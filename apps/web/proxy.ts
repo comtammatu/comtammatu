@@ -1,9 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@comtammatu/database/supabase/middleware";
-import { extractClaims, canAccess, isAdminRole } from "@comtammatu/shared/auth";
+import {
+  extractClaims,
+  canAccess,
+  getDefaultRedirect,
+} from "@comtammatu/shared/auth";
 import type { ModuleKey } from "@comtammatu/shared/auth";
 
-const PUBLIC_PATHS = ["/login", "/api/health", "/api/webhooks"];
+const PUBLIC_PATHS = ["/api/health", "/api/webhooks"];
 
 function isPublic(pathname: string) {
   return PUBLIC_PATHS.some(
@@ -17,6 +21,7 @@ function resolveModule(pathname: string): ModuleKey | null {
   if (pathname.startsWith("/admin/menu")) return "menu";
   if (pathname.startsWith("/admin/inventory")) return "inventory";
   if (pathname.startsWith("/admin/orders")) return "orders";
+  if (pathname.startsWith("/admin/staff")) return "staff";
   if (pathname.startsWith("/admin/hr")) return "hr";
   if (pathname.startsWith("/admin/crm")) return "crm";
   if (pathname.startsWith("/admin/finance")) return "finance";
@@ -26,6 +31,18 @@ function resolveModule(pathname: string): ModuleKey | null {
   if (pathname.match(/^\/br\/\d+\/kds/)) return "kds";
   if (pathname.startsWith("/employee")) return "employee";
   return null;
+}
+
+/** Create a redirect that preserves Set-Cookie from updateSession response */
+function redirectWithCookies(
+  url: URL,
+  sessionResponse: NextResponse,
+): NextResponse {
+  const redirect = NextResponse.redirect(url);
+  for (const cookie of sessionResponse.cookies.getAll()) {
+    redirect.cookies.set(cookie);
+  }
+  return redirect;
 }
 
 export async function proxy(request: NextRequest) {
@@ -39,23 +56,24 @@ export async function proxy(request: NextRequest) {
   // Refresh session + get user
   const { user, response } = await updateSession(request);
 
+  // Login page: special handling
+  if (pathname === "/login") {
+    if (!user) return response; // unauthenticated → show login
+    // authenticated → redirect away from login to role's default
+    const claims = extractClaims(user.app_metadata);
+    if (claims) {
+      const url = request.nextUrl.clone();
+      url.pathname = getDefaultRedirect(claims);
+      return redirectWithCookies(url, response);
+    }
+    return response;
+  }
+
   // Not authenticated → login
   if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
-  }
-
-  // Already on login page + authenticated → redirect to dashboard
-  if (pathname === "/login") {
-    const claims = extractClaims(user.app_metadata);
-    if (claims) {
-      const url = request.nextUrl.clone();
-      url.pathname = isAdminRole(claims.user_role)
-        ? "/admin/dashboard"
-        : "/employee";
-      return NextResponse.redirect(url);
-    }
+    return redirectWithCookies(url, response);
   }
 
   // Module ACL check
@@ -64,9 +82,14 @@ export async function proxy(request: NextRequest) {
     const claims = extractClaims(user.app_metadata);
     if (!claims || !canAccess(claims.user_role, moduleKey)) {
       const url = request.nextUrl.clone();
-      url.pathname = "/admin/dashboard";
+      const fallbackClaims = claims ?? {
+        tenant_id: 0,
+        branch_id: null,
+        user_role: "office" as const,
+      };
+      url.pathname = getDefaultRedirect(fallbackClaims);
       url.searchParams.set("forbidden", "1");
-      return NextResponse.redirect(url);
+      return redirectWithCookies(url, response);
     }
   }
 

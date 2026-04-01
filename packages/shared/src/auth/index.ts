@@ -9,3 +9,5 @@ export {
   isAdminRole,
   isBranchRole,
 } from "./scope";
+export type { NavItemConfig, NavGroupConfig } from "./nav-config";
+export { ADMIN_NAV_GROUPS } from "./nav-config";

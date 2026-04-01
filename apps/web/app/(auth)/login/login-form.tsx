@@ -1,6 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
+import { Loader2 } from "lucide-react";
+import { Button } from "@comtammatu/ui/components/button";
+import { Input } from "@comtammatu/ui/components/input";
+import { Label } from "@comtammatu/ui/components/label";
 import { login } from "./actions";
 
 export function LoginForm() {
@@ -9,45 +13,39 @@ export function LoginForm() {
   return (
     <form action={formAction} className="space-y-4">
       <div className="space-y-2">
-        <label htmlFor="email" className="text-sm font-medium">
-          Email
-        </label>
-        <input
+        <Label htmlFor="email">Email</Label>
+        <Input
           id="email"
           name="email"
           type="email"
           required
           autoComplete="email"
-          className="w-full rounded-md border px-3 py-2"
+          spellCheck={false}
           placeholder="email@comtammatu.com"
         />
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="password" className="text-sm font-medium">
-          Mật khẩu
-        </label>
-        <input
+        <Label htmlFor="password">Mật khẩu</Label>
+        <Input
           id="password"
           name="password"
           type="password"
           required
           autoComplete="current-password"
-          className="w-full rounded-md border px-3 py-2"
         />
       </div>
 
       {state?.error && (
-        <p className="text-sm text-destructive">{state.error}</p>
+        <p className="text-sm text-destructive" role="alert">
+          {state.error}
+        </p>
       )}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-      >
-        {isPending ? "Đang đăng nhập..." : "Đăng nhập"}
-      </button>
+      <Button type="submit" className="w-full" disabled={isPending}>
+        {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+        {isPending ? "Đang đăng nhập…" : "Đăng nhập"}
+      </Button>
     </form>
   );
 }

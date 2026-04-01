@@ -21,6 +21,14 @@ Total all sprints: ~47 ngày
 
 ## v0.1.0 — Foundation ✅ (2026-04-01)
 
+## v0.1.1 — Security Hardening ✅ (2026-04-02)
+
+- Fix migration ordering: clean up legacy profiles before adding branch constraint
+- Lock down profiles DML: revoke INSERT/DELETE, all mutations through RPCs only
+- Fix office role visibility: tenant-wide SELECT for HR functions
+- Drop overly-permissive "Managers can manage all profiles" policy
+- Fix supabase/config.toml for CLI compatibility
+
 ## Sprint 1: Admin Shell + Menu + Tables + Staff + Settings
 
 > 6 sessions | 4-5 ngày | Depends: v0.1.0

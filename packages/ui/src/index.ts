@@ -1,2 +1,1 @@
-// shadcn/ui components will be added here as they're installed
-export {};
+export { cn } from "./lib/utils";

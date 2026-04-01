@@ -10,6 +10,7 @@ export type ModuleKey =
   | "menu"
   | "inventory"
   | "orders"
+  | "staff"
   | "hr"
   | "crm"
   | "finance"
@@ -46,10 +47,15 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
     label: "Orders",
   },
+  staff: {
+    path: "/admin/staff",
+    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    label: "Nhân viên",
+  },
   hr: {
     path: "/admin/hr",
     allowedRoles: ["owner", "super_manager"],
-    label: "HR",
+    label: "Nhân sự & Lương",
   },
   crm: {
     path: "/admin/crm",
