@@ -1,0 +1,32 @@
+{
+  "name": "@comtammatu/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@comtammatu/database": "workspace:*",
+    "@comtammatu/security": "workspace:*",
+    "@comtammatu/shared": "workspace:*",
+    "@comtammatu/ui": "workspace:*",
+    "next": "^16.2.2",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tailwindcss": "^4.2.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@next/eslint-plugin-next": "^16.2.2",
+    "eslint": "^10.1.0",
+    "typescript": "^6.0.2"
+  }
+}

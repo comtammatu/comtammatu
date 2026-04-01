@@ -1,0 +1,47 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# next.js
+.next/
+out/
+
+# turbo
+.turbo/
+
+# env files
+.env
+.env*.local
+
+# build
+dist/
+
+# misc
+.DS_Store
+*.pem
+*.tsbuildinfo
+
+# supabase
+supabase/.temp/
+
+# gstack (clone per-machine)
+.claude/skills/gstack/
+
+# MCP config (contains tokens)
+.mcp.json
+
+# Claude Code personal settings
+.claude/settings.json
+
+# IDE
+.vscode/
+.idea/
+
+# debug logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# vercel
+.vercel/
