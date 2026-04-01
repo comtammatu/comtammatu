@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js >= 22
+- Node.js >= 24 (pin via `.nvmrc`)
 - pnpm 10.33+
 - Bun v1.0+ (for gstack skills)
 - Claude Code CLI

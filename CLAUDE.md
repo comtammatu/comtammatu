@@ -31,7 +31,7 @@ pnpm db:types     # Regenerate Supabase types (after migration)
 Browser → proxy.ts (auth + ACL) → App Router → Supabase (PostgREST + Auth)
 ```
 
-Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Turborepo 2.9
+Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Turborepo 2.9 | Node >= 24
 
 ### Import Boundaries
 
