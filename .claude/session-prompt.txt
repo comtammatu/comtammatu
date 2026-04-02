@@ -1,1 +1,0 @@
-Bắt đầu session mới. Thực hiện Session Start Protocol trong CLAUDE.md — đọc roadmap, regressions, lessons, todo, git status. Output checklist trước khi làm gì khác.
