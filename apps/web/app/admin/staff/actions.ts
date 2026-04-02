@@ -261,19 +261,28 @@ export async function updateStaff(
   return { success: true };
 }
 
+const staffIdSchema = z.string().uuid({ error: "ID nhân viên không hợp lệ" });
+
 export async function toggleStaffActive(
   staffId: string,
 ): Promise<ActionResult> {
+  const parsedId = staffIdSchema.safeParse(staffId);
+  if (!parsedId.success) return { success: false, error: "ID không hợp lệ" };
+
   const ctx = await getAuthContext();
   if (!ctx) return { success: false, error: "Chưa đăng nhập" };
 
   const { supabase, claims } = ctx;
 
+  if (!MANAGER_ROLES.includes(claims.user_role)) {
+    return { success: false, error: "Không có quyền" };
+  }
+
   // Fetch current state
   const { data: profile } = await supabase
     .from("profiles")
     .select("is_active")
-    .eq("id", staffId)
+    .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
     .single();
 
@@ -282,7 +291,7 @@ export async function toggleStaffActive(
   }
 
   const { error } = await supabase.rpc("admin_update_profile", {
-    p_target_id: staffId,
+    p_target_id: parsedId.data,
     p_is_active: !(profile.is_active ?? true),
   });
 

@@ -94,6 +94,10 @@ const modifierEntrySchema = z.object({
   sort_order: z.number().int().min(0).default(0),
 });
 
+/* ─── Shared Validation ─── */
+
+const idSchema = z.coerce.number().int().positive({ error: "ID không hợp lệ" });
+
 /* ─── Category Actions ─── */
 
 export async function createCategory(
@@ -177,6 +181,9 @@ export async function updateCategory(
 export async function toggleCategoryActive(
   categoryId: number,
 ): Promise<ActionResult> {
+  const parsedId = idSchema.safeParse(categoryId);
+  if (!parsedId.success) return { success: false, error: "ID không hợp lệ" };
+
   const ctx = await getAuthContext();
   if (!ctx) return { success: false, error: "Không có quyền" };
 
@@ -185,7 +192,7 @@ export async function toggleCategoryActive(
   const { data: cat } = await supabase
     .from("menu_categories")
     .select("is_active")
-    .eq("id", categoryId)
+    .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
     .single();
 
@@ -196,7 +203,7 @@ export async function toggleCategoryActive(
   const { error } = await supabase
     .from("menu_categories")
     .update({ is_active: !cat.is_active })
-    .eq("id", categoryId)
+    .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id);
 
   if (error) {
@@ -292,6 +299,9 @@ export async function updateItem(
 }
 
 export async function toggleItemActive(itemId: number): Promise<ActionResult> {
+  const parsedId = idSchema.safeParse(itemId);
+  if (!parsedId.success) return { success: false, error: "ID không hợp lệ" };
+
   const ctx = await getAuthContext();
   if (!ctx) return { success: false, error: "Không có quyền" };
 
@@ -300,7 +310,7 @@ export async function toggleItemActive(itemId: number): Promise<ActionResult> {
   const { data: item } = await supabase
     .from("menu_items")
     .select("is_active")
-    .eq("id", itemId)
+    .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
     .single();
 
@@ -311,7 +321,7 @@ export async function toggleItemActive(itemId: number): Promise<ActionResult> {
   const { error } = await supabase
     .from("menu_items")
     .update({ is_active: !item.is_active })
-    .eq("id", itemId)
+    .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id);
 
   if (error) {
@@ -328,6 +338,9 @@ export async function saveVariants(
   itemId: number,
   variants: z.infer<typeof variantEntrySchema>[],
 ): Promise<ActionResult> {
+  const parsedId = idSchema.safeParse(itemId);
+  if (!parsedId.success) return { success: false, error: "ID không hợp lệ" };
+
   const parsed = z.array(variantEntrySchema).safeParse(variants);
   if (!parsed.success) {
     return { success: false, error: "Dữ liệu biến thể không hợp lệ" };
@@ -342,7 +355,7 @@ export async function saveVariants(
   const { data: item } = await supabase
     .from("menu_items")
     .select("id")
-    .eq("id", itemId)
+    .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
     .single();
 
@@ -354,7 +367,7 @@ export async function saveVariants(
   const { error: delError } = await supabase
     .from("menu_item_variants")
     .delete()
-    .eq("item_id", itemId)
+    .eq("item_id", parsedId.data)
     .eq("tenant_id", claims.tenant_id);
 
   if (delError) {
@@ -367,7 +380,7 @@ export async function saveVariants(
       .insert(
         parsed.data.map((v, idx) => ({
           tenant_id: claims.tenant_id,
-          item_id: itemId,
+          item_id: parsedId.data,
           name: v.name,
           price_adjustment: v.price_adjustment,
           sort_order: v.sort_order ?? idx,
@@ -389,6 +402,9 @@ export async function saveModifiers(
   itemId: number,
   modifiers: z.infer<typeof modifierEntrySchema>[],
 ): Promise<ActionResult> {
+  const parsedId = idSchema.safeParse(itemId);
+  if (!parsedId.success) return { success: false, error: "ID không hợp lệ" };
+
   const parsed = z.array(modifierEntrySchema).safeParse(modifiers);
   if (!parsed.success) {
     return { success: false, error: "Dữ liệu tùy chọn không hợp lệ" };
@@ -403,7 +419,7 @@ export async function saveModifiers(
   const { data: item } = await supabase
     .from("menu_items")
     .select("id")
-    .eq("id", itemId)
+    .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
     .single();
 
@@ -415,7 +431,7 @@ export async function saveModifiers(
   const { error: delError } = await supabase
     .from("menu_item_modifiers")
     .delete()
-    .eq("item_id", itemId)
+    .eq("item_id", parsedId.data)
     .eq("tenant_id", claims.tenant_id);
 
   if (delError) {
@@ -428,7 +444,7 @@ export async function saveModifiers(
       .insert(
         parsed.data.map((m, idx) => ({
           tenant_id: claims.tenant_id,
-          item_id: itemId,
+          item_id: parsedId.data,
           name: m.name,
           price: m.price,
           sort_order: m.sort_order ?? idx,
@@ -470,11 +486,14 @@ export async function saveSides(
 
   const { supabase, claims } = ctx;
 
+  const validatedItemId = parsed.data.mainItemId;
+  const validatedSides = parsed.data.sideItemIds;
+
   // Verify main item belongs to tenant
   const { data: item } = await supabase
     .from("menu_items")
     .select("id")
-    .eq("id", mainItemId)
+    .eq("id", validatedItemId)
     .eq("tenant_id", claims.tenant_id)
     .single();
 
@@ -486,20 +505,20 @@ export async function saveSides(
   const { error: delError } = await supabase
     .from("menu_item_available_sides")
     .delete()
-    .eq("main_item_id", mainItemId)
+    .eq("main_item_id", validatedItemId)
     .eq("tenant_id", claims.tenant_id);
 
   if (delError) {
     return { success: false, error: mapDbError(delError.code) };
   }
 
-  if (sideItemIds.length > 0) {
+  if (validatedSides.length > 0) {
     const { error: insError } = await supabase
       .from("menu_item_available_sides")
       .insert(
-        sideItemIds.map((s) => ({
+        validatedSides.map((s) => ({
           tenant_id: claims.tenant_id,
-          main_item_id: mainItemId,
+          main_item_id: validatedItemId,
           side_item_id: s.id,
           is_default: s.is_default,
         })),
