@@ -1,6 +1,5 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { SYSTEM_SETTING_DEFAULTS } from "@comtammatu/shared/settings";
-import type { SystemSettingKey } from "@comtammatu/shared/settings";
 import { SettingsForm } from "./settings-form";
 
 export default async function GeneralSettingsPage() {

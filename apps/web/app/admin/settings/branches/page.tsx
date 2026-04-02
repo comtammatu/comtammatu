@@ -1,4 +1,3 @@
-import { Plus } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { BranchTable } from "./branch-table";
 import { AddBranchButton } from "./add-branch-button";
