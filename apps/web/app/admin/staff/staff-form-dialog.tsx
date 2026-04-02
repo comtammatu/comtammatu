@@ -24,8 +24,6 @@ import type { StaffRow, BranchOption } from "./staff-table";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ROLE_LABELS } from "./role-labels";
 
-const OPS_ROLES = ["cashier", "waiter", "chef", "branch_manager"];
-
 interface StaffFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;

@@ -134,7 +134,7 @@ export async function createStaff(
     };
   }
 
-  const { email, password, full_name, phone, role, branch_id } = parsed.data;
+  const { email, password, full_name, role, branch_id } = parsed.data;
 
   // Operational roles must have branch_id
   if (OPS_ROLES.includes(role) && !branch_id) {
