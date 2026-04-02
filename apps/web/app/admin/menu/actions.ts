@@ -336,6 +336,7 @@ export async function saveVariants(
 
   const { supabase, claims } = ctx;
 
+  // TODO: After db:types → supabase.rpc("save_item_variants", { p_item_id, p_variants })
   // Verify item belongs to tenant
   const { data: item } = await supabase
     .from("menu_items")
@@ -348,7 +349,7 @@ export async function saveVariants(
     return { success: false, error: "Món ăn không tồn tại" };
   }
 
-  // Delete all existing variants for this item, then insert fresh
+  // Non-atomic: delete+insert (RPC save_item_variants is atomic alternative)
   const { error: delError } = await supabase
     .from("menu_item_variants")
     .delete()
@@ -400,6 +401,7 @@ export async function saveModifiers(
 
   const { supabase, claims } = ctx;
 
+  // TODO: After db:types → supabase.rpc("save_item_modifiers", { p_item_id, p_modifiers })
   // Verify item belongs to tenant
   const { data: item } = await supabase
     .from("menu_items")
@@ -412,7 +414,7 @@ export async function saveModifiers(
     return { success: false, error: "Món ăn không tồn tại" };
   }
 
-  // Delete all existing modifiers for this item, then insert fresh
+  // Non-atomic: delete+insert (RPC save_item_modifiers is atomic alternative)
   const { error: delError } = await supabase
     .from("menu_item_modifiers")
     .delete()
@@ -471,9 +473,11 @@ export async function saveSides(
 
   const { supabase, claims } = ctx;
 
+  // TODO: After db:types → supabase.rpc("save_item_sides", { p_main_item_id, p_sides })
   const validatedItemId = parsed.data.mainItemId;
   const validatedSides = parsed.data.sideItemIds;
 
+  // Non-atomic: delete+insert (RPC save_item_sides is atomic alternative)
   // Verify main item belongs to tenant
   const { data: item } = await supabase
     .from("menu_items")
