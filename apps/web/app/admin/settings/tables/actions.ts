@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@comtammatu/database/supabase/server";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { getAuthContext } from "../../_lib/auth";
+import { TABLE_STATUSES } from "./constants";
 
 /* ─── Types ─── */
 
@@ -70,13 +71,6 @@ const createTableSchema = z.object({
     .min(1, { error: "Sức chứa phải ít nhất 1" })
     .default(4),
 });
-
-const TABLE_STATUSES = [
-  "available",
-  "occupied",
-  "reserved",
-  "maintenance",
-] as const;
 
 const updateTableSchema = z.object({
   id: z.coerce.number().int().positive(),

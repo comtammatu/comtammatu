@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { MoreHorizontal, Pencil, Trash2, UtensilsCrossed } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -30,6 +30,8 @@ import {
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
 import { deleteTable } from "./actions";
+import { STATUS_LABELS, STATUS_VARIANTS } from "./constants";
+import type { TableStatus } from "./constants";
 import { TableFormDialog } from "./table-form-dialog";
 import type { ZoneRow } from "./zone-table";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -44,23 +46,6 @@ export interface TableRow {
   zone_name: string | null;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  available: "Trống",
-  occupied: "Đang dùng",
-  reserved: "Đã đặt",
-  maintenance: "Bảo trì",
-};
-
-const STATUS_VARIANTS: Record<
-  string,
-  "default" | "secondary" | "outline" | "destructive"
-> = {
-  available: "default",
-  occupied: "secondary",
-  reserved: "outline",
-  maintenance: "destructive",
-};
-
 interface TableTableProps {
   tables: TableRow[];
   zones: ZoneRow[];
@@ -69,19 +54,19 @@ interface TableTableProps {
 export function TableTable({ tables, zones }: TableTableProps) {
   const [editTable, setEditTable] = useState<TableRow | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
-  function handleDelete(e: React.MouseEvent, id: number) {
+  async function handleDelete(e: React.MouseEvent, id: number) {
     e.preventDefault();
-    startTransition(async () => {
-      const result = await deleteTable(id);
-      if (!result.success) {
-        toast.error(result.error);
-      } else {
-        toast.success("Đã xóa bàn");
-      }
+    setPendingDeleteId(id);
+    const result = await deleteTable(id);
+    setPendingDeleteId(null);
+    if (!result.success) {
+      toast.error(result.error);
+    } else {
+      toast.success("Đã xóa bàn");
       setDeleteId(null);
-    });
+    }
   }
 
   return (
@@ -109,7 +94,7 @@ export function TableTable({ tables, zones }: TableTableProps) {
               </TRow>
             )}
             {tables.map((table) => (
-              <TRow key={table.id} className={isPending ? "opacity-60" : ""}>
+              <TRow key={table.id} className={pendingDeleteId === table.id ? "opacity-60" : ""}>
                 <TableCell>
                   <span className="font-medium">Bàn {table.number}</span>
                 </TableCell>
@@ -120,8 +105,8 @@ export function TableTable({ tables, zones }: TableTableProps) {
                   {table.capacity} người
                 </TableCell>
                 <TableCell>
-                  <Badge variant={STATUS_VARIANTS[table.status] ?? "outline"}>
-                    {STATUS_LABELS[table.status] ?? table.status}
+                  <Badge variant={STATUS_VARIANTS[table.status as TableStatus] ?? "outline"}>
+                    {STATUS_LABELS[table.status as TableStatus] ?? table.status}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -176,10 +161,10 @@ export function TableTable({ tables, zones }: TableTableProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
+            <AlertDialogCancel disabled={pendingDeleteId !== null}>Hủy</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isPending}
+              disabled={pendingDeleteId !== null}
               onClick={(e) => deleteId !== null && handleDelete(e, deleteId)}
             >
               Xóa

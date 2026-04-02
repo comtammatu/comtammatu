@@ -32,16 +32,23 @@ interface ItemFormDialogProps {
   categories: CategoryRow[];
 }
 
-export function ItemFormDialog({
-  open,
-  onOpenChange,
+function ItemFormContent({
   item,
   categories,
-}: ItemFormDialogProps) {
+  onOpenChange,
+}: {
+  item?: ItemRow | null;
+  categories: CategoryRow[];
+  onOpenChange: (open: boolean) => void;
+}) {
   const isEdit = !!item;
   const action = isEdit ? updateItem : createItem;
   const [state, formAction, isPending] = useActionState(action, null);
   const formRef = useRef<HTMLFormElement>(null);
+
+  const activeCategories = categories.filter(
+    (c) => c.is_active || c.id === item?.category_id,
+  );
 
   useEffect(() => {
     if (state?.success) {
@@ -50,97 +57,110 @@ export function ItemFormDialog({
     }
   }, [state, isEdit, onOpenChange]);
 
-  const activeCategories = categories.filter(
-    (c) => c.is_active || c.id === item?.category_id,
-  );
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>{isEdit ? "Chỉnh sửa món" : "Thêm món mới"}</DialogTitle>
+      </DialogHeader>
 
+      <form ref={formRef} action={formAction} className="space-y-4">
+        {isEdit && <input type="hidden" name="id" value={item.id} />}
+
+        <div className="space-y-2">
+          <Label htmlFor="name">Tên món *</Label>
+          <Input
+            id="name"
+            name="name"
+            required
+            defaultValue={item?.name ?? ""}
+            placeholder="VD: Cơm sườn cốt lết"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="category_id">Danh mục *</Label>
+          <Select
+            name="category_id"
+            defaultValue={item?.category_id?.toString() ?? ""}
+            required
+          >
+            <SelectTrigger id="category_id">
+              <SelectValue placeholder="Chọn danh mục" />
+            </SelectTrigger>
+            <SelectContent>
+              {activeCategories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id.toString()}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="base_price">Giá gốc (VND) *</Label>
+          <Input
+            id="base_price"
+            name="base_price"
+            type="number"
+            min={0}
+            step={1000}
+            required
+            defaultValue={item?.base_price ?? ""}
+            placeholder="35000"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="description">Mô tả</Label>
+          <Textarea
+            id="description"
+            name="description"
+            rows={2}
+            defaultValue={item?.description ?? ""}
+            placeholder="Mô tả ngắn về món ăn"
+          />
+        </div>
+
+        {state?.error && (
+          <p className="text-sm text-destructive" role="alert">
+            {state.error}
+          </p>
+        )}
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isPending}
+          >
+            Hủy
+          </Button>
+          <Button type="submit" disabled={isPending}>
+            {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+            {isEdit ? "Cập nhật" : "Tạo mới"}
+          </Button>
+        </DialogFooter>
+      </form>
+    </>
+  );
+}
+
+export function ItemFormDialog({
+  open,
+  onOpenChange,
+  item,
+  categories,
+}: ItemFormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? "Chỉnh sửa món" : "Thêm món mới"}</DialogTitle>
-        </DialogHeader>
-
-        <form ref={formRef} action={formAction} className="space-y-4">
-          {isEdit && <input type="hidden" name="id" value={item.id} />}
-
-          <div className="space-y-2">
-            <Label htmlFor="name">Tên món *</Label>
-            <Input
-              id="name"
-              name="name"
-              required
-              defaultValue={item?.name ?? ""}
-              placeholder="VD: Cơm sườn cốt lết"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="category_id">Danh mục *</Label>
-            <Select
-              name="category_id"
-              defaultValue={item?.category_id?.toString() ?? ""}
-              required
-            >
-              <SelectTrigger id="category_id">
-                <SelectValue placeholder="Chọn danh mục" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeCategories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id.toString()}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="base_price">Giá gốc (VND) *</Label>
-            <Input
-              id="base_price"
-              name="base_price"
-              type="number"
-              min={0}
-              step={1000}
-              required
-              defaultValue={item?.base_price ?? ""}
-              placeholder="35000"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Mô tả</Label>
-            <Textarea
-              id="description"
-              name="description"
-              rows={2}
-              defaultValue={item?.description ?? ""}
-              placeholder="Mô tả ngắn về món ăn"
-            />
-          </div>
-
-          {state?.error && (
-            <p className="text-sm text-destructive" role="alert">
-              {state.error}
-            </p>
-          )}
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isPending}
-            >
-              Hủy
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
-              {isEdit ? "Cập nhật" : "Tạo mới"}
-            </Button>
-          </DialogFooter>
-        </form>
+      <DialogContent className="sm:max-w-md" key={item?.id ?? "new"}>
+        <ItemFormContent
+          item={item}
+          categories={categories}
+          onOpenChange={onOpenChange}
+        />
       </DialogContent>
     </Dialog>
   );

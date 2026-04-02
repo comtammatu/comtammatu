@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
@@ -65,6 +65,7 @@ export function ItemDetailDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const loadTokenRef = useRef(0);
 
   // Side dish items (from categories with type "side_dish")
   const sideItems = allItems.filter(
@@ -72,6 +73,7 @@ export function ItemDetailDialog({
   );
 
   const loadItemDetails = useCallback(async (itemId: number) => {
+    const token = ++loadTokenRef.current;
     setIsLoading(true);
     setLoadError(null);
     const supabase = createClient();
@@ -94,6 +96,8 @@ export function ItemDetailDialog({
         )
         .eq("main_item_id", itemId),
     ]);
+
+    if (token !== loadTokenRef.current) return;
 
     if (varRes.error || modRes.error || sideRes.error) {
       setLoadError("Không thể tải dữ liệu. Vui lòng thử lại.");
@@ -118,6 +122,7 @@ export function ItemDetailDialog({
       loadItemDetails(item.id);
     }
     if (!open) {
+      loadTokenRef.current++;
       setVariants([]);
       setModifiers([]);
       setSides([]);
@@ -127,14 +132,17 @@ export function ItemDetailDialog({
   /* ─── Variant Handlers ─── */
 
   function addVariant() {
-    setVariants((prev) => [
-      ...prev,
-      { name: "", price_adjustment: 0, sort_order: prev.length },
-    ]);
+    setVariants((prev) => {
+      const next = [...prev, { name: "", price_adjustment: 0, sort_order: 0 }];
+      return next.map((v, i) => ({ ...v, sort_order: i }));
+    });
   }
 
   function removeVariant(idx: number) {
-    setVariants((prev) => prev.filter((_, i) => i !== idx));
+    setVariants((prev) => {
+      const next = prev.filter((_, i) => i !== idx);
+      return next.map((v, i) => ({ ...v, sort_order: i }));
+    });
   }
 
   function updateVariant(
@@ -149,7 +157,9 @@ export function ItemDetailDialog({
 
   function handleSaveVariants() {
     if (!item) return;
-    const valid = variants.filter((v) => v.name.trim() !== "");
+    const valid = variants
+      .filter((v) => v.name.trim() !== "")
+      .map((v, i) => ({ ...v, sort_order: i }));
     startTransition(async () => {
       const result = await saveVariants(item.id, valid);
       if (result.success) {
@@ -163,14 +173,17 @@ export function ItemDetailDialog({
   /* ─── Modifier Handlers ─── */
 
   function addModifier() {
-    setModifiers((prev) => [
-      ...prev,
-      { name: "", price: 0, sort_order: prev.length },
-    ]);
+    setModifiers((prev) => {
+      const next = [...prev, { name: "", price: 0, sort_order: 0 }];
+      return next.map((m, i) => ({ ...m, sort_order: i }));
+    });
   }
 
   function removeModifier(idx: number) {
-    setModifiers((prev) => prev.filter((_, i) => i !== idx));
+    setModifiers((prev) => {
+      const next = prev.filter((_, i) => i !== idx);
+      return next.map((m, i) => ({ ...m, sort_order: i }));
+    });
   }
 
   function updateModifier(
@@ -185,7 +198,9 @@ export function ItemDetailDialog({
 
   function handleSaveModifiers() {
     if (!item) return;
-    const valid = modifiers.filter((m) => m.name.trim() !== "");
+    const valid = modifiers
+      .filter((m) => m.name.trim() !== "")
+      .map((m, i) => ({ ...m, sort_order: i }));
     startTransition(async () => {
       const result = await saveModifiers(item.id, valid);
       if (result.success) {
@@ -287,14 +302,14 @@ export function ItemDetailDialog({
                     <Label className="text-xs">+/- Giá</Label>
                     <Input
                       type="number"
-                      value={v.price_adjustment}
-                      onChange={(e) =>
-                        updateVariant(
-                          idx,
-                          "price_adjustment",
-                          Number(e.target.value),
-                        )
-                      }
+                      defaultValue={v.price_adjustment}
+                      key={v.id ?? `price-${idx}`}
+                      onBlur={(e) => {
+                        const num = Number(e.target.value);
+                        if (!Number.isNaN(num)) {
+                          updateVariant(idx, "price_adjustment", num);
+                        }
+                      }}
                     />
                   </div>
                   <Button
@@ -352,10 +367,14 @@ export function ItemDetailDialog({
                     <Input
                       type="number"
                       min={0}
-                      value={m.price}
-                      onChange={(e) =>
-                        updateModifier(idx, "price", Number(e.target.value))
-                      }
+                      defaultValue={m.price}
+                      key={m.id ?? `mod-price-${idx}`}
+                      onBlur={(e) => {
+                        const num = Number(e.target.value);
+                        if (!Number.isNaN(num)) {
+                          updateModifier(idx, "price", num);
+                        }
+                      }}
                     />
                   </div>
                   <Button
@@ -415,13 +434,13 @@ export function ItemDetailDialog({
                         key={si.id}
                         className="flex items-center justify-between rounded-md border p-2"
                       >
-                        <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-2">
                           <Checkbox
                             checked={!!selected}
                             onCheckedChange={() => toggleSide(si.id, si.name)}
                           />
                           <span className="text-sm">{si.name}</span>
-                        </div>
+                        </label>
                         {selected && (
                           <label className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Checkbox

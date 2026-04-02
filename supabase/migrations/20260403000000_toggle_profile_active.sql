@@ -11,21 +11,33 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
+  v_actor_id UUID;
   v_actor_role TEXT;
   v_actor_tenant BIGINT;
+  v_actor_branch BIGINT;
   v_target_role TEXT;
+  v_target_branch BIGINT;
+  v_target_active BOOLEAN;
   v_new_state BOOLEAN;
 BEGIN
+  v_actor_id     := auth.uid();
   v_actor_role   := public.auth_role();
   v_actor_tenant := public.auth_tenant_id();
+  v_actor_branch := public.auth_branch_id();
 
   -- Fetch target (same tenant only)
-  SELECT role INTO v_target_role
+  SELECT role, branch_id, is_active
+    INTO v_target_role, v_target_branch, v_target_active
     FROM public.profiles
     WHERE id = p_target_id AND tenant_id = v_actor_tenant;
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'not_found';
+  END IF;
+
+  -- Prevent self-deactivation
+  IF p_target_id = v_actor_id AND v_target_active = TRUE THEN
+    RAISE EXCEPTION 'cannot_deactivate_self';
   END IF;
 
   -- Role hierarchy checks (same as admin_update_profile)
@@ -40,6 +52,9 @@ BEGIN
       RAISE EXCEPTION 'permission_denied';
     END IF;
   ELSIF v_actor_role = 'branch_manager' THEN
+    IF v_target_branch IS DISTINCT FROM v_actor_branch THEN
+      RAISE EXCEPTION 'branch_manager: target not in your branch';
+    END IF;
     IF v_target_role IN ('owner', 'super_manager', 'area_manager', 'branch_manager') THEN
       RAISE EXCEPTION 'permission_denied';
     END IF;

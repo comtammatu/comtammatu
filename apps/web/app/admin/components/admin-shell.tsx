@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -209,6 +209,7 @@ interface AdminShellProps {
 export function AdminShell({ children, user, role }: AdminShellProps) {
   const pathname = usePathname();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const mobileSignOutFormRef = useRef<HTMLFormElement>(null);
 
   const filteredGroups = resolveNavGroups(role);
 
@@ -278,13 +279,9 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onSelect={() => {
-                      const form = document.createElement("form");
-                      form.method = "post";
-                      form.action = "/api/auth/signout";
-                      document.body.appendChild(form);
-                      form.submit();
-                    }}
+                    onSelect={() =>
+                      mobileSignOutFormRef.current?.requestSubmit()
+                    }
                   >
                     <LogOut className="size-4" />
                     Đăng xuất
@@ -325,6 +322,14 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
           </SheetContent>
         </Sheet>
       </div>
+
+      {/* Hidden form for mobile sign-out */}
+      <form
+        ref={mobileSignOutFormRef}
+        action="/api/auth/signout"
+        method="post"
+        className="hidden"
+      />
     </TooltipProvider>
   );
 }
