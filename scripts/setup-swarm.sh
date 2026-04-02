@@ -41,7 +41,7 @@ fi
 if [ -d "$SWARM_DIR" ]; then
   echo "claude-swarm already cloned at $SWARM_DIR"
   echo "Pulling latest..."
-  cd "$SWARM_DIR" && git pull --rebase 2>/dev/null || true
+  cd "$SWARM_DIR" && git pull --rebase || echo "Warning: git pull failed, using existing version" >&2
 else
   echo "Cloning claude-swarm..."
   git clone --depth 1 "$REPO_URL" "$SWARM_DIR"
@@ -50,7 +50,7 @@ fi
 # ─── 3. Install dependencies ───
 
 echo "Installing dependencies..."
-cd "$SWARM_DIR" && npm install --production=false 2>/dev/null
+cd "$SWARM_DIR" && npm install --production=false
 
 # ─── 4. Register MCP server ───
 

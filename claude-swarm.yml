@@ -65,7 +65,7 @@ swarm:
         - Every table needs: GRANT SELECT, INSERT, UPDATE, DELETE TO authenticated
         - RLS enabled + policies for ALL roles
         - UNIQUE constraints must be composite with tenant_id
-        - After migration: run pnpm db:types
+        - After SQL migration is merged and applied by owner (post-merge): run pnpm db:types
         - Multi-item atomic writes → create Postgres RPC function
 
         Checklist before marking done:
@@ -73,7 +73,7 @@ swarm:
         - [ ] RLS enabled + policies
         - [ ] UNIQUE per tenant_id
         - [ ] Correct data types
-        - [ ] pnpm db:types regenerated
+        - [ ] pnpm db:types regenerated after migration is merged & applied by owner
       allowed_tools:
         - Read
         - Write

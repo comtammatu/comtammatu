@@ -123,12 +123,12 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setEditStaff(member)}>
+                      <DropdownMenuItem onSelect={() => setEditStaff(member)}>
                         <Pencil className="mr-2 size-4" />
                         Chỉnh sửa
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => handleToggleActive(member.id)}
+                        onSelect={() => handleToggleActive(member.id)}
                       >
                         {member.is_active !== false ? (
                           <>

@@ -582,25 +582,25 @@ Component: shadcn `Input`
 
 Default:
 
-```
+```text
 [                    ]  → h-9, rounded-md, border, text-sm
 ```
 
 With prefix (VND):
 
-```
+```text
 [₫ |              ]  → prefix: text-muted-foreground, border-r, px-3
 ```
 
 With suffix (%):
 
-```
+```text
 [              | % ]  → suffix: text-muted-foreground, border-l, px-3
 ```
 
 With icon (Search):
 
-```
+```text
 [🔍|              ]  → icon: absolute left-3, input: pl-9
 ```
 

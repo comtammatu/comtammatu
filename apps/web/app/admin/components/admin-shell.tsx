@@ -277,20 +277,17 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
                     <p className="text-xs text-muted-foreground">{role}</p>
                   </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <form
-                      action="/api/auth/signout"
-                      method="post"
-                      className="w-full"
-                    >
-                      <button
-                        type="submit"
-                        className="flex w-full items-center gap-2"
-                      >
-                        <LogOut className="size-4" />
-                        Đăng xuất
-                      </button>
-                    </form>
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      const form = document.createElement("form");
+                      form.method = "post";
+                      form.action = "/api/auth/signout";
+                      document.body.appendChild(form);
+                      form.submit();
+                    }}
+                  >
+                    <LogOut className="size-4" />
+                    Đăng xuất
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

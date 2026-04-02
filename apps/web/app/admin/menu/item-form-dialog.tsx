@@ -50,7 +50,9 @@ export function ItemFormDialog({
     }
   }, [state, isEdit, onOpenChange]);
 
-  const activeCategories = categories.filter((c) => c.is_active);
+  const activeCategories = categories.filter(
+    (c) => c.is_active || c.id === item?.category_id,
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

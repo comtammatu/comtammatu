@@ -249,24 +249,13 @@ export async function toggleStaffActive(
   const ctx = await getAuthContext(MANAGER_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
+  const { supabase } = ctx;
 
-  // Fetch current state
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_active")
-    .eq("id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
-
-  if (!profile) {
-    return { success: false, error: "Nhân viên không tồn tại" };
-  }
-
-  const { error } = await supabase.rpc("admin_update_profile", {
-    p_target_id: parsedId.data,
-    p_is_active: !(profile.is_active ?? true),
-  });
+  // RPC types available after migration applied + pnpm db:types
+  const { error } = await (supabase.rpc as CallableFunction)(
+    "toggle_profile_active",
+    { p_target_id: parsedId.data },
+  );
 
   if (error) {
     return { success: false, error: mapRpcError(error.message) };

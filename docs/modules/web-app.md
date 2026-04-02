@@ -2,7 +2,7 @@
 
 ## Overview
 
-Next.js 16.2 application with App Router. Serves four user surfaces: Admin (management), POS (cashier/waiter), KDS (chef), and Employee portal. Sprint 1 complete (S1–S5): admin shell, branches, staff, menu, tables/zones are shipped. POS/KDS/Employee remain placeholders for Sprint 2a.
+Next.js 16.2 application with App Router. Serves four user surfaces: Admin (management), POS (cashier/waiter), KDS (chef), and Employee portal. Sprint 1 complete (S1–S6): admin shell, branches, staff, menu, tables/zones, and security polish are shipped. POS/KDS/Employee remain placeholders for Sprint 2a.
 
 **Owner:** `apps/web/`
 
@@ -120,6 +120,6 @@ Browser request
 Written by codebase-oracle (manual) | 2026-04-02
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 95%
-Updated: Sprint 1 S5 complete (2026-04-02)
+Updated: Sprint 1 S6 complete (2026-04-03)
 Unknowns: 0
 -->

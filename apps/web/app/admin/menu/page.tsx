@@ -28,8 +28,11 @@ export default async function MenuPage() {
       .order("name"),
   ]);
 
-  const categories = categoriesRes.data ?? [];
-  const items = (itemsRes.data ?? []).map((item) => ({
+  if (categoriesRes.error) throw new Error("Không thể tải danh mục");
+  if (itemsRes.error) throw new Error("Không thể tải món ăn");
+
+  const categories = categoriesRes.data;
+  const items = itemsRes.data.map((item) => ({
     id: item.id,
     name: item.name,
     description: item.description,

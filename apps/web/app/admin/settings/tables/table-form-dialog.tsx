@@ -101,12 +101,13 @@ export function TableFormDialog({
             <Label htmlFor="table-zone">Khu vực</Label>
             <Select
               name="zone_id"
-              defaultValue={table?.zone_id?.toString() ?? ""}
+              defaultValue={table?.zone_id?.toString() ?? "none"}
             >
               <SelectTrigger id="table-zone">
                 <SelectValue placeholder="Không có khu vực" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="none">Không có khu vực</SelectItem>
                 {zones.map((z) => (
                   <SelectItem key={z.id} value={z.id.toString()}>
                     {z.name}

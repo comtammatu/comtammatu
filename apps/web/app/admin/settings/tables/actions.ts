@@ -190,14 +190,19 @@ export async function deleteZone(zoneId: number): Promise<ActionResult> {
 
   const { supabase, claims } = ctx;
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("branch_zones")
     .delete()
     .eq("id", parsed.data)
-    .eq("tenant_id", claims.tenant_id);
+    .eq("tenant_id", claims.tenant_id)
+    .select("id");
 
   if (error) {
     return { success: false, error: mapZoneDbError(error.code) };
+  }
+
+  if (!data || data.length === 0) {
+    return { success: false, error: "Không tìm thấy khu vực" };
   }
 
   revalidatePath("/admin/settings/tables");
@@ -211,11 +216,12 @@ export async function createTable(
   formData: FormData,
 ): Promise<ActionResult> {
   const rawZoneId = formData.get("zone_id");
+  const zoneId = rawZoneId && rawZoneId !== "none" ? rawZoneId : undefined;
 
   const parsed = createTableSchema.safeParse({
     number: formData.get("number"),
     branch_id: formData.get("branch_id"),
-    zone_id: rawZoneId ? rawZoneId : undefined,
+    zone_id: zoneId,
     capacity: formData.get("capacity") || 4,
   });
 
@@ -256,6 +262,7 @@ export async function updateTable(
   formData: FormData,
 ): Promise<ActionResult> {
   const rawZoneId = formData.get("zone_id");
+  const zoneId = rawZoneId && rawZoneId !== "none" ? rawZoneId : undefined;
 
   const rawStatus = formData.get("status");
 
@@ -263,7 +270,7 @@ export async function updateTable(
     id: formData.get("id"),
     number: formData.get("number"),
     branch_id: formData.get("branch_id"),
-    zone_id: rawZoneId ? rawZoneId : undefined,
+    zone_id: zoneId,
     capacity: formData.get("capacity") || 4,
     status: rawStatus ? rawStatus : undefined,
   });
@@ -313,14 +320,19 @@ export async function deleteTable(tableId: number): Promise<ActionResult> {
 
   const { supabase, claims } = ctx;
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("tables")
     .delete()
     .eq("id", parsed.data)
-    .eq("tenant_id", claims.tenant_id);
+    .eq("tenant_id", claims.tenant_id)
+    .select("id");
 
   if (error) {
     return { success: false, error: mapTableDbError(error.code) };
+  }
+
+  if (!data || data.length === 0) {
+    return { success: false, error: "Không tìm thấy bàn" };
   }
 
   revalidatePath("/admin/settings/tables");

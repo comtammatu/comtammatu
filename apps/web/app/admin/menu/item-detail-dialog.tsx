@@ -19,6 +19,7 @@ import {
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
 import { saveVariants, saveModifiers, saveSides } from "./actions";
+import { SIDE_DISH_TYPE } from "./category-labels";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { createClient } from "@comtammatu/database/supabase/client";
 import type { ItemRow } from "./item-table";
@@ -67,7 +68,7 @@ export function ItemDetailDialog({
 
   // Side dish items (from categories with type "side_dish")
   const sideItems = allItems.filter(
-    (i) => i.category_type === "side_dish" && i.id !== item?.id,
+    (i) => i.category_type === SIDE_DISH_TYPE && i.id !== item?.id,
   );
 
   const loadItemDetails = useCallback(async (itemId: number) => {

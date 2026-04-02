@@ -43,7 +43,7 @@ Defined in `packages/database/package.json`:
 
 ## Schema (Sprint 1 complete)
 
-12 tables with tenant isolation:
+11 tables with tenant isolation:
 
 | Table | RLS | Purpose | Since |
 |-------|-----|---------|-------|
@@ -127,12 +127,12 @@ Migrations live in `supabase/migrations/` with timestamp-prefixed filenames.
 7. Push branch → create PR → merge
 8. Owner runs `supabase db push` after merge
 9. Run `pnpm db:types` (after migration applied)
-9. Verify: `pnpm typecheck && pnpm build`
+10. Verify: `pnpm typecheck && pnpm build`
 
 <!-- ORACLE-META
 Written by codebase-oracle (manual) | 2026-04-02
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 95%
-Updated: Sprint 1 S5 complete (2026-04-02)
+Updated: Sprint 1 S6 complete (2026-04-03)
 Unknowns: 0
 -->

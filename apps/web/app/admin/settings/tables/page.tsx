@@ -23,9 +23,13 @@ export default async function TablesPage() {
       .order("number"),
   ]);
 
-  const branches = branchesRes.data ?? [];
-  const zones = zonesRes.data ?? [];
-  const tables = (tablesRes.data ?? []).map((t) => ({
+  if (branchesRes.error) throw new Error("Không thể tải chi nhánh");
+  if (zonesRes.error) throw new Error("Không thể tải khu vực");
+  if (tablesRes.error) throw new Error("Không thể tải bàn");
+
+  const branches = branchesRes.data;
+  const zones = zonesRes.data;
+  const tables = tablesRes.data.map((t) => ({
     id: t.id,
     branch_id: t.branch_id,
     zone_id: t.zone_id,

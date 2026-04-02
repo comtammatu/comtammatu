@@ -9,5 +9,5 @@
 - [x] S2: Branch CRUD + system_settings
 - [x] S3: Staff management
 - [x] S4: Menu CRUD + sides
-- [ ] S5: Tables & zones
-- [ ] S6: Polish + /review
+- [x] S5: Tables & zones
+- [x] S6: Polish + /review

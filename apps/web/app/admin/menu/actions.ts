@@ -334,48 +334,28 @@ export async function saveVariants(
   const ctx = await getAuthContext(MENU_MANAGER_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
+  const { supabase } = ctx;
 
-  // TODO: After db:types → supabase.rpc("save_item_variants", { p_item_id, p_variants })
-  // Verify item belongs to tenant
-  const { data: item } = await supabase
-    .from("menu_items")
-    .select("id")
-    .eq("id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
-
-  if (!item) {
-    return { success: false, error: "Món ăn không tồn tại" };
-  }
-
-  // Non-atomic: delete+insert (RPC save_item_variants is atomic alternative)
-  const { error: delError } = await supabase
-    .from("menu_item_variants")
-    .delete()
-    .eq("item_id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (delError) {
-    return { success: false, error: mapDbError(delError.code) };
-  }
-
-  if (parsed.data.length > 0) {
-    const { error: insError } = await supabase
-      .from("menu_item_variants")
-      .insert(
+  // RPC types available after migration applied + pnpm db:types
+  const { error } = await (supabase.rpc as CallableFunction)(
+    "save_item_variants",
+    {
+      p_item_id: parsedId.data,
+      p_variants: JSON.stringify(
         parsed.data.map((v, idx) => ({
-          tenant_id: claims.tenant_id,
-          item_id: parsedId.data,
           name: v.name,
           price_adjustment: v.price_adjustment,
           sort_order: v.sort_order ?? idx,
         })),
-      );
+      ),
+    },
+  );
 
-    if (insError) {
-      return { success: false, error: mapDbError(insError.code) };
+  if (error) {
+    if (error.message === "item not found") {
+      return { success: false, error: "Món ăn không tồn tại" };
     }
+    return { success: false, error: mapDbError(error.code) };
   }
 
   revalidatePath("/admin/menu");
@@ -399,48 +379,28 @@ export async function saveModifiers(
   const ctx = await getAuthContext(MENU_MANAGER_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
+  const { supabase } = ctx;
 
-  // TODO: After db:types → supabase.rpc("save_item_modifiers", { p_item_id, p_modifiers })
-  // Verify item belongs to tenant
-  const { data: item } = await supabase
-    .from("menu_items")
-    .select("id")
-    .eq("id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
-
-  if (!item) {
-    return { success: false, error: "Món ăn không tồn tại" };
-  }
-
-  // Non-atomic: delete+insert (RPC save_item_modifiers is atomic alternative)
-  const { error: delError } = await supabase
-    .from("menu_item_modifiers")
-    .delete()
-    .eq("item_id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (delError) {
-    return { success: false, error: mapDbError(delError.code) };
-  }
-
-  if (parsed.data.length > 0) {
-    const { error: insError } = await supabase
-      .from("menu_item_modifiers")
-      .insert(
+  // RPC types available after migration applied + pnpm db:types
+  const { error } = await (supabase.rpc as CallableFunction)(
+    "save_item_modifiers",
+    {
+      p_item_id: parsedId.data,
+      p_modifiers: JSON.stringify(
         parsed.data.map((m, idx) => ({
-          tenant_id: claims.tenant_id,
-          item_id: parsedId.data,
           name: m.name,
           price: m.price,
           sort_order: m.sort_order ?? idx,
         })),
-      );
+      ),
+    },
+  );
 
-    if (insError) {
-      return { success: false, error: mapDbError(insError.code) };
+  if (error) {
+    if (error.message === "item not found") {
+      return { success: false, error: "Món ăn không tồn tại" };
     }
+    return { success: false, error: mapDbError(error.code) };
   }
 
   revalidatePath("/admin/menu");
@@ -471,51 +431,30 @@ export async function saveSides(
   const ctx = await getAuthContext(MENU_MANAGER_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
+  const { supabase } = ctx;
 
-  // TODO: After db:types → supabase.rpc("save_item_sides", { p_main_item_id, p_sides })
   const validatedItemId = parsed.data.mainItemId;
   const validatedSides = parsed.data.sideItemIds;
 
-  // Non-atomic: delete+insert (RPC save_item_sides is atomic alternative)
-  // Verify main item belongs to tenant
-  const { data: item } = await supabase
-    .from("menu_items")
-    .select("id")
-    .eq("id", validatedItemId)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
-
-  if (!item) {
-    return { success: false, error: "Món ăn không tồn tại" };
-  }
-
-  // Delete all existing sides for this item, then insert fresh
-  const { error: delError } = await supabase
-    .from("menu_item_available_sides")
-    .delete()
-    .eq("main_item_id", validatedItemId)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (delError) {
-    return { success: false, error: mapDbError(delError.code) };
-  }
-
-  if (validatedSides.length > 0) {
-    const { error: insError } = await supabase
-      .from("menu_item_available_sides")
-      .insert(
+  // RPC types available after migration applied + pnpm db:types
+  const { error } = await (supabase.rpc as CallableFunction)(
+    "save_item_sides",
+    {
+      p_main_item_id: validatedItemId,
+      p_sides: JSON.stringify(
         validatedSides.map((s) => ({
-          tenant_id: claims.tenant_id,
-          main_item_id: validatedItemId,
           side_item_id: s.id,
           is_default: s.is_default,
         })),
-      );
+      ),
+    },
+  );
 
-    if (insError) {
-      return { success: false, error: mapDbError(insError.code) };
+  if (error) {
+    if (error.message === "item not found") {
+      return { success: false, error: "Món ăn không tồn tại" };
     }
+    return { success: false, error: mapDbError(error.code) };
   }
 
   revalidatePath("/admin/menu");

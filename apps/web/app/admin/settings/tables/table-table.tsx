@@ -71,7 +71,8 @@ export function TableTable({ tables, zones }: TableTableProps) {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function handleDelete(id: number) {
+  function handleDelete(e: React.MouseEvent, id: number) {
+    e.preventDefault();
     startTransition(async () => {
       const result = await deleteTable(id);
       if (!result.success) {
@@ -132,14 +133,14 @@ export function TableTable({ tables, zones }: TableTableProps) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setEditTable(table)}>
+                      <DropdownMenuItem onSelect={() => setEditTable(table)}>
                         <Pencil className="mr-2 size-4" />
                         Sửa
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className="text-destructive"
-                        onClick={() => setDeleteId(table.id)}
+                        onSelect={() => setDeleteId(table.id)}
                       >
                         <Trash2 className="mr-2 size-4" />
                         Xóa
@@ -179,7 +180,7 @@ export function TableTable({ tables, zones }: TableTableProps) {
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isPending}
-              onClick={() => deleteId !== null && handleDelete(deleteId)}
+              onClick={(e) => deleteId !== null && handleDelete(e, deleteId)}
             >
               Xóa
             </AlertDialogAction>
