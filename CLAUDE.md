@@ -9,7 +9,7 @@ pnpm dev          # Start dev server (Turbopack)
 pnpm build        # Production build
 pnpm typecheck    # Type checking across all packages
 pnpm lint         # ESLint
-pnpm db:types     # Regenerate Supabase types (after migration)
+pnpm db:types     # Regenerate Supabase types (after migration merged & applied)
 ```
 
 ## Constraints
@@ -22,7 +22,8 @@ pnpm db:types     # Regenerate Supabase types (after migration)
 - NEVER import `@comtammatu/database` barrel in "use client" components
 - NEVER store scope in localStorage/Context — URL params only
 - Multi-item atomic writes → Postgres RPC function
-- After SQL migration → `pnpm db:types`
+- After SQL migration merged & applied → `pnpm db:types`
+- NEVER apply migrations directly — write file → PR → merge → owner applies manually
 - ACL single source: `packages/shared/src/auth/module-acl.ts`
 
 ## Architecture
@@ -75,16 +76,34 @@ Money: `NUMERIC(15,2)` | Time: `TIMESTAMPTZ` | PK: `BIGINT GENERATED ALWAYS AS I
 
 ## References
 
+### System overview (read first for onboarding)
+
+- Codebase map + module index: `docs/CODEBASE_MAP.md`
+- Auth & ACL (roles, JWT, proxy, RLS): `docs/modules/auth.md`
+- Database (clients, types, migrations, RLS patterns): `docs/modules/database.md`
+- Web App (routes, layouts, server actions): `docs/modules/web-app.md`
+- UI (shadcn components, styling): `docs/modules/ui.md`
+- Security (rate limiting): `docs/modules/security.md`
+- Infrastructure (monorepo, build, deploy): `docs/modules/infrastructure.md`
+
+### Planning & specs
+
 - Roadmap + phases: `docs/plan/roadmap.md`
 - Architecture decisions: `docs/plan/decisions.md`
 - System architecture: `docs/spec/architecture.md`
 - Database schema: `docs/spec/database-schema.md`
+
+### Business domain
+
 - CTCP business context: `docs/ref/business-context.md`
 - Setup guide: `docs/ref/setup.md`
 - HĐĐT & Thuế GTGT: `docs/ref/einvoice-tax.md`
 - Hợp đồng lao động: `docs/ref/labor-contracts.md`
 - Kho hàng (Inventory): `docs/ref/inventory.md`
 - Thuế TNCN & Lương: `docs/ref/payroll-pit.md`
+
+### Meta-learning
+
 - Regression rules: `tasks/regressions.md`
 - Lessons learned: `tasks/lessons.md`
 - Current tasks: `tasks/todo.md`

@@ -15,7 +15,8 @@
 - [ ] UNIQUE constraints composite with tenant_id
 - [ ] PK: BIGINT GENERATED ALWAYS AS IDENTITY
 - [ ] Money: NUMERIC(15,2). Time: TIMESTAMPTZ. Text: TEXT (no VARCHAR)
-- [ ] `pnpm db:types` after migration
+- [ ] Migration file written (NEVER apply before PR merge — owner runs `supabase db push` after merge)
+- [ ] `pnpm db:types` after migration merged & applied
 
 ## New Server Action
 

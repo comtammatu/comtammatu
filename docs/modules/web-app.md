@@ -2,7 +2,7 @@
 
 ## Overview
 
-Next.js 16.2 application with App Router. Serves four user surfaces: Admin (management), POS (cashier/waiter), KDS (chef), and Employee portal. Currently at v0.1.1 — admin shell scaffold is built, feature pages are placeholders awaiting Sprint 1.
+Next.js 16.2 application with App Router. Serves four user surfaces: Admin (management), POS (cashier/waiter), KDS (chef), and Employee portal. Sprint 1 complete (S1–S6): admin shell, branches, staff, menu, tables/zones, and security polish are shipped. POS/KDS/Employee remain placeholders for Sprint 2a.
 
 **Owner:** `apps/web/`
 
@@ -24,18 +24,18 @@ apps/web/app/
 │   ├── components/
 │   │   └── admin-shell.tsx # Sidebar nav, header, role-based filtering
 │   ├── dashboard/          # StatCard demo (hardcoded)
-│   ├── menu/               # Placeholder
+│   ├── menu/               # Menu management: categories, items, variants, modifiers, sides (S4)
 │   ├── inventory/          # Placeholder
 │   ├── orders/             # Placeholder
-│   ├── staff/              # Placeholder
+│   ├── staff/              # Staff CRUD with role hierarchy auth (S3)
 │   ├── hr/                 # Placeholder (owner/super_manager only)
 │   ├── crm/                # Placeholder
 │   ├── finance/            # Placeholder (owner/super_manager only)
 │   ├── reports/            # Placeholder
 │   └── settings/
-│       ├── general/
-│       ├── branches/
-│       └── tables/
+│       ├── general/        # System settings key/value (S2)
+│       ├── branches/       # Branch CRUD + set_headquarters (S2)
+│       └── tables/         # Tables & zones per branch (S5)
 │
 ├── br/[branchId]/
 │   ├── pos/                # POS (cashier, waiter, branch_manager)
@@ -114,11 +114,12 @@ Browser request
 
 - **Proxy as single auth gate:** All auth enforcement happens in `proxy.ts` before any route code runs. Layout-level checks are defense-in-depth, not primary.
 - **RSC by default:** Pages are React Server Components. Only interactive elements (forms, dropdowns) use "use client".
-- **Placeholder pages:** Sprint 1 will replace placeholders. The shell + routing + ACL are validated and ready.
+- **Remaining placeholders:** inventory, orders, hr, crm, finance, reports, POS, KDS, employee. These will be built in Sprint 2a–3.
 
 <!-- ORACLE-META
 Written by codebase-oracle (manual) | 2026-04-02
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 95%
+Updated: Sprint 1 S6 complete (2026-04-03)
 Unknowns: 0
 -->

@@ -73,7 +73,15 @@ Optional (install globally as needed):
 
 Installs 31 gstack skills (`/ship`, `/review`, `/qa`, `/cso`, ...). Requires Bun.
 
-### 3c. Verify Claude Code
+### 3c. Claude Swarm (multi-agent coordination)
+
+```bash
+./scripts/setup-swarm.sh
+```
+
+Installs claude-swarm MCP server for multi-agent collaboration. Allows multiple Claude Code sessions to discover each other, form rooms, delegate tasks, and share memory. See `.claude/rules/swarm.md` for agent roles and conventions.
+
+### 3d. Verify Claude Code
 
 Open Claude Code in project root and check:
 
@@ -84,11 +92,10 @@ Open Claude Code in project root and check:
 
 ## 4. Database Setup
 
-Apply migrations to your Supabase project:
+Link your Supabase project (migrations are applied by owner after PR merge):
 
 ```bash
 supabase link --project-ref YOUR_PROJECT_ID
-supabase db push
 ```
 
 ### Enable JWT Custom Claims Hook
@@ -153,13 +160,13 @@ Vercel Dashboard → Project → Settings → Environment Variables.
 
 Thêm các biến sau cho **Production** và **Preview**:
 
-| Variable                         | Scope              | Source         |
-| -------------------------------- | ------------------ | -------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`       | Production+Preview | Supabase → API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`  | Production+Preview | Supabase → API |
-| `SUPABASE_SERVICE_ROLE_KEY`      | Production+Preview | Supabase → API |
-| `UPSTASH_REDIS_REST_URL`         | Production+Preview | Upstash console |
-| `UPSTASH_REDIS_REST_TOKEN`       | Production+Preview | Upstash console |
+| Variable                        | Scope              | Source          |
+| ------------------------------- | ------------------ | --------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Production+Preview | Supabase → API  |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Production+Preview | Supabase → API  |
+| `SUPABASE_SERVICE_ROLE_KEY`     | Production+Preview | Supabase → API  |
+| `UPSTASH_REDIS_REST_URL`        | Production+Preview | Upstash console |
+| `UPSTASH_REDIS_REST_TOKEN`      | Production+Preview | Upstash console |
 
 > **Note:** `VERCEL_URL` is auto-injected by Vercel — do NOT set manually.
 > `SUPABASE_PROJECT_ID` is only needed for `pnpm db:types` (local/CI), not Vercel runtime.
@@ -172,10 +179,10 @@ GitHub → Repo Settings → Secrets and variables → Actions → New repositor
 
 CI build cần `NEXT_PUBLIC_*` vars để Next.js build thành công:
 
-| Secret                           | Purpose                      |
-| -------------------------------- | ---------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`       | Next.js build (inlined)      |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`  | Next.js build (inlined)      |
+| Secret                          | Purpose                 |
+| ------------------------------- | ----------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Next.js build (inlined) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Next.js build (inlined) |
 
 ### CI Workflow Usage
 
@@ -191,13 +198,13 @@ Trong `.github/workflows/ci.yml`, thay placeholder bằng secrets:
 
 ### Optional Secrets (thêm khi cần)
 
-| Secret                     | When needed                        |
-| -------------------------- | ---------------------------------- |
-| `SUPABASE_SERVICE_ROLE_KEY`| CI cần seed data hoặc run RPC      |
-| `SUPABASE_PROJECT_ID`      | CI auto-generate types             |
-| `SUPABASE_ACCESS_TOKEN`    | CI `supabase db push` (CLI token)  |
-| `UPSTASH_REDIS_REST_URL`   | CI integration tests               |
-| `UPSTASH_REDIS_REST_TOKEN` | CI integration tests               |
+| Secret                      | When needed                       |
+| --------------------------- | --------------------------------- |
+| `SUPABASE_SERVICE_ROLE_KEY` | CI cần seed data hoặc run RPC     |
+| `SUPABASE_PROJECT_ID`       | CI auto-generate types            |
+| `SUPABASE_ACCESS_TOKEN`     | CI `supabase db push` (CLI token) |
+| `UPSTASH_REDIS_REST_URL`    | CI integration tests              |
+| `UPSTASH_REDIS_REST_TOKEN`  | CI integration tests              |
 
 ## Quick Reference — What's Gitignored (per-machine setup)
 
@@ -206,3 +213,4 @@ Trong `.github/workflows/ci.yml`, thay placeholder bằng secrets:
 | `apps/web/.env.local`    | `cp .env.example apps/web/.env.local` | Runtime env vars        |
 | `.mcp.json`              | `cp .mcp.json.example .mcp.json`      | Claude Code MCP servers |
 | `.claude/skills/gstack/` | `./scripts/setup-gstack.sh`           | 31 gstack skills        |
+| `~/.claude-swarm/`       | `./scripts/setup-swarm.sh`            | Multi-agent coordination |

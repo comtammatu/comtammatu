@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
+import type { StaffRole } from "@comtammatu/shared/auth";
+import { getAuthContext } from "../../_lib/auth";
+
+const SETTINGS_ROLES: StaffRole[] = ["owner", "super_manager"];
 
 /* ─── Schemas ─── */
 
@@ -22,22 +24,6 @@ const updateBranchSchema = branchSchema.extend({
 interface ActionResult {
   success: boolean;
   error?: string;
-}
-
-/* ─── Helpers ─── */
-
-async function getAuthContext() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
-  const claims = extractClaims(user.app_metadata);
-  if (!claims) return null;
-
-  return { supabase, claims };
 }
 
 /* ─── Actions ─── */
@@ -59,8 +45,8 @@ export async function createBranch(
     };
   }
 
-  const ctx = await getAuthContext();
-  if (!ctx) return { success: false, error: "Chưa đăng nhập" };
+  const ctx = await getAuthContext(SETTINGS_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
 
@@ -75,7 +61,10 @@ export async function createBranch(
     if (error.code === "23505") {
       return { success: false, error: "Tên chi nhánh đã tồn tại" };
     }
-    return { success: false, error: "Không thể tạo chi nhánh. Vui lòng thử lại." };
+    return {
+      success: false,
+      error: "Không thể tạo chi nhánh. Vui lòng thử lại.",
+    };
   }
 
   revalidatePath("/admin/settings/branches");
@@ -100,8 +89,8 @@ export async function updateBranch(
     };
   }
 
-  const ctx = await getAuthContext();
-  if (!ctx) return { success: false, error: "Chưa đăng nhập" };
+  const ctx = await getAuthContext(SETTINGS_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
 
@@ -126,11 +115,16 @@ export async function updateBranch(
   return { success: true };
 }
 
+const idSchema = z.coerce.number().int().positive();
+
 export async function toggleBranchActive(
   branchId: number,
 ): Promise<ActionResult> {
-  const ctx = await getAuthContext();
-  if (!ctx) return { success: false, error: "Chưa đăng nhập" };
+  const parsed = idSchema.safeParse(branchId);
+  if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
+
+  const ctx = await getAuthContext(SETTINGS_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
 
@@ -138,7 +132,7 @@ export async function toggleBranchActive(
   const { data: branch } = await supabase
     .from("branches")
     .select("is_active")
-    .eq("id", branchId)
+    .eq("id", parsed.data)
     .eq("tenant_id", claims.tenant_id)
     .single();
 
@@ -149,7 +143,7 @@ export async function toggleBranchActive(
   const { error } = await supabase
     .from("branches")
     .update({ is_active: !(branch.is_active ?? true) })
-    .eq("id", branchId)
+    .eq("id", parsed.data)
     .eq("tenant_id", claims.tenant_id);
 
   if (error) {
@@ -160,17 +154,18 @@ export async function toggleBranchActive(
   return { success: true };
 }
 
-export async function setHeadquarters(
-  branchId: number,
-): Promise<ActionResult> {
-  const ctx = await getAuthContext();
-  if (!ctx) return { success: false, error: "Chưa đăng nhập" };
+export async function setHeadquarters(branchId: number): Promise<ActionResult> {
+  const parsed = idSchema.safeParse(branchId);
+  if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
+
+  const ctx = await getAuthContext(SETTINGS_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase } = ctx;
 
   // Atomic RPC — avoids TOCTOU race from two separate UPDATEs
   const { error } = await supabase.rpc("set_headquarters", {
-    p_branch_id: branchId,
+    p_branch_id: parsed.data,
   });
 
   if (error) {

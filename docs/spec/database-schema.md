@@ -21,34 +21,35 @@ Single row — Cơm Tấm Má Tư CTCP.
 
 ### branches
 
-| Column          | Type               | Notes                   |
-| --------------- | ------------------ | ----------------------- |
-| id              | BIGINT PK          |                         |
-| tenant_id       | BIGINT FK(tenants)  | ON DELETE CASCADE       |
-| name            | TEXT               | UNIQUE(name, tenant_id) |
-| address         | TEXT               |                         |
-| phone           | TEXT               |                         |
-| is_active       | BOOLEAN            | default true            |
-| is_headquarters | BOOLEAN            | default false           |
-| created_at      | TIMESTAMPTZ        | default now()           |
+| Column          | Type               | Notes                       |
+| --------------- | ------------------ | --------------------------- |
+| id              | BIGINT PK          |                             |
+| tenant_id       | BIGINT FK(tenants) | ON DELETE CASCADE           |
+| name            | TEXT               | UNIQUE(name, tenant_id)     |
+| address         | TEXT               |                             |
+| phone           | TEXT               |                             |
+| is_active       | BOOLEAN            | default true                |
+| is_headquarters | BOOLEAN            | default false               |
+| created_at      | TIMESTAMPTZ        | default now()               |
 | updated_at      | TIMESTAMPTZ        | default now(), auto-trigger |
 
 ### profiles (staff)
 
-| Column     | Type                   | Notes                                           |
-| ---------- | ---------------------- | ----------------------------------------------- |
-| id         | UUID PK FK(auth.users) | ON DELETE CASCADE                                |
-| tenant_id  | BIGINT FK(tenants)     | ON DELETE CASCADE                                |
+| Column     | Type                   | Notes                                             |
+| ---------- | ---------------------- | ------------------------------------------------- |
+| id         | UUID PK FK(auth.users) | ON DELETE CASCADE                                 |
+| tenant_id  | BIGINT FK(tenants)     | ON DELETE CASCADE                                 |
 | branch_id  | BIGINT FK(branches)    | ON DELETE SET NULL; CHECK: required for ops roles |
-| role       | staff_role ENUM        | default 'waiter'                                 |
-| full_name  | TEXT                   |                                                  |
-| phone      | TEXT                   |                                                  |
-| avatar_url | TEXT                   |                                                  |
-| is_active  | BOOLEAN                | default true                                     |
-| created_at | TIMESTAMPTZ            | default now()                                    |
-| updated_at | TIMESTAMPTZ            | default now(), auto-trigger                      |
+| role       | staff_role ENUM        | default 'waiter'                                  |
+| full_name  | TEXT                   |                                                   |
+| phone      | TEXT                   |                                                   |
+| avatar_url | TEXT                   |                                                   |
+| is_active  | BOOLEAN                | default true                                      |
+| created_at | TIMESTAMPTZ            | default now()                                     |
+| updated_at | TIMESTAMPTZ            | default now(), auto-trigger                       |
 
 **Constraint** `chk_branch_required_for_ops`:
+
 - `branch_id IS NOT NULL` required when `role IN ('cashier', 'waiter', 'chef', 'branch_manager')`
 - `branch_id` nullable for: `owner`, `super_manager`, `area_manager`, `office`
 
@@ -62,16 +63,16 @@ owner, super_manager, area_manager, branch_manager, cashier, waiter, chef, offic
 
 ### Role Scoping Notes
 
-| Role | Branch required | Scope | Notes |
-|------|----------------|-------|-------|
-| owner | No | Tenant-wide | Unrestricted |
-| super_manager | No | Tenant-wide | Cannot modify owner |
-| area_manager | No | Tenant-wide (temporary) | No area mapping table yet; see Future Work |
-| branch_manager | Yes | Own branch | Can manage cashier/waiter/chef in own branch only |
-| cashier | Yes | Own branch | Route: `/br/[branchId]/pos` |
-| waiter | Yes | Own branch | Route: `/br/[branchId]/pos` |
-| chef | Yes | Own branch | Route: `/br/[branchId]/kds` |
-| office | No | HQ-wide | Route: `/employee` |
+| Role           | Branch required | Scope                   | Notes                                             |
+| -------------- | --------------- | ----------------------- | ------------------------------------------------- |
+| owner          | No              | Tenant-wide             | Unrestricted                                      |
+| super_manager  | No              | Tenant-wide             | Cannot modify owner                               |
+| area_manager   | No              | Tenant-wide (temporary) | No area mapping table yet; see Future Work        |
+| branch_manager | Yes             | Own branch              | Can manage cashier/waiter/chef in own branch only |
+| cashier        | Yes             | Own branch              | Route: `/br/[branchId]/pos`                       |
+| waiter         | Yes             | Own branch              | Route: `/br/[branchId]/pos`                       |
+| chef           | Yes             | Own branch              | Route: `/br/[branchId]/kds`                       |
+| office         | No              | HQ-wide                 | Route: `/employee`                                |
 
 ### system_settings (Sprint 1 S2)
 
@@ -93,26 +94,26 @@ Tenant-scoped key/value configuration.
 
 ## Indexes
 
-| Index | Columns | Purpose |
-|-------|---------|---------|
-| idx_branches_tenant | `branches(tenant_id)` | FK lookup, RLS filter |
-| idx_profiles_tenant_branch | `profiles(tenant_id, branch_id)` | Branch-scoped RLS |
-| idx_profiles_tenant_role | `profiles(tenant_id, role)` | Role filtering in admin UI |
-| idx_system_settings_tenant | `system_settings(tenant_id)` | FK lookup, RLS filter |
+| Index                      | Columns                          | Purpose                    |
+| -------------------------- | -------------------------------- | -------------------------- |
+| idx_branches_tenant        | `branches(tenant_id)`            | FK lookup, RLS filter      |
+| idx_profiles_tenant_branch | `profiles(tenant_id, branch_id)` | Branch-scoped RLS          |
+| idx_profiles_tenant_role   | `profiles(tenant_id, role)`      | Role filtering in admin UI |
+| idx_system_settings_tenant | `system_settings(tenant_id)`     | FK lookup, RLS filter      |
 
 ## Auth Helper Functions
 
-| Function                          | Returns | Purpose                                        |
-| --------------------------------- | ------- | ---------------------------------------------- |
-| `auth_tenant_id()`                | BIGINT  | Extract tenant_id from JWT app_metadata        |
-| `auth_branch_id()`                | BIGINT  | Extract branch_id from JWT app_metadata        |
-| `auth_role()`                     | TEXT    | Extract user_role from JWT app_metadata        |
-| `custom_access_token_hook(event)` | JSONB   | Inject claims into JWT (SECURITY DEFINER)      |
-| `handle_new_user()`               | TRIGGER | Auto-create profile from `raw_app_meta_data`   |
-| `update_my_profile()`             | void    | Self-update safe fields only (SECURITY DEFINER) |
+| Function                          | Returns | Purpose                                             |
+| --------------------------------- | ------- | --------------------------------------------------- |
+| `auth_tenant_id()`                | BIGINT  | Extract tenant_id from JWT app_metadata             |
+| `auth_branch_id()`                | BIGINT  | Extract branch_id from JWT app_metadata             |
+| `auth_role()`                     | TEXT    | Extract user_role from JWT app_metadata             |
+| `custom_access_token_hook(event)` | JSONB   | Inject claims into JWT (SECURITY DEFINER)           |
+| `handle_new_user()`               | TRIGGER | Auto-create profile from `raw_app_meta_data`        |
+| `update_my_profile()`             | void    | Self-update safe fields only (SECURITY DEFINER)     |
 | `admin_update_profile()`          | void    | Manager update with scope checks (SECURITY DEFINER) |
-| `update_updated_at()`             | TRIGGER | Auto-set `updated_at` on row update           |
-| `set_headquarters(p_branch_id)`   | void    | Atomic HQ swap — unset old + set new in one tx |
+| `update_updated_at()`             | TRIGGER | Auto-set `updated_at` on row update                 |
+| `set_headquarters(p_branch_id)`   | void    | Atomic HQ swap — unset old + set new in one tx      |
 
 ### handle_new_user() — Invite-Only Flow
 
@@ -131,14 +132,15 @@ Tenant-scoped key/value configuration.
 
 Actor scope restrictions:
 
-| Actor | Can modify | Target role limits | Branch limits |
-|-------|-----------|-------------------|---------------|
-| owner | Anyone in tenant | All roles | Any branch |
-| super_manager | All except owner | All except owner | Any branch |
-| area_manager | branch_manager and below | Cannot set owner/super_manager/area_manager | Any branch (temporary) |
-| branch_manager | cashier/waiter/chef in own branch | cashier/waiter/chef only | Own branch only |
+| Actor          | Can modify                        | Target role limits                          | Branch limits          |
+| -------------- | --------------------------------- | ------------------------------------------- | ---------------------- |
+| owner          | Anyone in tenant                  | All roles                                   | Any branch             |
+| super_manager  | All except owner                  | All except owner                            | Any branch             |
+| area_manager   | branch_manager and below          | Cannot set owner/super_manager/area_manager | Any branch (temporary) |
+| branch_manager | cashier/waiter/chef in own branch | cashier/waiter/chef only                    | Own branch only        |
 
 Additional checks:
+
 - `branch_manager` cannot modify peer `branch_manager`
 - `super_manager` cannot modify/deactivate `owner`
 - Operational roles (`cashier`, `waiter`, `chef`, `branch_manager`) require `branch_id`
@@ -147,24 +149,24 @@ Additional checks:
 
 ## RLS Policies (v0.1.1)
 
-| Table    | Policy                                  | Roles / Scope                                   |
-| -------- | --------------------------------------- | ------------------------------------------------ |
-| tenants  | SELECT own tenant                       | all authenticated                                |
-| branches | SELECT in tenant                        | all authenticated                                |
-| branches | ALL (manage)                            | owner, super_manager                             |
-| profiles | SELECT branch-scoped                    | self + same branch; managers/office see wider (see below) |
-| profiles | UPDATE own safe fields                  | self — `full_name`, `phone`, `avatar_url` only   |
-| profiles | (no direct INSERT/DELETE)               | All profile mutations go through RPCs only        |
-| system_settings | SELECT in tenant                 | all authenticated                                |
-| system_settings | INSERT/UPDATE/DELETE             | owner, super_manager only                        |
+| Table           | Policy                    | Roles / Scope                                             |
+| --------------- | ------------------------- | --------------------------------------------------------- |
+| tenants         | SELECT own tenant         | all authenticated                                         |
+| branches        | SELECT in tenant          | all authenticated                                         |
+| branches        | ALL (manage)              | owner, super_manager                                      |
+| profiles        | SELECT branch-scoped      | self + same branch; managers/office see wider (see below) |
+| profiles        | UPDATE own safe fields    | self — `full_name`, `phone`, `avatar_url` only            |
+| profiles        | (no direct INSERT/DELETE) | All profile mutations go through RPCs only                |
+| system_settings | SELECT in tenant          | all authenticated                                         |
+| system_settings | INSERT/UPDATE/DELETE      | owner, super_manager only                                 |
 
 ### profiles SELECT scope detail
 
-| Viewer role | Sees |
-|------------|------|
-| owner, super_manager, area_manager, office | All profiles in tenant |
-| branch_manager | Own profile + profiles in own branch |
-| cashier, waiter, chef | Own profile + profiles in own branch |
+| Viewer role                                | Sees                                 |
+| ------------------------------------------ | ------------------------------------ |
+| owner, super_manager, area_manager, office | All profiles in tenant               |
+| branch_manager                             | Own profile + profiles in own branch |
+| cashier, waiter, chef                      | Own profile + profiles in own branch |
 
 > Note: `office` has tenant-wide read access for HR functions (contracts, payroll) per business spec.
 
@@ -186,6 +188,7 @@ Additional checks:
 ### area_manager scope
 
 `area_manager` currently has tenant-wide access. If business needs area-level scoping:
+
 - Add `areas` table + `area_branches(area_id, branch_id)` mapping
 - Add `area_id` FK to `profiles` for area_manager
 - Update RLS and `admin_update_profile()` accordingly
@@ -194,16 +197,138 @@ Additional checks:
 
 Admin invite creates auth user via Supabase Admin API with `raw_app_meta_data` containing `tenant_id`, `branch_id`, `role`. No public signup endpoint.
 
+## Menu Tables (Sprint 1 S4)
+
+### menu_categories
+
+| Column     | Type               | Notes                                       |
+| ---------- | ------------------ | ------------------------------------------- |
+| id         | BIGINT PK          | GENERATED ALWAYS AS IDENTITY                |
+| tenant_id  | BIGINT FK(tenants) | ON DELETE CASCADE                           |
+| name       | TEXT NOT NULL      | UNIQUE(name, tenant_id)                     |
+| type       | TEXT NOT NULL      | CHECK: main_dish, side_dish, drink, dessert |
+| sort_order | INT                | default 0                                   |
+| is_active  | BOOLEAN            | default true                                |
+| created_at | TIMESTAMPTZ        |                                             |
+| updated_at | TIMESTAMPTZ        | auto-trigger                                |
+
+### menu_items
+
+| Column                | Type                       | Notes                        |
+| --------------------- | -------------------------- | ---------------------------- |
+| id                    | BIGINT PK                  | GENERATED ALWAYS AS IDENTITY |
+| tenant_id             | BIGINT FK(tenants)         | ON DELETE CASCADE            |
+| category_id           | BIGINT FK(menu_categories) | ON DELETE CASCADE            |
+| name                  | TEXT NOT NULL              | UNIQUE(name, tenant_id)      |
+| description           | TEXT                       |                              |
+| base_price            | NUMERIC(15,2) NOT NULL     |                              |
+| image_url             | TEXT                       |                              |
+| is_active             | BOOLEAN                    | default true                 |
+| sort_order            | INT                        | default 0                    |
+| created_at/updated_at | TIMESTAMPTZ                |                              |
+
+### menu_item_variants
+
+| Column           | Type                  | Notes                            |
+| ---------------- | --------------------- | -------------------------------- |
+| id               | BIGINT PK             |                                  |
+| tenant_id        | BIGINT FK             |                                  |
+| item_id          | BIGINT FK(menu_items) | ON DELETE CASCADE                |
+| name             | TEXT NOT NULL         | UNIQUE(name, item_id, tenant_id) |
+| price_adjustment | NUMERIC(15,2)         | default 0, +/- from base_price   |
+| is_active        | BOOLEAN               | default true                     |
+| sort_order       | INT                   | default 0                        |
+
+### menu_item_modifiers
+
+| Column     | Type                  | Notes                            |
+| ---------- | --------------------- | -------------------------------- |
+| id         | BIGINT PK             |                                  |
+| tenant_id  | BIGINT FK             |                                  |
+| item_id    | BIGINT FK(menu_items) | ON DELETE CASCADE                |
+| name       | TEXT NOT NULL         | UNIQUE(name, item_id, tenant_id) |
+| price      | NUMERIC(15,2)         | default 0, absolute price        |
+| is_active  | BOOLEAN               | default true                     |
+| sort_order | INT                   | default 0                        |
+
+### menu_item_available_sides
+
+Junction table: which side items can pair with which main items.
+
+| Column                                        | Type                  | Notes             |
+| --------------------------------------------- | --------------------- | ----------------- |
+| id                                            | BIGINT PK             |                   |
+| tenant_id                                     | BIGINT FK             |                   |
+| main_item_id                                  | BIGINT FK(menu_items) | ON DELETE CASCADE |
+| side_item_id                                  | BIGINT FK(menu_items) | ON DELETE CASCADE |
+| is_default                                    | BOOLEAN               | default false     |
+| created_at                                    | TIMESTAMPTZ           |                   |
+| UNIQUE(main_item_id, side_item_id, tenant_id) |                       |                   |
+
+**RLS for all 5 menu tables:**
+
+- SELECT: all authenticated in tenant
+- INSERT/UPDATE/DELETE: owner, super_manager, area_manager, branch_manager
+
+### Menu Indexes
+
+| Index                              | Columns                                 | Purpose          |
+| ---------------------------------- | --------------------------------------- | ---------------- |
+| idx_menu_categories_tenant         | menu_categories(tenant_id)              | RLS filter       |
+| idx_menu_items_tenant              | menu_items(tenant_id)                   | RLS filter       |
+| idx_menu_items_category            | menu_items(category_id)                 | Category lookup  |
+| idx_menu_item_variants_item        | menu_item_variants(item_id)             | Item lookup      |
+| idx_menu_item_modifiers_item       | menu_item_modifiers(item_id)            | Item lookup      |
+| idx_menu_item_available_sides_main | menu_item_available_sides(main_item_id) | Main item lookup |
+| idx_menu_item_available_sides_side | menu_item_available_sides(side_item_id) | Side item lookup |
+
+## Tables & Zones (Sprint 1 S5)
+
+### branch_zones
+
+| Column     | Type                | Notes                              |
+| ---------- | ------------------- | ---------------------------------- |
+| id         | BIGINT PK           | GENERATED ALWAYS AS IDENTITY       |
+| branch_id  | BIGINT FK(branches) | ON DELETE CASCADE                  |
+| tenant_id  | BIGINT FK(tenants)  | ON DELETE CASCADE                  |
+| name       | TEXT NOT NULL       | UNIQUE(branch_id, name, tenant_id) |
+| sort_order | INT                 | default 0                          |
+| created_at | TIMESTAMPTZ         | default now()                      |
+
+### tables
+
+| Column     | Type                    | Notes                                                                      |
+| ---------- | ----------------------- | -------------------------------------------------------------------------- |
+| id         | BIGINT PK               | GENERATED ALWAYS AS IDENTITY                                               |
+| branch_id  | BIGINT FK(branches)     | ON DELETE CASCADE                                                          |
+| zone_id    | BIGINT FK(branch_zones) | ON DELETE SET NULL, nullable                                               |
+| tenant_id  | BIGINT FK(tenants)      | ON DELETE CASCADE                                                          |
+| number     | INT NOT NULL            | UNIQUE(branch_id, number, tenant_id)                                       |
+| capacity   | INT NOT NULL            | default 4, CHECK > 0                                                       |
+| status     | TEXT NOT NULL           | default 'available', CHECK IN (available, occupied, reserved, maintenance) |
+| created_at | TIMESTAMPTZ             | default now()                                                              |
+| updated_at | TIMESTAMPTZ             | default now(), auto-trigger                                                |
+
+**RLS for both tables:**
+
+- SELECT: all authenticated in tenant
+- INSERT/UPDATE/DELETE: owner, super_manager, area_manager, branch_manager
+
+### Tables & Zones Indexes
+
+| Index                   | Columns                 | Purpose       |
+| ----------------------- | ----------------------- | ------------- |
+| idx_branch_zones_tenant | branch_zones(tenant_id) | RLS filter    |
+| idx_branch_zones_branch | branch_zones(branch_id) | Branch lookup |
+| idx_tables_tenant       | tables(tenant_id)       | RLS filter    |
+| idx_tables_branch       | tables(branch_id)       | Branch lookup |
+| idx_tables_zone         | tables(zone_id)         | Zone lookup   |
+
 ## Future Tables (by phase)
-
-### Sprint 1 — Core Management (remaining)
-
-- menu_categories, menu_items, menu_item_variants, menu_item_modifiers, menu_item_available_sides
-- branch_zones, tables
 
 ### v0.3.0 — Operations
 
-- orders, order_items, payments, tables, pos_terminals, kds_stations, tax_invoices
+- orders, order_items, payments, pos_terminals, kds_stations, tax_invoices
 
 ### v0.4.0 — Supply Chain
 

@@ -73,9 +73,7 @@ export function BranchTable({ branches }: BranchTableProps) {
             <TableRow>
               <TableHead>Chi nhánh</TableHead>
               <TableHead className="hidden sm:table-cell">Địa chỉ</TableHead>
-              <TableHead className="hidden md:table-cell">
-                Điện thoại
-              </TableHead>
+              <TableHead className="hidden md:table-cell">Điện thoại</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead className="w-12" />
             </TableRow>
@@ -92,7 +90,10 @@ export function BranchTable({ branches }: BranchTableProps) {
               </TableRow>
             )}
             {branches.map((branch) => (
-              <TableRow key={branch.id} className={isPending ? "opacity-60" : ""}>
+              <TableRow
+                key={branch.id}
+                className={isPending ? "opacity-60" : ""}
+              >
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{branch.name}</span>
@@ -111,7 +112,9 @@ export function BranchTable({ branches }: BranchTableProps) {
                   {branch.phone || "—"}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={branch.is_active !== false ? "default" : "outline"}>
+                  <Badge
+                    variant={branch.is_active !== false ? "default" : "outline"}
+                  >
                     {branch.is_active !== false ? "Hoạt động" : "Ngừng"}
                   </Badge>
                 </TableCell>

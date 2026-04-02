@@ -7,8 +7,8 @@
 
 ## Status
 
-- **Current version:** v0.1.1 (Foundation + Security Hardening)
-- **Next milestone:** Sprint 1 — Admin Shell + Menu + Tables + Staff + Settings
+- **Current version:** v0.1.1 + Sprint 1 complete (S1–S6)
+- **Next milestone:** Sprint 2a (POS + KDS + Payments)
 - **Tech stack:** Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Supabase | Turborepo 2.9
 
 ## Module Index
@@ -101,13 +101,13 @@ These files have the most dependents. Changes here affect many parts of the syst
 
 | # | Unknown | Verification Step | Impact |
 |---|---------|-------------------|--------|
-| 1 | area_manager has tenant-wide access (no area scoping table) | Check if business needs area boundaries before Sprint 1 | May need migration later |
+| 1 | area_manager has tenant-wide access (no area scoping table) | Check if business needs area boundaries before Sprint 2a | May need migration later |
 | 2 | No integration tests exist yet | Sprint 2b S5 will add them | Regressions possible |
-| 3 | Deployment pipeline not configured | Check Vercel project + GitHub Actions | Blocks production launch |
+| 3 | Deployment pipeline not configured | Check Vercel project + GitHub Actions before pilot | Blocks production launch |
 
 ## Priority Recommendations
 
-1. **Sprint 1 readiness:** All foundation modules are stable. Menu/Staff/Settings can build on existing auth + RLS patterns.
+1. **Sprint 2a readiness:** Sprint 1 complete (S1–S6). Admin shell, branches, staff, menu, tables/zones shipped + security polish applied.
 2. **Watch hub files:** Any change to `module-acl.ts` or `types.ts` requires proxy + layout + nav verification.
 3. **RLS pattern:** Every new table must follow the tenant-scoped RLS pattern with explicit GRANTs. See [database.md](modules/database.md).
 

@@ -2,18 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient } from "@comtammatu/database/supabase/server";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { extractClaims, STAFF_ROLES } from "@comtammatu/shared/auth";
+import { STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { getAuthContext } from "../_lib/auth";
 
 /* ─── Schemas ─── */
 
 const createStaffSchema = z.object({
   email: z.string().email({ error: "Email không hợp lệ" }),
-  password: z
-    .string()
-    .min(8, { error: "Mật khẩu phải có ít nhất 8 ký tự" }),
+  password: z.string().min(8, { error: "Mật khẩu phải có ít nhất 8 ký tự" }),
   full_name: z.string().min(1, { error: "Họ tên không được để trống" }),
   phone: z.string().optional().default(""),
   role: z.enum(STAFF_ROLES, { error: "Vai trò không hợp lệ" }),
@@ -37,12 +35,7 @@ interface ActionResult {
 
 /* ─── Helpers ─── */
 
-const OPS_ROLES: StaffRole[] = [
-  "cashier",
-  "waiter",
-  "chef",
-  "branch_manager",
-];
+const OPS_ROLES: StaffRole[] = ["cashier", "waiter", "chef", "branch_manager"];
 
 /** Roles allowed to manage staff (mirrors admin_update_profile RPC) */
 const MANAGER_ROLES: StaffRole[] = [
@@ -53,7 +46,10 @@ const MANAGER_ROLES: StaffRole[] = [
 ];
 
 /** Max role each actor can assign (hierarchy ceiling) */
-function canAssignRole(actorRole: StaffRole, targetRole: StaffRole): string | null {
+function canAssignRole(
+  actorRole: StaffRole,
+  targetRole: StaffRole,
+): string | null {
   if (actorRole === "owner") return null; // unrestricted
   if (actorRole === "super_manager") {
     if (targetRole === "owner") return "Không có quyền tạo chủ sở hữu";
@@ -70,20 +66,6 @@ function canAssignRole(actorRole: StaffRole, targetRole: StaffRole): string | nu
     return null;
   }
   return "Không có quyền quản lý nhân viên";
-}
-
-async function getAuthContext() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
-  const claims = extractClaims(user.app_metadata);
-  if (!claims) return null;
-
-  return { supabase, claims };
 }
 
 function mapRpcError(msg: string): string {
@@ -144,15 +126,10 @@ export async function createStaff(
     };
   }
 
-  const ctx = await getAuthContext();
-  if (!ctx) return { success: false, error: "Chưa đăng nhập" };
+  const ctx = await getAuthContext(MANAGER_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { claims } = ctx;
-
-  // Role authorization — must be manager+
-  if (!MANAGER_ROLES.includes(claims.user_role)) {
-    return { success: false, error: "Không có quyền quản lý nhân viên" };
-  }
 
   // Hierarchy ceiling — can't create roles above your level
   const roleError = canAssignRole(claims.user_role, role);
@@ -234,10 +211,16 @@ export async function updateStaff(
     };
   }
 
-  const ctx = await getAuthContext();
-  if (!ctx) return { success: false, error: "Chưa đăng nhập" };
+  const ctx = await getAuthContext(MANAGER_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
+
+  // Hierarchy ceiling — can't assign roles above your level
+  const roleError = canAssignRole(claims.user_role, role);
+  if (roleError) {
+    return { success: false, error: roleError };
+  }
 
   const { error } = await supabase.rpc("admin_update_profile", {
     p_target_id: id,
@@ -255,30 +238,24 @@ export async function updateStaff(
   return { success: true };
 }
 
+const staffIdSchema = z.string().uuid({ error: "ID nhân viên không hợp lệ" });
+
 export async function toggleStaffActive(
   staffId: string,
 ): Promise<ActionResult> {
-  const ctx = await getAuthContext();
-  if (!ctx) return { success: false, error: "Chưa đăng nhập" };
+  const parsedId = staffIdSchema.safeParse(staffId);
+  if (!parsedId.success) return { success: false, error: "ID không hợp lệ" };
 
-  const { supabase, claims } = ctx;
+  const ctx = await getAuthContext(MANAGER_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
 
-  // Fetch current state
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_active")
-    .eq("id", staffId)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
+  const { supabase } = ctx;
 
-  if (!profile) {
-    return { success: false, error: "Nhân viên không tồn tại" };
-  }
-
-  const { error } = await supabase.rpc("admin_update_profile", {
-    p_target_id: staffId,
-    p_is_active: !(profile.is_active ?? true),
-  });
+  // RPC types available after migration applied + pnpm db:types
+  const { error } = await (supabase.rpc as CallableFunction)(
+    "toggle_profile_active",
+    { p_target_id: parsedId.data },
+  );
 
   if (error) {
     return { success: false, error: mapRpcError(error.message) };

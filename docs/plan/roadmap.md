@@ -39,9 +39,9 @@ Total all sprints: ~47 ngày
 | S1  | Admin layout + sidebar        | —                                                                                               | ✅     |
 | S2  | Branch CRUD + system_settings | system_settings                                                                                 | ✅     |
 | S3  | Staff management              | — (profiles)                                                                                    | ✅     |
-| S4  | Menu CRUD + sides             | menu_categories, menu_items, menu_item_variants, menu_item_modifiers, menu_item_available_sides |        |
-| S5  | Tables & zones                | branch_zones, tables                                                                            |        |
-| S6  | Polish + /review              | —                                                                                               |        |
+| S4  | Menu CRUD + sides             | menu_categories, menu_items, menu_item_variants, menu_item_modifiers, menu_item_available_sides | ✅     |
+| S5  | Tables & zones                | branch_zones, tables                                                                            | ✅     |
+| S6  | Polish + /review              | —                                                                                               | ✅     |
 
 ## Sprint 2a: POS + KDS + Payments
 

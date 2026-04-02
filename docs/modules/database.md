@@ -41,15 +41,23 @@ Defined in `packages/database/package.json`:
 ./types              → src/types/database.types.ts
 ```
 
-## Schema (v0.1.1)
+## Schema (Sprint 1 complete)
 
-Three core tables with tenant isolation:
+11 tables with tenant isolation:
 
-| Table | Rows | RLS | Purpose |
-|-------|------|-----|---------|
-| `tenants` | 1 (single-tenant) | tenant_id match | CTCP legal entity |
-| `branches` | N | tenant_id match | Physical locations |
-| `profiles` | N | role-aware scoping | Staff accounts |
+| Table | RLS | Purpose | Since |
+|-------|-----|---------|-------|
+| `tenants` | tenant_id match | CTCP legal entity | v0.1.0 |
+| `branches` | tenant_id match | Physical locations | v0.1.0 |
+| `profiles` | role-aware scoping | Staff accounts (mutations via RPCs only) | v0.1.0 |
+| `system_settings` | owner/super_manager write | Tenant-scoped key/value config | S1-S2 |
+| `menu_categories` | manager+ write | Menu category grouping | S1-S4 |
+| `menu_items` | manager+ write | Menu items with base price | S1-S4 |
+| `menu_item_variants` | manager+ write | Size/portion variants with price adjustment | S1-S4 |
+| `menu_item_modifiers` | manager+ write | Add-on modifiers (extra toppings, etc.) | S1-S4 |
+| `menu_item_available_sides` | manager+ write | Junction: which sides pair with which mains | S1-S4 |
+| `branch_zones` | manager+ write | Dining zones per branch (Tầng 1, Sân vườn) | S1-S5 |
+| `tables` | manager+ write | Physical tables with zone, capacity, status | S1-S5 |
 
 Full schema reference: `docs/spec/database-schema.md`
 
@@ -87,7 +95,8 @@ Migrations live in `supabase/migrations/` with timestamp-prefixed filenames.
 | Time | `TIMESTAMPTZ` |
 | Text | `TEXT` (never VARCHAR) |
 | Unique | `UNIQUE(field, tenant_id)` — always composite |
-| After migration | Run `pnpm db:types` to regenerate types |
+| Apply | NEVER before PR merge — owner runs `supabase db push` after merge |
+| After applied | Run `pnpm db:types` to regenerate types |
 
 ## Security Functions (SECURITY DEFINER)
 
@@ -115,12 +124,15 @@ Migrations live in `supabase/migrations/` with timestamp-prefixed filenames.
 4. Add policies (at minimum: tenant isolation for SELECT)
 5. Add GRANTs: `GRANT SELECT, INSERT, UPDATE, DELETE ON ... TO authenticated`
 6. Add unique constraints composite with tenant_id
-7. Run `pnpm db:types`
-8. Verify: `pnpm typecheck && pnpm build`
+7. Push branch → create PR → merge
+8. Owner runs `supabase db push` after merge
+9. Run `pnpm db:types` (after migration applied)
+10. Verify: `pnpm typecheck && pnpm build`
 
 <!-- ORACLE-META
 Written by codebase-oracle (manual) | 2026-04-02
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 95%
+Updated: Sprint 1 S6 complete (2026-04-03)
 Unknowns: 0
 -->

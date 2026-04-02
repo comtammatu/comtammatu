@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
-import { SYSTEM_SETTING_KEYS, type SystemSettingKey } from "@comtammatu/shared/settings";
+import type { StaffRole } from "@comtammatu/shared/auth";
+import {
+  SYSTEM_SETTING_KEYS,
+  type SystemSettingKey,
+} from "@comtammatu/shared/settings";
 
 const settingsSchema = z.object({
   [SYSTEM_SETTING_KEYS.VAT_RATE]: z
@@ -19,7 +23,9 @@ const settingsSchema = z.object({
     .refine((v) => !isNaN(Number(v)) && Number(v) >= 0 && Number(v) <= 100, {
       error: "Phí dịch vụ phải từ 0-100%",
     }),
-  [SYSTEM_SETTING_KEYS.CURRENCY]: z.string().min(1, { error: "Đơn vị tiền tệ không được để trống" }),
+  [SYSTEM_SETTING_KEYS.CURRENCY]: z
+    .string()
+    .min(1, { error: "Đơn vị tiền tệ không được để trống" }),
   [SYSTEM_SETTING_KEYS.STORE_PHONE]: z.string().optional().default(""),
   [SYSTEM_SETTING_KEYS.STORE_EMAIL]: z
     .string()
@@ -62,6 +68,11 @@ export async function updateSettings(
   const claims = extractClaims(user.app_metadata);
   if (!claims) return { success: false, error: "Không có quyền" };
 
+  const SETTINGS_ROLES: StaffRole[] = ["owner", "super_manager"];
+  if (!SETTINGS_ROLES.includes(claims.user_role)) {
+    return { success: false, error: "Không có quyền" };
+  }
+
   // Upsert each setting
   const entries = Object.entries(parsed.data) as [string, string][];
   for (const [key, value] of entries) {
@@ -73,7 +84,10 @@ export async function updateSettings(
       );
 
     if (error) {
-      return { success: false, error: "Không thể lưu cài đặt. Vui lòng thử lại." };
+      return {
+        success: false,
+        error: "Không thể lưu cài đặt. Vui lòng thử lại.",
+      };
     }
   }
 

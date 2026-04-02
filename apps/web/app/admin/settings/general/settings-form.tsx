@@ -63,9 +63,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
               min={0}
               max={100}
               step="0.1"
-              defaultValue={
-                settings[SYSTEM_SETTING_KEYS.SERVICE_CHARGE] ?? "5"
-              }
+              defaultValue={settings[SYSTEM_SETTING_KEYS.SERVICE_CHARGE] ?? "5"}
             />
           </div>
           <div className="space-y-2">

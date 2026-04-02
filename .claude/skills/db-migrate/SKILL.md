@@ -44,4 +44,6 @@ For every new function:
 
 1. Write migration file to `supabase/migrations/`
 2. Update `docs/spec/database-schema.md` with new tables/columns
-3. Remind user: "Run `supabase db push` then `pnpm db:types`"
+3. Remind user: "Push branch → create PR → merge → owner applies `supabase db push` → then `pnpm db:types`"
+
+**NEVER run `supabase db push` before PR is merged.** Only the owner applies migrations after merge.
