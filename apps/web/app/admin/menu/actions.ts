@@ -2,9 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { getAuthContext } from "../_lib/auth";
 
 /* ─── Types ─── */
 
@@ -23,22 +22,6 @@ const MENU_MANAGER_ROLES: StaffRole[] = [
 ];
 
 const CATEGORY_TYPES = ["main_dish", "side_dish", "drink", "dessert"] as const;
-
-async function getAuthContext() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
-  const claims = extractClaims(user.app_metadata);
-  if (!claims) return null;
-
-  if (!MENU_MANAGER_ROLES.includes(claims.user_role)) return null;
-
-  return { supabase, claims };
-}
 
 function mapDbError(code: string | undefined): string {
   if (code === "23505") return "Tên đã tồn tại";
@@ -117,7 +100,7 @@ export async function createCategory(
     };
   }
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(MENU_MANAGER_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -155,7 +138,7 @@ export async function updateCategory(
     };
   }
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(MENU_MANAGER_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -184,11 +167,12 @@ export async function toggleCategoryActive(
   const parsedId = idSchema.safeParse(categoryId);
   if (!parsedId.success) return { success: false, error: "ID không hợp lệ" };
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(MENU_MANAGER_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
 
+  // TODO: Use toggle_category_active RPC after migration applied + pnpm db:types
   const { data: cat } = await supabase
     .from("menu_categories")
     .select("is_active")
@@ -234,7 +218,7 @@ export async function createItem(
     };
   }
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(MENU_MANAGER_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -274,7 +258,7 @@ export async function updateItem(
     };
   }
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(MENU_MANAGER_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -302,11 +286,12 @@ export async function toggleItemActive(itemId: number): Promise<ActionResult> {
   const parsedId = idSchema.safeParse(itemId);
   if (!parsedId.success) return { success: false, error: "ID không hợp lệ" };
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(MENU_MANAGER_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
 
+  // TODO: Use toggle_item_active RPC after migration applied + pnpm db:types
   const { data: item } = await supabase
     .from("menu_items")
     .select("is_active")
@@ -346,7 +331,7 @@ export async function saveVariants(
     return { success: false, error: "Dữ liệu biến thể không hợp lệ" };
   }
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(MENU_MANAGER_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -410,7 +395,7 @@ export async function saveModifiers(
     return { success: false, error: "Dữ liệu tùy chọn không hợp lệ" };
   }
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(MENU_MANAGER_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -481,7 +466,7 @@ export async function saveSides(
     return { success: false, error: "Dữ liệu không hợp lệ" };
   }
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(MENU_MANAGER_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;

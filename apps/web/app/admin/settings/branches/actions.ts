@@ -2,9 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { getAuthContext } from "../../_lib/auth";
 
 const SETTINGS_ROLES: StaffRole[] = ["owner", "super_manager"];
 
@@ -27,24 +26,6 @@ interface ActionResult {
   error?: string;
 }
 
-/* ─── Helpers ─── */
-
-async function getAuthContext() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
-  const claims = extractClaims(user.app_metadata);
-  if (!claims) return null;
-
-  if (!SETTINGS_ROLES.includes(claims.user_role)) return null;
-
-  return { supabase, claims };
-}
-
 /* ─── Actions ─── */
 
 export async function createBranch(
@@ -64,7 +45,7 @@ export async function createBranch(
     };
   }
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(SETTINGS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -108,7 +89,7 @@ export async function updateBranch(
     };
   }
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(SETTINGS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -142,7 +123,7 @@ export async function toggleBranchActive(
   const parsed = idSchema.safeParse(branchId);
   if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(SETTINGS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -177,7 +158,7 @@ export async function setHeadquarters(branchId: number): Promise<ActionResult> {
   const parsed = idSchema.safeParse(branchId);
   if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(SETTINGS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase } = ctx;

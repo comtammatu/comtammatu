@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { getAuthContext } from "../../_lib/auth";
 
 /* ─── Types ─── */
 
@@ -16,22 +16,6 @@ interface ActionResult {
 /* ─── Helpers ─── */
 
 const SETTINGS_ROLES: StaffRole[] = ["owner", "super_manager"];
-
-async function getAuthContext() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
-  const claims = extractClaims(user.app_metadata);
-  if (!claims) return null;
-
-  if (!SETTINGS_ROLES.includes(claims.user_role)) return null;
-
-  return { supabase, claims };
-}
 
 async function verifyBranchOwnership(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -126,7 +110,7 @@ export async function createZone(
     };
   }
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(SETTINGS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -168,7 +152,7 @@ export async function updateZone(
     };
   }
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(SETTINGS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -201,7 +185,7 @@ export async function deleteZone(zoneId: number): Promise<ActionResult> {
   const parsed = deleteIdSchema.safeParse(zoneId);
   if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(SETTINGS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -242,7 +226,7 @@ export async function createTable(
     };
   }
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(SETTINGS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -291,7 +275,7 @@ export async function updateTable(
     };
   }
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(SETTINGS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -324,7 +308,7 @@ export async function deleteTable(tableId: number): Promise<ActionResult> {
   const parsed = deleteIdSchema.safeParse(tableId);
   if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
 
-  const ctx = await getAuthContext();
+  const ctx = await getAuthContext(SETTINGS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;

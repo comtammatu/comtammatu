@@ -8,6 +8,7 @@ import { Label } from "@comtammatu/ui/components/label";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -48,6 +49,11 @@ export function ZoneFormDialog({
           <DialogTitle>
             {isEdit ? "Chỉnh sửa khu vực" : "Thêm khu vực mới"}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {isEdit
+              ? "Chỉnh sửa thông tin khu vực"
+              : "Nhập thông tin khu vực mới"}
+          </DialogDescription>
         </DialogHeader>
 
         <form ref={formRef} action={formAction} className="space-y-4">

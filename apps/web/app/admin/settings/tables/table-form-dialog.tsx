@@ -15,6 +15,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -63,6 +64,9 @@ export function TableFormDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Chỉnh sửa bàn" : "Thêm bàn mới"}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {isEdit ? "Chỉnh sửa thông tin bàn" : "Nhập thông tin bàn mới"}
+          </DialogDescription>
         </DialogHeader>
 
         <form ref={formRef} action={formAction} className="space-y-4">

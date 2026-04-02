@@ -2,10 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient } from "@comtammatu/database/supabase/server";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { extractClaims, STAFF_ROLES } from "@comtammatu/shared/auth";
+import { STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { getAuthContext } from "../_lib/auth";
 
 /* ─── Schemas ─── */
 
@@ -68,20 +68,6 @@ function canAssignRole(
   return "Không có quyền quản lý nhân viên";
 }
 
-async function getAuthContext() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
-  const claims = extractClaims(user.app_metadata);
-  if (!claims) return null;
-
-  return { supabase, claims };
-}
-
 function mapRpcError(msg: string): string {
   if (msg.includes("target profile not found"))
     return "Nhân viên không tồn tại";
@@ -140,15 +126,10 @@ export async function createStaff(
     };
   }
 
-  const ctx = await getAuthContext();
-  if (!ctx) return { success: false, error: "Chưa đăng nhập" };
+  const ctx = await getAuthContext(MANAGER_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { claims } = ctx;
-
-  // Role authorization — must be manager+
-  if (!MANAGER_ROLES.includes(claims.user_role)) {
-    return { success: false, error: "Không có quyền quản lý nhân viên" };
-  }
 
   // Hierarchy ceiling — can't create roles above your level
   const roleError = canAssignRole(claims.user_role, role);
@@ -230,14 +211,10 @@ export async function updateStaff(
     };
   }
 
-  const ctx = await getAuthContext();
-  if (!ctx) return { success: false, error: "Chưa đăng nhập" };
+  const ctx = await getAuthContext(MANAGER_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-
-  if (!MANAGER_ROLES.includes(claims.user_role)) {
-    return { success: false, error: "Không có quyền quản lý nhân viên" };
-  }
 
   // Hierarchy ceiling — can't assign roles above your level
   const roleError = canAssignRole(claims.user_role, role);
@@ -269,14 +246,10 @@ export async function toggleStaffActive(
   const parsedId = staffIdSchema.safeParse(staffId);
   if (!parsedId.success) return { success: false, error: "ID không hợp lệ" };
 
-  const ctx = await getAuthContext();
-  if (!ctx) return { success: false, error: "Chưa đăng nhập" };
+  const ctx = await getAuthContext(MANAGER_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-
-  if (!MANAGER_ROLES.includes(claims.user_role)) {
-    return { success: false, error: "Không có quyền" };
-  }
 
   // Fetch current state
   const { data: profile } = await supabase
