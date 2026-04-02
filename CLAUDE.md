@@ -2,6 +2,43 @@
 
 Single-tenant multi-branch for Cơm Tấm Má Tư CTCP. Hierarchy: `Tenant (L0) → Branch (L1)`.
 
+## MANDATORY: Session Start Protocol
+
+**Trước khi làm BẤT CỨ GÌ**, Claude PHẢI thực hiện đúng thứ tự:
+
+1. **Đọc** (dùng Read tool — KHÔNG được skip, KHÔNG được tóm tắt từ memory):
+   - `docs/plan/roadmap.md` → xác định session tiếp theo
+   - `tasks/regressions.md` → TẤT CẢ regression rules phải nằm trong đầu
+   - `tasks/lessons.md` → bài học từ các session trước
+   - `tasks/todo.md` → trạng thái hiện tại
+   - `git status` → working tree sạch?
+
+2. **Output checklist** (bắt buộc, phải in ra trước khi bắt đầu code):
+   ```
+   SESSION START ✓
+   Next: [session name from roadmap]
+   Regressions: [liệt kê TẤT CẢ rule names, vd: CONSTRAINT-BEFORE-CLEANUP, ...]
+   Lessons: [N] items
+   Git: [clean/dirty]
+   ```
+
+3. **Task Contract** (bắt buộc nếu task ≥ 3 bước — xem template trong session-protocol.md)
+
+4. **Domain skills** — invoke TRƯỚC khi code:
+   - SQL/migration → `/db-migrate`
+   - Server Action → `/new-action`
+   - New page → `/new-page`
+   - Auth/payment/RLS → `/cso`
+
+5. **Verify = CI** — trước khi commit phải chạy ĐỦ 3:
+   ```
+   pnpm typecheck && pnpm lint && pnpm build
+   ```
+
+6. **Close** — sau verify: `/review` → fix → commit → update roadmap + todo
+
+**Nếu bỏ qua bất kỳ bước nào → session INVALID. Không có ngoại lệ.**
+
 ## Commands
 
 ```bash
