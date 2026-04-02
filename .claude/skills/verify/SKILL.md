@@ -1,14 +1,15 @@
 ---
 name: verify
-description: Run full verification pipeline (typecheck + build). Use after making code changes or before committing.
+description: Run full verification pipeline (typecheck + lint + build). Use after making code changes or before committing.
 whenToUse: After code changes, before committing, when user says "verify", "check", or "does it build"
 allowed-tools: Bash(pnpm *)
 ---
 
-Run full verification:
+Run full verification (must match CI):
 
 1. `pnpm typecheck` — all 5 packages must pass
-2. `pnpm build` — production build (needs env placeholders)
+2. `pnpm lint` — all 5 packages must pass
+3. `pnpm build` — production build (needs env placeholders)
 
 !`echo "Packages:" && ls packages/`
 
@@ -21,4 +22,4 @@ Run full verification:
 
 ## On success
 
-Report: "✅ typecheck (5/5) + build pass"
+Report: "✅ typecheck + lint + build pass"

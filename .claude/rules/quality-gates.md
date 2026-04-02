@@ -2,7 +2,7 @@
 
 ## Every Task
 
-- [ ] `pnpm typecheck && pnpm build` pass
+- [ ] `pnpm typecheck && pnpm lint && pnpm build` pass
 - [ ] No `any` without justification comment
 - [ ] No raw DB errors returned to client
 - [ ] No over-engineering — simplest solution that works

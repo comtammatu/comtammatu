@@ -36,7 +36,7 @@
 
 ## Quality Gates (Before Delivery)
 
-- [ ] `/verify` passes (`pnpm typecheck && pnpm build`)
+- [ ] `/verify` passes (`pnpm typecheck && pnpm lint && pnpm build`)
 - [ ] `/review` passes (no bugs CI misses)
 - [ ] As simple as possible? No unnecessary abstractions
 - [ ] Violates any rule in `tasks/regressions.md`?

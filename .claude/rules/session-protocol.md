@@ -58,7 +58,7 @@ Run before the first session of a new Sprint.
 
 ### VERIFY
 
-7. `/verify` — `pnpm typecheck && pnpm build` — MUST pass
+7. `/verify` — `pnpm typecheck && pnpm lint && pnpm build` — MUST pass
 8. Quality Gates checklist (see `quality-gates.md`)
 9. `/review` — code review for bugs CI won't catch
    - Fix issues found before committing
@@ -134,7 +134,7 @@ Do not let context degrade. Fresh session > contaminated session.
 
 | Skill     | When               | Purpose                                                          |
 | --------- | ------------------ | ---------------------------------------------------------------- |
-| `/verify` | After code changes | `pnpm typecheck && pnpm build` pipeline                         |
+| `/verify` | After code changes | `pnpm typecheck && pnpm lint && pnpm build` pipeline                         |
 | `/review` | Before commit      | Find bugs CI misses: SQL safety, import boundaries, error leaks  |
 
 ### Sprint Kickoff (once per sprint)

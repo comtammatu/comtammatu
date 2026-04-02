@@ -17,7 +17,7 @@ pnpm db:types     # Regenerate Supabase types (after migration)
 - MUST use TypeScript strict mode. `noUncheckedIndexedAccess: true`
 - MUST use supabase-js for all queries. NEVER Prisma
 - MUST validate all Server Action inputs with Zod schemas
-- MUST run `pnpm typecheck && pnpm build` before marking task complete
+- MUST run `pnpm typecheck && pnpm lint && pnpm build` before marking task complete
 - NEVER return raw Supabase/Postgres error.message to client
 - NEVER import `@comtammatu/database` barrel in "use client" components
 - NEVER store scope in localStorage/Context — URL params only

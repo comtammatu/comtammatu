@@ -27,3 +27,8 @@
    - Pattern: Skipped Task Contract, domain skills, `/review`, roadmap update
    - Rule: Session protocol is mandatory, not optional — every step exists for a reason
    - Prevention: At session START, paste Task Contract template and fill it. At CLOSE, run `/review`, update roadmap, update lessons if corrected.
+
+6. **Local verify must match CI pipeline exactly**
+   - Pattern: `/verify` only ran typecheck + build, but CI also runs lint. Unused vars passed locally, failed on push.
+   - Rule: `/verify` = `pnpm typecheck && pnpm lint && pnpm build` — must mirror CI steps exactly
+   - Prevention: Updated `/verify` skill to include `pnpm lint`. Before adding any new CI step, update `/verify` to match.
