@@ -15,5 +15,5 @@ VALUES (
 -- Example branches (adjust to actual locations)
 INSERT INTO public.branches (tenant_id, name, address, is_headquarters)
 VALUES
-  (1, 'Chi nhánh Quận 1', 'Số 123 Đường ABC, Quận 1, TP.HCM', true),
-  (1, 'Chi nhánh Quận 3', 'Số 456 Đường XYZ, Quận 3, TP.HCM', false);
+  (1, 'Chi nhánh Đất Đỏ', 'Ấp Phước Sơn, Xã Đất Đỏ, TP.HCM', true),
+  (1, 'Chi nhánh Phước Hải', 'Tổ 1 Hải Phúc, Xã Phước Hải, TP.HCM', false);

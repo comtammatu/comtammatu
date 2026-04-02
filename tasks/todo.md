@@ -3,10 +3,11 @@
 > Active work items for the current session/phase.
 > Update during work, clear completed items regularly.
 
-## v0.2.0 — Core Management (Next)
+## Sprint 1 — Admin Shell + Menu + Tables + Staff
 
-- [ ] Admin layout + sidebar (role-filtered)
-- [ ] Branch management CRUD
-- [ ] Staff management
-- [ ] Menu CRUD
-- [ ] Dashboard (branch overview)
+- [x] S1: Admin layout + sidebar (role-filtered)
+- [x] S2: Branch CRUD + system_settings
+- [ ] S3: Staff management
+- [ ] S4: Menu CRUD + sides
+- [ ] S5: Tables & zones
+- [ ] S6: Polish + /review

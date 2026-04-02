@@ -34,14 +34,14 @@ Total all sprints: ~47 ngày
 > 6 sessions | 4-5 ngày | Depends: v0.1.0
 > Ref: `docs/ref/business-context.md`
 
-| #   | Session                       | Tables                                                                                          |
-| --- | ----------------------------- | ----------------------------------------------------------------------------------------------- |
-| S1  | Admin layout + sidebar        | —                                                                                               |
-| S2  | Branch CRUD + system_settings | system_settings                                                                                 |
-| S3  | Staff management              | — (profiles)                                                                                    |
-| S4  | Menu CRUD + sides             | menu_categories, menu_items, menu_item_variants, menu_item_modifiers, menu_item_available_sides |
-| S5  | Tables & zones                | branch_zones, tables                                                                            |
-| S6  | Polish + /review              | —                                                                                               |
+| #   | Session                       | Tables                                                                                          | Status |
+| --- | ----------------------------- | ----------------------------------------------------------------------------------------------- | ------ |
+| S1  | Admin layout + sidebar        | —                                                                                               | ✅     |
+| S2  | Branch CRUD + system_settings | system_settings                                                                                 | ✅     |
+| S3  | Staff management              | — (profiles)                                                                                    |        |
+| S4  | Menu CRUD + sides             | menu_categories, menu_items, menu_item_variants, menu_item_modifiers, menu_item_available_sides |        |
+| S5  | Tables & zones                | branch_zones, tables                                                                            |        |
+| S6  | Polish + /review              | —                                                                                               |        |
 
 ## Sprint 2a: POS + KDS + Payments
 

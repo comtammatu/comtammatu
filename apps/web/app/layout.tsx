@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Be_Vietnam_Pro } from "next/font/google";
+import { Toaster } from "@comtammatu/ui/components/sonner";
 import "./globals.css";
 
 const beVietnamPro = Be_Vietnam_Pro({
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="vi" className={beVietnamPro.variable} suppressHydrationWarning>
       <body className="min-h-screen font-sans antialiased">
         {children}
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   );

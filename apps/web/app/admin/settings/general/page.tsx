@@ -1,17 +1,32 @@
-import { Settings } from "lucide-react";
+import { createClient } from "@comtammatu/database/supabase/server";
+import { SYSTEM_SETTING_DEFAULTS } from "@comtammatu/shared/settings";
+import type { SystemSettingKey } from "@comtammatu/shared/settings";
+import { SettingsForm } from "./settings-form";
 
-export default function GeneralSettingsPage() {
+export default async function GeneralSettingsPage() {
+  const supabase = await createClient();
+
+  const { data: rows } = await supabase
+    .from("system_settings")
+    .select("key, value");
+
+  // Merge DB values over defaults
+  const settings: Record<string, string> = { ...SYSTEM_SETTING_DEFAULTS };
+  if (rows) {
+    for (const row of rows) {
+      settings[row.key] = row.value;
+    }
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Cài đặt chung</h1>
-        <p className="mt-1 text-muted-foreground">Thuế VAT, phí dịch vụ, thông tin cửa hàng</p>
+        <h2 className="text-lg font-semibold">Cài đặt chung</h2>
+        <p className="text-sm text-muted-foreground">
+          Thuế, phí dịch vụ và thông tin cửa hàng
+        </p>
       </div>
-      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-24 text-center">
-        <Settings className="size-12 text-muted-foreground" />
-        <h2 className="mt-4 text-lg font-medium">Tính năng đang phát triển</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Cài đặt hệ thống sẽ có trong Sprint 1 S2.</p>
-      </div>
+      <SettingsForm settings={settings} />
     </div>
   );
 }

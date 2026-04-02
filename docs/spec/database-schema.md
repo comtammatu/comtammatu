@@ -73,6 +73,24 @@ owner, super_manager, area_manager, branch_manager, cashier, waiter, chef, offic
 | chef | Yes | Own branch | Route: `/br/[branchId]/kds` |
 | office | No | HQ-wide | Route: `/employee` |
 
+### system_settings (Sprint 1 S2)
+
+Tenant-scoped key/value configuration.
+
+| Column      | Type               | Notes                        |
+| ----------- | ------------------ | ---------------------------- |
+| id          | BIGINT PK          | GENERATED ALWAYS AS IDENTITY |
+| tenant_id   | BIGINT FK(tenants) | ON DELETE CASCADE            |
+| key         | TEXT               | UNIQUE(key, tenant_id)       |
+| value       | TEXT               |                              |
+| description | TEXT               |                              |
+| created_at  | TIMESTAMPTZ        | default now()                |
+| updated_at  | TIMESTAMPTZ        | default now(), auto-trigger  |
+
+**RLS:** tenant SELECT for all authenticated; INSERT/UPDATE/DELETE for owner + super_manager only.
+
+**Seeded keys:** `vat_rate`, `service_charge`, `currency`, `store_phone`, `store_email`
+
 ## Indexes
 
 | Index | Columns | Purpose |
@@ -80,6 +98,7 @@ owner, super_manager, area_manager, branch_manager, cashier, waiter, chef, offic
 | idx_branches_tenant | `branches(tenant_id)` | FK lookup, RLS filter |
 | idx_profiles_tenant_branch | `profiles(tenant_id, branch_id)` | Branch-scoped RLS |
 | idx_profiles_tenant_role | `profiles(tenant_id, role)` | Role filtering in admin UI |
+| idx_system_settings_tenant | `system_settings(tenant_id)` | FK lookup, RLS filter |
 
 ## Auth Helper Functions
 
@@ -93,6 +112,7 @@ owner, super_manager, area_manager, branch_manager, cashier, waiter, chef, offic
 | `update_my_profile()`             | void    | Self-update safe fields only (SECURITY DEFINER) |
 | `admin_update_profile()`          | void    | Manager update with scope checks (SECURITY DEFINER) |
 | `update_updated_at()`             | TRIGGER | Auto-set `updated_at` on row update           |
+| `set_headquarters(p_branch_id)`   | void    | Atomic HQ swap — unset old + set new in one tx |
 
 ### handle_new_user() — Invite-Only Flow
 
@@ -134,6 +154,8 @@ Additional checks:
 | profiles | SELECT branch-scoped                    | self + same branch; managers/office see wider (see below) |
 | profiles | UPDATE own safe fields                  | self — `full_name`, `phone`, `avatar_url` only   |
 | profiles | (no direct INSERT/DELETE)               | All profile mutations go through RPCs only        |
+| system_settings | SELECT in tenant                 | all authenticated                                |
+| system_settings | INSERT/UPDATE/DELETE             | owner, super_manager only                        |
 
 ### profiles SELECT scope detail
 
@@ -173,9 +195,10 @@ Admin invite creates auth user via Supabase Admin API with `raw_app_meta_data` c
 
 ## Future Tables (by phase)
 
-### v0.2.0 — Core Management
+### Sprint 1 — Core Management (remaining)
 
-- menu_categories, menu_items, menu_item_variants, menu_item_modifiers
+- menu_categories, menu_items, menu_item_variants, menu_item_modifiers, menu_item_available_sides
+- branch_zones, tables
 
 ### v0.3.0 — Operations
 

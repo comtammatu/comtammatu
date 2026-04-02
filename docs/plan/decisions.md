@@ -49,3 +49,19 @@
 **Decision:** Supabase-js (PostgREST) cho tất cả queries. Không Prisma.
 
 **Consequences:** Không có Prisma migration system. Dùng Supabase CLI migrations. Type generation qua `supabase gen types`.
+
+## D006: system_settings key/value thay vì JSONB column (2026-04-02)
+
+**Context:** Cần lưu tenant-level config (VAT rate, service charge, currency, phone, email). Hai lựa chọn: JSONB column trên `tenants.settings` hoặc separate `system_settings` table.
+
+**Decision:** Separate `system_settings(key, value)` table. Key strings defined as constants in `@comtammatu/shared/settings`.
+
+**Consequences:** Mỗi setting có RLS riêng, audit trail qua `updated_at`, dễ thêm settings mới mà không thay đổi schema. Trade-off: N queries khi upsert nhiều settings cùng lúc (acceptable cho admin-only operation).
+
+## D007: Atomic RPC cho set_headquarters (2026-04-02)
+
+**Context:** `setHeadquarters` cần unset current HQ rồi set new HQ. Hai UPDATE riêng biệt tạo TOCTOU race — concurrent calls có thể để 0 hoặc 2 branches làm HQ.
+
+**Decision:** Postgres RPC `set_headquarters(p_branch_id)` chạy cả hai thao tác trong 1 transaction. Dùng single UPDATE với `SET is_headquarters = (id = p_branch_id)`.
+
+**Consequences:** Atomic, không race condition. Cần maintain thêm 1 RPC function + type stub.

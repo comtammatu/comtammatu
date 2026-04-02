@@ -17,3 +17,13 @@
    - Pattern: office defined as "HQ-wide" in role table but "own branch" in SELECT scope table
    - Rule: Role scope must be consistent across: enum comments, spec docs, RLS policies, HR/payroll docs
    - Prevention: When adding/modifying a role's scope, search all docs for that role name and update every reference.
+
+4. **Verify build before marking task complete**
+   - Pattern: Marked S2 tasks "completed" before running typecheck+build. Build failed on `boolean | null` mismatch and missing `system_settings` type stub.
+   - Rule: Never mark done until `pnpm typecheck && pnpm build` output is green in terminal
+   - Prevention: Run build immediately after writing code. When adding new DB tables, check generated `database.types.ts` first — if table is missing, add type stub before writing any code that references it.
+
+5. **Follow session protocol strictly**
+   - Pattern: Skipped Task Contract, domain skills, `/review`, roadmap update
+   - Rule: Session protocol is mandatory, not optional — every step exists for a reason
+   - Prevention: At session START, paste Task Contract template and fill it. At CLOSE, run `/review`, update roadmap, update lessons if corrected.

@@ -1,17 +1,29 @@
-import { Building2 } from "lucide-react";
+import { Plus } from "lucide-react";
+import { createClient } from "@comtammatu/database/supabase/server";
+import { BranchTable } from "./branch-table";
+import { AddBranchButton } from "./add-branch-button";
 
-export default function BranchesPage() {
+export default async function BranchesPage() {
+  const supabase = await createClient();
+
+  const { data: branches } = await supabase
+    .from("branches")
+    .select("id, name, address, phone, is_active, is_headquarters")
+    .order("is_headquarters", { ascending: false })
+    .order("name");
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Chi nhánh</h1>
-        <p className="mt-1 text-muted-foreground">Quản lý các chi nhánh nhà hàng</p>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Chi nhánh</h2>
+          <p className="text-sm text-muted-foreground">
+            {branches?.length ?? 0} chi nhánh
+          </p>
+        </div>
+        <AddBranchButton />
       </div>
-      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-24 text-center">
-        <Building2 className="size-12 text-muted-foreground" />
-        <h2 className="mt-4 text-lg font-medium">Tính năng đang phát triển</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Quản lý chi nhánh sẽ có trong Sprint 1 S2.</p>
-      </div>
+      <BranchTable branches={branches ?? []} />
     </div>
   );
 }
