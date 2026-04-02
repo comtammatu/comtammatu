@@ -8,6 +8,7 @@
     "./supabase": "./src/supabase/index.ts",
     "./supabase/server": "./src/supabase/server.ts",
     "./supabase/client": "./src/supabase/client.ts",
+    "./supabase/service": "./src/supabase/service.ts",
     "./supabase/middleware": "./src/supabase/middleware.ts",
     "./types": "./src/types/database.types.ts"
   },

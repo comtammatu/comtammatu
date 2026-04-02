@@ -112,6 +112,44 @@ export type Database = {
           },
         ]
       }
+      system_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          key: string
+          tenant_id: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: never
+          key: string
+          tenant_id: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: never
+          key?: string
+          tenant_id?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           created_at: string | null
@@ -151,57 +189,32 @@ export type Database = {
         }
         Relationships: []
       }
-      system_settings: {
-        Row: {
-          id: number
-          tenant_id: number
-          key: string
-          value: string
-          description: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: never
-          tenant_id: number
-          key: string
-          value: string
-          description?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: never
-          tenant_id?: number
-          key?: string
-          value?: string
-          description?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "system_settings_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      admin_update_profile: {
-        Args: {
-          p_branch_id?: number
-          p_is_active?: boolean
-          p_role?: Database["public"]["Enums"]["staff_role"]
-          p_target_id: string
-        }
-        Returns: undefined
-      }
+      admin_update_profile:
+        | {
+            Args: {
+              p_branch_id?: number
+              p_is_active?: boolean
+              p_role?: Database["public"]["Enums"]["staff_role"]
+              p_target_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_branch_id?: number
+              p_full_name?: string
+              p_is_active?: boolean
+              p_phone?: string
+              p_role?: Database["public"]["Enums"]["staff_role"]
+              p_target_id: string
+            }
+            Returns: undefined
+          }
       auth_branch_id: { Args: never; Returns: number }
       auth_role: { Args: never; Returns: string }
       auth_tenant_id: { Args: never; Returns: number }

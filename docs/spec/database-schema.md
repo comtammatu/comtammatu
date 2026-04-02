@@ -127,7 +127,7 @@ Tenant-scoped key/value configuration.
 - Cannot modify: `role`, `branch_id`, `tenant_id`, `is_active`
 - Column-level GRANT enforced at DB level as defense-in-depth
 
-### admin_update_profile(target_id, role, branch_id, is_active)
+### admin_update_profile(target_id, role, branch_id, is_active, full_name, phone)
 
 Actor scope restrictions:
 
@@ -143,6 +143,7 @@ Additional checks:
 - `super_manager` cannot modify/deactivate `owner`
 - Operational roles (`cashier`, `waiter`, `chef`, `branch_manager`) require `branch_id`
 - `branch_id` must belong to same tenant (cross-tenant check)
+- `p_full_name` and `p_phone` use COALESCE — pass NULL to keep existing value (Sprint 1 S3)
 
 ## RLS Policies (v0.1.1)
 
