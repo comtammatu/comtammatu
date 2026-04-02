@@ -92,11 +92,10 @@ Open Claude Code in project root and check:
 
 ## 4. Database Setup
 
-Apply migrations to your Supabase project:
+Link your Supabase project (migrations are applied by owner after PR merge):
 
 ```bash
 supabase link --project-ref YOUR_PROJECT_ID
-supabase db push
 ```
 
 ### Enable JWT Custom Claims Hook

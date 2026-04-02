@@ -16,7 +16,7 @@ comtammatu/
 │   ├── ui/                 # shadcn/ui component library
 │   └── security/           # Rate limiting
 ├── supabase/
-│   └── migrations/         # SQL migrations (applied via Supabase CLI)
+│   └── migrations/         # SQL migrations (applied via CI after PR merge)
 ├── turbo.json              # Task pipeline
 ├── pnpm-workspace.yaml     # Workspace definition
 └── tsconfig.base.json      # Shared TS config
@@ -70,16 +70,13 @@ SUPABASE_DB_PASSWORD              # Local DB password
 # 1. Install dependencies
 pnpm install
 
-# 2. Start Supabase locally
-supabase start
+# 2. Link Supabase project
+supabase link --project-ref YOUR_PROJECT_ID
 
-# 3. Apply migrations
-supabase db push
-
-# 4. Generate types
+# 3. Generate types (migrations applied via CI after PR merge)
 pnpm db:types
 
-# 5. Start dev server
+# 4. Start dev server
 pnpm dev
 ```
 
@@ -88,7 +85,7 @@ Full setup guide: `docs/ref/setup.md`
 ## Deployment
 
 - **Vercel:** Auto-deploy from main branch. Environment variables set in Vercel dashboard.
-- **Supabase:** Migrations applied via `supabase db push` or Supabase dashboard.
+- **Supabase:** Migrations applied manually by owner (`supabase db push`) after PR merge.
 - **GitHub Actions:** CI pipeline (typecheck + build + lint). Secrets documented in commit `1223952`.
 
 ## TypeScript Configuration

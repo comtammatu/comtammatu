@@ -95,7 +95,8 @@ Migrations live in `supabase/migrations/` with timestamp-prefixed filenames.
 | Time | `TIMESTAMPTZ` |
 | Text | `TEXT` (never VARCHAR) |
 | Unique | `UNIQUE(field, tenant_id)` — always composite |
-| After migration | Run `pnpm db:types` to regenerate types |
+| Apply | NEVER before PR merge — owner runs `supabase db push` after merge |
+| After applied | Run `pnpm db:types` to regenerate types |
 
 ## Security Functions (SECURITY DEFINER)
 
@@ -123,8 +124,10 @@ Migrations live in `supabase/migrations/` with timestamp-prefixed filenames.
 4. Add policies (at minimum: tenant isolation for SELECT)
 5. Add GRANTs: `GRANT SELECT, INSERT, UPDATE, DELETE ON ... TO authenticated`
 6. Add unique constraints composite with tenant_id
-7. Run `pnpm db:types`
-8. Verify: `pnpm typecheck && pnpm build`
+7. Push branch → create PR → merge
+8. Owner runs `supabase db push` after merge
+9. Run `pnpm db:types` (after migration applied)
+9. Verify: `pnpm typecheck && pnpm build`
 
 <!-- ORACLE-META
 Written by codebase-oracle (manual) | 2026-04-02

@@ -12,7 +12,8 @@ paths:
 - Parameters with DEFAULT must come AFTER required parameters in CREATE FUNCTION
 - Each migration file MUST have unique timestamp
 - Auth hook functions: MUST be SECURITY DEFINER to bypass RLS
-- After migration adds/modifies functions → `pnpm db:types`
+- NEVER apply migrations before PR merge — write file → PR → merge → owner runs `supabase db push`
+- After migration merged & applied → `pnpm db:types`
 - Before column rename: query `information_schema.columns` to verify actual schema
 - After column rename: `pg_proc WHERE prosrc ILIKE '%old_name%'` to find stale functions
 - Materialized views: UNIQUE index + `GRANT SELECT TO authenticated` in same migration

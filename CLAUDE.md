@@ -9,7 +9,7 @@ pnpm dev          # Start dev server (Turbopack)
 pnpm build        # Production build
 pnpm typecheck    # Type checking across all packages
 pnpm lint         # ESLint
-pnpm db:types     # Regenerate Supabase types (after migration)
+pnpm db:types     # Regenerate Supabase types (after migration merged & applied)
 ```
 
 ## Constraints
@@ -22,7 +22,8 @@ pnpm db:types     # Regenerate Supabase types (after migration)
 - NEVER import `@comtammatu/database` barrel in "use client" components
 - NEVER store scope in localStorage/Context — URL params only
 - Multi-item atomic writes → Postgres RPC function
-- After SQL migration → `pnpm db:types`
+- After SQL migration merged & applied → `pnpm db:types`
+- NEVER apply migrations directly — write file → PR → merge → owner applies manually
 - ACL single source: `packages/shared/src/auth/module-acl.ts`
 
 ## Architecture
