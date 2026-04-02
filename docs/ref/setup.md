@@ -73,7 +73,15 @@ Optional (install globally as needed):
 
 Installs 31 gstack skills (`/ship`, `/review`, `/qa`, `/cso`, ...). Requires Bun.
 
-### 3c. Verify Claude Code
+### 3c. Claude Swarm (multi-agent coordination)
+
+```bash
+./scripts/setup-swarm.sh
+```
+
+Installs claude-swarm MCP server for multi-agent collaboration. Allows multiple Claude Code sessions to discover each other, form rooms, delegate tasks, and share memory. See `.claude/rules/swarm.md` for agent roles and conventions.
+
+### 3d. Verify Claude Code
 
 Open Claude Code in project root and check:
 
@@ -206,3 +214,4 @@ Trong `.github/workflows/ci.yml`, thay placeholder bằng secrets:
 | `apps/web/.env.local`    | `cp .env.example apps/web/.env.local` | Runtime env vars        |
 | `.mcp.json`              | `cp .mcp.json.example .mcp.json`      | Claude Code MCP servers |
 | `.claude/skills/gstack/` | `./scripts/setup-gstack.sh`           | 31 gstack skills        |
+| `~/.claude-swarm/`       | `./scripts/setup-swarm.sh`            | Multi-agent coordination |
