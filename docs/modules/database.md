@@ -41,15 +41,23 @@ Defined in `packages/database/package.json`:
 ./types              → src/types/database.types.ts
 ```
 
-## Schema (v0.1.1)
+## Schema (Sprint 1 complete)
 
-Three core tables with tenant isolation:
+12 tables with tenant isolation:
 
-| Table | Rows | RLS | Purpose |
-|-------|------|-----|---------|
-| `tenants` | 1 (single-tenant) | tenant_id match | CTCP legal entity |
-| `branches` | N | tenant_id match | Physical locations |
-| `profiles` | N | role-aware scoping | Staff accounts |
+| Table | RLS | Purpose | Since |
+|-------|-----|---------|-------|
+| `tenants` | tenant_id match | CTCP legal entity | v0.1.0 |
+| `branches` | tenant_id match | Physical locations | v0.1.0 |
+| `profiles` | role-aware scoping | Staff accounts (mutations via RPCs only) | v0.1.0 |
+| `system_settings` | owner/super_manager write | Tenant-scoped key/value config | S1-S2 |
+| `menu_categories` | manager+ write | Menu category grouping | S1-S4 |
+| `menu_items` | manager+ write | Menu items with base price | S1-S4 |
+| `menu_item_variants` | manager+ write | Size/portion variants with price adjustment | S1-S4 |
+| `menu_item_modifiers` | manager+ write | Add-on modifiers (extra toppings, etc.) | S1-S4 |
+| `menu_item_available_sides` | manager+ write | Junction: which sides pair with which mains | S1-S4 |
+| `branch_zones` | manager+ write | Dining zones per branch (Tầng 1, Sân vườn) | S1-S5 |
+| `tables` | manager+ write | Physical tables with zone, capacity, status | S1-S5 |
 
 Full schema reference: `docs/spec/database-schema.md`
 
@@ -122,5 +130,6 @@ Migrations live in `supabase/migrations/` with timestamp-prefixed filenames.
 Written by codebase-oracle (manual) | 2026-04-02
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 95%
+Updated: Sprint 1 S5 complete (2026-04-02)
 Unknowns: 0
 -->

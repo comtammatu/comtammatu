@@ -14,6 +14,48 @@ export type Database = {
   };
   public: {
     Tables: {
+      branch_zones: {
+        Row: {
+          branch_id: number;
+          created_at: string;
+          id: number;
+          name: string;
+          sort_order: number;
+          tenant_id: number;
+        };
+        Insert: {
+          branch_id: number;
+          created_at?: string;
+          id?: never;
+          name: string;
+          sort_order?: number;
+          tenant_id: number;
+        };
+        Update: {
+          branch_id?: number;
+          created_at?: string;
+          id?: never;
+          name?: string;
+          sort_order?: number;
+          tenant_id?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "branch_zones_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "branch_zones_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       branches: {
         Row: {
           address: string | null;
@@ -392,6 +434,64 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "system_settings_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      tables: {
+        Row: {
+          branch_id: number;
+          capacity: number;
+          created_at: string;
+          id: number;
+          number: number;
+          status: string;
+          tenant_id: number;
+          updated_at: string;
+          zone_id: number | null;
+        };
+        Insert: {
+          branch_id: number;
+          capacity?: number;
+          created_at?: string;
+          id?: never;
+          number: number;
+          status?: string;
+          tenant_id: number;
+          updated_at?: string;
+          zone_id?: number | null;
+        };
+        Update: {
+          branch_id?: number;
+          capacity?: number;
+          created_at?: string;
+          id?: never;
+          number?: number;
+          status?: string;
+          tenant_id?: number;
+          updated_at?: string;
+          zone_id?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tables_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "tables_zone_id_fkey";
+            columns: ["zone_id"];
+            isOneToOne: false;
+            referencedRelation: "branch_zones";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "tables_tenant_id_fkey";
             columns: ["tenant_id"];
             isOneToOne: false;
             referencedRelation: "tenants";

@@ -282,15 +282,53 @@ Junction table: which side items can pair with which main items.
 | idx_menu_item_available_sides_main | menu_item_available_sides(main_item_id) | Main item lookup |
 | idx_menu_item_available_sides_side | menu_item_available_sides(side_item_id) | Side item lookup |
 
+## Tables & Zones (Sprint 1 S5)
+
+### branch_zones
+
+| Column     | Type                | Notes                              |
+| ---------- | ------------------- | ---------------------------------- |
+| id         | BIGINT PK           | GENERATED ALWAYS AS IDENTITY       |
+| branch_id  | BIGINT FK(branches) | ON DELETE CASCADE                  |
+| tenant_id  | BIGINT FK(tenants)  | ON DELETE CASCADE                  |
+| name       | TEXT NOT NULL       | UNIQUE(branch_id, name, tenant_id) |
+| sort_order | INT                 | default 0                          |
+| created_at | TIMESTAMPTZ         | default now()                      |
+
+### tables
+
+| Column     | Type                    | Notes                                                                      |
+| ---------- | ----------------------- | -------------------------------------------------------------------------- |
+| id         | BIGINT PK               | GENERATED ALWAYS AS IDENTITY                                               |
+| branch_id  | BIGINT FK(branches)     | ON DELETE CASCADE                                                          |
+| zone_id    | BIGINT FK(branch_zones) | ON DELETE SET NULL, nullable                                               |
+| tenant_id  | BIGINT FK(tenants)      | ON DELETE CASCADE                                                          |
+| number     | INT NOT NULL            | UNIQUE(branch_id, number, tenant_id)                                       |
+| capacity   | INT NOT NULL            | default 4, CHECK > 0                                                       |
+| status     | TEXT NOT NULL           | default 'available', CHECK IN (available, occupied, reserved, maintenance) |
+| created_at | TIMESTAMPTZ             | default now()                                                              |
+| updated_at | TIMESTAMPTZ             | default now(), auto-trigger                                                |
+
+**RLS for both tables:**
+
+- SELECT: all authenticated in tenant
+- INSERT/UPDATE/DELETE: owner, super_manager, area_manager, branch_manager
+
+### Tables & Zones Indexes
+
+| Index                   | Columns                 | Purpose       |
+| ----------------------- | ----------------------- | ------------- |
+| idx_branch_zones_tenant | branch_zones(tenant_id) | RLS filter    |
+| idx_branch_zones_branch | branch_zones(branch_id) | Branch lookup |
+| idx_tables_tenant       | tables(tenant_id)       | RLS filter    |
+| idx_tables_branch       | tables(branch_id)       | Branch lookup |
+| idx_tables_zone         | tables(zone_id)         | Zone lookup   |
+
 ## Future Tables (by phase)
-
-### Sprint 1 — Core Management (remaining)
-
-- branch_zones, tables
 
 ### v0.3.0 — Operations
 
-- orders, order_items, payments, tables, pos_terminals, kds_stations, tax_invoices
+- orders, order_items, payments, pos_terminals, kds_stations, tax_invoices
 
 ### v0.4.0 — Supply Chain
 
