@@ -13,16 +13,16 @@
 
 ## Domain Skills (Invoke before coding)
 
-| Task involves              | Invoke first                                             |
-| -------------------------- | -------------------------------------------------------- |
-| SQL / migration / RLS      | `/db-migrate` + `database-design:postgresql`             |
-| Next.js routes / RSC       | `/new-page` + `nextjs-app-router-patterns`               |
-| Server Action              | `/new-action`                                            |
-| Bug investigation          | `/investigate` + `code-documentation:code-reviewer`      |
-| Auth / payment / RLS audit | `/cso`                                                   |
-| Destructive commands       | `/careful`                                               |
-| Complex migration          | `/guard`                                                 |
-| Focused debugging          | `/freeze`                                                |
+| Task involves              | Invoke first                                        |
+| -------------------------- | --------------------------------------------------- |
+| SQL / migration / RLS      | `/db-migrate` + `database-design:postgresql`        |
+| Next.js routes / RSC       | `/new-page` + `nextjs-app-router-patterns`          |
+| Server Action              | `/new-action`                                       |
+| Bug investigation          | `/investigate` + `code-documentation:code-reviewer` |
+| Auth / payment / RLS audit | `/cso`                                              |
+| Destructive commands       | `/careful`                                          |
+| Complex migration          | `/guard`                                            |
+| Focused debugging          | `/freeze`                                           |
 
 ## Meta-Learning Files
 

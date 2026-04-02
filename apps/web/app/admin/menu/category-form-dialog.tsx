@@ -57,9 +57,7 @@ export function CategoryFormDialog({
         </DialogHeader>
 
         <form ref={formRef} action={formAction} className="space-y-4">
-          {isEdit && (
-            <input type="hidden" name="id" value={category.id} />
-          )}
+          {isEdit && <input type="hidden" name="id" value={category.id} />}
 
           <div className="space-y-2">
             <Label htmlFor="name">Tên danh mục *</Label>

@@ -45,9 +45,7 @@ export function StaffFormDialog({
   useEffect(() => {
     if (state?.success) {
       onOpenChange(false);
-      toast.success(
-        isEdit ? "Đã cập nhật nhân viên" : "Đã tạo nhân viên mới",
-      );
+      toast.success(isEdit ? "Đã cập nhật nhân viên" : "Đã tạo nhân viên mới");
     }
   }, [state, isEdit, onOpenChange]);
 

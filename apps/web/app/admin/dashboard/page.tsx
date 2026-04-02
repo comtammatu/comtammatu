@@ -66,12 +66,7 @@ export default function DashboardPage() {
           change={12.5}
           icon={DollarSign}
         />
-        <StatCard
-          title="Đơn hàng"
-          value="48"
-          change={8.3}
-          icon={Receipt}
-        />
+        <StatCard title="Đơn hàng" value="48" change={8.3} icon={Receipt} />
         <StatCard
           title="Khách hàng mới"
           value="12"

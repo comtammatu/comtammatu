@@ -19,11 +19,7 @@ export function AddStaffButton({ branches }: AddStaffButtonProps) {
         <UserPlus className="mr-2 size-4" />
         Thêm nhân viên
       </Button>
-      <StaffFormDialog
-        open={open}
-        onOpenChange={setOpen}
-        branches={branches}
-      />
+      <StaffFormDialog open={open} onOpenChange={setOpen} branches={branches} />
     </>
   );
 }

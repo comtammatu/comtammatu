@@ -11,9 +11,7 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 
 const createStaffSchema = z.object({
   email: z.string().email({ error: "Email không hợp lệ" }),
-  password: z
-    .string()
-    .min(8, { error: "Mật khẩu phải có ít nhất 8 ký tự" }),
+  password: z.string().min(8, { error: "Mật khẩu phải có ít nhất 8 ký tự" }),
   full_name: z.string().min(1, { error: "Họ tên không được để trống" }),
   phone: z.string().optional().default(""),
   role: z.enum(STAFF_ROLES, { error: "Vai trò không hợp lệ" }),
@@ -37,12 +35,7 @@ interface ActionResult {
 
 /* ─── Helpers ─── */
 
-const OPS_ROLES: StaffRole[] = [
-  "cashier",
-  "waiter",
-  "chef",
-  "branch_manager",
-];
+const OPS_ROLES: StaffRole[] = ["cashier", "waiter", "chef", "branch_manager"];
 
 /** Roles allowed to manage staff (mirrors admin_update_profile RPC) */
 const MANAGER_ROLES: StaffRole[] = [
@@ -53,7 +46,10 @@ const MANAGER_ROLES: StaffRole[] = [
 ];
 
 /** Max role each actor can assign (hierarchy ceiling) */
-function canAssignRole(actorRole: StaffRole, targetRole: StaffRole): string | null {
+function canAssignRole(
+  actorRole: StaffRole,
+  targetRole: StaffRole,
+): string | null {
   if (actorRole === "owner") return null; // unrestricted
   if (actorRole === "super_manager") {
     if (targetRole === "owner") return "Không có quyền tạo chủ sở hữu";

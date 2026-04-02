@@ -56,9 +56,7 @@ export function ItemFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {isEdit ? "Chỉnh sửa món" : "Thêm món mới"}
-          </DialogTitle>
+          <DialogTitle>{isEdit ? "Chỉnh sửa món" : "Thêm món mới"}</DialogTitle>
         </DialogHeader>
 
         <form ref={formRef} action={formAction} className="space-y-4">

@@ -132,17 +132,17 @@ Do not let context degrade. Fresh session > contaminated session.
 
 ### Every Session (mandatory)
 
-| Skill     | When               | Purpose                                                          |
-| --------- | ------------------ | ---------------------------------------------------------------- |
-| `/verify` | After code changes | `pnpm typecheck && pnpm lint && pnpm build` pipeline                         |
-| `/review` | Before commit      | Find bugs CI misses: SQL safety, import boundaries, error leaks  |
+| Skill     | When               | Purpose                                                         |
+| --------- | ------------------ | --------------------------------------------------------------- |
+| `/verify` | After code changes | `pnpm typecheck && pnpm lint && pnpm build` pipeline            |
+| `/review` | Before commit      | Find bugs CI misses: SQL safety, import boundaries, error leaks |
 
 ### Sprint Kickoff (once per sprint)
 
-| Skill              | When             | Purpose                                  |
-| ------------------ | ---------------- | ---------------------------------------- |
-| `/plan-ceo-review` | Đầu sprint       | Challenge scope, cắt gì không mất value? |
-| `/plan-eng-review` | Sau CEO review   | Lock architecture, edge cases, test plan |
+| Skill              | When           | Purpose                                  |
+| ------------------ | -------------- | ---------------------------------------- |
+| `/plan-ceo-review` | Đầu sprint     | Challenge scope, cắt gì không mất value? |
+| `/plan-eng-review` | Sau CEO review | Lock architecture, edge cases, test plan |
 
 ### Sensitive Code (when touching auth/payment/RLS)
 
@@ -177,13 +177,13 @@ Do not let context degrade. Fresh session > contaminated session.
 
 ### Phase/Sprint Close
 
-| Skill               | When              | Purpose                                        |
-| -------------------- | ----------------- | ---------------------------------------------- |
-| `/retro`             | Cuối phase/sprint | Retrospective, velocity tracking               |
-| `/plan-eng-review`   | Chuyển phase      | Re-evaluate assumptions cho phase tiếp         |
-| `/document-release`  | Cuối sprint       | Sync docs with what shipped                    |
-| `/ship`              | Ready to push     | Merge → test → review → push → PR             |
-| `/canary`            | After deploy      | Post-deploy monitoring for errors              |
+| Skill               | When              | Purpose                                |
+| ------------------- | ----------------- | -------------------------------------- |
+| `/retro`            | Cuối phase/sprint | Retrospective, velocity tracking       |
+| `/plan-eng-review`  | Chuyển phase      | Re-evaluate assumptions cho phase tiếp |
+| `/document-release` | Cuối sprint       | Sync docs with what shipped            |
+| `/ship`             | Ready to push     | Merge → test → review → push → PR      |
+| `/canary`           | After deploy      | Post-deploy monitoring for errors      |
 
 ### Learning & Memory
 
@@ -196,14 +196,14 @@ Do not let context degrade. Fresh session > contaminated session.
 
 ## Skills by Sprint Phase
 
-| Sprint                         | Primary Skills                                                    |
-| ------------------------------ | ----------------------------------------------------------------- |
-| Sprint 1: Admin Shell + Menu   | `/new-page`, `/new-action`, `/db-migrate`, `/verify`, `/review`   |
-| Sprint 2a: POS + KDS + Payment | `/db-migrate`, `/cso` (payments), `/new-page`, `/new-action`     |
-| Sprint 2b: Stock + Dashboard   | `/db-migrate`, `/qa`, `/browse`, `/benchmark`                    |
-| Sprint 3: HĐĐT + Momo + Refund | `/cso` (payments+HĐĐT), `/db-migrate`, `/investigate`            |
-| v1.0.0 Pilot Launch            | `/qa`, `/canary`, `/benchmark`, `/ship`, `/document-release`     |
-| Sprint 4-7: Post-pilot         | `/cso` (finance), `/plan-eng-review`, `/qa`, `/benchmark`        |
+| Sprint                         | Primary Skills                                                  |
+| ------------------------------ | --------------------------------------------------------------- |
+| Sprint 1: Admin Shell + Menu   | `/new-page`, `/new-action`, `/db-migrate`, `/verify`, `/review` |
+| Sprint 2a: POS + KDS + Payment | `/db-migrate`, `/cso` (payments), `/new-page`, `/new-action`    |
+| Sprint 2b: Stock + Dashboard   | `/db-migrate`, `/qa`, `/browse`, `/benchmark`                   |
+| Sprint 3: HĐĐT + Momo + Refund | `/cso` (payments+HĐĐT), `/db-migrate`, `/investigate`           |
+| v1.0.0 Pilot Launch            | `/qa`, `/canary`, `/benchmark`, `/ship`, `/document-release`    |
+| Sprint 4-7: Post-pilot         | `/cso` (finance), `/plan-eng-review`, `/qa`, `/benchmark`       |
 
 ---
 

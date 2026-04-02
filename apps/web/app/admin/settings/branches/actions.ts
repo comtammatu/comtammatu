@@ -75,7 +75,10 @@ export async function createBranch(
     if (error.code === "23505") {
       return { success: false, error: "Tên chi nhánh đã tồn tại" };
     }
-    return { success: false, error: "Không thể tạo chi nhánh. Vui lòng thử lại." };
+    return {
+      success: false,
+      error: "Không thể tạo chi nhánh. Vui lòng thử lại.",
+    };
   }
 
   revalidatePath("/admin/settings/branches");
@@ -160,9 +163,7 @@ export async function toggleBranchActive(
   return { success: true };
 }
 
-export async function setHeadquarters(
-  branchId: number,
-): Promise<ActionResult> {
+export async function setHeadquarters(branchId: number): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { success: false, error: "Chưa đăng nhập" };
 

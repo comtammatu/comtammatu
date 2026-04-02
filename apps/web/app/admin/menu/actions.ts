@@ -291,9 +291,7 @@ export async function updateItem(
   return { success: true };
 }
 
-export async function toggleItemActive(
-  itemId: number,
-): Promise<ActionResult> {
+export async function toggleItemActive(itemId: number): Promise<ActionResult> {
   const ctx = await getAuthContext();
   if (!ctx) return { success: false, error: "Không có quyền" };
 

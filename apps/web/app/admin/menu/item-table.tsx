@@ -94,10 +94,7 @@ export function ItemTable({ items, categories }: ItemTableProps) {
               </TableRow>
             )}
             {items.map((item) => (
-              <TableRow
-                key={item.id}
-                className={isPending ? "opacity-60" : ""}
-              >
+              <TableRow key={item.id} className={isPending ? "opacity-60" : ""}>
                 <TableCell>
                   <div>
                     <span className="font-medium">{item.name}</span>
@@ -109,9 +106,7 @@ export function ItemTable({ items, categories }: ItemTableProps) {
                   </div>
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
-                  <Badge variant="secondary">
-                    {item.category_name}
-                  </Badge>
+                  <Badge variant="secondary">{item.category_name}</Badge>
                 </TableCell>
                 <TableCell className="hidden md:table-cell text-right font-mono">
                   {formatVND(item.base_price)}

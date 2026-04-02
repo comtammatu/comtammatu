@@ -79,10 +79,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
               </TableRow>
             )}
             {categories.map((cat) => (
-              <TableRow
-                key={cat.id}
-                className={isPending ? "opacity-60" : ""}
-              >
+              <TableRow key={cat.id} className={isPending ? "opacity-60" : ""}>
                 <TableCell>
                   <span className="font-medium">{cat.name}</span>
                 </TableCell>
@@ -108,9 +105,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => setEditCategory(cat)}
-                      >
+                      <DropdownMenuItem onClick={() => setEditCategory(cat)}>
                         <Pencil className="mr-2 size-4" />
                         Chỉnh sửa
                       </DropdownMenuItem>

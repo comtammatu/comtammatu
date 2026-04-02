@@ -23,91 +23,91 @@ Sử dụng OKLCH color space (perceptual uniformity tốt hơn HSL). Toàn bộ
 
 ### 2.1 Light Mode (Default)
 
-| Token                       | OKLCH Value             | Hex Approx | Mục đích                         |
-| --------------------------- | ----------------------- | ---------- | -------------------------------- |
-| `--color-background`        | `oklch(0.98 0.005 80)`  | #FAF8F5    | Nền chính — warm cream           |
-| `--color-foreground`        | `oklch(0.15 0.02 55)`   | #1C1612    | Text chính — near-black warm     |
-| `--color-primary`           | `oklch(0.50 0.14 55)`   | #8B5E2F    | Primary — warm amber-brown       |
-| `--color-primary-foreground`| `oklch(0.98 0.005 80)`  | #FAF8F5    | Text trên primary                |
-| `--color-secondary`         | `oklch(0.94 0.01 80)`   | #EDE8E0    | Secondary — warm beige           |
-| `--color-secondary-foreground`| `oklch(0.25 0.02 55)` | #3D3129    | Text trên secondary              |
-| `--color-accent`            | `oklch(0.70 0.14 80)`   | #C49B4A    | Accent — warm gold               |
-| `--color-accent-foreground` | `oklch(0.15 0.02 55)`   | #1C1612    | Text trên accent                 |
-| `--color-muted`             | `oklch(0.94 0.01 80)`   | #EDE8E0    | Muted backgrounds                |
-| `--color-muted-foreground`  | `oklch(0.55 0.02 55)`   | #8B7E72    | Text phụ, placeholder            |
-| `--color-card`              | `oklch(1.0 0 0)`        | #FFFFFF    | Card background                  |
-| `--color-card-foreground`   | `oklch(0.15 0.02 55)`   | #1C1612    | Card text                        |
-| `--color-border`            | `oklch(0.88 0.01 80)`   | #DDD5C9    | Borders                          |
-| `--color-input`             | `oklch(0.88 0.01 80)`   | #DDD5C9    | Input borders                    |
-| `--color-ring`              | `oklch(0.50 0.14 55)`   | #8B5E2F    | Focus ring                       |
-| `--color-destructive`       | `oklch(0.55 0.20 27)`   | #DC2626    | Error/danger                     |
-| `--color-destructive-foreground`| `oklch(0.98 0.005 0)`| #FFF5F5    | Text trên destructive            |
+| Token                            | OKLCH Value            | Hex Approx | Mục đích                     |
+| -------------------------------- | ---------------------- | ---------- | ---------------------------- |
+| `--color-background`             | `oklch(0.98 0.005 80)` | #FAF8F5    | Nền chính — warm cream       |
+| `--color-foreground`             | `oklch(0.15 0.02 55)`  | #1C1612    | Text chính — near-black warm |
+| `--color-primary`                | `oklch(0.50 0.14 55)`  | #8B5E2F    | Primary — warm amber-brown   |
+| `--color-primary-foreground`     | `oklch(0.98 0.005 80)` | #FAF8F5    | Text trên primary            |
+| `--color-secondary`              | `oklch(0.94 0.01 80)`  | #EDE8E0    | Secondary — warm beige       |
+| `--color-secondary-foreground`   | `oklch(0.25 0.02 55)`  | #3D3129    | Text trên secondary          |
+| `--color-accent`                 | `oklch(0.70 0.14 80)`  | #C49B4A    | Accent — warm gold           |
+| `--color-accent-foreground`      | `oklch(0.15 0.02 55)`  | #1C1612    | Text trên accent             |
+| `--color-muted`                  | `oklch(0.94 0.01 80)`  | #EDE8E0    | Muted backgrounds            |
+| `--color-muted-foreground`       | `oklch(0.55 0.02 55)`  | #8B7E72    | Text phụ, placeholder        |
+| `--color-card`                   | `oklch(1.0 0 0)`       | #FFFFFF    | Card background              |
+| `--color-card-foreground`        | `oklch(0.15 0.02 55)`  | #1C1612    | Card text                    |
+| `--color-border`                 | `oklch(0.88 0.01 80)`  | #DDD5C9    | Borders                      |
+| `--color-input`                  | `oklch(0.88 0.01 80)`  | #DDD5C9    | Input borders                |
+| `--color-ring`                   | `oklch(0.50 0.14 55)`  | #8B5E2F    | Focus ring                   |
+| `--color-destructive`            | `oklch(0.55 0.20 27)`  | #DC2626    | Error/danger                 |
+| `--color-destructive-foreground` | `oklch(0.98 0.005 0)`  | #FFF5F5    | Text trên destructive        |
 
 ### 2.2 Dark Mode
 
-| Token                       | OKLCH Value             | Hex Approx | Ghi chú                         |
-| --------------------------- | ----------------------- | ---------- | -------------------------------- |
-| `--color-background`        | `oklch(0.16 0.02 55)`  | #1E1814    | Dark warm background             |
-| `--color-foreground`        | `oklch(0.93 0.01 80)`  | #EBE5DD    | Light warm text                  |
-| `--color-primary`           | `oklch(0.65 0.14 55)`  | #C4894A    | Lighter amber for dark bg        |
-| `--color-primary-foreground`| `oklch(0.13 0.02 55)`  | #1A1410    | Dark text on primary             |
-| `--color-secondary`         | `oklch(0.24 0.02 55)`  | #3A2F25    | Dark secondary                   |
-| `--color-secondary-foreground`| `oklch(0.93 0.01 80)`| #EBE5DD    | Light text on secondary          |
-| `--color-accent`            | `oklch(0.60 0.12 80)`  | #A88638    | Muted gold                       |
-| `--color-accent-foreground` | `oklch(0.93 0.01 80)`  | #EBE5DD    | Light text on accent             |
-| `--color-muted`             | `oklch(0.24 0.02 55)`  | #3A2F25    | Dark muted                       |
-| `--color-muted-foreground`  | `oklch(0.60 0.02 55)`  | #998B7E    | Muted text                       |
-| `--color-card`              | `oklch(0.20 0.02 55)`  | #2A221B    | Dark card                        |
-| `--color-card-foreground`   | `oklch(0.93 0.01 80)`  | #EBE5DD    | Card text                        |
-| `--color-border`            | `oklch(0.30 0.02 55)`  | #4A3D32    | Dark border                      |
-| `--color-input`             | `oklch(0.30 0.02 55)`  | #4A3D32    | Dark input border                |
-| `--color-ring`              | `oklch(0.65 0.14 55)`  | #C4894A    | Focus ring                       |
-| `--color-destructive`       | `oklch(0.45 0.18 27)`  | #B91C1C    | Darker red for dark mode         |
-| `--color-destructive-foreground`| `oklch(0.93 0.01 0)`| #F5EDED    | Text on destructive              |
+| Token                            | OKLCH Value           | Hex Approx | Ghi chú                   |
+| -------------------------------- | --------------------- | ---------- | ------------------------- |
+| `--color-background`             | `oklch(0.16 0.02 55)` | #1E1814    | Dark warm background      |
+| `--color-foreground`             | `oklch(0.93 0.01 80)` | #EBE5DD    | Light warm text           |
+| `--color-primary`                | `oklch(0.65 0.14 55)` | #C4894A    | Lighter amber for dark bg |
+| `--color-primary-foreground`     | `oklch(0.13 0.02 55)` | #1A1410    | Dark text on primary      |
+| `--color-secondary`              | `oklch(0.24 0.02 55)` | #3A2F25    | Dark secondary            |
+| `--color-secondary-foreground`   | `oklch(0.93 0.01 80)` | #EBE5DD    | Light text on secondary   |
+| `--color-accent`                 | `oklch(0.60 0.12 80)` | #A88638    | Muted gold                |
+| `--color-accent-foreground`      | `oklch(0.93 0.01 80)` | #EBE5DD    | Light text on accent      |
+| `--color-muted`                  | `oklch(0.24 0.02 55)` | #3A2F25    | Dark muted                |
+| `--color-muted-foreground`       | `oklch(0.60 0.02 55)` | #998B7E    | Muted text                |
+| `--color-card`                   | `oklch(0.20 0.02 55)` | #2A221B    | Dark card                 |
+| `--color-card-foreground`        | `oklch(0.93 0.01 80)` | #EBE5DD    | Card text                 |
+| `--color-border`                 | `oklch(0.30 0.02 55)` | #4A3D32    | Dark border               |
+| `--color-input`                  | `oklch(0.30 0.02 55)` | #4A3D32    | Dark input border         |
+| `--color-ring`                   | `oklch(0.65 0.14 55)` | #C4894A    | Focus ring                |
+| `--color-destructive`            | `oklch(0.45 0.18 27)` | #B91C1C    | Darker red for dark mode  |
+| `--color-destructive-foreground` | `oklch(0.93 0.01 0)`  | #F5EDED    | Text on destructive       |
 
 ### 2.3 Sidebar Tokens (Admin)
 
-| Token                            | Light                    | Dark                     |
-| -------------------------------- | ------------------------ | ------------------------ |
-| `--color-sidebar`                | `oklch(0.96 0.008 80)`  | `oklch(0.18 0.02 55)`   |
-| `--color-sidebar-foreground`     | `oklch(0.25 0.02 55)`   | `oklch(0.90 0.01 80)`   |
-| `--color-sidebar-primary`        | `oklch(0.50 0.14 55)`   | `oklch(0.65 0.14 55)`   |
+| Token                                | Light                  | Dark                  |
+| ------------------------------------ | ---------------------- | --------------------- |
+| `--color-sidebar`                    | `oklch(0.96 0.008 80)` | `oklch(0.18 0.02 55)` |
+| `--color-sidebar-foreground`         | `oklch(0.25 0.02 55)`  | `oklch(0.90 0.01 80)` |
+| `--color-sidebar-primary`            | `oklch(0.50 0.14 55)`  | `oklch(0.65 0.14 55)` |
 | `--color-sidebar-primary-foreground` | `oklch(0.98 0.005 80)` | `oklch(0.13 0.02 55)` |
-| `--color-sidebar-accent`         | `oklch(0.91 0.015 80)`  | `oklch(0.26 0.02 55)`   |
-| `--color-sidebar-accent-foreground` | `oklch(0.25 0.02 55)` | `oklch(0.90 0.01 80)`  |
-| `--color-sidebar-border`         | `oklch(0.88 0.01 80)`   | `oklch(0.30 0.02 55)`   |
-| `--color-sidebar-ring`           | `oklch(0.50 0.14 55)`   | `oklch(0.65 0.14 55)`   |
+| `--color-sidebar-accent`             | `oklch(0.91 0.015 80)` | `oklch(0.26 0.02 55)` |
+| `--color-sidebar-accent-foreground`  | `oklch(0.25 0.02 55)`  | `oklch(0.90 0.01 80)` |
+| `--color-sidebar-border`             | `oklch(0.88 0.01 80)`  | `oklch(0.30 0.02 55)` |
+| `--color-sidebar-ring`               | `oklch(0.50 0.14 55)`  | `oklch(0.65 0.14 55)` |
 
 ### 2.4 Status Colors (Custom — ngoài shadcn)
 
-| Status          | Token                    | Color          | Badge Variant |
-| --------------- | ------------------------ | -------------- | ------------- |
-| Success/Active  | `--color-success`        | Emerald 600    | `success`     |
-| Warning/Pending | `--color-warning`        | Amber 500      | `warning`     |
-| Info            | `--color-info`           | Sky 500        | `info`        |
+| Status          | Token             | Color       | Badge Variant |
+| --------------- | ----------------- | ----------- | ------------- |
+| Success/Active  | `--color-success` | Emerald 600 | `success`     |
+| Warning/Pending | `--color-warning` | Amber 500   | `warning`     |
+| Info            | `--color-info`    | Sky 500     | `info`        |
 
 Áp dụng cho:
 
-| Domain  | Status         | Badge Variant  | Icon          |
-| ------- | -------------- | -------------- | ------------- |
-| Order   | pending        | `warning`      | Clock         |
-| Order   | confirmed      | `info`         | CheckCircle   |
-| Order   | preparing      | `info`         | ChefHat       |
-| Order   | ready          | `success`      | Bell          |
-| Order   | served         | `success`      | UtensilsCrossed |
-| Order   | completed      | `secondary`    | CheckCheck    |
-| Order   | cancelled      | `destructive`  | X             |
-| Table   | available      | `success`      | Circle        |
-| Table   | occupied       | `warning`      | Users         |
-| Table   | reserved       | `info`         | CalendarClock |
-| Table   | maintenance    | `secondary`    | Wrench        |
-| Payment | pending        | `warning`      | Clock         |
-| Payment | completed      | `success`      | CheckCircle   |
-| Payment | failed         | `destructive`  | AlertCircle   |
-| Payment | refunded       | `secondary`    | RotateCcw     |
-| Staff   | active         | `success`      | UserCheck     |
-| Staff   | inactive       | `secondary`    | UserX         |
-| Staff   | on_leave       | `warning`      | Calendar      |
+| Domain  | Status      | Badge Variant | Icon            |
+| ------- | ----------- | ------------- | --------------- |
+| Order   | pending     | `warning`     | Clock           |
+| Order   | confirmed   | `info`        | CheckCircle     |
+| Order   | preparing   | `info`        | ChefHat         |
+| Order   | ready       | `success`     | Bell            |
+| Order   | served      | `success`     | UtensilsCrossed |
+| Order   | completed   | `secondary`   | CheckCheck      |
+| Order   | cancelled   | `destructive` | X               |
+| Table   | available   | `success`     | Circle          |
+| Table   | occupied    | `warning`     | Users           |
+| Table   | reserved    | `info`        | CalendarClock   |
+| Table   | maintenance | `secondary`   | Wrench          |
+| Payment | pending     | `warning`     | Clock           |
+| Payment | completed   | `success`     | CheckCircle     |
+| Payment | failed      | `destructive` | AlertCircle     |
+| Payment | refunded    | `secondary`   | RotateCcw       |
+| Staff   | active      | `success`     | UserCheck       |
+| Staff   | inactive    | `secondary`   | UserX           |
+| Staff   | on_leave    | `warning`     | Calendar        |
 
 ### 2.5 Radius Tokens
 
@@ -131,20 +131,21 @@ Sử dụng OKLCH color space (perceptual uniformity tốt hơn HSL). Toàn bộ
 - Fallback: `system-ui, -apple-system, sans-serif`
 
 Lý do chọn:
+
 - Playfair Display + Karla (từ UI UX Pro Max skill) **thiếu Vietnamese diacritics** → loại
 - Be Vietnam Pro: sans-serif hiện đại, dễ đọc trên mọi kích thước, tối ưu cho tiếng Việt
 
 ### 3.2 Type Scale
 
-| Level    | Class         | Size    | Weight       | Line Height | Dùng cho                            |
-| -------- | ------------- | ------- | ------------ | ----------- | ----------------------------------- |
-| Display  | `text-4xl`    | 36px    | Bold 700     | 1.2         | Page title (Dashboard, Menu)        |
-| Heading 1| `text-2xl`    | 24px    | Bold 700     | 1.3         | Section title                       |
-| Heading 2| `text-xl`     | 20px    | Bold 700     | 1.4         | Card title, dialog title            |
-| Heading 3| `text-base`   | 16px    | SemiBold 600 | 1.5         | Subsection, table group header      |
-| Body     | `text-base`   | 16px    | Regular 400  | 1.5         | Paragraph, description              |
-| Body SM  | `text-sm`     | 14px    | Regular 400  | 1.5         | Table cell, form label, input text  |
-| Caption  | `text-xs`     | 12px    | Medium 500   | 1.4         | Helper text, timestamp, badge label |
+| Level     | Class       | Size | Weight       | Line Height | Dùng cho                            |
+| --------- | ----------- | ---- | ------------ | ----------- | ----------------------------------- |
+| Display   | `text-4xl`  | 36px | Bold 700     | 1.2         | Page title (Dashboard, Menu)        |
+| Heading 1 | `text-2xl`  | 24px | Bold 700     | 1.3         | Section title                       |
+| Heading 2 | `text-xl`   | 20px | Bold 700     | 1.4         | Card title, dialog title            |
+| Heading 3 | `text-base` | 16px | SemiBold 600 | 1.5         | Subsection, table group header      |
+| Body      | `text-base` | 16px | Regular 400  | 1.5         | Paragraph, description              |
+| Body SM   | `text-sm`   | 14px | Regular 400  | 1.5         | Table cell, form label, input text  |
+| Caption   | `text-xs`   | 12px | Medium 500   | 1.4         | Helper text, timestamp, badge label |
 
 > **Lưu ý Vietnamese diacritics:** Tiếng Việt có dấu xếp chồng (ể, ẵ, ỗ). Line-height cho Display
 > đã tăng lên 1.2 (từ 1.1) để tránh cắt đỉnh dấu. H2 và H3 giờ có khoảng cách rõ rệt hơn
@@ -154,6 +155,7 @@ Lý do chọn:
 ### 3.3 Số & Giá (Tabular Numbers)
 
 Dùng `font-variant-numeric: tabular-nums` cho:
+
 - Cột giá trong table → số thẳng hàng
 - Tổng tiền POS
 - Dashboard metrics
@@ -168,20 +170,21 @@ Class: `tabular-nums` (Tailwind built-in)
 
 Base unit: 4px. Sử dụng Tailwind default scale.
 
-| Token  | Value | Dùng cho                              |
-| ------ | ----- | ------------------------------------- |
-| `1`    | 4px   | Inline spacing, icon gap              |
-| `2`    | 8px   | Compact element spacing               |
-| `3`    | 12px  | Input padding-x, button padding       |
-| `4`    | 16px  | Component gap, card padding (compact) |
-| `6`    | 24px  | Card padding, section spacing         |
-| `8`    | 32px  | Page section gap                      |
-| `12`   | 48px  | Large section gap                     |
-| `16`   | 64px  | Page-level padding                    |
+| Token | Value | Dùng cho                              |
+| ----- | ----- | ------------------------------------- |
+| `1`   | 4px   | Inline spacing, icon gap              |
+| `2`   | 8px   | Compact element spacing               |
+| `3`   | 12px  | Input padding-x, button padding       |
+| `4`   | 16px  | Component gap, card padding (compact) |
+| `6`   | 24px  | Card padding, section spacing         |
+| `8`   | 32px  | Page section gap                      |
+| `12`  | 48px  | Large section gap                     |
+| `16`  | 64px  | Page-level padding                    |
 
 ### 4.2 Responsive Breakpoints
 
 Tailwind v4 defaults:
+
 ```
 sm:  640px   — Mobile landscape
 md:  768px   — Tablet portrait
@@ -192,13 +195,13 @@ xl:  1280px  — Desktop
 
 ### 4.3 Container Widths per Surface
 
-| Surface  | Container         | Sidebar   | Content Area    |
-| -------- | ----------------- | --------- | --------------- |
-| Admin    | Full viewport     | w-64 (256px), collapsible → w-[68px] | `flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8` |
-| POS      | Full viewport     | None      | Split: 70% menu / 30% cart |
-| KDS      | Full viewport     | None      | CSS Grid `auto-fill, minmax(320px, 1fr)` |
-| Employee | `max-w-lg mx-auto`| None      | Single column, centered |
-| Login    | `max-w-sm mx-auto`| None      | Centered card   |
+| Surface  | Container          | Sidebar                              | Content Area                                    |
+| -------- | ------------------ | ------------------------------------ | ----------------------------------------------- |
+| Admin    | Full viewport      | w-64 (256px), collapsible → w-[68px] | `flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8` |
+| POS      | Full viewport      | None                                 | Split: 70% menu / 30% cart                      |
+| KDS      | Full viewport      | None                                 | CSS Grid `auto-fill, minmax(320px, 1fr)`        |
+| Employee | `max-w-lg mx-auto` | None                                 | Single column, centered                         |
+| Login    | `max-w-sm mx-auto` | None                                 | Centered card                                   |
 
 ---
 
@@ -231,6 +234,7 @@ xl:  1280px  — Desktop
 ```
 
 **Admin List Page Pattern:**
+
 1. Page Header: `<h1>` (text-2xl font-bold) + description (text-muted-foreground) + primary action Button
 2. Filter Bar: Search Input + Select filters + optional date range
 3. Data Table: sortable columns, row selection, row actions (DropdownMenu)
@@ -238,12 +242,14 @@ xl:  1280px  — Desktop
 5. Empty State: centered icon + heading + description + CTA button
 
 **Admin Detail/Edit Page Pattern:**
+
 1. Breadcrumb: Dashboard / Menu / [Item Name]
 2. Page Header: title + back button (ghost)
 3. Form sections as Cards, each with CardHeader + CardContent
 4. Sticky footer: Cancel (outline) + Save (primary)
 
 **Admin Settings Page Pattern:**
+
 1. Vertical Tabs on desktop (left sidebar within content)
 2. Horizontal Tabs on mobile
 3. Each tab → Card with form fields
@@ -280,6 +286,7 @@ xl:  1280px  — Desktop
 ```
 
 **POS Design Rules:**
+
 - Menu grid: CSS Grid `auto-fill, minmax(120px, 1fr)`, gap-3
 - Menu item card: image (aspect-square, rounded-lg) + name (text-sm font-medium, 2 lines max) + price (text-sm font-bold tabular-nums)
 - Tap to add → instant cart update (optimistic UI)
@@ -314,6 +321,7 @@ xl:  1280px  — Desktop
 ```
 
 **KDS Design Rules:**
+
 - LUÔN dark theme (`class="dark"` on layout)
 - Order card: Card with thick left border (color = time status)
 - Timer color thresholds: green `< 5 min` → amber `5-10 min` → red `> 10 min`
@@ -359,6 +367,7 @@ xl:  1280px  — Desktop
 ```
 
 **Employee Portal Design Rules:**
+
 - Single column, max-w-lg, centered
 - Bottom tab navigation (3-4 tabs): Home, Schedule, Profile
 - Card-based content sections
@@ -446,6 +455,7 @@ Component: shadcn `Tabs`
 Component: shadcn `Table` + `@tanstack/react-table`
 
 **Features:**
+
 - Column sorting: click header → asc → desc → none (ArrowUpDown icon)
 - Row selection: Checkbox column (leftmost)
 - Pagination: 10 / 20 / 50 rows per page
@@ -454,6 +464,7 @@ Component: shadcn `Table` + `@tanstack/react-table`
 - Responsive: horizontal scroll on mobile (overflow-x-auto)
 
 **Styling:**
+
 - Header: bg-muted text-muted-foreground text-xs font-medium uppercase tracking-wider
 - Row: border-b hover:bg-muted/50 transition-colors
 - Cell: py-3 px-4 text-sm
@@ -462,15 +473,15 @@ Component: shadcn `Table` + `@tanstack/react-table`
 
 **Standard Admin Table Columns:**
 
-| Column      | Width   | Align | Notes                          |
-| ----------- | ------- | ----- | ------------------------------ |
-| Checkbox    | w-[40px]| center| Row selection                  |
-| ID/Number   | w-[80px]| left  | #1, #2... or auto-generated    |
-| Name/Title  | flex-1  | left  | Primary identifier, font-medium|
-| Status      | w-[120px]| center| Badge component                |
-| Price/Amount| w-[120px]| right | tabular-nums, VND formatted    |
-| Date        | w-[140px]| left  | dd/MM/yyyy HH:mm format        |
-| Actions     | w-[60px]| center| ⋯ DropdownMenu                 |
+| Column       | Width     | Align  | Notes                           |
+| ------------ | --------- | ------ | ------------------------------- |
+| Checkbox     | w-[40px]  | center | Row selection                   |
+| ID/Number    | w-[80px]  | left   | #1, #2... or auto-generated     |
+| Name/Title   | flex-1    | left   | Primary identifier, font-medium |
+| Status       | w-[120px] | center | Badge component                 |
+| Price/Amount | w-[120px] | right  | tabular-nums, VND formatted     |
+| Date         | w-[140px] | left   | dd/MM/yyyy HH:mm format         |
+| Actions      | w-[60px]  | center | ⋯ DropdownMenu                  |
 
 #### Card
 
@@ -479,6 +490,7 @@ Component: shadcn `Card`
 **Variants by usage:**
 
 Stat Card (Dashboard):
+
 ```
 ┌─────────────────────┐
 │  Doanh thu hôm nay  │  ← CardHeader: text-sm text-muted-foreground
@@ -488,6 +500,7 @@ Stat Card (Dashboard):
 ```
 
 Setting Card:
+
 ```
 ┌─────────────────────────┐
 │  Thông tin chi nhánh     │  ← CardTitle: text-lg font-semibold
@@ -505,15 +518,15 @@ Component: shadcn `Badge` + custom variants
 
 **Variants:**
 
-| Variant       | Background           | Text                 | Border          |
-| ------------- | -------------------- | -------------------- | --------------- |
-| `default`     | bg-primary           | text-primary-foreground | —             |
-| `secondary`   | bg-secondary         | text-secondary-foreground | —           |
-| `outline`     | transparent          | text-foreground      | border          |
-| `destructive` | bg-destructive       | text-destructive-foreground | —         |
-| `success`     | bg-emerald-100       | text-emerald-800     | — (dark: bg-emerald-900/30 text-emerald-400) |
-| `warning`     | bg-amber-100         | text-amber-800       | — (dark: bg-amber-900/30 text-amber-400) |
-| `info`        | bg-sky-100           | text-sky-800         | — (dark: bg-sky-900/30 text-sky-400) |
+| Variant       | Background     | Text                        | Border                                       |
+| ------------- | -------------- | --------------------------- | -------------------------------------------- |
+| `default`     | bg-primary     | text-primary-foreground     | —                                            |
+| `secondary`   | bg-secondary   | text-secondary-foreground   | —                                            |
+| `outline`     | transparent    | text-foreground             | border                                       |
+| `destructive` | bg-destructive | text-destructive-foreground | —                                            |
+| `success`     | bg-emerald-100 | text-emerald-800            | — (dark: bg-emerald-900/30 text-emerald-400) |
+| `warning`     | bg-amber-100   | text-amber-800              | — (dark: bg-amber-900/30 text-amber-400)     |
+| `info`        | bg-sky-100     | text-sky-800                | — (dark: bg-sky-900/30 text-sky-400)         |
 
 Size: `text-xs font-medium px-2.5 py-0.5 rounded-sm`
 
@@ -530,6 +543,7 @@ Component: shadcn `Avatar`
 Component: shadcn `Skeleton`
 
 Dùng cho loading states:
+
 - Table: 5 skeleton rows, matching column widths
 - Card: skeleton cho title + value + trend
 - Sidebar: skeleton cho nav items
@@ -553,6 +567,7 @@ Dùng cho loading states:
 ```
 
 Empty state nên có:
+
 - **Primary action**: Button outline rõ ràng (e.g., "+ Thêm món ăn")
 - **Secondary action** (optional): link nhỏ bên dưới cho hành động thay thế (e.g., "Nhập từ Excel", "Xem hướng dẫn")
 - Container: dashed border (`border-dashed`), py-12, max-w-sm mx-auto
@@ -566,26 +581,31 @@ Component: shadcn `Input`
 **Variants:**
 
 Default:
+
 ```
 [                    ]  → h-9, rounded-md, border, text-sm
 ```
 
 With prefix (VND):
+
 ```
 [₫ |              ]  → prefix: text-muted-foreground, border-r, px-3
 ```
 
 With suffix (%):
+
 ```
 [              | % ]  → suffix: text-muted-foreground, border-l, px-3
 ```
 
 With icon (Search):
+
 ```
 [🔍|              ]  → icon: absolute left-3, input: pl-9
 ```
 
 **States:**
+
 - Default: border-input
 - Focus: ring-2 ring-ring ring-offset-2
 - Error: border-destructive ring-destructive
@@ -655,6 +675,7 @@ FormField
 ```
 
 **Form spacing:**
+
 - Between fields: `space-y-4`
 - Between sections: `space-y-6`
 - Form width: `max-w-2xl` (create/edit), full-width (settings/filters)
@@ -691,15 +712,16 @@ Component: shadcn `Dialog`
 
 **Sizes:**
 
-| Size    | Class           | Dùng cho                           |
-| ------- | --------------- | ---------------------------------- |
-| `sm`    | `max-w-sm`      | Simple confirms, quick actions     |
-| `default`| `max-w-lg`     | Create/edit forms (1-5 fields)     |
-| `lg`    | `max-w-2xl`     | Complex forms, multi-section       |
-| `xl`    | `max-w-4xl`     | Previews, large content            |
-| `full`  | `max-w-[calc(100vw-4rem)]` | Full-screen modals (rare) |
+| Size      | Class                      | Dùng cho                       |
+| --------- | -------------------------- | ------------------------------ |
+| `sm`      | `max-w-sm`                 | Simple confirms, quick actions |
+| `default` | `max-w-lg`                 | Create/edit forms (1-5 fields) |
+| `lg`      | `max-w-2xl`                | Complex forms, multi-section   |
+| `xl`      | `max-w-4xl`                | Previews, large content        |
+| `full`    | `max-w-[calc(100vw-4rem)]` | Full-screen modals (rare)      |
 
 **Structure:**
+
 ```
 Dialog
   └── DialogContent
@@ -713,6 +735,7 @@ Dialog
 ```
 
 **Rules:**
+
 - Always include DialogTitle (accessibility)
 - Close button (X) top-right
 - Click outside → close (default behavior)
@@ -740,6 +763,7 @@ Dùng cho: delete item, deactivate staff, cancel order
 ```
 
 **Rules:**
+
 - Destructive button: `variant="destructive"`, explicit action text ("Xóa món ăn" NOT "OK" or "Xác nhận")
 - Cannot click outside to close
 - Must explicitly choose Cancel or Confirm
@@ -749,6 +773,7 @@ Dùng cho: delete item, deactivate staff, cancel order
 Component: shadcn `DropdownMenu`
 
 Dùng cho:
+
 1. Row actions (table): Trigger = ⋯ icon button (ghost, size="icon")
 2. User menu (header): Trigger = Avatar
 
@@ -774,19 +799,21 @@ Position: bottom-right (desktop), bottom-center (mobile)
 
 **Types:**
 
-| Type    | Icon        | Duration | Dùng cho                        |
-| ------- | ----------- | -------- | ------------------------------- |
-| success | CheckCircle | 4s       | CRUD thành công                 |
-| error   | XCircle     | 6s       | Lỗi validation, server error   |
-| info    | Info        | 4s       | Thông báo chung                 |
-| loading | Spinner     | ∞        | Đang xử lý (dismiss on complete)|
+| Type    | Icon        | Duration | Dùng cho                         |
+| ------- | ----------- | -------- | -------------------------------- |
+| success | CheckCircle | 4s       | CRUD thành công                  |
+| error   | XCircle     | 6s       | Lỗi validation, server error     |
+| info    | Info        | 4s       | Thông báo chung                  |
+| loading | Spinner     | ∞        | Đang xử lý (dismiss on complete) |
 
 **Config:**
+
 - Max visible: `visibleToasts={3}` — tránh spam UI, đặc biệt POS/KDS có updates liên tục
 - Stacking: newest on top, older ones collapse
 - Dismiss: swipe hoặc click X
 
 **Examples:**
+
 - "Đã lưu thực đơn" (success)
 - "Đã xóa bàn số 5" (success)
 - "Không thể kết nối server. Vui lòng thử lại." (error — luôn kèm hướng dẫn)
@@ -805,10 +832,10 @@ Component: shadcn `Tooltip`
 
 Component: shadcn `Sheet`
 
-| Side    | Dùng cho                           |
-| ------- | ---------------------------------- |
-| `left`  | Mobile sidebar navigation          |
-| `right` | Quick-edit panels, filter panels   |
+| Side    | Dùng cho                         |
+| ------- | -------------------------------- |
+| `left`  | Mobile sidebar navigation        |
+| `right` | Quick-edit panels, filter panels |
 
 - Width: w-[300px] (mobile sidebar), w-[400px] (edit panels)
 - Overlay: bg-black/50
@@ -840,25 +867,26 @@ Component: shadcn `Button`
 
 **Variants:**
 
-| Variant       | Style                              | Dùng cho                        |
-| ------------- | ---------------------------------- | ------------------------------- |
-| `default`     | bg-primary text-primary-foreground | Primary actions: Lưu, Thêm mới |
-| `secondary`   | bg-secondary text-secondary-foreground | Secondary actions            |
-| `outline`     | border bg-background               | Cancel, back, alternative       |
-| `ghost`       | transparent, hover:bg-accent       | Icon buttons, nav items         |
-| `destructive` | bg-destructive                     | Delete, deactivate              |
-| `link`        | text-primary underline             | Inline links                    |
+| Variant       | Style                                  | Dùng cho                       |
+| ------------- | -------------------------------------- | ------------------------------ |
+| `default`     | bg-primary text-primary-foreground     | Primary actions: Lưu, Thêm mới |
+| `secondary`   | bg-secondary text-secondary-foreground | Secondary actions              |
+| `outline`     | border bg-background                   | Cancel, back, alternative      |
+| `ghost`       | transparent, hover:bg-accent           | Icon buttons, nav items        |
+| `destructive` | bg-destructive                         | Delete, deactivate             |
+| `link`        | text-primary underline                 | Inline links                   |
 
 **Sizes:**
 
-| Size      | Class            | Dùng cho                   |
-| --------- | ---------------- | -------------------------- |
-| `sm`      | h-8 px-3 text-xs | Table actions, compact UI  |
-| `default` | h-9 px-4 text-sm | Forms, dialogs             |
-| `lg`      | h-11 px-8        | Page-level CTAs            |
-| `icon`    | h-9 w-9          | Icon-only buttons          |
+| Size      | Class            | Dùng cho                  |
+| --------- | ---------------- | ------------------------- |
+| `sm`      | h-8 px-3 text-xs | Table actions, compact UI |
+| `default` | h-9 px-4 text-sm | Forms, dialogs            |
+| `lg`      | h-11 px-8        | Page-level CTAs           |
+| `icon`    | h-9 w-9          | Icon-only buttons         |
 
 **Loading state:**
+
 ```tsx
 <Button disabled>
   <Loader2 className="mr-2 size-4 animate-spin" />
@@ -867,11 +895,13 @@ Component: shadcn `Button`
 ```
 
 **POS Button sizes:**
+
 - Menu item tap: min-h-[48px]
 - Payment button: h-12 w-full text-base font-semibold
 - Quantity stepper: h-10 w-10
 
 **KDS Button sizes:**
+
 - Bump button: h-16 w-full text-lg font-bold
 
 #### Pagination
@@ -902,49 +932,49 @@ Component: shadcn `ToggleGroup`
 
 ### 7.1 Size Scale
 
-| Surface  | Default Size | Stroke Width | Class           |
-| -------- | ------------ | ------------ | --------------- |
-| Admin    | 20px         | 1.5          | `size-5`        |
-| POS      | 24px         | 2            | `size-6`        |
-| KDS      | 28px         | 2            | `size-7`        |
-| Inline   | 16px         | 1.5          | `size-4`        |
+| Surface | Default Size | Stroke Width | Class    |
+| ------- | ------------ | ------------ | -------- |
+| Admin   | 20px         | 1.5          | `size-5` |
+| POS     | 24px         | 2            | `size-6` |
+| KDS     | 28px         | 2            | `size-7` |
+| Inline  | 16px         | 1.5          | `size-4` |
 
 ### 7.2 Module Icon Mapping
 
-| Module     | Icon               | Lucide Name        |
-| ---------- | ------------------ | ------------------ |
-| Dashboard  | 📊                 | `LayoutDashboard`  |
-| Menu       | 🍴                 | `UtensilsCrossed`  |
-| Orders     | 🧾                 | `Receipt`          |
-| Inventory  | 📦                 | `Package`          |
-| Staff/HR   | 👥                 | `Users`            |
-| CRM        | ❤️                 | `Heart`            |
-| Finance    | 💰                 | `Wallet`           |
-| Reports    | 📈                 | `BarChart3`        |
-| Settings   | ⚙️                 | `Settings`         |
-| POS        | 🛒                 | `ShoppingCart`     |
-| KDS        | 👨‍🍳                 | `ChefHat`          |
+| Module    | Icon | Lucide Name       |
+| --------- | ---- | ----------------- |
+| Dashboard | 📊   | `LayoutDashboard` |
+| Menu      | 🍴   | `UtensilsCrossed` |
+| Orders    | 🧾   | `Receipt`         |
+| Inventory | 📦   | `Package`         |
+| Staff/HR  | 👥   | `Users`           |
+| CRM       | ❤️   | `Heart`           |
+| Finance   | 💰   | `Wallet`          |
+| Reports   | 📈   | `BarChart3`       |
+| Settings  | ⚙️   | `Settings`        |
+| POS       | 🛒   | `ShoppingCart`    |
+| KDS       | 👨‍🍳   | `ChefHat`         |
 
 ### 7.3 Action Icon Mapping
 
-| Action     | Icon               | Lucide Name        |
-| ---------- | ------------------ | ------------------ |
-| Search     | 🔍                 | `Search`           |
-| Add/Create | ➕                 | `Plus`             |
-| Edit       | ✏️                 | `Pencil`           |
-| Delete     | 🗑                 | `Trash2`           |
-| More/Menu  | ⋯                  | `MoreHorizontal`   |
-| Back       | ←                  | `ArrowLeft`        |
-| Close      | ✕                  | `X`                |
-| Filter     | 🔽                 | `SlidersHorizontal`|
-| Sort       | ↕                  | `ArrowUpDown`      |
-| Download   | ⬇                  | `Download`         |
-| Upload     | ⬆                  | `Upload`           |
-| Refresh    | 🔄                 | `RefreshCw`        |
-| Eye (view) | 👁                 | `Eye`              |
-| Copy       | 📋                 | `Copy`             |
-| Print      | 🖨                 | `Printer`          |
-| Logout     | 🚪                 | `LogOut`           |
+| Action     | Icon | Lucide Name         |
+| ---------- | ---- | ------------------- |
+| Search     | 🔍   | `Search`            |
+| Add/Create | ➕   | `Plus`              |
+| Edit       | ✏️   | `Pencil`            |
+| Delete     | 🗑   | `Trash2`            |
+| More/Menu  | ⋯    | `MoreHorizontal`    |
+| Back       | ←    | `ArrowLeft`         |
+| Close      | ✕    | `X`                 |
+| Filter     | 🔽   | `SlidersHorizontal` |
+| Sort       | ↕    | `ArrowUpDown`       |
+| Download   | ⬇    | `Download`          |
+| Upload     | ⬆    | `Upload`            |
+| Refresh    | 🔄   | `RefreshCw`         |
+| Eye (view) | 👁   | `Eye`               |
+| Copy       | 📋   | `Copy`              |
+| Print      | 🖨   | `Printer`           |
+| Logout     | 🚪   | `LogOut`            |
 
 ---
 
@@ -966,7 +996,7 @@ Component: shadcn `ToggleGroup`
 export function formatVND(amount: number): string {
   const formatted = Math.round(amount)
     .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   return `${formatted}đ`;
 }
 ```
@@ -997,12 +1027,12 @@ text-right tabular-nums font-medium
 
 ### 9.3 Touch Targets
 
-| Surface  | Minimum Size | Class                    |
-| -------- | ------------ | ------------------------ |
-| Admin    | 32 x 32 px   | `min-h-8 min-w-8`       |
-| POS      | 48 x 48 px   | `min-h-12 min-w-12`     |
-| KDS      | 64 x 64 px   | `min-h-16 min-w-16`     |
-| Employee | 44 x 44 px   | `min-h-11 min-w-11`     |
+| Surface  | Minimum Size | Class               |
+| -------- | ------------ | ------------------- |
+| Admin    | 32 x 32 px   | `min-h-8 min-w-8`   |
+| POS      | 48 x 48 px   | `min-h-12 min-w-12` |
+| KDS      | 64 x 64 px   | `min-h-16 min-w-16` |
+| Employee | 44 x 44 px   | `min-h-11 min-w-11` |
 
 ### 9.4 Keyboard Navigation
 
@@ -1023,7 +1053,9 @@ text-right tabular-nums font-medium
 
 ```css
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -1034,6 +1066,7 @@ text-right tabular-nums font-medium
 ### 9.7 Color Independence
 
 Never use color alone to convey information:
+
 - Status badges: color + text label + icon
 - Form errors: red border + error icon + text message
 - Chart data: color + pattern/shape + label
@@ -1044,11 +1077,11 @@ Never use color alone to convey information:
 
 ### 10.1 Duration Scale
 
-| Duration | Value  | Dùng cho                         |
-| -------- | ------ | -------------------------------- |
-| Fast     | 150ms  | Hover states, opacity changes    |
-| Normal   | 200ms  | Dialogs, popovers, dropdowns     |
-| Slow     | 300ms  | Sheet slide, sidebar collapse    |
+| Duration | Value | Dùng cho                      |
+| -------- | ----- | ----------------------------- |
+| Fast     | 150ms | Hover states, opacity changes |
+| Normal   | 200ms | Dialogs, popovers, dropdowns  |
+| Slow     | 300ms | Sheet slide, sidebar collapse |
 
 ### 10.2 Easing
 
@@ -1081,13 +1114,13 @@ Never use color alone to convey information:
 
 ### Surface Defaults
 
-| Surface  | Default Theme | User Toggle? |
-| -------- | ------------- | ------------ |
-| Admin    | Light         | Yes (header) |
-| POS      | Light         | Yes (settings)|
-| KDS      | **Dark**      | No (always dark)|
-| Employee | System        | Yes          |
-| Login    | Light         | No           |
+| Surface  | Default Theme | User Toggle?     |
+| -------- | ------------- | ---------------- |
+| Admin    | Light         | Yes (header)     |
+| POS      | Light         | Yes (settings)   |
+| KDS      | **Dark**      | No (always dark) |
+| Employee | System        | Yes              |
+| Login    | Light         | No               |
 
 ---
 
@@ -1133,22 +1166,22 @@ packages/shared/
 
 ### packages/ui
 
-| Package                     | Version  | Purpose                      |
-| --------------------------- | -------- | ---------------------------- |
-| `class-variance-authority`  | ^0.7.1   | Component variant system     |
-| `clsx`                      | ^2.1.1   | Conditional class names      |
-| `tailwind-merge`            | ^3.5.0   | Merge Tailwind classes       |
-| `lucide-react`              | ^1.7.0   | Icon library                 |
-| `sonner`                    | ^2.0.7   | Toast notifications          |
-| `@radix-ui/react-*`        | latest   | Headless UI primitives       |
+| Package                    | Version | Purpose                  |
+| -------------------------- | ------- | ------------------------ |
+| `class-variance-authority` | ^0.7.1  | Component variant system |
+| `clsx`                     | ^2.1.1  | Conditional class names  |
+| `tailwind-merge`           | ^3.5.0  | Merge Tailwind classes   |
+| `lucide-react`             | ^1.7.0  | Icon library             |
+| `sonner`                   | ^2.0.7  | Toast notifications      |
+| `@radix-ui/react-*`        | latest  | Headless UI primitives   |
 
 ### apps/web
 
-| Package                     | Version  | Purpose                      |
-| --------------------------- | -------- | ---------------------------- |
-| `@tanstack/react-table`    | ^8.21.3  | Data table logic             |
-| `react-hook-form`          | ^7.72.0  | Form state management        |
-| `@hookform/resolvers`      | ^5.2.2   | Zod integration for RHF      |
+| Package                 | Version | Purpose                 |
+| ----------------------- | ------- | ----------------------- |
+| `@tanstack/react-table` | ^8.21.3 | Data table logic        |
+| `react-hook-form`       | ^7.72.0 | Form state management   |
+| `@hookform/resolvers`   | ^5.2.2  | Zod integration for RHF |
 
 ### shadcn Components (Sprint 1)
 
@@ -1165,6 +1198,7 @@ Display: `card`, `skeleton`, `breadcrumb`, `toggle-group`, `pagination`
 > Nguồn: Vercel Web Interface Guidelines + Web Design best practices
 
 ### HTML & Semantics
+
 - `<button>` cho actions, `<a>` cho navigation — KHÔNG BAO GIỜ `<div onClick>`
 - `<img>` luôn có `width` + `height` attributes (tránh CLS)
 - Below-fold images: `loading="lazy"`
@@ -1174,6 +1208,7 @@ Display: `card`, `skeleton`, `breadcrumb`, `toggle-group`, `pagination`
 - Headings theo thứ bậc `<h1>`–`<h6>`
 
 ### Forms
+
 - `autocomplete` + `name` attributes có ý nghĩa (e.g., `autocomplete="email"`)
 - `type` + `inputMode` phù hợp (`email`, `tel`, `numeric`)
 - `spellCheck={false}` cho email, codes, usernames
@@ -1185,6 +1220,7 @@ Display: `card`, `skeleton`, `breadcrumb`, `toggle-group`, `pagination`
 - Cảnh báo khi navigate với unsaved changes (`beforeunload`)
 
 ### Text & Typography
+
 - Dấu ba chấm: `…` (ellipsis character) không phải `...`
 - Ngoặc kép: `"` `"` (curly quotes)
 - Loading text: "Đang lưu…", "Đang tải…"
@@ -1193,27 +1229,32 @@ Display: `card`, `skeleton`, `breadcrumb`, `toggle-group`, `pagination`
 - Flex children: `min-w-0` để cho phép truncation
 
 ### Animation
+
 - CHỈ animate `transform` + `opacity` (compositor-friendly)
 - KHÔNG BAO GIỜ `transition: all` — list properties cụ thể
 - Honor `prefers-reduced-motion`
 - Animations phải interruptible — phản hồi user input giữa chừng
 
 ### State & Navigation
+
 - URL phản ánh state: filters, tabs, pagination trong query params
 - Deep-link mọi stateful UI
 - Destructive actions: confirmation dialog hoặc undo window — KHÔNG immediate
 
 ### Touch & Mobile
+
 - `touch-action: manipulation` trên POS/KDS (tránh double-tap zoom delay)
 - `overscroll-behavior: contain` trong modals/drawers/sheets
 - `autoFocus`: chỉ dùng trên desktop, single primary input; tránh trên mobile
 
 ### Dark Mode
+
 - `color-scheme: dark` trên `<html>` cho dark themes
 - `<meta name="theme-color">` match page background
 - Native `<select>`: set explicit `background-color` + `color` (Windows dark mode)
 
 ### Performance
+
 - Lists > 50 items: virtualization bắt buộc (`virtua` hoặc `content-visibility: auto`)
 - Tránh layout reads trong render (`getBoundingClientRect`, `offsetHeight`)
 - `<link rel="preconnect">` cho CDN/asset domains
@@ -1225,22 +1266,26 @@ Display: `card`, `skeleton`, `breadcrumb`, `toggle-group`, `pagination`
 > Nguồn: Vercel React Best Practices (57 rules, 8 categories)
 
 ### Eliminating Waterfalls (CRITICAL)
+
 - `Promise.all()` cho independent fetches
 - `await` chỉ ở nhánh thực sự cần — defer await
 - Suspense boundaries để stream content
 
 ### Bundle Size (CRITICAL)
+
 - Direct imports: `@comtammatu/ui/components/button` — KHÔNG barrel import trong client
 - `next/dynamic` cho heavy components (Calendar, DataTable trong modals)
 - Analytics/3rd-party: load sau hydration (`next/script strategy="afterInteractive"`)
 
 ### Server Performance (HIGH)
+
 - `React.cache()` cho per-request deduplication
 - Minimize data serialized từ Server Components sang Client
 - `server.after()` (Next.js 16) cho non-blocking ops (audit logs, analytics)
 - Server Actions: authenticate như API routes
 
 ### Re-render Optimization (MEDIUM)
+
 - `useMemo` cho expensive computations
 - Functional `setState`: `setCount(prev => prev + 1)` cho stable callbacks
 - Primitive deps trong `useEffect`
@@ -1254,6 +1299,7 @@ Display: `card`, `skeleton`, `breadcrumb`, `toggle-group`, `pagination`
 > Nguồn: Vercel Composition Patterns
 
 ### Component Architecture
+
 - **KHÔNG boolean prop proliferation**: Không `isThread`, `isEditing`, `isDMThread`
 - Mỗi boolean doubles possible states → exponential complexity
 - **Compound components** thay vì monolithic:
@@ -1274,16 +1320,19 @@ Display: `card`, `skeleton`, `breadcrumb`, `toggle-group`, `pagination`
 ```
 
 ### Explicit Variants
+
 - Tạo variant components rõ ràng thay vì boolean modes:
   - `<MenuItemCard />` và `<MenuItemRow />` thay vì `<MenuItem isCard />`
   - `<ChannelComposer />` và `<ThreadComposer />` thay vì `<Composer isThread />`
 
 ### State Management
+
 - Lift state vào Provider components
 - Decouple state từ UI qua context interface: `{ state, actions, meta }`
 - Children over render props: `<DataTable>{children}</DataTable>` thay vì `renderRow={...}`
 
 ### React 19 APIs
+
 - **KHÔNG `forwardRef`** — ref là regular prop trong React 19
 - Dùng `use()` thay vì `useContext()`
 
@@ -1292,6 +1341,7 @@ Display: `card`, `skeleton`, `breadcrumb`, `toggle-group`, `pagination`
 ## 17. Copywriting & Content Guidelines
 
 ### Vietnamese UI Text Rules
+
 - **Active voice**: "Thêm món ăn" không phải "Món ăn sẽ được thêm"
 - **Button labels cụ thể**: "Lưu thực đơn", "Xóa nhân viên", "Tạo chi nhánh" — KHÔNG "Lưu", "OK", "Xác nhận"
 - **Error messages kèm hướng dẫn**: "Email không hợp lệ. Vui lòng nhập đúng định dạng." — KHÔNG chỉ "Lỗi"
@@ -1303,6 +1353,7 @@ Display: `card`, `skeleton`, `breadcrumb`, `toggle-group`, `pagination`
 - **Confirmation dialogs**: action verb cụ thể cho destructive button ("Xóa món ăn" không phải "Xóa")
 
 ### Date & Number Formatting
+
 - Ngày: `dd/MM/yyyy` (Vietnamese standard) — dùng `Intl.DateTimeFormat`
 - Giờ: `HH:mm` (24h format)
 - Tiền: `formatVND()` — KHÔNG hardcode format
@@ -1315,21 +1366,24 @@ Display: `card`, `skeleton`, `breadcrumb`, `toggle-group`, `pagination`
 > Nguồn: Frontend Design skill — tránh "AI slop" aesthetics
 
 ### Aesthetic Direction: Warm Professional
+
 - **Tone**: Warm, trustworthy, traditional-meets-modern. Nhà hàng cơm tấm Việt Nam chuyên nghiệp
 - **NOT generic**: Không Inter/Roboto/Arial, không purple gradients, không cookie-cutter layouts
 - **Dominant + accent**: Warm amber-brown primary đậm + gold accent sắc nét. Không phân bổ màu đều
 - **Intentional choices**: Mỗi quyết định thiết kế phải có lý do rõ ràng
 
 ### Per-Surface Aesthetic
-| Surface  | Aesthetic              | Key Feeling                        |
-| -------- | ---------------------- | ---------------------------------- |
-| Admin    | Clean professional     | Efficient, organized, trustworthy  |
-| POS      | Bold, touch-optimized  | Fast, clear, confident             |
-| KDS      | Industrial utilitarian | Raw, high-contrast, no decoration  |
-| Employee | Warm, simple           | Welcoming, easy, personal          |
-| Login    | Brand-forward          | Warm, memorable, premium           |
+
+| Surface  | Aesthetic              | Key Feeling                       |
+| -------- | ---------------------- | --------------------------------- |
+| Admin    | Clean professional     | Efficient, organized, trustworthy |
+| POS      | Bold, touch-optimized  | Fast, clear, confident            |
+| KDS      | Industrial utilitarian | Raw, high-contrast, no decoration |
+| Employee | Warm, simple           | Welcoming, easy, personal         |
+| Login    | Brand-forward          | Warm, memorable, premium          |
 
 ### Visual Polish Checklist
+
 - [ ] Spacing consistent (4px grid)
 - [ ] Color palette cohesive (warm family)
 - [ ] Typography hierarchy clear (scan-friendly)

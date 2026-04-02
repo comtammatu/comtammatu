@@ -1,5 +1,10 @@
 import { createClient } from "@comtammatu/database/supabase/server";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
 import { CategoryTable } from "./category-table";
 import { AddCategoryButton } from "./add-category-button";
 import { ItemTable } from "./item-table";
@@ -47,9 +52,7 @@ export default async function MenuPage() {
 
       <Tabs defaultValue="items">
         <TabsList>
-          <TabsTrigger value="items">
-            Món ăn ({items.length})
-          </TabsTrigger>
+          <TabsTrigger value="items">Món ăn ({items.length})</TabsTrigger>
           <TabsTrigger value="categories">
             Danh mục ({categories.length})
           </TabsTrigger>

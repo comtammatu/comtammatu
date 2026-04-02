@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   CircleCheck,
@@ -6,10 +6,10 @@ import {
   LoaderCircle,
   OctagonX,
   TriangleAlert,
-} from "lucide-react"
-import { Toaster as Sonner } from "sonner"
+} from "lucide-react";
+import { Toaster as Sonner } from "sonner";
 
-type ToasterProps = React.ComponentProps<typeof Sonner>
+type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
@@ -35,8 +35,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       {...props}
     />
-  )
-}
+  );
+};
 
-export { Toaster }
-export { toast } from "sonner"
+export { Toaster };
+export { toast } from "sonner";

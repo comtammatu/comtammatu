@@ -155,7 +155,13 @@ function SidebarNav({
 
 /* ─── Sidebar User Footer ─── */
 
-function SidebarUserFooter({ user, role }: { user: { name: string }; role: string }) {
+function SidebarUserFooter({
+  user,
+  role,
+}: {
+  user: { name: string };
+  role: string;
+}) {
   return (
     <>
       <Separator />
@@ -252,7 +258,12 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
             <div className="md:hidden">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="size-8" aria-label="Menu tài khoản">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    aria-label="Menu tài khoản"
+                  >
                     <Avatar className="size-8">
                       <AvatarFallback className="bg-muted text-xs font-medium">
                         {getInitials(user.name)}
@@ -267,8 +278,15 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <form action="/api/auth/signout" method="post" className="w-full">
-                      <button type="submit" className="flex w-full items-center gap-2">
+                    <form
+                      action="/api/auth/signout"
+                      method="post"
+                      className="w-full"
+                    >
+                      <button
+                        type="submit"
+                        className="flex w-full items-center gap-2"
+                      >
                         <LogOut className="size-4" />
                         Đăng xuất
                       </button>

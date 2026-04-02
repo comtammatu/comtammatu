@@ -12,7 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
 import { saveVariants, saveModifiers, saveSides } from "./actions";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { createClient } from "@comtammatu/database/supabase/client";
@@ -81,7 +86,9 @@ export function ItemDetailDialog({
         .order("sort_order"),
       supabase
         .from("menu_item_available_sides")
-        .select("side_item_id, is_default, menu_items!menu_item_available_sides_side_item_id_fkey(name)")
+        .select(
+          "side_item_id, is_default, menu_items!menu_item_available_sides_side_item_id_fkey(name)",
+        )
         .eq("main_item_id", itemId),
     ]);
 
@@ -121,7 +128,11 @@ export function ItemDetailDialog({
     setVariants((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  function updateVariant(idx: number, field: keyof VariantEntry, value: string | number) {
+  function updateVariant(
+    idx: number,
+    field: keyof VariantEntry,
+    value: string | number,
+  ) {
     setVariants((prev) =>
       prev.map((v, i) => (i === idx ? { ...v, [field]: value } : v)),
     );
@@ -153,7 +164,11 @@ export function ItemDetailDialog({
     setModifiers((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  function updateModifier(idx: number, field: keyof ModifierEntry, value: string | number) {
+  function updateModifier(
+    idx: number,
+    field: keyof ModifierEntry,
+    value: string | number,
+  ) {
     setModifiers((prev) =>
       prev.map((m, i) => (i === idx ? { ...m, [field]: value } : m)),
     );
@@ -180,16 +195,21 @@ export function ItemDetailDialog({
       if (exists) {
         return prev.filter((s) => s.side_item_id !== sideItemId);
       }
-      return [...prev, { side_item_id: sideItemId, side_item_name: sideItemName, is_default: false }];
+      return [
+        ...prev,
+        {
+          side_item_id: sideItemId,
+          side_item_name: sideItemName,
+          is_default: false,
+        },
+      ];
     });
   }
 
   function toggleSideDefault(sideItemId: number) {
     setSides((prev) =>
       prev.map((s) =>
-        s.side_item_id === sideItemId
-          ? { ...s, is_default: !s.is_default }
-          : s,
+        s.side_item_id === sideItemId ? { ...s, is_default: !s.is_default } : s,
       ),
     );
   }
@@ -244,7 +264,9 @@ export function ItemDetailDialog({
                     <Label className="text-xs">Tên</Label>
                     <Input
                       value={v.name}
-                      onChange={(e) => updateVariant(idx, "name", e.target.value)}
+                      onChange={(e) =>
+                        updateVariant(idx, "name", e.target.value)
+                      }
                       placeholder="VD: Phần lớn"
                     />
                   </div>
@@ -254,7 +276,11 @@ export function ItemDetailDialog({
                       type="number"
                       value={v.price_adjustment}
                       onChange={(e) =>
-                        updateVariant(idx, "price_adjustment", Number(e.target.value))
+                        updateVariant(
+                          idx,
+                          "price_adjustment",
+                          Number(e.target.value),
+                        )
                       }
                     />
                   </div>
@@ -285,7 +311,9 @@ export function ItemDetailDialog({
                   onClick={handleSaveVariants}
                   disabled={isPending}
                 >
-                  {isPending && <Loader2 className="mr-1 size-3 animate-spin" />}
+                  {isPending && (
+                    <Loader2 className="mr-1 size-3 animate-spin" />
+                  )}
                   Lưu biến thể
                 </Button>
               </div>
@@ -343,7 +371,9 @@ export function ItemDetailDialog({
                   onClick={handleSaveModifiers}
                   disabled={isPending}
                 >
-                  {isPending && <Loader2 className="mr-1 size-3 animate-spin" />}
+                  {isPending && (
+                    <Loader2 className="mr-1 size-3 animate-spin" />
+                  )}
                   Lưu tùy chọn
                 </Button>
               </div>
@@ -398,7 +428,9 @@ export function ItemDetailDialog({
                   onClick={handleSaveSides}
                   disabled={isPending}
                 >
-                  {isPending && <Loader2 className="mr-1 size-3 animate-spin" />}
+                  {isPending && (
+                    <Loader2 className="mr-1 size-3 animate-spin" />
+                  )}
                   Lưu món kèm
                 </Button>
               </div>
