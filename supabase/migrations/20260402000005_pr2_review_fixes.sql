@@ -196,6 +196,10 @@ DECLARE
   v JSONB;
   i INT := 0;
 BEGIN
+  IF p_variants IS NULL OR jsonb_typeof(p_variants) <> 'array' THEN
+    RAISE EXCEPTION 'p_variants must be a JSON array' USING ERRCODE = '22023';
+  END IF;
+
   v_tenant_id := public.auth_tenant_id();
 
   -- Verify item belongs to caller's tenant
@@ -240,6 +244,10 @@ DECLARE
   m JSONB;
   i INT := 0;
 BEGIN
+  IF p_modifiers IS NULL OR jsonb_typeof(p_modifiers) <> 'array' THEN
+    RAISE EXCEPTION 'p_modifiers must be a JSON array' USING ERRCODE = '22023';
+  END IF;
+
   v_tenant_id := public.auth_tenant_id();
 
   IF NOT EXISTS (
@@ -281,6 +289,10 @@ DECLARE
   v_tenant_id BIGINT;
   s JSONB;
 BEGIN
+  IF p_sides IS NULL OR jsonb_typeof(p_sides) <> 'array' THEN
+    RAISE EXCEPTION 'p_sides must be a JSON array' USING ERRCODE = '22023';
+  END IF;
+
   v_tenant_id := public.auth_tenant_id();
 
   IF NOT EXISTS (

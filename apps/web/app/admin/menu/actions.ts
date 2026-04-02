@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { ADMIN_ROLES } from "@comtammatu/shared/auth";
 import { getAuthContext } from "../_lib/auth";
 
 /* ─── Types ─── */
@@ -14,12 +14,7 @@ interface ActionResult {
 
 /* ─── Helpers ─── */
 
-const MENU_MANAGER_ROLES: StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-];
+const MENU_MANAGER_ROLES = ADMIN_ROLES;
 
 const CATEGORY_TYPES = ["main_dish", "side_dish", "drink", "dessert"] as const;
 
