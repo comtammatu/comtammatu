@@ -62,6 +62,7 @@ export function ItemDetailDialog({
   const [modifiers, setModifiers] = useState<ModifierEntry[]>([]);
   const [sides, setSides] = useState<SideEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // Side dish items (from categories with type "side_dish")
@@ -71,6 +72,7 @@ export function ItemDetailDialog({
 
   const loadItemDetails = useCallback(async (itemId: number) => {
     setIsLoading(true);
+    setLoadError(null);
     const supabase = createClient();
 
     const [varRes, modRes, sideRes] = await Promise.all([
@@ -91,6 +93,12 @@ export function ItemDetailDialog({
         )
         .eq("main_item_id", itemId),
     ]);
+
+    if (varRes.error || modRes.error || sideRes.error) {
+      setLoadError("Không thể tải dữ liệu. Vui lòng thử lại.");
+      setIsLoading(false);
+      return;
+    }
 
     setVariants(varRes.data ?? []);
     setModifiers(modRes.data ?? []);
@@ -242,6 +250,10 @@ export function ItemDetailDialog({
           <div className="flex justify-center py-8">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
           </div>
+        ) : loadError ? (
+          <p className="py-8 text-center text-sm text-destructive" role="alert">
+            {loadError}
+          </p>
         ) : (
           <Tabs defaultValue="variants" className="w-full">
             <TabsList className="w-full">
@@ -259,7 +271,7 @@ export function ItemDetailDialog({
             {/* ─── Variants Tab ─── */}
             <TabsContent value="variants" className="space-y-3 mt-4">
               {variants.map((v, idx) => (
-                <div key={idx} className="flex items-end gap-2">
+                <div key={v.id ?? `new-${idx}`} className="flex items-end gap-2">
                   <div className="flex-1 space-y-1">
                     <Label className="text-xs">Tên</Label>
                     <Input
@@ -292,6 +304,7 @@ export function ItemDetailDialog({
                     onClick={() => removeVariant(idx)}
                   >
                     <Trash2 className="size-4" />
+                    <span className="sr-only">Xóa biến thể</span>
                   </Button>
                 </div>
               ))}
@@ -322,7 +335,7 @@ export function ItemDetailDialog({
             {/* ─── Modifiers Tab ─── */}
             <TabsContent value="modifiers" className="space-y-3 mt-4">
               {modifiers.map((m, idx) => (
-                <div key={idx} className="flex items-end gap-2">
+                <div key={m.id ?? `new-${idx}`} className="flex items-end gap-2">
                   <div className="flex-1 space-y-1">
                     <Label className="text-xs">Tên</Label>
                     <Input
@@ -352,6 +365,7 @@ export function ItemDetailDialog({
                     onClick={() => removeModifier(idx)}
                   >
                     <Trash2 className="size-4" />
+                    <span className="sr-only">Xóa tùy chọn</span>
                   </Button>
                 </div>
               ))}

@@ -80,7 +80,7 @@ export function ItemFormDialog({
               defaultValue={item?.category_id?.toString() ?? ""}
               required
             >
-              <SelectTrigger>
+              <SelectTrigger id="category_id">
                 <SelectValue placeholder="Chọn danh mục" />
               </SelectTrigger>
               <SelectContent>

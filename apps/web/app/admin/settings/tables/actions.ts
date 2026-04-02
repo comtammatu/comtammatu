@@ -33,6 +33,20 @@ async function getAuthContext() {
   return { supabase, claims };
 }
 
+async function verifyBranchOwnership(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  branchId: number,
+  tenantId: number,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("branches")
+    .select("id")
+    .eq("id", branchId)
+    .eq("tenant_id", tenantId)
+    .single();
+  return !!data;
+}
+
 function mapZoneDbError(code: string | undefined): string {
   if (code === "23505") return "Tên khu vực đã tồn tại";
   if (code === "23503") return "Dữ liệu tham chiếu không hợp lệ";
@@ -117,6 +131,10 @@ export async function createZone(
 
   const { supabase, claims } = ctx;
 
+  if (!(await verifyBranchOwnership(supabase, parsed.data.branch_id, claims.tenant_id))) {
+    return { success: false, error: "Chi nhánh không hợp lệ" };
+  }
+
   const { error } = await supabase.from("branch_zones").insert({
     tenant_id: claims.tenant_id,
     branch_id: parsed.data.branch_id,
@@ -154,6 +172,10 @@ export async function updateZone(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
+
+  if (!(await verifyBranchOwnership(supabase, parsed.data.branch_id, claims.tenant_id))) {
+    return { success: false, error: "Chi nhánh không hợp lệ" };
+  }
 
   const { error } = await supabase
     .from("branch_zones")
@@ -225,6 +247,10 @@ export async function createTable(
 
   const { supabase, claims } = ctx;
 
+  if (!(await verifyBranchOwnership(supabase, parsed.data.branch_id, claims.tenant_id))) {
+    return { success: false, error: "Chi nhánh không hợp lệ" };
+  }
+
   const { error } = await supabase.from("tables").insert({
     tenant_id: claims.tenant_id,
     branch_id: parsed.data.branch_id,
@@ -269,6 +295,10 @@ export async function updateTable(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
+
+  if (!(await verifyBranchOwnership(supabase, parsed.data.branch_id, claims.tenant_id))) {
+    return { success: false, error: "Chi nhánh không hợp lệ" };
+  }
 
   const { error } = await supabase
     .from("tables")

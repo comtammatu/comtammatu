@@ -446,10 +446,25 @@ export async function saveModifiers(
 
 /* ─── Available Sides ─── */
 
+const sideItemSchema = z.object({
+  id: z.number().int().positive(),
+  is_default: z.boolean(),
+});
+
+const saveSidesSchema = z.object({
+  mainItemId: z.number().int().positive(),
+  sideItemIds: z.array(sideItemSchema),
+});
+
 export async function saveSides(
   mainItemId: number,
   sideItemIds: { id: number; is_default: boolean }[],
 ): Promise<ActionResult> {
+  const parsed = saveSidesSchema.safeParse({ mainItemId, sideItemIds });
+  if (!parsed.success) {
+    return { success: false, error: "Dữ liệu không hợp lệ" };
+  }
+
   const ctx = await getAuthContext();
   if (!ctx) return { success: false, error: "Không có quyền" };
 

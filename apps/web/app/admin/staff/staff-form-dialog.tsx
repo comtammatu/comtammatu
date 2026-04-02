@@ -113,7 +113,7 @@ export function StaffFormDialog({
           <div className="space-y-2">
             <Label htmlFor="role">Vai trò *</Label>
             <Select name="role" defaultValue={staff?.role ?? "waiter"} required>
-              <SelectTrigger>
+              <SelectTrigger id="role">
                 <SelectValue placeholder="Chọn vai trò" />
               </SelectTrigger>
               <SelectContent>
@@ -132,7 +132,7 @@ export function StaffFormDialog({
               name="branch_id"
               defaultValue={staff?.branch_id?.toString() ?? ""}
             >
-              <SelectTrigger>
+              <SelectTrigger id="branch_id">
                 <SelectValue placeholder="Không thuộc chi nhánh" />
               </SelectTrigger>
               <SelectContent>

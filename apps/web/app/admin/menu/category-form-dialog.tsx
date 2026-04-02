@@ -77,7 +77,7 @@ export function CategoryFormDialog({
               defaultValue={category?.type ?? "main_dish"}
               required
             >
-              <SelectTrigger>
+              <SelectTrigger id="type">
                 <SelectValue placeholder="Chọn loại" />
               </SelectTrigger>
               <SelectContent>

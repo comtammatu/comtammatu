@@ -233,7 +233,17 @@ export async function updateStaff(
   const ctx = await getAuthContext();
   if (!ctx) return { success: false, error: "Chưa đăng nhập" };
 
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
+
+  if (!MANAGER_ROLES.includes(claims.user_role)) {
+    return { success: false, error: "Không có quyền quản lý nhân viên" };
+  }
+
+  // Hierarchy ceiling — can't assign roles above your level
+  const roleError = canAssignRole(claims.user_role, role);
+  if (roleError) {
+    return { success: false, error: roleError };
+  }
 
   const { error } = await supabase.rpc("admin_update_profile", {
     p_target_id: id,

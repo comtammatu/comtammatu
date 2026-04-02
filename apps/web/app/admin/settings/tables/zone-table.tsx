@@ -144,6 +144,7 @@ export function ZoneTable({ zones }: ZoneTableProps) {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
             <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isPending}
               onClick={() => deleteId !== null && handleDelete(deleteId)}
             >

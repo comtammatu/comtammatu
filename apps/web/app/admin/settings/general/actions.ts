@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
+import type { StaffRole } from "@comtammatu/shared/auth";
 import {
   SYSTEM_SETTING_KEYS,
   type SystemSettingKey,
@@ -66,6 +67,11 @@ export async function updateSettings(
 
   const claims = extractClaims(user.app_metadata);
   if (!claims) return { success: false, error: "Không có quyền" };
+
+  const SETTINGS_ROLES: StaffRole[] = ["owner", "super_manager"];
+  if (!SETTINGS_ROLES.includes(claims.user_role)) {
+    return { success: false, error: "Không có quyền" };
+  }
 
   // Upsert each setting
   const entries = Object.entries(parsed.data) as [string, string][];
