@@ -147,6 +147,58 @@ pnpm typecheck    # All 5 packages should pass
 pnpm build        # Production build should succeed
 ```
 
+## 8. Vercel Environment Variables
+
+Vercel Dashboard → Project → Settings → Environment Variables.
+
+Thêm các biến sau cho **Production** và **Preview**:
+
+| Variable                         | Scope              | Source         |
+| -------------------------------- | ------------------ | -------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`       | Production+Preview | Supabase → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`  | Production+Preview | Supabase → API |
+| `SUPABASE_SERVICE_ROLE_KEY`      | Production+Preview | Supabase → API |
+| `UPSTASH_REDIS_REST_URL`         | Production+Preview | Upstash console |
+| `UPSTASH_REDIS_REST_TOKEN`       | Production+Preview | Upstash console |
+
+> **Note:** `VERCEL_URL` is auto-injected by Vercel — do NOT set manually.
+> `SUPABASE_PROJECT_ID` is only needed for `pnpm db:types` (local/CI), not Vercel runtime.
+
+## 9. GitHub Actions Secrets
+
+GitHub → Repo Settings → Secrets and variables → Actions → New repository secret.
+
+### Required Secrets
+
+CI build cần `NEXT_PUBLIC_*` vars để Next.js build thành công:
+
+| Secret                           | Purpose                      |
+| -------------------------------- | ---------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`       | Next.js build (inlined)      |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`  | Next.js build (inlined)      |
+
+### CI Workflow Usage
+
+Trong `.github/workflows/ci.yml`, thay placeholder bằng secrets:
+
+```yaml
+- name: Build
+  run: pnpm build
+  env:
+    NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+```
+
+### Optional Secrets (thêm khi cần)
+
+| Secret                     | When needed                        |
+| -------------------------- | ---------------------------------- |
+| `SUPABASE_SERVICE_ROLE_KEY`| CI cần seed data hoặc run RPC      |
+| `SUPABASE_PROJECT_ID`      | CI auto-generate types             |
+| `SUPABASE_ACCESS_TOKEN`    | CI `supabase db push` (CLI token)  |
+| `UPSTASH_REDIS_REST_URL`   | CI integration tests               |
+| `UPSTASH_REDIS_REST_TOKEN` | CI integration tests               |
+
 ## Quick Reference — What's Gitignored (per-machine setup)
 
 | File                     | How to create                         | Purpose                 |

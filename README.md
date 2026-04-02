@@ -4,12 +4,13 @@ Hệ thống quản lý nhà hàng cho Cơm Tấm Má Tư CTCP — single-tenant
 
 ## Tech Stack
 
+- **Runtime:** Node.js >= 24
 - **Framework:** Next.js 16.2 (App Router, Turbopack)
 - **Language:** TypeScript 6.0 (strict mode)
 - **Database:** Supabase (PostgREST + Auth + RLS)
 - **Styling:** Tailwind CSS 4.2
 - **Validation:** Zod 4
-- **Monorepo:** Turborepo 2.9 + pnpm workspaces
+- **Monorepo:** Turborepo 2.9 + pnpm 10
 - **Rate Limiting:** Upstash Redis
 
 ## Project Structure
@@ -41,24 +42,20 @@ tasks/              # Work tracking & lessons learned
 
 ## Getting Started
 
-### Prerequisites
+See [`docs/ref/setup.md`](docs/ref/setup.md) for full setup guide.
 
-- Node.js 22+
-- pnpm 10+
-- Supabase CLI (for local dev)
-
-### Setup
+### Quick Start
 
 ```bash
+# Use correct Node version
+nvm use
+
 # Install dependencies
 pnpm install
 
 # Copy environment variables
-cp .env.example .env
+cp .env.example apps/web/.env.local
 # Fill in your Supabase & Upstash credentials
-
-# Start Supabase locally (optional)
-supabase start
 
 # Run dev server
 pnpm dev
