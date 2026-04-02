@@ -41,7 +41,7 @@ Total all sprints: ~47 ngày
 | S3  | Staff management              | — (profiles)                                                                                    | ✅     |
 | S4  | Menu CRUD + sides             | menu_categories, menu_items, menu_item_variants, menu_item_modifiers, menu_item_available_sides | ✅     |
 | S5  | Tables & zones                | branch_zones, tables                                                                            | ✅     |
-| S6  | Polish + /review              | —                                                                                               |        |
+| S6  | Polish + /review              | —                                                                                               | ✅     |
 
 ## Sprint 2a: POS + KDS + Payments
 
