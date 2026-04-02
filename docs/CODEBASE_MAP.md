@@ -7,8 +7,8 @@
 
 ## Status
 
-- **Current version:** v0.1.1 + Sprint 1 (S1–S5 complete, S6 polish pending)
-- **Next milestone:** Sprint 1 S6 (polish + /review) → Sprint 2a (POS + KDS + Payments)
+- **Current version:** v0.1.1 + Sprint 1 complete (S1–S6)
+- **Next milestone:** Sprint 2a (POS + KDS + Payments)
 - **Tech stack:** Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Supabase | Turborepo 2.9
 
 ## Module Index
@@ -107,7 +107,7 @@ These files have the most dependents. Changes here affect many parts of the syst
 
 ## Priority Recommendations
 
-1. **Sprint 2a readiness:** Sprint 1 feature code complete (S1–S5). Admin shell, branches, staff, menu, tables/zones all shipped. S6 polish pending.
+1. **Sprint 2a readiness:** Sprint 1 complete (S1–S6). Admin shell, branches, staff, menu, tables/zones shipped + security polish applied.
 2. **Watch hub files:** Any change to `module-acl.ts` or `types.ts` requires proxy + layout + nav verification.
 3. **RLS pattern:** Every new table must follow the tenant-scoped RLS pattern with explicit GRANTs. See [database.md](modules/database.md).
 
