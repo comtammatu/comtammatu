@@ -58,6 +58,255 @@ export type Database = {
           },
         ]
       }
+      menu_categories: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          name: string
+          sort_order: number
+          tenant_id: number
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          tenant_id: number
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          tenant_id?: number
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_categories_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_item_available_sides: {
+        Row: {
+          created_at: string
+          id: number
+          is_default: boolean
+          main_item_id: number
+          side_item_id: number
+          tenant_id: number
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          is_default?: boolean
+          main_item_id: number
+          side_item_id: number
+          tenant_id: number
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          is_default?: boolean
+          main_item_id?: number
+          side_item_id?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_item_available_sides_main_item_id_fkey"
+            columns: ["main_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_item_available_sides_side_item_id_fkey"
+            columns: ["side_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_item_available_sides_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_item_modifiers: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          item_id: number
+          name: string
+          price: number
+          sort_order: number
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          item_id: number
+          name: string
+          price?: number
+          sort_order?: number
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          item_id?: number
+          name?: string
+          price?: number
+          sort_order?: number
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_item_modifiers_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_item_modifiers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_item_variants: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          item_id: number
+          name: string
+          price_adjustment: number
+          sort_order: number
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          item_id: number
+          name: string
+          price_adjustment?: number
+          sort_order?: number
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          item_id?: number
+          name?: string
+          price_adjustment?: number
+          sort_order?: number
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_item_variants_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_item_variants_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_items: {
+        Row: {
+          base_price: number
+          category_id: number
+          created_at: string
+          description: string | null
+          id: number
+          image_url: string | null
+          is_active: boolean
+          name: string
+          sort_order: number
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          base_price: number
+          category_id: number
+          created_at?: string
+          description?: string | null
+          id?: never
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          base_price?: number
+          category_id?: number
+          created_at?: string
+          description?: string | null
+          id?: never
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

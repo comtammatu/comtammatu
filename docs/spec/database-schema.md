@@ -194,11 +194,94 @@ Additional checks:
 
 Admin invite creates auth user via Supabase Admin API with `raw_app_meta_data` containing `tenant_id`, `branch_id`, `role`. No public signup endpoint.
 
+## Menu Tables (Sprint 1 S4)
+
+### menu_categories
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | BIGINT PK | GENERATED ALWAYS AS IDENTITY |
+| tenant_id | BIGINT FK(tenants) | ON DELETE CASCADE |
+| name | TEXT NOT NULL | UNIQUE(name, tenant_id) |
+| type | TEXT NOT NULL | CHECK: main_dish, side_dish, drink, dessert |
+| sort_order | INT | default 0 |
+| is_active | BOOLEAN | default true |
+| created_at | TIMESTAMPTZ | |
+| updated_at | TIMESTAMPTZ | auto-trigger |
+
+### menu_items
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | BIGINT PK | GENERATED ALWAYS AS IDENTITY |
+| tenant_id | BIGINT FK(tenants) | ON DELETE CASCADE |
+| category_id | BIGINT FK(menu_categories) | ON DELETE CASCADE |
+| name | TEXT NOT NULL | UNIQUE(name, tenant_id) |
+| description | TEXT | |
+| base_price | NUMERIC(15,2) NOT NULL | |
+| image_url | TEXT | |
+| is_active | BOOLEAN | default true |
+| sort_order | INT | default 0 |
+| created_at/updated_at | TIMESTAMPTZ | |
+
+### menu_item_variants
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | BIGINT PK | |
+| tenant_id | BIGINT FK | |
+| item_id | BIGINT FK(menu_items) | ON DELETE CASCADE |
+| name | TEXT NOT NULL | UNIQUE(name, item_id, tenant_id) |
+| price_adjustment | NUMERIC(15,2) | default 0, +/- from base_price |
+| is_active | BOOLEAN | default true |
+| sort_order | INT | default 0 |
+
+### menu_item_modifiers
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | BIGINT PK | |
+| tenant_id | BIGINT FK | |
+| item_id | BIGINT FK(menu_items) | ON DELETE CASCADE |
+| name | TEXT NOT NULL | UNIQUE(name, item_id, tenant_id) |
+| price | NUMERIC(15,2) | default 0, absolute price |
+| is_active | BOOLEAN | default true |
+| sort_order | INT | default 0 |
+
+### menu_item_available_sides
+
+Junction table: which side items can pair with which main items.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | BIGINT PK | |
+| tenant_id | BIGINT FK | |
+| main_item_id | BIGINT FK(menu_items) | ON DELETE CASCADE |
+| side_item_id | BIGINT FK(menu_items) | ON DELETE CASCADE |
+| is_default | BOOLEAN | default false |
+| created_at | TIMESTAMPTZ | |
+| UNIQUE(main_item_id, side_item_id, tenant_id) | | |
+
+**RLS for all 5 menu tables:**
+- SELECT: all authenticated in tenant
+- INSERT/UPDATE/DELETE: owner, super_manager, area_manager, branch_manager
+
+### Menu Indexes
+
+| Index | Columns | Purpose |
+|-------|---------|---------|
+| idx_menu_categories_tenant | menu_categories(tenant_id) | RLS filter |
+| idx_menu_items_tenant | menu_items(tenant_id) | RLS filter |
+| idx_menu_items_category | menu_items(category_id) | Category lookup |
+| idx_menu_item_variants_item | menu_item_variants(item_id) | Item lookup |
+| idx_menu_item_modifiers_item | menu_item_modifiers(item_id) | Item lookup |
+| idx_menu_item_available_sides_main | menu_item_available_sides(main_item_id) | Main item lookup |
+| idx_menu_item_available_sides_side | menu_item_available_sides(side_item_id) | Side item lookup |
+
 ## Future Tables (by phase)
 
 ### Sprint 1 — Core Management (remaining)
 
-- menu_categories, menu_items, menu_item_variants, menu_item_modifiers, menu_item_available_sides
 - branch_zones, tables
 
 ### v0.3.0 — Operations
