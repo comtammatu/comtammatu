@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roadmap Status | Cơm Tấm Má Tư</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --orange: #f0883e;
+      --red: #f85149;
+      --purple: #bc8cff;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
+      margin-bottom: 3rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+    }
+
+    .stat-card .label {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 0.25rem;
+    }
+
+    .progress-bar-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 3rem;
+    }
+
+    .progress-bar-container h3 {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .progress-track {
+      background: var(--border);
+      border-radius: 6px;
+      height: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 6px;
+      background: linear-gradient(90deg, var(--green), var(--accent));
+      transition: width 0.6s ease;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .timeline {
+      position: relative;
+      padding-left: 2rem;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 7px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+
+    .milestone {
+      position: relative;
+      margin-bottom: 2rem;
+    }
+
+    .milestone:last-child { margin-bottom: 0; }
+
+    .milestone .dot {
+      position: absolute;
+      left: -2rem;
+      top: 0.35rem;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--bg);
+      z-index: 1;
+    }
+
+    .milestone.done .dot { background: var(--green); border-color: var(--green); }
+    .milestone.active .dot { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 4px rgba(88,166,255,0.2); }
+    .milestone.upcoming .dot { background: var(--surface); border-color: var(--border); }
+
+    .milestone-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+    }
+
+    .milestone.active .milestone-card {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(88,166,255,0.15);
+    }
+
+    .milestone-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .milestone-header h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.6rem;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-done { background: rgba(63,185,80,0.15); color: var(--green); }
+    .badge-active { background: rgba(88,166,255,0.15); color: var(--accent); }
+    .badge-upcoming { background: rgba(139,148,158,0.15); color: var(--text-muted); }
+    .badge-pilot { background: rgba(240,136,62,0.15); color: var(--orange); }
+
+    .milestone-meta {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .milestone-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .sessions {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+
+    .session-dot {
+      width: 28px;
+      height: 8px;
+      border-radius: 4px;
+      background: var(--border);
+    }
+
+    .session-dot.done { background: var(--green); }
+    .session-dot.active { background: var(--accent); }
+
+    .tables-list {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .tables-list strong { color: var(--text); font-weight: 500; }
+
+    .pilot-marker {
+      text-align: center;
+      margin: 2rem 0;
+      padding: 1rem;
+      border: 2px dashed var(--orange);
+      border-radius: 8px;
+      color: var(--orange);
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 0.05em;
+      position: relative;
+      margin-left: -2rem;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    .tech-stack {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 0.5rem;
+    }
+
+    .tech-tag {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 600px) {
+      .container { padding: 1rem; }
+      header h1 { font-size: 1.5rem; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Roadmap Status</h1>
+      <p>Single-tenant multi-branch restaurant management system</p>
+    </header>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="value" style="color:var(--green)">3</div>
+        <div class="label">Completed</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" style="color:var(--accent)">0</div>
+        <div class="label">In Progress</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" style="color:var(--text-muted)">6</div>
+        <div class="label">Upcoming</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" style="color:var(--orange)">~47d</div>
+        <div class="label">Total Est.</div>
+      </div>
+    </div>
+
+    <div class="progress-bar-container">
+      <h3>Overall Progress to Pilot (v1.0.0)</h3>
+      <div class="progress-track">
+        <div class="progress-fill" style="width: 35%"></div>
+      </div>
+      <div class="progress-label">
+        <span>Sprint 1 done</span>
+        <span>~25 days to pilot</span>
+      </div>
+    </div>
+
+    <div class="timeline">
+
+      <!-- v0.1.0 -->
+      <div class="milestone done">
+        <div class="dot"></div>
+        <div class="milestone-card">
+          <div class="milestone-header">
+            <h3>v0.1.0 — Foundation</h3>
+            <span class="badge badge-done">Done</span>
+          </div>
+          <div class="milestone-meta">2026-04-01</div>
+          <div class="milestone-desc">
+            Monorepo setup, auth system, proxy middleware, DB schema, RLS policies, role-based routing.
+          </div>
+          <div class="tables-list">
+            <strong>Tables:</strong> tenants, branches, profiles
+          </div>
+        </div>
+      </div>
+
+      <!-- v0.1.1 -->
+      <div class="milestone done">
+        <div class="dot"></div>
+        <div class="milestone-card">
+          <div class="milestone-header">
+            <h3>v0.1.1 — Security Hardening</h3>
+            <span class="badge badge-done">Done</span>
+          </div>
+          <div class="milestone-meta">2026-04-02</div>
+          <div class="milestone-desc">
+            Fix RLS policies, lock down profile mutations to RPCs, admin shell scaffold, invite-only flow.
+          </div>
+        </div>
+      </div>
+
+      <!-- Sprint 1 -->
+      <div class="milestone done">
+        <div class="dot"></div>
+        <div class="milestone-card">
+          <div class="milestone-header">
+            <h3>Sprint 1 — Admin Shell + Menu + Staff</h3>
+            <span class="badge badge-done">Done</span>
+          </div>
+          <div class="milestone-meta">6 sessions | 2026-04-02</div>
+          <div class="milestone-desc">
+            Branch CRUD, system settings, staff management, menu categories/items/variants/modifiers, tables & zones.
+          </div>
+          <div class="sessions">
+            <div class="session-dot done"></div>
+            <div class="session-dot done"></div>
+            <div class="session-dot done"></div>
+            <div class="session-dot done"></div>
+            <div class="session-dot done"></div>
+            <div class="session-dot done"></div>
+          </div>
+          <div class="tables-list">
+            <strong>New tables:</strong> system_settings, menu_categories, menu_items, menu_item_variants, menu_item_modifiers, menu_item_available_sides, branch_zones, tables
+          </div>
+        </div>
+      </div>
+
+      <!-- Sprint 2a -->
+      <div class="milestone upcoming">
+        <div class="dot"></div>
+        <div class="milestone-card">
+          <div class="milestone-header">
+            <h3>Sprint 2a — POS + KDS + Payments</h3>
+            <span class="badge badge-upcoming">Upcoming</span>
+          </div>
+          <div class="milestone-meta">6 sessions | 5-7 days | North Star: "Order to payment under 2 min"</div>
+          <div class="milestone-desc">
+            Order schema + state machine, POS menu browse/cart, table select + order submit, KDS realtime queue + bump/complete, cash + VietQR payments.
+          </div>
+          <div class="sessions">
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+          </div>
+          <div class="tables-list">
+            <strong>New tables:</strong> orders, order_items, order_status_history, pos_terminals, pos_sessions, kds_stations, kds_station_categories, kds_tickets, payments
+          </div>
+        </div>
+      </div>
+
+      <!-- Sprint 2b -->
+      <div class="milestone upcoming">
+        <div class="dot"></div>
+        <div class="milestone-card">
+          <div class="milestone-header">
+            <h3>Sprint 2b — Stock + Dashboard + Printer</h3>
+            <span class="badge badge-upcoming">Upcoming</span>
+          </div>
+          <div class="milestone-meta">5 sessions | 4-5 days</div>
+          <div class="milestone-desc">
+            Ingredients + stock levels, basic revenue dashboard, printer config + bill printing, audit logging, integration test.
+          </div>
+          <div class="sessions">
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+          </div>
+          <div class="tables-list">
+            <strong>New tables:</strong> ingredients, recipes, stock_levels, stock_movements, printer_configs, audit_logs
+          </div>
+        </div>
+      </div>
+
+      <!-- Sprint 3 -->
+      <div class="milestone upcoming">
+        <div class="dot"></div>
+        <div class="milestone-card">
+          <div class="milestone-header">
+            <h3>Sprint 3 — HĐĐT + Momo + Procurement</h3>
+            <span class="badge badge-upcoming">Upcoming</span>
+          </div>
+          <div class="milestone-meta">7 sessions | 6-8 days</div>
+          <div class="milestone-desc">
+            E-invoice (HĐĐT) schema + Edge Function + UI, Momo payment, suppliers + PO, GRN + auto stock, supplier invoices + 3-way matching, refunds.
+          </div>
+          <div class="sessions">
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+          </div>
+          <div class="tables-list">
+            <strong>New tables:</strong> tax_invoices, payment_webhooks, suppliers, purchase_orders, purchase_order_items, goods_received_notes, grn_items, supplier_invoices, refunds
+          </div>
+        </div>
+      </div>
+
+      <!-- PILOT -->
+      <div class="pilot-marker">v1.0.0 PILOT LAUNCH</div>
+
+      <!-- Sprint 4 -->
+      <div class="milestone upcoming">
+        <div class="dot"></div>
+        <div class="milestone-card">
+          <div class="milestone-header">
+            <h3>Sprint 4 — CRM + Loyalty + Discounts</h3>
+            <span class="badge badge-upcoming">Upcoming</span>
+          </div>
+          <div class="milestone-meta">6 sessions | 5-6 days</div>
+          <div class="milestone-desc">
+            Customer database, loyalty tiers + earn rules, points accumulation, vouchers + redemption, manual discounts, CRM dashboard.
+          </div>
+          <div class="sessions">
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sprint 5 -->
+      <div class="milestone upcoming">
+        <div class="dot"></div>
+        <div class="milestone-card">
+          <div class="milestone-header">
+            <h3>Sprint 5 — Dashboard Advanced + Reports</h3>
+            <span class="badge badge-upcoming">Upcoming</span>
+          </div>
+          <div class="milestone-meta">4 sessions | 3-4 days</div>
+          <div class="milestone-desc">
+            Revenue dashboard (advanced), top items + menu performance, food cost analysis, materialized view refresh + cron.
+          </div>
+          <div class="sessions">
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sprint 6 -->
+      <div class="milestone upcoming">
+        <div class="dot"></div>
+        <div class="milestone-card">
+          <div class="milestone-header">
+            <h3>Sprint 6 — Finance VAS + HR/Payroll</h3>
+            <span class="badge badge-upcoming">Upcoming</span>
+          </div>
+          <div class="milestone-meta">7 sessions | 6-8 days</div>
+          <div class="milestone-desc">
+            Employee records, shifts + attendance, payroll calculation + processing, chart of accounts (VAS), financial statements, payroll reports.
+          </div>
+          <div class="sessions">
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sprint 7 -->
+      <div class="milestone upcoming">
+        <div class="dot"></div>
+        <div class="milestone-card">
+          <div class="milestone-header">
+            <h3>Sprint 7 — QR Self-Order</h3>
+            <span class="badge badge-upcoming">Upcoming</span>
+          </div>
+          <div class="milestone-meta">4 sessions | 3-4 days</div>
+          <div class="milestone-desc">
+            QR code generation, customer menu page, self-order flow, self-checkout VietQR.
+          </div>
+          <div class="sessions">
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+            <div class="session-dot"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <footer>
+      <p>Last updated: 2026-04-02 (Sprint 1 complete)</p>
+      <div class="tech-stack">
+        <span class="tech-tag">Next.js 16.2</span>
+        <span class="tech-tag">React 19.2</span>
+        <span class="tech-tag">TypeScript 6.0</span>
+        <span class="tech-tag">Supabase</span>
+        <span class="tech-tag">Tailwind 4.2</span>
+        <span class="tech-tag">Turborepo</span>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

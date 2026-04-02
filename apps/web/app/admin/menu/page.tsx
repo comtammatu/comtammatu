@@ -1,21 +1,24 @@
-import { UtensilsCrossed } from "lucide-react";
+import { getCategories, getMenuItems } from "./actions";
+import { MenuManager } from "./menu-manager";
 
-export default function MenuPage() {
+export default async function MenuPage() {
+  const [categoriesResult, itemsResult] = await Promise.all([
+    getCategories(),
+    getMenuItems(),
+  ]);
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Thực đơn</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Quản lý thực đơn</h1>
         <p className="mt-1 text-muted-foreground">
-          Quản lý danh mục và món ăn
+          Quản lý danh mục, món ăn, biến thể và topping
         </p>
       </div>
-      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-24 text-center">
-        <UtensilsCrossed className="size-12 text-muted-foreground" />
-        <h2 className="mt-4 text-lg font-medium">Tính năng đang phát triển</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Quản lý thực đơn sẽ có trong Sprint 1 S4.
-        </p>
-      </div>
+      <MenuManager
+        initialCategories={categoriesResult.data ?? []}
+        initialItems={itemsResult.data ?? []}
+      />
     </div>
   );
 }
