@@ -1,8 +1,8 @@
-# Sprint 7: QR Self-Order
+# Sprint 7: QR Self-Order (Post-v1.0)
 
-> Depends on: Sprint 2 (POS + orders + payments)
+> **Module mapping:** Post-v1.0 (QR Self-Order) — see `roadmap.md`
+> Depends on: M2 (POS) + M4 (Payment)
 > Sessions: 4 | Estimate: 3-4 ngày
-> Delight feature: post-pilot
 
 ---
 
@@ -76,7 +76,7 @@ CREATE TABLE public.table_qr_codes (
 - [ ] VietQR code displayed on phone
 - [ ] Staff confirms payment received → order completed
 - [ ] Table status auto-release
-- [ ] Optional: link customer phone → loyalty (Sprint 4)
+- [ ] Optional: link customer phone → loyalty (Post-v1.0)
 
 ---
 

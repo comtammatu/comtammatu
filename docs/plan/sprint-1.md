@@ -1,8 +1,8 @@
-# Sprint 1: Admin Shell + Menu + Tables + Staff
+# Sprint 1: Admin Shell + Menu + Tables + Staff ✅ SHIPPED
 
+> **Module mapping:** M0 (Admin Shell) + M1 (Menu) — see `roadmap.md`
 > Depends on: v0.1.0 Foundation (done)
-> Enables: Sprint 2 (POS cần menu + tables + staff)
-> Sessions: 6 | Estimate: 4-5 ngày
+> Sessions: 6 | Shipped: 2026-04-03
 
 ---
 

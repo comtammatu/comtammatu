@@ -83,12 +83,36 @@ USING (branch_id = auth_branch_id()
 | proxy.ts / Edge      | `@comtammatu/database/supabase/middleware` | No Node.js deps               |
 | "use client"         | `@comtammatu/database/supabase/client`     | No server deps (next/headers) |
 
-## Domain Surfaces
+## Routing (path-based, single domain)
 
-| Surface        | Domain                  | Route                                |
-| -------------- | ----------------------- | ------------------------------------ |
-| Admin/CRM      | comtammatu.com          | `/admin/*`                           |
-| POS            | pos.comtammatu.com      | Proxy rewrite → `/br/[branchId]/pos` |
-| KDS            | kds.comtammatu.com      | Proxy rewrite → `/br/[branchId]/kds` |
-| Employee       | comtammatu.com/employee | `/employee/*`                        |
-| Mobile Loyalty | —                       | Separate Flutter repo                |
+> Decision: D009 — path-based, không sub-domain. Sub-domain là Post-v1.0.
+
+| Surface  | Route                  | Roles                              |
+| -------- | ---------------------- | ---------------------------------- |
+| Admin    | `/admin/*`             | owner, super_manager, area_manager, branch_manager |
+| POS      | `/br/[branchId]/pos`   | cashier, waiter                    |
+| KDS      | `/br/[branchId]/kds`   | chef                               |
+| Employee | `/employee/*`          | office                             |
+
+## Infrastructure Strategy
+
+> Decision: D008 — cloud-first MVP, local-first Phase 2.
+
+```
+MVP (v1.0.0):
+  Browser → proxy.ts → Next.js → Supabase Cloud
+  + PWA Service Worker cache cho offline cơ bản
+
+Post-v1.0 (nếu cần):
+  Branch LAN: Mini PC + Bun + SQLite
+    POS/KDS → local server (< 1ms)
+    Sync worker → Supabase Cloud (mỗi 1-5 min)
+```
+
+| Module       | MVP runs on | Post-v1.0 option       |
+| ------------ | ----------- | ---------------------- |
+| Admin, Menu  | Cloud       | Cloud (giữ nguyên)    |
+| POS, KDS     | Cloud + PWA | Local-first per branch |
+| Payment      | Cloud       | Local-first per branch |
+| Stock        | Cloud       | Hybrid                 |
+| Finance, HR  | Cloud       | Cloud (giữ nguyên)    |

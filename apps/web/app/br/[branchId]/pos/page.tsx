@@ -7,7 +7,7 @@ export default function PosPage() {
         <ShoppingCart className="mx-auto size-16 text-muted-foreground" />
         <h1 className="mt-4 text-xl font-bold">POS — Điểm bán hàng</h1>
         <p className="mt-2 text-muted-foreground">
-          Giao diện bán hàng sẽ có trong Sprint 2a.
+          Giao diện bán hàng sẽ có trong M2 (POS).
         </p>
       </div>
     </div>

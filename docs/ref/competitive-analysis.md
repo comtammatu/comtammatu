@@ -57,7 +57,7 @@ GIÁ THẤP / ĐƠN GIẢN
 | Quản lý trạng thái bàn realtime | ✅            | ✅   | 🟡       | ✅          | 🟡       | ✅    |
 | Tách / gộp bàn                  | 🟡            | ✅   | 🟡       | ✅          | ✅       | ✅    |
 | Tách / gộp bill                 | ❌            | ✅   | 🟡       | ✅          | ✅       | ✅    |
-| QR self-order                   | ⚠️ Sprint 7   | ✅   | ⚠️       | ✅          | 🟡       | ✅    |
+| QR self-order                   | ⏳ Post-v1.0  | ✅   | ⚠️       | ✅          | 🟡       | ✅    |
 | Kết nối GrabFood / ShopeeFood   | ❌            | ✅   | 🟡       | ✅          | ✅       | ✅    |
 | Kết nối Baemin                  | ❌            | ✅   | ❌       | ❌          | ❌       | 🟡    |
 | Offline mode                    | ❌            | 🟡   | ✅       | 🟡          | 🟡       | ✅    |
@@ -79,7 +79,7 @@ GIÁ THẤP / ĐƠN GIẢN
 | --------------------------------- | ------------- | ---- | -------- | ----------- | -------- | ----- |
 | Tiền mặt                          | ✅            | ✅   | ✅       | ✅          | ✅       | ✅    |
 | VietQR / chuyển khoản             | ✅            | ✅   | ✅       | ✅          | ✅       | ✅    |
-| MoMo                              | ✅ Sprint 3   | ✅   | 🟡       | ✅          | ✅       | ✅    |
+| MoMo                              | ✅ M4         | ✅   | 🟡       | ✅          | ✅       | ✅    |
 | VNPay                             | ❌ Post-v1    | 🟡   | ✅       | 🟡          | ✅       | ✅    |
 | Visa/Mastercard                   | ❌            | 🟡   | ✅       | 🟡          | ✅       | ✅    |
 | Thanh toán chia nhiều phương thức | ❌            | ✅   | ✅       | ✅          | ✅       | ✅    |
@@ -88,12 +88,12 @@ GIÁ THẤP / ĐƠN GIẢN
 
 | Tính năng                          | Cơm Tấm Má Tư | iPOS              | KiotViet         | MISA CukCuk         | Sapo FnB | bePOS |
 | ---------------------------------- | ------------- | ----------------- | ---------------- | ------------------- | -------- | ----- |
-| Xuất HĐĐT đầu ra                   | ✅ Sprint 3   | ✅ (iPOS Invoice) | ✅ (KV-EINVOICE) | ✅ (MISA meInvoice) | 🟡       | ⚠️    |
+| Xuất HĐĐT đầu ra                   | ✅ M6         | ✅ (iPOS Invoice) | ✅ (KV-EINVOICE) | ✅ (MISA meInvoice) | 🟡       | ⚠️    |
 | Multi-provider (Viettel/MISA/VNPT) | ✅            | ✅ (tự có)        | ✅ (tự có)       | ✅ (tự có)          | 🟡       | ⚠️    |
-| Hóa đơn đầu vào / Supplier         | ✅ Sprint 3   | 🟡                | ❌               | 🟡                  | ❌       | ❌    |
-| 3-way matching (PO/GRN/HĐ)         | ✅ Sprint 3   | ❌                | ❌               | ❌                  | ❌       | ❌    |
-| VAT khấu trừ đầu vào               | ✅ Sprint 3   | ❌                | ❌               | 🟡                  | ❌       | ❌    |
-| Báo cáo thuế GTGT hàng tháng       | ✅ Sprint 3   | 🟡                | 🟡               | ✅                  | ❌       | ❌    |
+| Hóa đơn đầu vào / Supplier         | ✅ M6         | 🟡                | ❌               | 🟡                  | ❌       | ❌    |
+| 3-way matching (PO/GRN/HĐ)         | ✅ M6         | ❌                | ❌               | ❌                  | ❌       | ❌    |
+| VAT khấu trừ đầu vào               | ✅ M6         | ❌                | ❌               | 🟡                  | ❌       | ❌    |
+| Báo cáo thuế GTGT hàng tháng       | ✅ M6         | 🟡                | 🟡               | ✅                  | ❌       | ❌    |
 
 ### 2.5 Kho hàng (Inventory)
 
@@ -104,47 +104,47 @@ GIÁ THẤP / ĐƠN GIẢN
 | Xuất kho tự động theo order    | ✅               | ✅   | ✅       | ✅          | ✅       | 🟡    |
 | Cảnh báo tồn kho min/max       | ✅               | ✅   | ✅       | ✅          | ✅       | 🟡    |
 | Kiểm kê kho                    | ✅               | ✅   | ✅       | ✅          | 🟡       | ❌    |
-| Phiếu nhập kho GRN             | ✅ Sprint 3      | 🟡   | ✅       | ✅          | ✅       | ❌    |
-| Purchase Order (PO)            | ✅ Sprint 3      | 🟡   | ✅       | 🟡          | 🟡       | ❌    |
+| Phiếu nhập kho GRN             | ✅ M5            | 🟡   | ✅       | ✅          | ✅       | ❌    |
+| Purchase Order (PO)            | ✅ M5            | 🟡   | ✅       | 🟡          | 🟡       | ❌    |
 | FIFO / FEFO                    | 🟡 giá bình quân | ❌   | ❌       | ❌          | ❌       | ❌    |
-| Phân tích Food cost            | ✅ Sprint 5      | ✅   | 🟡       | ✅          | 🟡       | ❌    |
+| Phân tích Food cost            | ✅ M6            | ✅   | 🟡       | ✅          | 🟡       | ❌    |
 
-### 2.6 CRM & Khách hàng thân thiết
+### 2.6 Loyalty & Khách hàng thân thiết (Post-v1.0)
 
-| Tính năng                    | Cơm Tấm Má Tư | iPOS | KiotViet | MISA CukCuk | Sapo FnB | bePOS |
-| ---------------------------- | ------------- | ---- | -------- | ----------- | -------- | ----- |
-| Cơ sở dữ liệu khách hàng     | ✅ Sprint 4   | ✅   | ✅       | ✅          | ✅       | ✅    |
-| Loyalty points / tích điểm   | ✅ Sprint 4   | ✅   | ✅       | ✅          | 🟡       | ✅    |
-| Voucher / mã giảm giá        | ✅ Sprint 4   | ✅   | ✅       | ✅          | ✅       | ✅    |
-| Hạng thành viên (Tier)       | ✅ Sprint 4   | ✅   | 🟡       | 🟡          | ❌       | 🟡    |
-| Chiến dịch marketing tự động | ❌            | ✅   | 🟡       | 🟡          | 🟡       | 🟡    |
-| Phân tích hành vi khách hàng | ❌            | ✅   | ✅       | ✅          | 🟡       | 🟡    |
+| Tính năng                    | Cơm Tấm Má Tư  | iPOS | KiotViet | MISA CukCuk | Sapo FnB | bePOS |
+| ---------------------------- | -------------- | ---- | -------- | ----------- | -------- | ----- |
+| Cơ sở dữ liệu khách hàng     | ⏳ Post-v1.0   | ✅   | ✅       | ✅          | ✅       | ✅    |
+| Loyalty points / tích điểm   | ⏳ Post-v1.0   | ✅   | ✅       | ✅          | 🟡       | ✅    |
+| Voucher / mã giảm giá        | ⏳ Post-v1.0   | ✅   | ✅       | ✅          | ✅       | ✅    |
+| Hạng thành viên (Tier)       | ⏳ Post-v1.0   | ✅   | 🟡       | 🟡          | ❌       | 🟡    |
+| Chiến dịch marketing tự động | ❌             | ✅   | 🟡       | 🟡          | 🟡       | 🟡    |
+| Phân tích hành vi khách hàng | ❌             | ✅   | ✅       | ✅          | 🟡       | 🟡    |
 
 ### 2.7 HR & Nhân sự
 
 | Tính năng                 | Cơm Tấm Má Tư | iPOS             | KiotViet | MISA CukCuk | Sapo FnB | bePOS |
 | ------------------------- | ------------- | ---------------- | -------- | ----------- | -------- | ----- |
-| Quản lý nhân viên / hồ sơ | ✅ Sprint 6   | ✅               | ✅       | ✅          | ✅       | 🟡    |
-| Ca làm / lịch trực        | ✅ Sprint 6   | ✅               | ✅       | ✅          | ✅       | 🟡    |
-| Chấm công                 | ✅ Sprint 6   | ✅ (FaceID/WiFi) | ✅       | ✅          | 🟡       | 🟡    |
-| Tính lương tự động        | ✅ Sprint 6   | ✅               | ✅       | ✅          | 🟡       | ❌    |
-| BHXH/BHYT/BHTN            | ✅ Sprint 6   | ⚠️               | ❌       | ⚠️          | ❌       | ❌    |
-| Thuế TNCN lũy tiến        | ✅ Sprint 6   | ⚠️               | ❌       | ⚠️          | ❌       | ❌    |
-| Hợp đồng lao động         | ✅ Sprint 6   | ❌               | ❌       | ❌          | ❌       | ❌    |
-| Quyết toán thuế TNCN      | ✅ Sprint 6   | ❌               | ❌       | ❌          | ❌       | ❌    |
+| Quản lý nhân viên / hồ sơ | ✅ M7         | ✅               | ✅       | ✅          | ✅       | 🟡    |
+| Ca làm / lịch trực        | ✅ M7         | ✅               | ✅       | ✅          | ✅       | 🟡    |
+| Chấm công                 | ✅ M7         | ✅ (FaceID/WiFi) | ✅       | ✅          | 🟡       | 🟡    |
+| Tính lương tự động        | ✅ M7         | ✅               | ✅       | ✅          | 🟡       | ❌    |
+| BHXH/BHYT/BHTN            | ✅ M7         | ⚠️               | ❌       | ⚠️          | ❌       | ❌    |
+| Thuế TNCN lũy tiến        | ✅ M7         | ⚠️               | ❌       | ⚠️          | ❌       | ❌    |
+| Hợp đồng lao động         | ✅ M7         | ❌               | ❌       | ❌          | ❌       | ❌    |
+| Quyết toán thuế TNCN      | ✅ M7         | ❌               | ❌       | ❌          | ❌       | ❌    |
 
 ### 2.8 Báo cáo & Analytics
 
 | Tính năng                    | Cơm Tấm Má Tư | iPOS | KiotViet | MISA CukCuk       | Sapo FnB | bePOS |
 | ---------------------------- | ------------- | ---- | -------- | ----------------- | -------- | ----- |
-| Dashboard doanh thu realtime | ✅ Sprint 2b  | ✅   | ✅       | ✅                | ✅       | ✅    |
+| Dashboard doanh thu realtime | ✅ M6         | ✅   | ✅       | ✅                | ✅       | ✅    |
 | Báo cáo theo chi nhánh       | ✅            | ✅   | ✅       | ✅                | ✅       | ✅    |
-| Phân tích menu / top món     | ✅ Sprint 5   | ✅   | ✅       | ✅                | ✅       | 🟡    |
-| Food cost analysis           | ✅ Sprint 5   | ✅   | 🟡       | ✅                | 🟡       | ❌    |
-| Báo cáo tài chính (VAS)      | ✅ Sprint 6   | ❌   | ❌       | ✅ (MISA kế toán) | ❌       | ❌    |
-| Báo cáo lương & thuế TNCN    | ✅ Sprint 6   | ⚠️   | ❌       | ⚠️                | ❌       | ❌    |
-| Báo cáo thuế GTGT            | ✅ Sprint 3   | 🟡   | 🟡       | ✅                | ❌       | ❌    |
-| Materialized Views / OLAP    | ✅ Sprint 5   | ❌   | ❌       | ❌                | ❌       | ❌    |
+| Phân tích menu / top món     | ✅ M6         | ✅   | ✅       | ✅                | ✅       | 🟡    |
+| Food cost analysis           | ✅ M6         | ✅   | 🟡       | ✅                | 🟡       | ❌    |
+| Báo cáo tài chính (VAS)      | ✅ M6         | ❌   | ❌       | ✅ (MISA kế toán) | ❌       | ❌    |
+| Báo cáo lương & thuế TNCN    | ✅ M7         | ⚠️   | ❌       | ⚠️                | ❌       | ❌    |
+| Báo cáo thuế GTGT            | ✅ M6         | 🟡   | 🟡       | ✅                | ❌       | ❌    |
+| Materialized Views / OLAP    | ✅ M6         | ❌   | ❌       | ❌                | ❌       | ❌    |
 
 ### 2.9 Multi-Branch & Vận hành chuỗi
 
@@ -166,7 +166,7 @@ GIÁ THẤP / ĐƠN GIẢN
 | Custom-built cho 1 tenant         | ✅ (lợi thế)  | ❌   | ❌       | ❌          | ❌       | ❌    |
 | Không vendor lock-in              | ✅            | ❌   | ❌       | ❌          | ❌       | ❌    |
 | Offline mode                      | ❌            | 🟡   | ✅       | 🟡          | 🟡       | ✅    |
-| In hóa đơn (printer)              | ✅ Sprint 2b  | ✅   | ✅       | ✅          | ✅       | ✅    |
+| In hóa đơn (printer)              | ✅ M2+M3      | ✅   | ✅       | ✅          | ✅       | ✅    |
 
 ---
 
@@ -224,11 +224,11 @@ Các phần mềm SaaS dùng logic phân quyền ở application layer. Hệ th�
 | Điểm yếu hiện tại                  | Mức độ ảnh hưởng             | Roadmap giải quyết          |
 | ---------------------------------- | ---------------------------- | --------------------------- |
 | Không có offline mode              | 🔴 Cao — mất điện / mất mạng | Post-v1.0 (PWA + IndexedDB) |
-| Chưa kết nối GrabFood / ShopeeFood | 🟠 Trung bình                | Post-v1.0 (Sprint 8 nếu có) |
-| QR Self-order chưa live            | 🟡 Thấp                      | Sprint 7                    |
+| Chưa kết nối GrabFood / ShopeeFood | 🟠 Trung bình                | Post-v1.0 (nếu có)          |
+| QR Self-order chưa live            | 🟡 Thấp                      | Post-v1.0                   |
 | Chưa có app mobile native          | 🟡 Thấp                      | PWA đủ dùng trước mắt       |
-| Chưa có tách bill                  | 🟡 Thấp                      | Sprint 2a hoặc backlog      |
-| Chưa có marketing automation       | 🟢 Thấp                      | Sprint 4 (manual campaign)  |
+| Chưa có tách bill                  | 🟡 Thấp                      | M2 hoặc backlog             |
+| Chưa có marketing automation       | 🟢 Thấp                      | Post-v1.0                   |
 
 ---
 

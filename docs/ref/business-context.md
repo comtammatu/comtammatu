@@ -1,5 +1,12 @@
 # Business Context — Cơm Tấm Má Tư CTCP
 
+## Sản phẩm
+
+**Hệ thống Quản lý Vận hành Nhà hàng** (Restaurant Operations Management System) cho chuỗi cơm tấm Cơm Tấm Má Tư CTCP.
+
+Phạm vi sản phẩm: POS, KDS, Menu, Staff, Stock, Payment, Finance (HĐĐT/VAS), HR/Payroll.
+Không phải CRM, không phải ERP tổng hợp, không phải phần mềm bán hàng đa ngành.
+
 ## Mô hình pháp lý
 
 Cơm Tấm Má Tư vận hành theo mô hình **Công ty Cổ Phần (CTCP)**. Nghĩa vụ pháp lý bắt buộc:

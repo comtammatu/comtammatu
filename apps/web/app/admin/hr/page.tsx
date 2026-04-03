@@ -13,7 +13,7 @@ export default function HrPage() {
         <Briefcase className="size-12 text-muted-foreground" />
         <h2 className="mt-4 text-lg font-medium">Tính năng đang phát triển</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Quản lý nhân sự và bảng lương sẽ có trong Sprint 6.
+          Quản lý nhân sự và bảng lương sẽ có trong M7 (HR/Payroll).
         </p>
       </div>
     </div>

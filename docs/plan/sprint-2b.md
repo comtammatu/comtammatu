@@ -1,7 +1,7 @@
 # Sprint 2b: Stock + Dashboard + Printer + Audit
 
-> Depends on: Sprint 2a (orders + POS + KDS + payments)
-> Enables: Sprint 3 (procurement extends stock)
+> **Module mapping:** M5 (Stock) + M6 (Finance/Dashboard) — see `roadmap.md`
+> Depends on: M2 (POS) + M3 (KDS) + M4 (Payment)
 > Sessions: 5 | Estimate: 4-5 ngày
 
 ---
@@ -14,14 +14,14 @@ Hoàn thiện operations: stock management (ingredients + auto-deduct), dashboar
 
 ## Schema
 
-Dùng tables đã define trong Sprint 2a:
+Dùng tables đã define trong M2+M3+M4 (sprint-2a.md):
 
 - `ingredients`, `recipes`, `stock_levels`, `stock_movements` — stock
 - `order_status_history` — order audit trail
 - `audit_logs` — general audit
 - `printer_configs` — printer management
 
-Xem Sprint 2a (`sprint-2.md`) cho full schema definitions.
+Xem `sprint-2a.md` cho full schema definitions.
 
 ---
 
@@ -42,7 +42,7 @@ Xem Sprint 2a (`sprint-2.md`) cho full schema definitions.
 - [ ] View stock levels per branch
 - [ ] Manual stock adjustment (kiểm kê)
 - [ ] Low stock warning (quantity < min_stock)
-- [ ] Stock auto-deduct khi order confirmed (trigger từ Sprint 2a S1)
+- [ ] Stock auto-deduct khi order confirmed (trigger từ M2 POS)
 - [ ] Recipes: link menu_item → ingredients + quantity
 
 ### S2: Dashboard — Basic Revenue

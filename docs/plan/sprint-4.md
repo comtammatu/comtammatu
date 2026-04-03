@@ -1,6 +1,8 @@
-# Sprint 4: CRM + Loyalty
+# Sprint 4: Loyalty + Vouchers (Post-v1.0)
 
-> Depends on: Sprint 2 (orders data cho loyalty earn)
+> **Module mapping:** Post-v1.0 (Loyalty/Vouchers) — see `roadmap.md`
+> **Note:** CRM đã loại khỏi scope. Đây là module Loyalty thuần túy.
+> Depends on: M2 (POS/orders data cho loyalty earn)
 > Sessions: 6 | Estimate: 5-6 ngày
 
 ---
@@ -182,7 +184,7 @@ CREATE TABLE public.order_discounts (
 - [ ] orders.discount_total updated
 - [ ] Audit log entry for every discount applied
 
-### S5: CRM Dashboard
+### S5: Loyalty Dashboard
 
 **Acceptance Criteria:**
 
@@ -198,4 +200,4 @@ CREATE TABLE public.order_discounts (
 - [ ] Customer linked to orders at POS
 - [ ] Auto earn points on order completion
 - [ ] Voucher apply + redeem flow works
-- [ ] CRM dashboard shows customer analytics
+- [ ] Loyalty dashboard shows customer analytics

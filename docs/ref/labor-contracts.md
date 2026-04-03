@@ -228,7 +228,7 @@ payroll_entries.insurance_base (immutable snapshot)
 2. Sửa `employees` trực tiếp không qua HĐ → mất audit trail, cơ quan BHXH kiểm tra không khớp
 3. Payroll lấy từ `employees` thay vì HĐ hiện hành → HĐ mới có hiệu lực giữa tháng sẽ lấy sai mức
 
-> ⚠️ **Dev note**: Khi implement Sprint 6, `employees.insurance_base_salary` PHẢI được sync tự động từ `employment_contracts` active. KHÔNG cho phép update trực tiếp. `payroll_entries.insurance_base` là snapshot — KHÔNG bao giờ thay đổi sau khi payroll approved.
+> ⚠️ **Dev note**: Khi implement M7 (HR/Payroll), `employees.insurance_base_salary` PHẢI được sync tự động từ `employment_contracts` active. KHÔNG cho phép update trực tiếp. `payroll_entries.insurance_base` là snapshot — KHÔNG bao giờ thay đổi sau khi payroll approved.
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Next.js 16.2 application with App Router. Serves four user surfaces: Admin (management), POS (cashier/waiter), KDS (chef), and Employee portal. Sprint 1 complete (S1–S6): admin shell, branches, staff, menu, tables/zones, and security polish are shipped. POS/KDS/Employee remain placeholders for Sprint 2a.
+Next.js 16.2 application with App Router. Serves four user surfaces: Admin (management), POS (cashier/waiter), KDS (chef), and Employee portal. M0 (Admin Shell) + M1 (Menu) shipped: admin shell, branches, staff, menu, tables/zones, and security polish. POS/KDS/Employee remain placeholders for M2/M3.
 
 **Owner:** `apps/web/`
 
@@ -114,12 +114,12 @@ Browser request
 
 - **Proxy as single auth gate:** All auth enforcement happens in `proxy.ts` before any route code runs. Layout-level checks are defense-in-depth, not primary.
 - **RSC by default:** Pages are React Server Components. Only interactive elements (forms, dropdowns) use "use client".
-- **Remaining placeholders:** inventory, orders, hr, crm, finance, reports, POS, KDS, employee. These will be built in Sprint 2a–3.
+- **Remaining placeholders:** inventory, orders, hr, finance, reports, POS, KDS, employee. These will be built in M2–M7. CRM is Post-v1.0.
 
 <!-- ORACLE-META
 Written by codebase-oracle (manual) | 2026-04-02
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 95%
-Updated: Sprint 1 S6 complete (2026-04-03)
+Updated: M0+M1 shipped (2026-04-04)
 Unknowns: 0
 -->

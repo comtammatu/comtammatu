@@ -1,6 +1,7 @@
 # Sprint 5: Dashboard Advanced + Reports
 
-> Depends on: Sprint 2 (orders data), Sprint 3 (procurement data)
+> **Module mapping:** M6 (Finance/Reports) — see `roadmap.md`
+> Depends on: M2 (POS/orders) + M5 (Stock/procurement)
 > Sessions: 4 | Estimate: 3-4 ngày
 
 ---
