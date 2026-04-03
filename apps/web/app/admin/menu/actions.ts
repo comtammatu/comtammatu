@@ -165,27 +165,16 @@ export async function toggleCategoryActive(
   const ctx = await getAuthContext(MENU_MANAGER_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
+  const { supabase } = ctx;
 
-  // TODO: Use toggle_category_active RPC after migration applied + pnpm db:types
-  const { data: cat } = await supabase
-    .from("menu_categories")
-    .select("is_active")
-    .eq("id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
-
-  if (!cat) {
-    return { success: false, error: "Danh mục không tồn tại" };
-  }
-
-  const { error } = await supabase
-    .from("menu_categories")
-    .update({ is_active: !cat.is_active })
-    .eq("id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id);
+  const { error } = await supabase.rpc("toggle_category_active", {
+    p_id: parsedId.data,
+  });
 
   if (error) {
+    if (error.message?.includes("not_found")) {
+      return { success: false, error: "Danh mục không tồn tại" };
+    }
     return { success: false, error: mapDbError(error.code) };
   }
 
@@ -284,27 +273,16 @@ export async function toggleItemActive(itemId: number): Promise<ActionResult> {
   const ctx = await getAuthContext(MENU_MANAGER_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
+  const { supabase } = ctx;
 
-  // TODO: Use toggle_item_active RPC after migration applied + pnpm db:types
-  const { data: item } = await supabase
-    .from("menu_items")
-    .select("is_active")
-    .eq("id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
-
-  if (!item) {
-    return { success: false, error: "Món ăn không tồn tại" };
-  }
-
-  const { error } = await supabase
-    .from("menu_items")
-    .update({ is_active: !item.is_active })
-    .eq("id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id);
+  const { error } = await supabase.rpc("toggle_item_active", {
+    p_id: parsedId.data,
+  });
 
   if (error) {
+    if (error.message?.includes("not_found")) {
+      return { success: false, error: "Món ăn không tồn tại" };
+    }
     return { success: false, error: mapDbError(error.code) };
   }
 
