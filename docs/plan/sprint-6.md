@@ -1,6 +1,7 @@
 # Sprint 6: Finance VAS + HR/Payroll CTCP
 
-> Depends on: Sprint 2 (orders), Sprint 3 (procurement, invoices)
+> **Module mapping:** M6 (Finance/VAS) + M7 (HR/Payroll) — see `roadmap.md`
+> Depends on: M2 (POS/orders) + M5 (Stock/procurement)
 > Sessions: 7 | Estimate: 6-8 ngày
 > Legal: BHXH bắt buộc, thuế TNCN lũy tiến, BCTC theo VAS
 

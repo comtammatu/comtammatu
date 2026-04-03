@@ -1,6 +1,7 @@
 # Sprint 3: HĐĐT + Momo + Procurement
 
-> Depends on: Sprint 2 (orders + payments + stock)
+> **Module mapping:** M4 (Payment/Momo) + M5 (Stock/Procurement) + M6 (Finance/HĐĐT) — see `roadmap.md`
+> Depends on: M2+M3+M4 (POS + KDS + Payment) + M5 (Stock)
 > Enables: v1.0.0 Pilot Launch (CTCP compliant)
 > Sessions: 7 | Estimate: 6-8 ngày
 

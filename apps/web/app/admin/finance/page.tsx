@@ -13,7 +13,7 @@ export default function FinancePage() {
         <Wallet className="size-12 text-muted-foreground" />
         <h2 className="mt-4 text-lg font-medium">Tính năng đang phát triển</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Quản lý tài chính sẽ có trong Sprint 6.
+          Quản lý tài chính sẽ có trong M6 (Finance).
         </p>
       </div>
     </div>

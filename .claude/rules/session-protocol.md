@@ -167,7 +167,7 @@ Do not let context degrade. Fresh session > contaminated session.
 | `/new-action` | Adding Server Action     | Zod 4 validation + auth context + safe errors |
 | `/freeze`     | Focused debugging        | Restrict edits to one directory               |
 
-### QA & Browser Testing (from Sprint 2b+ when UI is complete)
+### QA & Browser Testing (from M2+ when UI is complete)
 
 | Skill        | When                      | Purpose                          |
 | ------------ | ------------------------- | -------------------------------- |
@@ -194,16 +194,17 @@ Do not let context degrade. Fresh session > contaminated session.
 
 ---
 
-## Skills by Sprint Phase
+## Skills by Module
 
-| Sprint                         | Primary Skills                                                  |
-| ------------------------------ | --------------------------------------------------------------- |
-| Sprint 1: Admin Shell + Menu   | `/new-page`, `/new-action`, `/db-migrate`, `/verify`, `/review` |
-| Sprint 2a: POS + KDS + Payment | `/db-migrate`, `/cso` (payments), `/new-page`, `/new-action`    |
-| Sprint 2b: Stock + Dashboard   | `/db-migrate`, `/qa`, `/browse`, `/benchmark`                   |
-| Sprint 3: HĐĐT + Momo + Refund | `/cso` (payments+HĐĐT), `/db-migrate`, `/investigate`           |
+| Module                            | Primary Skills                                                  |
+| --------------------------------- | --------------------------------------------------------------- |
+| M0+M1: Admin Shell + Menu ✅      | `/new-page`, `/new-action`, `/db-migrate`, `/verify`, `/review` |
+| M2+M3: POS + KDS                  | `/db-migrate`, `/new-page`, `/new-action`                       |
+| M4: Payment                       | `/db-migrate`, `/cso` (payments), `/new-action`                 |
+| M5: Stock                         | `/db-migrate`, `/qa`, `/browse`                                 |
+| M6: Finance (HĐĐT + Dashboard)    | `/cso` (finance+HĐĐT), `/db-migrate`, `/investigate`            |
 | v1.0.0 Pilot Launch            | `/qa`, `/canary`, `/benchmark`, `/ship`, `/document-release`    |
-| Sprint 4-7: Post-pilot         | `/cso` (finance), `/plan-eng-review`, `/qa`, `/benchmark`       |
+| M7 + Post-v1.0                    | `/cso` (finance), `/plan-eng-review`, `/qa`, `/benchmark`       |
 
 ---
 

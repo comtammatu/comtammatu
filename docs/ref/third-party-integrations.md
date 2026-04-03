@@ -8,19 +8,19 @@
 
 ## Tóm tắt nhanh — Vendors được chọn
 
-| Nhóm                  | Vendor chọn        | Fallback             | Sprint    |
-| --------------------- | ------------------ | -------------------- | --------- |
-| **QR thanh toán**     | VietQR (NAPAS)     | —                    | Sprint 2a |
-| **E-wallet #1**       | MoMo               | —                    | Sprint 3  |
-| **E-wallet #2**       | ZaloPay            | —                    | Post-v1.0 |
-| **Card payment**      | VNPay              | —                    | Post-v1.0 |
-| **HĐĐT**              | MISA meInvoice     | ViettelSinvoice      | Sprint 3  |
-| **OTP / Notify**      | Zalo ZNS           | SpeedSMS             | Sprint 4  |
-| **Email**             | Resend.com         | —                    | Sprint 3  |
-| **Delivery dispatch** | Ahamove            | —                    | Post-v1.0 |
-| **Delivery platform** | GrabFood           | ShopeeFood (partner) | Post-v1.0 |
-| **BHXH**              | iBHXH / VNPT-BHXH  | Manual portal        | Sprint 6  |
-| **eTax / GTGT**       | Manual eTax portal | HTKK desktop         | Sprint 6  |
+| Nhóm                  | Vendor chọn        | Fallback             | Module         |
+| --------------------- | ------------------ | -------------------- | -------------- |
+| **QR thanh toán**     | VietQR (NAPAS)     | —                    | M4 Payment     |
+| **E-wallet #1**       | MoMo               | —                    | M4 Payment     |
+| **E-wallet #2**       | ZaloPay            | —                    | Post-v1.0      |
+| **Card payment**      | VNPay              | —                    | Post-v1.0      |
+| **HĐĐT**              | MISA meInvoice     | ViettelSinvoice      | M6 Finance     |
+| **OTP / Notify**      | Zalo ZNS           | SpeedSMS             | Post-v1.0      |
+| **Email**             | Resend.com         | —                    | M6 Finance     |
+| **Delivery dispatch** | Ahamove            | —                    | Post-v1.0      |
+| **Delivery platform** | GrabFood           | ShopeeFood (partner) | Post-v1.0      |
+| **BHXH**              | iBHXH / VNPT-BHXH  | Manual portal        | M7 HR/Payroll  |
+| **eTax / GTGT**       | Manual eTax portal | HTKK desktop         | M7 HR/Payroll  |
 
 ---
 
@@ -28,7 +28,7 @@
 
 ### 1.1 VietQR — Chuyển khoản QR ngân hàng
 
-**Lựa chọn**: ✅ **Tích hợp Sprint 2a (đã có trong roadmap)**
+**Lựa chọn**: ✅ **Tích hợp M4 (Payment)**
 
 | Thuộc tính    | Giá trị                                                            |
 | ------------- | ------------------------------------------------------------------ |
@@ -55,7 +55,7 @@
 
 ### 1.2 MoMo — E-wallet #1
 
-**Lựa chọn**: ✅ **Tích hợp Sprint 3**
+**Lựa chọn**: ✅ **Tích hợp M4 (Payment)**
 
 | Thuộc tính       | Giá trị                                         |
 | ---------------- | ----------------------------------------------- |
@@ -131,7 +131,7 @@
 
 ### 2.1 MISA meInvoice — Provider chính
 
-**Lựa chọn**: ✅ **Tích hợp Sprint 3 — Provider ưu tiên**
+**Lựa chọn**: ✅ **Tích hợp M6 (Finance) — Provider ưu tiên**
 
 | Thuộc tính      | Giá trị                                                 |
 | --------------- | ------------------------------------------------------- |
@@ -200,7 +200,7 @@ Xem chi tiết schema trong `docs/ref/einvoice-tax.md`.
 
 ### 3.1 Zalo ZNS — Kênh chính
 
-**Lựa chọn**: ✅ **Tích hợp Sprint 4 (CRM)**
+**Lựa chọn**: ⏳ **Post-v1.0 (Notifications)**
 
 | Thuộc tính | Giá trị                                         |
 | ---------- | ----------------------------------------------- |
@@ -408,15 +408,14 @@ Giả định: 500 order/ngày, 5 chi nhánh, ~15,000 order/tháng
 
 ---
 
-## 8. Thứ tự tích hợp theo Sprint
+## 8. Thứ tự tích hợp theo Module
 
-| Sprint        | Tích hợp                                         |
-| ------------- | ------------------------------------------------ |
-| **Sprint 2a** | VietQR (POS payments)                            |
-| **Sprint 3**  | MoMo + MISA meInvoice + Resend email             |
-| **Sprint 4**  | Zalo ZNS + SpeedSMS (CRM notifications)          |
-| **Sprint 6**  | Xuất data BHXH / thuế TNCN (no API, just export) |
-| **Post-v1.0** | ZaloPay, VNPay, GrabFood, Ahamove, ShopeeFood    |
+| Module             | Tích hợp                                         |
+| ------------------ | ------------------------------------------------ |
+| **M4 Payment**     | VietQR + MoMo                                    |
+| **M6 Finance**     | MISA meInvoice + Resend email                    |
+| **M7 HR/Payroll**  | Xuất data BHXH / thuế TNCN (no API, just export) |
+| **Post-v1.0**      | Zalo ZNS, SpeedSMS, ZaloPay, VNPay, GrabFood, Ahamove |
 
 ---
 

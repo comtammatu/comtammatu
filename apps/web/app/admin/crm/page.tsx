@@ -13,7 +13,7 @@ export default function CrmPage() {
         <Heart className="size-12 text-muted-foreground" />
         <h2 className="mt-4 text-lg font-medium">Tính năng đang phát triển</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          CRM và khách hàng thân thiết sẽ có trong Sprint 4.
+          Loyalty và khách hàng thân thiết sẽ có sau v1.0.
         </p>
       </div>
     </div>

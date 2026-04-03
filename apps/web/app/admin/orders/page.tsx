@@ -13,7 +13,7 @@ export default function OrdersPage() {
         <Receipt className="size-12 text-muted-foreground" />
         <h2 className="mt-4 text-lg font-medium">Tính năng đang phát triển</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Quản lý đơn hàng sẽ có trong Sprint 2a.
+          Quản lý đơn hàng sẽ có trong M2 (POS).
         </p>
       </div>
     </div>

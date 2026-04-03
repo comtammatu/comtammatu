@@ -1,7 +1,7 @@
 # Kho Hàng — Inventory Management
 
 > Áp dụng: Cơm Tấm Má Tư CTCP — quản lý kho nguyên liệu F&B
-> Phạm vi: Sprint 2b (stock cơ bản) + Sprint 3 (GRN + 3-way matching)
+> Phạm vi: M5 Stock (stock cơ bản + GRN + 3-way matching)
 
 ---
 

@@ -7,7 +7,7 @@ export default function KdsPage() {
         <ChefHat className="mx-auto size-16 text-muted-foreground" />
         <h1 className="mt-4 text-xl font-bold">KDS — Màn hình bếp</h1>
         <p className="mt-2 text-muted-foreground">
-          Hệ thống hiển thị bếp sẽ có trong Sprint 2a.
+          Hệ thống hiển thị bếp sẽ có trong M3 (KDS).
         </p>
       </div>
     </div>

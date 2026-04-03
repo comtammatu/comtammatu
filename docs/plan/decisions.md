@@ -65,3 +65,25 @@
 **Decision:** Postgres RPC `set_headquarters(p_branch_id)` chạy cả hai thao tác trong 1 transaction. Dùng single UPDATE với `SET is_headquarters = (id = p_branch_id)`.
 
 **Consequences:** Atomic, không race condition. Cần maintain thêm 1 RPC function + type stub.
+
+## D008: Cloud-first, local-first Phase 2 (2026-04-04)
+
+**Context:** Cân nhắc local-first (mini PC + SQLite per branch) để POS/KDS hoạt động offline. Phân tích cho thấy:
+- Internet hiếm khi mất (< 1 lần/tháng, fiber ổn định)
+- Local-first tăng effort ~3x (2 DB layers, sync logic, deploy per branch, conflict resolution)
+- 200-600 đơn/ngày, < 50 req/s — cloud hoàn toàn đủ
+
+**Decision:** MVP (v1.0.0) dùng cloud-first + PWA cache cho offline cơ bản. Local-first (mini PC + SQLite + sync) đưa vào Post-v1.0, quyết định dựa trên metrics thực tế sau pilot.
+
+**Consequences:** Ship nhanh hơn, validate business logic trước. Nếu pilot cho thấy cần offline thực sự → Phase 2 thêm local layer. Code architecture cần giữ clean enough để tách được sau.
+
+## D009: Path-based routing, không sub-domain (2026-04-04)
+
+**Context:** Cân nhắc sub-domain per module (pos.comtammatu.com, kds.comtammatu.com). Phân tích:
+- Sub-domain: auth phức tạp (cross-origin cookies), CORS, wildcard cert, DNS records, dev env phức tạp
+- Path-based: 1 domain, auth "just works", proxy.ts ACL tập trung, đã có sẵn
+- Team 1 người, monorepo, cùng Supabase Auth → không cần tách deploy
+
+**Decision:** Giữ path-based routing (`/admin/*`, `/br/[branchId]/pos`, `/br/[branchId]/kds`). Sub-domain chuyển sang Post-v1.0, khi cần tách deploy hoặc chuyển local-first.
+
+**Consequences:** Đơn giản, ship nhanh. Khi chuyển sub-domain sau chỉ cần thêm proxy rewrite rules, không cần đổi code logic.

@@ -1,7 +1,7 @@
 # Sprint 2a: POS + KDS + Payments
 
-> Depends on: Sprint 1 (menu + tables + staff)
-> Enables: Sprint 2b (stock, dashboard, audit)
+> **Module mapping:** M2 (POS) + M3 (KDS) + M4 (Payment) — see `roadmap.md`
+> Depends on: M0+M1 (Admin Shell + Menu)
 > Sessions: 6 | Estimate: 5-7 ngày
 > North Star: "Order → thanh toán — dưới 2 phút"
 
@@ -489,4 +489,4 @@ Cashier chọn "VietQR" → generate QR code (VietQR API format)
 - [ ] `pnpm typecheck && pnpm build` pass
 - [ ] `/review` + `/cso` pass
 
-> **Tiếp:** Sprint 2b — Stock + Dashboard + Printer + Audit → `sprint-2b.md`
+> **Tiếp:** M5 (Stock) + M6 (Finance/Dashboard) → `sprint-2b.md`
