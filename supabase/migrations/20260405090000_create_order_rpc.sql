@@ -43,12 +43,15 @@ BEGIN
     END IF;
   END IF;
 
-  -- FIX #12: Validate session belongs to branch
+  -- FIX #12: Validate session belongs to branch and is open
   IF p_pos_session_id IS NOT NULL THEN
     PERFORM 1 FROM public.pos_sessions
-    WHERE id = p_pos_session_id AND branch_id = p_branch_id AND tenant_id = p_tenant_id;
+    WHERE id = p_pos_session_id
+      AND branch_id = p_branch_id
+      AND tenant_id = p_tenant_id
+      AND status = 'open';
     IF NOT FOUND THEN
-      RAISE EXCEPTION 'POS session does not belong to this branch' USING ERRCODE = 'P0002';
+      RAISE EXCEPTION 'POS session does not belong to this branch or is not open' USING ERRCODE = 'P0002';
     END IF;
   END IF;
 
@@ -117,7 +120,11 @@ BEGIN
     UPDATE public.tables
     SET status = 'occupied'
     WHERE id = p_table_id
+      AND branch_id = p_branch_id
       AND tenant_id = p_tenant_id;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Failed to update table status' USING ERRCODE = 'P0002';
+    END IF;
   END IF;
 
   RETURN jsonb_build_object(
