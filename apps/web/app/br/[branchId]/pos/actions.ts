@@ -181,6 +181,7 @@ export async function fetchTablesForBranch(
 export async function submitOrder(
   branchId: number,
   cart: CartState,
+  posSessionId?: number,
 ): Promise<ActionResult<{ order_id: number; order_number: string }>> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
@@ -243,6 +244,7 @@ export async function submitOrder(
       p_items: JSON.stringify(rpcItems),
       p_order_type: parsedCart.data.order_type,
       p_table_id: parsedCart.data.table_id ?? null,
+      p_pos_session_id: posSessionId ?? null,
       p_note: parsedCart.data.note ?? null,
     },
   );
@@ -273,4 +275,319 @@ export async function submitOrder(
     success: true,
     data: { order_id: result.order_id, order_number: result.order_number },
   };
+}
+
+/* ─── fetchPosTerminals ─── */
+
+/**
+ * Fetch active POS terminals for a branch.
+ */
+export async function fetchPosTerminals(
+  branchId: number,
+): Promise<ActionResult> {
+  const parsedBranchId = branchIdSchema.safeParse(branchId);
+  if (!parsedBranchId.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const ctx = await getAuthContext(POS_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  if (claims.branch_id !== parsedBranchId.data) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const { data: terminals, error } = await supabase
+    .from("pos_terminals")
+    .select("id, name, device_id")
+    .eq("branch_id", parsedBranchId.data)
+    .eq("tenant_id", claims.tenant_id)
+    .eq("is_active", true)
+    .order("name", { ascending: true });
+
+  if (error) {
+    return {
+      success: false,
+      error: "Không thể tải danh sách máy POS. Vui lòng thử lại.",
+    };
+  }
+
+  return { success: true, data: terminals ?? [] };
+}
+
+/* ─── fetchActiveSession ─── */
+
+/**
+ * Fetch the currently open POS session for a branch.
+ * Returns null in data if no open session exists.
+ */
+export async function fetchActiveSession(
+  branchId: number,
+): Promise<ActionResult> {
+  const parsedBranchId = branchIdSchema.safeParse(branchId);
+  if (!parsedBranchId.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const ctx = await getAuthContext(POS_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  if (claims.branch_id !== parsedBranchId.data) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const { data: session, error } = await supabase
+    .from("pos_sessions")
+    .select(
+      `
+      id,
+      terminal_id,
+      opened_by,
+      opened_at,
+      opening_cash,
+      status,
+      note,
+      pos_terminals (
+        id,
+        name
+      )
+    `,
+    )
+    .eq("branch_id", parsedBranchId.data)
+    .eq("tenant_id", claims.tenant_id)
+    .eq("status", "open")
+    .maybeSingle();
+
+  if (error) {
+    return {
+      success: false,
+      error: "Không thể tải thông tin ca. Vui lòng thử lại.",
+    };
+  }
+
+  return { success: true, data: session };
+}
+
+/* ─── openPosSession ─── */
+
+const openSessionSchema = z.object({
+  terminalId: z.coerce.number().int().positive({ error: "Chọn máy POS" }),
+  openingCash: z.coerce.number().min(0, { error: "Tiền mở ca không hợp lệ" }),
+});
+
+/**
+ * Open a new POS session (shift) for a terminal.
+ */
+export async function openPosSession(
+  branchId: number,
+  terminalId: number,
+  openingCash: number,
+): Promise<ActionResult<{ session_id: number }>> {
+  const parsedBranchId = branchIdSchema.safeParse(branchId);
+  if (!parsedBranchId.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const parsedInput = openSessionSchema.safeParse({ terminalId, openingCash });
+  if (!parsedInput.success) {
+    return {
+      success: false,
+      error: parsedInput.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContext(POS_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  if (claims.branch_id !== parsedBranchId.data) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: "Phiên đăng nhập hết hạn" };
+
+  const { data, error } = await supabase
+    .from("pos_sessions")
+    .insert({
+      tenant_id: claims.tenant_id,
+      branch_id: parsedBranchId.data,
+      terminal_id: parsedInput.data.terminalId,
+      opened_by: user.id,
+      opening_cash: parsedInput.data.openingCash,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    // Partial unique index violation: terminal already has an open session
+    if (error.code === "23505") {
+      return {
+        success: false,
+        error: "Máy POS này đã có ca đang mở. Vui lòng đóng ca trước.",
+      };
+    }
+    return {
+      success: false,
+      error: "Không thể mở ca. Vui lòng thử lại.",
+    };
+  }
+
+  if (!data) {
+    return { success: false, error: "Không thể mở ca. Vui lòng thử lại." };
+  }
+
+  return { success: true, data: { session_id: data.id } };
+}
+
+/* ─── closePosSession ─── */
+
+const closeSessionSchema = z.object({
+  sessionId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Session ID không hợp lệ" }),
+  closingCash: z.coerce.number().min(0, { error: "Tiền đóng ca không hợp lệ" }),
+  note: z.string().optional(),
+});
+
+/**
+ * Close a POS session. Calculates expected cash and difference via RPC.
+ */
+export async function closePosSession(
+  sessionId: number,
+  closingCash: number,
+  note?: string,
+): Promise<ActionResult> {
+  const parsed = closeSessionSchema.safeParse({
+    sessionId,
+    closingCash,
+    note,
+  });
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContext(POS_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase } = ctx;
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: "Phiên đăng nhập hết hạn" };
+
+  const { data, error } = await (supabase.rpc as CallableFunction)(
+    "close_pos_session",
+    {
+      p_session_id: parsed.data.sessionId,
+      p_closed_by: user.id,
+      p_closing_cash: parsed.data.closingCash,
+      p_note: parsed.data.note ?? null,
+    },
+  );
+
+  if (error) {
+    if (error.message?.includes("not found")) {
+      return { success: false, error: "Không tìm thấy ca" };
+    }
+    if (error.message?.includes("not open")) {
+      return { success: false, error: "Ca đã được đóng" };
+    }
+    return {
+      success: false,
+      error: "Không thể đóng ca. Vui lòng thử lại.",
+    };
+  }
+
+  return { success: true, data };
+}
+
+/* ─── fetchOrderForBill ─── */
+
+const orderIdSchema = z.coerce
+  .number()
+  .int()
+  .positive({ error: "Order ID không hợp lệ" });
+
+/**
+ * Fetch a single order with items for bill/receipt display.
+ * Includes branch info for receipt header.
+ */
+export async function fetchOrderForBill(
+  orderId: number,
+): Promise<ActionResult> {
+  const parsedId = orderIdSchema.safeParse(orderId);
+  if (!parsedId.success) {
+    return { success: false, error: "Order ID không hợp lệ" };
+  }
+
+  const ctx = await getAuthContext(POS_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  const { data: order, error } = await supabase
+    .from("orders")
+    .select(
+      `
+      id,
+      order_number,
+      order_type,
+      status,
+      subtotal,
+      tax_amount,
+      service_charge,
+      discount_amount,
+      total_amount,
+      customer_count,
+      note,
+      created_at,
+      table_id,
+      tables (
+        number
+      ),
+      branches (
+        name,
+        address
+      ),
+      order_items (
+        id,
+        item_name,
+        variant_name,
+        quantity,
+        unit_price,
+        subtotal,
+        modifiers,
+        sides,
+        note
+      )
+    `,
+    )
+    .eq("id", parsedId.data)
+    .eq("tenant_id", claims.tenant_id)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      return { success: false, error: "Không tìm thấy đơn hàng" };
+    }
+    return {
+      success: false,
+      error: "Không thể tải đơn hàng. Vui lòng thử lại.",
+    };
+  }
+
+  return { success: true, data: order };
 }

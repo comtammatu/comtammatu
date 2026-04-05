@@ -6,12 +6,15 @@ import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { Clock, LogOut, Monitor } from "lucide-react";
 import { CartSidebar } from "./cart-sidebar";
 import { ItemCustomizer } from "./item-customizer";
+import { CloseSessionDialog } from "./close-session-dialog";
+import { BillReceipt } from "./bill-receipt";
 import { submitOrder } from "./actions";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import { calcCartTotal } from "./types";
-import type { BranchTable } from "./page";
+import type { BranchTable, ActiveSession } from "./page";
 
 /* ─── Menu data types (derived from fetchMenuForPos action) ─── */
 
@@ -65,6 +68,13 @@ function formatVnd(amount: number): string {
   }).format(amount);
 }
 
+function formatTime(dateStr: string): string {
+  return new Date(dateStr).toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function makeCartKey(
   itemId: number,
   variantId: number | undefined,
@@ -92,9 +102,15 @@ interface PosMenuProps {
   branchId: number;
   categories: MenuCategory[];
   tables: BranchTable[];
+  session: ActiveSession;
 }
 
-export function PosMenu({ branchId, categories, tables }: PosMenuProps) {
+export function PosMenu({
+  branchId,
+  categories,
+  tables,
+  session,
+}: PosMenuProps) {
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(
     categories[0]?.id ?? null,
   );
@@ -103,6 +119,8 @@ export function PosMenu({ branchId, categories, tables }: PosMenuProps) {
   const [orderType, setOrderType] = useState<OrderType>("dine_in");
   const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [showCloseSession, setShowCloseSession] = useState(false);
+  const [billOrderId, setBillOrderId] = useState<number | null>(null);
 
   const activeCategory = useMemo(
     () => categories.find((c) => c.id === activeCategoryId),
@@ -180,21 +198,30 @@ export function PosMenu({ branchId, categories, tables }: PosMenuProps) {
     if (!canSubmit) return;
 
     startTransition(async () => {
-      const result = await submitOrder(branchId, {
-        items: cartItems,
-        order_type: orderType,
-        table_id: selectedTableId ?? undefined,
-      });
+      const result = await submitOrder(
+        branchId,
+        {
+          items: cartItems,
+          order_type: orderType,
+          table_id: selectedTableId ?? undefined,
+        },
+        session.id,
+      );
 
       if (result.success && result.data) {
-        toast.success(`Đặt món thành công — #${result.data.order_number}`);
+        toast.success(`Đặt món thành công — #${result.data.order_number}`, {
+          action: {
+            label: "Xem hóa đơn",
+            onClick: () => setBillOrderId(result.data!.order_id),
+          },
+        });
         setCartItems([]);
         setSelectedTableId(null);
       } else {
         toast.error(result.error ?? "Không thể tạo đơn hàng");
       }
     });
-  }, [canSubmit, branchId, cartItems, orderType, selectedTableId]);
+  }, [canSubmit, branchId, cartItems, orderType, selectedTableId, session.id]);
 
   const handleItemTap = useCallback(
     (item: MenuItem) => {
@@ -230,6 +257,29 @@ export function PosMenu({ branchId, categories, tables }: PosMenuProps) {
     <>
       {/* Left Panel — Menu Browse */}
       <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Session header */}
+        <div className="flex items-center justify-between border-b bg-background px-3 py-2">
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Monitor className="size-3" />
+              {session.pos_terminals?.name ?? "POS"}
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="size-3" />
+              Ca mở lúc {formatTime(session.opened_at)}
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => setShowCloseSession(true)}
+          >
+            <LogOut className="mr-1 size-3" />
+            Đóng ca
+          </Button>
+        </div>
+
         {/* Category tabs */}
         <div className="border-b bg-muted/30">
           <ScrollArea className="w-full">
@@ -325,6 +375,21 @@ export function PosMenu({ branchId, categories, tables }: PosMenuProps) {
         item={customizerItem}
         onClose={() => setCustomizerItem(null)}
         onConfirm={handleCustomizerConfirm}
+        formatVnd={formatVnd}
+      />
+
+      {/* Close Session Dialog */}
+      <CloseSessionDialog
+        sessionId={session.id}
+        open={showCloseSession}
+        onOpenChange={setShowCloseSession}
+        formatVnd={formatVnd}
+      />
+
+      {/* Bill Receipt Sheet */}
+      <BillReceipt
+        orderId={billOrderId}
+        onClose={() => setBillOrderId(null)}
         formatVnd={formatVnd}
       />
     </>

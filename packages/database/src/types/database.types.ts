@@ -777,6 +777,69 @@ export type Database = {
           },
         ];
       };
+      printer_configs: {
+        Row: {
+          branch_id: number;
+          connection_type: string;
+          created_at: string;
+          id: number;
+          ip_address: string | null;
+          is_active: boolean;
+          is_default: boolean;
+          name: string;
+          paper_width: number;
+          port: number | null;
+          tenant_id: number;
+          type: string;
+          updated_at: string;
+        };
+        Insert: {
+          branch_id: number;
+          connection_type: string;
+          created_at?: string;
+          id?: never;
+          ip_address?: string | null;
+          is_active?: boolean;
+          is_default?: boolean;
+          name: string;
+          paper_width?: number;
+          port?: number | null;
+          tenant_id: number;
+          type: string;
+          updated_at?: string;
+        };
+        Update: {
+          branch_id?: number;
+          connection_type?: string;
+          created_at?: string;
+          id?: never;
+          ip_address?: string | null;
+          is_active?: boolean;
+          is_default?: boolean;
+          name?: string;
+          paper_width?: number;
+          port?: number | null;
+          tenant_id?: number;
+          type?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "printer_configs_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "printer_configs_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       pos_terminals: {
         Row: {
           branch_id: number;
@@ -927,6 +990,15 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      close_pos_session: {
+        Args: {
+          p_session_id: number;
+          p_closed_by: string;
+          p_closing_cash: number;
+          p_note?: string;
+        };
+        Returns: Json;
+      };
       create_order: {
         Args: {
           p_tenant_id: number;

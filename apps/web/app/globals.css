@@ -204,4 +204,25 @@
       transition-duration: 0.01ms !important;
     }
   }
+
+  /* POS receipt print styles */
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+
+    #pos-receipt,
+    #pos-receipt * {
+      visibility: visible;
+    }
+
+    #pos-receipt {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 80mm;
+      font-size: 12px;
+      padding: 4mm;
+    }
+  }
 }
