@@ -1,29 +1,71 @@
 "use client";
 
+import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
-import { Minus, Plus, ShoppingCart, Trash2, X } from "lucide-react";
-import type { CartItem } from "./types";
+import {
+  Loader2,
+  Minus,
+  Plus,
+  ShoppingCart,
+  Trash2,
+  UtensilsCrossed,
+  X,
+  Package,
+} from "lucide-react";
+import type { CartItem, OrderType } from "./types";
 import { calcItemSubtotal } from "./types";
+import type { BranchTable } from "./page";
 
 interface CartSidebarProps {
   items: CartItem[];
   total: number;
+  orderType: OrderType;
+  selectedTableId: number | null;
+  tables: BranchTable[];
+  canSubmit: boolean;
+  isSubmitting: boolean;
   onUpdateQuantity: (key: string, delta: number) => void;
   onRemoveItem: (key: string) => void;
   onClearCart: () => void;
+  onOrderTypeChange: (type: OrderType) => void;
+  onTableSelect: (tableId: number | null) => void;
+  onSubmitOrder: () => void;
   formatVnd: (amount: number) => string;
 }
 
 export function CartSidebar({
   items,
   total,
+  orderType,
+  selectedTableId,
+  tables,
+  canSubmit,
+  isSubmitting,
   onUpdateQuantity,
   onRemoveItem,
   onClearCart,
+  onOrderTypeChange,
+  onTableSelect,
+  onSubmitOrder,
   formatVnd,
 }: CartSidebarProps) {
+  // Group tables by zone
+  const tablesByZone = tables.reduce<Map<string, BranchTable[]>>(
+    (acc, table) => {
+      const zoneName = table.branch_zones?.name ?? "Không có khu vực";
+      const group = acc.get(zoneName);
+      if (group) {
+        group.push(table);
+      } else {
+        acc.set(zoneName, [table]);
+      }
+      return acc;
+    },
+    new Map(),
+  );
+
   return (
     <div className="flex w-[320px] shrink-0 flex-col border-l bg-background lg:w-[360px]">
       {/* Header */}
@@ -49,6 +91,97 @@ export function CartSidebar({
           </Button>
         )}
       </div>
+
+      {/* Order type toggle */}
+      <div className="border-b px-3 py-2">
+        <div className="flex gap-1 rounded-lg bg-muted p-1">
+          <button
+            type="button"
+            className={cn(
+              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              orderType === "dine_in"
+                ? "bg-background shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            onClick={() => onOrderTypeChange("dine_in")}
+          >
+            <UtensilsCrossed className="size-3.5" />
+            Tại bàn
+          </button>
+          <button
+            type="button"
+            className={cn(
+              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              orderType === "takeaway"
+                ? "bg-background shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            onClick={() => onOrderTypeChange("takeaway")}
+          >
+            <Package className="size-3.5" />
+            Mang về
+          </button>
+        </div>
+      </div>
+
+      {/* Table picker (dine_in only) */}
+      {orderType === "dine_in" && (
+        <div className="border-b px-3 py-2">
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+            Chọn bàn
+          </p>
+          {tables.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Không có bàn nào khả dụng
+            </p>
+          ) : (
+            <ScrollArea className="max-h-[120px]">
+              <div className="flex flex-col gap-1.5">
+                {Array.from(tablesByZone.entries()).map(
+                  ([zoneName, zoneTables]) => (
+                    <div key={zoneName}>
+                      {tablesByZone.size > 1 && (
+                        <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                          {zoneName}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-1">
+                        {zoneTables.map((table) => {
+                          const isAvailable = table.status === "available";
+                          const isSelected = selectedTableId === table.id;
+                          return (
+                            <button
+                              key={table.id}
+                              type="button"
+                              disabled={!isAvailable}
+                              className={cn(
+                                "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
+                                isSelected
+                                  ? "border-primary bg-primary/10 text-primary"
+                                  : isAvailable
+                                    ? "border-border hover:bg-accent"
+                                    : "border-border/50 text-muted-foreground/50",
+                              )}
+                              onClick={() =>
+                                onTableSelect(isSelected ? null : table.id)
+                              }
+                            >
+                              {table.number}
+                              {!isAvailable && (
+                                <span className="ml-0.5 text-[9px]">●</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ),
+                )}
+              </div>
+            </ScrollArea>
+          )}
+        </div>
+      )}
 
       {/* Cart items */}
       {items.length === 0 ? (
@@ -137,9 +270,26 @@ export function CartSidebar({
                 {formatVnd(total)}
               </span>
             </div>
-            <Button className="mt-3 w-full" size="lg" disabled>
-              Đặt món (M2-S4)
+            <Button
+              className="mt-3 w-full"
+              size="lg"
+              disabled={!canSubmit || isSubmitting}
+              onClick={onSubmitOrder}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Đang xử lý...
+                </>
+              ) : (
+                "Đặt món"
+              )}
             </Button>
+            {!canSubmit && items.length > 0 && orderType === "dine_in" && (
+              <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
+                Vui lòng chọn bàn để đặt món
+              </p>
+            )}
           </div>
         </>
       )}

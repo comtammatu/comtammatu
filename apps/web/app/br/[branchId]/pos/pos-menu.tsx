@@ -1,14 +1,17 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { toast } from "@comtammatu/ui/components/sonner";
 import { CartSidebar } from "./cart-sidebar";
 import { ItemCustomizer } from "./item-customizer";
-import type { CartItem, CartModifier, CartSide } from "./types";
+import { submitOrder } from "./actions";
+import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import { calcCartTotal } from "./types";
+import type { BranchTable } from "./page";
 
 /* ─── Menu data types (derived from fetchMenuForPos action) ─── */
 
@@ -85,12 +88,21 @@ const CATEGORY_TYPE_LABELS: Record<string, string> = {
 
 /* ─── Component ─── */
 
-export function PosMenu({ categories }: { categories: MenuCategory[] }) {
+interface PosMenuProps {
+  branchId: number;
+  categories: MenuCategory[];
+  tables: BranchTable[];
+}
+
+export function PosMenu({ branchId, categories, tables }: PosMenuProps) {
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(
     categories[0]?.id ?? null,
   );
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [customizerItem, setCustomizerItem] = useState<MenuItem | null>(null);
+  const [orderType, setOrderType] = useState<OrderType>("dine_in");
+  const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const activeCategory = useMemo(
     () => categories.find((c) => c.id === activeCategoryId),
@@ -98,6 +110,10 @@ export function PosMenu({ categories }: { categories: MenuCategory[] }) {
   );
 
   const cartTotal = useMemo(() => calcCartTotal(cartItems), [cartItems]);
+
+  const canSubmit =
+    cartItems.length > 0 &&
+    (orderType === "takeaway" || selectedTableId !== null);
 
   const addToCart = useCallback(
     (
@@ -152,6 +168,33 @@ export function PosMenu({ categories }: { categories: MenuCategory[] }) {
   const clearCart = useCallback(() => {
     setCartItems([]);
   }, []);
+
+  const handleOrderTypeChange = useCallback((type: OrderType) => {
+    setOrderType(type);
+    if (type === "takeaway") {
+      setSelectedTableId(null);
+    }
+  }, []);
+
+  const handleSubmitOrder = useCallback(() => {
+    if (!canSubmit) return;
+
+    startTransition(async () => {
+      const result = await submitOrder(branchId, {
+        items: cartItems,
+        order_type: orderType,
+        table_id: selectedTableId ?? undefined,
+      });
+
+      if (result.success && result.data) {
+        toast.success(`Đặt món thành công — #${result.data.order_number}`);
+        setCartItems([]);
+        setSelectedTableId(null);
+      } else {
+        toast.error(result.error ?? "Không thể tạo đơn hàng");
+      }
+    });
+  }, [canSubmit, branchId, cartItems, orderType, selectedTableId]);
 
   const handleItemTap = useCallback(
     (item: MenuItem) => {
@@ -263,9 +306,17 @@ export function PosMenu({ categories }: { categories: MenuCategory[] }) {
       <CartSidebar
         items={cartItems}
         total={cartTotal}
+        orderType={orderType}
+        selectedTableId={selectedTableId}
+        tables={tables}
+        canSubmit={canSubmit}
+        isSubmitting={isPending}
         onUpdateQuantity={updateQuantity}
         onRemoveItem={removeItem}
         onClearCart={clearCart}
+        onOrderTypeChange={handleOrderTypeChange}
+        onTableSelect={setSelectedTableId}
+        onSubmitOrder={handleSubmitOrder}
         formatVnd={formatVnd}
       />
 

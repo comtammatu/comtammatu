@@ -927,6 +927,20 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      create_order: {
+        Args: {
+          p_tenant_id: number;
+          p_branch_id: number;
+          p_created_by: string;
+          p_items: Json;
+          p_order_type?: string;
+          p_table_id?: number;
+          p_pos_session_id?: number;
+          p_customer_count?: number;
+          p_note?: string;
+        };
+        Returns: Json;
+      };
       admin_update_profile: {
         Args: {
           p_branch_id?: number;

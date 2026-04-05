@@ -3,6 +3,8 @@
 import { z } from "zod";
 import { MODULE_ACL } from "@comtammatu/shared/auth";
 import { getAuthContext } from "../../_lib/auth";
+import { cartStateSchema, calcItemSubtotal } from "./types";
+import type { CartState } from "./types";
 
 /* ─── Types ─── */
 
@@ -168,4 +170,107 @@ export async function fetchTablesForBranch(
   }
 
   return { success: true, data: tables ?? [] };
+}
+
+/* ─── submitOrder ─── */
+
+/**
+ * Submit a new order from the POS cart.
+ * Calls the create_order RPC which atomically creates order + items + status history.
+ */
+export async function submitOrder(
+  branchId: number,
+  cart: CartState,
+): Promise<ActionResult<{ order_id: number; order_number: string }>> {
+  const parsedBranchId = branchIdSchema.safeParse(branchId);
+  if (!parsedBranchId.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const parsedCart = cartStateSchema.safeParse(cart);
+  if (!parsedCart.success) {
+    return { success: false, error: "Dữ liệu giỏ hàng không hợp lệ" };
+  }
+
+  if (parsedCart.data.items.length === 0) {
+    return { success: false, error: "Giỏ hàng trống" };
+  }
+
+  const ctx = await getAuthContext(POS_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  // Verify branch_id matches JWT claim
+  if (claims.branch_id !== parsedBranchId.data) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  // Get user ID for created_by
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: "Phiên đăng nhập hết hạn" };
+
+  // Transform cart items to RPC JSONB format
+  const rpcItems = parsedCart.data.items.map((item) => ({
+    menu_item_id: item.menu_item_id,
+    variant_id: item.variant_id ?? null,
+    item_name: item.item_name,
+    variant_name: item.variant_name ?? null,
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    modifiers: item.modifiers.map((m) => ({
+      modifier_id: m.modifier_id,
+      name: m.name,
+      price: m.price,
+    })),
+    sides: item.sides.map((s) => ({
+      side_item_id: s.side_item_id,
+      name: s.name,
+      is_default: s.is_default,
+    })),
+    subtotal: calcItemSubtotal(item),
+    note: item.note ?? null,
+  }));
+
+  const { data, error } = await (supabase.rpc as CallableFunction)(
+    "create_order",
+    {
+      p_tenant_id: claims.tenant_id,
+      p_branch_id: parsedBranchId.data,
+      p_created_by: user.id,
+      p_items: JSON.stringify(rpcItems),
+      p_order_type: parsedCart.data.order_type,
+      p_table_id: parsedCart.data.table_id ?? null,
+      p_note: parsedCart.data.note ?? null,
+    },
+  );
+
+  if (error) {
+    if (error.message?.includes("empty")) {
+      return { success: false, error: "Giỏ hàng trống" };
+    }
+    return {
+      success: false,
+      error: "Không thể tạo đơn hàng. Vui lòng thử lại.",
+    };
+  }
+
+  const result = data as unknown as {
+    order_id: number;
+    order_number: string;
+  } | null;
+
+  if (!result) {
+    return {
+      success: false,
+      error: "Không thể tạo đơn hàng. Vui lòng thử lại.",
+    };
+  }
+
+  return {
+    success: true,
+    data: { order_id: result.order_id, order_number: result.order_number },
+  };
 }

@@ -1,4 +1,4 @@
-import { fetchMenuForPos } from "./actions";
+import { fetchMenuForPos, fetchTablesForBranch } from "./actions";
 import { PosMenu } from "./pos-menu";
 import type { MenuCategory } from "./pos-menu";
 
@@ -10,7 +10,10 @@ export default async function PosPage({
   const { branchId } = await params;
   const branchIdNum = Number(branchId);
 
-  const menuResult = await fetchMenuForPos(branchIdNum);
+  const [menuResult, tablesResult] = await Promise.all([
+    fetchMenuForPos(branchIdNum),
+    fetchTablesForBranch(branchIdNum),
+  ]);
 
   if (!menuResult.success || !menuResult.data) {
     return (
@@ -27,5 +30,21 @@ export default async function PosPage({
     );
   }
 
-  return <PosMenu categories={menuResult.data as MenuCategory[]} />;
+  return (
+    <PosMenu
+      branchId={branchIdNum}
+      categories={menuResult.data as MenuCategory[]}
+      tables={(tablesResult.data ?? []) as BranchTable[]}
+    />
+  );
+}
+
+/** Table shape returned by fetchTablesForBranch */
+export interface BranchTable {
+  id: number;
+  number: number;
+  capacity: number;
+  status: string;
+  zone_id: number | null;
+  branch_zones: { id: number; name: string } | null;
 }
