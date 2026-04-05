@@ -30,22 +30,22 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   dashboard: {
     path: "/admin/dashboard",
     allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
-    label: "Dashboard",
+    label: "Tổng quan",
   },
   menu: {
     path: "/admin/menu",
     allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
-    label: "Menu",
+    label: "Thực đơn",
   },
   inventory: {
     path: "/admin/inventory",
     allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
-    label: "Inventory",
+    label: "Kho hàng",
   },
   orders: {
     path: "/admin/orders",
     allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
-    label: "Orders",
+    label: "Đơn hàng",
   },
   staff: {
     path: "/admin/staff",
@@ -60,22 +60,22 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   crm: {
     path: "/admin/crm",
     allowedRoles: ["owner", "super_manager", "area_manager"],
-    label: "CRM",
+    label: "Khách hàng",
   },
   finance: {
     path: "/admin/finance",
     allowedRoles: ["owner", "super_manager"],
-    label: "Finance",
+    label: "Kế toán",
   },
   reports: {
     path: "/admin/reports",
     allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
-    label: "Reports",
+    label: "Báo cáo",
   },
   settings: {
     path: "/admin/settings",
     allowedRoles: ["owner", "super_manager"],
-    label: "Settings",
+    label: "Cài đặt",
   },
   pos: {
     path: "/br/*/pos",
