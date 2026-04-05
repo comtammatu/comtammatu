@@ -434,11 +434,98 @@ new → confirmed → preparing → ready → served → completed
 | idx_order_status_history_tenant | order_status_history(tenant_id) | RLS filter                    |
 | idx_order_status_history_order  | order_status_history(order_id)  | History for a given order     |
 
+## POS Terminals & Sessions (M2 S2)
+
+### pos_terminals
+
+One row per physical or virtual POS device at a branch. Terminals are tenant/branch-scoped and must have unique names within a branch.
+
+| Column     | Type                | Notes                              |
+| ---------- | ------------------- | ---------------------------------- |
+| id         | BIGINT PK           | GENERATED ALWAYS AS IDENTITY       |
+| tenant_id  | BIGINT FK(tenants)  | ON DELETE CASCADE                  |
+| branch_id  | BIGINT FK(branches) | ON DELETE CASCADE                  |
+| name       | TEXT NOT NULL       | UNIQUE(branch_id, name, tenant_id) |
+| device_id  | TEXT                | Hardware identifier; nullable      |
+| is_active  | BOOLEAN             | default true                       |
+| created_at | TIMESTAMPTZ         | default now()                      |
+| updated_at | TIMESTAMPTZ         | default now(), auto-trigger        |
+
+### pos_sessions
+
+Records a cashier's shift at a terminal — from the moment they open the till to when they close it. Capturing cash figures at open and close supports end-of-shift cash reconciliation.
+
+| Column          | Type                     | Notes                                                  |
+| --------------- | ------------------------ | ------------------------------------------------------ |
+| id              | BIGINT PK                | GENERATED ALWAYS AS IDENTITY                           |
+| tenant_id       | BIGINT FK(tenants)       | ON DELETE CASCADE                                      |
+| branch_id       | BIGINT FK(branches)      | ON DELETE CASCADE                                      |
+| terminal_id     | BIGINT FK(pos_terminals) | NOT NULL; ON DELETE CASCADE                            |
+| opened_by       | UUID FK(profiles)        | NOT NULL; staff member who opened the session          |
+| closed_by       | UUID FK(profiles)        | Nullable; staff member who closed the session          |
+| opened_at       | TIMESTAMPTZ              | NOT NULL; default now()                                |
+| closed_at       | TIMESTAMPTZ              | Nullable; set when session is closed                   |
+| opening_cash    | NUMERIC(15,2) NOT NULL   | default 0; cash in drawer at session open              |
+| closing_cash    | NUMERIC(15,2)            | Nullable; actual cash counted at close                 |
+| expected_cash   | NUMERIC(15,2)            | Nullable; system-calculated at close (opening + sales) |
+| cash_difference | NUMERIC(15,2)            | Nullable; closing_cash - expected_cash                 |
+| status          | TEXT NOT NULL            | default 'open'; CHECK IN (open, closed)                |
+| note            | TEXT                     | Optional shift note                                    |
+| created_at      | TIMESTAMPTZ              | default now()                                          |
+| updated_at      | TIMESTAMPTZ              | default now(), auto-trigger                            |
+
+**Partial unique index — one open session per terminal:**
+
+```sql
+CREATE UNIQUE INDEX idx_pos_sessions_one_open
+  ON pos_sessions(terminal_id)
+  WHERE status = 'open';
+```
+
+This enforces at the database level that a terminal can have at most one open session at any point in time. A second `INSERT` with `status = 'open'` for the same `terminal_id` will fail with a unique constraint violation before the application layer can produce a conflicting state.
+
+> Note: `DELETE` is not granted on `pos_sessions`. Sessions are permanent business records. Close a session by updating `status = 'closed'` and setting `closed_at`, `closed_by`, and cash reconciliation fields.
+
+### orders (updated M2 S2)
+
+The `orders` table receives one new nullable column that links a POS transaction to the session in which it was created:
+
+| Column         | New/Changed | Notes                                                                                                                                         |
+| -------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| pos_session_id | Added       | BIGINT FK(pos_sessions); ON DELETE SET NULL; nullable — NULL for orders not created through a POS session (e.g. online orders, admin-entered) |
+
+This allows per-session revenue reporting and reconciliation: all orders taken during a session can be summed to derive `expected_cash`.
+
+### POS Terminal & Session RLS Policies
+
+| Table         | Policy | Roles / Scope                                                                 |
+| ------------- | ------ | ----------------------------------------------------------------------------- |
+| pos_terminals | SELECT | all authenticated in tenant                                                   |
+| pos_terminals | INSERT | branch-scoped: branch_manager own branch; owner/super_manager/area_manager    |
+| pos_terminals | UPDATE | branch-scoped: branch_manager own branch; owner/super_manager/area_manager    |
+| pos_terminals | DELETE | branch-scoped: branch_manager own branch; owner/super_manager/area_manager    |
+| pos_sessions  | SELECT | all authenticated in tenant                                                   |
+| pos_sessions  | INSERT | branch-scoped: cashier/waiter in own branch; owner/super_manager/area_manager |
+| pos_sessions  | UPDATE | branch-scoped: cashier/waiter in own branch; owner/super_manager/area_manager |
+| pos_sessions  | DELETE | NOT GRANTED — sessions are permanent business records                         |
+
+### POS Terminals & Sessions Indexes
+
+| Index                     | Columns                                         | Purpose                                        |
+| ------------------------- | ----------------------------------------------- | ---------------------------------------------- |
+| idx_pos_terminals_tenant  | pos_terminals(tenant_id)                        | RLS filter                                     |
+| idx_pos_terminals_branch  | pos_terminals(branch_id)                        | Branch-scoped terminal list                    |
+| idx_pos_sessions_tenant   | pos_sessions(tenant_id)                         | RLS filter                                     |
+| idx_pos_sessions_branch   | pos_sessions(branch_id)                         | Branch-scoped session queries                  |
+| idx_pos_sessions_terminal | pos_sessions(terminal_id)                       | Sessions for a given terminal                  |
+| idx_pos_sessions_one_open | pos_sessions(terminal_id) WHERE status = 'open' | Partial unique — one open session per terminal |
+| idx_orders_pos_session    | orders(pos_session_id)                          | Orders within a session (reconciliation)       |
+
 ## Future Tables (by phase)
 
 ### v0.3.0 — Operations
 
-- payments, pos_terminals, kds_stations, tax_invoices
+- payments, kds_stations, tax_invoices
 
 ### v0.4.0 — Supply Chain
 

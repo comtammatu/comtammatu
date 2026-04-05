@@ -14,7 +14,7 @@
 ## Next: M2 POS — Point of Sale
 
 - [x] S1: Order schema + state machine (orders, order_items, order_status_history)
-- [ ] S2: POS terminal + sessions (pos_terminals, pos_sessions)
+- [x] S2: POS terminal + sessions (pos_terminals, pos_sessions)
 - [ ] S3: Menu browse + cart UI
 - [ ] S4: Table selection + order submit
 - [ ] S5: Bill printing + cash register
