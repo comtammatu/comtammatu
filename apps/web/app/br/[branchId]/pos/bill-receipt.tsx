@@ -63,8 +63,11 @@ export function BillReceipt({ orderId, onClose, formatVnd }: BillReceiptProps) {
       return;
     }
 
+    let cancelled = false;
+
     startTransition(async () => {
       const result = await fetchOrderForBill(orderId);
+      if (cancelled) return;
       if (result.success && result.data) {
         setOrder(result.data as OrderData);
         setError(null);
@@ -72,6 +75,10 @@ export function BillReceipt({ orderId, onClose, formatVnd }: BillReceiptProps) {
         setError(result.error ?? "Không thể tải đơn hàng");
       }
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [orderId]);
 
   const handlePrint = useCallback(() => {
