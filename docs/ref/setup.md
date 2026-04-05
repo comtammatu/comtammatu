@@ -208,9 +208,9 @@ Trong `.github/workflows/ci.yml`, thay placeholder bằng secrets:
 
 ## Quick Reference — What's Gitignored (per-machine setup)
 
-| File                     | How to create                         | Purpose                 |
-| ------------------------ | ------------------------------------- | ----------------------- |
-| `apps/web/.env.local`    | `cp .env.example apps/web/.env.local` | Runtime env vars        |
-| `.mcp.json`              | `cp .mcp.json.example .mcp.json`      | Claude Code MCP servers |
-| `.claude/skills/gstack/` | `./scripts/setup-gstack.sh`           | 31 gstack skills        |
+| File                     | How to create                         | Purpose                  |
+| ------------------------ | ------------------------------------- | ------------------------ |
+| `apps/web/.env.local`    | `cp .env.example apps/web/.env.local` | Runtime env vars         |
+| `.mcp.json`              | `cp .mcp.json.example .mcp.json`      | Claude Code MCP servers  |
+| `.claude/skills/gstack/` | `./scripts/setup-gstack.sh`           | 31 gstack skills         |
 | `~/.claude-swarm/`       | `./scripts/setup-swarm.sh`            | Multi-agent coordination |

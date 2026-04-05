@@ -87,12 +87,12 @@ USING (branch_id = auth_branch_id()
 
 > Decision: D009 — path-based, không sub-domain. Sub-domain là Post-v1.0.
 
-| Surface  | Route                  | Roles                              |
-| -------- | ---------------------- | ---------------------------------- |
-| Admin    | `/admin/*`             | owner, super_manager, area_manager, branch_manager |
-| POS      | `/br/[branchId]/pos`   | cashier, waiter                    |
-| KDS      | `/br/[branchId]/kds`   | chef                               |
-| Employee | `/employee/*`          | office                             |
+| Surface  | Route                | Roles                                              |
+| -------- | -------------------- | -------------------------------------------------- |
+| Admin    | `/admin/*`           | owner, super_manager, area_manager, branch_manager |
+| POS      | `/br/[branchId]/pos` | cashier, waiter                                    |
+| KDS      | `/br/[branchId]/kds` | chef                                               |
+| Employee | `/employee/*`        | office                                             |
 
 ## Infrastructure Strategy
 
@@ -109,10 +109,10 @@ Post-v1.0 (nếu cần):
     Sync worker → Supabase Cloud (mỗi 1-5 min)
 ```
 
-| Module       | MVP runs on | Post-v1.0 option       |
-| ------------ | ----------- | ---------------------- |
-| Admin, Menu  | Cloud       | Cloud (giữ nguyên)    |
-| POS, KDS     | Cloud + PWA | Local-first per branch |
-| Payment      | Cloud       | Local-first per branch |
-| Stock        | Cloud       | Hybrid                 |
-| Finance, HR  | Cloud       | Cloud (giữ nguyên)    |
+| Module      | MVP runs on | Post-v1.0 option       |
+| ----------- | ----------- | ---------------------- |
+| Admin, Menu | Cloud       | Cloud (giữ nguyên)     |
+| POS, KDS    | Cloud + PWA | Local-first per branch |
+| Payment     | Cloud       | Local-first per branch |
+| Stock       | Cloud       | Hybrid                 |
+| Finance, HR | Cloud       | Cloud (giữ nguyên)     |

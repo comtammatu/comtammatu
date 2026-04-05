@@ -274,18 +274,18 @@ Junction table: which side items can pair with which main items.
 
 ### Menu Indexes
 
-| Index                              | Columns                                 | Purpose          |
-| ---------------------------------- | --------------------------------------- | ---------------- |
-| idx_menu_categories_tenant         | menu_categories(tenant_id)              | RLS filter       |
-| idx_menu_items_tenant              | menu_items(tenant_id)                   | RLS filter       |
-| idx_menu_items_category            | menu_items(category_id)                 | Category lookup  |
-| idx_menu_item_variants_item        | menu_item_variants(item_id)             | Item lookup      |
-| idx_menu_item_modifiers_item       | menu_item_modifiers(item_id)            | Item lookup      |
-| idx_menu_item_variants_tenant      | menu_item_variants(tenant_id)           | RLS filter       |
-| idx_menu_item_modifiers_tenant     | menu_item_modifiers(tenant_id)          | RLS filter       |
-| idx_menu_item_available_sides_main | menu_item_available_sides(main_item_id) | Main item lookup |
-| idx_menu_item_available_sides_side | menu_item_available_sides(side_item_id) | Side item lookup |
-| idx_menu_item_available_sides_tenant | menu_item_available_sides(tenant_id)  | RLS filter       |
+| Index                                | Columns                                 | Purpose          |
+| ------------------------------------ | --------------------------------------- | ---------------- |
+| idx_menu_categories_tenant           | menu_categories(tenant_id)              | RLS filter       |
+| idx_menu_items_tenant                | menu_items(tenant_id)                   | RLS filter       |
+| idx_menu_items_category              | menu_items(category_id)                 | Category lookup  |
+| idx_menu_item_variants_item          | menu_item_variants(item_id)             | Item lookup      |
+| idx_menu_item_modifiers_item         | menu_item_modifiers(item_id)            | Item lookup      |
+| idx_menu_item_variants_tenant        | menu_item_variants(tenant_id)           | RLS filter       |
+| idx_menu_item_modifiers_tenant       | menu_item_modifiers(tenant_id)          | RLS filter       |
+| idx_menu_item_available_sides_main   | menu_item_available_sides(main_item_id) | Main item lookup |
+| idx_menu_item_available_sides_side   | menu_item_available_sides(side_item_id) | Side item lookup |
+| idx_menu_item_available_sides_tenant | menu_item_available_sides(tenant_id)    | RLS filter       |
 
 ## Tables & Zones (Sprint 1 S5)
 
@@ -329,11 +329,203 @@ Junction table: which side items can pair with which main items.
 | idx_tables_branch       | tables(branch_id)       | Branch lookup |
 | idx_tables_zone         | tables(zone_id)         | Zone lookup   |
 
+## Order Tables (M2 S1)
+
+### orders
+
+| Column          | Type                   | Notes                                                                                    |
+| --------------- | ---------------------- | ---------------------------------------------------------------------------------------- |
+| id              | BIGINT PK              | GENERATED ALWAYS AS IDENTITY                                                             |
+| tenant_id       | BIGINT FK(tenants)     | ON DELETE CASCADE                                                                        |
+| branch_id       | BIGINT FK(branches)    | ON DELETE CASCADE                                                                        |
+| table_id        | BIGINT FK(tables)      | ON DELETE SET NULL; nullable — NULL for takeaway orders                                  |
+| order_number    | TEXT NOT NULL          | UNIQUE(branch_id, order_number, tenant_id); branch-scoped sequential                     |
+| order_type      | TEXT NOT NULL          | CHECK IN (dine_in, takeaway)                                                             |
+| status          | TEXT NOT NULL          | default 'new'; CHECK IN (new, confirmed, preparing, ready, served, completed, cancelled) |
+| subtotal        | NUMERIC(15,2) NOT NULL | Sum of order_items.subtotal                                                              |
+| tax_amount      | NUMERIC(15,2) NOT NULL | default 0                                                                                |
+| service_charge  | NUMERIC(15,2) NOT NULL | default 0                                                                                |
+| discount_amount | NUMERIC(15,2) NOT NULL | default 0                                                                                |
+| total_amount    | NUMERIC(15,2) NOT NULL | subtotal + tax_amount + service_charge - discount_amount                                 |
+| customer_count  | INT NOT NULL           | default 1, CHECK > 0; guest count for dine-in, bill splitting, revenue-per-head          |
+| note            | TEXT                   |                                                                                          |
+| created_by      | UUID FK(profiles)      | NOT NULL; staff member who opened the order                                              |
+| created_at      | TIMESTAMPTZ            | default now()                                                                            |
+| updated_at      | TIMESTAMPTZ            | default now(), auto-trigger                                                              |
+
+### order_items
+
+| Column       | Type                          | Notes                                                                                                 |
+| ------------ | ----------------------------- | ----------------------------------------------------------------------------------------------------- |
+| id           | BIGINT PK                     | GENERATED ALWAYS AS IDENTITY                                                                          |
+| tenant_id    | BIGINT FK(tenants)            | ON DELETE CASCADE                                                                                     |
+| order_id     | BIGINT FK(orders)             | ON DELETE CASCADE                                                                                     |
+| menu_item_id | BIGINT FK(menu_items)         | NOT NULL; ON DELETE RESTRICT — cannot delete menu item with existing orders                           |
+| variant_id   | BIGINT FK(menu_item_variants) | ON DELETE SET NULL; nullable — no variant selected                                                    |
+| item_name    | TEXT NOT NULL                 | Snapshot of menu_items.name at time of order                                                          |
+| variant_name | TEXT                          | Snapshot of menu_item_variants.name at time of order                                                  |
+| quantity     | INT NOT NULL                  | CHECK > 0                                                                                             |
+| unit_price   | NUMERIC(15,2) NOT NULL        | Snapshot price (base + variant adjustment) at time of order                                           |
+| modifiers    | JSONB NOT NULL                | DEFAULT '[]'; Snapshot: `[{"modifier_id": BIGINT, "name": TEXT, "price": NUMERIC}]`                   |
+| sides        | JSONB NOT NULL                | DEFAULT '[]'; Snapshot: `[{"side_item_id": BIGINT, "name": TEXT, "price": NUMERIC, "quantity": INT}]` |
+| subtotal     | NUMERIC(15,2) NOT NULL        | quantity x unit_price + modifier/side totals                                                          |
+| note         | TEXT                          |                                                                                                       |
+| status       | TEXT NOT NULL                 | default 'pending'; CHECK IN (pending, preparing, ready, served, cancelled)                            |
+| created_at   | TIMESTAMPTZ                   | default now()                                                                                         |
+| updated_at   | TIMESTAMPTZ                   | default now(), auto-trigger                                                                           |
+
+**Snapshot pattern:** `item_name`, `variant_name`, `unit_price`, `modifiers`, and `sides` are captured at order creation time. Menu changes after the order is placed do not retroactively alter order records. `menu_item_id` and `variant_id` are kept as nullable FKs for analytics joins but are not relied on for pricing or display.
+
+### order_status_history
+
+| Column      | Type               | Notes                                       |
+| ----------- | ------------------ | ------------------------------------------- |
+| id          | BIGINT PK          | GENERATED ALWAYS AS IDENTITY                |
+| tenant_id   | BIGINT FK(tenants) | ON DELETE CASCADE                           |
+| order_id    | BIGINT FK(orders)  | ON DELETE CASCADE                           |
+| from_status | TEXT               | Previous status; NULL for initial creation  |
+| to_status   | TEXT NOT NULL      | New status after transition                 |
+| changed_by  | UUID FK(profiles)  | NOT NULL                                    |
+| note        | TEXT               | Optional reason (e.g., cancellation reason) |
+| created_at  | TIMESTAMPTZ        | default now()                               |
+
+**Append-only:** No UPDATE or DELETE is allowed on this table. It is a complete audit trail of every status transition. INSERT is allowed via RLS (branch-scoped) — will move to RPC-only when state machine RPC is built in later sessions.
+
+### Order State Machine
+
+```
+new → confirmed → preparing → ready → served → completed
+ ↓        ↓           ↓         ↓        ↓
+        cancelled (reachable from any state except completed)
+```
+
+- `completed` is a terminal state — no further transitions
+- Every transition writes one row to `order_status_history`
+- Item-level `status` has its own lifecycle: `pending → preparing → ready → served → cancelled`
+
+### Order RLS Policies
+
+| Table                | Policy          | Roles / Scope                                                       |
+| -------------------- | --------------- | ------------------------------------------------------------------- |
+| orders               | SELECT          | all authenticated in tenant                                         |
+| orders               | INSERT          | own branch (via auth_branch_id) OR owner/super_manager/area_manager |
+| orders               | UPDATE          | own branch OR owner/super_manager/area_manager                      |
+| orders               | DELETE          | NOT GRANTED — use status='cancelled'                                |
+| order_items          | SELECT          | all authenticated in tenant                                         |
+| order_items          | INSERT          | branch-scoped via parent order EXISTS check                         |
+| order_items          | UPDATE          | branch-scoped via parent order EXISTS check                         |
+| order_items          | DELETE          | NOT GRANTED — follows parent order lifecycle                        |
+| order_status_history | SELECT          | all authenticated in tenant                                         |
+| order_status_history | INSERT          | branch-scoped via parent order EXISTS check                         |
+| order_status_history | UPDATE / DELETE | NOT GRANTED — append-only audit trail                               |
+
+### Order Indexes
+
+| Index                           | Columns                         | Purpose                       |
+| ------------------------------- | ------------------------------- | ----------------------------- |
+| idx_orders_tenant               | orders(tenant_id)               | RLS filter                    |
+| idx_orders_branch               | orders(branch_id)               | Branch-scoped POS queries     |
+| idx_orders_table                | orders(table_id)                | Table status lookup           |
+| idx_orders_branch_status        | orders(branch_id, status)       | Filter by status in POS/KDS   |
+| idx_orders_created_by           | orders(created_by)              | Staff activity lookup         |
+| idx_order_items_tenant          | order_items(tenant_id)          | RLS filter                    |
+| idx_order_items_order           | order_items(order_id)           | Items for a given order       |
+| idx_order_items_menu_item       | order_items(menu_item_id)       | Analytics: sales by menu item |
+| idx_order_status_history_tenant | order_status_history(tenant_id) | RLS filter                    |
+| idx_order_status_history_order  | order_status_history(order_id)  | History for a given order     |
+
+## POS Terminals & Sessions (M2 S2)
+
+### pos_terminals
+
+One row per physical or virtual POS device at a branch. Terminals are tenant/branch-scoped and must have unique names within a branch.
+
+| Column     | Type                | Notes                              |
+| ---------- | ------------------- | ---------------------------------- |
+| id         | BIGINT PK           | GENERATED ALWAYS AS IDENTITY       |
+| tenant_id  | BIGINT FK(tenants)  | ON DELETE CASCADE                  |
+| branch_id  | BIGINT FK(branches) | ON DELETE CASCADE                  |
+| name       | TEXT NOT NULL       | UNIQUE(branch_id, name, tenant_id) |
+| device_id  | TEXT                | Hardware identifier; nullable      |
+| is_active  | BOOLEAN             | default true                       |
+| created_at | TIMESTAMPTZ         | default now()                      |
+| updated_at | TIMESTAMPTZ         | default now(), auto-trigger        |
+
+### pos_sessions
+
+Records a cashier's shift at a terminal — from the moment they open the till to when they close it. Capturing cash figures at open and close supports end-of-shift cash reconciliation.
+
+| Column          | Type                     | Notes                                                  |
+| --------------- | ------------------------ | ------------------------------------------------------ |
+| id              | BIGINT PK                | GENERATED ALWAYS AS IDENTITY                           |
+| tenant_id       | BIGINT FK(tenants)       | ON DELETE CASCADE                                      |
+| branch_id       | BIGINT FK(branches)      | ON DELETE CASCADE                                      |
+| terminal_id     | BIGINT FK(pos_terminals) | NOT NULL; ON DELETE CASCADE                            |
+| opened_by       | UUID FK(profiles)        | NOT NULL; staff member who opened the session          |
+| closed_by       | UUID FK(profiles)        | Nullable; staff member who closed the session          |
+| opened_at       | TIMESTAMPTZ              | NOT NULL; default now()                                |
+| closed_at       | TIMESTAMPTZ              | Nullable; set when session is closed                   |
+| opening_cash    | NUMERIC(15,2) NOT NULL   | default 0; cash in drawer at session open              |
+| closing_cash    | NUMERIC(15,2)            | Nullable; actual cash counted at close                 |
+| expected_cash   | NUMERIC(15,2)            | Nullable; system-calculated at close (opening + sales) |
+| cash_difference | NUMERIC(15,2)            | Nullable; closing_cash - expected_cash                 |
+| status          | TEXT NOT NULL            | default 'open'; CHECK IN (open, closed)                |
+| note            | TEXT                     | Optional shift note                                    |
+| created_at      | TIMESTAMPTZ              | default now()                                          |
+| updated_at      | TIMESTAMPTZ              | default now(), auto-trigger                            |
+
+**Partial unique index — one open session per terminal:**
+
+```sql
+CREATE UNIQUE INDEX idx_pos_sessions_one_open
+  ON pos_sessions(terminal_id)
+  WHERE status = 'open';
+```
+
+This enforces at the database level that a terminal can have at most one open session at any point in time. A second `INSERT` with `status = 'open'` for the same `terminal_id` will fail with a unique constraint violation before the application layer can produce a conflicting state.
+
+> Note: `DELETE` is not granted on `pos_sessions`. Sessions are permanent business records. Close a session by updating `status = 'closed'` and setting `closed_at`, `closed_by`, and cash reconciliation fields.
+
+### orders (updated M2 S2)
+
+The `orders` table receives one new nullable column that links a POS transaction to the session in which it was created:
+
+| Column         | New/Changed | Notes                                                                                                                                         |
+| -------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| pos_session_id | Added       | BIGINT FK(pos_sessions); ON DELETE SET NULL; nullable — NULL for orders not created through a POS session (e.g. online orders, admin-entered) |
+
+This allows per-session revenue reporting and reconciliation: all orders taken during a session can be summed to derive `expected_cash`.
+
+### POS Terminal & Session RLS Policies
+
+| Table         | Policy | Roles / Scope                                                                 |
+| ------------- | ------ | ----------------------------------------------------------------------------- |
+| pos_terminals | SELECT | all authenticated in tenant                                                   |
+| pos_terminals | INSERT | branch-scoped: branch_manager own branch; owner/super_manager/area_manager    |
+| pos_terminals | UPDATE | branch-scoped: branch_manager own branch; owner/super_manager/area_manager    |
+| pos_terminals | DELETE | branch-scoped: branch_manager own branch; owner/super_manager/area_manager    |
+| pos_sessions  | SELECT | all authenticated in tenant                                                   |
+| pos_sessions  | INSERT | branch-scoped: cashier/waiter in own branch; owner/super_manager/area_manager |
+| pos_sessions  | UPDATE | branch-scoped: cashier/waiter in own branch; owner/super_manager/area_manager |
+| pos_sessions  | DELETE | NOT GRANTED — sessions are permanent business records                         |
+
+### POS Terminals & Sessions Indexes
+
+| Index                     | Columns                                         | Purpose                                        |
+| ------------------------- | ----------------------------------------------- | ---------------------------------------------- |
+| idx_pos_terminals_tenant  | pos_terminals(tenant_id)                        | RLS filter                                     |
+| idx_pos_terminals_branch  | pos_terminals(branch_id)                        | Branch-scoped terminal list                    |
+| idx_pos_sessions_tenant   | pos_sessions(tenant_id)                         | RLS filter                                     |
+| idx_pos_sessions_branch   | pos_sessions(branch_id)                         | Branch-scoped session queries                  |
+| idx_pos_sessions_terminal | pos_sessions(terminal_id)                       | Sessions for a given terminal                  |
+| idx_pos_sessions_one_open | pos_sessions(terminal_id) WHERE status = 'open' | Partial unique — one open session per terminal |
+| idx_orders_pos_session    | orders(pos_session_id)                          | Orders within a session (reconciliation)       |
+
 ## Future Tables (by phase)
 
 ### v0.3.0 — Operations
 
-- orders, order_items, payments, pos_terminals, kds_stations, tax_invoices
+- payments, kds_stations, tax_invoices
 
 ### v0.4.0 — Supply Chain
 

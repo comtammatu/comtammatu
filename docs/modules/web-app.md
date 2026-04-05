@@ -58,6 +58,7 @@ apps/web/app/
 ### Admin Shell (`apps/web/app/admin/components/admin-shell.tsx`)
 
 The main layout for all `/admin/*` routes. Renders:
+
 - Collapsible sidebar with role-filtered navigation (reads `ADMIN_NAV_GROUPS` from `@comtammatu/shared/auth`)
 - Header with user info and sign-out
 - Responsive: sidebar collapses on mobile
@@ -86,12 +87,12 @@ Browser request
 
 ## Import Rules
 
-| File Type | Can Import |
-|-----------|-----------|
-| `page.tsx` (RSC) | `@comtammatu/database`, `@comtammatu/shared`, `@comtammatu/ui` |
-| `layout.tsx` (RSC) | Same as page.tsx |
-| `"use client"` components | `@comtammatu/database/supabase/client`, `@comtammatu/shared`, `@comtammatu/ui` |
-| `actions.ts` (Server Actions) | `@comtammatu/database`, `@comtammatu/shared`, `@comtammatu/security` |
+| File Type                     | Can Import                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------ |
+| `page.tsx` (RSC)              | `@comtammatu/database`, `@comtammatu/shared`, `@comtammatu/ui`                 |
+| `layout.tsx` (RSC)            | Same as page.tsx                                                               |
+| `"use client"` components     | `@comtammatu/database/supabase/client`, `@comtammatu/shared`, `@comtammatu/ui` |
+| `actions.ts` (Server Actions) | `@comtammatu/database`, `@comtammatu/shared`, `@comtammatu/security`           |
 
 ## Adding a New Admin Page
 
@@ -103,12 +104,12 @@ Browser request
 
 ## Failure Modes
 
-| Failure | Signal | Recovery |
-|---------|--------|----------|
-| "use client" barrel import | Turbopack build crash | Use `/supabase/client` import path |
-| Missing module in proxy resolveModule() | 404 or no ACL check | Add URL pattern → ModuleKey mapping |
-| Missing nav entry | Page exists but unreachable from sidebar | Add to `ADMIN_NAV_GROUPS` |
-| Layout auth check mismatch with proxy | Double redirect or bypass | Proxy is source of truth — layout checks are defense-in-depth |
+| Failure                                 | Signal                                   | Recovery                                                      |
+| --------------------------------------- | ---------------------------------------- | ------------------------------------------------------------- |
+| "use client" barrel import              | Turbopack build crash                    | Use `/supabase/client` import path                            |
+| Missing module in proxy resolveModule() | 404 or no ACL check                      | Add URL pattern → ModuleKey mapping                           |
+| Missing nav entry                       | Page exists but unreachable from sidebar | Add to `ADMIN_NAV_GROUPS`                                     |
+| Layout auth check mismatch with proxy   | Double redirect or bypass                | Proxy is source of truth — layout checks are defense-in-depth |
 
 ## Design Rationale
 

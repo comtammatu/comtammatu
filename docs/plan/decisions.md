@@ -69,6 +69,7 @@
 ## D008: Cloud-first, local-first Phase 2 (2026-04-04)
 
 **Context:** Cân nhắc local-first (mini PC + SQLite per branch) để POS/KDS hoạt động offline. Phân tích cho thấy:
+
 - Internet hiếm khi mất (< 1 lần/tháng, fiber ổn định)
 - Local-first tăng effort ~3x (2 DB layers, sync logic, deploy per branch, conflict resolution)
 - 200-600 đơn/ngày, < 50 req/s — cloud hoàn toàn đủ
@@ -80,6 +81,7 @@
 ## D009: Path-based routing, không sub-domain (2026-04-04)
 
 **Context:** Cân nhắc sub-domain per module (pos.comtammatu.com, kds.comtammatu.com). Phân tích:
+
 - Sub-domain: auth phức tạp (cross-origin cookies), CORS, wildcard cert, DNS records, dev env phức tạp
 - Path-based: 1 domain, auth "just works", proxy.ts ACL tập trung, đã có sẵn
 - Team 1 người, monorepo, cùng Supabase Auth → không cần tách deploy

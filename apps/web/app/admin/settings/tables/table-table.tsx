@@ -94,7 +94,10 @@ export function TableTable({ tables, zones }: TableTableProps) {
               </TRow>
             )}
             {tables.map((table) => (
-              <TRow key={table.id} className={pendingDeleteId === table.id ? "opacity-60" : ""}>
+              <TRow
+                key={table.id}
+                className={pendingDeleteId === table.id ? "opacity-60" : ""}
+              >
                 <TableCell>
                   <span className="font-medium">Bàn {table.number}</span>
                 </TableCell>
@@ -105,7 +108,11 @@ export function TableTable({ tables, zones }: TableTableProps) {
                   {table.capacity} người
                 </TableCell>
                 <TableCell>
-                  <Badge variant={STATUS_VARIANTS[table.status as TableStatus] ?? "outline"}>
+                  <Badge
+                    variant={
+                      STATUS_VARIANTS[table.status as TableStatus] ?? "outline"
+                    }
+                  >
                     {STATUS_LABELS[table.status as TableStatus] ?? table.status}
                   </Badge>
                 </TableCell>
@@ -161,7 +168,9 @@ export function TableTable({ tables, zones }: TableTableProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={pendingDeleteId !== null}>Hủy</AlertDialogCancel>
+            <AlertDialogCancel disabled={pendingDeleteId !== null}>
+              Hủy
+            </AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={pendingDeleteId !== null}

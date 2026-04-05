@@ -8,17 +8,17 @@ Rate limiting via Upstash Redis. Protects API routes and auth endpoints from abu
 
 ## Components
 
-| File | Purpose |
-|------|---------|
+| File                | Purpose                |
+| ------------------- | ---------------------- |
 | `src/rate-limit.ts` | Rate limiter instances |
-| `src/index.ts` | Barrel export |
+| `src/index.ts`      | Barrel export          |
 
 ## Rate Limiters
 
-| Limiter | Limit | Window | Used By |
-|---------|-------|--------|---------|
-| `rateLimit` | 60 requests | 1 minute | General API routes |
-| `loginRateLimit` | 5 attempts | 15 minutes | Login action (`apps/web/app/(auth)/login/actions.ts`) |
+| Limiter          | Limit       | Window     | Used By                                               |
+| ---------------- | ----------- | ---------- | ----------------------------------------------------- |
+| `rateLimit`      | 60 requests | 1 minute   | General API routes                                    |
+| `loginRateLimit` | 5 attempts  | 15 minutes | Login action (`apps/web/app/(auth)/login/actions.ts`) |
 
 Both use Upstash Redis sliding window algorithm.
 
@@ -42,10 +42,10 @@ if (!success) {
 
 ## Failure Modes
 
-| Failure | Signal | Recovery |
-|---------|--------|----------|
-| Upstash unreachable | Rate limit check throws | **Fail open** — allow the request. Availability > abuse protection for MVP. Add monitoring alert when this happens. |
-| Missing env vars | Runtime error on first request | Set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` |
+| Failure             | Signal                         | Recovery                                                                                                            |
+| ------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| Upstash unreachable | Rate limit check throws        | **Fail open** — allow the request. Availability > abuse protection for MVP. Add monitoring alert when this happens. |
+| Missing env vars    | Runtime error on first request | Set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`                                                         |
 
 ## Design Rationale
 

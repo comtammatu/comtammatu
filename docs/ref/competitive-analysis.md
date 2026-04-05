@@ -111,14 +111,14 @@ GIÁ THẤP / ĐƠN GIẢN
 
 ### 2.6 Loyalty & Khách hàng thân thiết (Post-v1.0)
 
-| Tính năng                    | Cơm Tấm Má Tư  | iPOS | KiotViet | MISA CukCuk | Sapo FnB | bePOS |
-| ---------------------------- | -------------- | ---- | -------- | ----------- | -------- | ----- |
-| Cơ sở dữ liệu khách hàng     | ⏳ Post-v1.0   | ✅   | ✅       | ✅          | ✅       | ✅    |
-| Loyalty points / tích điểm   | ⏳ Post-v1.0   | ✅   | ✅       | ✅          | 🟡       | ✅    |
-| Voucher / mã giảm giá        | ⏳ Post-v1.0   | ✅   | ✅       | ✅          | ✅       | ✅    |
-| Hạng thành viên (Tier)       | ⏳ Post-v1.0   | ✅   | 🟡       | 🟡          | ❌       | 🟡    |
-| Chiến dịch marketing tự động | ❌             | ✅   | 🟡       | 🟡          | 🟡       | 🟡    |
-| Phân tích hành vi khách hàng | ❌             | ✅   | ✅       | ✅          | 🟡       | 🟡    |
+| Tính năng                    | Cơm Tấm Má Tư | iPOS | KiotViet | MISA CukCuk | Sapo FnB | bePOS |
+| ---------------------------- | ------------- | ---- | -------- | ----------- | -------- | ----- |
+| Cơ sở dữ liệu khách hàng     | ⏳ Post-v1.0  | ✅   | ✅       | ✅          | ✅       | ✅    |
+| Loyalty points / tích điểm   | ⏳ Post-v1.0  | ✅   | ✅       | ✅          | 🟡       | ✅    |
+| Voucher / mã giảm giá        | ⏳ Post-v1.0  | ✅   | ✅       | ✅          | ✅       | ✅    |
+| Hạng thành viên (Tier)       | ⏳ Post-v1.0  | ✅   | 🟡       | 🟡          | ❌       | 🟡    |
+| Chiến dịch marketing tự động | ❌            | ✅   | 🟡       | 🟡          | 🟡       | 🟡    |
+| Phân tích hành vi khách hàng | ❌            | ✅   | ✅       | ✅          | 🟡       | 🟡    |
 
 ### 2.7 HR & Nhân sự
 

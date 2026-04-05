@@ -5,16 +5,16 @@ Single-tenant, multi-branch. Không phải CRM, không phải ERP tổng hợp.
 
 ## Modules
 
-| #  | Module      | Scope                                         | Status     |
-| -- | ----------- | --------------------------------------------- | ---------- |
-| M0 | Admin Shell | Layout, sidebar, branches, staff, settings    | SHIPPED    |
-| M1 | Menu        | Categories, items, variants, modifiers, sides | SHIPPED    |
-| M2 | POS         | Cart, table/zone, order submit, bill printing | NEXT       |
-| M3 | KDS         | Realtime queue, bump/complete, station config | NEXT       |
-| M4 | Payment     | Cash, VietQR, Momo, refunds, reconciliation   | Planned    |
-| M5 | Stock       | Ingredients, recipes, stock levels, GRN       | Planned    |
-| M6 | Finance     | HĐĐT, VAT, dashboard, VAS accounting          | Planned    |
-| M7 | HR/Payroll  | Shifts, attendance, payroll, PIT              | Planned    |
+| #   | Module      | Scope                                         | Status  |
+| --- | ----------- | --------------------------------------------- | ------- |
+| M0  | Admin Shell | Layout, sidebar, branches, staff, settings    | SHIPPED |
+| M1  | Menu        | Categories, items, variants, modifiers, sides | SHIPPED |
+| M2  | POS         | Cart, table/zone, order submit, bill printing | NEXT    |
+| M3  | KDS         | Realtime queue, bump/complete, station config | NEXT    |
+| M4  | Payment     | Cash, VietQR, Momo, refunds, reconciliation   | Planned |
+| M5  | Stock       | Ingredients, recipes, stock levels, GRN       | Planned |
+| M6  | Finance     | HĐĐT, VAT, dashboard, VAS accounting          | Planned |
+| M7  | HR/Payroll  | Shifts, attendance, payroll, PIT              | Planned |
 
 ## Tech Stack
 
@@ -77,13 +77,13 @@ pnpm db:types     # Regenerate Supabase types (after migration)
 
 ## Documentation
 
-| Doc | Purpose |
-| --- | ------- |
-| [`docs/CODEBASE_MAP.md`](docs/CODEBASE_MAP.md) | Codebase map + module index |
-| [`docs/plan/roadmap.md`](docs/plan/roadmap.md) | Roadmap + module sessions |
-| [`docs/plan/decisions.md`](docs/plan/decisions.md) | Architecture decisions log |
-| [`docs/spec/database-schema.md`](docs/spec/database-schema.md) | Database schema reference |
-| [`docs/spec/architecture.md`](docs/spec/architecture.md) | System architecture |
+| Doc                                                            | Purpose                     |
+| -------------------------------------------------------------- | --------------------------- |
+| [`docs/CODEBASE_MAP.md`](docs/CODEBASE_MAP.md)                 | Codebase map + module index |
+| [`docs/plan/roadmap.md`](docs/plan/roadmap.md)                 | Roadmap + module sessions   |
+| [`docs/plan/decisions.md`](docs/plan/decisions.md)             | Architecture decisions log  |
+| [`docs/spec/database-schema.md`](docs/spec/database-schema.md) | Database schema reference   |
+| [`docs/spec/architecture.md`](docs/spec/architecture.md)       | System architecture         |
 
 ## License
 

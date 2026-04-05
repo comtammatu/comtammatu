@@ -37,13 +37,13 @@ Build order: `packages/*` (parallel) → `apps/web` (depends on packages).
 
 ## Runtime Requirements
 
-| Service | Purpose | Required |
-|---------|---------|----------|
-| Node.js >= 24 | Runtime | Yes |
-| pnpm 10.33.0 | Package manager | Yes |
-| Supabase | Auth + DB + PostgREST | Yes |
-| Upstash Redis | Rate limiting | Yes |
-| Vercel | Hosting | Production |
+| Service       | Purpose               | Required   |
+| ------------- | --------------------- | ---------- |
+| Node.js >= 24 | Runtime               | Yes        |
+| pnpm 10.33.0  | Package manager       | Yes        |
+| Supabase      | Auth + DB + PostgREST | Yes        |
+| Upstash Redis | Rate limiting         | Yes        |
+| Vercel        | Hosting               | Production |
 
 ## Environment Variables
 
@@ -91,6 +91,7 @@ Full setup guide: `docs/ref/setup.md`
 ## TypeScript Configuration
 
 Base config (`tsconfig.base.json`):
+
 - `target: ES2022`, `module: ESNext`, `moduleResolution: bundler`
 - `strict: true`, `noUncheckedIndexedAccess: true`
 - TypeScript 6.0 — packages using `process.env` need `"types": ["node"]` in their tsconfig

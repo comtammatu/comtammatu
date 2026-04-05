@@ -8,14 +8,14 @@ Authentication and authorization for the entire system. Every request passes thr
 
 ## Components
 
-| File | Purpose | Lines |
-|------|---------|-------|
-| `packages/shared/src/auth/types.ts` | Role enum, JWT claims shape, scope types | Core types |
-| `packages/shared/src/auth/module-acl.ts` | Module → allowed roles mapping, `canAccess()`, `getAccessibleModules()` | ACL single source of truth |
-| `packages/shared/src/auth/scope.ts` | `extractClaims()`, `getScope()`, `getDefaultRedirect()`, role classification | JWT claim extraction |
-| `packages/shared/src/auth/nav-config.ts` | Admin sidebar navigation groups filtered by role | UI navigation |
-| `apps/web/proxy.ts` | Next.js middleware — auth check + ACL enforcement | Request gateway |
-| `supabase/migrations/*_jwt_custom_claims_hook.sql` | `custom_access_token_hook()` — injects claims into JWT | DB-level auth |
+| File                                               | Purpose                                                                      | Lines                      |
+| -------------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------- |
+| `packages/shared/src/auth/types.ts`                | Role enum, JWT claims shape, scope types                                     | Core types                 |
+| `packages/shared/src/auth/module-acl.ts`           | Module → allowed roles mapping, `canAccess()`, `getAccessibleModules()`      | ACL single source of truth |
+| `packages/shared/src/auth/scope.ts`                | `extractClaims()`, `getScope()`, `getDefaultRedirect()`, role classification | JWT claim extraction       |
+| `packages/shared/src/auth/nav-config.ts`           | Admin sidebar navigation groups filtered by role                             | UI navigation              |
+| `apps/web/proxy.ts`                                | Next.js middleware — auth check + ACL enforcement                            | Request gateway            |
+| `supabase/migrations/*_jwt_custom_claims_hook.sql` | `custom_access_token_hook()` — injects claims into JWT                       | DB-level auth              |
 
 ## Role Hierarchy
 
@@ -45,21 +45,21 @@ Roles are stored as Postgres ENUM `staff_role` (`packages/shared/src/auth/types.
 
 Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — proxy.ts, admin shell, and layouts all read from here.
 
-| Module | owner | super_mgr | area_mgr | branch_mgr | cashier | waiter | chef | office |
-|--------|-------|-----------|----------|------------|---------|--------|------|--------|
-| dashboard | ✓ | ✓ | ✓ | ✓ | | | | |
-| menu | ✓ | ✓ | ✓ | ✓ | | | | |
-| inventory | ✓ | ✓ | ✓ | ✓ | | | | |
-| orders | ✓ | ✓ | ✓ | ✓ | | | | |
-| staff | ✓ | ✓ | ✓ | ✓ | | | | |
-| hr | ✓ | ✓ | | | | | | |
-| crm | ✓ | ✓ | ✓ | ✓ | | | | |
-| finance | ✓ | ✓ | | | | | | |
-| reports | ✓ | ✓ | ✓ | ✓ | | | | |
-| settings | ✓ | ✓ | | | | | | |
-| pos | | | | ✓ | ✓ | ✓ | | |
-| kds | | | | ✓ | | | ✓ | |
-| employee | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Module    | owner | super_mgr | area_mgr | branch_mgr | cashier | waiter | chef | office |
+| --------- | ----- | --------- | -------- | ---------- | ------- | ------ | ---- | ------ |
+| dashboard | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
+| menu      | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
+| inventory | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
+| orders    | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
+| staff     | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
+| hr        | ✓     | ✓         |          |            |         |        |      |        |
+| crm       | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
+| finance   | ✓     | ✓         |          |            |         |        |      |        |
+| reports   | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
+| settings  | ✓     | ✓         |          |            |         |        |      |        |
+| pos       |       |           |          | ✓          | ✓       | ✓      |      |        |
+| kds       |       |           |          | ✓          |         |        | ✓    |        |
+| employee  | ✓     | ✓         | ✓        | ✓          | ✓       | ✓      | ✓    | ✓      |
 
 ## Proxy Routing Logic
 
@@ -72,20 +72,20 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 
 ## Failure Modes
 
-| Failure | Signal | Recovery |
-|---------|--------|----------|
-| JWT hook returns no claims | User lands on login repeatedly | Check `custom_access_token_hook` is SECURITY DEFINER, check profiles row exists |
-| RLS blocks silently | `{ data: null, error: null }` — no error thrown | Check GRANT + RLS policy for the table |
-| Role not in MODULE_ACL | `canAccess()` returns false, user redirected | Add role to MODULE_ACL for the module |
-| Stale JWT after role change | Old role persists until token refresh | Call `supabase.auth.refreshSession()` or wait for proxy `updateSession()` |
+| Failure                     | Signal                                          | Recovery                                                                        |
+| --------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------- |
+| JWT hook returns no claims  | User lands on login repeatedly                  | Check `custom_access_token_hook` is SECURITY DEFINER, check profiles row exists |
+| RLS blocks silently         | `{ data: null, error: null }` — no error thrown | Check GRANT + RLS policy for the table                                          |
+| Role not in MODULE_ACL      | `canAccess()` returns false, user redirected    | Add role to MODULE_ACL for the module                                           |
+| Stale JWT after role change | Old role persists until token refresh           | Call `supabase.auth.refreshSession()` or wait for proxy `updateSession()`       |
 
 ## Blast Radius
 
-| Change | Affected |
-|--------|----------|
+| Change                       | Affected                                                           |
+| ---------------------------- | ------------------------------------------------------------------ |
 | Add new role to `staff_role` | Migration + types.ts + module-acl.ts + scope.ts + all RLS policies |
-| Add new module to ACL | module-acl.ts + proxy.ts `resolveModule()` + nav-config.ts |
-| Change JWT claims shape | jwt hook SQL + types.ts + scope.ts + proxy.ts |
+| Add new module to ACL        | module-acl.ts + proxy.ts `resolveModule()` + nav-config.ts         |
+| Change JWT claims shape      | jwt hook SQL + types.ts + scope.ts + proxy.ts                      |
 
 ## Design Rationale
 
