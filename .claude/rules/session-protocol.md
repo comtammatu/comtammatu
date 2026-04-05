@@ -196,15 +196,15 @@ Do not let context degrade. Fresh session > contaminated session.
 
 ## Skills by Module
 
-| Module                            | Primary Skills                                                  |
-| --------------------------------- | --------------------------------------------------------------- |
-| M0+M1: Admin Shell + Menu ✅      | `/new-page`, `/new-action`, `/db-migrate`, `/verify`, `/review` |
-| M2+M3: POS + KDS                  | `/db-migrate`, `/new-page`, `/new-action`                       |
-| M4: Payment                       | `/db-migrate`, `/cso` (payments), `/new-action`                 |
-| M5: Stock                         | `/db-migrate`, `/qa`, `/browse`                                 |
-| M6: Finance (HĐĐT + Dashboard)    | `/cso` (finance+HĐĐT), `/db-migrate`, `/investigate`            |
+| Module                         | Primary Skills                                                  |
+| ------------------------------ | --------------------------------------------------------------- |
+| M0+M1: Admin Shell + Menu ✅   | `/new-page`, `/new-action`, `/db-migrate`, `/verify`, `/review` |
+| M2+M3: POS + KDS               | `/db-migrate`, `/new-page`, `/new-action`                       |
+| M4: Payment                    | `/db-migrate`, `/cso` (payments), `/new-action`                 |
+| M5: Stock                      | `/db-migrate`, `/qa`, `/browse`                                 |
+| M6: Finance (HĐĐT + Dashboard) | `/cso` (finance+HĐĐT), `/db-migrate`, `/investigate`            |
 | v1.0.0 Pilot Launch            | `/qa`, `/canary`, `/benchmark`, `/ship`, `/document-release`    |
-| M7 + Post-v1.0                    | `/cso` (finance), `/plan-eng-review`, `/qa`, `/benchmark`       |
+| M7 + Post-v1.0                 | `/cso` (finance), `/plan-eng-review`, `/qa`, `/benchmark`       |
 
 ---
 

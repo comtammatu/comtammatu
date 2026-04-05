@@ -287,7 +287,10 @@ export function ItemDetailDialog({
             {/* ─── Variants Tab ─── */}
             <TabsContent value="variants" className="space-y-3 mt-4">
               {variants.map((v, idx) => (
-                <div key={v.id ?? `new-${idx}`} className="flex items-end gap-2">
+                <div
+                  key={v.id ?? `new-${idx}`}
+                  className="flex items-end gap-2"
+                >
                   <div className="flex-1 space-y-1">
                     <Label className="text-xs">Tên</Label>
                     <Input
@@ -351,7 +354,10 @@ export function ItemDetailDialog({
             {/* ─── Modifiers Tab ─── */}
             <TabsContent value="modifiers" className="space-y-3 mt-4">
               {modifiers.map((m, idx) => (
-                <div key={m.id ?? `new-${idx}`} className="flex items-end gap-2">
+                <div
+                  key={m.id ?? `new-${idx}`}
+                  className="flex items-end gap-2"
+                >
                   <div className="flex-1 space-y-1">
                     <Label className="text-xs">Tên</Label>
                     <Input

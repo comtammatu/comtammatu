@@ -109,7 +109,13 @@ export async function createZone(
 
   const { supabase, claims } = ctx;
 
-  if (!(await verifyBranchOwnership(supabase, parsed.data.branch_id, claims.tenant_id))) {
+  if (
+    !(await verifyBranchOwnership(
+      supabase,
+      parsed.data.branch_id,
+      claims.tenant_id,
+    ))
+  ) {
     return { success: false, error: "Chi nhánh không hợp lệ" };
   }
 
@@ -151,7 +157,13 @@ export async function updateZone(
 
   const { supabase, claims } = ctx;
 
-  if (!(await verifyBranchOwnership(supabase, parsed.data.branch_id, claims.tenant_id))) {
+  if (
+    !(await verifyBranchOwnership(
+      supabase,
+      parsed.data.branch_id,
+      claims.tenant_id,
+    ))
+  ) {
     return { success: false, error: "Chi nhánh không hợp lệ" };
   }
 
@@ -231,7 +243,13 @@ export async function createTable(
 
   const { supabase, claims } = ctx;
 
-  if (!(await verifyBranchOwnership(supabase, parsed.data.branch_id, claims.tenant_id))) {
+  if (
+    !(await verifyBranchOwnership(
+      supabase,
+      parsed.data.branch_id,
+      claims.tenant_id,
+    ))
+  ) {
     return { success: false, error: "Chi nhánh không hợp lệ" };
   }
 
@@ -281,7 +299,13 @@ export async function updateTable(
 
   const { supabase, claims } = ctx;
 
-  if (!(await verifyBranchOwnership(supabase, parsed.data.branch_id, claims.tenant_id))) {
+  if (
+    !(await verifyBranchOwnership(
+      supabase,
+      parsed.data.branch_id,
+      claims.tenant_id,
+    ))
+  ) {
     return { success: false, error: "Chi nhánh không hợp lệ" };
   }
 

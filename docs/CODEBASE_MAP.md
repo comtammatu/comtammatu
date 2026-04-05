@@ -13,14 +13,14 @@
 
 ## Module Index
 
-| Module | Doc | Purpose | Risk Level |
-|--------|-----|---------|------------|
-| Auth & ACL | [auth.md](modules/auth.md) | JWT claims, role hierarchy, RLS, proxy routing | **High** — gates all access |
-| Database | [database.md](modules/database.md) | Supabase clients, types, migrations, RLS policies | **High** — data integrity |
-| Web App | [web-app.md](modules/web-app.md) | Next.js routes, layouts, server actions, admin shell | Medium |
-| UI | [ui.md](modules/ui.md) | shadcn components, design tokens | Low |
-| Security | [security.md](modules/security.md) | Rate limiting (Upstash Redis) | Medium |
-| Infrastructure | [infrastructure.md](modules/infrastructure.md) | Monorepo, build, deploy, environment | Medium |
+| Module         | Doc                                            | Purpose                                              | Risk Level                  |
+| -------------- | ---------------------------------------------- | ---------------------------------------------------- | --------------------------- |
+| Auth & ACL     | [auth.md](modules/auth.md)                     | JWT claims, role hierarchy, RLS, proxy routing       | **High** — gates all access |
+| Database       | [database.md](modules/database.md)             | Supabase clients, types, migrations, RLS policies    | **High** — data integrity   |
+| Web App        | [web-app.md](modules/web-app.md)               | Next.js routes, layouts, server actions, admin shell | Medium                      |
+| UI             | [ui.md](modules/ui.md)                         | shadcn components, design tokens                     | Low                         |
+| Security       | [security.md](modules/security.md)             | Rate limiting (Upstash Redis)                        | Medium                      |
+| Infrastructure | [infrastructure.md](modules/infrastructure.md) | Monorepo, build, deploy, environment                 | Medium                      |
 
 ## Architecture Overview
 
@@ -89,21 +89,21 @@ sequenceDiagram
 
 These files have the most dependents. Changes here affect many parts of the system.
 
-| File | Importers | Impact |
-|------|-----------|--------|
-| `packages/shared/src/auth/module-acl.ts` | proxy.ts, admin shell, all layouts | Adding/removing modules affects routing, nav, and ACL |
-| `packages/shared/src/auth/types.ts` | Every auth-aware file | Changing roles or JWT shape breaks auth chain |
-| `packages/shared/src/auth/scope.ts` | proxy.ts, layouts, server actions | Changing claim extraction breaks session |
-| `packages/database/src/types/database.types.ts` | All server code | Auto-generated — regenerate with `pnpm db:types` |
-| `apps/web/proxy.ts` | Next.js middleware entry | Single point of auth enforcement |
+| File                                            | Importers                          | Impact                                                |
+| ----------------------------------------------- | ---------------------------------- | ----------------------------------------------------- |
+| `packages/shared/src/auth/module-acl.ts`        | proxy.ts, admin shell, all layouts | Adding/removing modules affects routing, nav, and ACL |
+| `packages/shared/src/auth/types.ts`             | Every auth-aware file              | Changing roles or JWT shape breaks auth chain         |
+| `packages/shared/src/auth/scope.ts`             | proxy.ts, layouts, server actions  | Changing claim extraction breaks session              |
+| `packages/database/src/types/database.types.ts` | All server code                    | Auto-generated — regenerate with `pnpm db:types`      |
+| `apps/web/proxy.ts`                             | Next.js middleware entry           | Single point of auth enforcement                      |
 
 ## Critical Unknowns
 
-| # | Unknown | Verification Step | Impact |
-|---|---------|-------------------|--------|
-| 1 | area_manager has tenant-wide access (no area scoping table) | Check if business needs area boundaries before M2 (POS) | May need migration later |
-| 2 | No integration tests exist yet | Add before v1.0.0 pilot | Regressions possible |
-| 3 | Deployment pipeline not configured | Check Vercel project + GitHub Actions before pilot | Blocks production launch |
+| #   | Unknown                                                     | Verification Step                                       | Impact                   |
+| --- | ----------------------------------------------------------- | ------------------------------------------------------- | ------------------------ |
+| 1   | area_manager has tenant-wide access (no area scoping table) | Check if business needs area boundaries before M2 (POS) | May need migration later |
+| 2   | No integration tests exist yet                              | Add before v1.0.0 pilot                                 | Regressions possible     |
+| 3   | Deployment pipeline not configured                          | Check Vercel project + GitHub Actions before pilot      | Blocks production launch |
 
 ## Priority Recommendations
 
