@@ -10,18 +10,19 @@ Không phải CRM, không phải ERP tổng hợp. Mỗi module giải quyết m
 
 ## Module Map
 
-| #  | Module         | Scope                                                   | Status  |
-| -- | -------------- | ------------------------------------------------------- | ------- |
-| M0 | Admin Shell    | Layout, sidebar, branches, staff, settings              | SHIPPED |
-| M1 | Menu           | Categories, items, variants, modifiers, sides           | SHIPPED |
-| M2 | POS            | Cart, table/zone, order submit, bill printing           | NEXT    |
-| M3 | KDS            | Realtime queue, bump/complete, station config           | NEXT    |
-| M4 | Payment        | Cash, VietQR, Momo, refunds, reconciliation             | —       |
-| M5 | Stock          | Ingredients, recipes, stock levels, procurement, GRN    | —       |
-| M6 | Finance        | HĐĐT, VAT, dashboard, reports, VAS accounting           | —       |
-| M7 | HR/Payroll     | Employees, shifts, attendance, payroll, PIT             | —       |
+| #   | Module      | Scope                                                | Status  |
+| --- | ----------- | ---------------------------------------------------- | ------- |
+| M0  | Admin Shell | Layout, sidebar, branches, staff, settings           | SHIPPED |
+| M1  | Menu        | Categories, items, variants, modifiers, sides        | SHIPPED |
+| M2  | POS         | Cart, table/zone, order submit, bill printing        | NEXT    |
+| M3  | KDS         | Realtime queue, bump/complete, station config        | NEXT    |
+| M4  | Payment     | Cash, VietQR, Momo, refunds, reconciliation          | —       |
+| M5  | Stock       | Ingredients, recipes, stock levels, procurement, GRN | —       |
+| M6  | Finance     | HĐĐT, VAT, dashboard, reports, VAS accounting        | —       |
+| M7  | HR/Payroll  | Employees, shifts, attendance, payroll, PIT          | —       |
 
 Post-v1.0 (lên kế hoạch riêng):
+
 - Local-First per Branch (mini PC + SQLite, offline-capable POS/KDS)
 - QR Self-Order (khách tự order qua QR)
 - Loyalty / Vouchers (tích điểm, khuyến mãi)
@@ -64,11 +65,11 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 
 **Tables owned:** tenants, branches, profiles, system_settings
 
-| Session | Task                    | Status |
-| ------- | ----------------------- | ------ |
-| S1      | Admin layout + sidebar  | ✅     |
-| S2      | Branch CRUD + settings  | ✅     |
-| S3      | Staff management        | ✅     |
+| Session | Task                   | Status |
+| ------- | ---------------------- | ------ |
+| S1      | Admin layout + sidebar | ✅     |
+| S2      | Branch CRUD + settings | ✅     |
+| S3      | Staff management       | ✅     |
 
 ---
 
@@ -103,15 +104,16 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 
 **Routes:** `/br/[branchId]/pos`
 
-| Session | Task                           | Tables                                          |
-| ------- | ------------------------------ | ------------------------------------------------ |
-| S1      | Order schema + state machine   | orders, order_items, order_status_history         |
-| S2      | POS terminal + sessions        | pos_terminals, pos_sessions                       |
-| S3      | Menu browse + cart UI          | —                                                 |
-| S4      | Table selection + order submit | —                                                 |
-| S5      | Bill printing + cash register  | printer_configs                                   |
+| Session | Task                           | Tables                                    |
+| ------- | ------------------------------ | ----------------------------------------- |
+| S1      | Order schema + state machine   | orders, order_items, order_status_history |
+| S2      | POS terminal + sessions        | pos_terminals, pos_sessions               |
+| S3      | Menu browse + cart UI          | —                                         |
+| S4      | Table selection + order submit | —                                         |
+| S5      | Bill printing + cash register  | printer_configs                           |
 
 **Ship criteria:**
+
 - [ ] Tạo order với món + biến thể + modifier
 - [ ] Chọn bàn/mang về
 - [ ] Gửi order → order xuất hiện ở KDS
@@ -134,13 +136,14 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 
 **Routes:** `/br/[branchId]/kds`
 
-| Session | Task                       | Tables                           |
-| ------- | -------------------------- | -------------------------------- |
-| S1      | KDS station config         | kds_stations, kds_station_categories |
-| S2      | Realtime order queue       | kds_tickets                      |
-| S3      | Bump/complete + alerts     | —                                |
+| Session | Task                   | Tables                               |
+| ------- | ---------------------- | ------------------------------------ |
+| S1      | KDS station config     | kds_stations, kds_station_categories |
+| S2      | Realtime order queue   | kds_tickets                          |
+| S3      | Bump/complete + alerts | —                                    |
 
 **Ship criteria:**
+
 - [ ] Order từ POS xuất hiện realtime trên KDS
 - [ ] Chef bump từng món → cập nhật order status
 - [ ] Bump hết → order chuyển "ready"
@@ -160,15 +163,16 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 
 **Tables owned:** payments, payment_webhooks, refunds
 
-| Session | Task                        | Tables           |
-| ------- | --------------------------- | ---------------- |
-| S1      | Payment schema              | payments         |
-| S2      | VietQR integration          | —                |
-| S3      | Momo integration            | payment_webhooks |
-| S4      | Refunds                     | refunds          |
-| S5      | End-of-day reconciliation   | —                |
+| Session | Task                      | Tables           |
+| ------- | ------------------------- | ---------------- |
+| S1      | Payment schema            | payments         |
+| S2      | VietQR integration        | —                |
+| S3      | Momo integration          | payment_webhooks |
+| S4      | Refunds                   | refunds          |
+| S5      | End-of-day reconciliation | —                |
 
 **Ship criteria:**
+
 - [ ] Thanh toán tiền mặt + VietQR + Momo
 - [ ] Hoàn tiền (partial + full)
 - [ ] Đối soát cuối ngày chính xác
@@ -197,6 +201,7 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 | S5      | Supplier invoices + 3-way match | supplier_invoices                                |
 
 **Ship criteria:**
+
 - [ ] CRUD nguyên liệu + công thức
 - [ ] Tồn kho tự động cập nhật khi GRN
 - [ ] PO → GRN → Supplier Invoice flow hoàn chỉnh
@@ -216,17 +221,18 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 
 **Tables owned:** tax_invoices, chart_of_accounts, journal_entries, mv_daily_revenue, mv_top_items, mv_food_cost
 
-| Session | Task                            | Tables                         |
-| ------- | ------------------------------- | ------------------------------ |
-| S1      | HĐĐT schema + Edge Function     | tax_invoices                   |
-| S2      | HĐĐT UI + provider config       | —                              |
-| S3      | Revenue dashboard               | mv_daily_revenue, mv_top_items |
-| S4      | Food cost analysis              | mv_food_cost                   |
-| S5      | Chart of accounts (VAS)         | chart_of_accounts, journal_entries |
-| S6      | Financial statements            | —                              |
-| S7      | MV refresh + audit logging      | audit_logs                     |
+| Session | Task                        | Tables                             |
+| ------- | --------------------------- | ---------------------------------- |
+| S1      | HĐĐT schema + Edge Function | tax_invoices                       |
+| S2      | HĐĐT UI + provider config   | —                                  |
+| S3      | Revenue dashboard           | mv_daily_revenue, mv_top_items     |
+| S4      | Food cost analysis          | mv_food_cost                       |
+| S5      | Chart of accounts (VAS)     | chart_of_accounts, journal_entries |
+| S6      | Financial statements        | —                                  |
+| S7      | MV refresh + audit logging  | audit_logs                         |
 
 **Ship criteria:**
+
 - [ ] HĐĐT xuất/hủy hoạt động với provider
 - [ ] Dashboard doanh thu chính xác
 - [ ] Food cost report đúng
@@ -247,15 +253,16 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 
 **Tables owned:** employees, shifts, attendance_records, payroll_periods, payroll_entries
 
-| Session | Task                   | Tables                           |
-| ------- | ---------------------- | -------------------------------- |
-| S1      | Employee records       | employees                        |
-| S2      | Shifts + attendance    | shifts, attendance_records       |
-| S3      | Payroll calculation    | —                                |
-| S4      | Payroll processing     | payroll_periods, payroll_entries |
-| S5      | Payroll reports + PIT  | —                                |
+| Session | Task                  | Tables                           |
+| ------- | --------------------- | -------------------------------- |
+| S1      | Employee records      | employees                        |
+| S2      | Shifts + attendance   | shifts, attendance_records       |
+| S3      | Payroll calculation   | —                                |
+| S4      | Payroll processing    | payroll_periods, payroll_entries |
+| S5      | Payroll reports + PIT | —                                |
 
 **Ship criteria:**
+
 - [ ] Quản lý hồ sơ nhân viên đầy đủ
 - [ ] Lập ca, chấm công
 - [ ] Tính lương + BHXH + thuế TNCN chính xác
@@ -270,6 +277,7 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 > Sau khi M0–M6 stable (M7 có thể ship song song hoặc sau pilot)
 
 **Pilot checklist:**
+
 - [ ] M0–M4 SHIPPED (vận hành cơ bản)
 - [ ] M5 SHIPPED (quản lý kho)
 - [ ] M6 SHIPPED (HĐĐT — bắt buộc pháp lý)
@@ -283,22 +291,22 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 
 ## Post-v1.0 (Tier 2 — lên kế hoạch riêng)
 
-| Feature             | Mô tả                                                          |
-| ------------------- | --------------------------------------------------------------- |
-| Local-First Branch  | Mini PC + SQLite per branch, offline POS/KDS, sync mỗi 1-5 min |
-| QR Self-Order       | Khách scan QR tại bàn, tự chọn món, tự thanh toán              |
-| Loyalty / Vouchers  | Tích điểm, voucher, khuyến mãi                                 |
-| Advanced Analytics  | Phân tích xu hướng, dự đoán nhu cầu                            |
-| VNPay               | Thêm cổng thanh toán VNPay                                     |
-| Multi-warehouse     | Quản lý nhiều kho                                              |
-| Sub-domain routing  | pos.comtammatu.com, kds.comtammatu.com (khi tách deploy)       |
+| Feature            | Mô tả                                                          |
+| ------------------ | -------------------------------------------------------------- |
+| Local-First Branch | Mini PC + SQLite per branch, offline POS/KDS, sync mỗi 1-5 min |
+| QR Self-Order      | Khách scan QR tại bàn, tự chọn món, tự thanh toán              |
+| Loyalty / Vouchers | Tích điểm, voucher, khuyến mãi                                 |
+| Advanced Analytics | Phân tích xu hướng, dự đoán nhu cầu                            |
+| VNPay              | Thêm cổng thanh toán VNPay                                     |
+| Multi-warehouse    | Quản lý nhiều kho                                              |
+| Sub-domain routing | pos.comtammatu.com, kds.comtammatu.com (khi tách deploy)       |
 
 ---
 
 ## Version History
 
-| Version | Date       | What                                         |
-| ------- | ---------- | -------------------------------------------- |
-| v0.1.0  | 2026-04-01 | Foundation (auth, proxy, RLS, monorepo)      |
-| v0.1.1  | 2026-04-02 | Security hardening (RLS, DML lockdown)       |
-| M0+M1   | 2026-04-03 | Admin Shell + Menu shipped (ex Sprint 1)     |
+| Version | Date       | What                                     |
+| ------- | ---------- | ---------------------------------------- |
+| v0.1.0  | 2026-04-01 | Foundation (auth, proxy, RLS, monorepo)  |
+| v0.1.1  | 2026-04-02 | Security hardening (RLS, DML lockdown)   |
+| M0+M1   | 2026-04-03 | Admin Shell + Menu shipped (ex Sprint 1) |
