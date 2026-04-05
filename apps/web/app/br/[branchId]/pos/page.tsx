@@ -1,15 +1,31 @@
-import { ShoppingCart } from "lucide-react";
+import { fetchMenuForPos } from "./actions";
+import { PosMenu } from "./pos-menu";
+import type { MenuCategory } from "./pos-menu";
 
-export default function PosPage() {
-  return (
-    <div className="flex flex-1 items-center justify-center">
-      <div className="text-center">
-        <ShoppingCart className="mx-auto size-16 text-muted-foreground" />
-        <h1 className="mt-4 text-xl font-bold">POS — Điểm bán hàng</h1>
-        <p className="mt-2 text-muted-foreground">
-          Giao diện bán hàng sẽ có trong M2 (POS).
-        </p>
+export default async function PosPage({
+  params,
+}: {
+  params: Promise<{ branchId: string }>;
+}) {
+  const { branchId } = await params;
+  const branchIdNum = Number(branchId);
+
+  const menuResult = await fetchMenuForPos(branchIdNum);
+
+  if (!menuResult.success || !menuResult.data) {
+    return (
+      <div className="flex flex-1 items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg font-medium text-destructive">
+            {menuResult.error ?? "Không thể tải menu"}
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Vui lòng tải lại trang hoặc liên hệ quản lý.
+          </p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return <PosMenu categories={menuResult.data as MenuCategory[]} />;
 }

@@ -444,6 +444,387 @@ export type Database = {
           },
         ];
       };
+      order_items: {
+        Row: {
+          created_at: string;
+          id: number;
+          item_name: string;
+          menu_item_id: number;
+          modifiers: Json;
+          note: string | null;
+          order_id: number;
+          quantity: number;
+          sides: Json;
+          status: string;
+          subtotal: number;
+          tenant_id: number;
+          unit_price: number;
+          updated_at: string;
+          variant_id: number | null;
+          variant_name: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          id?: never;
+          item_name: string;
+          menu_item_id: number;
+          modifiers?: Json;
+          note?: string | null;
+          order_id: number;
+          quantity: number;
+          sides?: Json;
+          status?: string;
+          subtotal: number;
+          tenant_id: number;
+          unit_price: number;
+          updated_at?: string;
+          variant_id?: number | null;
+          variant_name?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          id?: never;
+          item_name?: string;
+          menu_item_id?: number;
+          modifiers?: Json;
+          note?: string | null;
+          order_id?: number;
+          quantity?: number;
+          sides?: Json;
+          status?: string;
+          subtotal?: number;
+          tenant_id?: number;
+          unit_price?: number;
+          updated_at?: string;
+          variant_id?: number | null;
+          variant_name?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_items_menu_item_id_fkey";
+            columns: ["menu_item_id"];
+            isOneToOne: false;
+            referencedRelation: "menu_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_items_variant_id_fkey";
+            columns: ["variant_id"];
+            isOneToOne: false;
+            referencedRelation: "menu_item_variants";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_items_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      order_status_history: {
+        Row: {
+          changed_by: string;
+          created_at: string;
+          from_status: string | null;
+          id: number;
+          note: string | null;
+          order_id: number;
+          tenant_id: number;
+          to_status: string;
+        };
+        Insert: {
+          changed_by: string;
+          created_at?: string;
+          from_status?: string | null;
+          id?: never;
+          note?: string | null;
+          order_id: number;
+          tenant_id: number;
+          to_status: string;
+        };
+        Update: {
+          changed_by?: string;
+          created_at?: string;
+          from_status?: string | null;
+          id?: never;
+          note?: string | null;
+          order_id?: number;
+          tenant_id?: number;
+          to_status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_status_history_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_status_history_changed_by_fkey";
+            columns: ["changed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_status_history_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      orders: {
+        Row: {
+          branch_id: number;
+          created_at: string;
+          created_by: string;
+          customer_count: number;
+          discount_amount: number;
+          id: number;
+          note: string | null;
+          order_number: string;
+          order_type: string;
+          pos_session_id: number | null;
+          service_charge: number;
+          status: string;
+          subtotal: number;
+          table_id: number | null;
+          tax_amount: number;
+          tenant_id: number;
+          total_amount: number;
+          updated_at: string;
+        };
+        Insert: {
+          branch_id: number;
+          created_at?: string;
+          created_by: string;
+          customer_count?: number;
+          discount_amount?: number;
+          id?: never;
+          note?: string | null;
+          order_number: string;
+          order_type?: string;
+          pos_session_id?: number | null;
+          service_charge?: number;
+          status?: string;
+          subtotal?: number;
+          table_id?: number | null;
+          tax_amount?: number;
+          tenant_id: number;
+          total_amount?: number;
+          updated_at?: string;
+        };
+        Update: {
+          branch_id?: number;
+          created_at?: string;
+          created_by?: string;
+          customer_count?: number;
+          discount_amount?: number;
+          id?: never;
+          note?: string | null;
+          order_number?: string;
+          order_type?: string;
+          pos_session_id?: number | null;
+          service_charge?: number;
+          status?: string;
+          subtotal?: number;
+          table_id?: number | null;
+          tax_amount?: number;
+          tenant_id?: number;
+          total_amount?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "orders_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orders_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orders_table_id_fkey";
+            columns: ["table_id"];
+            isOneToOne: false;
+            referencedRelation: "tables";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orders_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orders_pos_session_id_fkey";
+            columns: ["pos_session_id"];
+            isOneToOne: false;
+            referencedRelation: "pos_sessions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      pos_sessions: {
+        Row: {
+          branch_id: number;
+          cash_difference: number | null;
+          closed_at: string | null;
+          closed_by: string | null;
+          closing_cash: number | null;
+          created_at: string;
+          expected_cash: number | null;
+          id: number;
+          note: string | null;
+          opened_at: string;
+          opened_by: string;
+          opening_cash: number;
+          status: string;
+          tenant_id: number;
+          terminal_id: number;
+          updated_at: string;
+        };
+        Insert: {
+          branch_id: number;
+          cash_difference?: number | null;
+          closed_at?: string | null;
+          closed_by?: string | null;
+          closing_cash?: number | null;
+          created_at?: string;
+          expected_cash?: number | null;
+          id?: never;
+          note?: string | null;
+          opened_at?: string;
+          opened_by: string;
+          opening_cash?: number;
+          status?: string;
+          tenant_id: number;
+          terminal_id: number;
+          updated_at?: string;
+        };
+        Update: {
+          branch_id?: number;
+          cash_difference?: number | null;
+          closed_at?: string | null;
+          closed_by?: string | null;
+          closing_cash?: number | null;
+          created_at?: string;
+          expected_cash?: number | null;
+          id?: never;
+          note?: string | null;
+          opened_at?: string;
+          opened_by?: string;
+          opening_cash?: number;
+          status?: string;
+          tenant_id?: number;
+          terminal_id?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pos_sessions_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "pos_sessions_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "pos_sessions_terminal_id_fkey";
+            columns: ["terminal_id"];
+            isOneToOne: false;
+            referencedRelation: "pos_terminals";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "pos_sessions_opened_by_fkey";
+            columns: ["opened_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "pos_sessions_closed_by_fkey";
+            columns: ["closed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      pos_terminals: {
+        Row: {
+          branch_id: number;
+          created_at: string;
+          device_id: string | null;
+          id: number;
+          is_active: boolean;
+          name: string;
+          tenant_id: number;
+          updated_at: string;
+        };
+        Insert: {
+          branch_id: number;
+          created_at?: string;
+          device_id?: string | null;
+          id?: never;
+          is_active?: boolean;
+          name: string;
+          tenant_id: number;
+          updated_at?: string;
+        };
+        Update: {
+          branch_id?: number;
+          created_at?: string;
+          device_id?: string | null;
+          id?: never;
+          is_active?: boolean;
+          name?: string;
+          tenant_id?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pos_terminals_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "pos_terminals_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       tables: {
         Row: {
           branch_id: number;
