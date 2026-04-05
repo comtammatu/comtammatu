@@ -44,7 +44,7 @@ if (!success) {
 
 | Failure | Signal | Recovery |
 |---------|--------|----------|
-| Upstash unreachable | Rate limit check throws | Decide: fail open (allow) or fail closed (block). Currently no fallback configured |
+| Upstash unreachable | Rate limit check throws | **Fail open** — allow the request. Availability > abuse protection for MVP. Add monitoring alert when this happens. |
 | Missing env vars | Runtime error on first request | Set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` |
 
 ## Design Rationale
@@ -56,5 +56,5 @@ if (!success) {
 Written by codebase-oracle (manual) | 2026-04-02
 Data: Direct source reading
 Audience: new engineer | Confidence: 95%
-Unknowns: 1 (no fail-open/fail-closed policy defined)
+Unknowns: 0
 -->

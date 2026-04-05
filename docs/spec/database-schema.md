@@ -15,7 +15,7 @@ Single row — Cơm Tấm Má Tư CTCP.
 | tax_code       | TEXT UNIQUE | MST 10 or 13 digits          |
 | legal_address  | TEXT        | Registered address           |
 | representative | TEXT        | Legal representative         |
-| settings       | JSONB       | Tenant-level config          |
+| settings       | JSONB       | Legacy — use system_settings |
 | created_at     | TIMESTAMPTZ | default now()                |
 | updated_at     | TIMESTAMPTZ | default now(), auto-trigger  |
 
@@ -129,6 +129,8 @@ Tenant-scoped key/value configuration.
 - Column-level GRANT enforced at DB level as defense-in-depth
 
 ### admin_update_profile(target_id, role, branch_id, is_active, full_name, phone)
+
+> Note: Old 4-param overload (from v0.1.1) dropped in pre-M2 cleanup migration. Only the 6-param version exists.
 
 Actor scope restrictions:
 
@@ -279,8 +281,11 @@ Junction table: which side items can pair with which main items.
 | idx_menu_items_category            | menu_items(category_id)                 | Category lookup  |
 | idx_menu_item_variants_item        | menu_item_variants(item_id)             | Item lookup      |
 | idx_menu_item_modifiers_item       | menu_item_modifiers(item_id)            | Item lookup      |
+| idx_menu_item_variants_tenant      | menu_item_variants(tenant_id)           | RLS filter       |
+| idx_menu_item_modifiers_tenant     | menu_item_modifiers(tenant_id)          | RLS filter       |
 | idx_menu_item_available_sides_main | menu_item_available_sides(main_item_id) | Main item lookup |
 | idx_menu_item_available_sides_side | menu_item_available_sides(side_item_id) | Side item lookup |
+| idx_menu_item_available_sides_tenant | menu_item_available_sides(tenant_id)  | RLS filter       |
 
 ## Tables & Zones (Sprint 1 S5)
 
