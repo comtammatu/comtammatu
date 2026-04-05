@@ -30,8 +30,9 @@ supabase/.temp/
 # MCP config (contains tokens)
 .mcp.json
 
-# Claude Code personal settings
+# Claude Code personal/machine-specific
 .claude/settings.json
+.claude/launch.json
 
 # IDE
 .vscode/

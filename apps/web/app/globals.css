@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Monorepo: tell Tailwind to scan workspace packages */
+@source "../../../packages/ui/src";
+@source "../../../packages/shared/src";
+
 /* ============================================================
    Cơm Tấm Má Tư — Design Tokens
    Tailwind CSS v4 — CSS-first configuration
