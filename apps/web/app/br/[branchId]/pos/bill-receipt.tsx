@@ -53,11 +53,13 @@ interface BillReceiptProps {
 
 export function BillReceipt({ orderId, onClose, formatVnd }: BillReceiptProps) {
   const [order, setOrder] = useState<OrderData | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     if (orderId === null) {
       setOrder(null);
+      setError(null);
       return;
     }
 
@@ -65,6 +67,9 @@ export function BillReceipt({ orderId, onClose, formatVnd }: BillReceiptProps) {
       const result = await fetchOrderForBill(orderId);
       if (result.success && result.data) {
         setOrder(result.data as OrderData);
+        setError(null);
+      } else {
+        setError(result.error ?? "Không thể tải đơn hàng");
       }
     });
   }, [orderId]);
@@ -100,6 +105,13 @@ export function BillReceipt({ orderId, onClose, formatVnd }: BillReceiptProps) {
         {isPending ? (
           <div className="flex h-full items-center justify-center">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : error ? (
+          <div className="flex h-full flex-col items-center justify-center gap-2 px-4">
+            <p className="text-sm font-medium text-destructive">{error}</p>
+            <Button variant="outline" size="sm" onClick={() => onClose()}>
+              Đóng
+            </Button>
           </div>
         ) : order ? (
           <div className="flex h-full flex-col">

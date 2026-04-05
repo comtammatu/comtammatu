@@ -38,11 +38,17 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
   const handleOpen = useCallback(() => {
     if (!canOpen) return;
 
+    const cashAmount = Number(openingCash);
+    if (Number.isNaN(cashAmount) || cashAmount < 0) {
+      toast.error("Số tiền đầu ca không hợp lệ");
+      return;
+    }
+
     startTransition(async () => {
       const result = await openPosSession(
         branchId,
         Number(terminalId),
-        Number(openingCash) || 0,
+        cashAmount,
       );
 
       if (result.success) {

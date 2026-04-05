@@ -4,7 +4,6 @@
 
 CREATE OR REPLACE FUNCTION public.close_pos_session(
   p_session_id BIGINT,
-  p_closed_by UUID,
   p_closing_cash NUMERIC(15,2),
   p_note TEXT DEFAULT NULL
 )
@@ -17,7 +16,16 @@ DECLARE
   v_expected_cash NUMERIC(15,2);
   v_cash_difference NUMERIC(15,2);
   v_order_count INT;
+  v_closed_by UUID;
 BEGIN
+  -- FIX #13: Validate closing_cash
+  IF p_closing_cash IS NULL OR p_closing_cash < 0 THEN
+    RAISE EXCEPTION 'closing_cash must be non-negative' USING ERRCODE = '22023';
+  END IF;
+
+  -- FIX #3: Use auth.uid() instead of parameter
+  v_closed_by := auth.uid();
+
   -- Lock and fetch the session
   SELECT id, tenant_id, branch_id, opening_cash, opened_at, status
   INTO v_session
@@ -50,7 +58,7 @@ BEGIN
   SET
     status = 'closed',
     closed_at = now(),
-    closed_by = p_closed_by,
+    closed_by = v_closed_by,
     closing_cash = p_closing_cash,
     expected_cash = v_expected_cash,
     cash_difference = v_cash_difference,
@@ -70,4 +78,4 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.close_pos_session(BIGINT, UUID, NUMERIC, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.close_pos_session(BIGINT, NUMERIC, TEXT) TO authenticated;

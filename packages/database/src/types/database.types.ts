@@ -993,7 +993,6 @@ export type Database = {
       close_pos_session: {
         Args: {
           p_session_id: number;
-          p_closed_by: string;
           p_closing_cash: number;
           p_note?: string;
         };

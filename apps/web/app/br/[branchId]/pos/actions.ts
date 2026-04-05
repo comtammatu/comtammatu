@@ -67,13 +67,15 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
           id,
           name,
           price_adjustment,
-          sort_order
+          sort_order,
+          is_active
         ),
         menu_item_modifiers (
           id,
           name,
           price,
-          sort_order
+          sort_order,
+          is_active
         ),
         menu_item_available_sides (
           id,
@@ -106,10 +108,10 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
     menu_items: (cat.menu_items ?? []).map((item) => ({
       ...item,
       menu_item_variants: (item.menu_item_variants ?? [])
-        .filter((v) => "is_active" in v && v.is_active !== false)
+        .filter((v) => v.is_active !== false)
         .sort((a, b) => a.sort_order - b.sort_order),
       menu_item_modifiers: (item.menu_item_modifiers ?? [])
-        .filter((m) => "is_active" in m && m.is_active !== false)
+        .filter((m) => m.is_active !== false)
         .sort((a, b) => a.sort_order - b.sort_order),
       menu_item_available_sides: item.menu_item_available_sides ?? [],
     })),
@@ -197,6 +199,13 @@ export async function submitOrder(
     return { success: false, error: "Giỏ hàng trống" };
   }
 
+  // Validate optional posSessionId
+  const posSessionIdSchema = z.coerce.number().int().positive().optional();
+  const parsedSessionId = posSessionIdSchema.safeParse(posSessionId);
+  if (!parsedSessionId.success) {
+    return { success: false, error: "Session ID không hợp lệ" };
+  }
+
   const ctx = await getAuthContext(POS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
@@ -244,7 +253,7 @@ export async function submitOrder(
       p_items: JSON.stringify(rpcItems),
       p_order_type: parsedCart.data.order_type,
       p_table_id: parsedCart.data.table_id ?? null,
-      p_pos_session_id: posSessionId ?? null,
+      p_pos_session_id: parsedSessionId.data ?? null,
       p_note: parsedCart.data.note ?? null,
     },
   );
@@ -340,6 +349,12 @@ export async function fetchActiveSession(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
+  // Get current user to filter sessions by opener
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: "Phiên đăng nhập hết hạn" };
+
   const { data: session, error } = await supabase
     .from("pos_sessions")
     .select(
@@ -360,6 +375,7 @@ export async function fetchActiveSession(
     .eq("branch_id", parsedBranchId.data)
     .eq("tenant_id", claims.tenant_id)
     .eq("status", "open")
+    .eq("opened_by", user.id)
     .maybeSingle();
 
   if (error) {
@@ -483,16 +499,10 @@ export async function closePosSession(
 
   const { supabase } = ctx;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { success: false, error: "Phiên đăng nhập hết hạn" };
-
   const { data, error } = await (supabase.rpc as CallableFunction)(
     "close_pos_session",
     {
       p_session_id: parsed.data.sessionId,
-      p_closed_by: user.id,
       p_closing_cash: parsed.data.closingCash,
       p_note: parsed.data.note ?? null,
     },

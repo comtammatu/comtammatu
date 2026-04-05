@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
@@ -46,7 +46,21 @@ export function ItemCustomizer({
     new Set(),
   );
 
-  // Reset state when item changes
+  // Reset state when item prop changes
+  useEffect(() => {
+    if (item) {
+      setSelectedVariant(item.menu_item_variants[0] ?? null);
+      setSelectedModifierIds(new Set());
+      setSelectedSideIds(
+        new Set(
+          item.menu_item_available_sides
+            .filter((s) => s.is_default)
+            .map((s) => s.side_item.id),
+        ),
+      );
+    }
+  }, [item]);
+
   const resetAndSetItem = useCallback(
     (open: boolean) => {
       if (open && item) {

@@ -34,6 +34,27 @@ BEGIN
     RAISE EXCEPTION 'p_order_type must be dine_in or takeaway' USING ERRCODE = '22023';
   END IF;
 
+  -- FIX #12: Validate table belongs to branch
+  IF p_table_id IS NOT NULL THEN
+    PERFORM 1 FROM public.tables
+    WHERE id = p_table_id AND branch_id = p_branch_id AND tenant_id = p_tenant_id;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Table does not belong to this branch' USING ERRCODE = 'P0002';
+    END IF;
+  END IF;
+
+  -- FIX #12: Validate session belongs to branch
+  IF p_pos_session_id IS NOT NULL THEN
+    PERFORM 1 FROM public.pos_sessions
+    WHERE id = p_pos_session_id AND branch_id = p_branch_id AND tenant_id = p_tenant_id;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'POS session does not belong to this branch' USING ERRCODE = 'P0002';
+    END IF;
+  END IF;
+
+  -- FIX #11: Advisory lock to prevent order_number race condition
+  PERFORM pg_advisory_xact_lock(p_branch_id);
+
   -- Generate order_number: {branch_id}-{YYMMDD}-{NNN}
   SELECT COUNT(*) + 1 INTO v_seq
   FROM public.orders

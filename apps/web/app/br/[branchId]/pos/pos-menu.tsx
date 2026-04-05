@@ -79,12 +79,17 @@ function makeCartKey(
   itemId: number,
   variantId: number | undefined,
   modifiers: CartModifier[],
+  sides: CartSide[],
 ): string {
   const modIds = modifiers
     .map((m) => m.modifier_id)
     .sort((a, b) => a - b)
     .join(",");
-  return `${String(itemId)}-${String(variantId ?? 0)}-${modIds}`;
+  const sideIds = sides
+    .map((s) => s.side_item_id)
+    .sort((a, b) => a - b)
+    .join(",");
+  return `${String(itemId)}-${String(variantId ?? 0)}-${modIds}-${sideIds}`;
 }
 
 /* ─── Category type labels ─── */
@@ -143,7 +148,7 @@ export function PosMenu({
       sides: CartSide[] = [],
     ) => {
       const price = unitPrice ?? item.base_price;
-      const key = makeCartKey(item.id, variantId, modifiers);
+      const key = makeCartKey(item.id, variantId, modifiers, sides);
 
       setCartItems((prev) => {
         const existing = prev.find((ci) => ci.key === key);

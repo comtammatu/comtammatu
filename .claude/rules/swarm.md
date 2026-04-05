@@ -313,19 +313,19 @@ HANDOFF (ALL steps mandatory — do not skip any):
 
 ```bash
 # Terminal 1 — Orchestrator
-cd ~/Downloads/Personal/comtammatu && claude
+cd /path/to/comtammatu && claude
 # Paste orchestrator prompt → it creates room and tells you the room_id
 
 # Terminal 2 — Database (start after orchestrator gives room_id)
-cd ~/Downloads/Personal/comtammatu && claude
+cd /path/to/comtammatu && claude
 # Paste database agent prompt (replace {room_id})
 
 # Terminal 3 — Backend (start anytime, will wait for DB)
-cd ~/Downloads/Personal/comtammatu && claude
+cd /path/to/comtammatu && claude
 # Paste backend agent prompt (replace {room_id})
 
 # Terminal 4 — Frontend (start anytime, will wait for backend)
-cd ~/Downloads/Personal/comtammatu && claude
+cd /path/to/comtammatu && claude
 # Paste frontend agent prompt (replace {room_id})
 ```
 
