@@ -20,9 +20,10 @@ swarm:
 
         Workflow:
         1. Read roadmap → identify current session tasks
-        2. Delegate DB work to database agent first (others depend on schema)
-        3. Once DB ready, delegate backend + frontend in parallel
-        4. Review all changes, run /verify, then commit
+        2. Create room → write plan to scratchpad → create tasks for agents
+        3. Delegate DB work first (others depend on schema)
+        4. Once DB ready, send_message to backend + frontend to start
+        5. Review all changes, run /verify, then commit
 
         Key constraints from CLAUDE.md:
         - supabase-js only, never Prisma
@@ -40,11 +41,25 @@ swarm:
         - Grep
         - Bash
         - Agent
-        - TaskCreate
-        - TaskUpdate
-        - TaskList
-        - WebSearch
-        - WebFetch
+        # claude-swarm coordination
+        - create_room
+        - join_room
+        - leave_room
+        - list_rooms
+        - list_peers
+        - set_name
+        - set_status
+        - set_summary
+        - send_message
+        - broadcast
+        - check_messages
+        - message_history
+        - create_task
+        - update_task
+        - list_tasks
+        - scratchpad_get
+        - scratchpad_set
+        - scratchpad_list
 
     database:
       description: "Database specialist — migrations, RLS policies, SQL functions, type generation"
@@ -74,6 +89,11 @@ swarm:
         - [ ] UNIQUE per tenant_id
         - [ ] Correct data types
         - [ ] pnpm db:types regenerated after migration is merged & applied by owner
+
+        Coordination:
+        - On start: join_room → scratchpad_get("plan") → list_tasks → find your assigned tasks
+        - On progress: update_task(status: "in_progress") → do work
+        - On done: scratchpad_set("schema-changes", summary) → broadcast completion → update_task(status: "review")
       allowed_tools:
         - Read
         - Write
@@ -81,6 +101,23 @@ swarm:
         - Bash
         - Glob
         - Grep
+        # claude-swarm coordination
+        - join_room
+        - leave_room
+        - list_rooms
+        - list_peers
+        - set_name
+        - set_status
+        - set_summary
+        - send_message
+        - broadcast
+        - check_messages
+        - message_history
+        - update_task
+        - list_tasks
+        - scratchpad_get
+        - scratchpad_set
+        - scratchpad_list
 
     backend:
       description: "Backend specialist — Server Actions, API routes, proxy logic, auth/ACL"
@@ -109,6 +146,12 @@ swarm:
         - .email() → z.email()
 
         JWT claims: { tenant_id: number, branch_id: number | null, user_role: StaffRole }
+
+        Coordination:
+        - On start: join_room → scratchpad_get("plan") → list_tasks → find your assigned tasks
+        - WAIT for database agent to broadcast schema completion before starting
+        - On progress: update_task(status: "in_progress") → do work
+        - On done: scratchpad_set("action-status", summary) → broadcast completion → update_task(status: "review")
       allowed_tools:
         - Read
         - Write
@@ -116,6 +159,23 @@ swarm:
         - Bash
         - Glob
         - Grep
+        # claude-swarm coordination
+        - join_room
+        - leave_room
+        - list_rooms
+        - list_peers
+        - set_name
+        - set_status
+        - set_summary
+        - send_message
+        - broadcast
+        - check_messages
+        - message_history
+        - update_task
+        - list_tasks
+        - scratchpad_get
+        - scratchpad_set
+        - scratchpad_list
 
     frontend:
       description: "Frontend specialist — UI components, pages, forms, client-side state"
@@ -142,6 +202,12 @@ swarm:
         - /br/[branchId]/kds → KDS
         - /employee → Employee portal
         - /login → Auth
+
+        Coordination:
+        - On start: join_room → scratchpad_get("plan") → list_tasks → find your assigned tasks
+        - WAIT for database agent schema + backend agent actions before starting UI that depends on them
+        - On progress: update_task(status: "in_progress") → do work
+        - On done: scratchpad_set("ui-changes", summary) → broadcast completion → update_task(status: "review")
       allowed_tools:
         - Read
         - Write
@@ -149,12 +215,20 @@ swarm:
         - Bash
         - Glob
         - Grep
-
-memory:
-  enabled: true
-  path: "./.swarm/memory"
-  categories:
-    - concept
-    - fact
-    - skill
-    - experience
+        # claude-swarm coordination
+        - join_room
+        - leave_room
+        - list_rooms
+        - list_peers
+        - set_name
+        - set_status
+        - set_summary
+        - send_message
+        - broadcast
+        - check_messages
+        - message_history
+        - update_task
+        - list_tasks
+        - scratchpad_get
+        - scratchpad_set
+        - scratchpad_list
