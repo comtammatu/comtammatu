@@ -1,26 +1,51 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@comtammatu/database/supabase/server";
+import { extractClaims } from "@comtammatu/shared/auth";
 import { TablesClient } from "./tables-client";
 
 export default async function TablesPage() {
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const claims = extractClaims(user.app_metadata);
+  if (!claims) redirect("/login");
+
+  // branch_manager: only their branch. Others: all branches.
+  const branchFilter = claims.branch_id;
+
+  let branchesQuery = supabase
+    .from("branches")
+    .select("id, name, is_active")
+    .eq("is_active", true)
+    .order("name");
+
+  let zonesQuery = supabase
+    .from("branch_zones")
+    .select("id, branch_id, name, sort_order")
+    .order("sort_order")
+    .order("name");
+
+  let tablesQuery = supabase
+    .from("tables")
+    .select(
+      "id, branch_id, zone_id, number, capacity, status, branch_zones(name)",
+    )
+    .order("number");
+
+  if (branchFilter) {
+    branchesQuery = branchesQuery.eq("id", branchFilter);
+    zonesQuery = zonesQuery.eq("branch_id", branchFilter);
+    tablesQuery = tablesQuery.eq("branch_id", branchFilter);
+  }
+
   const [branchesRes, zonesRes, tablesRes] = await Promise.all([
-    supabase
-      .from("branches")
-      .select("id, name, is_active")
-      .eq("is_active", true)
-      .order("name"),
-    supabase
-      .from("branch_zones")
-      .select("id, branch_id, name, sort_order")
-      .order("sort_order")
-      .order("name"),
-    supabase
-      .from("tables")
-      .select(
-        "id, branch_id, zone_id, number, capacity, status, branch_zones(name)",
-      )
-      .order("number"),
+    branchesQuery,
+    zonesQuery,
+    tablesQuery,
   ]);
 
   if (branchesRes.error) throw new Error("Không thể tải chi nhánh");

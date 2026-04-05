@@ -6,7 +6,8 @@ export function extractClaims(
   appMetadata: Record<string, unknown>,
 ): JwtClaims | null {
   const tenantId = appMetadata.tenant_id;
-  const role = appMetadata.user_role;
+  // JWT hook writes "user_role", raw app_metadata has "role"
+  const role = appMetadata.user_role ?? appMetadata.role;
 
   if (typeof tenantId !== "number" || typeof role !== "string") {
     return null;

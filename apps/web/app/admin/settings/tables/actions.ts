@@ -16,7 +16,12 @@ interface ActionResult {
 
 /* ─── Helpers ─── */
 
-const SETTINGS_ROLES: StaffRole[] = ["owner", "super_manager"];
+const SETTINGS_ROLES: StaffRole[] = [
+  "owner",
+  "super_manager",
+  "area_manager",
+  "branch_manager",
+];
 
 async function verifyBranchOwnership(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -30,6 +35,15 @@ async function verifyBranchOwnership(
     .eq("tenant_id", tenantId)
     .single();
   return !!data;
+}
+
+/** Branch manager can only operate on their own branch */
+function canOperateBranch(
+  claimsBranchId: number | null,
+  targetBranchId: number,
+): boolean {
+  if (claimsBranchId === null) return true; // owner/super_manager/area_manager
+  return claimsBranchId === targetBranchId;
 }
 
 function mapZoneDbError(code: string | undefined): string {
@@ -109,6 +123,10 @@ export async function createZone(
 
   const { supabase, claims } = ctx;
 
+  if (!canOperateBranch(claims.branch_id, parsed.data.branch_id)) {
+    return { success: false, error: "Không có quyền thao tác chi nhánh này" };
+  }
+
   if (
     !(await verifyBranchOwnership(
       supabase,
@@ -157,6 +175,10 @@ export async function updateZone(
 
   const { supabase, claims } = ctx;
 
+  if (!canOperateBranch(claims.branch_id, parsed.data.branch_id)) {
+    return { success: false, error: "Không có quyền thao tác chi nhánh này" };
+  }
+
   if (
     !(await verifyBranchOwnership(
       supabase,
@@ -196,12 +218,17 @@ export async function deleteZone(zoneId: number): Promise<ActionResult> {
 
   const { supabase, claims } = ctx;
 
-  const { data, error } = await supabase
+  let deleteQuery = supabase
     .from("branch_zones")
     .delete()
     .eq("id", parsed.data)
-    .eq("tenant_id", claims.tenant_id)
-    .select("id");
+    .eq("tenant_id", claims.tenant_id);
+
+  if (claims.branch_id) {
+    deleteQuery = deleteQuery.eq("branch_id", claims.branch_id);
+  }
+
+  const { data, error } = await deleteQuery.select("id");
 
   if (error) {
     return { success: false, error: mapZoneDbError(error.code) };
@@ -242,6 +269,10 @@ export async function createTable(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
+
+  if (!canOperateBranch(claims.branch_id, parsed.data.branch_id)) {
+    return { success: false, error: "Không có quyền thao tác chi nhánh này" };
+  }
 
   if (
     !(await verifyBranchOwnership(
@@ -299,6 +330,10 @@ export async function updateTable(
 
   const { supabase, claims } = ctx;
 
+  if (!canOperateBranch(claims.branch_id, parsed.data.branch_id)) {
+    return { success: false, error: "Không có quyền thao tác chi nhánh này" };
+  }
+
   if (
     !(await verifyBranchOwnership(
       supabase,
@@ -338,12 +373,17 @@ export async function deleteTable(tableId: number): Promise<ActionResult> {
 
   const { supabase, claims } = ctx;
 
-  const { data, error } = await supabase
+  let deleteTableQuery = supabase
     .from("tables")
     .delete()
     .eq("id", parsed.data)
-    .eq("tenant_id", claims.tenant_id)
-    .select("id");
+    .eq("tenant_id", claims.tenant_id);
+
+  if (claims.branch_id) {
+    deleteTableQuery = deleteTableQuery.eq("branch_id", claims.branch_id);
+  }
+
+  const { data, error } = await deleteTableQuery.select("id");
 
   if (error) {
     return { success: false, error: mapTableDbError(error.code) };

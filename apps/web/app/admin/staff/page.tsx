@@ -26,10 +26,11 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
     .eq("is_active", true)
     .order("name");
 
-  // Build staff query with join for branch name
+  // Build staff query — exclude owner/super_manager (not managed here)
   let query = supabase
     .from("profiles")
     .select("id, full_name, phone, role, branch_id, is_active, branches(name)")
+    .not("role", "in", "(owner,super_manager)")
     .order("full_name");
 
   // Apply filters

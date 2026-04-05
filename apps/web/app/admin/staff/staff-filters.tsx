@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { ROLE_LABELS } from "./role-labels";
+import { MANAGEABLE_ROLES } from "./role-labels";
 import type { BranchOption } from "./staff-table";
 
 interface StaffFiltersProps {
@@ -40,7 +40,7 @@ export function StaffFilters({ branches }: StaffFiltersProps) {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Tất cả vai trò</SelectItem>
-          {Object.entries(ROLE_LABELS).map(([value, label]) => (
+          {Object.entries(MANAGEABLE_ROLES).map(([value, label]) => (
             <SelectItem key={value} value={value}>
               {label}
             </SelectItem>

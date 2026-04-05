@@ -12,7 +12,7 @@ Authentication and authorization for the entire system. Every request passes thr
 | -------------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------- |
 | `packages/shared/src/auth/types.ts`                | Role enum, JWT claims shape, scope types                                     | Core types                 |
 | `packages/shared/src/auth/module-acl.ts`           | Module → allowed roles mapping, `canAccess()`, `getAccessibleModules()`      | ACL single source of truth |
-| `packages/shared/src/auth/scope.ts`                | `extractClaims()`, `getScope()`, `getDefaultRedirect()`, role classification | JWT claim extraction       |
+| `packages/shared/src/auth/scope.ts`                | `extractClaims()` (reads `user_role` or `role` fallback), `getScope()`, `getDefaultRedirect()` | JWT claim extraction       |
 | `packages/shared/src/auth/nav-config.ts`           | Admin sidebar navigation groups filtered by role                             | UI navigation              |
 | `apps/web/proxy.ts`                                | Next.js middleware — auth check + ACL enforcement                            | Request gateway            |
 | `supabase/migrations/*_jwt_custom_claims_hook.sql` | `custom_access_token_hook()` — injects claims into JWT                       | DB-level auth              |
@@ -56,10 +56,15 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 | crm       | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
 | finance   | ✓     | ✓         |          |            |         |        |      |        |
 | reports   | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
-| settings  | ✓     | ✓         |          |            |         |        |      |        |
+| settings  | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
 | pos       |       |           |          | ✓          | ✓       | ✓      |      |        |
 | kds       |       |           |          | ✓          |         |        | ✓    |        |
 | employee  | ✓     | ✓         | ✓        | ✓          | ✓       | ✓      | ✓    | ✓      |
+
+**Settings sub-page ACL:** The settings module allows area_manager and branch_manager, but sub-pages have additional guards:
+- `/admin/settings/branches` — owner, super_manager only (page-level redirect)
+- `/admin/settings/general` — owner, super_manager only (page-level redirect)
+- `/admin/settings/tables` — all settings roles (area_manager, branch_manager see only their branch data)
 
 ## Proxy Routing Logic
 

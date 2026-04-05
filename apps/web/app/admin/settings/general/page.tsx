@@ -1,9 +1,22 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@comtammatu/database/supabase/server";
+import { extractClaims } from "@comtammatu/shared/auth";
 import { SYSTEM_SETTING_DEFAULTS } from "@comtammatu/shared/settings";
 import { SettingsForm } from "./settings-form";
 
 export default async function GeneralSettingsPage() {
   const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const claims = user ? extractClaims(user.app_metadata) : null;
+  if (
+    !claims ||
+    !["owner", "super_manager"].includes(claims.user_role)
+  ) {
+    redirect("/admin/settings/tables");
+  }
 
   const { data: rows } = await supabase
     .from("system_settings")

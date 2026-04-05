@@ -11,7 +11,7 @@ This project uses **claude-swarm** for multi-agent collaboration. Each Claude Co
 ### Orchestrator (Room Owner)
 
 - **Scope:** Project root (`/comtammatu`)
-- **Responsibilities:** Plan sessions, delegate tasks, review results, merge decisions
+- **Responsibilities:** Plan sessions, delegate tasks, review results, merge decisions, **route bug fixes**
 - **Creates room:** `comtammatu-{module}-s{N}`
 
 ### Database Agent
@@ -35,6 +35,14 @@ This project uses **claude-swarm** for multi-agent collaboration. Each Claude Co
 - **Must follow:** Import from `@comtammatu/database/supabase/client` NEVER barrel
 - **Scratchpad keys:** `ui-changes`
 
+### QA Agent
+
+- **Scope:** Running application (browser testing only)
+- **Responsibilities:** Test flows, find bugs, verify fixes, take screenshots as evidence
+- **Tools:** `/qa`, `/browse`, `/benchmark`, screenshot, click, form fill
+- **Does NOT:** Edit code, write migrations, create actions
+- **Scratchpad keys:** `qa-results`
+
 ---
 
 ## Coordination Protocol
@@ -51,15 +59,25 @@ Agents forget to:
 
 Every agent must follow a **3-phase loop**: POLL → WORK → HANDOFF.
 
-#### Dependency Graph (hardcoded)
+#### Dependency Graph
 
 ```
 orchestrator creates room + tasks
        │
        ▼
-   database ──── HANDOFF ────► backend ──── HANDOFF ────► frontend
-       │                          │                          │
-       └── REPORT ──► orchestrator ◄── REPORT ──┘◄── REPORT ─┘
+   database ──► orchestrator ──► backend ──► orchestrator ──► frontend ──► orchestrator ──► QA
+       │                           │                            │                           │
+       └── REPORT ──► orchestrator ◄── REPORT ──┘◄── REPORT ───┘◄── REPORT ────────────────┘
+                                                                              │
+                                                                   BUG FOUND ▼
+                                                              orchestrator routes fix
+                                                              to database/backend/frontend
+                                                                        │
+                                                                        ▼
+                                                              agent fixes → orchestrator
+                                                                        │
+                                                                        ▼
+                                                              QA re-tests → pass/fail
 ```
 
 #### Scratchpad as Source of Truth
@@ -67,10 +85,11 @@ orchestrator creates room + tasks
 Instead of relying on messages (which can be missed), use **scratchpad keys** as reliable state:
 
 ```
-pipeline-status     # JSON: {"database":"done","backend":"working","frontend":"blocked"}
+pipeline-status     # JSON: {"database":"done","backend":"working","frontend":"blocked","qa":"blocked"}
 schema-changes      # Database agent writes: what tables/columns/RLS changed
 action-status       # Backend agent writes: what actions/routes created
 ui-changes          # Frontend agent writes: what pages/components built
+qa-results          # QA agent writes: bugs found, test results, screenshots
 plan                # Orchestrator writes: task contract
 ```
 
@@ -93,17 +112,14 @@ scratchpad_set(room, "pipeline-status", updated)
 # 3. Update your task
 update_task(task_id, status: "review", result: "summary")
 
-# 4. Direct message to EACH downstream agent (not broadcast)
-send_message(next_agent_id, "UNBLOCKED: {your-role} done. Check scratchpad '{your-key}' for details.")
-
-# 5. Direct message to orchestrator
+# 4. Direct message to orchestrator (NOT broadcast, NOT to next agent)
 send_message(orchestrator_id, "DONE: {task summary}")
 
-# 6. Update status
+# 5. Update status
 set_status("idle")
 ```
 
-**Why direct `send_message` instead of `broadcast`?** Broadcast is fire-and-forget. Direct messages are targeted — the receiving agent knows the message is specifically for them.
+**All communication goes through orchestrator.** Agents never message each other directly.
 
 #### Mandatory Poll Protocol
 
@@ -126,6 +142,19 @@ Agents waiting for dependencies MUST poll on a loop:
 4. If all "review" → start reviewing
 5. If any "blocked" → investigate + unblock
 6. If timeout (>10 min no progress) → send_message to stuck agent
+```
+
+#### Bug Fix Flow (QA → Orchestrator → Agent → QA)
+
+```
+1. QA finds bug → scratchpad_set(room, "qa-results", bug report)
+2. QA → send_message(orchestrator_id, "BUG: {description}")
+3. Orchestrator reviews → determines which agent should fix
+4. Orchestrator → send_message(agent_id, "FIX: {bug details}")
+5. Agent fixes → handoff to orchestrator (standard handoff protocol)
+6. Orchestrator → send_message(qa_id, "RE-TEST: {bug fixed, verify}")
+7. QA re-tests → pass → send_message(orchestrator_id, "VERIFIED: {bug}")
+8. QA re-tests → fail → back to step 2
 ```
 
 ---
@@ -152,13 +181,14 @@ pending → in_progress → review → done
 ## Rules
 
 1. **Scratchpad over messages** — `pipeline-status` is the source of truth, not message history
-2. **Direct message, not broadcast** — handoff uses `send_message` to specific agents
+2. **All communication through orchestrator** — agents never message each other directly
 3. **Poll before work** — always `check_messages()` + `scratchpad_get("pipeline-status")` before starting
-4. **No silent completion** — finishing without handoff = bug. All 6 handoff steps required
-5. **Don't cross scope boundaries** — Database Agent doesn't write UI, Frontend Agent doesn't write migrations
+4. **No silent completion** — finishing without handoff = bug. All 5 handoff steps required
+5. **Don't cross scope boundaries** — Database Agent doesn't write UI, QA Agent doesn't edit code
 6. **Verify independently** — each agent runs `/verify` on their own changes before handoff
-7. **Orchestrator merges** — only Orchestrator marks the overall session as complete
-8. **Follow existing CLAUDE.md** — all swarm rules are additive, never override project constraints
+7. **QA doesn't fix** — QA reports bugs, orchestrator routes fixes, QA re-tests
+8. **Orchestrator merges** — only Orchestrator marks the overall session as complete
+9. **Follow existing CLAUDE.md** — all swarm rules are additive, never override project constraints
 
 ---
 
@@ -177,17 +207,17 @@ SETUP:
 3. Read docs/plan/roadmap.md → identify current module + session
 4. create_room("comtammatu-{module}-s{N}")
 5. Write Task Contract → scratchpad_set(room, "plan", contract)
-6. scratchpad_set(room, "pipeline-status", '{"database":"pending","backend":"blocked","frontend":"blocked"}')
-7. create_task for each agent (assigned_to: "database" | "backend" | "frontend")
+6. scratchpad_set(room, "pipeline-status", '{"database":"pending","backend":"blocked","frontend":"blocked","qa":"blocked"}')
+7. create_task for each agent (assigned_to: "database" | "backend" | "frontend" | "qa")
 8. set_status("waiting")
 
-Tell user: "Room created: {room_id}. Start database/backend/frontend agents in other terminals."
+Tell user: "Room created: {room_id}. Start agents in other terminals."
 
 COORDINATION LOOP (run every few minutes or when user prompts):
 1. check_messages()
 2. list_tasks(room)
 3. scratchpad_get(room, "pipeline-status")
-4. Log status to user: "Pipeline: DB={status}, Backend={status}, Frontend={status}"
+4. Log status to user: "Pipeline: DB={status}, Backend={status}, Frontend={status}, QA={status}"
 
 WHEN database reports done:
 1. scratchpad_get(room, "schema-changes") → review
@@ -201,12 +231,24 @@ WHEN backend reports done:
 3. send_message(frontend_id, "UNBLOCKED: Backend done. Read scratchpad 'action-status'. Start your tasks.")
 4. Update pipeline-status: frontend → "pending"
 
-WHEN all tasks "review":
-1. Review all scratchpad keys
+WHEN frontend reports done:
+1. scratchpad_get(room, "ui-changes") → review
 2. Run /verify on full project
-3. update_task all → "done"
-4. broadcast("Session complete. All tasks done.")
-5. Checkpoint commit
+3. list_peers(scope: "room") → find qa peer ID
+4. send_message(qa_id, "UNBLOCKED: All code complete. Start QA testing.")
+5. Update pipeline-status: qa → "pending"
+
+WHEN QA reports bug:
+1. scratchpad_get(room, "qa-results") → review bug report
+2. Determine which agent should fix (database/backend/frontend)
+3. send_message(agent_id, "FIX: {bug details from qa-results}")
+4. Wait for agent fix → then send_message(qa_id, "RE-TEST: {bug fixed}")
+
+WHEN QA reports all pass:
+1. Review all scratchpad keys
+2. update_task all → "done"
+3. broadcast("Session complete. All tasks done. QA passed.")
+4. Checkpoint commit
 ```
 
 ### Database Agent (Terminal 2)
@@ -234,7 +276,14 @@ HANDOFF (ALL steps mandatory — do not skip any):
 4. list_peers(scope: "room") → find orchestrator peer ID
 5. send_message(orchestrator_id, "DONE: Database task complete. Tables: X, Y, Z. Check scratchpad 'schema-changes'.")
 6. set_status("idle")
-7. Wait for orchestrator review. Poll: check_messages() for feedback.
+7. Wait for orchestrator review. Poll: check_messages() for feedback or fix requests.
+
+BUG FIX (when orchestrator sends "FIX:" message):
+1. Read the bug details
+2. update_task or create new task → in_progress
+3. Fix the issue
+4. Run /verify
+5. Do standard HANDOFF again
 ```
 
 ### Backend Agent (Terminal 3)
@@ -269,7 +318,14 @@ HANDOFF (ALL steps mandatory — do not skip any):
 4. list_peers(scope: "room") → find orchestrator peer ID
 5. send_message(orchestrator_id, "DONE: Backend task complete. Actions: X, Y. Check scratchpad 'action-status'.")
 6. set_status("idle")
-7. Wait for orchestrator review. Poll: check_messages() for feedback.
+7. Wait for orchestrator review. Poll: check_messages() for feedback or fix requests.
+
+BUG FIX (when orchestrator sends "FIX:" message):
+1. Read the bug details
+2. update_task or create new task → in_progress
+3. Fix the issue
+4. Run /verify
+5. Do standard HANDOFF again
 ```
 
 ### Frontend Agent (Terminal 4)
@@ -304,12 +360,78 @@ HANDOFF (ALL steps mandatory — do not skip any):
 4. list_peers(scope: "room") → find orchestrator peer ID
 5. send_message(orchestrator_id, "DONE: Frontend task complete. Pages: X, Y. Check scratchpad 'ui-changes'.")
 6. set_status("idle")
-7. Wait for orchestrator review. Poll: check_messages() for feedback.
+7. Wait for orchestrator review. Poll: check_messages() for feedback or fix requests.
+
+BUG FIX (when orchestrator sends "FIX:" message):
+1. Read the bug details
+2. update_task or create new task → in_progress
+3. Fix the issue
+4. Run /verify
+5. Do standard HANDOFF again
+```
+
+### QA Agent (Terminal 5)
+
+```
+You are the QA AGENT. You TEST the running application — you do NOT edit code.
+
+SETUP:
+1. set_name("qa")
+2. set_status("waiting")
+3. list_rooms() → join_room("{room_id}")
+4. scratchpad_get(room, "plan") → understand what was built
+5. list_tasks(room) → find tasks assigned to "qa"
+
+WAIT LOOP (repeat until unblocked):
+1. check_messages() → look for "UNBLOCKED" from orchestrator
+2. scratchpad_get(room, "pipeline-status") → is frontend "done"?
+3. If not done → tell user "Waiting for frontend agent..." → wait for user to prompt again
+4. If done → proceed to WORK
+
+WORK:
+1. Read all scratchpad keys: "schema-changes", "action-status", "ui-changes"
+   → understand what to test
+2. update_task(task_id, status: "in_progress")
+3. set_status("busy")
+4. Run the app (pnpm dev) if not already running
+5. Use /browse or /qa to test:
+   - Navigate to relevant pages
+   - Fill forms, click buttons, verify behavior
+   - Check error handling (invalid input, edge cases)
+   - Take screenshots as evidence
+   - Check console for errors
+   - Verify data appears correctly
+
+WHEN BUG FOUND:
+1. Document bug: what page, what action, what expected, what happened
+2. Take screenshot as evidence
+3. scratchpad_set(room, "qa-results", JSON with all bugs found so far)
+4. send_message(orchestrator_id, "BUG: {page} — {description}. Screenshot attached. Check scratchpad 'qa-results'.")
+5. Continue testing other flows (don't stop at first bug)
+
+WHEN RE-TEST REQUESTED (orchestrator sends "RE-TEST:" message):
+1. Re-test the specific bug that was fixed
+2. If fixed → send_message(orchestrator_id, "VERIFIED: {bug} is fixed.")
+3. If not fixed → send_message(orchestrator_id, "STILL BROKEN: {bug}. {details}")
+
+WHEN ALL TESTS PASS:
+1. scratchpad_set(room, "qa-results", "ALL PASS: {summary of what was tested}")
+2. scratchpad_get(room, "pipeline-status") → update qa to "done" → scratchpad_set back
+3. update_task(task_id, status: "review", result: "All tests passed")
+4. send_message(orchestrator_id, "DONE: QA complete. All flows tested and passed. Check scratchpad 'qa-results'.")
+5. set_status("idle")
+
+CRITICAL RULES:
+- NEVER edit code — you only test and report
+- NEVER fix bugs yourself — report to orchestrator
+- Test the HAPPY PATH first, then edge cases
+- Always take screenshots as evidence
+- Continue testing after finding a bug — report ALL bugs, not just the first one
 ```
 
 ---
 
-## Quick Start (4 terminals)
+## Quick Start (5 terminals)
 
 ```bash
 # Terminal 1 — Orchestrator
@@ -327,6 +449,10 @@ cd /path/to/comtammatu && claude
 # Terminal 4 — Frontend (start anytime, will wait for backend)
 cd /path/to/comtammatu && claude
 # Paste frontend agent prompt (replace {room_id})
+
+# Terminal 5 — QA (start anytime, will wait for frontend)
+cd /path/to/comtammatu && claude
+# Paste QA agent prompt (replace {room_id})
 ```
 
 ---
@@ -358,3 +484,11 @@ Orchestrator is the authority. If `pipeline-status` is wrong:
 1. `list_tasks(room)` → get actual task states
 2. `scratchpad_set(room, "pipeline-status", corrected_state)` → fix it
 3. Notify affected agents
+
+### QA bug fix loop stuck
+
+If bug fix cycle repeats more than 3 times for the same bug:
+
+1. Orchestrator escalates — review the bug directly
+2. Consider if the bug is a design issue, not a code issue
+3. Note in scratchpad and move on — track as known issue

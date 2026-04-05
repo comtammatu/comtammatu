@@ -47,7 +47,7 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  // Fetch active categories with nested active items, variants, modifiers, sides
+  // Fetch categories + items + variants + modifiers (no self-join for sides)
   const { data: categories, error: catError } = await supabase
     .from("menu_categories")
     .select(
@@ -77,14 +77,10 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
           sort_order,
           is_active
         ),
-        menu_item_available_sides (
+        menu_item_available_sides!menu_item_available_sides_main_item_id_fkey (
           id,
           is_default,
-          side_item:menu_items!menu_item_available_sides_side_item_id_fkey (
-            id,
-            name,
-            base_price
-          )
+          side_item_id
         )
       )
     `,
@@ -102,7 +98,22 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
     return { success: false, error: "Không thể tải menu. Vui lòng thử lại." };
   }
 
-  // Filter nested variants/modifiers to active only, sort them
+  // Build item lookup for resolving side_item references
+  const itemLookup = new Map<
+    number,
+    { id: number; name: string; base_price: number }
+  >();
+  for (const cat of categories ?? []) {
+    for (const item of cat.menu_items ?? []) {
+      itemLookup.set(item.id, {
+        id: item.id,
+        name: item.name,
+        base_price: item.base_price,
+      });
+    }
+  }
+
+  // Filter nested variants/modifiers to active only, resolve side_item
   const menu = (categories ?? []).map((cat) => ({
     ...cat,
     menu_items: (cat.menu_items ?? []).map((item) => ({
@@ -113,7 +124,13 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
       menu_item_modifiers: (item.menu_item_modifiers ?? [])
         .filter((m) => m.is_active !== false)
         .sort((a, b) => a.sort_order - b.sort_order),
-      menu_item_available_sides: item.menu_item_available_sides ?? [],
+      menu_item_available_sides: (item.menu_item_available_sides ?? [])
+        .map((s) => {
+          const sideItem = itemLookup.get(s.side_item_id);
+          if (!sideItem) return null;
+          return { id: s.id, is_default: s.is_default, side_item: sideItem };
+        })
+        .filter((s) => s !== null),
     })),
   }));
 

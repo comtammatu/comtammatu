@@ -3,19 +3,40 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@comtammatu/ui";
+import type { StaffRole } from "@comtammatu/shared/auth";
 
-const TABS = [
-  { href: "/admin/settings/branches", label: "Chi nhánh" },
-  { href: "/admin/settings/general", label: "Chung" },
-  { href: "/admin/settings/tables", label: "Bàn" },
-] as const;
+interface Tab {
+  href: string;
+  label: string;
+  allowedRoles: readonly StaffRole[];
+}
 
-export function SettingsNav() {
+const TABS: Tab[] = [
+  {
+    href: "/admin/settings/branches",
+    label: "Chi nhánh",
+    allowedRoles: ["owner", "super_manager"],
+  },
+  {
+    href: "/admin/settings/general",
+    label: "Chung",
+    allowedRoles: ["owner", "super_manager"],
+  },
+  {
+    href: "/admin/settings/tables",
+    label: "Bàn",
+    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+  },
+];
+
+export function SettingsNav({ role }: { role: StaffRole }) {
   const pathname = usePathname();
+
+  const visibleTabs = TABS.filter((tab) => tab.allowedRoles.includes(role));
 
   return (
     <nav className="flex gap-1 border-b">
-      {TABS.map((tab) => {
+      {visibleTabs.map((tab) => {
         const isActive = pathname.startsWith(tab.href);
         return (
           <Link

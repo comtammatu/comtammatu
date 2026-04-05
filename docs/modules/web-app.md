@@ -2,7 +2,7 @@
 
 ## Overview
 
-Next.js 16.2 application with App Router. Serves four user surfaces: Admin (management), POS (cashier/waiter), KDS (chef), and Employee portal. M0 (Admin Shell) + M1 (Menu) shipped: admin shell, branches, staff, menu, tables/zones, and security polish. POS/KDS/Employee remain placeholders for M2/M3.
+Next.js 16.2 application with App Router. Serves four user surfaces: Admin (management), POS (cashier/waiter), KDS (chef), and Employee portal. M0 (Admin Shell) + M1 (Menu) + M2 (POS) shipped. KDS/Employee remain placeholders for M3+.
 
 **Owner:** `apps/web/`
 
@@ -27,20 +27,23 @@ apps/web/app/
 │   ├── menu/               # Menu management: categories, items, variants, modifiers, sides (S4)
 │   ├── inventory/          # Placeholder
 │   ├── orders/             # Placeholder
-│   ├── staff/              # Staff CRUD with role hierarchy auth (S3)
+│   ├── staff/              # Staff CRUD with role hierarchy auth (S3), excludes owner/super_manager
 │   ├── hr/                 # Placeholder (owner/super_manager only)
 │   ├── crm/                # Placeholder
 │   ├── finance/            # Placeholder (owner/super_manager only)
 │   ├── reports/            # Placeholder
 │   └── settings/
-│       ├── general/        # System settings key/value (S2)
-│       ├── branches/       # Branch CRUD + set_headquarters (S2)
-│       └── tables/         # Tables & zones per branch (S5)
+│       ├── layout.tsx      # Auth guard + role-aware SettingsNav
+│       ├── page.tsx        # Redirect: branch_manager/area_manager → tables, others → branches
+│       ├── general/        # System settings key/value — owner/super_manager only
+│       ├── branches/       # Branch CRUD + set_headquarters — owner/super_manager only
+│       └── tables/         # Tables & zones per branch — all settings roles (branch-scoped)
 │
 ├── br/[branchId]/
-│   ├── pos/                # POS (cashier, waiter, branch_manager)
-│   │   ├── layout.tsx      # Auth + ACL check
-│   │   └── page.tsx        # Placeholder
+│   ├── pos/                # POS (cashier, waiter, branch_manager) — M2 shipped
+│   │   ├── layout.tsx      # Auth + ACL + branch validation
+│   │   ├── page.tsx        # POS terminal UI
+│   │   └── actions.ts      # Order CRUD, session management
 │   └── kds/                # KDS (chef, branch_manager)
 │       ├── layout.tsx      # Auth + ACL check
 │       └── page.tsx        # Placeholder

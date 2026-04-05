@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
@@ -22,7 +22,7 @@ import {
 import { createStaff, updateStaff } from "./actions";
 import type { StaffRow, BranchOption } from "./staff-table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { ROLE_LABELS } from "./role-labels";
+import { MANAGEABLE_ROLES, TENANT_LEVEL_ROLES } from "./role-labels";
 
 interface StaffFormDialogProps {
   open: boolean;
@@ -41,6 +41,12 @@ export function StaffFormDialog({
   const action = isEdit ? updateStaff : createStaff;
   const [state, formAction, isPending] = useActionState(action, null);
   const formRef = useRef<HTMLFormElement>(null);
+  const [selectedRole, setSelectedRole] = useState(
+    staff?.role ?? "waiter",
+  );
+  const isTenantLevel = TENANT_LEVEL_ROLES.includes(
+    selectedRole as (typeof TENANT_LEVEL_ROLES)[number],
+  );
 
   useEffect(() => {
     if (state?.success) {
@@ -48,6 +54,10 @@ export function StaffFormDialog({
       toast.success(isEdit ? "Đã cập nhật nhân viên" : "Đã tạo nhân viên mới");
     }
   }, [state, isEdit, onOpenChange]);
+
+  useEffect(() => {
+    setSelectedRole(staff?.role ?? "waiter");
+  }, [staff]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -112,12 +122,17 @@ export function StaffFormDialog({
 
           <div className="space-y-2">
             <Label htmlFor="role">Vai trò *</Label>
-            <Select name="role" defaultValue={staff?.role ?? "waiter"} required>
+            <Select
+              name="role"
+              value={selectedRole}
+              onValueChange={setSelectedRole}
+              required
+            >
               <SelectTrigger id="role">
                 <SelectValue placeholder="Chọn vai trò" />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                {Object.entries(MANAGEABLE_ROLES).map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}
                   </SelectItem>
@@ -131,9 +146,16 @@ export function StaffFormDialog({
             <Select
               name="branch_id"
               defaultValue={staff?.branch_id?.toString() ?? ""}
+              disabled={isTenantLevel}
             >
               <SelectTrigger id="branch_id">
-                <SelectValue placeholder="Không thuộc chi nhánh" />
+                <SelectValue
+                  placeholder={
+                    isTenantLevel
+                      ? "Không áp dụng"
+                      : "Chọn chi nhánh"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {branches.map((b) => (
@@ -143,10 +165,12 @@ export function StaffFormDialog({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              Bắt buộc cho vai trò vận hành (thu ngân, phục vụ, bếp, QL chi
-              nhánh)
-            </p>
+            {!isTenantLevel && (
+              <p className="text-xs text-muted-foreground">
+                Bắt buộc cho vai trò vận hành (thu ngân, phục vụ, bếp, QL chi
+                nhánh)
+              </p>
+            )}
           </div>
 
           {state?.error && (

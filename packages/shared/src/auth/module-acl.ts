@@ -74,7 +74,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   settings: {
     path: "/admin/settings",
-    allowedRoles: ["owner", "super_manager"],
+    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
     label: "Cài đặt",
   },
   pos: {

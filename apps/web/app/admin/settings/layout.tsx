@@ -1,7 +1,24 @@
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { createClient } from "@comtammatu/database/supabase/server";
+import { extractClaims } from "@comtammatu/shared/auth";
 import { SettingsNav } from "./settings-nav";
 
-export default function SettingsLayout({ children }: { children: ReactNode }) {
+export default async function SettingsLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
+
+  const claims = extractClaims(user.app_metadata);
+  if (!claims) redirect("/login");
+
   return (
     <div className="space-y-6">
       <div>
@@ -10,7 +27,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
           Quản lý chi nhánh, bàn và cấu hình hệ thống
         </p>
       </div>
-      <SettingsNav />
+      <SettingsNav role={claims.user_role} />
       {children}
     </div>
   );

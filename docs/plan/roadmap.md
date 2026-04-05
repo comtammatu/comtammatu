@@ -1,7 +1,7 @@
 # Roadmap — Cơm Tấm Má Tư
 
 > Hệ thống Quản lý Vận hành Nhà hàng (Restaurant Operations Management System)
-> Updated: 2026-04-04 | Structure: Module-based
+> Updated: 2026-04-06 | Structure: Module-based
 
 ## Product Identity
 
@@ -14,7 +14,7 @@ Không phải CRM, không phải ERP tổng hợp. Mỗi module giải quyết m
 | --- | ----------- | ---------------------------------------------------- | ------- |
 | M0  | Admin Shell | Layout, sidebar, branches, staff, settings           | SHIPPED |
 | M1  | Menu        | Categories, items, variants, modifiers, sides        | SHIPPED |
-| M2  | POS         | Cart, table/zone, order submit, bill printing        | NEXT    |
+| M2  | POS         | Cart, table/zone, order submit, bill printing        | DONE    |
 | M3  | KDS         | Realtime queue, bump/complete, station config        | NEXT    |
 | M4  | Payment     | Cash, VietQR, Momo, refunds, reconciliation          | —       |
 | M5  | Stock       | Ingredients, recipes, stock levels, procurement, GRN | —       |
@@ -33,7 +33,7 @@ Post-v1.0 (lên kế hoạch riêng):
 ```
 M0 (Admin Shell) ✅
 M1 (Menu) ✅
-  └── M2 (POS) ← cần dữ liệu menu
+  └── M2 (POS) ✅
       ├── M3 (KDS) ← cần orders từ POS
       └── M4 (Payment) ← cần orders từ POS
           └── M5 (Stock) ← cần GRN + procurement
@@ -91,9 +91,35 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 
 ---
 
+## Sprint Hotfix
+
+> Sửa lỗi phân quyền phát hiện sau khi ship M0+M1.
+
+| #   | Task                                              | Status |
+| --- | ------------------------------------------------- | ------ |
+| H1  | Settings ACL: thêm branch_manager + area_manager  | ✅     |
+| H2  | Tables page: branch_manager chỉ thấy branch mình | ✅     |
+| H3  | area_manager scope: tạo `areas` + `area_branches` mapping, area_manager chỉ thấy branches mình quản lý | TODO   |
+
+### H3: area_manager branch scope
+
+Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn bộ tenant (spec ghi "tenant-wide temporary").
+
+**Cần implement:**
+
+- [ ] Migration: tạo bảng `areas` (id, tenant_id, name) + `area_branches` (area_id, branch_id)
+- [ ] Migration: thêm `area_id` FK vào `profiles` cho area_manager
+- [ ] RLS policies cho `areas` + `area_branches`
+- [ ] Server-side: query branches qua `area_branches` mapping khi role = area_manager
+- [ ] Update `admin_update_profile()` RPC: area_manager chỉ quản lý staff trong branches thuộc area mình
+- [ ] UI: quản lý areas (owner/super_manager only)
+- [ ] `/verify` + `/review` passes
+
+---
+
 ## M2: POS — Point of Sale
 
-> Status: NEXT | Depends: M0, M1
+> Status: DONE | Depends: M0, M1 | Shipped: 2026-04-06
 > North Star: "Order → gửi bếp — dưới 30 giây"
 
 **Scope:** Giao diện bán hàng tại quầy. Nhân viên chọn món, chọn bàn, gửi order. In bill. Thanh toán tiền mặt cơ bản.
@@ -104,22 +130,22 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 
 **Routes:** `/br/[branchId]/pos`
 
-| Session | Task                           | Tables                                    |
-| ------- | ------------------------------ | ----------------------------------------- |
-| S1      | Order schema + state machine   | orders, order_items, order_status_history |
-| S2      | POS terminal + sessions        | pos_terminals, pos_sessions               |
-| S3      | Menu browse + cart UI          | —                                         |
-| S4      | Table selection + order submit | —                                         |
-| S5      | Bill printing + cash register  | printer_configs                           |
+| Session | Task                           | Tables                                    | Status |
+| ------- | ------------------------------ | ----------------------------------------- | ------ |
+| S1      | Order schema + state machine   | orders, order_items, order_status_history | ✅     |
+| S2      | POS terminal + sessions        | pos_terminals, pos_sessions               | ✅     |
+| S3      | Menu browse + cart UI          | —                                         | ✅     |
+| S4      | Table selection + order submit | —                                         | ✅     |
+| S5      | Bill printing + cash register  | printer_configs                           | ✅     |
 
 **Ship criteria:**
 
-- [ ] Tạo order với món + biến thể + modifier
-- [ ] Chọn bàn/mang về
-- [ ] Gửi order → order xuất hiện ở KDS
-- [ ] In bill
-- [ ] Thanh toán tiền mặt
-- [ ] `/verify` + `/review` passes
+- [x] Tạo order với món + biến thể + modifier
+- [x] Chọn bàn/mang về
+- [x] Gửi order → order xuất hiện ở KDS
+- [x] In bill
+- [x] Thanh toán tiền mặt
+- [x] `/verify` + `/review` passes
 
 ---
 
@@ -310,3 +336,4 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 | v0.1.0  | 2026-04-01 | Foundation (auth, proxy, RLS, monorepo)  |
 | v0.1.1  | 2026-04-02 | Security hardening (RLS, DML lockdown)   |
 | M0+M1   | 2026-04-03 | Admin Shell + Menu shipped (ex Sprint 1) |
+| M2      | 2026-04-06 | POS shipped — order, cart, bill, cash     |
