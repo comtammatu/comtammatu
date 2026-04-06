@@ -2,8 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { headers } from "next/headers";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims, getDefaultRedirect } from "@comtammatu/shared/auth";
+import { loginRateLimit } from "@comtammatu/security";
 
 const loginSchema = z.object({
   email: z.email({ error: "Email không hợp lệ" }),
@@ -29,7 +31,20 @@ export async function login(
 
   const { email, password } = parsed.data;
 
-  // TODO: Rate limiting via @comtammatu/security (RATE_LIMIT_BEFORE_AUTH)
+  // Rate limiting — 5 attempts per 15 min, keyed by IP
+  const headerStore = await headers();
+  const ip =
+    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    headerStore.get("x-real-ip") ??
+    "unknown";
+  try {
+    const { success: allowed } = await loginRateLimit.limit(ip);
+    if (!allowed) {
+      return { error: "Quá nhiều lần thử. Vui lòng đợi 15 phút." };
+    }
+  } catch {
+    // Fail open — Upstash unreachable, allow login to proceed
+  }
 
   const supabase = await createClient();
 
