@@ -249,10 +249,15 @@ export async function updateStation(
     query = query.eq("branch_id", claims.branch_id);
   }
 
-  const { error } = await query;
+  const { data, error } = await query.select("id");
 
   if (error) {
     return { success: false, error: mapStationDbError(error.code) };
+  }
+
+  // RLS returns { data: [], error: null } on blocked writes
+  if (!data || data.length === 0) {
+    return { success: false, error: "Trạm KDS không tồn tại hoặc không có quyền" };
   }
 
   revalidatePath("/admin/settings/kds");
@@ -286,63 +291,26 @@ export async function saveStationCategories(
   const ctx = await getAuthContext(SETTINGS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
+  const { supabase } = ctx;
 
-  // Verify station belongs to tenant (and branch for branch_manager)
-  // kds_stations not yet in generated types — remove cast after pnpm db:types
-  let stationQuery = fromTable(supabase, "kds_stations")
-    .select("id, branch_id")
-    .eq("id", parsedStationId.data)
-    .eq("tenant_id", claims.tenant_id);
+  // Use atomic RPC — DELETE + INSERT in single transaction
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.rpc as any)(
+    "save_station_categories",
+    {
+      p_station_id: parsedStationId.data,
+      p_category_ids: parsedCategoryIds.data,
+    },
+  );
 
-  if (claims.branch_id !== null) {
-    stationQuery = stationQuery.eq("branch_id", claims.branch_id);
-  }
-
-  const { data: station, error: stationError } =
-    await stationQuery.single();
-
-  if (stationError || !station) {
-    return { success: false, error: "Trạm KDS không tồn tại" };
-  }
-
-  // Delete existing category assignments for this station
-  // kds_station_categories not yet in generated types — remove cast after pnpm db:types
-  const { error: deleteError } = await fromTable(supabase, "kds_station_categories")
-    .delete()
-    .eq("station_id", parsedStationId.data)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (deleteError) {
+  if (error) {
+    if (error.message?.includes("not found")) {
+      return { success: false, error: "Trạm KDS không tồn tại" };
+    }
     return {
       success: false,
       error: "Không thể cập nhật danh mục. Vui lòng thử lại.",
     };
-  }
-
-  // Insert new assignments (if any)
-  if (parsedCategoryIds.data.length > 0) {
-    const rows = parsedCategoryIds.data.map((categoryId) => ({
-      tenant_id: claims.tenant_id,
-      station_id: parsedStationId.data,
-      category_id: categoryId,
-    }));
-
-    const { error: insertError } = await fromTable(supabase, "kds_station_categories")
-      .insert(rows);
-
-    if (insertError) {
-      if (insertError.code === "23503") {
-        return { success: false, error: "Danh mục không hợp lệ" };
-      }
-      if (insertError.code === "23505") {
-        return { success: false, error: "Danh mục đã được gán cho trạm này" };
-      }
-      return {
-        success: false,
-        error: "Không thể cập nhật danh mục. Vui lòng thử lại.",
-      };
-    }
   }
 
   revalidatePath("/admin/settings/kds");

@@ -12,11 +12,11 @@ import type { KdsOrder } from "./kds-board";
 
 const STATUS_CONFIG = {
   pending: {
-    label: "Cho",
+    label: "Chờ",
     className: "bg-gray-600 text-gray-100",
   },
   preparing: {
-    label: "Dang lam",
+    label: "Đang làm",
     className: "bg-yellow-600 text-yellow-100",
   },
   ready: {
@@ -35,8 +35,8 @@ function getStatusConfig(status: string) {
 }
 
 const ORDER_TYPE_LABELS: Record<string, string> = {
-  dine_in: "Tai cho",
-  takeaway: "Mang di",
+  dine_in: "Tại chỗ",
+  takeaway: "Mang đi",
 };
 
 /* ─── Elapsed time hook ─── */
@@ -115,7 +115,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
           </Badge>
           {order.tableNumber !== null && (
             <Badge variant="secondary" className="text-[10px]">
-              Ban {order.tableNumber}
+              Bàn {order.tableNumber}
             </Badge>
           )}
         </div>
@@ -173,7 +173,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                     onClick={() => void onRecall(ticket.id)}
                   >
                     <Undo2 className="size-4" />
-                    <span className="sr-only">Thu hoi</span>
+                    <span className="sr-only">Thu hồi</span>
                   </Button>
                 )}
                 {ticket && canBump && (
@@ -209,7 +209,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
               >
                 <div className="flex-1 min-w-0">
                   <span className="text-sm text-muted-foreground">
-                    Mon #{String(ticket.order_item_id)}
+                    Món #{String(ticket.order_item_id)}
                   </span>
                 </div>
                 <Badge
@@ -226,7 +226,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                       onClick={() => void onRecall(ticket.id)}
                     >
                       <Undo2 className="size-4" />
-                      <span className="sr-only">Thu hoi</span>
+                      <span className="sr-only">Thu hồi</span>
                     </Button>
                   )}
                   {canBump && (
@@ -262,7 +262,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
               void Promise.all(bumpable.map((t) => onBump(t.id)));
             }}
           >
-            Bump tat ca
+            Bump tất cả
             <ChevronRight className="ml-1 size-4" />
           </Button>
         </div>

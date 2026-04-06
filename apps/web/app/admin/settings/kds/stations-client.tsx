@@ -110,26 +110,26 @@ export function StationsClient({
             }}
           >
             <Plus className="mr-2 size-4" />
-            Them tram
+            Thêm trạm
           </Button>
         </div>
 
         {filteredStations.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            Chua co tram KDS nao cho chi nhanh nay.
+            Chưa có trạm KDS nào cho chi nhánh này.
           </p>
         ) : (
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[200px]">Ten tram</TableHead>
+                  <TableHead className="w-[200px]">Tên trạm</TableHead>
                   <TableHead className="w-[100px] text-center">
-                    Thu tu
+                    Thứ tự
                   </TableHead>
-                  <TableHead>Danh muc mon an</TableHead>
+                  <TableHead>Danh mục món ăn</TableHead>
                   <TableHead className="w-[100px] text-center">
-                    Trang thai
+                    Trạng thái
                   </TableHead>
                   <TableHead className="w-[80px]" />
                 </TableRow>
@@ -147,7 +147,7 @@ export function StationsClient({
                       <div className="flex flex-wrap gap-1">
                         {station.category_ids.length === 0 ? (
                           <span className="text-xs text-muted-foreground">
-                            Tat ca (fallback)
+                            Tất cả (fallback)
                           </span>
                         ) : (
                           station.category_ids.map((catId) => (
@@ -172,7 +172,7 @@ export function StationsClient({
                             : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
                         )}
                       >
-                        {station.is_active ? "Hoat dong" : "Tam tat"}
+                        {station.is_active ? "Hoạt động" : "Tạm tắt"}
                       </Badge>
                     </TableCell>
                     <TableCell>

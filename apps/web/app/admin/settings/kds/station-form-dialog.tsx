@@ -42,11 +42,13 @@ export function StationFormDialog({
     new Set(),
   );
   const [isSavingCategories, startCategoryTransition] = useTransition();
+  const [isActive, setIsActive] = useState(true);
 
-  // Reset selected categories when dialog opens with a station
+  // Reset state when dialog opens
   useEffect(() => {
     if (open) {
       setSelectedCategories(new Set(station?.category_ids ?? []));
+      setIsActive(station?.is_active ?? true);
     }
   }, [open, station]);
 
@@ -62,15 +64,15 @@ export function StationFormDialog({
             Array.from(selectedCategories),
           );
           if (!catResult.success) {
-            toast.error(catResult.error ?? "Khong the luu danh muc");
+            toast.error(catResult.error ?? "Không thể lưu danh mục");
             return;
           }
           onOpenChange(false);
-          toast.success("Da cap nhat tram KDS");
+          toast.success("Đã cập nhật trạm KDS");
         });
       } else {
         onOpenChange(false);
-        toast.success("Da tao tram KDS moi. Chinh sua de gan danh muc.");
+        toast.success("Đã tạo trạm KDS mới. Chỉnh sửa để gán danh mục.");
       }
     }
   }, [state, isEdit, station, selectedCategories, onOpenChange]);
@@ -94,7 +96,7 @@ export function StationFormDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? "Chinh sua tram KDS" : "Them tram KDS moi"}
+            {isEdit ? "Chỉnh sửa trạm KDS" : "Thêm trạm KDS mới"}
           </DialogTitle>
           <DialogDescription className="sr-only">
             {isEdit
@@ -108,7 +110,7 @@ export function StationFormDialog({
           <input type="hidden" name="branch_id" value={branchId} />
 
           <div className="space-y-2">
-            <Label htmlFor="station-name">Ten tram *</Label>
+            <Label htmlFor="station-name">Tên trạm *</Label>
             <Input
               id="station-name"
               name="name"
@@ -119,7 +121,7 @@ export function StationFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="station-position">Thu tu hien thi</Label>
+            <Label htmlFor="station-position">Thứ tự hiển thị</Label>
             <Input
               id="station-position"
               name="position"
@@ -131,21 +133,25 @@ export function StationFormDialog({
 
           {isEdit && (
             <div className="flex items-center gap-3">
+              <input
+                type="hidden"
+                name="is_active"
+                value={isActive ? "true" : "false"}
+              />
               <Switch
                 id="station-active"
-                name="is_active"
-                defaultChecked={station.is_active}
-                value="true"
+                checked={isActive}
+                onCheckedChange={setIsActive}
               />
-              <Label htmlFor="station-active">Hoat dong</Label>
+              <Label htmlFor="station-active">Hoạt động</Label>
             </div>
           )}
 
           {/* Category assignment */}
           <div className="space-y-2">
-            <Label>Danh muc mon an</Label>
+            <Label>Danh mục món ăn</Label>
             <p className="text-xs text-muted-foreground">
-              Chon danh muc de tram nay tiep nhan. De trong = nhan tat ca mon
+              Chọn danh mục để trạm này tiếp nhận. Để trống = nhận tất cả món
               (fallback).
             </p>
             <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-3">

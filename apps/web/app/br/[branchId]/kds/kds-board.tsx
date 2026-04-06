@@ -36,20 +36,27 @@ interface KdsBoardProps {
   initialOrderItems: KdsOrderItem[];
 }
 
-/* ─── Audio beep helper ─── */
+/* ─── Audio beep helper (reuses single AudioContext) ─── */
+
+let _audioCtx: AudioContext | null = null;
 
 function playBeep() {
   try {
-    const ctx = new AudioContext();
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
+    if (!_audioCtx) {
+      _audioCtx = new AudioContext();
+    }
+    if (_audioCtx.state === "suspended") {
+      void _audioCtx.resume();
+    }
+    const oscillator = _audioCtx.createOscillator();
+    const gainNode = _audioCtx.createGain();
     oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
+    gainNode.connect(_audioCtx.destination);
     oscillator.frequency.value = 880;
     oscillator.type = "sine";
     gainNode.gain.value = 0.3;
     oscillator.start();
-    oscillator.stop(ctx.currentTime + 0.15);
+    oscillator.stop(_audioCtx.currentTime + 0.15);
   } catch {
     // Audio not available — silently ignore
   }
@@ -331,7 +338,7 @@ export function KdsBoard({
               )}
               onClick={() => setActiveStationId(null)}
             >
-              Tat ca
+              Tất cả
               <Badge
                 variant="secondary"
                 className={cn(
@@ -378,7 +385,7 @@ export function KdsBoard({
             <div className="text-center">
               <ChefHat className="mx-auto size-16 text-muted-foreground/50" />
               <p className="mt-4 text-lg text-muted-foreground">
-                Khong co don hang nao dang cho
+                Không có đơn hàng nào đang chờ
               </p>
             </div>
           </div>
