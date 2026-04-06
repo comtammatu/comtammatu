@@ -1,243 +1,407 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
-import { createClient } from "@comtammatu/database/supabase/client";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
+import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { Card } from "@comtammatu/ui/components/card";
-import { ChefHat, Clock, Flame, Check } from "lucide-react";
-import { bumpItem } from "./actions";
-import type { KdsOrderItem } from "./types";
+import { createClient } from "@comtammatu/database/supabase/client";
+import { ChefHat } from "lucide-react";
+import { OrderCard } from "./order-card";
+import type {
+  KdsStation,
+  KdsTicket,
+  KdsOrderInfo,
+  KdsOrderItem,
+} from "./page";
+
+/* ─── Types ─── */
+
+/** Grouped order with its tickets and items for display */
+export interface KdsOrder {
+  orderId: number;
+  orderNumber: string;
+  orderType: string;
+  tableNumber: number | null;
+  createdAt: string;
+  tickets: KdsTicket[];
+  items: KdsOrderItem[];
+}
 
 interface KdsBoardProps {
   branchId: number;
-  initialItems: KdsOrderItem[];
-  selectedStationId: number;
-  tenantId: number;
+  stations: KdsStation[];
+  initialTickets: KdsTicket[];
+  initialOrders: KdsOrderInfo[];
+  initialOrderItems: KdsOrderItem[];
 }
+
+/* ─── Audio beep helper (reuses single AudioContext) ─── */
+
+let _audioCtx: AudioContext | null = null;
+
+function playBeep() {
+  try {
+    if (!_audioCtx) {
+      _audioCtx = new AudioContext();
+    }
+    if (_audioCtx.state === "suspended") {
+      void _audioCtx.resume();
+    }
+    const oscillator = _audioCtx.createOscillator();
+    const gainNode = _audioCtx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(_audioCtx.destination);
+    oscillator.frequency.value = 880;
+    oscillator.type = "sine";
+    gainNode.gain.value = 0.3;
+    oscillator.start();
+    oscillator.stop(_audioCtx.currentTime + 0.15);
+  } catch {
+    // Audio not available — silently ignore
+  }
+}
+
+/* ─── Component ─── */
 
 export function KdsBoard({
   branchId,
-  initialItems,
-  selectedStationId,
-  tenantId,
+  stations,
+  initialTickets,
+  initialOrders,
+  initialOrderItems,
 }: KdsBoardProps) {
-  const [items, setItems] = useState<KdsOrderItem[]>(initialItems);
-  const [isPending, startTransition] = useTransition();
-  const supabase = createClient();
+  const [tickets, setTickets] = useState<KdsTicket[]>(initialTickets);
+  const [orders, setOrders] = useState<Map<number, KdsOrderInfo>>(
+    () => new Map(initialOrders.map((o) => [o.id, o])),
+  );
+  const [orderItems, setOrderItems] = useState<Map<number, KdsOrderItem[]>>(
+    () => {
+      const map = new Map<number, KdsOrderItem[]>();
+      for (const item of initialOrderItems) {
+        const existing = map.get(item.order_id) ?? [];
+        existing.push(item);
+        map.set(item.order_id, existing);
+      }
+      return map;
+    },
+  );
+  const [activeStationId, setActiveStationId] = useState<number | null>(null);
+  const supabaseRef = useRef(createClient());
+  const prevTicketCountRef = useRef(tickets.length);
+  const ordersRef = useRef(orders);
 
-  // Subscribe to realtime changes on order_items
+  // Keep ordersRef in sync
   useEffect(() => {
+    ordersRef.current = orders;
+  }, [orders]);
+
+  // Play beep on new tickets
+  useEffect(() => {
+    if (tickets.length > prevTicketCountRef.current) {
+      playBeep();
+    }
+    prevTicketCountRef.current = tickets.length;
+  }, [tickets.length]);
+
+  const fetchOrderInfo = useCallback(
+    async (orderId: number) => {
+      const supabase = supabaseRef.current;
+
+      const [orderRes, itemsRes] = await Promise.all([
+        supabase
+          .from("orders")
+          .select(
+            "id, order_number, order_type, table_id, created_at, tables(number)",
+          )
+          .eq("id", orderId)
+          .single(),
+        supabase
+          .from("order_items")
+          .select(
+            "id, order_id, item_name, variant_name, quantity, unit_price, status",
+          )
+          .eq("order_id", orderId),
+      ]);
+
+      if (orderRes.data) {
+        setOrders((prev) => {
+          const next = new Map(prev);
+          next.set(orderId, orderRes.data as unknown as KdsOrderInfo);
+          return next;
+        });
+      }
+
+      if (itemsRes.data) {
+        setOrderItems((prev) => {
+          const next = new Map(prev);
+          next.set(orderId, itemsRes.data as unknown as KdsOrderItem[]);
+          return next;
+        });
+      }
+    },
+    [],
+  );
+
+  // Subscribe to kds_tickets realtime
+  useEffect(() => {
+    const supabase = supabaseRef.current;
+
     const channel = supabase
-      .channel(`kds-${branchId}-${selectedStationId}`)
+      .channel(`kds-tickets-${String(branchId)}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
-          table: "order_items",
-          filter: `tenant_id=eq.${tenantId}`,
+          table: "kds_tickets",
+          filter: `branch_id=eq.${String(branchId)}`,
         },
-        () => {
-          // On any change, refetch the queue
-          // This is simpler and more reliable than trying to patch state
-          window.location.reload();
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "orders",
-          filter: `tenant_id=eq.${tenantId}`,
-        },
-        () => {
-          window.location.reload();
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const newTicket = payload.new as KdsTicket;
+            setTickets((prev) => [...prev, newTicket]);
+
+            // Fetch order info if we don't have it
+            const orderId = newTicket.order_id;
+            if (!ordersRef.current.has(orderId)) {
+              void fetchOrderInfo(orderId);
+            }
+          } else if (payload.eventType === "UPDATE") {
+            const updated = payload.new as KdsTicket;
+            setTickets((prev) =>
+              prev.map((t) => (t.id === updated.id ? updated : t)),
+            );
+          } else if (payload.eventType === "DELETE") {
+            const deleted = payload.old as { id: number };
+            setTickets((prev) => prev.filter((t) => t.id !== deleted.id));
+          }
         },
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
-  }, [supabase, branchId, selectedStationId, tenantId]);
+  }, [branchId, fetchOrderInfo]);
 
-  const handleBump = useCallback(
-    (itemId: number, currentStatus: string) => {
-      startTransition(async () => {
-        const result = await bumpItem(itemId, currentStatus);
-        if (result.success) {
-          // Optimistically update UI
-          setItems((prev) =>
-            prev
-              .map((item) => {
-                if (item.id !== itemId) return item;
-                const nextStatus =
-                  currentStatus === "pending" ? "preparing" : "ready";
-                // If bumped to ready, remove from queue
-                if (nextStatus === "ready") return null;
-                return { ...item, status: nextStatus };
-              })
-              .filter((item): item is KdsOrderItem => item !== null),
-          );
-        }
-      });
-    },
-    [],
-  );
+  // Filter tickets by station
+  const filteredTickets = useMemo(() => {
+    if (activeStationId === null) return tickets;
+    return tickets.filter((t) => t.station_id === activeStationId);
+  }, [tickets, activeStationId]);
 
-  // Group items by order
-  const orderGroups = new Map<
-    number,
-    { orderNumber: string; tableNumber: number | null; orderType: string; createdAt: string; items: KdsOrderItem[] }
-  >();
+  // Group tickets by order_id
+  const groupedOrders = useMemo(() => {
+    const orderMap = new Map<number, KdsTicket[]>();
+    for (const ticket of filteredTickets) {
+      const existing = orderMap.get(ticket.order_id) ?? [];
+      existing.push(ticket);
+      orderMap.set(ticket.order_id, existing);
+    }
 
-  for (const item of items) {
-    const existing = orderGroups.get(item.order_id);
-    if (existing) {
-      existing.items.push(item);
-    } else {
-      orderGroups.set(item.order_id, {
-        orderNumber: item.orders?.order_number ?? `#${item.order_id}`,
-        tableNumber: item.orders?.tables?.number ?? null,
-        orderType: item.orders?.order_type ?? "dine_in",
-        createdAt: item.orders?.created_at ?? item.created_at,
-        items: [item],
+    const result: KdsOrder[] = [];
+    for (const [orderId, orderTickets] of orderMap) {
+      const orderInfo = orders.get(orderId);
+      result.push({
+        orderId,
+        orderNumber: orderInfo?.order_number ?? `#${String(orderId)}`,
+        orderType: orderInfo?.order_type ?? "dine_in",
+        tableNumber: orderInfo?.tables?.number ?? null,
+        createdAt: orderInfo?.created_at ?? orderTickets[0]?.created_at ?? "",
+        tickets: orderTickets,
+        items: orderItems.get(orderId) ?? [],
       });
     }
-  }
 
-  const sortedOrders = [...orderGroups.entries()].sort(
-    ([, a], [, b]) =>
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    // Sort by creation time (oldest first)
+    result.sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+
+    return result;
+  }, [filteredTickets, orders, orderItems]);
+
+  // Optimistic bump handler
+  const handleBump = useCallback(
+    async (ticketId: number) => {
+      // Optimistic update
+      setTickets((prev) =>
+        prev.map((t) => {
+          if (t.id !== ticketId) return t;
+          const nextStatus =
+            t.status === "pending"
+              ? "preparing"
+              : t.status === "preparing"
+                ? "ready"
+                : t.status;
+          return { ...t, status: nextStatus };
+        }),
+      );
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- KDS RPCs not in generated types yet
+      const sb = supabaseRef.current as any;
+      const { error } = await sb.rpc("bump_kds_ticket", {
+        p_ticket_id: ticketId,
+      });
+
+      if (error) {
+        // Revert optimistic update — refetch all active tickets
+        const { data: freshTickets } = await sb
+          .from("kds_tickets")
+          .select(
+            "id, station_id, order_id, order_item_id, status, bumped_at, created_at",
+          )
+          .eq("branch_id", branchId)
+          .in("status", ["pending", "preparing", "ready"])
+          .order("created_at");
+
+        if (freshTickets) {
+          setTickets(freshTickets as KdsTicket[]);
+        }
+      }
+    },
+    [branchId],
   );
 
-  if (sortedOrders.length === 0) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 text-muted-foreground">
-        <ChefHat className="size-16" />
-        <p className="text-lg">Không có món nào đang chờ</p>
-      </div>
-    );
-  }
+  // Optimistic recall handler
+  const handleRecall = useCallback(
+    async (ticketId: number) => {
+      // Optimistic update
+      setTickets((prev) =>
+        prev.map((t) => {
+          if (t.id !== ticketId) return t;
+          const prevStatus =
+            t.status === "ready"
+              ? "preparing"
+              : t.status === "preparing"
+                ? "pending"
+                : t.status;
+          return { ...t, status: prevStatus };
+        }),
+      );
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- KDS RPCs not in generated types yet
+      const sb = supabaseRef.current as any;
+      const { error } = await sb.rpc("recall_kds_ticket", {
+        p_ticket_id: ticketId,
+      });
+
+      if (error) {
+        // Revert — refetch
+        const { data: freshTickets } = await sb
+          .from("kds_tickets")
+          .select(
+            "id, station_id, order_id, order_item_id, status, bumped_at, created_at",
+          )
+          .eq("branch_id", branchId)
+          .in("status", ["pending", "preparing", "ready"])
+          .order("created_at");
+
+        if (freshTickets) {
+          setTickets(freshTickets as KdsTicket[]);
+        }
+      }
+    },
+    [branchId],
+  );
+
+  // Count tickets per station (for badge)
+  const stationCounts = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const t of tickets) {
+      if (t.status !== "ready") {
+        counts.set(t.station_id, (counts.get(t.station_id) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [tickets]);
+
+  const totalActiveCount = useMemo(
+    () => tickets.filter((t) => t.status !== "ready").length,
+    [tickets],
+  );
 
   return (
-    <div className="grid auto-rows-min grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {sortedOrders.map(([orderId, order]) => (
-        <OrderCard
-          key={orderId}
-          order={order}
-          onBump={handleBump}
-          isPending={isPending}
-        />
-      ))}
+    <div className="flex h-full flex-col">
+      {/* Station filter tabs */}
+      <div className="border-b border-border/50 bg-background/50">
+        <ScrollArea className="w-full">
+          <div className="flex gap-1 p-2">
+            <Button
+              variant={activeStationId === null ? "default" : "ghost"}
+              size="sm"
+              className={cn(
+                "min-h-11 shrink-0 text-sm",
+                activeStationId === null && "shadow-sm",
+              )}
+              onClick={() => setActiveStationId(null)}
+            >
+              Tất cả
+              <Badge
+                variant="secondary"
+                className={cn(
+                  "ml-1.5 text-[10px]",
+                  activeStationId === null &&
+                    "bg-primary-foreground/20 text-primary-foreground",
+                )}
+              >
+                {totalActiveCount}
+              </Badge>
+            </Button>
+            {stations.map((station) => (
+              <Button
+                key={station.id}
+                variant={activeStationId === station.id ? "default" : "ghost"}
+                size="sm"
+                className={cn(
+                  "min-h-11 shrink-0 text-sm",
+                  activeStationId === station.id && "shadow-sm",
+                )}
+                onClick={() => setActiveStationId(station.id)}
+              >
+                {station.name}
+                <Badge
+                  variant="secondary"
+                  className={cn(
+                    "ml-1.5 text-[10px]",
+                    activeStationId === station.id &&
+                      "bg-primary-foreground/20 text-primary-foreground",
+                  )}
+                >
+                  {stationCounts.get(station.id) ?? 0}
+                </Badge>
+              </Button>
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
+
+      {/* Order cards grid */}
+      <ScrollArea className="flex-1">
+        {groupedOrders.length === 0 ? (
+          <div className="flex h-full min-h-[60vh] items-center justify-center">
+            <div className="text-center">
+              <ChefHat className="mx-auto size-16 text-muted-foreground/50" />
+              <p className="mt-4 text-lg text-muted-foreground">
+                Không có đơn hàng nào đang chờ
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {groupedOrders.map((order) => (
+              <OrderCard
+                key={order.orderId}
+                order={order}
+                onBump={handleBump}
+                onRecall={handleRecall}
+              />
+            ))}
+          </div>
+        )}
+      </ScrollArea>
     </div>
   );
-}
-
-function OrderCard({
-  order,
-  onBump,
-  isPending,
-}: {
-  order: {
-    orderNumber: string;
-    tableNumber: number | null;
-    orderType: string;
-    createdAt: string;
-    items: KdsOrderItem[];
-  };
-  onBump: (itemId: number, currentStatus: string) => void;
-  isPending: boolean;
-}) {
-  const elapsed = getElapsedMinutes(order.createdAt);
-  const isUrgent = elapsed >= 10;
-
-  return (
-    <Card
-      className={`flex flex-col overflow-hidden ${isUrgent ? "border-destructive" : ""}`}
-    >
-      {/* Header */}
-      <div
-        className={`flex items-center justify-between px-3 py-2 ${isUrgent ? "bg-destructive text-destructive-foreground" : "bg-muted"}`}
-      >
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-sm font-bold">
-            {order.orderNumber}
-          </span>
-          {order.tableNumber ? (
-            <Badge variant="secondary">Bàn {order.tableNumber}</Badge>
-          ) : (
-            <Badge variant="outline">Mang về</Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-1 text-xs">
-          {isUrgent ? <Flame className="size-3" /> : <Clock className="size-3" />}
-          <span>{elapsed}p</span>
-        </div>
-      </div>
-
-      {/* Items */}
-      <div className="flex flex-1 flex-col divide-y">
-        {order.items.map((item) => (
-          <div
-            key={item.id}
-            className="flex items-center gap-2 px-3 py-2"
-          >
-            <div className="flex-1">
-              <div className="flex items-center gap-1">
-                <span className="font-mono text-sm font-bold">
-                  {item.quantity}x
-                </span>
-                <span className="text-sm font-medium">{item.item_name}</span>
-              </div>
-              {item.variant_name && (
-                <p className="text-xs text-muted-foreground">
-                  {item.variant_name}
-                </p>
-              )}
-              {Array.isArray(item.modifiers) &&
-                item.modifiers.length > 0 ? (
-                  <p className="text-xs text-muted-foreground">
-                    +{" "}
-                    {(item.modifiers as { name: string }[])
-                      .map((m) => m.name)
-                      .join(", ")}
-                  </p>
-                ) : null}
-              {item.note && (
-                <p className="text-xs font-medium text-amber-500">
-                  📝 {item.note}
-                </p>
-              )}
-            </div>
-            <Button
-              size="sm"
-              variant={item.status === "pending" ? "default" : "secondary"}
-              disabled={isPending}
-              onClick={() => onBump(item.id, item.status)}
-              className="shrink-0"
-            >
-              {item.status === "pending" ? (
-                <>
-                  <Flame className="mr-1 size-3" />
-                  Bắt đầu
-                </>
-              ) : (
-                <>
-                  <Check className="mr-1 size-3" />
-                  Xong
-                </>
-              )}
-            </Button>
-          </div>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
-function getElapsedMinutes(createdAt: string): number {
-  return Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000);
 }

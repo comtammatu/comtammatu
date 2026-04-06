@@ -2,7 +2,7 @@
 
 ## Overview
 
-Next.js 16.2 application with App Router. Serves four user surfaces: Admin (management), POS (cashier/waiter), KDS (chef), and Employee portal. M0 (Admin Shell) + M1 (Menu) + M2 (POS) shipped. KDS/Employee remain placeholders for M3+.
+Next.js 16.2 application with App Router. Serves four user surfaces: Admin (management), POS (cashier/waiter), KDS (chef), and Employee portal. M0 (Admin Shell) + M1 (Menu) + M2 (POS) + M3 (KDS) shipped. Employee remains placeholder for M7+.
 
 **Owner:** `apps/web/`
 
@@ -44,9 +44,12 @@ apps/web/app/
 │   │   ├── layout.tsx      # Auth + ACL + branch validation
 │   │   ├── page.tsx        # POS terminal UI
 │   │   └── actions.ts      # Order CRUD, session management
-│   └── kds/                # KDS (chef, branch_manager)
-│       ├── layout.tsx      # Auth + ACL check
-│       └── page.tsx        # Placeholder
+│   └── kds/                # KDS (chef, branch_manager) — M3 shipped
+│       ├── layout.tsx      # Auth + ACL + branch validation
+│       ├── page.tsx        # KDS board — station tabs, realtime queue
+│       ├── actions.ts      # bump/recall tickets, station CRUD, category mapping
+│       ├── kds-board.tsx   # "use client" — realtime ticket board with Supabase subscription
+│       └── order-card.tsx  # Individual order card with bump/recall buttons
 │
 ├── employee/               # Employee portal (all roles)
 │   └── page.tsx            # Placeholder
@@ -118,12 +121,12 @@ Browser request
 
 - **Proxy as single auth gate:** All auth enforcement happens in `proxy.ts` before any route code runs. Layout-level checks are defense-in-depth, not primary.
 - **RSC by default:** Pages are React Server Components. Only interactive elements (forms, dropdowns) use "use client".
-- **Remaining placeholders:** inventory, orders, hr, finance, reports, KDS, employee. These will be built in M3–M7. CRM is Post-v1.0. POS shipped in M2.
+- **Remaining placeholders:** inventory, orders, hr, finance, reports, employee. These will be built in M4–M7. CRM is Post-v1.0. POS shipped in M2, KDS shipped in M3.
 
 <!-- ORACLE-META
 Written by codebase-oracle (manual) | 2026-04-06
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 95%
-Updated: M2 POS shipped (2026-04-06)
+Updated: M3 KDS shipped (2026-04-06)
 Unknowns: 0
 -->
