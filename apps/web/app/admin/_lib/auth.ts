@@ -19,5 +19,5 @@ export async function getAuthContext(allowedRoles: readonly StaffRole[]) {
 
   if (!allowedRoles.includes(claims.user_role)) return null;
 
-  return { supabase, claims };
+  return { supabase, claims, user };
 }
