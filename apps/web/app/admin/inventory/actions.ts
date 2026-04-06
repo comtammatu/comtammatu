@@ -183,6 +183,7 @@ export async function adjustStock(
   const { supabase, claims, user } = ctx;
 
   // Branch scope check for branch_manager
+  // TODO(H3): validate area_manager can only access branches in their assigned area
   if (
     claims.user_role === "branch_manager" &&
     claims.branch_id !== parsed.data.branchId

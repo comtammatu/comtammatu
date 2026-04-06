@@ -179,12 +179,13 @@ export async function confirmPayment(
 
   const { supabase, claims } = ctx;
 
-  // Fetch payment
+  // Fetch payment — scope by tenant + branch for defense in depth
   const { data: payment, error: fetchErr } = await supabase
     .from("payments")
-    .select("id, order_id, status")
+    .select("id, order_id, branch_id, status")
     .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
+    .eq("branch_id", claims.branch_id ?? 0)
     .single();
 
   if (fetchErr || !payment) {
@@ -195,7 +196,7 @@ export async function confirmPayment(
     return { success: false, error: "Thanh toán không ở trạng thái chờ." };
   }
 
-  // Update payment to completed
+  // Update payment to completed — re-scope by tenant
   const { error: updateErr } = await supabase
     .from("payments")
     .update({
@@ -203,17 +204,19 @@ export async function confirmPayment(
       provider_ref: providerRef,
       paid_at: new Date().toISOString(),
     })
-    .eq("id", parsedId.data);
+    .eq("id", parsedId.data)
+    .eq("tenant_id", claims.tenant_id);
 
   if (updateErr) {
     return { success: false, error: "Không thể xác nhận thanh toán." };
   }
 
-  // Update order
+  // Update order — scope by tenant for defense in depth
   await supabase
     .from("orders")
     .update({ payment_status: "paid" })
-    .eq("id", payment.order_id);
+    .eq("id", payment.order_id)
+    .eq("tenant_id", claims.tenant_id);
 
   return { success: true };
 }

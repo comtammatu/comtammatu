@@ -148,6 +148,7 @@ export async function createShift(
 
   const { supabase, claims } = ctx;
 
+  // TODO(H3): validate area_manager can only access branches in their assigned area
   if (
     claims.user_role === "branch_manager" &&
     claims.branch_id !== parsed.data.branchId

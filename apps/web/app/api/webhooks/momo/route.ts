@@ -98,11 +98,12 @@ export async function POST(request: Request) {
     );
   }
 
-  // Update order payment status
+  // Update order payment status — scope by tenant_id for defense in depth
   await supabase
     .from("orders")
     .update({ payment_status: "paid" })
-    .eq("id", payment.order_id);
+    .eq("id", payment.order_id)
+    .eq("tenant_id", payment.tenant_id);
 
   return NextResponse.json({ received: true });
 }

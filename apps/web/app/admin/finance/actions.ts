@@ -73,6 +73,7 @@ export async function createTaxInvoice(
   }
 
   // Branch scope check
+  // TODO(H3): validate area_manager can only access branches in their assigned area
   if (
     claims.branch_id !== null &&
     claims.branch_id !== order.branch_id
