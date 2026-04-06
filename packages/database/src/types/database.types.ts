@@ -14,6 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
+      area_branches: {
+        Row: {
+          id: number
+          tenant_id: number
+          area_id: number
+          branch_id: number
+          created_at: string
+        }
+        Insert: {
+          id?: never
+          tenant_id: number
+          area_id: number
+          branch_id: number
+          created_at?: string
+        }
+        Update: {
+          id?: never
+          tenant_id?: number
+          area_id?: number
+          branch_id?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "area_branches_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "area_branches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "area_branches_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      areas: {
+        Row: {
+          id: number
+          tenant_id: number
+          name: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: never
+          tenant_id: number
+          name: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: never
+          tenant_id?: number
+          name?: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "areas_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_zones: {
         Row: {
           branch_id: number
@@ -105,36 +186,39 @@ export type Database = {
       }
       kds_station_categories: {
         Row: {
-          category_id: number
           id: number
-          station_id: number
           tenant_id: number
+          station_id: number
+          category_id: number
+          created_at: string
         }
         Insert: {
-          category_id: number
           id?: never
-          station_id: number
           tenant_id: number
+          station_id: number
+          category_id: number
+          created_at?: string
         }
         Update: {
-          category_id?: number
           id?: never
-          station_id?: number
           tenant_id?: number
+          station_id?: number
+          category_id?: number
+          created_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "kds_station_categories_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "menu_categories"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "kds_station_categories_station_id_fkey"
             columns: ["station_id"]
             isOneToOne: false
             referencedRelation: "kds_stations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kds_station_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categories"
             referencedColumns: ["id"]
           },
           {
@@ -148,33 +232,33 @@ export type Database = {
       }
       kds_stations: {
         Row: {
-          branch_id: number
-          created_at: string
           id: number
-          is_active: boolean
+          tenant_id: number
+          branch_id: number
           name: string
           position: number
-          tenant_id: number
+          is_active: boolean
+          created_at: string
           updated_at: string
         }
         Insert: {
-          branch_id: number
-          created_at?: string
           id?: never
-          is_active?: boolean
+          tenant_id: number
+          branch_id: number
           name: string
           position?: number
-          tenant_id: number
+          is_active?: boolean
+          created_at?: string
           updated_at?: string
         }
         Update: {
-          branch_id?: number
-          created_at?: string
           id?: never
-          is_active?: boolean
+          tenant_id?: number
+          branch_id?: number
           name?: string
           position?: number
-          tenant_id?: number
+          is_active?: boolean
+          created_at?: string
           updated_at?: string
         }
         Relationships: [
@@ -680,6 +764,8 @@ export type Database = {
           note: string | null
           order_number: string
           order_type: string
+          payment_method: string | null
+          payment_status: string | null
           pos_session_id: number | null
           service_charge: number
           status: string
@@ -700,6 +786,8 @@ export type Database = {
           note?: string | null
           order_number: string
           order_type?: string
+          payment_method?: string | null
+          payment_status?: string | null
           pos_session_id?: number | null
           service_charge?: number
           status?: string
@@ -720,6 +808,8 @@ export type Database = {
           note?: string | null
           order_number?: string
           order_type?: string
+          payment_method?: string | null
+          payment_status?: string | null
           pos_session_id?: number | null
           service_charge?: number
           status?: string
@@ -974,6 +1064,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          area_id: number | null
           avatar_url: string | null
           branch_id: number | null
           created_at: string | null
@@ -986,6 +1077,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          area_id?: number | null
           avatar_url?: string | null
           branch_id?: number | null
           created_at?: string | null
@@ -998,6 +1090,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          area_id?: number | null
           avatar_url?: string | null
           branch_id?: number | null
           created_at?: string | null
@@ -1025,6 +1118,480 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payments: {
+        Row: {
+          id: number
+          tenant_id: number
+          branch_id: number
+          order_id: number
+          method: string
+          amount: number
+          status: string
+          provider_ref: string | null
+          provider_data: Json | null
+          paid_at: string | null
+          created_by: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: never
+          tenant_id: number
+          branch_id: number
+          order_id: number
+          method: string
+          amount: number
+          status?: string
+          provider_ref?: string | null
+          provider_data?: Json | null
+          paid_at?: string | null
+          created_by: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: never
+          tenant_id?: number
+          branch_id?: number
+          order_id?: number
+          method?: string
+          amount?: number
+          status?: string
+          provider_ref?: string | null
+          provider_data?: Json | null
+          paid_at?: string | null
+          created_by?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ingredients: {
+        Row: {
+          id: number
+          tenant_id: number
+          name: string
+          sku: string | null
+          unit: string
+          unit_cost: number | null
+          category: string | null
+          min_stock_level: number
+          max_stock_level: number | null
+          reorder_point: number | null
+          storage_type: string
+          shelf_life_days: number | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: never
+          tenant_id: number
+          name: string
+          sku?: string | null
+          unit: string
+          unit_cost?: number | null
+          category?: string | null
+          min_stock_level?: number
+          max_stock_level?: number | null
+          reorder_point?: number | null
+          storage_type?: string
+          shelf_life_days?: number | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: never
+          tenant_id?: number
+          name?: string
+          sku?: string | null
+          unit?: string
+          unit_cost?: number | null
+          category?: string | null
+          min_stock_level?: number
+          max_stock_level?: number | null
+          reorder_point?: number | null
+          storage_type?: string
+          shelf_life_days?: number | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      stock_levels: {
+        Row: {
+          id: number
+          tenant_id: number
+          branch_id: number
+          ingredient_id: number
+          current_quantity: number
+          last_counted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: never
+          tenant_id: number
+          branch_id: number
+          ingredient_id: number
+          current_quantity?: number
+          last_counted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: never
+          tenant_id?: number
+          branch_id?: number
+          ingredient_id?: number
+          current_quantity?: number
+          last_counted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      stock_movements: {
+        Row: {
+          id: number
+          tenant_id: number
+          branch_id: number
+          ingredient_id: number
+          type: string
+          quantity_change: number
+          reason: string | null
+          created_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: never
+          tenant_id: number
+          branch_id: number
+          ingredient_id: number
+          type: string
+          quantity_change: number
+          reason?: string | null
+          created_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: never
+          tenant_id?: number
+          branch_id?: number
+          ingredient_id?: number
+          type?: string
+          quantity_change?: number
+          reason?: string | null
+          created_by?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      employees: {
+        Row: {
+          id: number
+          tenant_id: number
+          profile_id: string
+          employee_code: string | null
+          id_number: string | null
+          bank_account: string | null
+          bank_name: string | null
+          base_salary: number | null
+          start_date: string | null
+          contract_type: string | null
+          dependents_count: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: never
+          tenant_id: number
+          profile_id: string
+          employee_code?: string | null
+          id_number?: string | null
+          bank_account?: string | null
+          bank_name?: string | null
+          base_salary?: number | null
+          start_date?: string | null
+          contract_type?: string | null
+          dependents_count?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: never
+          tenant_id?: number
+          profile_id?: string
+          employee_code?: string | null
+          id_number?: string | null
+          bank_account?: string | null
+          bank_name?: string | null
+          base_salary?: number | null
+          start_date?: string | null
+          contract_type?: string | null
+          dependents_count?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      shifts: {
+        Row: {
+          id: number
+          tenant_id: number
+          branch_id: number
+          name: string
+          start_time: string
+          end_time: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: never
+          tenant_id: number
+          branch_id: number
+          name: string
+          start_time: string
+          end_time: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: never
+          tenant_id?: number
+          branch_id?: number
+          name?: string
+          start_time?: string
+          end_time?: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      shift_assignments: {
+        Row: {
+          id: number
+          tenant_id: number
+          branch_id: number
+          employee_id: number
+          shift_id: number
+          date: string
+          created_at: string
+        }
+        Insert: {
+          id?: never
+          tenant_id: number
+          branch_id: number
+          employee_id: number
+          shift_id: number
+          date: string
+          created_at?: string
+        }
+        Update: {
+          id?: never
+          tenant_id?: number
+          branch_id?: number
+          employee_id?: number
+          shift_id?: number
+          date?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      attendance_records: {
+        Row: {
+          id: number
+          tenant_id: number
+          branch_id: number
+          employee_id: number
+          shift_id: number | null
+          date: string
+          check_in: string | null
+          check_out: string | null
+          status: string
+          note: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: never
+          tenant_id: number
+          branch_id: number
+          employee_id: number
+          shift_id?: number | null
+          date: string
+          check_in?: string | null
+          check_out?: string | null
+          status?: string
+          note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: never
+          tenant_id?: number
+          branch_id?: number
+          employee_id?: number
+          shift_id?: number | null
+          date?: string
+          check_in?: string | null
+          check_out?: string | null
+          status?: string
+          note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tax_invoices: {
+        Row: {
+          id: number
+          tenant_id: number
+          branch_id: number
+          order_id: number
+          invoice_number: string | null
+          status: string
+          buyer_name: string | null
+          buyer_tax_code: string | null
+          buyer_address: string | null
+          subtotal: number
+          vat_rate: number
+          vat_amount: number
+          total_amount: number
+          provider: string
+          provider_ref: string | null
+          provider_data: Json | null
+          issued_at: string | null
+          cancelled_at: string | null
+          replaced_by: number | null
+          created_by: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: never
+          tenant_id: number
+          branch_id: number
+          order_id: number
+          invoice_number?: string | null
+          status?: string
+          buyer_name?: string | null
+          buyer_tax_code?: string | null
+          buyer_address?: string | null
+          subtotal: number
+          vat_rate?: number
+          vat_amount: number
+          total_amount: number
+          provider?: string
+          provider_ref?: string | null
+          provider_data?: Json | null
+          issued_at?: string | null
+          cancelled_at?: string | null
+          replaced_by?: number | null
+          created_by: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: never
+          tenant_id?: number
+          branch_id?: number
+          order_id?: number
+          invoice_number?: string | null
+          status?: string
+          buyer_name?: string | null
+          buyer_tax_code?: string | null
+          buyer_address?: string | null
+          subtotal?: number
+          vat_rate?: number
+          vat_amount?: number
+          total_amount?: number
+          provider?: string
+          provider_ref?: string | null
+          provider_data?: Json | null
+          issued_at?: string | null
+          cancelled_at?: string | null
+          replaced_by?: number | null
+          created_by?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      mv_daily_revenue: {
+        Row: {
+          date: string
+          branch_id: number
+          tenant_id: number
+          order_count: number
+          total_revenue: number | null
+          total_tax: number | null
+          cash_revenue: number | null
+          vietqr_revenue: number | null
+          momo_revenue: number | null
+        }
+        Insert: {
+          date: string
+          branch_id: number
+          tenant_id: number
+          order_count: number
+          total_revenue?: number | null
+          total_tax?: number | null
+          cash_revenue?: number | null
+          vietqr_revenue?: number | null
+          momo_revenue?: number | null
+        }
+        Update: {
+          date?: string
+          branch_id?: number
+          tenant_id?: number
+          order_count?: number
+          total_revenue?: number | null
+          total_tax?: number | null
+          cash_revenue?: number | null
+          vietqr_revenue?: number | null
+          momo_revenue?: number | null
+        }
+        Relationships: []
+      }
+      mv_top_items: {
+        Row: {
+          period_start: string
+          period_end: string
+          branch_id: number
+          tenant_id: number
+          menu_item_id: number
+          item_name: string
+          quantity_sold: number
+          revenue: number
+        }
+        Insert: {
+          period_start: string
+          period_end: string
+          branch_id: number
+          tenant_id: number
+          menu_item_id: number
+          item_name: string
+          quantity_sold: number
+          revenue: number
+        }
+        Update: {
+          period_start?: string
+          period_end?: string
+          branch_id?: number
+          tenant_id?: number
+          menu_item_id?: number
+          item_name?: string
+          quantity_sold?: number
+          revenue?: number
+        }
+        Relationships: []
       }
       system_settings: {
         Row: {
@@ -1188,11 +1755,10 @@ export type Database = {
             }
             Returns: undefined
           }
+      auth_area_id: { Args: never; Returns: number }
       auth_branch_id: { Args: never; Returns: number }
       auth_role: { Args: never; Returns: string }
       auth_tenant_id: { Args: never; Returns: number }
-      bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
-      check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
       close_pos_session: {
         Args: { p_closing_cash: number; p_note?: string; p_session_id: number }
         Returns: Json
@@ -1212,9 +1778,7 @@ export type Database = {
         Returns: Json
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
-      recall_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       release_table: { Args: { p_table_id: number }; Returns: undefined }
-      route_order_to_kds: { Args: { p_order_id: number }; Returns: undefined }
       save_item_modifiers: {
         Args: { p_item_id: number; p_modifiers: Json }
         Returns: undefined
@@ -1231,6 +1795,14 @@ export type Database = {
       toggle_category_active: { Args: { p_id: number }; Returns: boolean }
       toggle_item_active: { Args: { p_id: number }; Returns: boolean }
       toggle_profile_active: { Args: { p_target_id: string }; Returns: boolean }
+      transition_order_item_status: {
+        Args: { p_item_id: number; p_new_status: string; p_expected_status: string }
+        Returns: Json
+      }
+      transition_order_status: {
+        Args: { p_order_id: number; p_new_status: string; p_expected_status: string; p_note?: string }
+        Returns: Json
+      }
       update_my_profile: {
         Args: { p_avatar_url?: string; p_full_name?: string; p_phone?: string }
         Returns: undefined
