@@ -32,27 +32,43 @@ CREATE TRIGGER trg_kds_tickets_updated_at
 
 ALTER TABLE public.kds_tickets ENABLE ROW LEVEL SECURITY;
 
--- SELECT: authenticated in same tenant
+-- SELECT: tenant-scoped, branch-scoped for branch-level roles
 CREATE POLICY "tenant_select" ON public.kds_tickets
   FOR SELECT TO authenticated
-  USING (tenant_id = public.auth_tenant_id());
+  USING (
+    tenant_id = public.auth_tenant_id()
+    AND (
+      public.auth_branch_id() IS NULL  -- tenant-wide roles (owner, super_manager, area_manager)
+      OR branch_id = public.auth_branch_id()  -- branch-scoped roles (chef, branch_manager)
+    )
+  );
 
--- INSERT: system only (via RPC)
--- Direct INSERT revoked below, only RPCs insert tickets
+-- INSERT: only roles that create orders (via create_order → route_order_to_kds)
 CREATE POLICY "rpc_insert" ON public.kds_tickets
   FOR INSERT TO authenticated
-  WITH CHECK (tenant_id = public.auth_tenant_id());
+  WITH CHECK (
+    tenant_id = public.auth_tenant_id()
+    AND public.auth_role() IN ('cashier', 'waiter', 'branch_manager', 'owner', 'super_manager', 'area_manager')
+  );
 
--- UPDATE: chef + branch_manager (for bump/recall)
+-- UPDATE: chef + management roles, branch-scoped
 CREATE POLICY "kds_update" ON public.kds_tickets
   FOR UPDATE TO authenticated
   USING (
     tenant_id = public.auth_tenant_id()
     AND public.auth_role() IN ('chef', 'branch_manager', 'owner', 'super_manager', 'area_manager')
+    AND (
+      public.auth_branch_id() IS NULL
+      OR branch_id = public.auth_branch_id()
+    )
   )
   WITH CHECK (
     tenant_id = public.auth_tenant_id()
     AND public.auth_role() IN ('chef', 'branch_manager', 'owner', 'super_manager', 'area_manager')
+    AND (
+      public.auth_branch_id() IS NULL
+      OR branch_id = public.auth_branch_id()
+    )
   );
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.kds_tickets TO authenticated;
@@ -78,13 +94,14 @@ DECLARE
   v_station_id BIGINT;
   v_fallback_station_id BIGINT;
 BEGIN
-  -- Fetch order metadata
+  -- Fetch order metadata — scoped to caller's tenant
   SELECT tenant_id, branch_id INTO v_order
   FROM public.orders
-  WHERE id = p_order_id;
+  WHERE id = p_order_id
+    AND tenant_id = public.auth_tenant_id();
 
   IF NOT FOUND THEN
-    RETURN; -- silently skip if order doesn't exist
+    RETURN; -- silently skip if order doesn't exist or wrong tenant
   END IF;
 
   -- Find fallback station (a station with zero category assignments)

@@ -71,36 +71,45 @@ DECLARE
   v_pending_count INT;
   v_current_status TEXT;
 BEGIN
-  -- Count non-ready tickets
+  -- Count non-ready tickets (tenant-scoped for defense-in-depth)
   SELECT COUNT(*) INTO v_pending_count
   FROM public.kds_tickets
   WHERE order_id = p_order_id
+    AND tenant_id = public.auth_tenant_id()
     AND status NOT IN ('ready', 'served');
 
   -- If all tickets are ready (or served), transition order
   IF v_pending_count = 0 THEN
     SELECT status INTO v_current_status
     FROM public.orders
-    WHERE id = p_order_id;
+    WHERE id = p_order_id
+      AND tenant_id = public.auth_tenant_id();
+
+    IF NOT FOUND THEN
+      RETURN; -- order not in caller's tenant
+    END IF;
 
     -- Only transition if not already ready or beyond
     IF v_current_status NOT IN ('ready', 'served', 'completed', 'cancelled') THEN
       UPDATE public.orders
       SET status = 'ready'
-      WHERE id = p_order_id;
+      WHERE id = p_order_id
+        AND tenant_id = public.auth_tenant_id();
 
       INSERT INTO public.order_status_history (
         tenant_id, order_id, from_status, to_status, changed_by
       )
       SELECT tenant_id, id, v_current_status, 'ready', auth.uid()
       FROM public.orders
-      WHERE id = p_order_id;
+      WHERE id = p_order_id
+        AND tenant_id = public.auth_tenant_id();
     END IF;
   END IF;
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.check_order_ready(BIGINT) TO authenticated;
+-- No public GRANT: check_order_ready is internal-only, called from bump_kds_ticket.
+-- Direct invocation by authenticated users is not permitted.
 
 
 -- ─── recall_kds_ticket ───
