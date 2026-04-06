@@ -338,3 +338,4 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 | v0.1.1  | 2026-04-02 | Security hardening (RLS, DML lockdown)   |
 | M0+M1   | 2026-04-03 | Admin Shell + Menu shipped (ex Sprint 1) |
 | M2      | 2026-04-06 | POS shipped — order, cart, bill, cash     |
+| M3      | 2026-04-06 | KDS shipped — station config, realtime, bump/complete |

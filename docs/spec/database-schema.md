@@ -521,16 +521,118 @@ This allows per-session revenue reporting and reconciliation: all orders taken d
 | idx_pos_sessions_one_open | pos_sessions(terminal_id) WHERE status = 'open' | Partial unique — one open session per terminal |
 | idx_orders_pos_session    | orders(pos_session_id)                          | Orders within a session (reconciliation)       |
 
+## KDS Tables (M3)
+
+### kds_stations
+
+One row per kitchen display station at a branch. Stations can be assigned to specific menu categories, or left unassigned to act as a "fallback" station that receives items with no category mapping.
+
+| Column     | Type                | Notes                              |
+| ---------- | ------------------- | ---------------------------------- |
+| id         | BIGINT PK           | GENERATED ALWAYS AS IDENTITY       |
+| tenant_id  | BIGINT FK(tenants)  | ON DELETE CASCADE                  |
+| branch_id  | BIGINT FK(branches) | ON DELETE CASCADE                  |
+| name       | TEXT NOT NULL       | UNIQUE(name, branch_id, tenant_id) |
+| position   | INT NOT NULL        | default 0; display order           |
+| is_active  | BOOLEAN NOT NULL    | default true                       |
+| created_at | TIMESTAMPTZ         | default now()                      |
+| updated_at | TIMESTAMPTZ         | default now(), auto-trigger        |
+
+### kds_station_categories
+
+Junction table: which menu categories route to which KDS station.
+
+| Column      | Type                       | Notes                                      |
+| ----------- | -------------------------- | ------------------------------------------ |
+| id          | BIGINT PK                  | GENERATED ALWAYS AS IDENTITY               |
+| tenant_id   | BIGINT FK(tenants)         | ON DELETE CASCADE                          |
+| station_id  | BIGINT FK(kds_stations)    | ON DELETE CASCADE                          |
+| category_id | BIGINT FK(menu_categories) | ON DELETE CASCADE                          |
+|             |                            | UNIQUE(station_id, category_id, tenant_id) |
+
+### kds_tickets
+
+One ticket per order item per station. Created automatically by `route_order_to_kds` when an order is submitted. Bumped by chef through `bump_kds_ticket` RPC.
+
+| Column        | Type                   | Notes                                         |
+| ------------- | ---------------------- | --------------------------------------------- |
+| id            | BIGINT PK              | GENERATED ALWAYS AS IDENTITY                  |
+| tenant_id     | BIGINT FK(tenants)     | ON DELETE CASCADE                             |
+| branch_id     | BIGINT FK(branches)    | ON DELETE CASCADE                             |
+| station_id    | BIGINT FK(kds_stations)| ON DELETE CASCADE                             |
+| order_id      | BIGINT FK(orders)      | ON DELETE CASCADE                             |
+| order_item_id | BIGINT FK(order_items) | ON DELETE CASCADE                             |
+| status        | TEXT NOT NULL          | default 'pending'; CHECK IN (pending, preparing, ready, served) |
+| bumped_at     | TIMESTAMPTZ            | Set when chef bumps                           |
+| bumped_by     | UUID FK(profiles)      | Chef who last bumped                          |
+| created_at    | TIMESTAMPTZ            | default now()                                 |
+| updated_at    | TIMESTAMPTZ            | default now(), auto-trigger                   |
+|               |                        | UNIQUE(order_item_id, station_id, tenant_id)  |
+
+**Realtime enabled:** `kds_tickets` is added to `supabase_realtime` publication for live KDS updates.
+
+### KDS Ticket State Machine
+
+```
+pending → preparing → ready → served
+```
+
+- `bump_kds_ticket`: advances pending→preparing→ready
+- `recall_kds_ticket`: reverts ready→preparing→pending
+- When all tickets for an order reach `ready`, `check_order_ready` auto-transitions the parent order to `ready`
+
+### KDS RLS Policies
+
+| Table                  | Policy | Roles / Scope                                                              |
+| ---------------------- | ------ | -------------------------------------------------------------------------- |
+| kds_stations           | SELECT | tenant + branch-scoped (branch roles see own branch, managers see all)     |
+| kds_stations           | INSERT/UPDATE/DELETE | branch_manager + owner/super_manager/area_manager            |
+| kds_station_categories | SELECT | tenant + branch-scoped via parent station join                             |
+| kds_station_categories | INSERT/UPDATE/DELETE | branch_manager + owner/super_manager/area_manager            |
+| kds_tickets            | SELECT | tenant + branch-scoped                                                     |
+| kds_tickets            | INSERT | cashier, waiter, branch_manager + management roles                         |
+| kds_tickets            | UPDATE | chef, branch_manager + management roles, branch-scoped                     |
+
+### KDS Indexes
+
+| Index                            | Columns                                           | Purpose                     |
+| -------------------------------- | ------------------------------------------------- | --------------------------- |
+| idx_kds_stations_branch          | kds_stations(branch_id)                           | Branch lookup               |
+| idx_kds_station_categories_station | kds_station_categories(station_id)              | Station lookup              |
+| idx_kds_station_categories_category | kds_station_categories(category_id)            | Category lookup             |
+| idx_kds_tickets_branch           | kds_tickets(branch_id)                            | Branch-scoped queries       |
+| idx_kds_tickets_station          | kds_tickets(station_id)                           | Station-scoped queries      |
+| idx_kds_tickets_order            | kds_tickets(order_id)                             | Order lookup                |
+| idx_kds_tickets_status           | kds_tickets(branch_id, station_id, status)        | Composite: active queue     |
+
+### KDS RPC Functions
+
+| Function                                        | Returns | Purpose                                                                |
+| ----------------------------------------------- | ------- | ---------------------------------------------------------------------- |
+| `route_order_to_kds(p_order_id)`                | void    | Routes order items to stations by category mapping; fallback station   |
+| `bump_kds_ticket(p_ticket_id)`                  | TEXT    | Advances ticket: pending→preparing→ready; auto-checks order readiness  |
+| `recall_kds_ticket(p_ticket_id)`                | TEXT    | Reverts ticket: ready→preparing→pending; clears bumped_at/bumped_by   |
+| `check_order_ready(p_order_id)`                 | void    | Internal: if all tickets ready, transitions order to 'ready'           |
+| `save_station_categories(p_station_id, p_ids[])` | void   | Atomic replace: delete old + insert new category assignments           |
+
+> Note: `check_order_ready` has no public GRANT — internal only, called from `bump_kds_ticket`.
+
+> Note: `create_order` RPC was updated in M3 to call `route_order_to_kds` automatically after order creation, and now includes server-side price verification (re-fetches prices from menu tables).
+
 ## Future Tables (by phase)
 
-### v0.3.0 — Operations
+### M4 — Payment
 
-- payments, kds_stations, tax_invoices
+- payments, payment_webhooks, refunds
 
-### v0.4.0 — Supply Chain
+### M5 — Stock
 
-- ingredients, suppliers, purchase_orders, goods_received_notes, grn_items, supplier_invoices, stock_levels, stock_movements
+- ingredients, recipes, stock_levels, stock_movements, suppliers, purchase_orders, purchase_order_items, goods_received_notes, grn_items, supplier_invoices
 
-### v0.5.0 — Intelligence + CTCP
+### M6 — Finance
 
-- customers, loyalty_tiers, loyalty_transactions, employees, shifts, payroll_periods, payroll_entries
+- tax_invoices, chart_of_accounts, journal_entries, mv_daily_revenue, mv_top_items, mv_food_cost
+
+### M7 — HR/Payroll
+
+- employees, shifts, attendance_records, payroll_periods, payroll_entries

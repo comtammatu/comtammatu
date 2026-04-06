@@ -7,8 +7,8 @@
 
 ## Status
 
-- **Current version:** v0.1.1 + M0 (Admin Shell) + M1 (Menu) + M2 (POS) shipped
-- **Next milestone:** M3 (KDS)
+- **Current version:** v0.1.1 + M0 (Admin Shell) + M1 (Menu) + M2 (POS) + M3 (KDS) shipped
+- **Next milestone:** M4 (Payment)
 - **Tech stack:** Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Supabase | Turborepo 2.9
 
 ## Module Index
@@ -107,13 +107,13 @@ These files have the most dependents. Changes here affect many parts of the syst
 
 ## Priority Recommendations
 
-1. **M3 KDS is next:** M0–M2 shipped. POS includes orders, pos_terminals, pos_sessions, printer_configs, and `create_order`/`close_pos_session` RPCs.
+1. **M4 Payment is next:** M0–M3 shipped. POS + KDS operational. KDS adds `kds_stations`, `kds_station_categories`, `kds_tickets` tables and `route_order_to_kds`/`bump_kds_ticket`/`recall_kds_ticket`/`save_station_categories` RPCs.
 2. **Watch hub files:** Any change to `module-acl.ts` or `types.ts` requires proxy + layout + nav verification.
 3. **RLS pattern:** Every new table must follow the tenant-scoped RLS pattern with explicit GRANTs. See [database.md](modules/database.md).
-4. **Deferred to M4:** Server-side price rehydration in `create_order` RPC — client-controlled pricing acceptable for internal MVP.
+4. **Deferred to M4:** Server-side price rehydration in `create_order` RPC — already done in M3 (create_order now re-fetches prices server-side).
 
 <!-- ORACLE-META
-Written by codebase-oracle (manual) | 2026-04-06
+Written by codebase-oracle (manual) | 2026-04-06 (M3 KDS shipped)
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 90%
 Unknowns: 3 items pending verification
