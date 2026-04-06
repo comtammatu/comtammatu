@@ -34,6 +34,7 @@ export const BRANCH_ROLES: readonly StaffRole[] = [
 export interface JwtClaims {
   tenant_id: number;
   branch_id: number | null;
+  area_id: number | null;
   user_role: StaffRole;
 }
 

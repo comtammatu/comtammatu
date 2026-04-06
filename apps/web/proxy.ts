@@ -85,6 +85,7 @@ export async function proxy(request: NextRequest) {
       const fallbackClaims = claims ?? {
         tenant_id: 0,
         branch_id: null,
+        area_id: null,
         user_role: "office" as const,
       };
       url.pathname = getDefaultRedirect(fallbackClaims);

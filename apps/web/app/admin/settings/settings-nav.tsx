@@ -23,6 +23,11 @@ const TABS: Tab[] = [
     allowedRoles: ["owner", "super_manager"],
   },
   {
+    href: "/admin/settings/areas",
+    label: "Khu vực",
+    allowedRoles: ["owner", "super_manager"],
+  },
+  {
     href: "/admin/settings/tables",
     label: "Bàn",
     allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],

@@ -14,10 +14,12 @@ export function extractClaims(
   }
 
   const branchId = appMetadata.branch_id;
+  const areaId = appMetadata.area_id;
 
   return {
     tenant_id: tenantId,
     branch_id: typeof branchId === "number" ? branchId : null,
+    area_id: typeof areaId === "number" ? areaId : null,
     user_role: role as StaffRole,
   };
 }
