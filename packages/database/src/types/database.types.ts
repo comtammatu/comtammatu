@@ -990,17 +990,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      admin_update_profile: {
-        Args: {
-          p_branch_id?: number
-          p_full_name?: string
-          p_is_active?: boolean
-          p_phone?: string
-          p_role?: Database["public"]["Enums"]["staff_role"]
-          p_target_id: string
-        }
-        Returns: undefined
-      }
+      admin_update_profile:
+        | {
+            Args: {
+              p_branch_id?: number
+              p_full_name?: string
+              p_phone?: string
+              p_role?: string
+              p_target_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_branch_id?: number
+              p_full_name?: string
+              p_is_active?: boolean
+              p_phone?: string
+              p_role?: Database["public"]["Enums"]["staff_role"]
+              p_target_id: string
+            }
+            Returns: undefined
+          }
       auth_branch_id: { Args: never; Returns: number }
       auth_role: { Args: never; Returns: string }
       auth_tenant_id: { Args: never; Returns: number }
@@ -1023,6 +1034,7 @@ export type Database = {
         Returns: Json
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      release_table: { Args: { p_table_id: number }; Returns: undefined }
       save_item_modifiers: {
         Args: { p_item_id: number; p_modifiers: Json }
         Returns: undefined
