@@ -3,14 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { ADMIN_ROLES } from "@comtammatu/shared/auth";
+import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "../_lib/auth";
-
-/* ─── Types ─── */
-
-interface ActionResult {
-  success: boolean;
-  error?: string;
-}
 
 /* ─── Helpers ─── */
 

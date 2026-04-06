@@ -2,17 +2,10 @@
 
 import { z } from "zod";
 import { MODULE_ACL } from "@comtammatu/shared/auth";
+import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "../../_lib/auth";
 import { cartStateSchema, calcItemSubtotal } from "./types";
 import type { CartState } from "./types";
-
-/* ─── Types ─── */
-
-interface ActionResult<T = unknown> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 /* ─── Constants ─── */
 

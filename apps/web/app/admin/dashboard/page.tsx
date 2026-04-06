@@ -53,7 +53,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Tổng quan</h1>
         <p className="mt-1 text-muted-foreground">
           Tổng quan hoạt động kinh doanh
         </p>

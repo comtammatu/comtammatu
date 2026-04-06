@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "../../_lib/auth";
 
 const SETTINGS_ROLES: StaffRole[] = ["owner", "super_manager"];
@@ -18,13 +19,6 @@ const branchSchema = z.object({
 const updateBranchSchema = branchSchema.extend({
   id: z.coerce.number().int().positive(),
 });
-
-/* ─── Types ─── */
-
-interface ActionResult {
-  success: boolean;
-  error?: string;
-}
 
 /* ─── Actions ─── */
 

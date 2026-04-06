@@ -3,6 +3,7 @@
 import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@comtammatu/ui";
+import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
@@ -33,14 +34,12 @@ interface CloseSessionDialogProps {
   sessionId: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  formatVnd: (amount: number) => string;
 }
 
 export function CloseSessionDialog({
   sessionId,
   open,
   onOpenChange,
-  formatVnd,
 }: CloseSessionDialogProps) {
   const router = useRouter();
   const [closingCash, setClosingCash] = useState<string>("");
@@ -119,7 +118,7 @@ export function CloseSessionDialog({
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Tiền đầu ca</span>
                   <span className="font-medium">
-                    {formatVnd(summary.opening_cash)}
+                    {formatVND(summary.opening_cash)}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -127,14 +126,14 @@ export function CloseSessionDialog({
                     Doanh thu dự kiến
                   </span>
                   <span className="font-medium">
-                    {formatVnd(summary.expected_cash)}
+                    {formatVND(summary.expected_cash)}
                   </span>
                 </div>
                 <Separator />
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Tiền cuối ca</span>
                   <span className="font-medium">
-                    {formatVnd(summary.closing_cash)}
+                    {formatVND(summary.closing_cash)}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -146,7 +145,7 @@ export function CloseSessionDialog({
                     )}
                   >
                     {summary.cash_difference >= 0 ? "+" : ""}
-                    {formatVnd(summary.cash_difference)}
+                    {formatVND(summary.cash_difference)}
                   </span>
                 </div>
                 <Separator />

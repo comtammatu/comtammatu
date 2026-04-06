@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
@@ -27,14 +28,12 @@ interface ItemCustomizerProps {
     modifiers: CartModifier[],
     sides: CartSide[],
   ) => void;
-  formatVnd: (amount: number) => string;
 }
 
 export function ItemCustomizer({
   item,
   onClose,
   onConfirm,
-  formatVnd,
 }: ItemCustomizerProps) {
   const [selectedVariant, setSelectedVariant] = useState<MenuVariant | null>(
     null,
@@ -193,7 +192,7 @@ export function ItemCustomizer({
                           >
                             <span>{v.name}</span>
                             <span className="ml-1.5 text-xs opacity-70">
-                              {formatVnd(price)}
+                              {formatVND(price)}
                             </span>
                           </button>
                         );
@@ -218,7 +217,7 @@ export function ItemCustomizer({
                           />
                           <span className="flex-1 text-sm">{m.name}</span>
                           <span className="text-sm text-muted-foreground">
-                            +{formatVnd(m.price)}
+                            +{formatVND(m.price)}
                           </span>
                         </label>
                       ))}
@@ -262,7 +261,7 @@ export function ItemCustomizer({
               <div>
                 <p className="text-xs text-muted-foreground">Đơn giá</p>
                 <p className="text-lg font-bold text-primary">
-                  {formatVnd(totalPrice)}
+                  {formatVND(totalPrice)}
                 </p>
               </div>
               <Button size="lg" onClick={handleConfirm}>

@@ -7,6 +7,8 @@ import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Clock, LogOut, Monitor } from "lucide-react";
+import { formatVND } from "@comtammatu/shared/format";
+import { CATEGORY_TYPE_LABELS } from "@comtammatu/shared/menu";
 import { CartSidebar } from "./cart-sidebar";
 import { ItemCustomizer } from "./item-customizer";
 import { CloseSessionDialog } from "./close-session-dialog";
@@ -60,14 +62,6 @@ export interface MenuCategory {
 
 /* ─── Helpers ─── */
 
-function formatVnd(amount: number): string {
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
 function formatTime(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString("vi-VN", {
     hour: "2-digit",
@@ -91,15 +85,6 @@ function makeCartKey(
     .join(",");
   return `${String(itemId)}-${String(variantId ?? 0)}-${modIds}-${sideIds}`;
 }
-
-/* ─── Category type labels ─── */
-
-const CATEGORY_TYPE_LABELS: Record<string, string> = {
-  main_dish: "Món chính",
-  side_dish: "Món phụ",
-  drink: "Nước uống",
-  dessert: "Tráng miệng",
-};
 
 /* ─── Component ─── */
 
@@ -344,7 +329,7 @@ export function PosMenu({
                   </span>
                 )}
                 <span className="mt-auto pt-2 text-sm font-semibold text-primary">
-                  {formatVnd(item.base_price)}
+                  {formatVND(item.base_price)}
                 </span>
               </button>
             ))}
@@ -372,7 +357,6 @@ export function PosMenu({
         onOrderTypeChange={handleOrderTypeChange}
         onTableSelect={setSelectedTableId}
         onSubmitOrder={handleSubmitOrder}
-        formatVnd={formatVnd}
       />
 
       {/* Item Customizer Sheet */}
@@ -380,7 +364,6 @@ export function PosMenu({
         item={customizerItem}
         onClose={() => setCustomizerItem(null)}
         onConfirm={handleCustomizerConfirm}
-        formatVnd={formatVnd}
       />
 
       {/* Close Session Dialog */}
@@ -388,14 +371,12 @@ export function PosMenu({
         sessionId={session.id}
         open={showCloseSession}
         onOpenChange={setShowCloseSession}
-        formatVnd={formatVnd}
       />
 
       {/* Bill Receipt Sheet */}
       <BillReceipt
         orderId={billOrderId}
         onClose={() => setBillOrderId(null)}
-        formatVnd={formatVnd}
       />
     </>
   );

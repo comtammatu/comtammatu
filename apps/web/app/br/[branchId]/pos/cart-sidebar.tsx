@@ -1,6 +1,18 @@
 "use client";
 
 import { cn } from "@comtammatu/ui";
+import { formatVND } from "@comtammatu/shared/format";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@comtammatu/ui/components/alert-dialog";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
@@ -32,7 +44,6 @@ interface CartSidebarProps {
   onOrderTypeChange: (type: OrderType) => void;
   onTableSelect: (tableId: number | null) => void;
   onSubmitOrder: () => void;
-  formatVnd: (amount: number) => string;
 }
 
 export function CartSidebar({
@@ -49,7 +60,6 @@ export function CartSidebar({
   onOrderTypeChange,
   onTableSelect,
   onSubmitOrder,
-  formatVnd,
 }: CartSidebarProps) {
   // Group tables by zone
   const tablesByZone = tables.reduce<Map<string, BranchTable[]>>(
@@ -80,25 +90,49 @@ export function CartSidebar({
           )}
         </div>
         {items.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs text-muted-foreground"
-            onClick={onClearCart}
-          >
-            <Trash2 className="mr-1 size-3" />
-            Xóa
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-muted-foreground"
+              >
+                <Trash2 className="mr-1 size-3" />
+                Xóa
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Xóa giỏ hàng?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tất cả {items.length} món sẽ bị xóa khỏi giỏ hàng. Hành động
+                  này không thể hoàn tác.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Hủy</AlertDialogCancel>
+                <AlertDialogAction onClick={onClearCart}>
+                  Xóa tất cả
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </div>
 
       {/* Order type toggle */}
       <div className="border-b px-3 py-2">
-        <div className="flex gap-1 rounded-lg bg-muted p-1">
+        <div
+          role="radiogroup"
+          aria-label="Loại đơn hàng"
+          className="flex gap-1 rounded-lg bg-muted p-1"
+        >
           <button
             type="button"
+            role="radio"
+            aria-checked={orderType === "dine_in"}
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
               orderType === "dine_in"
                 ? "bg-background shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
@@ -110,8 +144,10 @@ export function CartSidebar({
           </button>
           <button
             type="button"
+            role="radio"
+            aria-checked={orderType === "takeaway"}
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
               orderType === "takeaway"
                 ? "bg-background shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
@@ -154,8 +190,13 @@ export function CartSidebar({
                               key={table.id}
                               type="button"
                               disabled={!isAvailable}
+                              aria-label={
+                                isAvailable
+                                  ? `Bàn ${String(table.number)}`
+                                  : `Bàn ${String(table.number)} — đang sử dụng`
+                              }
                               className={cn(
-                                "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
+                                "min-h-10 min-w-10 rounded-md border px-3 py-2 text-xs font-medium transition-colors",
                                 isSelected
                                   ? "border-primary bg-primary/10 text-primary"
                                   : isAvailable
@@ -168,7 +209,7 @@ export function CartSidebar({
                             >
                               {table.number}
                               {!isAvailable && (
-                                <span className="ml-0.5 text-[9px]">●</span>
+                                <span aria-hidden="true" className="ml-0.5 text-xs">●</span>
                               )}
                             </button>
                           );
@@ -234,10 +275,10 @@ export function CartSidebar({
                         <Button
                           variant="outline"
                           size="icon"
-                          className="size-7"
+                          className="size-10"
                           onClick={() => onUpdateQuantity(item.key, -1)}
                         >
-                          <Minus className="size-3" />
+                          <Minus className="size-4" />
                         </Button>
                         <span className="w-8 text-center text-sm font-medium">
                           {item.quantity}
@@ -245,14 +286,14 @@ export function CartSidebar({
                         <Button
                           variant="outline"
                           size="icon"
-                          className="size-7"
+                          className="size-10"
                           onClick={() => onUpdateQuantity(item.key, 1)}
                         >
-                          <Plus className="size-3" />
+                          <Plus className="size-4" />
                         </Button>
                       </div>
                       <span className="text-sm font-semibold">
-                        {formatVnd(subtotal)}
+                        {formatVND(subtotal)}
                       </span>
                     </div>
                   </div>
@@ -267,7 +308,7 @@ export function CartSidebar({
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Tạm tính</span>
               <span className="text-lg font-bold text-primary">
-                {formatVnd(total)}
+                {formatVND(total)}
               </span>
             </div>
             <Button

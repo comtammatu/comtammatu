@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "../_lib/auth";
 
 /* ─── Schemas ─── */
@@ -25,13 +26,6 @@ const updateStaffSchema = z.object({
   role: z.enum(STAFF_ROLES, { error: "Vai trò không hợp lệ" }),
   branch_id: z.coerce.number().int().positive().optional(),
 });
-
-/* ─── Types ─── */
-
-interface ActionResult {
-  success: boolean;
-  error?: string;
-}
 
 /* ─── Helpers ─── */
 

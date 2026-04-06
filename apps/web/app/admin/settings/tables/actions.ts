@@ -4,15 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@comtammatu/database/supabase/server";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "../../_lib/auth";
 import { TABLE_STATUSES } from "./constants";
-
-/* ─── Types ─── */
-
-interface ActionResult {
-  success: boolean;
-  error?: string;
-}
 
 /* ─── Helpers ─── */
 

@@ -9,6 +9,7 @@ import {
   Settings2,
   UtensilsCrossed,
 } from "lucide-react";
+import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -47,10 +48,6 @@ export interface ItemRow {
 interface ItemTableProps {
   items: ItemRow[];
   categories: CategoryRow[];
-}
-
-function formatVND(amount: number): string {
-  return new Intl.NumberFormat("vi-VN").format(amount) + "đ";
 }
 
 export function ItemTable({ items, categories }: ItemTableProps) {

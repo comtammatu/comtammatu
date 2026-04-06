@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useTransition } from "react";
+import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
@@ -48,10 +49,9 @@ interface OrderData {
 interface BillReceiptProps {
   orderId: number | null;
   onClose: () => void;
-  formatVnd: (amount: number) => string;
 }
 
-export function BillReceipt({ orderId, onClose, formatVnd }: BillReceiptProps) {
+export function BillReceipt({ orderId, onClose }: BillReceiptProps) {
   const [order, setOrder] = useState<OrderData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -198,10 +198,10 @@ export function BillReceipt({ orderId, onClose, formatVnd }: BillReceiptProps) {
                         </td>
                         <td className="py-1 text-center">{item.quantity}</td>
                         <td className="py-1 text-right">
-                          {formatVnd(item.unit_price)}
+                          {formatVND(item.unit_price)}
                         </td>
                         <td className="py-1 text-right font-medium">
-                          {formatVnd(item.subtotal)}
+                          {formatVND(item.subtotal)}
                         </td>
                       </tr>
                     ))}
@@ -214,30 +214,30 @@ export function BillReceipt({ orderId, onClose, formatVnd }: BillReceiptProps) {
                 <div className="flex flex-col gap-1 text-xs">
                   <div className="flex justify-between">
                     <span>Tạm tính</span>
-                    <span>{formatVnd(order.subtotal)}</span>
+                    <span>{formatVND(order.subtotal)}</span>
                   </div>
                   {order.tax_amount > 0 && (
                     <div className="flex justify-between">
                       <span>Thuế</span>
-                      <span>{formatVnd(order.tax_amount)}</span>
+                      <span>{formatVND(order.tax_amount)}</span>
                     </div>
                   )}
                   {order.service_charge > 0 && (
                     <div className="flex justify-between">
                       <span>Phí dịch vụ</span>
-                      <span>{formatVnd(order.service_charge)}</span>
+                      <span>{formatVND(order.service_charge)}</span>
                     </div>
                   )}
                   {order.discount_amount > 0 && (
                     <div className="flex justify-between">
                       <span>Giảm giá</span>
-                      <span>-{formatVnd(order.discount_amount)}</span>
+                      <span>-{formatVND(order.discount_amount)}</span>
                     </div>
                   )}
                   <Separator className="my-1" />
                   <div className="flex justify-between text-sm font-bold">
                     <span>TỔNG CỘNG</span>
-                    <span>{formatVnd(order.total_amount)}</span>
+                    <span>{formatVND(order.total_amount)}</span>
                   </div>
                 </div>
 

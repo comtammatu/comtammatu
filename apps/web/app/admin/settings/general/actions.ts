@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import type { ActionResult } from "@comtammatu/shared/types";
 import {
   SYSTEM_SETTING_KEYS,
   type SystemSettingKey,
@@ -35,11 +36,6 @@ const settingsSchema = z.object({
       error: "Email không hợp lệ",
     }),
 });
-
-interface ActionResult {
-  success: boolean;
-  error?: string;
-}
 
 export async function updateSettings(
   _prev: ActionResult | null,

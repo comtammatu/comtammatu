@@ -7,7 +7,9 @@
     ".": "./src/index.ts",
     "./auth": "./src/auth/index.ts",
     "./format": "./src/format/currency.ts",
-    "./settings": "./src/settings/index.ts"
+    "./settings": "./src/settings/index.ts",
+    "./types": "./src/types/action-result.ts",
+    "./menu": "./src/menu/category-labels.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
