@@ -14,9 +14,9 @@ Không phải CRM, không phải ERP tổng hợp. Mỗi module giải quyết m
 | --- | ----------- | ---------------------------------------------------- | ------- |
 | M0  | Admin Shell | Layout, sidebar, branches, staff, settings           | SHIPPED |
 | M1  | Menu        | Categories, items, variants, modifiers, sides        | SHIPPED |
-| M2  | POS         | Cart, table/zone, order submit, bill printing        | DONE    |
-| M3  | KDS         | Realtime queue, bump/complete, station config        | NEXT    |
-| M4  | Payment     | Cash, VietQR, Momo, refunds, reconciliation          | —       |
+| M2  | POS         | Cart, table/zone, order submit, bill printing        | SHIPPED |
+| M3  | KDS         | Realtime queue, bump/complete, station config        | SHIPPED |
+| M4  | Payment     | Cash, VietQR, Momo, refunds, reconciliation          | NEXT    |
 | M5  | Stock       | Ingredients, recipes, stock levels, procurement, GRN | —       |
 | M6  | Finance     | HĐĐT, VAT, dashboard, reports, VAS accounting        | —       |
 | M7  | HR/Payroll  | Employees, shifts, attendance, payroll, PIT          | —       |
@@ -34,11 +34,12 @@ Post-v1.0 (lên kế hoạch riêng):
 M0 (Admin Shell) ✅
 M1 (Menu) ✅
   └── M2 (POS) ✅
-      ├── M3 (KDS) ← cần orders từ POS
-      └── M4 (Payment) ← cần orders từ POS
-          └── M5 (Stock) ← cần GRN + procurement
-              └── M6 (Finance) ← cần dữ liệu payment + stock
-                  └── M7 (HR/Payroll) ← cần nền tảng finance
+      ├── M3 (KDS) ✅
+      └── M4 (Payment) ← NEXT
+          ├── M6-lite (HĐĐT only) = PILOT v1.0
+          └── M5 (Stock) ← v1.1
+              └── M6-full (Finance) ← v1.1
+                  └── M7 (HR/Payroll) ← v1.2
 ```
 
 ## "Ready to Ship" — Định nghĩa chung
@@ -151,7 +152,7 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 ## M3: KDS — Kitchen Display System
 
-> Status: NEXT | Depends: M2
+> Status: SHIPPED | Depends: M2 | Shipped: 2026-04-06
 > North Star: "Bếp thấy order realtime, bump xong → waiter biết ngay"
 
 **Scope:** Màn hình bếp hiển thị order realtime. Chef bump từng món khi xong. Waiter thấy trạng thái.
@@ -164,17 +165,17 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 | Session | Task                   | Tables                               |
 | ------- | ---------------------- | ------------------------------------ |
-| S1      | KDS station config     | kds_stations, kds_station_categories |
-| S2      | Realtime order queue   | kds_tickets                          |
-| S3      | Bump/complete + alerts | —                                    |
+| S1      | KDS station config     | kds_stations, kds_station_categories | ✅ |
+| S2      | Realtime order queue   | kds_tickets                          | ✅ |
+| S3      | Bump/complete + alerts | —                                    | ✅ |
 
 **Ship criteria:**
 
-- [ ] Order từ POS xuất hiện realtime trên KDS
-- [ ] Chef bump từng món → cập nhật order status
-- [ ] Bump hết → order chuyển "ready"
-- [ ] Station categories filter đúng món
-- [ ] `/verify` + `/review` passes
+- [x] Order từ POS xuất hiện realtime trên KDS
+- [x] Chef bump từng món → cập nhật order status
+- [x] Bump hết → order chuyển "ready"
+- [x] Station categories filter đúng món
+- [x] `/verify` + `/review` passes
 
 ---
 
