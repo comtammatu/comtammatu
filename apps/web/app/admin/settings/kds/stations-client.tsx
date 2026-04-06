@@ -1,0 +1,210 @@
+"use client";
+
+import { useState } from "react";
+import { cn } from "@comtammatu/ui";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
+import { Button } from "@comtammatu/ui/components/button";
+import { Badge } from "@comtammatu/ui/components/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@comtammatu/ui/components/table";
+import { Plus, Pencil } from "lucide-react";
+import { StationFormDialog } from "./station-form-dialog";
+
+/* ─── Types ─── */
+
+export interface StationRow {
+  id: number;
+  name: string;
+  branch_id: number;
+  position: number;
+  is_active: boolean;
+  category_ids: number[];
+}
+
+export interface BranchOption {
+  id: number;
+  name: string;
+  is_active: boolean | null;
+}
+
+export interface CategoryOption {
+  id: number;
+  name: string;
+  type: string;
+  sort_order: number;
+}
+
+interface StationsClientProps {
+  branches: BranchOption[];
+  stations: StationRow[];
+  categories: CategoryOption[];
+}
+
+/* ─── Component ─── */
+
+export function StationsClient({
+  branches,
+  stations,
+  categories,
+}: StationsClientProps) {
+  const firstBranch = branches[0];
+  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(
+    firstBranch?.id ?? null,
+  );
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editStation, setEditStation] = useState<StationRow | null>(null);
+
+  const filteredStations = stations.filter(
+    (s) => s.branch_id === selectedBranchId,
+  );
+
+  const categoryMap = new Map(categories.map((c) => [c.id, c.name]));
+
+  if (branches.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Chua co chi nhanh nao. Vui long tao chi nhanh truoc.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <div className="flex items-center gap-4">
+        <label className="text-sm font-medium">Chi nhanh:</label>
+        <Select
+          value={selectedBranchId?.toString() ?? ""}
+          onValueChange={(v) => setSelectedBranchId(Number(v))}
+        >
+          <SelectTrigger className="w-[240px]">
+            <SelectValue placeholder="Chon chi nhanh" />
+          </SelectTrigger>
+          <SelectContent>
+            {branches.map((b) => (
+              <SelectItem key={b.id} value={b.id.toString()}>
+                {b.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex justify-end">
+          <Button
+            onClick={() => {
+              setEditStation(null);
+              setDialogOpen(true);
+            }}
+          >
+            <Plus className="mr-2 size-4" />
+            Them tram
+          </Button>
+        </div>
+
+        {filteredStations.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            Chua co tram KDS nao cho chi nhanh nay.
+          </p>
+        ) : (
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">Ten tram</TableHead>
+                  <TableHead className="w-[100px] text-center">
+                    Thu tu
+                  </TableHead>
+                  <TableHead>Danh muc mon an</TableHead>
+                  <TableHead className="w-[100px] text-center">
+                    Trang thai
+                  </TableHead>
+                  <TableHead className="w-[80px]" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredStations.map((station) => (
+                  <TableRow key={station.id}>
+                    <TableCell className="font-medium">
+                      {station.name}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {station.position}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {station.category_ids.length === 0 ? (
+                          <span className="text-xs text-muted-foreground">
+                            Tat ca (fallback)
+                          </span>
+                        ) : (
+                          station.category_ids.map((catId) => (
+                            <Badge
+                              key={catId}
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {categoryMap.get(catId) ?? `#${String(catId)}`}
+                            </Badge>
+                          ))
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge
+                        variant={station.is_active ? "default" : "secondary"}
+                        className={cn(
+                          "text-xs",
+                          station.is_active
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                            : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+                        )}
+                      >
+                        {station.is_active ? "Hoat dong" : "Tam tat"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditStation(station);
+                          setDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="size-4" />
+                        <span className="sr-only">Chinh sua</span>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
+
+      {selectedBranchId !== null && (
+        <StationFormDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          branchId={selectedBranchId}
+          station={editStation}
+          categories={categories}
+        />
+      )}
+    </>
+  );
+}

@@ -103,6 +103,182 @@ export type Database = {
           },
         ]
       }
+      kds_station_categories: {
+        Row: {
+          category_id: number
+          id: number
+          station_id: number
+          tenant_id: number
+        }
+        Insert: {
+          category_id: number
+          id?: never
+          station_id: number
+          tenant_id: number
+        }
+        Update: {
+          category_id?: number
+          id?: never
+          station_id?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kds_station_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kds_station_categories_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "kds_stations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kds_station_categories_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kds_stations: {
+        Row: {
+          branch_id: number
+          created_at: string
+          id: number
+          is_active: boolean
+          name: string
+          position: number
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          name: string
+          position?: number
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          name?: string
+          position?: number
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kds_stations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kds_stations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kds_tickets: {
+        Row: {
+          branch_id: number
+          bumped_at: string | null
+          bumped_by: string | null
+          created_at: string
+          id: number
+          order_id: number
+          order_item_id: number
+          station_id: number
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          bumped_at?: string | null
+          bumped_by?: string | null
+          created_at?: string
+          id?: never
+          order_id: number
+          order_item_id: number
+          station_id: number
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          bumped_at?: string | null
+          bumped_by?: string | null
+          created_at?: string
+          id?: never
+          order_id?: number
+          order_item_id?: number
+          station_id?: number
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kds_tickets_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kds_tickets_bumped_by_fkey"
+            columns: ["bumped_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kds_tickets_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kds_tickets_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kds_tickets_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "kds_stations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kds_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_categories: {
         Row: {
           created_at: string
@@ -1015,6 +1191,8 @@ export type Database = {
       auth_branch_id: { Args: never; Returns: number }
       auth_role: { Args: never; Returns: string }
       auth_tenant_id: { Args: never; Returns: number }
+      bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
+      check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
       close_pos_session: {
         Args: { p_closing_cash: number; p_note?: string; p_session_id: number }
         Returns: Json
@@ -1034,7 +1212,9 @@ export type Database = {
         Returns: Json
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      recall_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       release_table: { Args: { p_table_id: number }; Returns: undefined }
+      route_order_to_kds: { Args: { p_order_id: number }; Returns: undefined }
       save_item_modifiers: {
         Args: { p_item_id: number; p_modifiers: Json }
         Returns: undefined

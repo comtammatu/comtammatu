@@ -27,6 +27,11 @@ const TABS: Tab[] = [
     label: "Bàn",
     allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
   },
+  {
+    href: "/admin/settings/kds",
+    label: "Trạm bếp",
+    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+  },
 ];
 
 export function SettingsNav({ role }: { role: StaffRole }) {
