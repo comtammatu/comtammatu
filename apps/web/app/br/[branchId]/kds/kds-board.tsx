@@ -6,7 +6,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { createClient } from "@comtammatu/database/supabase/client";
-import { ChefHat } from "lucide-react";
+import { ChefHat, DoorOpen } from "lucide-react";
 import { OrderCard } from "./order-card";
 import type {
   KdsStation,
@@ -87,6 +87,7 @@ export function KdsBoard({
     },
   );
   const [activeStationId, setActiveStationId] = useState<number | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const supabaseRef = useRef(createClient());
   const prevTicketCountRef = useRef(tickets.length);
   const ordersRef = useRef(orders);
@@ -119,7 +120,7 @@ export function KdsBoard({
         supabase
           .from("order_items")
           .select(
-            "id, order_id, item_name, variant_name, quantity, unit_price, status",
+            "id, order_id, item_name, variant_name, quantity, unit_price, status, modifiers, sides",
           )
           .eq("order_id", orderId),
       ]);
@@ -203,6 +204,10 @@ export function KdsBoard({
     const result: KdsOrder[] = [];
     for (const [orderId, orderTickets] of orderMap) {
       const orderInfo = orders.get(orderId);
+      // Only show items that have a ticket at the filtered station(s)
+      const ticketItemIds = new Set(orderTickets.map((t) => t.order_item_id));
+      const allItems = orderItems.get(orderId) ?? [];
+      const stationItems = allItems.filter((i) => ticketItemIds.has(i.id));
       result.push({
         orderId,
         orderNumber: orderInfo?.order_number ?? `#${String(orderId)}`,
@@ -210,7 +215,7 @@ export function KdsBoard({
         tableNumber: orderInfo?.tables?.number ?? null,
         createdAt: orderInfo?.created_at ?? orderTickets[0]?.created_at ?? "",
         tickets: orderTickets,
-        items: orderItems.get(orderId) ?? [],
+        items: stationItems,
       });
     }
 
@@ -222,6 +227,32 @@ export function KdsBoard({
 
     return result;
   }, [filteredTickets, orders, orderItems]);
+
+  // Derive overall status per order for filtering
+  function getOrderStatus(orderTickets: KdsTicket[]): string {
+    const statuses = orderTickets.map((t) => t.status);
+    if (statuses.every((s) => s === "ready")) return "ready";
+    if (statuses.some((s) => s === "preparing")) return "preparing";
+    return "pending";
+  }
+
+  // Filter orders by status
+  const displayOrders = useMemo(() => {
+    if (statusFilter === null) return groupedOrders;
+    return groupedOrders.filter(
+      (o) => getOrderStatus(o.tickets) === statusFilter,
+    );
+  }, [groupedOrders, statusFilter]);
+
+  // Count orders per status (for badges)
+  const statusCounts = useMemo(() => {
+    const counts = { pending: 0, preparing: 0, ready: 0 };
+    for (const o of groupedOrders) {
+      const s = getOrderStatus(o.tickets);
+      if (s in counts) counts[s as keyof typeof counts]++;
+    }
+    return counts;
+  }, [groupedOrders]);
 
   // Optimistic bump handler
   const handleBump = useCallback(
@@ -325,9 +356,9 @@ export function KdsBoard({
 
   return (
     <div className="flex h-full flex-col">
-      {/* Station filter tabs */}
-      <div className="border-b border-border/50 bg-background/50">
-        <ScrollArea className="w-full">
+      {/* Station filter tabs + logout */}
+      <div className="flex items-center border-b border-border/50 bg-background/50">
+        <ScrollArea className="flex-1">
           <div className="flex gap-1 p-2">
             <Button
               variant={activeStationId === null ? "default" : "ghost"}
@@ -376,11 +407,57 @@ export function KdsBoard({
             ))}
           </div>
         </ScrollArea>
+        <div className="shrink-0 pr-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="min-h-11 text-sm text-muted-foreground"
+            asChild
+          >
+            <a href="/employee">
+              <DoorOpen className="mr-1 size-4" />
+              Đăng xuất
+            </a>
+          </Button>
+        </div>
+      </div>
+
+      {/* Status filter */}
+      <div className="flex gap-1 border-b border-border/50 bg-background/50 px-2 py-1.5">
+        {([
+          { key: null, label: "Tất cả", count: groupedOrders.length },
+          { key: "pending", label: "Chưa làm", count: statusCounts.pending },
+          { key: "preparing", label: "Đang làm", count: statusCounts.preparing },
+          { key: "ready", label: "Đã làm", count: statusCounts.ready },
+        ] as const).map((f) => (
+          <Button
+            key={f.key ?? "all"}
+            variant={statusFilter === f.key ? "default" : "ghost"}
+            size="sm"
+            className={cn(
+              "h-8 shrink-0 text-xs",
+              statusFilter === f.key && "shadow-sm",
+            )}
+            onClick={() => setStatusFilter(f.key)}
+          >
+            {f.label}
+            <Badge
+              variant="secondary"
+              className={cn(
+                "ml-1.5 text-[10px]",
+                statusFilter === f.key &&
+                  "bg-primary-foreground/20 text-primary-foreground",
+              )}
+            >
+              {f.count}
+            </Badge>
+          </Button>
+        ))}
       </div>
 
       {/* Order cards grid */}
       <ScrollArea className="flex-1">
-        {groupedOrders.length === 0 ? (
+        {displayOrders.length === 0 ? (
           <div className="flex h-full min-h-[60vh] items-center justify-center">
             <div className="text-center">
               <ChefHat className="mx-auto size-16 text-muted-foreground/50" />
@@ -391,7 +468,7 @@ export function KdsBoard({
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {groupedOrders.map((order) => (
+            {displayOrders.map((order) => (
               <OrderCard
                 key={order.orderId}
                 order={order}

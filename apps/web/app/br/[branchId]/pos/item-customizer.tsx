@@ -14,6 +14,7 @@ import {
   SheetDescription,
 } from "@comtammatu/ui/components/sheet";
 import { cn } from "@comtammatu/ui";
+import { Minus, Plus } from "lucide-react";
 import type { CartModifier, CartSide } from "./types";
 import type { MenuItem, MenuVariant } from "./pos-menu";
 
@@ -41,8 +42,9 @@ export function ItemCustomizer({
   const [selectedModifierIds, setSelectedModifierIds] = useState<Set<number>>(
     new Set(),
   );
-  const [selectedSideIds, setSelectedSideIds] = useState<Set<number>>(
-    new Set(),
+  // Map<sideItemId, quantity>
+  const [selectedSides, setSelectedSides] = useState<Map<number, number>>(
+    new Map(),
   );
 
   // Reset state when item prop changes
@@ -50,11 +52,11 @@ export function ItemCustomizer({
     if (item) {
       setSelectedVariant(item.menu_item_variants[0] ?? null);
       setSelectedModifierIds(new Set());
-      setSelectedSideIds(
-        new Set(
+      setSelectedSides(
+        new Map(
           item.menu_item_available_sides
             .filter((s) => s.is_default)
-            .map((s) => s.side_item.id),
+            .map((s) => [s.side_item.id, 1]),
         ),
       );
     }
@@ -63,17 +65,16 @@ export function ItemCustomizer({
   const resetAndSetItem = useCallback(
     (open: boolean) => {
       if (open && item) {
-        // Pre-select first variant if variants exist
         const firstVariant = item.menu_item_variants[0];
         setSelectedVariant(firstVariant ?? null);
         setSelectedModifierIds(new Set());
-        // Pre-select default sides
-        const defaultSideIds = new Set(
-          item.menu_item_available_sides
-            .filter((s) => s.is_default)
-            .map((s) => s.side_item.id),
+        setSelectedSides(
+          new Map(
+            item.menu_item_available_sides
+              .filter((s) => s.is_default)
+              .map((s) => [s.side_item.id, 1]),
+          ),
         );
-        setSelectedSideIds(defaultSideIds);
       }
       if (!open) {
         onClose();
@@ -106,11 +107,12 @@ export function ItemCustomizer({
       .map((m) => ({ modifier_id: m.id, name: m.name, price: m.price }));
 
     const sides: CartSide[] = item.menu_item_available_sides
-      .filter((s) => selectedSideIds.has(s.side_item.id))
+      .filter((s) => selectedSides.has(s.side_item.id))
       .map((s) => ({
         side_item_id: s.side_item.id,
         name: s.side_item.name,
         is_default: s.is_default,
+        quantity: selectedSides.get(s.side_item.id) ?? 1,
       }));
 
     onConfirm(
@@ -125,7 +127,7 @@ export function ItemCustomizer({
     item,
     selectedVariant,
     selectedModifierIds,
-    selectedSideIds,
+    selectedSides,
     unitPrice,
     onConfirm,
   ]);
@@ -142,13 +144,27 @@ export function ItemCustomizer({
     });
   }, []);
 
-  const toggleSide = useCallback((sideItemId: number) => {
-    setSelectedSideIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(sideItemId)) {
+  const toggleSide = useCallback((sideItemId: number, checked: boolean) => {
+    setSelectedSides((prev) => {
+      const next = new Map(prev);
+      if (checked) {
+        next.set(sideItemId, 1);
+      } else {
+        next.delete(sideItemId);
+      }
+      return next;
+    });
+  }, []);
+
+  const adjustSideQty = useCallback((sideItemId: number, delta: number) => {
+    setSelectedSides((prev) => {
+      const next = new Map(prev);
+      const current = next.get(sideItemId) ?? 1;
+      const newQty = current + delta;
+      if (newQty <= 0) {
         next.delete(sideItemId);
       } else {
-        next.add(sideItemId);
+        next.set(sideItemId, newQty);
       }
       return next;
     });
@@ -230,25 +246,54 @@ export function ItemCustomizer({
                   <div>
                     <h3 className="mb-2 text-sm font-semibold">Món kèm</h3>
                     <div className="flex flex-col gap-2">
-                      {item.menu_item_available_sides.map((s) => (
-                        <label
-                          key={s.id}
-                          className="flex cursor-pointer items-center gap-3 rounded-md border p-2.5 transition-colors hover:bg-accent"
-                        >
-                          <Checkbox
-                            checked={selectedSideIds.has(s.side_item.id)}
-                            onCheckedChange={() => toggleSide(s.side_item.id)}
-                          />
-                          <span className="flex-1 text-sm">
-                            {s.side_item.name}
-                            {s.is_default && (
-                              <span className="ml-1 text-xs text-muted-foreground">
-                                (mặc định)
-                              </span>
+                      {item.menu_item_available_sides.map((s) => {
+                        const isSelected = selectedSides.has(s.side_item.id);
+                        const qty = selectedSides.get(s.side_item.id) ?? 0;
+                        return (
+                          <div
+                            key={s.id}
+                            className="flex items-center gap-3 rounded-md border p-2.5 transition-colors hover:bg-accent"
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={(checked) =>
+                                toggleSide(s.side_item.id, checked === true)
+                              }
+                            />
+                            <span className="flex-1 text-sm">
+                              {s.side_item.name}
+                              {s.is_default && (
+                                <span className="ml-1 text-xs text-muted-foreground">
+                                  (mặc định)
+                                </span>
+                              )}
+                            </span>
+                            {isSelected && (
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="size-7"
+                                  onClick={() => adjustSideQty(s.side_item.id, -1)}
+                                >
+                                  <Minus className="size-3" />
+                                </Button>
+                                <span className="w-6 text-center text-sm font-medium">
+                                  {qty}
+                                </span>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="size-7"
+                                  onClick={() => adjustSideQty(s.side_item.id, 1)}
+                                >
+                                  <Plus className="size-3" />
+                                </Button>
+                              </div>
                             )}
-                          </span>
-                        </label>
-                      ))}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

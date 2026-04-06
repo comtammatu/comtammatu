@@ -274,6 +274,8 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 > Status: — | Depends: M6
 > Ref: `docs/ref/labor-contracts.md`, `docs/ref/payroll-pit.md`
 
+**Note:** Employee Portal shell (`/employee`) đã ship — layout, greeting, POS/KDS nav buttons. M7 sẽ thêm business logic vào shell này.
+
 **Scope:** Hồ sơ nhân viên (mở rộng từ profiles), ca làm, chấm công, tính lương, thuế TNCN, BHXH.
 
 **Không bao gồm:** Tuyển dụng, đánh giá hiệu suất.
@@ -339,3 +341,4 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 | M0+M1   | 2026-04-03 | Admin Shell + Menu shipped (ex Sprint 1) |
 | M2      | 2026-04-06 | POS shipped — order, cart, bill, cash     |
 | M3      | 2026-04-06 | KDS shipped — station config, realtime, bump/complete |
+| —       | 2026-04-06 | Employee Portal shell — login redirect fix, POS/KDS nav buttons (full features → M7) |

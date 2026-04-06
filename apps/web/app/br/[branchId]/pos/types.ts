@@ -21,6 +21,7 @@ export const cartSideSchema = z.object({
   side_item_id: z.number().int().positive(),
   name: z.string().min(1),
   is_default: z.boolean(),
+  quantity: z.number().int().min(1).default(1),
 });
 
 export type CartSide = z.infer<typeof cartSideSchema>;

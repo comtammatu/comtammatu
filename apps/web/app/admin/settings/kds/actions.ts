@@ -186,19 +186,27 @@ export async function createStation(
   }
 
   // kds_stations not yet in generated types — remove cast after pnpm db:types
-  const { error } = await fromTable(supabase, "kds_stations").insert({
-    tenant_id: claims.tenant_id,
-    branch_id: parsed.data.branch_id,
-    name: parsed.data.name,
-    position: parsed.data.position,
-  });
+  const { data, error } = await fromTable(supabase, "kds_stations")
+    .insert({
+      tenant_id: claims.tenant_id,
+      branch_id: parsed.data.branch_id,
+      name: parsed.data.name,
+      position: parsed.data.position,
+    })
+    .select("id");
 
   if (error) {
     return { success: false, error: mapStationDbError(error.code) };
   }
 
+  // RLS returns { data: [], error: null } on blocked writes
+  if (!data || data.length === 0) {
+    return { success: false, error: "Không thể tạo trạm KDS. Kiểm tra quyền truy cập." };
+  }
+
   revalidatePath("/admin/settings/kds");
-  return { success: true };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return { success: true, data: { id: (data as any[])[0].id as number } };
 }
 
 /**

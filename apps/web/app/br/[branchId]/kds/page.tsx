@@ -34,6 +34,18 @@ export interface KdsOrderInfo {
   tables: { number: number } | null;
 }
 
+export interface KdsModifier {
+  modifier_id: number;
+  name: string;
+  price: number;
+}
+
+export interface KdsSide {
+  side_item_id: number;
+  name: string;
+  is_default: boolean;
+}
+
 export interface KdsOrderItem {
   id: number;
   order_id: number;
@@ -42,6 +54,8 @@ export interface KdsOrderItem {
   quantity: number;
   unit_price: number;
   status: string;
+  modifiers: KdsModifier[] | null;
+  sides: KdsSide[] | null;
 }
 
 export default async function KdsPage({
@@ -110,7 +124,7 @@ export default async function KdsPage({
         .in("id", orderIds),
       supabase
         .from("order_items")
-        .select("id, order_id, item_name, variant_name, quantity, unit_price, status")
+        .select("id, order_id, item_name, variant_name, quantity, unit_price, status, modifiers, sides")
         .in("order_id", orderIds),
     ]);
 

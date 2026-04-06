@@ -55,24 +55,24 @@ export function StationFormDialog({
   // Handle successful form submission — save categories then close
   useEffect(() => {
     if (state?.success) {
-      // For create: we don't have the station ID yet, so categories are saved on edit.
-      // For edit: save categories immediately.
-      if (isEdit && station) {
+      const stationId = isEdit
+        ? station?.id
+        : (state.data as { id: number } | undefined)?.id;
+      const cats = Array.from(selectedCategories);
+
+      if (stationId && cats.length > 0) {
         startCategoryTransition(async () => {
-          const catResult = await saveStationCategories(
-            station.id,
-            Array.from(selectedCategories),
-          );
+          const catResult = await saveStationCategories(stationId, cats);
           if (!catResult.success) {
             toast.error(catResult.error ?? "Không thể lưu danh mục");
             return;
           }
           onOpenChange(false);
-          toast.success("Đã cập nhật trạm KDS");
+          toast.success(isEdit ? "Đã cập nhật trạm KDS" : "Đã tạo trạm KDS");
         });
       } else {
         onOpenChange(false);
-        toast.success("Đã tạo trạm KDS mới. Chỉnh sửa để gán danh mục.");
+        toast.success(isEdit ? "Đã cập nhật trạm KDS" : "Đã tạo trạm KDS");
       }
     }
   }, [state, isEdit, station, selectedCategories, onOpenChange]);

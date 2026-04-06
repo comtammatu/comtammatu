@@ -7,6 +7,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Card } from "@comtammatu/ui/components/card";
 import { ChevronRight, Undo2 } from "lucide-react";
 import type { KdsOrder } from "./kds-board";
+import type { KdsModifier, KdsSide } from "./page";
 
 /* ─── Status helpers ─── */
 
@@ -156,6 +157,18 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                     {item.variant_name}
                   </span>
                 )}
+                {/* Sides (accompaniments like Bì, Chả, etc.) */}
+                {(item.sides as KdsSide[] | null)?.map((side) => (
+                  <div key={side.side_item_id} className="text-xs text-muted-foreground">
+                    + {side.name}
+                  </div>
+                ))}
+                {/* Modifiers (add-ons like Extra cheese, etc.) */}
+                {(item.modifiers as KdsModifier[] | null)?.map((mod) => (
+                  <div key={mod.modifier_id} className="text-xs text-muted-foreground">
+                    + {mod.name}
+                  </div>
+                ))}
               </div>
 
               {/* Status badge */}

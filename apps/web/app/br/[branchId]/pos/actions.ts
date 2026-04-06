@@ -260,7 +260,7 @@ export async function submitOrder(
       p_tenant_id: claims.tenant_id,
       p_branch_id: parsedBranchId.data,
       p_created_by: user.id,
-      p_items: JSON.stringify(rpcItems),
+      p_items: rpcItems,
       p_order_type: parsedCart.data.order_type,
       p_table_id: parsedCart.data.table_id ?? null,
       p_pos_session_id: parsedSessionId.data ?? null,
@@ -294,6 +294,64 @@ export async function submitOrder(
     success: true,
     data: { order_id: result.order_id, order_number: result.order_number },
   };
+}
+
+/* ─── fetchSessionOrders ─── */
+
+/**
+ * Fetch all orders for the current POS session.
+ * Used to display order history in the POS sidebar.
+ */
+export async function fetchSessionOrders(
+  branchId: number,
+  sessionId: number,
+): Promise<ActionResult> {
+  const parsedBranchId = branchIdSchema.safeParse(branchId);
+  if (!parsedBranchId.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const parsedSessionId = z.coerce.number().int().positive().safeParse(sessionId);
+  if (!parsedSessionId.success) {
+    return { success: false, error: "Session ID không hợp lệ" };
+  }
+
+  const ctx = await getAuthContext(POS_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  if (claims.branch_id !== parsedBranchId.data) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const { data: orders, error } = await supabase
+    .from("orders")
+    .select(
+      `
+      id,
+      order_number,
+      order_type,
+      status,
+      total_amount,
+      table_id,
+      created_at,
+      tables ( number )
+    `,
+    )
+    .eq("branch_id", parsedBranchId.data)
+    .eq("tenant_id", claims.tenant_id)
+    .eq("pos_session_id", parsedSessionId.data)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return {
+      success: false,
+      error: "Không thể tải danh sách đơn hàng.",
+    };
+  }
+
+  return { success: true, data: orders ?? [] };
 }
 
 /* ─── fetchPosTerminals ─── */
