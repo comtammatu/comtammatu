@@ -9,7 +9,8 @@
     "./format": "./src/format/currency.ts",
     "./settings": "./src/settings/index.ts",
     "./types": "./src/types/action-result.ts",
-    "./menu": "./src/menu/category-labels.ts"
+    "./menu": "./src/menu/category-labels.ts",
+    "./providers": "./src/providers/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
