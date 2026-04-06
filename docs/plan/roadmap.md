@@ -15,11 +15,11 @@ Không phải CRM, không phải ERP tổng hợp. Mỗi module giải quyết m
 | M0  | Admin Shell | Layout, sidebar, branches, staff, settings           | SHIPPED |
 | M1  | Menu        | Categories, items, variants, modifiers, sides        | SHIPPED |
 | M2  | POS         | Cart, table/zone, order submit, bill printing        | DONE    |
-| M3  | KDS         | Realtime queue, bump/complete, station config        | NEXT    |
-| M4  | Payment     | Cash, VietQR, Momo, refunds, reconciliation          | —       |
-| M5  | Stock       | Ingredients, recipes, stock levels, procurement, GRN | —       |
-| M6  | Finance     | HĐĐT, VAT, dashboard, reports, VAS accounting        | —       |
-| M7  | HR/Payroll  | Employees, shifts, attendance, payroll, PIT          | —       |
+| M3  | KDS         | Realtime queue, bump/complete, station config        | DONE    |
+| M4  | Payment     | Cash, VietQR, Momo, refunds, reconciliation          | DONE    |
+| M5  | Stock       | Ingredients, recipes, stock levels, procurement, GRN | DONE    |
+| M6  | Finance     | HĐĐT, VAT, dashboard, reports, VAS accounting        | DONE    |
+| M7  | HR/Payroll  | Employees, shifts, attendance, payroll, PIT          | DONE    |
 
 Post-v1.0 (lên kế hoạch riêng):
 
@@ -99,7 +99,7 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 | --- | ------------------------------------------------- | ------ |
 | H1  | Settings ACL: thêm branch_manager + area_manager  | ✅     |
 | H2  | Tables page: branch_manager chỉ thấy branch mình | ✅     |
-| H3  | area_manager scope: tạo `areas` + `area_branches` mapping, area_manager chỉ thấy branches mình quản lý | TODO   |
+| H3  | area_manager scope: tạo `areas` + `area_branches` mapping, area_manager chỉ thấy branches mình quản lý | ✅     |
 
 ### H3: area_manager branch scope
 
@@ -162,11 +162,11 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 **Routes:** `/br/[branchId]/kds`
 
-| Session | Task                   | Tables                               |
-| ------- | ---------------------- | ------------------------------------ |
-| S1      | KDS station config     | kds_stations, kds_station_categories |
-| S2      | Realtime order queue   | kds_tickets                          |
-| S3      | Bump/complete + alerts | —                                    |
+| Session | Task                               | Tables                               | Status |
+| ------- | ---------------------------------- | ------------------------------------ | ------ |
+| S1      | KDS station config                 | kds_stations, kds_station_categories | ✅     |
+| S2      | KDS UI + realtime (derived query)  | — (queries order_items directly)     | ✅     |
+| S3      | Bump/complete via item state RPC   | —                                    | ✅     |
 
 **Ship criteria:**
 
