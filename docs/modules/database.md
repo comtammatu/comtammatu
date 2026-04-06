@@ -43,7 +43,7 @@ Defined in `packages/database/package.json`:
 
 ## Schema (Sprint 1 complete)
 
-11 tables with tenant isolation:
+19 tables with tenant isolation:
 
 | Table                       | RLS                       | Purpose                                     | Since  |
 | --------------------------- | ------------------------- | ------------------------------------------- | ------ |
@@ -58,6 +58,19 @@ Defined in `packages/database/package.json`:
 | `menu_item_available_sides` | manager+ write            | Junction: which sides pair with which mains | S1-S4  |
 | `branch_zones`              | manager+ write            | Dining zones per branch (Tầng 1, Sân vườn)  | S1-S5  |
 | `tables`                    | manager+ write            | Physical tables with zone, capacity, status | S1-S5  |
+| `orders`                    | branch-scoped RLS         | Order header: status, totals, table ref     | M2     |
+| `order_items`               | via order RLS             | Line items with price, quantity, modifiers   | M2     |
+| `order_status_history`      | via order RLS             | State machine audit trail                    | M2     |
+| `pos_terminals`             | branch-scoped RLS         | POS device registration per branch           | M2     |
+| `pos_sessions`              | branch-scoped RLS         | Cashier shift sessions (open/close)          | M2     |
+| `printer_configs`           | branch-scoped RLS         | Receipt printer configuration per branch     | M2     |
+
+**RPCs added in M2:**
+
+| Function              | Purpose                                       |
+| --------------------- | --------------------------------------------- |
+| `create_order()`      | Atomic order + items insert (client pricing — deferred server rehydration to M4) |
+| `close_pos_session()` | Close session with totals reconciliation       |
 
 Full schema reference: `docs/spec/database-schema.md`
 
@@ -130,9 +143,9 @@ Migrations live in `supabase/migrations/` with timestamp-prefixed filenames.
 10. Verify: `pnpm typecheck && pnpm build`
 
 <!-- ORACLE-META
-Written by codebase-oracle (manual) | 2026-04-02
+Written by codebase-oracle (manual) | 2026-04-06
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 95%
-Updated: Sprint 1 S6 complete (2026-04-03)
+Updated: M2 POS tables added (2026-04-06)
 Unknowns: 0
 -->

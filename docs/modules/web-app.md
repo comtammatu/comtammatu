@@ -118,12 +118,12 @@ Browser request
 
 - **Proxy as single auth gate:** All auth enforcement happens in `proxy.ts` before any route code runs. Layout-level checks are defense-in-depth, not primary.
 - **RSC by default:** Pages are React Server Components. Only interactive elements (forms, dropdowns) use "use client".
-- **Remaining placeholders:** inventory, orders, hr, finance, reports, POS, KDS, employee. These will be built in M2–M7. CRM is Post-v1.0.
+- **Remaining placeholders:** inventory, orders, hr, finance, reports, KDS, employee. These will be built in M3–M7. CRM is Post-v1.0. POS shipped in M2.
 
 <!-- ORACLE-META
-Written by codebase-oracle (manual) | 2026-04-02
+Written by codebase-oracle (manual) | 2026-04-06
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 95%
-Updated: M0+M1 shipped (2026-04-04)
+Updated: M2 POS shipped (2026-04-06)
 Unknowns: 0
 -->
