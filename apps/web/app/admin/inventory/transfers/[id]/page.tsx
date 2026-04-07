@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { fetchIngredients } from "../../actions";
+import { fetchIngredientsForBranch } from "../../actions";
 import {
   fetchStockTransferDetail,
   resolveHeadquartersBranchId,
@@ -16,17 +16,18 @@ export default async function TransferDetailPage({
   const num = Number(id);
   if (!Number.isFinite(num) || num <= 0) notFound();
 
-  const [detail, ingRes, hqBranchId] = await Promise.all([
+  const [detail, hqBranchId] = await Promise.all([
     fetchStockTransferDetail(num),
-    fetchIngredients(),
     resolveHeadquartersBranchId(),
   ]);
   if (!detail.success || !detail.data) notFound();
 
   const { transfer, lines } = detail.data as {
-    transfer: Record<string, unknown>;
+    transfer: { from_branch_id: number };
     lines: unknown[];
   };
+  const fromBranchId = transfer.from_branch_id;
+  const ingRes = await fetchIngredientsForBranch(fromBranchId);
   const ingredients: IngredientRow[] = ingRes.success
     ? ((ingRes.data ?? []) as IngredientRow[])
     : [];

@@ -16,10 +16,14 @@ export default async function InventoryLayout({
   const showProcurement = claims
     ? canAccess(claims.user_role, "inventory_procurement")
     : false;
+  const showBranchIngredientSettings = claims?.user_role === "super_manager";
 
   return (
     <div className="space-y-6">
-      <InventorySubNav showProcurement={showProcurement} />
+      <InventorySubNav
+        showProcurement={showProcurement}
+        showBranchIngredientSettings={showBranchIngredientSettings}
+      />
       {children}
     </div>
   );

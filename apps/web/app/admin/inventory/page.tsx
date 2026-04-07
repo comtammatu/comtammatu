@@ -40,6 +40,8 @@ export default async function InventoryPage() {
   // For branch_manager, default to their own branch
   const defaultBranchId = claims?.branch_id ?? branches[0]?.id ?? null;
 
+  const canManageIngredientCatalog = claims?.user_role === "super_manager";
+
   return (
     <div className="space-y-6">
       <div>
@@ -54,6 +56,7 @@ export default async function InventoryPage() {
         branches={branches}
         defaultBranchId={defaultBranchId}
         inventoryValueVisibility={inventoryValueVisibility}
+        canManageIngredientCatalog={canManageIngredientCatalog}
       />
     </div>
   );

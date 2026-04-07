@@ -36,17 +36,28 @@ const LINKS = [
     label: "Công thức",
     procurementOnly: true,
   },
+  {
+    href: "/admin/inventory/branch-ingredients",
+    label: "Mở NL theo CN",
+    procurementOnly: false,
+    branchIngredientsOnly: true,
+  },
 ] as const;
 
 export function InventorySubNav({
   showProcurement,
+  showBranchIngredientSettings,
 }: {
   showProcurement: boolean;
+  showBranchIngredientSettings: boolean;
 }) {
   const pathname = usePathname();
-  const visible = LINKS.filter(
-    (link) => !link.procurementOnly || showProcurement,
-  );
+  const visible = LINKS.filter((link) => {
+    if ("branchIngredientsOnly" in link && link.branchIngredientsOnly) {
+      return showBranchIngredientSettings;
+    }
+    return !link.procurementOnly || showProcurement;
+  });
 
   return (
     <nav className="flex flex-wrap gap-2 border-b pb-3" aria-label="Kho hàng">

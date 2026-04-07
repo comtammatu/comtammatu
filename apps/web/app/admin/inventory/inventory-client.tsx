@@ -18,6 +18,7 @@ interface InventoryClientProps {
   branches: BranchOption[];
   defaultBranchId: number | null;
   inventoryValueVisibility: InventoryValueVisibility;
+  canManageIngredientCatalog: boolean;
 }
 
 export function InventoryClient({
@@ -25,6 +26,7 @@ export function InventoryClient({
   branches,
   defaultBranchId,
   inventoryValueVisibility,
+  canManageIngredientCatalog,
 }: InventoryClientProps) {
   const [localIngredients, setLocalIngredients] =
     useState<IngredientRow[]>(ingredients);
@@ -44,6 +46,7 @@ export function InventoryClient({
         <TabsContent value="ingredients" className="mt-4 space-y-4">
           <IngredientTable
             ingredients={localIngredients}
+            canManageCatalog={canManageIngredientCatalog}
             onIngredientAdded={(ing) =>
               setLocalIngredients((prev) => [...prev, ing])
             }

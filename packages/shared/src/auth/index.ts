@@ -23,5 +23,10 @@ export {
   getInventoryValueVisibility,
 } from "./inventory-value";
 export type { InventoryValueVisibility } from "./inventory-value";
+export {
+  INVENTORY_CATALOG_ROLES,
+  INVENTORY_OPS_ROLES,
+  PROCUREMENT_ROLES,
+} from "./inventory-roles";
 export type { NavItemConfig, NavGroupConfig } from "./nav-config";
 export { ADMIN_NAV_GROUPS } from "./nav-config";

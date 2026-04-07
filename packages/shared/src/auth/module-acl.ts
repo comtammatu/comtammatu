@@ -35,28 +35,28 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   menu: {
     path: "/admin/menu",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    allowedRoles: ["super_manager", "area_manager", "branch_manager"],
     label: "Thực đơn",
   },
   inventory: {
     path: "/admin/inventory",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    allowedRoles: ["super_manager", "area_manager", "branch_manager"],
     label: "Kho hàng",
   },
-  /** NCC, PO, GRN, HĐ NCC, công thức — chỉ owner / super_manager */
+  /** NCC, PO, GRN, HĐ NCC, công thức — chỉ super_manager (Trụ sở) */
   inventory_procurement: {
     path: "/admin/inventory/suppliers",
-    allowedRoles: ["owner", "super_manager"],
+    allowedRoles: ["super_manager"],
     label: "Kho — NCC & công thức",
   },
   orders: {
     path: "/admin/orders",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    allowedRoles: ["super_manager", "area_manager", "branch_manager"],
     label: "Đơn hàng",
   },
   staff: {
     path: "/admin/staff",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    allowedRoles: ["super_manager", "area_manager", "branch_manager"],
     label: "Nhân viên",
   },
   hr: {
@@ -66,7 +66,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   crm: {
     path: "/admin/crm",
-    allowedRoles: ["owner", "super_manager", "area_manager"],
+    allowedRoles: ["super_manager", "area_manager"],
     label: "Khách hàng",
   },
   finance: {

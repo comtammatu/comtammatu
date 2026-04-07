@@ -27,12 +27,15 @@ interface IngredientTableProps {
   ingredients: IngredientRow[];
   onIngredientAdded: (ingredient: IngredientRow) => void;
   onIngredientUpdated: (ingredient: IngredientRow) => void;
+  /** CRUD danh mục — chỉ Trụ sở (super_manager) */
+  canManageCatalog: boolean;
 }
 
 export function IngredientTable({
   ingredients,
   onIngredientAdded,
   onIngredientUpdated,
+  canManageCatalog,
 }: IngredientTableProps) {
   const [search, setSearch] = useState("");
   const [editItem, setEditItem] = useState<IngredientRow | null>(null);
@@ -62,10 +65,12 @@ export function IngredientTable({
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-xs"
         />
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="mr-2 size-4" />
-          Thêm nguyên liệu
-        </Button>
+        {canManageCatalog && (
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="mr-2 size-4" />
+            Thêm nguyên liệu
+          </Button>
+        )}
       </div>
 
       <div className="rounded-md border">
@@ -80,13 +85,16 @@ export function IngredientTable({
               </TableHead>
               <TableHead className="hidden lg:table-cell">Danh mục</TableHead>
               <TableHead className="hidden lg:table-cell">Lưu trữ</TableHead>
-              <TableHead className="w-12" />
+              {canManageCatalog && <TableHead className="w-12" />}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="py-12 text-center">
+                <TableCell
+                  colSpan={canManageCatalog ? 7 : 6}
+                  className="py-12 text-center"
+                >
                   <PackageSearch className="mx-auto size-8 text-muted-foreground" />
                   <p className="mt-2 text-sm text-muted-foreground">
                     {search
@@ -127,44 +135,48 @@ export function IngredientTable({
                     {STORAGE_LABELS[ing.storage_type] ?? ing.storage_type}
                   </Badge>
                 </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8"
-                    onClick={() => setEditItem(ing)}
-                  >
-                    <Pencil className="size-4" />
-                    <span className="sr-only">Chỉnh sửa</span>
-                  </Button>
-                </TableCell>
+                {canManageCatalog && (
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8"
+                      onClick={() => setEditItem(ing)}
+                    >
+                      <Pencil className="size-4" />
+                      <span className="sr-only">Chỉnh sửa</span>
+                    </Button>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
 
-      {/* Add dialog */}
-      <IngredientFormDialog
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        ingredient={null}
-        onSaved={(saved) => {
-          handleSaved(saved);
-          setAddOpen(false);
-        }}
-      />
+      {canManageCatalog && (
+        <>
+          <IngredientFormDialog
+            open={addOpen}
+            onOpenChange={setAddOpen}
+            ingredient={null}
+            onSaved={(saved) => {
+              handleSaved(saved);
+              setAddOpen(false);
+            }}
+          />
 
-      {/* Edit dialog */}
-      <IngredientFormDialog
-        open={!!editItem}
-        onOpenChange={(open) => !open && setEditItem(null)}
-        ingredient={editItem}
-        onSaved={(saved) => {
-          handleSaved(saved);
-          setEditItem(null);
-        }}
-      />
+          <IngredientFormDialog
+            open={!!editItem}
+            onOpenChange={(open) => !open && setEditItem(null)}
+            ingredient={editItem}
+            onSaved={(saved) => {
+              handleSaved(saved);
+              setEditItem(null);
+            }}
+          />
+        </>
+      )}
     </>
   );
 }

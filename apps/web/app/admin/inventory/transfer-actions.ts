@@ -10,7 +10,6 @@ import type { Database, SupabaseClient } from "@comtammatu/database";
 type TenantSupabase = SupabaseClient<Database>;
 
 const ROLES: readonly StaffRole[] = [
-  "owner",
   "super_manager",
   "area_manager",
   "branch_manager",
@@ -75,18 +74,26 @@ export async function fetchStockTransfers(): Promise<ActionResult> {
   return { success: true, data: enriched };
 }
 
+const transferLineInputSchema = z.object({
+  ingredientId: z.coerce.number().int().positive(),
+  quantity: z.coerce.number().positive(),
+  unit: z.string().min(1),
+});
+
 const transferCreateSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("hq_to_branch"),
     toBranchId: z.coerce.number().int().positive(),
     notes: z.string().optional(),
     vehicleInfo: z.string().optional(),
+    lines: z.array(transferLineInputSchema).optional(),
   }),
   z.object({
     kind: z.literal("branch_to_hq"),
     fromBranchId: z.coerce.number().int().positive(),
     notes: z.string().optional(),
     vehicleInfo: z.string().optional(),
+    lines: z.array(transferLineInputSchema).optional(),
   }),
   z.object({
     kind: z.literal("branch_to_branch"),
@@ -94,6 +101,7 @@ const transferCreateSchema = z.discriminatedUnion("kind", [
     toBranchId: z.coerce.number().int().positive(),
     notes: z.string().optional(),
     vehicleInfo: z.string().optional(),
+    lines: z.array(transferLineInputSchema).optional(),
   }),
 ]);
 
@@ -189,6 +197,35 @@ export async function createStockTransfer(
     toBranchId = parsed.data.toBranchId;
   }
 
+  if (claims.user_role === "branch_manager" && claims.branch_id != null) {
+    const my = claims.branch_id;
+    if (my === hqId) {
+      if (parsed.data.kind === "hq_to_branch") {
+        /* xuất từ Trụ sở */
+      } else if (parsed.data.kind === "branch_to_hq" && toBranchId === hqId) {
+        /* nhập về Trụ sở từ chi nhánh */
+      } else {
+        return {
+          success: false,
+          error:
+            "Tài khoản Trụ sở chỉ tạo phiếu xuất đi chi nhánh hoặc nhập về Trụ sở.",
+        };
+      }
+    } else if (parsed.data.kind === "hq_to_branch") {
+      if (toBranchId !== my) {
+        return {
+          success: false,
+          error: "Phiếu nhập chỉ nhận về kho chi nhánh của bạn.",
+        };
+      }
+    } else if (fromBranchId !== my) {
+      return {
+        success: false,
+        error: "Phiếu xuất chỉ gửi từ kho chi nhánh của bạn.",
+      };
+    }
+  }
+
   const transferNumber = `TRF-${Date.now()}`;
   const { data, error } = await supabase
     .from("stock_transfers")
@@ -207,6 +244,29 @@ export async function createStockTransfer(
   if (error) {
     return { success: false, error: "Không thể tạo phiếu chuyển." };
   }
+
+  const newId = data?.id;
+  const lines = parsed.data.lines;
+  if (newId != null && lines != null && lines.length > 0) {
+    for (const line of lines) {
+      const { error: lineErr } = await supabase
+        .from("stock_transfer_items")
+        .upsert(
+          {
+            tenant_id: claims.tenant_id,
+            transfer_id: newId,
+            ingredient_id: line.ingredientId,
+            quantity: line.quantity,
+            unit: line.unit,
+          },
+          { onConflict: "transfer_id,ingredient_id,tenant_id" },
+        );
+      if (lineErr) {
+        return { success: false, error: "Không thể lưu dòng nguyên liệu." };
+      }
+    }
+  }
+
   return { success: true, data };
 }
 
@@ -330,13 +390,8 @@ export async function transferReceive(
 export async function fetchBranchesForTransfer(): Promise<ActionResult> {
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-  const { data, error } = await supabase
-    .from("branches")
-    .select("id, name, is_headquarters, is_active")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("is_active", true)
-    .order("name");
+  const { supabase } = ctx;
+  const { data, error } = await supabase.rpc("stock_transfer_list_branches");
   if (error) return { success: false, error: "Không thể tải chi nhánh." };
   return { success: true, data: data ?? [] };
 }

@@ -1,16 +1,12 @@
 "use server";
 
 import { z } from "zod";
-import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import {
+  INVENTORY_CATALOG_ROLES,
+  INVENTORY_OPS_ROLES,
+} from "@comtammatu/shared/auth";
 import { getAuthContext } from "../_lib/auth";
-
-const INVENTORY_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-];
 
 /* ─── Schemas ─── */
 
@@ -29,10 +25,10 @@ const ingredientSchema = z.object({
   shelf_life_days: z.coerce.number().int().positive().optional(),
 });
 
-/* ─── fetchIngredients ─── */
+/* ─── fetchIngredients (full catalog — SM quản lý danh mục; ops xem theo nghiệp vụ) ─── */
 
 export async function fetchIngredients(): Promise<ActionResult> {
-  const ctx = await getAuthContext(INVENTORY_ROLES);
+  const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -50,6 +46,60 @@ export async function fetchIngredients(): Promise<ActionResult> {
   return { success: true, data: data ?? [] };
 }
 
+/**
+ * Nguyên liệu được phép tại một chi nhánh (theo branch_ingredients).
+ * Dùng cho điều chỉnh tồn, luân chuyển, v.v.
+ */
+export async function fetchIngredientsForBranch(
+  branchId: number,
+): Promise<ActionResult> {
+  const parsedBranch = z.coerce.number().int().positive().safeParse(branchId);
+  if (!parsedBranch.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  if (
+    claims.user_role === "branch_manager" &&
+    claims.branch_id !== parsedBranch.data
+  ) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const { data, error } = await supabase
+    .from("branch_ingredients")
+    .select(
+      `
+      ingredient_id,
+      ingredients (
+        id, name, sku, unit, unit_cost, category, min_stock_level, max_stock_level,
+        reorder_point, storage_type, shelf_life_days, is_active
+      )
+    `,
+    )
+    .eq("branch_id", parsedBranch.data)
+    .eq("tenant_id", claims.tenant_id);
+
+  if (error) {
+    return {
+      success: false,
+      error: "Không thể tải nguyên liệu theo chi nhánh.",
+    };
+  }
+
+  const rows = (data ?? [])
+    .map((r) => r.ingredients)
+    .filter((x): x is NonNullable<typeof x> => x != null);
+
+  rows.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+
+  return { success: true, data: rows };
+}
+
 /* ─── createIngredient ─── */
 
 export async function createIngredient(
@@ -63,7 +113,7 @@ export async function createIngredient(
     };
   }
 
-  const ctx = await getAuthContext(INVENTORY_ROLES);
+  const ctx = await getAuthContext(INVENTORY_CATALOG_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -105,7 +155,7 @@ export async function updateIngredient(
     return { success: false, error: "Dữ liệu không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(INVENTORY_ROLES);
+  const ctx = await getAuthContext(INVENTORY_CATALOG_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -139,7 +189,7 @@ export async function fetchStockLevels(
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(INVENTORY_ROLES);
+  const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -189,13 +239,11 @@ export async function adjustStock(
     };
   }
 
-  const ctx = await getAuthContext(INVENTORY_ROLES);
+  const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims, user } = ctx;
 
-  // Branch scope check for branch_manager
-  // TODO(H3): validate area_manager can only access branches in their assigned area
   if (
     claims.user_role === "branch_manager" &&
     claims.branch_id !== parsed.data.branchId
@@ -214,10 +262,16 @@ export async function adjustStock(
   });
 
   if (error) {
+    if (error.code === "23514") {
+      return {
+        success: false,
+        error:
+          "Nguyên liệu chưa được mở cho chi nhánh này. Liên hệ Trụ sở để cấu hình.",
+      };
+    }
     return { success: false, error: "Không thể điều chỉnh tồn kho." };
   }
 
-  // stock_levels auto-updated via trigger
   return { success: true };
 }
 
@@ -231,13 +285,11 @@ export async function fetchStockAlerts(
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(INVENTORY_ROLES);
+  const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
 
-  // Fetch stock levels with ingredient info, then filter for alerts client-side
-  // (Supabase doesn't support cross-table column comparison in .lt())
   const { data, error } = await supabase
     .from("stock_levels")
     .select(
@@ -255,7 +307,6 @@ export async function fetchStockAlerts(
     return { success: false, error: "Không thể tải cảnh báo tồn kho." };
   }
 
-  // Filter for items below min or above max
   const alerts = (data ?? []).filter((sl) => {
     const ing = sl.ingredients as unknown as {
       min_stock_level: number;

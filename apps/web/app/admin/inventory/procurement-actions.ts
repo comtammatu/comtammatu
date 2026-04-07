@@ -1,13 +1,12 @@
 "use server";
 
 import { z } from "zod";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "../_lib/auth";
 import { fetchHeadquartersBranchId } from "./_lib/headquarters";
 
-/** NCC, PO, GRN, HĐ NCC, công thức — chỉ owner / super_manager */
-const ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const ROLES = PROCUREMENT_ROLES;
 
 const supplierSchema = z.object({
   name: z.string().min(1, { error: "Tên NCC không được để trống" }),

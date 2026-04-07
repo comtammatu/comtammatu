@@ -8,13 +8,6 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -31,6 +24,7 @@ import {
   transferReceive,
   upsertTransferLine,
 } from "../../transfer-actions";
+import { IngredientSearchDialog } from "../transfer-ingredient-dialog";
 import type { IngredientRow } from "../../page";
 
 interface TransferRecord {
@@ -82,10 +76,14 @@ export function TransferDetailClient({
   const [tr, setTr] = useState(initialTransfer);
   const [lines, setLines] = useState(initialLines);
   const [ingredientId, setIngredientId] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const shipFromIsHq = hqBranchId != null && tr.from_branch_id === hqBranchId;
   const receiveToIsHq = hqBranchId != null && tr.to_branch_id === hqBranchId;
+  const selectedIngredient = ingredients.find(
+    (x) => String(x.id) === ingredientId,
+  );
 
   async function reload() {
     const res = await fetchStockTransferDetail(transferId);
@@ -129,6 +127,10 @@ export function TransferDetailClient({
       setIngredientId("");
       await reload();
     });
+  }
+
+  function pickIngredient(ing: IngredientRow) {
+    setIngredientId(String(ing.id));
   }
 
   function ship() {
@@ -319,25 +321,28 @@ export function TransferDetailClient({
           className="rounded-lg border bg-muted/30 p-4 space-y-3 max-w-xl"
         >
           <h2 className="font-semibold text-sm">Thêm dòng</h2>
+          <input type="hidden" name="ingredientId" value={ingredientId} />
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Nguyên liệu</Label>
-              <Select
-                value={ingredientId}
-                onValueChange={setIngredientId}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ingredients.map((i) => (
-                    <SelectItem key={i.id} value={String(i.id)}>
-                      {i.name} ({i.unit})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPickerOpen(true)}
+                >
+                  {ingredientId
+                    ? (ingredients.find((x) => String(x.id) === ingredientId)
+                        ?.name ?? "Đã chọn")
+                    : "Chọn trong bảng nguyên liệu…"}
+                </Button>
+                {ingredientId && (
+                  <span className="text-xs text-muted-foreground">
+                    Có thể tìm theo tên, SKU, danh mục trong popup.
+                  </span>
+                )}
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="qty">Số lượng</Label>
@@ -352,7 +357,14 @@ export function TransferDetailClient({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="unit">Đơn vị</Label>
-              <Input id="unit" name="unit" required placeholder="kg" />
+              <Input
+                key={ingredientId || "none"}
+                id="unit"
+                name="unit"
+                required
+                placeholder="kg"
+                defaultValue={selectedIngredient?.unit ?? ""}
+              />
             </div>
           </div>
           <Button type="submit" size="sm" disabled={isPending || !ingredientId}>
@@ -360,6 +372,13 @@ export function TransferDetailClient({
           </Button>
         </form>
       )}
+
+      <IngredientSearchDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        ingredients={ingredients}
+        onPick={pickIngredient}
+      />
     </div>
   );
 }
