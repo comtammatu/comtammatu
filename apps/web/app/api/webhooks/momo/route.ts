@@ -41,10 +41,7 @@ export async function POST(request: Request) {
 
   // Verify HMAC signature
   if (!verifySignature(payload)) {
-    return NextResponse.json(
-      { error: "Invalid signature" },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
   // resultCode 0 = success
@@ -54,7 +51,10 @@ export async function POST(request: Request) {
     // Scope by provider_ref which includes tenant context
     await supabase
       .from("payments")
-      .update({ status: "failed", provider_data: JSON.parse(JSON.stringify(payload)) })
+      .update({
+        status: "failed",
+        provider_data: JSON.parse(JSON.stringify(payload)),
+      })
       .eq("provider_ref", payload.orderId)
       .eq("method", "momo")
       .eq("status", "pending");
@@ -92,10 +92,7 @@ export async function POST(request: Request) {
       .from("payments")
       .update({ status: "failed" })
       .eq("id", payment.id);
-    return NextResponse.json(
-      { error: "Amount mismatch" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Amount mismatch" }, { status: 400 });
   }
 
   // Update order payment status — scope by tenant_id for defense in depth

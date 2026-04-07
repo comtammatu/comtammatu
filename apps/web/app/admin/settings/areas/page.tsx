@@ -31,7 +31,8 @@ export default async function AreasPage() {
       <div>
         <h2 className="text-lg font-semibold">Quản lý Khu vực</h2>
         <p className="text-sm text-muted-foreground">
-          Nhóm các chi nhánh thành khu vực để phân quyền cho Quản lý vùng (area_manager).
+          Nhóm các chi nhánh thành khu vực để phân quyền cho Quản lý vùng
+          (area_manager).
         </p>
       </div>
 

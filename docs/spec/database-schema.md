@@ -554,20 +554,20 @@ Junction table: which menu categories route to which KDS station.
 
 One ticket per order item per station. Created automatically by `route_order_to_kds` when an order is submitted. Bumped by chef through `bump_kds_ticket` RPC.
 
-| Column        | Type                   | Notes                                         |
-| ------------- | ---------------------- | --------------------------------------------- |
-| id            | BIGINT PK              | GENERATED ALWAYS AS IDENTITY                  |
-| tenant_id     | BIGINT FK(tenants)     | ON DELETE CASCADE                             |
-| branch_id     | BIGINT FK(branches)    | ON DELETE CASCADE                             |
-| station_id    | BIGINT FK(kds_stations)| ON DELETE CASCADE                             |
-| order_id      | BIGINT FK(orders)      | ON DELETE CASCADE                             |
-| order_item_id | BIGINT FK(order_items) | ON DELETE CASCADE                             |
-| status        | TEXT NOT NULL          | default 'pending'; CHECK IN (pending, preparing, ready, served) |
-| bumped_at     | TIMESTAMPTZ            | Set when chef bumps                           |
-| bumped_by     | UUID FK(profiles)      | Chef who last bumped                          |
-| created_at    | TIMESTAMPTZ            | default now()                                 |
-| updated_at    | TIMESTAMPTZ            | default now(), auto-trigger                   |
-|               |                        | UNIQUE(order_item_id, station_id, tenant_id)  |
+| Column        | Type                    | Notes                                                           |
+| ------------- | ----------------------- | --------------------------------------------------------------- |
+| id            | BIGINT PK               | GENERATED ALWAYS AS IDENTITY                                    |
+| tenant_id     | BIGINT FK(tenants)      | ON DELETE CASCADE                                               |
+| branch_id     | BIGINT FK(branches)     | ON DELETE CASCADE                                               |
+| station_id    | BIGINT FK(kds_stations) | ON DELETE CASCADE                                               |
+| order_id      | BIGINT FK(orders)       | ON DELETE CASCADE                                               |
+| order_item_id | BIGINT FK(order_items)  | ON DELETE CASCADE                                               |
+| status        | TEXT NOT NULL           | default 'pending'; CHECK IN (pending, preparing, ready, served) |
+| bumped_at     | TIMESTAMPTZ             | Set when chef bumps                                             |
+| bumped_by     | UUID FK(profiles)       | Chef who last bumped                                            |
+| created_at    | TIMESTAMPTZ             | default now()                                                   |
+| updated_at    | TIMESTAMPTZ             | default now(), auto-trigger                                     |
+|               |                         | UNIQUE(order_item_id, station_id, tenant_id)                    |
 
 **Realtime enabled:** `kds_tickets` is added to `supabase_realtime` publication for live KDS updates.
 
@@ -583,37 +583,37 @@ pending → preparing → ready → served
 
 ### KDS RLS Policies
 
-| Table                  | Policy | Roles / Scope                                                              |
-| ---------------------- | ------ | -------------------------------------------------------------------------- |
-| kds_stations           | SELECT | tenant + branch-scoped (branch roles see own branch, managers see all)     |
-| kds_stations           | INSERT/UPDATE/DELETE | branch_manager + owner/super_manager/area_manager            |
-| kds_station_categories | SELECT | tenant + branch-scoped via parent station join                             |
-| kds_station_categories | INSERT/UPDATE/DELETE | branch_manager + owner/super_manager/area_manager            |
-| kds_tickets            | SELECT | tenant + branch-scoped                                                     |
-| kds_tickets            | INSERT | cashier, waiter, branch_manager + management roles                         |
-| kds_tickets            | UPDATE | chef, branch_manager + management roles, branch-scoped                     |
+| Table                  | Policy               | Roles / Scope                                                          |
+| ---------------------- | -------------------- | ---------------------------------------------------------------------- |
+| kds_stations           | SELECT               | tenant + branch-scoped (branch roles see own branch, managers see all) |
+| kds_stations           | INSERT/UPDATE/DELETE | branch_manager + owner/super_manager/area_manager                      |
+| kds_station_categories | SELECT               | tenant + branch-scoped via parent station join                         |
+| kds_station_categories | INSERT/UPDATE/DELETE | branch_manager + owner/super_manager/area_manager                      |
+| kds_tickets            | SELECT               | tenant + branch-scoped                                                 |
+| kds_tickets            | INSERT               | cashier, waiter, branch_manager + management roles                     |
+| kds_tickets            | UPDATE               | chef, branch_manager + management roles, branch-scoped                 |
 
 ### KDS Indexes
 
-| Index                            | Columns                                           | Purpose                     |
-| -------------------------------- | ------------------------------------------------- | --------------------------- |
-| idx_kds_stations_branch          | kds_stations(branch_id)                           | Branch lookup               |
-| idx_kds_station_categories_station | kds_station_categories(station_id)              | Station lookup              |
-| idx_kds_station_categories_category | kds_station_categories(category_id)            | Category lookup             |
-| idx_kds_tickets_branch           | kds_tickets(branch_id)                            | Branch-scoped queries       |
-| idx_kds_tickets_station          | kds_tickets(station_id)                           | Station-scoped queries      |
-| idx_kds_tickets_order            | kds_tickets(order_id)                             | Order lookup                |
-| idx_kds_tickets_status           | kds_tickets(branch_id, station_id, status)        | Composite: active queue     |
+| Index                               | Columns                                    | Purpose                 |
+| ----------------------------------- | ------------------------------------------ | ----------------------- |
+| idx_kds_stations_branch             | kds_stations(branch_id)                    | Branch lookup           |
+| idx_kds_station_categories_station  | kds_station_categories(station_id)         | Station lookup          |
+| idx_kds_station_categories_category | kds_station_categories(category_id)        | Category lookup         |
+| idx_kds_tickets_branch              | kds_tickets(branch_id)                     | Branch-scoped queries   |
+| idx_kds_tickets_station             | kds_tickets(station_id)                    | Station-scoped queries  |
+| idx_kds_tickets_order               | kds_tickets(order_id)                      | Order lookup            |
+| idx_kds_tickets_status              | kds_tickets(branch_id, station_id, status) | Composite: active queue |
 
 ### KDS RPC Functions
 
-| Function                                        | Returns | Purpose                                                                |
-| ----------------------------------------------- | ------- | ---------------------------------------------------------------------- |
-| `route_order_to_kds(p_order_id)`                | void    | Routes order items to stations by category mapping; fallback station   |
-| `bump_kds_ticket(p_ticket_id)`                  | TEXT    | Advances ticket: pending→preparing→ready; auto-checks order readiness  |
-| `recall_kds_ticket(p_ticket_id)`                | TEXT    | Reverts ticket: ready→preparing→pending; clears bumped_at/bumped_by   |
-| `check_order_ready(p_order_id)`                 | void    | Internal: if all tickets ready, transitions order to 'ready'           |
-| `save_station_categories(p_station_id, p_ids[])` | void   | Atomic replace: delete old + insert new category assignments           |
+| Function                                         | Returns | Purpose                                                               |
+| ------------------------------------------------ | ------- | --------------------------------------------------------------------- |
+| `route_order_to_kds(p_order_id)`                 | void    | Routes order items to stations by category mapping; fallback station  |
+| `bump_kds_ticket(p_ticket_id)`                   | TEXT    | Advances ticket: pending→preparing→ready; auto-checks order readiness |
+| `recall_kds_ticket(p_ticket_id)`                 | TEXT    | Reverts ticket: ready→preparing→pending; clears bumped_at/bumped_by   |
+| `check_order_ready(p_order_id)`                  | void    | Internal: if all tickets ready, transitions order to 'ready'          |
+| `save_station_categories(p_station_id, p_ids[])` | void    | Atomic replace: delete old + insert new category assignments          |
 
 > Note: `check_order_ready` has no public GRANT — internal only, called from `bump_kds_ticket`.
 

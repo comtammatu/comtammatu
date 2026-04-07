@@ -71,12 +71,7 @@ export default async function EmployeePage() {
               </Button>
             )}
             {canAccess(role, "kds") && (
-              <Button
-                asChild
-                className="flex-1"
-                size="lg"
-                variant="secondary"
-              >
+              <Button asChild className="flex-1" size="lg" variant="secondary">
                 <Link href={`/br/${branchId}/kds`}>
                   <ChefHat className="mr-2 size-5" />
                   Mở KDS

@@ -15,7 +15,10 @@ const KDS_ROLES = MODULE_ACL.kds.allowedRoles;
  * Remove after migrations applied + pnpm db:types.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function fromTable(supabase: Awaited<ReturnType<typeof createClient>>, table: string): any {
+function fromTable(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  table: string,
+): any {
   return (supabase.from as CallableFunction)(table);
 }
 

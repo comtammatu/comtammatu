@@ -44,8 +44,7 @@ export async function createPayment(
   if (!parsedPayment.success) {
     return {
       success: false,
-      error:
-        parsedPayment.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+      error: parsedPayment.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
     };
   }
 
@@ -277,9 +276,10 @@ export async function fetchDailyReconciliation(
 
   const dateSchema = z.string().date().optional();
   const parsedDate = dateSchema.safeParse(date);
-  const targetDate = parsedDate.success && parsedDate.data
-    ? parsedDate.data
-    : new Date().toISOString().split("T")[0]!;
+  const targetDate =
+    parsedDate.success && parsedDate.data
+      ? parsedDate.data
+      : new Date().toISOString().split("T")[0]!;
 
   // Next day for exclusive upper bound (avoids sub-millisecond boundary bug)
   const nextDay = new Date(targetDate + "T00:00:00");
@@ -315,9 +315,7 @@ export async function fetchDailyReconciliation(
   const allOrders = orders ?? [];
   const allPayments = payments ?? [];
 
-  const completedPayments = allPayments.filter(
-    (p) => p.status === "completed",
-  );
+  const completedPayments = allPayments.filter((p) => p.status === "completed");
 
   const summary = {
     date: targetDate,

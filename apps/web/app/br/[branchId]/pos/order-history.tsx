@@ -21,7 +21,13 @@ export interface SessionOrder {
 
 /* ─── Status labels ─── */
 
-const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const STATUS_LABELS: Record<
+  string,
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+  }
+> = {
   new: { label: "Mới", variant: "default" },
   confirmed: { label: "Xác nhận", variant: "default" },
   preparing: { label: "Đang làm", variant: "secondary" },
@@ -67,10 +73,7 @@ export function OrderHistory({ orders, onViewBill }: OrderHistoryProps) {
             variant: "outline" as const,
           };
           return (
-            <div
-              key={order.id}
-              className="rounded-md border bg-card p-3"
-            >
+            <div key={order.id} className="rounded-md border bg-card p-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold">
                   #{order.order_number}

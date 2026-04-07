@@ -23,7 +23,9 @@ const ingredientSchema = z.object({
   min_stock_level: z.coerce.number().min(0).default(0),
   max_stock_level: z.coerce.number().min(0).optional(),
   reorder_point: z.coerce.number().min(0).optional(),
-  storage_type: z.enum(["ambient", "refrigerated", "frozen"]).default("ambient"),
+  storage_type: z
+    .enum(["ambient", "refrigerated", "frozen"])
+    .default("ambient"),
   shelf_life_days: z.coerce.number().int().positive().optional(),
 });
 
@@ -245,7 +247,11 @@ export async function fetchStockAlerts(
 
   // Filter for items below min or above max
   const alerts = (data ?? []).filter((sl) => {
-    const ing = sl.ingredients as unknown as { min_stock_level: number; max_stock_level: number | null; is_active: boolean } | null;
+    const ing = sl.ingredients as unknown as {
+      min_stock_level: number;
+      max_stock_level: number | null;
+      is_active: boolean;
+    } | null;
     if (!ing || !ing.is_active) return false;
     if (sl.current_quantity < ing.min_stock_level) return true;
     if (ing.max_stock_level && sl.current_quantity > ing.max_stock_level)

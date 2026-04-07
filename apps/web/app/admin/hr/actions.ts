@@ -103,8 +103,12 @@ export async function createEmployee(
 const shiftSchema = z.object({
   branchId: z.coerce.number().int().positive(),
   name: z.string().min(1, { error: "Tên ca không được để trống" }),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/, { message: "Giờ bắt đầu không hợp lệ (HH:MM)" }),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/, { message: "Giờ kết thúc không hợp lệ (HH:MM)" }),
+  startTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, { message: "Giờ bắt đầu không hợp lệ (HH:MM)" }),
+  endTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, { message: "Giờ kết thúc không hợp lệ (HH:MM)" }),
 });
 
 export async function fetchShifts(branchId: number): Promise<ActionResult> {
@@ -287,9 +291,7 @@ export async function checkIn(
   return { success: true, data };
 }
 
-export async function checkOut(
-  attendanceId: number,
-): Promise<ActionResult> {
+export async function checkOut(attendanceId: number): Promise<ActionResult> {
   const parsedId = z.coerce.number().int().positive().safeParse(attendanceId);
   if (!parsedId.success) {
     return { success: false, error: "ID không hợp lệ" };

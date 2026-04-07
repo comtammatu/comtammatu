@@ -50,7 +50,10 @@ function mapStationDbError(code: string | undefined): string {
  * Remove after migrations applied + pnpm db:types.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function fromTable(supabase: Awaited<ReturnType<typeof createClient>>, table: string): any {
+function fromTable(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  table: string,
+): any {
   return (supabase.from as CallableFunction)(table);
 }
 
@@ -78,9 +81,7 @@ const updateStationSchema = z.object({
  * Fetch KDS stations with their category assignments.
  * Optionally filter by branchId.
  */
-export async function fetchStations(
-  branchId?: number,
-): Promise<ActionResult> {
+export async function fetchStations(branchId?: number): Promise<ActionResult> {
   const ctx = await getAuthContext(SETTINGS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
@@ -201,7 +202,10 @@ export async function createStation(
 
   // RLS returns { data: [], error: null } on blocked writes
   if (!data || data.length === 0) {
-    return { success: false, error: "Không thể tạo trạm KDS. Kiểm tra quyền truy cập." };
+    return {
+      success: false,
+      error: "Không thể tạo trạm KDS. Kiểm tra quyền truy cập.",
+    };
   }
 
   revalidatePath("/admin/settings/kds");
@@ -265,7 +269,10 @@ export async function updateStation(
 
   // RLS returns { data: [], error: null } on blocked writes
   if (!data || data.length === 0) {
-    return { success: false, error: "Trạm KDS không tồn tại hoặc không có quyền" };
+    return {
+      success: false,
+      error: "Trạm KDS không tồn tại hoặc không có quyền",
+    };
   }
 
   revalidatePath("/admin/settings/kds");
@@ -303,13 +310,10 @@ export async function saveStationCategories(
 
   // Use atomic RPC — DELETE + INSERT in single transaction
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.rpc as any)(
-    "save_station_categories",
-    {
-      p_station_id: parsedStationId.data,
-      p_category_ids: parsedCategoryIds.data,
-    },
-  );
+  const { error } = await (supabase.rpc as any)("save_station_categories", {
+    p_station_id: parsedStationId.data,
+    p_category_ids: parsedCategoryIds.data,
+  });
 
   if (error) {
     if (error.message?.includes("not found")) {

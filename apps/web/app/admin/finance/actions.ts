@@ -69,16 +69,19 @@ export async function createTaxInvoice(
   }
 
   if (order.payment_status !== "paid") {
-    return { success: false, error: "Đơn hàng chưa thanh toán. Không thể xuất hóa đơn." };
+    return {
+      success: false,
+      error: "Đơn hàng chưa thanh toán. Không thể xuất hóa đơn.",
+    };
   }
 
   // Branch scope check
   // TODO(H3): validate area_manager can only access branches in their assigned area
-  if (
-    claims.branch_id !== null &&
-    claims.branch_id !== order.branch_id
-  ) {
-    return { success: false, error: "Không có quyền xuất hóa đơn cho chi nhánh này." };
+  if (claims.branch_id !== null && claims.branch_id !== order.branch_id) {
+    return {
+      success: false,
+      error: "Không có quyền xuất hóa đơn cho chi nhánh này.",
+    };
   }
 
   // Check no existing active invoice for this order
@@ -160,7 +163,9 @@ export async function createTaxInvoice(
       total_amount: Number(order.total_amount),
       provider: invoiceProvider?.name ?? "mock",
       provider_ref: providerRef,
-      provider_data: providerData ? JSON.parse(JSON.stringify(providerData)) : null,
+      provider_data: providerData
+        ? JSON.parse(JSON.stringify(providerData))
+        : null,
       issued_at: invoiceStatus === "issued" ? new Date().toISOString() : null,
       created_by: user.id,
     })

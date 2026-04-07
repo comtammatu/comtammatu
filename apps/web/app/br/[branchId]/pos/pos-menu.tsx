@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
@@ -127,7 +134,9 @@ export function PosMenu({
   const activeCategoryIdRef = useRef(activeCategoryId);
   activeCategoryIdRef.current = activeCategoryId;
   useEffect(() => {
-    const stillExists = categories.some((c) => c.id === activeCategoryIdRef.current);
+    const stillExists = categories.some(
+      (c) => c.id === activeCategoryIdRef.current,
+    );
     if (!stillExists) {
       setActiveCategoryId(categories[0]?.id ?? null);
     }
@@ -261,7 +270,15 @@ export function PosMenu({
         toast.error(result.error ?? "Không thể tạo đơn hàng");
       }
     });
-  }, [canSubmit, branchId, cartItems, orderType, selectedTableId, session.id, loadSessionOrders]);
+  }, [
+    canSubmit,
+    branchId,
+    cartItems,
+    orderType,
+    selectedTableId,
+    session.id,
+    loadSessionOrders,
+  ]);
 
   const handleItemTap = useCallback(
     (item: MenuItem) => {
@@ -487,10 +504,7 @@ export function PosMenu({
       />
 
       {/* Bill Receipt Sheet */}
-      <BillReceipt
-        orderId={billOrderId}
-        onClose={() => setBillOrderId(null)}
-      />
+      <BillReceipt orderId={billOrderId} onClose={() => setBillOrderId(null)} />
     </>
   );
 }

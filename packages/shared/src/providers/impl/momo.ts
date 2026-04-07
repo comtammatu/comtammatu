@@ -45,10 +45,7 @@ export class MoMoProvider implements PaymentProvider {
     };
   }
 
-  verifyWebhook(
-    payload: unknown,
-    signature: string,
-  ): WebhookVerification {
+  verifyWebhook(payload: unknown, signature: string): WebhookVerification {
     // TODO: Real HMAC-SHA256 verification
     // rawData = `amount=${amount}&message=${message}&orderId=${orderId}&...`
     // expectedSig = HMAC-SHA256(secretKey, rawData)

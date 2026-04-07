@@ -209,7 +209,12 @@ export function CartSidebar({
                             >
                               {table.number}
                               {!isAvailable && (
-                                <span aria-hidden="true" className="ml-0.5 text-xs">●</span>
+                                <span
+                                  aria-hidden="true"
+                                  className="ml-0.5 text-xs"
+                                >
+                                  ●
+                                </span>
                               )}
                             </button>
                           );
