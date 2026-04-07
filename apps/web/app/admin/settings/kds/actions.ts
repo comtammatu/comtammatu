@@ -49,10 +49,10 @@ function mapStationDbError(code: string | undefined): string {
  * Typed wrapper for supabase.from() on KDS tables not yet in generated types.
  * Remove after migrations applied + pnpm db:types.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function fromTable(
   supabase: Awaited<ReturnType<typeof createClient>>,
   table: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any {
   return (supabase.from as CallableFunction)(table);
 }
