@@ -20,8 +20,8 @@ Authentication and authorization for the entire system. Every request passes thr
 ## Role Hierarchy
 
 ```
-owner                          ← unrestricted, tenant-wide
-├── super_manager              ← everything except owner mgmt
+owner                          ← governance: dashboard, reports, finance, hr, settings (no day-to-day ops)
+├── super_manager              ← Trụ sở: vận hành + catalog NL, procurement
 ├── area_manager               ← tenant-wide (no area scoping yet)
 ├── branch_manager             ← single branch operations
 │   ├── cashier                ← POS (/br/[branchId]/pos)
@@ -48,13 +48,13 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 | Module                                                  | owner | super_mgr | area_mgr | branch_mgr | cashier | waiter | chef | office |
 | ------------------------------------------------------- | ----- | --------- | -------- | ---------- | ------- | ------ | ---- | ------ |
 | dashboard                                               | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
-| menu                                                    | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
-| inventory                                               | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
-| inventory_procurement (NCC, PO, GRN, HĐ NCC, công thức) | ✓     | ✓         |          |            |         |        |      |        |
-| orders                                                  | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
-| staff                                                   | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
+| menu                                                    |       | ✓         | ✓        | ✓          |         |        |      |        |
+| inventory                                               |       | ✓         | ✓        | ✓          |         |        |      |        |
+| inventory_procurement (NCC, PO, GRN, HĐ NCC, công thức) |       | ✓         |          |            |         |        |      |        |
+| orders                                                  |       | ✓         | ✓        | ✓          |         |        |      |        |
+| staff                                                   |       | ✓         | ✓        | ✓          |         |        |      |        |
 | hr                                                      | ✓     | ✓         |          |            |         |        |      |        |
-| crm                                                     | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
+| crm                                                     |       | ✓         | ✓        |            |         |        |      |        |
 | finance                                                 | ✓     | ✓         |          |            |         |        |      |        |
 | reports                                                 | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
 | settings                                                | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
@@ -62,7 +62,9 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 | kds                                                     |       |           |          | ✓          |         |        | ✓    |        |
 | employee                                                | ✓     | ✓         | ✓        | ✓          | ✓       | ✓      | ✓    | ✓      |
 
-**Inventory sub-route ACL:** `inventory` allows area_manager and branch_manager for tồn kho, nguyên liệu, luân chuyển. Paths under NCC/PO/GRN/HĐ NCC/công thức use `inventory_procurement` (owner, super_manager only) — see `proxy.ts` and `module-acl.ts`.
+**Owner (chủ sở hữu):** chỉ các module quản trị / giám sát — `dashboard`, `reports`, `finance`, `hr`, `settings`. Không vào vận hành (`menu`, `orders`, `inventory`, `staff`, `crm`). Giá trị tồn kho xem tại `/admin/reports/inventory-value`.
+
+**Inventory sub-route ACL:** `inventory` allows `super_manager`, `area_manager`, `branch_manager` for tồn kho, luân chuyển; CRUD danh mục nguyên liệu và mở NL theo chi nhánh là Trụ sở (`super_manager`) — RLS khớp. Paths under NCC/PO/GRN/HĐ NCC/công thức use `inventory_procurement` (`super_manager` only) — see `proxy.ts` and `module-acl.ts`.
 
 **Settings sub-page ACL:** The settings module allows area_manager and branch_manager, but sub-pages have additional guards:
 

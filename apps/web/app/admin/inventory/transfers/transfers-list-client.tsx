@@ -117,6 +117,16 @@ export function TransfersListClient({
   const [pickerIngredients, setPickerIngredients] =
     useState<IngredientRow[]>(ingredients);
 
+  const hq = branches.find((b) => b.is_headquarters);
+  const operational = branches.filter((b) => !b.is_headquarters);
+  const canBranchToBranch = operational.length >= 2;
+
+  const isUserHq =
+    hqBranchId != null && userBranchId != null && userBranchId === hqBranchId;
+  const isUserOperational =
+    hqBranchId != null && userBranchId != null && userBranchId !== hqBranchId;
+  const isBranchManager = userRole === "branch_manager";
+
   const stockFromBranchId = useMemo((): number | null => {
     if (hqBranchId == null) return null;
     if (slipKind === "inbound") {
@@ -164,16 +174,6 @@ export function TransfersListClient({
       cancelled = true;
     };
   }, [stockFromBranchId]);
-
-  const hq = branches.find((b) => b.is_headquarters);
-  const operational = branches.filter((b) => !b.is_headquarters);
-  const canBranchToBranch = operational.length >= 2;
-
-  const isUserHq =
-    hqBranchId != null && userBranchId != null && userBranchId === hqBranchId;
-  const isUserOperational =
-    hqBranchId != null && userBranchId != null && userBranchId !== hqBranchId;
-  const isBranchManager = userRole === "branch_manager";
 
   const myBranchName = useMemo(() => {
     if (userBranchId == null) return null;
