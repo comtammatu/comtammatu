@@ -6,6 +6,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { createClient } from "@comtammatu/database/supabase/client";
+import { toast } from "@comtammatu/ui/components/sonner";
 import { ChefHat } from "lucide-react";
 import { OrderCard } from "./order-card";
 import type { KdsStation, KdsTicket, KdsOrderInfo, KdsOrderItem } from "./page";
@@ -239,6 +240,7 @@ export function KdsBoard({
       });
 
       if (error) {
+        toast.error("Không thể cập nhật trạng thái món. Vui lòng thử lại.");
         // Revert optimistic update — refetch all active tickets
         const { data: freshTickets } = await sb
           .from("kds_tickets")
@@ -281,6 +283,7 @@ export function KdsBoard({
       });
 
       if (error) {
+        toast.error("Không thể thu hồi trạng thái món. Vui lòng thử lại.");
         // Revert — refetch
         const { data: freshTickets } = await sb
           .from("kds_tickets")
