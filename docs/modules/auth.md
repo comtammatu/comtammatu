@@ -45,21 +45,24 @@ Roles are stored as Postgres ENUM `staff_role` (`packages/shared/src/auth/types.
 
 Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — proxy.ts, admin shell, and layouts all read from here.
 
-| Module    | owner | super_mgr | area_mgr | branch_mgr | cashier | waiter | chef | office |
-| --------- | ----- | --------- | -------- | ---------- | ------- | ------ | ---- | ------ |
-| dashboard | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
-| menu      | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
-| inventory | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
-| orders    | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
-| staff     | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
-| hr        | ✓     | ✓         |          |            |         |        |      |        |
-| crm       | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
-| finance   | ✓     | ✓         |          |            |         |        |      |        |
-| reports   | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
-| settings  | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
-| pos       |       |           |          | ✓          | ✓       | ✓      |      |        |
-| kds       |       |           |          | ✓          |         |        | ✓    |        |
-| employee  | ✓     | ✓         | ✓        | ✓          | ✓       | ✓      | ✓    | ✓      |
+| Module                                                  | owner | super_mgr | area_mgr | branch_mgr | cashier | waiter | chef | office |
+| ------------------------------------------------------- | ----- | --------- | -------- | ---------- | ------- | ------ | ---- | ------ |
+| dashboard                                               | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
+| menu                                                    | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
+| inventory                                               | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
+| inventory_procurement (NCC, PO, GRN, HĐ NCC, công thức) | ✓     | ✓         |          |            |         |        |      |        |
+| orders                                                  | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
+| staff                                                   | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
+| hr                                                      | ✓     | ✓         |          |            |         |        |      |        |
+| crm                                                     | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
+| finance                                                 | ✓     | ✓         |          |            |         |        |      |        |
+| reports                                                 | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
+| settings                                                | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
+| pos                                                     |       |           |          | ✓          | ✓       | ✓      |      |        |
+| kds                                                     |       |           |          | ✓          |         |        | ✓    |        |
+| employee                                                | ✓     | ✓         | ✓        | ✓          | ✓       | ✓      | ✓    | ✓      |
+
+**Inventory sub-route ACL:** `inventory` allows area_manager and branch_manager for tồn kho, nguyên liệu, luân chuyển. Paths under NCC/PO/GRN/HĐ NCC/công thức use `inventory_procurement` (owner, super_manager only) — see `proxy.ts` and `module-acl.ts`.
 
 **Settings sub-page ACL:** The settings module allows area_manager and branch_manager, but sub-pages have additional guards:
 

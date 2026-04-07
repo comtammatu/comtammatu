@@ -9,6 +9,7 @@ export type ModuleKey =
   | "dashboard"
   | "menu"
   | "inventory"
+  | "inventory_procurement"
   | "orders"
   | "staff"
   | "hr"
@@ -41,6 +42,12 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/admin/inventory",
     allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
     label: "Kho hàng",
+  },
+  /** NCC, PO, GRN, HĐ NCC, công thức — chỉ owner / super_manager */
+  inventory_procurement: {
+    path: "/admin/inventory/suppliers",
+    allowedRoles: ["owner", "super_manager"],
+    label: "Kho — NCC & công thức",
   },
   orders: {
     path: "/admin/orders",

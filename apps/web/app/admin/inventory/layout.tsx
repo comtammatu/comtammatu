@@ -1,10 +1,25 @@
 import type { ReactNode } from "react";
+import { createClient } from "@comtammatu/database/supabase/server";
+import { extractClaims, canAccess } from "@comtammatu/shared/auth";
 import { InventorySubNav } from "./inventory-sub-nav";
 
-export default function InventoryLayout({ children }: { children: ReactNode }) {
+export default async function InventoryLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const claims = user ? extractClaims(user.app_metadata) : null;
+  const showProcurement = claims
+    ? canAccess(claims.user_role, "inventory_procurement")
+    : false;
+
   return (
     <div className="space-y-6">
-      <InventorySubNav />
+      <InventorySubNav showProcurement={showProcurement} />
       {children}
     </div>
   );

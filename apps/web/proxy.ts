@@ -15,10 +15,24 @@ function isPublic(pathname: string) {
   );
 }
 
+/** Sub-routes under /admin/inventory restricted to owner + super_manager */
+const INVENTORY_PROCUREMENT_PREFIXES = [
+  "/admin/inventory/suppliers",
+  "/admin/inventory/purchase-orders",
+  "/admin/inventory/grn",
+  "/admin/inventory/supplier-invoices",
+  "/admin/inventory/recipes",
+] as const;
+
 /** Map pathname to ModuleKey for ACL check */
 function resolveModule(pathname: string): ModuleKey | null {
   if (pathname.startsWith("/admin/dashboard")) return "dashboard";
   if (pathname.startsWith("/admin/menu")) return "menu";
+  for (const prefix of INVENTORY_PROCUREMENT_PREFIXES) {
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
+      return "inventory_procurement";
+    }
+  }
   if (pathname.startsWith("/admin/inventory")) return "inventory";
   if (pathname.startsWith("/admin/orders")) return "orders";
   if (pathname.startsWith("/admin/staff")) return "staff";

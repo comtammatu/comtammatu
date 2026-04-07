@@ -5,21 +5,52 @@ import { usePathname } from "next/navigation";
 import { cn } from "@comtammatu/ui";
 
 const LINKS = [
-  { href: "/admin/inventory", label: "Tồn kho & NL" },
-  { href: "/admin/inventory/suppliers", label: "Nhà cung cấp" },
-  { href: "/admin/inventory/purchase-orders", label: "Đặt hàng (PO)" },
-  { href: "/admin/inventory/grn", label: "Nhập kho (GRN)" },
-  { href: "/admin/inventory/transfers", label: "Luân chuyển" },
-  { href: "/admin/inventory/supplier-invoices", label: "HĐ NCC" },
-  { href: "/admin/inventory/recipes", label: "Công thức" },
+  { href: "/admin/inventory", label: "Tồn kho & NL", procurementOnly: false },
+  {
+    href: "/admin/inventory/suppliers",
+    label: "Nhà cung cấp",
+    procurementOnly: true,
+  },
+  {
+    href: "/admin/inventory/purchase-orders",
+    label: "Đặt hàng (PO)",
+    procurementOnly: true,
+  },
+  {
+    href: "/admin/inventory/grn",
+    label: "Nhập kho (GRN)",
+    procurementOnly: true,
+  },
+  {
+    href: "/admin/inventory/transfers",
+    label: "Luân chuyển",
+    procurementOnly: false,
+  },
+  {
+    href: "/admin/inventory/supplier-invoices",
+    label: "HĐ NCC",
+    procurementOnly: true,
+  },
+  {
+    href: "/admin/inventory/recipes",
+    label: "Công thức",
+    procurementOnly: true,
+  },
 ] as const;
 
-export function InventorySubNav() {
+export function InventorySubNav({
+  showProcurement,
+}: {
+  showProcurement: boolean;
+}) {
   const pathname = usePathname();
+  const visible = LINKS.filter(
+    (link) => !link.procurementOnly || showProcurement,
+  );
 
   return (
     <nav className="flex flex-wrap gap-2 border-b pb-3" aria-label="Kho hàng">
-      {LINKS.map((link) => {
+      {visible.map((link) => {
         const active =
           link.href === "/admin/inventory"
             ? pathname === "/admin/inventory"
