@@ -23,6 +23,7 @@ dist/
 
 # supabase
 supabase/.temp/
+supabase/.branches/
 
 # gstack (clone per-machine)
 .claude/skills/gstack/

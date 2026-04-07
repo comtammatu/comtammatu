@@ -308,13 +308,11 @@ export async function saveVariants(
     "save_item_variants",
     {
       p_item_id: parsedId.data,
-      p_variants: JSON.stringify(
-        parsed.data.map((v, idx) => ({
-          name: v.name,
-          price_adjustment: v.price_adjustment,
-          sort_order: v.sort_order ?? idx,
-        })),
-      ),
+      p_variants: parsed.data.map((v, idx) => ({
+        name: v.name,
+        price_adjustment: v.price_adjustment,
+        sort_order: v.sort_order ?? idx,
+      })),
     },
   );
 
@@ -353,13 +351,11 @@ export async function saveModifiers(
     "save_item_modifiers",
     {
       p_item_id: parsedId.data,
-      p_modifiers: JSON.stringify(
-        parsed.data.map((m, idx) => ({
-          name: m.name,
-          price: m.price,
-          sort_order: m.sort_order ?? idx,
-        })),
-      ),
+      p_modifiers: parsed.data.map((m, idx) => ({
+        name: m.name,
+        price: m.price,
+        sort_order: m.sort_order ?? idx,
+      })),
     },
   );
 
@@ -408,12 +404,10 @@ export async function saveSides(
     "save_item_sides",
     {
       p_main_item_id: validatedItemId,
-      p_sides: JSON.stringify(
-        validatedSides.map((s) => ({
-          side_item_id: s.id,
-          is_default: s.is_default,
-        })),
-      ),
+      p_sides: validatedSides.map((s) => ({
+        side_item_id: s.id,
+        is_default: s.is_default,
+      })),
     },
   );
 

@@ -12,8 +12,25 @@ VALUES (
   NULL   -- Fill representative name
 );
 
--- Example branches (adjust to actual locations)
+-- Branches: đúng một HQ (trụ sở / văn phòng); còn lại là chi nhánh có POS/KDS.
+-- Không hardcode tenant_id = 1 — map theo tenant vừa insert (slug).
 INSERT INTO public.branches (tenant_id, name, address, is_headquarters)
 VALUES
-  (1, 'Chi nhánh Đất Đỏ', 'Ấp Phước Sơn, Xã Đất Đỏ, TP.HCM', true),
-  (1, 'Chi nhánh Phước Hải', 'Tổ 1 Hải Phúc, Xã Phước Hải, TP.HCM', false);
+  (
+    (SELECT id FROM public.tenants WHERE slug = 'comtammatu' LIMIT 1),
+    'Trụ sở chính',
+    'Ấp Phước Sơn, Xã Đất Đỏ, TP.HCM',
+    TRUE
+  ),
+  (
+    (SELECT id FROM public.tenants WHERE slug = 'comtammatu' LIMIT 1),
+    'Chi nhánh Đất Đỏ',
+    'Ấp Phước Sơn, Xã Đất Đỏ, TP.HCM',
+    FALSE
+  ),
+  (
+    (SELECT id FROM public.tenants WHERE slug = 'comtammatu' LIMIT 1),
+    'Chi nhánh Phước Hải',
+    'Tổ 1 Hải Phúc, Xã Phước Hải, TP.HCM',
+    FALSE
+  );
