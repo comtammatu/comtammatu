@@ -7,7 +7,6 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Card } from "@comtammatu/ui/components/card";
 import { ChevronRight, Undo2 } from "lucide-react";
 import type { KdsOrder } from "./kds-board";
-import type { KdsModifier, KdsSide } from "./page";
 
 /* ─── Status helpers ─── */
 
@@ -120,9 +119,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
             </Badge>
           )}
         </div>
-        <span
-          className={cn("text-sm font-semibold", getElapsedColor(elapsed))}
-        >
+        <span className={cn("text-sm font-semibold", getElapsedColor(elapsed))}>
           {elapsed}p
         </span>
       </div>
@@ -147,9 +144,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
               {/* Item info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-sm font-medium">
-                    {item.quantity}x
-                  </span>
+                  <span className="text-sm font-medium">{item.quantity}x</span>
                   <span className="truncate text-sm">{item.item_name}</span>
                 </div>
                 {item.variant_name && (
@@ -158,14 +153,20 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                   </span>
                 )}
                 {/* Sides (accompaniments like Bì, Chả, etc.) */}
-                {(item.sides as KdsSide[] | null)?.map((side) => (
-                  <div key={side.side_item_id} className="text-xs text-muted-foreground">
+                {item.sides?.map((side) => (
+                  <div
+                    key={side.side_item_id}
+                    className="text-xs text-muted-foreground"
+                  >
                     + {side.name}
                   </div>
                 ))}
                 {/* Modifiers (add-ons like Extra cheese, etc.) */}
-                {(item.modifiers as KdsModifier[] | null)?.map((mod) => (
-                  <div key={mod.modifier_id} className="text-xs text-muted-foreground">
+                {item.modifiers?.map((mod) => (
+                  <div
+                    key={mod.modifier_id}
+                    className="text-xs text-muted-foreground"
+                  >
                     + {mod.name}
                   </div>
                 ))}
@@ -225,9 +226,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                     Món #{String(ticket.order_item_id)}
                   </span>
                 </div>
-                <Badge
-                  className={cn("shrink-0 text-[10px]", config.className)}
-                >
+                <Badge className={cn("shrink-0 text-[10px]", config.className)}>
                   {config.label}
                 </Badge>
                 <div className="flex shrink-0 gap-1">

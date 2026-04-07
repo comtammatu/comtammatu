@@ -14,12 +14,14 @@ Pattern: dine-in customers order com suon first, then add nuoc mia/canh/trung op
 ## Scope
 
 **PR1 (ship first, observe on floor):**
+
 - Append items to existing order
 - Order notes in cart UI (expose existing `note` field)
 - Item-level status in order history
 - Sync trigger: kds_tickets.status -> order_items.status
 
 **PR2 (after floor validation of PR1):**
+
 - Void item (role-based auth, manager+ required)
 - Cancel entire order (role-based auth + reason)
 - Transfer table
@@ -28,18 +30,18 @@ Pattern: dine-in customers order com suon first, then add nuoc mia/canh/trung op
 
 ## Key Decisions (from reviews)
 
-| # | Decision | Source | Rationale |
-|---|----------|--------|-----------|
-| 1 | Role-based auth, NOT manager PIN | CEO outside voice | Simpler for pilot. Manager+ role check is sufficient. No pgcrypto/PIN infrastructure needed. |
-| 2 | 2 PRs with observation gap | CEO review | Ship them mon, watch staff use it, then ship void/cancel/transfer. |
-| 3 | Reuse route_order_to_kds | Eng review | ON CONFLICT DO NOTHING skips existing tickets. No new routing function needed. |
-| 4 | Add sync trigger kds_tickets -> order_items | Eng review | order_items.status never updated by KDS bump. Breaks void guard + item status display. |
-| 5 | Order-level advisory lock | Eng review | pg_advisory_xact_lock(order_id) for mutations. Branch-level lock serializes all orders. |
-| 6 | Tax stays 0 | Eng review | create_order sets tax_amount=0. No tax_rate field exists. Match existing behavior. |
-| 7 | Server-side price verification | CEO outside voice | append RPC must fetch canonical prices from menu tables, ignore client prices. Same as create_order. |
-| 8 | Sheet overlay for order detail | Design review | Reuse existing Sheet pattern from bill-receipt. Consistent. |
-| 9 | Button grouping: primary + overflow | Design review | Them mon (green, always visible), status row, rest in "Khac..." dropdown. |
-| 10 | Auto-cancel on void last item | CEO review | Order with zero active items has no reason to exist. Free table. |
+| #   | Decision                                    | Source            | Rationale                                                                                            |
+| --- | ------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------- |
+| 1   | Role-based auth, NOT manager PIN            | CEO outside voice | Simpler for pilot. Manager+ role check is sufficient. No pgcrypto/PIN infrastructure needed.         |
+| 2   | 2 PRs with observation gap                  | CEO review        | Ship them mon, watch staff use it, then ship void/cancel/transfer.                                   |
+| 3   | Reuse route_order_to_kds                    | Eng review        | ON CONFLICT DO NOTHING skips existing tickets. No new routing function needed.                       |
+| 4   | Add sync trigger kds_tickets -> order_items | Eng review        | order_items.status never updated by KDS bump. Breaks void guard + item status display.               |
+| 5   | Order-level advisory lock                   | Eng review        | pg_advisory_xact_lock(order_id) for mutations. Branch-level lock serializes all orders.              |
+| 6   | Tax stays 0                                 | Eng review        | create_order sets tax_amount=0. No tax_rate field exists. Match existing behavior.                   |
+| 7   | Server-side price verification              | CEO outside voice | append RPC must fetch canonical prices from menu tables, ignore client prices. Same as create_order. |
+| 8   | Sheet overlay for order detail              | Design review     | Reuse existing Sheet pattern from bill-receipt. Consistent.                                          |
+| 9   | Button grouping: primary + overflow         | Design review     | Them mon (green, always visible), status row, rest in "Khac..." dropdown.                            |
+| 10  | Auto-cancel on void last item               | CEO review        | Order with zero active items has no reason to exist. Free table.                                     |
 
 ## NOT in scope
 
@@ -61,7 +63,7 @@ Pattern: dine-in customers order com suon first, then add nuoc mia/canh/trung op
 
 **File:** `supabase/migrations/YYYYMMDD_order_items_kds_sync.sql`
 
-```
+```sql
 -- Trigger: when kds_tickets.status changes, sync to order_items.status
 -- kds_tickets.status: pending, preparing, ready, served
 -- order_items.status: pending, preparing, ready, served, cancelled
@@ -92,7 +94,7 @@ CREATE TRIGGER trg_sync_order_item_status
 
 **File:** `supabase/migrations/YYYYMMDD_append_order_items.sql`
 
-```
+```sql
 CREATE OR REPLACE FUNCTION public.append_order_items(
   p_order_id   BIGINT,
   p_items      JSONB
@@ -101,6 +103,7 @@ LANGUAGE plpgsql SECURITY INVOKER AS $$
 ```
 
 **Logic:**
+
 1. `pg_advisory_xact_lock(p_order_id)` — order-level lock
 2. Validate order exists, tenant/branch match caller's JWT claims
 3. Validate order.status IN ('new','confirmed','preparing','ready')
@@ -132,18 +135,21 @@ LANGUAGE plpgsql SECURITY INVOKER AS $$
 
 ```typescript
 const appendItemsSchema = z.object({
-  orderId: z.coerce.number().int().positive(),
-  items: z.array(cartItemSchema).min(1),
+  orderId: z.coerce.number().int().positive({ error: "Invalid order ID" }),
+  items: z
+    .array(cartItemSchema)
+    .min(1, { error: "At least one item required" }),
 });
 
 export async function appendOrderItems(
   branchId: number,
   orderId: number,
   items: CartItem[],
-): Promise<ActionResult<{ subtotal: number; total_amount: number }>>
+): Promise<ActionResult<{ subtotal: number; total_amount: number }>>;
 ```
 
 **Logic:**
+
 1. Zod validate inputs
 2. getAuthContext(POS_ROLES) — any POS role can append
 3. Verify branch_id matches JWT
@@ -156,9 +162,7 @@ export async function appendOrderItems(
 **File:** `apps/web/app/br/[branchId]/pos/actions.ts`
 
 ```typescript
-export async function fetchOrderDetail(
-  orderId: number,
-): Promise<ActionResult>
+export async function fetchOrderDetail(orderId: number): Promise<ActionResult>;
 ```
 
 Fetches order with items including `order_items.status` for item-level display.
@@ -189,6 +193,7 @@ Query: `orders` with `order_items(id, item_name, variant_name, quantity, unit_pr
 ```
 
 **Components:**
+
 - `Sheet` from shadcn (reuse bill-receipt pattern)
 - Item list with status icons: `CheckCircle` (ready/served), `Loader2` (preparing), `Circle` (pending)
 - Status icons have `aria-label` for accessibility
@@ -197,6 +202,7 @@ Query: `orders` with `order_items(id, item_name, variant_name, quantity, unit_pr
 - Success: toast "Da them [N] mon", refresh item list
 
 **PR1 also includes:**
+
 - Expose `note` textarea in `cart-sidebar.tsx` above "Dat mon" button
 - Pass note to submitOrder (already supported in schema, just hidden in UI)
 
@@ -223,7 +229,9 @@ Query: `orders` with `order_items(id, item_name, variant_name, quantity, unit_pr
 **File:** `supabase/migrations/YYYYMMDD_order_lifecycle_pr2.sql`
 
 **Changes:**
+
 1. ALTER kds_tickets: add 'cancelled' to status CHECK constraint
+
    ```sql
    ALTER TABLE kds_tickets DROP CONSTRAINT kds_tickets_status_check;
    ALTER TABLE kds_tickets ADD CONSTRAINT kds_tickets_status_check
@@ -278,41 +286,51 @@ Query: `orders` with `order_items(id, item_name, variant_name, quantity, unit_pr
 ```typescript
 // Void: requires manager+ role (getAuthContext checks this)
 export async function voidOrderItem(
-  branchId: number, orderItemId: number, reason: string
-): Promise<ActionResult>
+  branchId: number,
+  orderItemId: number,
+  reason: string,
+): Promise<ActionResult>;
 
 // Cancel: requires manager+ role
 export async function cancelOrder(
-  branchId: number, orderId: number, reason: string
-): Promise<ActionResult>
+  branchId: number,
+  orderId: number,
+  reason: string,
+): Promise<ActionResult>;
 
 // Transfer: any POS role
 export async function transferTable(
-  branchId: number, orderId: number, newTableId: number
-): Promise<ActionResult>
+  branchId: number,
+  orderId: number,
+  newTableId: number,
+): Promise<ActionResult>;
 
 // Status update: any POS role
 export async function updateOrderStatus(
-  branchId: number, orderId: number, newStatus: string
-): Promise<ActionResult>
+  branchId: number,
+  orderId: number,
+  newStatus: string,
+): Promise<ActionResult>;
 
 // Quick reorder: any POS role
 export async function fetchOrderItemsForReorder(
-  orderId: number
-): Promise<ActionResult>
+  orderId: number,
+): Promise<ActionResult>;
 ```
 
 **Void/Cancel auth pattern:**
+
 ```typescript
 // Instead of manager PIN, check caller's role
-const ctx = await getAuthContext(['owner', 'super_manager', 'branch_manager']);
-if (!ctx) return { success: false, error: 'Can quyen quan ly de thuc hien' };
+const ctx = await getAuthContext(["owner", "super_manager", "branch_manager"]);
+if (!ctx) return { success: false, error: "Can quyen quan ly de thuc hien" };
 // Pass ctx.user.id as approved_by to the RPC
 ```
 
 ### PR2-S3: UI Components
 
 **Void item dialog:**
+
 ```
 ┌──────────────────────────────┐
 │ Huy mon: Com Tam Suon Bi    │
@@ -323,12 +341,14 @@ if (!ctx) return { success: false, error: 'Can quyen quan ly de thuc hien' };
 │ [Huy bo]     [Xac nhan huy] │
 └──────────────────────────────┘
 ```
+
 - Only visible to manager+ roles (check from auth context)
 - Reason field required (Zod min(1))
 - On success: item shows strikethrough + "DA HUY" badge
 - On last item void: toast "Don hang da tu dong huy"
 
 **Cancel order dialog:**
+
 ```
 ┌──────────────────────────────┐
 │ Huy don hang #1-260406-001?  │
@@ -343,12 +363,14 @@ if (!ctx) return { success: false, error: 'Can quyen quan ly de thuc hien' };
 ```
 
 **Table transfer:**
+
 - "Chuyen ban" in "Khac..." dropdown
 - Opens table picker (reuse fetchTablesForBranch)
 - Shows available tables only
 - On success: toast "Da chuyen sang ban [N]"
 
 **Quick reorder:**
+
 - "Dat lai" in "Khac..." dropdown or on order history item
 - Calls fetchOrderItemsForReorder
 - Filters out deactivated menu items, warns: "X mon khong con trong menu"
@@ -356,11 +378,13 @@ if (!ctx) return { success: false, error: 'Can quyen quan ly de thuc hien' };
 - User reviews cart, can modify, then submits normally
 
 **Update order status:**
+
 - "Phuc vu" button: marks order as 'served'
 - "Hoan thanh" button: marks order as 'completed', frees table
 - "Hoan thanh" disabled if any items are still preparing (guard from RPC)
 
 **KDS void display:**
+
 - In `kds-board.tsx`: when kds_ticket.status changes to 'cancelled' via realtime
 - Show red "DA HUY" overlay on the ticket card
 - setTimeout(30000) to fade the overlay
@@ -387,32 +411,32 @@ if (!ctx) return { success: false, error: 'Can quyen quan ly de thuc hien' };
 
 ## Interaction States
 
-| Feature | Loading | Empty | Error | Success | Partial |
-|---------|---------|-------|-------|---------|---------|
-| Them mon | Spinner, disable btn | N/A | Toast + reason, re-enable | Toast "Da them", refresh | N/A |
-| Huy mon | Spinner, dim item | N/A | Toast "Loi", restore | Strikethrough + DA HUY | N/A |
-| Huy don | Confirm dialog, dim sheet | N/A | Toast, keep dialog | Sheet closes, toast | N/A |
-| Chuyen ban | Table picker loading | "Khong co ban" | Toast "Loi" | Toast "Da chuyen", update header | N/A |
-| Dat lai | Cart loading | Past order empty | Toast "Loi" | Cart pre-filled | Items filtered, warning |
-| Item status | Skeleton rows | "Chua co mon" | N/A | Status icons | Mixed (normal) |
-| Phuc vu/Hoan thanh | Spinner on btn | N/A | Toast (items in-flight) | Badge updates | N/A |
+| Feature            | Loading                   | Empty            | Error                     | Success                          | Partial                 |
+| ------------------ | ------------------------- | ---------------- | ------------------------- | -------------------------------- | ----------------------- |
+| Them mon           | Spinner, disable btn      | N/A              | Toast + reason, re-enable | Toast "Da them", refresh         | N/A                     |
+| Huy mon            | Spinner, dim item         | N/A              | Toast "Loi", restore      | Strikethrough + DA HUY           | N/A                     |
+| Huy don            | Confirm dialog, dim sheet | N/A              | Toast, keep dialog        | Sheet closes, toast              | N/A                     |
+| Chuyen ban         | Table picker loading      | "Khong co ban"   | Toast "Loi"               | Toast "Da chuyen", update header | N/A                     |
+| Dat lai            | Cart loading              | Past order empty | Toast "Loi"               | Cart pre-filled                  | Items filtered, warning |
+| Item status        | Skeleton rows             | "Chua co mon"    | N/A                       | Status icons                     | Mixed (normal)          |
+| Phuc vu/Hoan thanh | Spinner on btn            | N/A              | Toast (items in-flight)   | Badge updates                    | N/A                     |
 
 ## Existing Code Reused
 
-| Pattern | Source | Used in |
-|---------|--------|---------|
-| Atomic RPC | create_order | append, void, cancel, transfer |
-| KDS routing | route_order_to_kds (ON CONFLICT) | append (re-call) |
-| Cart item schema | types.ts cartItemSchema | append items validation |
-| Price verification | create_order menu lookup loop | append RPC |
-| Audit trail | order_status_history | all mutations |
-| Table picker | fetchTablesForBranch | transfer table |
-| Sheet overlay | bill-receipt.tsx | order detail view |
-| Status badges | order-history.tsx | item status icons |
+| Pattern            | Source                           | Used in                        |
+| ------------------ | -------------------------------- | ------------------------------ |
+| Atomic RPC         | create_order                     | append, void, cancel, transfer |
+| KDS routing        | route_order_to_kds (ON CONFLICT) | append (re-call)               |
+| Cart item schema   | types.ts cartItemSchema          | append items validation        |
+| Price verification | create_order menu lookup loop    | append RPC                     |
+| Audit trail        | order_status_history             | all mutations                  |
+| Table picker       | fetchTablesForBranch             | transfer table                 |
+| Sheet overlay      | bill-receipt.tsx                 | order detail view              |
+| Status badges      | order-history.tsx                | item status icons              |
 
 ## State Machine (updated)
 
-```
+```text
                     ┌──────────┐
                     │   new    │
                     └────┬─────┘
@@ -448,7 +472,7 @@ if (!ctx) return { success: false, error: 'Can quyen quan ly de thuc hien' };
 
 ## Data Flow: Append Items
 
-```
+```text
 POS UI                Server Action           RPC                    KDS
   │                       │                    │                      │
   │ tap "Them mon"        │                    │                      │
@@ -479,6 +503,7 @@ POS UI                Server Action           RPC                    KDS
 ## QA Test Plan
 
 ### PR1 Tests
+
 1. Happy path: create order -> them mon (add 2 items) -> verify bill total updated
 2. KDS: new items appear as new tickets under same order number
 3. Order notes: add note in cart, verify it shows in bill receipt
@@ -489,6 +514,7 @@ POS UI                Server Action           RPC                    KDS
 8. Edge: double-click submit (loading state prevents)
 
 ### PR2 Tests
+
 1. Void: void pending item -> strikethrough + DA HUY -> bill total decreased
 2. Void: non-manager attempts void (should show "Can quyen quan ly")
 3. Void: void last item -> order auto-cancels -> table freed
@@ -504,27 +530,27 @@ POS UI                Server Action           RPC                    KDS
 
 ## Failure Modes
 
-| Codepath | Failure | Handled? | User sees |
-|----------|---------|----------|-----------|
-| append: menu item deactivated | Price lookup fails | YES (RAISE) | Error toast |
-| append: concurrent KDS bump | Race on totals | YES (advisory lock) | Transparent |
-| void: item already served | Guard rejects | YES (status check) | Error toast |
-| void: last item voided | Auto-cancel triggered | YES (in RPC) | Toast "Don da huy" |
-| cancel: order already completed | Guard rejects | YES (status check) | Error toast |
-| transfer: target table occupied | Status check | YES (warning) | Warning toast |
-| reorder: stale menu items | Filter + warn | YES (filter) | Warning + partial cart |
-| complete: items in-flight | Terminal guard | YES (RPC check) | Error toast |
-| sync trigger: item with no KDS ticket | Trigger doesn't fire | ACCEPTABLE | Item stays 'pending' |
-| route_order_to_kds: station deleted | FK violation possible | GAP (handle in impl) | 500 error |
+| Codepath                              | Failure               | Handled?             | User sees              |
+| ------------------------------------- | --------------------- | -------------------- | ---------------------- |
+| append: menu item deactivated         | Price lookup fails    | YES (RAISE)          | Error toast            |
+| append: concurrent KDS bump           | Race on totals        | YES (advisory lock)  | Transparent            |
+| void: item already served             | Guard rejects         | YES (status check)   | Error toast            |
+| void: last item voided                | Auto-cancel triggered | YES (in RPC)         | Toast "Don da huy"     |
+| cancel: order already completed       | Guard rejects         | YES (status check)   | Error toast            |
+| transfer: target table occupied       | Status check          | YES (warning)        | Warning toast          |
+| reorder: stale menu items             | Filter + warn         | YES (filter)         | Warning + partial cart |
+| complete: items in-flight             | Terminal guard        | YES (RPC check)      | Error toast            |
+| sync trigger: item with no KDS ticket | Trigger doesn't fire  | ACCEPTABLE           | Item stays 'pending'   |
+| route_order_to_kds: station deleted   | FK violation possible | GAP (handle in impl) | 500 error              |
 
 ## GSTACK REVIEW REPORT
 
-| Review | Trigger | Why | Runs | Status | Findings |
-|--------|---------|-----|------|--------|----------|
-| CEO Review | `/plan-ceo-review` | Scope & strategy | 1 | OPEN | 5 proposals, 5 accepted, 7 deferred |
-| Codex Review | `/codex review` | Independent 2nd opinion | 0 | -- | -- |
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR (PLAN) | 7 issues, 1 critical gap |
-| Design Review | `/plan-design-review` | UI/UX gaps | 1 | CLEAR (FULL) | score: 5/10 -> 8/10, 4 decisions |
-| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | -- | -- |
+| Review        | Trigger               | Why                             | Runs | Status       | Findings                            |
+| ------------- | --------------------- | ------------------------------- | ---- | ------------ | ----------------------------------- |
+| CEO Review    | `/plan-ceo-review`    | Scope & strategy                | 1    | OPEN         | 5 proposals, 5 accepted, 7 deferred |
+| Codex Review  | `/codex review`       | Independent 2nd opinion         | 0    | --           | --                                  |
+| Eng Review    | `/plan-eng-review`    | Architecture & tests (required) | 1    | CLEAR (PLAN) | 7 issues, 1 critical gap            |
+| Design Review | `/plan-design-review` | UI/UX gaps                      | 1    | CLEAR (FULL) | score: 5/10 -> 8/10, 4 decisions    |
+| DX Review     | `/plan-devex-review`  | Developer experience gaps       | 0    | --           | --                                  |
 
 **VERDICT:** CEO + ENG + DESIGN CLEARED. Ready to implement.

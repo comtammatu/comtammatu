@@ -248,7 +248,8 @@ export async function submitOrder(
     sides: item.sides.map((s) => ({
       side_item_id: s.side_item_id,
       name: s.name,
-      is_default: s.is_default,
+      price: s.price,
+      quantity: s.quantity,
     })),
     subtotal: calcItemSubtotal(item),
     note: item.note ?? null,
@@ -311,7 +312,11 @@ export async function fetchSessionOrders(
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
-  const parsedSessionId = z.coerce.number().int().positive().safeParse(sessionId);
+  const parsedSessionId = z.coerce
+    .number()
+    .int()
+    .positive()
+    .safeParse(sessionId);
   if (!parsedSessionId.success) {
     return { success: false, error: "Session ID không hợp lệ" };
   }

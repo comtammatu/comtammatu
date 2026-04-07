@@ -8,12 +8,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { ChefHat, DoorOpen } from "lucide-react";
 import { OrderCard } from "./order-card";
-import type {
-  KdsStation,
-  KdsTicket,
-  KdsOrderInfo,
-  KdsOrderItem,
-} from "./page";
+import type { KdsStation, KdsTicket, KdsOrderInfo, KdsOrderItem } from "./page";
 
 /* ─── Types ─── */
 
@@ -62,6 +57,15 @@ function playBeep() {
   }
 }
 
+/* ─── Helpers ─── */
+
+function getOrderStatus(orderTickets: KdsTicket[]): string {
+  const statuses = orderTickets.map((t) => t.status);
+  if (statuses.every((s) => s === "ready")) return "ready";
+  if (statuses.some((s) => s === "preparing")) return "preparing";
+  return "pending";
+}
+
 /* ─── Component ─── */
 
 export function KdsBoard({
@@ -105,44 +109,41 @@ export function KdsBoard({
     prevTicketCountRef.current = tickets.length;
   }, [tickets.length]);
 
-  const fetchOrderInfo = useCallback(
-    async (orderId: number) => {
-      const supabase = supabaseRef.current;
+  const fetchOrderInfo = useCallback(async (orderId: number) => {
+    const supabase = supabaseRef.current;
 
-      const [orderRes, itemsRes] = await Promise.all([
-        supabase
-          .from("orders")
-          .select(
-            "id, order_number, order_type, table_id, created_at, tables(number)",
-          )
-          .eq("id", orderId)
-          .single(),
-        supabase
-          .from("order_items")
-          .select(
-            "id, order_id, item_name, variant_name, quantity, unit_price, status, modifiers, sides",
-          )
-          .eq("order_id", orderId),
-      ]);
+    const [orderRes, itemsRes] = await Promise.all([
+      supabase
+        .from("orders")
+        .select(
+          "id, order_number, order_type, table_id, created_at, tables(number)",
+        )
+        .eq("id", orderId)
+        .single(),
+      supabase
+        .from("order_items")
+        .select(
+          "id, order_id, item_name, variant_name, quantity, unit_price, status, modifiers, sides",
+        )
+        .eq("order_id", orderId),
+    ]);
 
-      if (orderRes.data) {
-        setOrders((prev) => {
-          const next = new Map(prev);
-          next.set(orderId, orderRes.data as unknown as KdsOrderInfo);
-          return next;
-        });
-      }
+    if (orderRes.data) {
+      setOrders((prev) => {
+        const next = new Map(prev);
+        next.set(orderId, orderRes.data as unknown as KdsOrderInfo);
+        return next;
+      });
+    }
 
-      if (itemsRes.data) {
-        setOrderItems((prev) => {
-          const next = new Map(prev);
-          next.set(orderId, itemsRes.data as unknown as KdsOrderItem[]);
-          return next;
-        });
-      }
-    },
-    [],
-  );
+    if (itemsRes.data) {
+      setOrderItems((prev) => {
+        const next = new Map(prev);
+        next.set(orderId, itemsRes.data as unknown as KdsOrderItem[]);
+        return next;
+      });
+    }
+  }, []);
 
   // Subscribe to kds_tickets realtime
   useEffect(() => {
@@ -227,14 +228,6 @@ export function KdsBoard({
 
     return result;
   }, [filteredTickets, orders, orderItems]);
-
-  // Derive overall status per order for filtering
-  function getOrderStatus(orderTickets: KdsTicket[]): string {
-    const statuses = orderTickets.map((t) => t.status);
-    if (statuses.every((s) => s === "ready")) return "ready";
-    if (statuses.some((s) => s === "preparing")) return "preparing";
-    return "pending";
-  }
 
   // Filter orders by status
   const displayOrders = useMemo(() => {
@@ -424,12 +417,18 @@ export function KdsBoard({
 
       {/* Status filter */}
       <div className="flex gap-1 border-b border-border/50 bg-background/50 px-2 py-1.5">
-        {([
-          { key: null, label: "Tất cả", count: groupedOrders.length },
-          { key: "pending", label: "Chưa làm", count: statusCounts.pending },
-          { key: "preparing", label: "Đang làm", count: statusCounts.preparing },
-          { key: "ready", label: "Đã làm", count: statusCounts.ready },
-        ] as const).map((f) => (
+        {(
+          [
+            { key: null, label: "Tất cả", count: groupedOrders.length },
+            { key: "pending", label: "Chưa làm", count: statusCounts.pending },
+            {
+              key: "preparing",
+              label: "Đang làm",
+              count: statusCounts.preparing,
+            },
+            { key: "ready", label: "Đã làm", count: statusCounts.ready },
+          ] as const
+        ).map((f) => (
           <Button
             key={f.key ?? "all"}
             variant={statusFilter === f.key ? "default" : "ghost"}

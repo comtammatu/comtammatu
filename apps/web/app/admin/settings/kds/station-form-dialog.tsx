@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
@@ -60,7 +66,7 @@ export function StationFormDialog({
         : (state.data as { id: number } | undefined)?.id;
       const cats = Array.from(selectedCategories);
 
-      if (stationId && cats.length > 0) {
+      if (stationId) {
         startCategoryTransition(async () => {
           const catResult = await saveStationCategories(stationId, cats);
           if (!catResult.success) {
