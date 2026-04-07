@@ -16,25 +16,25 @@ export type Database = {
     Tables: {
       area_branches: {
         Row: {
-          id: number
-          tenant_id: number
           area_id: number
           branch_id: number
           created_at: string
+          id: number
+          tenant_id: number
         }
         Insert: {
-          id?: never
-          tenant_id: number
           area_id: number
           branch_id: number
           created_at?: string
+          id?: never
+          tenant_id: number
         }
         Update: {
-          id?: never
-          tenant_id?: number
           area_id?: number
           branch_id?: number
           created_at?: string
+          id?: never
+          tenant_id?: number
         }
         Relationships: [
           {
@@ -62,32 +62,106 @@ export type Database = {
       }
       areas: {
         Row: {
-          id: number
-          tenant_id: number
-          name: string
-          is_active: boolean
           created_at: string
+          id: number
+          is_active: boolean
+          name: string
+          tenant_id: number
           updated_at: string
         }
         Insert: {
-          id?: never
-          tenant_id: number
-          name: string
-          is_active?: boolean
           created_at?: string
+          id?: never
+          is_active?: boolean
+          name: string
+          tenant_id: number
           updated_at?: string
         }
         Update: {
-          id?: never
-          tenant_id?: number
-          name?: string
-          is_active?: boolean
           created_at?: string
+          id?: never
+          is_active?: boolean
+          name?: string
+          tenant_id?: number
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "areas_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_records: {
+        Row: {
+          branch_id: number
+          check_in: string | null
+          check_out: string | null
+          created_at: string
+          date: string
+          employee_id: number
+          id: number
+          note: string | null
+          shift_id: number | null
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string
+          date: string
+          employee_id: number
+          id?: never
+          note?: string | null
+          shift_id?: number | null
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string
+          date?: string
+          employee_id?: number
+          id?: never
+          note?: string | null
+          shift_id?: number | null
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -184,41 +258,166 @@ export type Database = {
           },
         ]
       }
-      kds_station_categories: {
+      employees: {
         Row: {
-          id: number
-          tenant_id: number
-          station_id: number
-          category_id: number
+          bank_account: string | null
+          bank_name: string | null
+          base_salary: number | null
+          contract_type: string | null
           created_at: string
+          dependents_count: number
+          employee_code: string | null
+          id: number
+          id_number: string | null
+          is_active: boolean
+          profile_id: string
+          start_date: string | null
+          tenant_id: number
+          updated_at: string
         }
         Insert: {
-          id?: never
-          tenant_id: number
-          station_id: number
-          category_id: number
+          bank_account?: string | null
+          bank_name?: string | null
+          base_salary?: number | null
+          contract_type?: string | null
           created_at?: string
+          dependents_count?: number
+          employee_code?: string | null
+          id?: never
+          id_number?: string | null
+          is_active?: boolean
+          profile_id: string
+          start_date?: string | null
+          tenant_id: number
+          updated_at?: string
         }
         Update: {
-          id?: never
-          tenant_id?: number
-          station_id?: number
-          category_id?: number
+          bank_account?: string | null
+          bank_name?: string | null
+          base_salary?: number | null
+          contract_type?: string | null
           created_at?: string
+          dependents_count?: number
+          employee_code?: string | null
+          id?: never
+          id_number?: string | null
+          is_active?: boolean
+          profile_id?: string
+          start_date?: string | null
+          tenant_id?: number
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "kds_station_categories_station_id_fkey"
-            columns: ["station_id"]
+            foreignKeyName: "employees_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
-            referencedRelation: "kds_stations"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "employees_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingredients: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: number
+          is_active: boolean
+          max_stock_level: number | null
+          min_stock_level: number
+          name: string
+          reorder_point: number | null
+          shelf_life_days: number | null
+          sku: string | null
+          storage_type: string
+          tenant_id: number
+          unit: string
+          unit_cost: number | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          max_stock_level?: number | null
+          min_stock_level?: number
+          name: string
+          reorder_point?: number | null
+          shelf_life_days?: number | null
+          sku?: string | null
+          storage_type?: string
+          tenant_id: number
+          unit: string
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          max_stock_level?: number | null
+          min_stock_level?: number
+          name?: string
+          reorder_point?: number | null
+          shelf_life_days?: number | null
+          sku?: string | null
+          storage_type?: string
+          tenant_id?: number
+          unit?: string
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredients_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kds_station_categories: {
+        Row: {
+          category_id: number
+          id: number
+          station_id: number
+          tenant_id: number
+        }
+        Insert: {
+          category_id: number
+          id?: never
+          station_id: number
+          tenant_id: number
+        }
+        Update: {
+          category_id?: number
+          id?: never
+          station_id?: number
+          tenant_id?: number
+        }
+        Relationships: [
           {
             foreignKeyName: "kds_station_categories_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "menu_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kds_station_categories_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "kds_stations"
             referencedColumns: ["id"]
           },
           {
@@ -232,33 +431,33 @@ export type Database = {
       }
       kds_stations: {
         Row: {
-          id: number
-          tenant_id: number
           branch_id: number
+          created_at: string
+          id: number
+          is_active: boolean
           name: string
           position: number
-          is_active: boolean
-          created_at: string
+          tenant_id: number
           updated_at: string
         }
         Insert: {
-          id?: never
-          tenant_id: number
           branch_id: number
+          created_at?: string
+          id?: never
+          is_active?: boolean
           name: string
           position?: number
-          is_active?: boolean
-          created_at?: string
+          tenant_id: number
           updated_at?: string
         }
         Update: {
-          id?: never
-          tenant_id?: number
           branch_id?: number
+          created_at?: string
+          id?: never
+          is_active?: boolean
           name?: string
           position?: number
-          is_active?: boolean
-          created_at?: string
+          tenant_id?: number
           updated_at?: string
         }
         Relationships: [
@@ -858,6 +1057,83 @@ export type Database = {
           },
         ]
       }
+      payments: {
+        Row: {
+          amount: number
+          branch_id: number
+          created_at: string
+          created_by: string
+          id: number
+          method: string
+          order_id: number
+          paid_at: string | null
+          provider_data: Json | null
+          provider_ref: string | null
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          branch_id: number
+          created_at?: string
+          created_by: string
+          id?: never
+          method: string
+          order_id: number
+          paid_at?: string | null
+          provider_data?: Json | null
+          provider_ref?: string | null
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          branch_id?: number
+          created_at?: string
+          created_by?: string
+          id?: never
+          method?: string
+          order_id?: number
+          paid_at?: string | null
+          provider_data?: Json | null
+          provider_ref?: string | null
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pos_sessions: {
         Row: {
           branch_id: number
@@ -1104,6 +1380,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "profiles_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "profiles_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
@@ -1119,479 +1402,232 @@ export type Database = {
           },
         ]
       }
-      payments: {
+      shift_assignments: {
         Row: {
-          id: number
-          tenant_id: number
           branch_id: number
-          order_id: number
-          method: string
-          amount: number
-          status: string
-          provider_ref: string | null
-          provider_data: Json | null
-          paid_at: string | null
-          created_by: string
           created_at: string
-          updated_at: string
+          date: string
+          employee_id: number
+          id: number
+          shift_id: number
+          tenant_id: number
         }
         Insert: {
-          id?: never
-          tenant_id: number
           branch_id: number
-          order_id: number
-          method: string
-          amount: number
-          status?: string
-          provider_ref?: string | null
-          provider_data?: Json | null
-          paid_at?: string | null
-          created_by: string
           created_at?: string
-          updated_at?: string
+          date: string
+          employee_id: number
+          id?: never
+          shift_id: number
+          tenant_id: number
         }
         Update: {
-          id?: never
-          tenant_id?: number
           branch_id?: number
-          order_id?: number
-          method?: string
-          amount?: number
-          status?: string
-          provider_ref?: string | null
-          provider_data?: Json | null
-          paid_at?: string | null
-          created_by?: string
           created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      ingredients: {
-        Row: {
-          id: number
-          tenant_id: number
-          name: string
-          sku: string | null
-          unit: string
-          unit_cost: number | null
-          category: string | null
-          min_stock_level: number
-          max_stock_level: number | null
-          reorder_point: number | null
-          storage_type: string
-          shelf_life_days: number | null
-          is_active: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
+          date?: string
+          employee_id?: number
           id?: never
-          tenant_id: number
-          name: string
-          sku?: string | null
-          unit: string
-          unit_cost?: number | null
-          category?: string | null
-          min_stock_level?: number
-          max_stock_level?: number | null
-          reorder_point?: number | null
-          storage_type?: string
-          shelf_life_days?: number | null
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: never
+          shift_id?: number
           tenant_id?: number
-          name?: string
-          sku?: string | null
-          unit?: string
-          unit_cost?: number | null
-          category?: string | null
-          min_stock_level?: number
-          max_stock_level?: number | null
-          reorder_point?: number | null
-          storage_type?: string
-          shelf_life_days?: number | null
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
         }
-        Relationships: []
-      }
-      stock_levels: {
-        Row: {
-          id: number
-          tenant_id: number
-          branch_id: number
-          ingredient_id: number
-          current_quantity: number
-          last_counted_at: string | null
-          updated_at: string
-        }
-        Insert: {
-          id?: never
-          tenant_id: number
-          branch_id: number
-          ingredient_id: number
-          current_quantity?: number
-          last_counted_at?: string | null
-          updated_at?: string
-        }
-        Update: {
-          id?: never
-          tenant_id?: number
-          branch_id?: number
-          ingredient_id?: number
-          current_quantity?: number
-          last_counted_at?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      stock_movements: {
-        Row: {
-          id: number
-          tenant_id: number
-          branch_id: number
-          ingredient_id: number
-          type: string
-          quantity_change: number
-          reason: string | null
-          created_by: string
-          created_at: string
-        }
-        Insert: {
-          id?: never
-          tenant_id: number
-          branch_id: number
-          ingredient_id: number
-          type: string
-          quantity_change: number
-          reason?: string | null
-          created_by: string
-          created_at?: string
-        }
-        Update: {
-          id?: never
-          tenant_id?: number
-          branch_id?: number
-          ingredient_id?: number
-          type?: string
-          quantity_change?: number
-          reason?: string | null
-          created_by?: string
-          created_at?: string
-        }
-        Relationships: []
-      }
-      employees: {
-        Row: {
-          id: number
-          tenant_id: number
-          profile_id: string
-          employee_code: string | null
-          id_number: string | null
-          bank_account: string | null
-          bank_name: string | null
-          base_salary: number | null
-          start_date: string | null
-          contract_type: string | null
-          dependents_count: number
-          is_active: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: never
-          tenant_id: number
-          profile_id: string
-          employee_code?: string | null
-          id_number?: string | null
-          bank_account?: string | null
-          bank_name?: string | null
-          base_salary?: number | null
-          start_date?: string | null
-          contract_type?: string | null
-          dependents_count?: number
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: never
-          tenant_id?: number
-          profile_id?: string
-          employee_code?: string | null
-          id_number?: string | null
-          bank_account?: string | null
-          bank_name?: string | null
-          base_salary?: number | null
-          start_date?: string | null
-          contract_type?: string | null
-          dependents_count?: number
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "shift_assignments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shifts: {
         Row: {
-          id: number
-          tenant_id: number
           branch_id: number
+          created_at: string
+          end_time: string
+          id: number
+          is_active: boolean
           name: string
           start_time: string
-          end_time: string
-          is_active: boolean
-          created_at: string
+          tenant_id: number
           updated_at: string
         }
         Insert: {
-          id?: never
-          tenant_id: number
           branch_id: number
+          created_at?: string
+          end_time: string
+          id?: never
+          is_active?: boolean
           name: string
           start_time: string
-          end_time: string
-          is_active?: boolean
-          created_at?: string
+          tenant_id: number
           updated_at?: string
         }
         Update: {
-          id?: never
-          tenant_id?: number
           branch_id?: number
+          created_at?: string
+          end_time?: string
+          id?: never
+          is_active?: boolean
           name?: string
           start_time?: string
-          end_time?: string
-          is_active?: boolean
-          created_at?: string
+          tenant_id?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "shifts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shifts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      shift_assignments: {
+      stock_levels: {
         Row: {
+          branch_id: number
+          current_quantity: number
           id: number
+          ingredient_id: number
+          last_counted_at: string | null
           tenant_id: number
-          branch_id: number
-          employee_id: number
-          shift_id: number
-          date: string
-          created_at: string
-        }
-        Insert: {
-          id?: never
-          tenant_id: number
-          branch_id: number
-          employee_id: number
-          shift_id: number
-          date: string
-          created_at?: string
-        }
-        Update: {
-          id?: never
-          tenant_id?: number
-          branch_id?: number
-          employee_id?: number
-          shift_id?: number
-          date?: string
-          created_at?: string
-        }
-        Relationships: []
-      }
-      attendance_records: {
-        Row: {
-          id: number
-          tenant_id: number
-          branch_id: number
-          employee_id: number
-          shift_id: number | null
-          date: string
-          check_in: string | null
-          check_out: string | null
-          status: string
-          note: string | null
-          created_at: string
           updated_at: string
         }
         Insert: {
-          id?: never
-          tenant_id: number
           branch_id: number
-          employee_id: number
-          shift_id?: number | null
-          date: string
-          check_in?: string | null
-          check_out?: string | null
-          status?: string
-          note?: string | null
-          created_at?: string
+          current_quantity?: number
+          id?: never
+          ingredient_id: number
+          last_counted_at?: string | null
+          tenant_id: number
           updated_at?: string
         }
         Update: {
-          id?: never
-          tenant_id?: number
           branch_id?: number
-          employee_id?: number
-          shift_id?: number | null
-          date?: string
-          check_in?: string | null
-          check_out?: string | null
-          status?: string
-          note?: string | null
-          created_at?: string
+          current_quantity?: number
+          id?: never
+          ingredient_id?: number
+          last_counted_at?: string | null
+          tenant_id?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stock_levels_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_levels_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_levels_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      tax_invoices: {
+      stock_movements: {
         Row: {
-          id: number
-          tenant_id: number
           branch_id: number
-          order_id: number
-          invoice_number: string | null
-          status: string
-          buyer_name: string | null
-          buyer_tax_code: string | null
-          buyer_address: string | null
-          subtotal: number
-          vat_rate: number
-          vat_amount: number
-          total_amount: number
-          provider: string
-          provider_ref: string | null
-          provider_data: Json | null
-          issued_at: string | null
-          cancelled_at: string | null
-          replaced_by: number | null
-          created_by: string
           created_at: string
-          updated_at: string
+          created_by: string
+          id: number
+          ingredient_id: number
+          quantity_change: number
+          reason: string | null
+          tenant_id: number
+          type: string
         }
         Insert: {
-          id?: never
-          tenant_id: number
           branch_id: number
-          order_id: number
-          invoice_number?: string | null
-          status?: string
-          buyer_name?: string | null
-          buyer_tax_code?: string | null
-          buyer_address?: string | null
-          subtotal: number
-          vat_rate?: number
-          vat_amount: number
-          total_amount: number
-          provider?: string
-          provider_ref?: string | null
-          provider_data?: Json | null
-          issued_at?: string | null
-          cancelled_at?: string | null
-          replaced_by?: number | null
-          created_by: string
           created_at?: string
-          updated_at?: string
+          created_by: string
+          id?: never
+          ingredient_id: number
+          quantity_change: number
+          reason?: string | null
+          tenant_id: number
+          type: string
         }
         Update: {
-          id?: never
-          tenant_id?: number
           branch_id?: number
-          order_id?: number
-          invoice_number?: string | null
-          status?: string
-          buyer_name?: string | null
-          buyer_tax_code?: string | null
-          buyer_address?: string | null
-          subtotal?: number
-          vat_rate?: number
-          vat_amount?: number
-          total_amount?: number
-          provider?: string
-          provider_ref?: string | null
-          provider_data?: Json | null
-          issued_at?: string | null
-          cancelled_at?: string | null
-          replaced_by?: number | null
+          created_at?: string
           created_by?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      mv_daily_revenue: {
-        Row: {
-          date: string
-          branch_id: number
-          tenant_id: number
-          order_count: number
-          total_revenue: number | null
-          total_tax: number | null
-          cash_revenue: number | null
-          vietqr_revenue: number | null
-          momo_revenue: number | null
-        }
-        Insert: {
-          date: string
-          branch_id: number
-          tenant_id: number
-          order_count: number
-          total_revenue?: number | null
-          total_tax?: number | null
-          cash_revenue?: number | null
-          vietqr_revenue?: number | null
-          momo_revenue?: number | null
-        }
-        Update: {
-          date?: string
-          branch_id?: number
+          id?: never
+          ingredient_id?: number
+          quantity_change?: number
+          reason?: string | null
           tenant_id?: number
-          order_count?: number
-          total_revenue?: number | null
-          total_tax?: number | null
-          cash_revenue?: number | null
-          vietqr_revenue?: number | null
-          momo_revenue?: number | null
+          type?: string
         }
-        Relationships: []
-      }
-      mv_top_items: {
-        Row: {
-          period_start: string
-          period_end: string
-          branch_id: number
-          tenant_id: number
-          menu_item_id: number
-          item_name: string
-          quantity_sold: number
-          revenue: number
-        }
-        Insert: {
-          period_start: string
-          period_end: string
-          branch_id: number
-          tenant_id: number
-          menu_item_id: number
-          item_name: string
-          quantity_sold: number
-          revenue: number
-        }
-        Update: {
-          period_start?: string
-          period_end?: string
-          branch_id?: number
-          tenant_id?: number
-          menu_item_id?: number
-          item_name?: string
-          quantity_sold?: number
-          revenue?: number
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_settings: {
         Row: {
@@ -1689,6 +1725,117 @@ export type Database = {
           },
         ]
       }
+      tax_invoices: {
+        Row: {
+          branch_id: number
+          buyer_address: string | null
+          buyer_name: string | null
+          buyer_tax_code: string | null
+          cancelled_at: string | null
+          created_at: string
+          created_by: string
+          id: number
+          invoice_number: string | null
+          issued_at: string | null
+          order_id: number
+          provider: string
+          provider_data: Json | null
+          provider_ref: string | null
+          replaced_by: number | null
+          status: string
+          subtotal: number
+          tenant_id: number
+          total_amount: number
+          updated_at: string
+          vat_amount: number
+          vat_rate: number
+        }
+        Insert: {
+          branch_id: number
+          buyer_address?: string | null
+          buyer_name?: string | null
+          buyer_tax_code?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          created_by: string
+          id?: never
+          invoice_number?: string | null
+          issued_at?: string | null
+          order_id: number
+          provider?: string
+          provider_data?: Json | null
+          provider_ref?: string | null
+          replaced_by?: number | null
+          status?: string
+          subtotal: number
+          tenant_id: number
+          total_amount: number
+          updated_at?: string
+          vat_amount: number
+          vat_rate?: number
+        }
+        Update: {
+          branch_id?: number
+          buyer_address?: string | null
+          buyer_name?: string | null
+          buyer_tax_code?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          created_by?: string
+          id?: never
+          invoice_number?: string | null
+          issued_at?: string | null
+          order_id?: number
+          provider?: string
+          provider_data?: Json | null
+          provider_ref?: string | null
+          replaced_by?: number | null
+          status?: string
+          subtotal?: number
+          tenant_id?: number
+          total_amount?: number
+          updated_at?: string
+          vat_amount?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_invoices_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoices_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoices_replaced_by_fkey"
+            columns: ["replaced_by"]
+            isOneToOne: false
+            referencedRelation: "tax_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           created_at: string | null
@@ -1730,7 +1877,70 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      mv_daily_revenue: {
+        Row: {
+          branch_id: number | null
+          cash_revenue: number | null
+          date: string | null
+          momo_revenue: number | null
+          order_count: number | null
+          tenant_id: number | null
+          total_revenue: number | null
+          total_tax: number | null
+          vietqr_revenue: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mv_top_items: {
+        Row: {
+          branch_id: number | null
+          item_name: string | null
+          menu_item_id: number | null
+          period_end: string | null
+          period_start: string | null
+          quantity_sold: number | null
+          revenue: number | null
+          tenant_id: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       admin_update_profile:
@@ -1759,6 +1969,8 @@ export type Database = {
       auth_branch_id: { Args: never; Returns: number }
       auth_role: { Args: never; Returns: string }
       auth_tenant_id: { Args: never; Returns: number }
+      bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
+      check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
       close_pos_session: {
         Args: { p_closing_cash: number; p_note?: string; p_session_id: number }
         Returns: Json
@@ -1777,8 +1989,23 @@ export type Database = {
         }
         Returns: Json
       }
+      create_payment: {
+        Args: {
+          p_amount: number
+          p_branch_id: number
+          p_created_by: string
+          p_method: string
+          p_order_id: number
+          p_provider_ref?: string
+          p_status?: string
+          p_tenant_id: number
+        }
+        Returns: Json
+      }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      recall_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       release_table: { Args: { p_table_id: number }; Returns: undefined }
+      route_order_to_kds: { Args: { p_order_id: number }; Returns: undefined }
       save_item_modifiers: {
         Args: { p_item_id: number; p_modifiers: Json }
         Returns: undefined
@@ -1791,16 +2018,29 @@ export type Database = {
         Args: { p_item_id: number; p_variants: Json }
         Returns: undefined
       }
+      save_station_categories: {
+        Args: { p_category_ids: number[]; p_station_id: number }
+        Returns: undefined
+      }
       set_headquarters: { Args: { p_branch_id: number }; Returns: undefined }
       toggle_category_active: { Args: { p_id: number }; Returns: boolean }
       toggle_item_active: { Args: { p_id: number }; Returns: boolean }
       toggle_profile_active: { Args: { p_target_id: string }; Returns: boolean }
       transition_order_item_status: {
-        Args: { p_item_id: number; p_new_status: string; p_expected_status: string }
+        Args: {
+          p_expected_status: string
+          p_item_id: number
+          p_new_status: string
+        }
         Returns: Json
       }
       transition_order_status: {
-        Args: { p_order_id: number; p_new_status: string; p_expected_status: string; p_note?: string }
+        Args: {
+          p_expected_status: string
+          p_new_status: string
+          p_note?: string
+          p_order_id: number
+        }
         Returns: Json
       }
       update_my_profile: {
