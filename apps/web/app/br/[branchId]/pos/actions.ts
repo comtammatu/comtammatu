@@ -199,6 +199,7 @@ export async function submitOrder(
   branchId: number,
   cart: CartState,
   posSessionId?: number,
+  idempotencyKey?: string,
 ): Promise<ActionResult<{ order_id: number; order_number: string }>> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
@@ -219,6 +220,13 @@ export async function submitOrder(
   const parsedSessionId = posSessionIdSchema.safeParse(posSessionId);
   if (!parsedSessionId.success) {
     return { success: false, error: "Session ID không hợp lệ" };
+  }
+
+  if (idempotencyKey !== undefined) {
+    const parsedKey = z.string().uuid().safeParse(idempotencyKey);
+    if (!parsedKey.success) {
+      return { success: false, error: "Mã giao dịch không hợp lệ" };
+    }
   }
 
   const ctx = await getAuthContext(POS_ROLES);
@@ -270,10 +278,19 @@ export async function submitOrder(
       p_table_id: parsedCart.data.table_id ?? null,
       p_pos_session_id: parsedSessionId.data ?? null,
       p_note: parsedCart.data.note ?? null,
+      p_idempotency_key: idempotencyKey ?? null,
     },
   );
 
   if (error) {
+    // Postgres advisory lock not available (another order creation in-flight)
+    // Avoid hanging the POS UI waiting for a long DB lock.
+    if (error.code === "55P03") {
+      return {
+        success: false,
+        error: "Đang có đơn khác được tạo. Vui lòng thử lại sau vài giây.",
+      };
+    }
     if (error.message?.includes("empty")) {
       return { success: false, error: "Giỏ hàng trống" };
     }

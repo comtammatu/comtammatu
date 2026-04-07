@@ -37,7 +37,6 @@ export function IngredientTable({
   const [search, setSearch] = useState("");
   const [editItem, setEditItem] = useState<IngredientRow | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_isPending, startTransition] = useTransition();
 
   const filtered = ingredients.filter((ing) =>

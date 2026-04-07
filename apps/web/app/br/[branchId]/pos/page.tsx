@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import {
   fetchMenuForPos,
   fetchTablesForBranch,
@@ -10,10 +11,21 @@ import { SessionGate } from "./session-gate";
 
 export default async function PosPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ branchId: string }>;
+  searchParams: Promise<{ table?: string }>;
 }) {
   const { branchId } = await params;
+  const sp = await searchParams;
+  const tableParam = sp.table;
+  const parsedTable =
+    tableParam !== undefined ? Number.parseInt(tableParam, 10) : NaN;
+  const initialTableId =
+    Number.isFinite(parsedTable) && parsedTable > 0
+      ? Math.trunc(parsedTable)
+      : undefined;
+
   const branchIdNum = Number(branchId);
 
   // Check for active session first
@@ -72,12 +84,21 @@ export default async function PosPage({
   }
 
   return (
-    <PosMenu
-      branchId={branchIdNum}
-      categories={menuResult.data as MenuCategory[]}
-      tables={(tablesResult.data ?? []) as BranchTable[]}
-      session={session}
-    />
+    <Suspense
+      fallback={
+        <div className="flex flex-1 items-center justify-center p-8">
+          <p className="text-sm text-muted-foreground">Đang tải POS…</p>
+        </div>
+      }
+    >
+      <PosMenu
+        branchId={branchIdNum}
+        categories={menuResult.data as MenuCategory[]}
+        tables={(tablesResult.data ?? []) as BranchTable[]}
+        session={session}
+        initialTableId={initialTableId}
+      />
+    </Suspense>
   );
 }
 

@@ -8,6 +8,7 @@ import {
   useState,
   useTransition,
 } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
@@ -102,6 +103,8 @@ interface PosMenuProps {
   categories: MenuCategory[];
   tables: BranchTable[];
   session: ActiveSession;
+  /** From URL `?table=` — preselect dine-in table when valid */
+  initialTableId?: number;
 }
 
 export function PosMenu({
@@ -109,7 +112,11 @@ export function PosMenu({
   categories,
   tables: initialTables,
   session,
+  initialTableId,
 }: PosMenuProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(
     categories[0]?.id ?? null,
   );
@@ -127,6 +134,33 @@ export function PosMenu({
   useEffect(() => {
     setLocalTables(initialTables);
   }, [initialTables]);
+
+  const syncTableToUrl = useCallback(
+    (tableId: number | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (tableId != null) params.set("table", String(tableId));
+      else params.delete("table");
+      const q = params.toString();
+      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const handleTableSelect = useCallback(
+    (id: number | null) => {
+      setSelectedTableId(id);
+      syncTableToUrl(id);
+    },
+    [syncTableToUrl],
+  );
+
+  useEffect(() => {
+    if (initialTableId == null) return;
+    const t = initialTables.find((x) => x.id === initialTableId);
+    if (t && t.status !== "maintenance") {
+      setSelectedTableId(initialTableId);
+    }
+  }, [initialTableId, initialTables]);
 
   // Preserve activeCategoryId across RSC re-renders that pass new categories
   const activeCategoryIdRef = useRef(activeCategoryId);
@@ -219,26 +253,55 @@ export function PosMenu({
     setCartItems([]);
   }, []);
 
-  const handleOrderTypeChange = useCallback((type: OrderType) => {
-    setOrderType(type);
-    if (type === "takeaway") {
-      setSelectedTableId(null);
-    }
-  }, []);
+  const handleOrderTypeChange = useCallback(
+    (type: OrderType) => {
+      setOrderType(type);
+      if (type === "takeaway") {
+        setSelectedTableId(null);
+        syncTableToUrl(null);
+      }
+    },
+    [syncTableToUrl],
+  );
 
   const handleSubmitOrder = useCallback(() => {
     if (!canSubmit) return;
 
     startTransition(async () => {
-      const result = await submitOrder(
-        branchId,
-        {
-          items: cartItems,
-          order_type: orderType,
-          table_id: selectedTableId ?? undefined,
-        },
-        session.id,
-      );
+      const idempotencyKey = crypto.randomUUID();
+      const backoffMs = [0, 400, 1000] as const;
+
+      let result: Awaited<ReturnType<typeof submitOrder>> = {
+        success: false,
+        error: "Không thể tạo đơn hàng",
+      };
+
+      for (const delay of backoffMs) {
+        if (delay > 0) {
+          await new Promise((r) => setTimeout(r, delay));
+        }
+        result = await submitOrder(
+          branchId,
+          {
+            items: cartItems,
+            order_type: orderType,
+            table_id: selectedTableId ?? undefined,
+          },
+          session.id,
+          idempotencyKey,
+        );
+        if (result.success) break;
+        const err = result.error ?? "";
+        if (
+          err.includes("Giỏ hàng") ||
+          err.includes("không hợp lệ") ||
+          err.includes("quyền") ||
+          err.includes("Phiên đăng nhập") ||
+          err.includes("chi nhánh")
+        ) {
+          break;
+        }
+      }
 
       if (result.success && result.data) {
         const orderId = result.data.order_id;
@@ -260,7 +323,10 @@ export function PosMenu({
         }
 
         setCartItems([]);
-        setSelectedTableId(null);
+        if (orderType === "takeaway") {
+          setSelectedTableId(null);
+          syncTableToUrl(null);
+        }
         void loadSessionOrders();
       } else {
         toast.error(result.error ?? "Không thể tạo đơn hàng");
@@ -274,6 +340,7 @@ export function PosMenu({
     orderType,
     selectedTableId,
     session.id,
+    syncTableToUrl,
   ]);
 
   const handleItemTap = useCallback(
@@ -491,7 +558,7 @@ export function PosMenu({
             onRemoveItem={removeItem}
             onClearCart={clearCart}
             onOrderTypeChange={handleOrderTypeChange}
-            onTableSelect={setSelectedTableId}
+            onTableSelect={handleTableSelect}
             onSubmitOrder={handleSubmitOrder}
           />
         )}
