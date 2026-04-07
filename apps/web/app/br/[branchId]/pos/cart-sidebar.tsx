@@ -39,7 +39,7 @@ interface CartSidebarProps {
   tables: BranchTable[];
   canSubmit: boolean;
   isSubmitting: boolean;
-  /** True while user must finish table / order-type on the table gate */
+  /** True when đơn tại bàn và chưa chọn bàn (chưa mở thực đơn) */
   contextLocked: boolean;
   onUpdateQuantity: (key: string, delta: number) => void;
   onRemoveItem: (key: string) => void;
@@ -118,81 +118,82 @@ export function CartSidebar({
         )}
       </div>
 
-      {/* Order context — hidden while table gate is active (gate owns this step) */}
-      {!contextLocked && (
-        <>
-          <div className="border-b px-3 py-2">
-            <div
-              role="radiogroup"
-              aria-label="Loại đơn hàng"
-              className="flex gap-1 rounded-lg bg-muted p-1"
-            >
-              <button
-                type="button"
-                role="radio"
-                aria-checked={orderType === "dine_in"}
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  orderType === "dine_in"
-                    ? "bg-background shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-                onClick={() => onOrderTypeChange("dine_in")}
-              >
-                <UtensilsCrossed className="size-3.5" />
-                Tại bàn
-              </button>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={orderType === "takeaway"}
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  orderType === "takeaway"
-                    ? "bg-background shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-                onClick={() => onOrderTypeChange("takeaway")}
-              >
-                <Package className="size-3.5" />
-                Mang về
-              </button>
-            </div>
-          </div>
-
-          {orderType === "dine_in" && selectedTableNumber != null && (
-            <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
-              <div className="min-w-0">
-                <p className="text-[10px] font-medium uppercase text-muted-foreground">
-                  Bàn phục vụ
-                </p>
-                <p className="truncate text-sm font-semibold">
-                  Bàn {selectedTableNumber}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 shrink-0 text-xs"
-                type="button"
-                onClick={onRequestChangeTable}
-              >
-                Đổi bàn
-              </Button>
-            </div>
-          )}
-        </>
-      )}
+      <div className="border-b px-3 py-2">
+        <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Loại đơn
+        </p>
+        <div
+          role="radiogroup"
+          aria-label="Loại đơn hàng"
+          className="flex gap-1 rounded-lg bg-muted p-1"
+        >
+          <button
+            type="button"
+            role="radio"
+            aria-checked={orderType === "dine_in"}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              orderType === "dine_in"
+                ? "bg-background shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            onClick={() => onOrderTypeChange("dine_in")}
+          >
+            <UtensilsCrossed className="size-3.5" />
+            Tại bàn
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={orderType === "takeaway"}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              orderType === "takeaway"
+                ? "bg-background shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            onClick={() => onOrderTypeChange("takeaway")}
+          >
+            <Package className="size-3.5" />
+            Mang về
+          </button>
+        </div>
+      </div>
 
       {contextLocked && (
-        <div className="border-b px-3 py-3">
-          <p className="text-xs text-muted-foreground">
-            Hoàn tất bước{" "}
-            <span className="font-medium text-foreground">Chọn bàn</span> bên
-            trái để mở thực đơn và thêm món vào giỏ.
+        <div className="border-b bg-muted/40 px-3 py-2.5">
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            <span className="font-medium text-foreground">Tại bàn:</span> chọn
+            bàn trống bên trái.{" "}
+            <span className="font-medium text-foreground">Mang về:</span> thực
+            đơn mở ngay, không cần bàn.
           </p>
         </div>
       )}
+
+      {!contextLocked &&
+        orderType === "dine_in" &&
+        selectedTableNumber != null && (
+          <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium uppercase text-muted-foreground">
+                Bàn phục vụ
+              </p>
+              <p className="truncate text-sm font-semibold">
+                Bàn {selectedTableNumber}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 shrink-0 text-xs"
+              type="button"
+              onClick={onRequestChangeTable}
+            >
+              Đổi bàn
+            </Button>
+          </div>
+        )}
 
       {/* Cart items */}
       {items.length === 0 ? (
@@ -201,7 +202,7 @@ export function CartSidebar({
           <p className="text-sm">Chưa có món</p>
           <p className="text-xs">
             {contextLocked
-              ? "Mở thực đơn sau khi chọn bàn."
+              ? "Chọn bàn trống bên trái, hoặc Mang về ở trên."
               : "Chọn món từ menu bên trái."}
           </p>
         </div>

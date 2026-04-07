@@ -3,22 +3,17 @@
 import { useMemo } from "react";
 import { cn } from "@comtammatu/ui";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import { UtensilsCrossed, Package, LayoutGrid } from "lucide-react";
-import type { OrderType } from "./types";
+import { LayoutGrid } from "lucide-react";
 import type { BranchTable } from "./page";
 
 interface PosTableGateProps {
   tables: BranchTable[];
-  orderType: OrderType;
-  onOrderTypeChange: (type: OrderType) => void;
   selectedTableId: number | null;
   onTableSelect: (tableId: number | null) => void;
 }
 
 export function PosTableGate({
   tables,
-  orderType,
-  onOrderTypeChange,
   selectedTableId,
   onTableSelect,
 }: PosTableGateProps) {
@@ -43,58 +38,15 @@ export function PosTableGate({
               Chọn bàn
             </h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Chọn tại bàn hoặc mang về, sau đó chọn bàn để mở thực đơn.
+              Chọn một bàn trống để mở thực đơn. Khách mang đi — chọn{" "}
+              <span className="font-medium text-foreground">Mang về</span> ở cột
+              phải.
             </p>
           </div>
         </div>
-
-        <div
-          role="radiogroup"
-          aria-label="Loại đơn hàng"
-          className="mt-4 flex max-w-md gap-1 rounded-lg bg-muted p-1"
-        >
-          <button
-            type="button"
-            role="radio"
-            aria-checked={orderType === "dine_in"}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
-              orderType === "dine_in"
-                ? "bg-background shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            onClick={() => onOrderTypeChange("dine_in")}
-          >
-            <UtensilsCrossed className="size-4" />
-            Tại bàn
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={orderType === "takeaway"}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
-              orderType === "takeaway"
-                ? "bg-background shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            onClick={() => onOrderTypeChange("takeaway")}
-          >
-            <Package className="size-4" />
-            Mang về
-          </button>
-        </div>
       </div>
 
-      {orderType === "takeaway" ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-8 text-center">
-          <Package className="size-14 text-muted-foreground/40" />
-          <p className="max-w-sm text-sm text-muted-foreground">
-            Mang về không cần chọn bàn. Thực đơn hiển thị bên trái — thêm món
-            vào giỏ rồi đặt món.
-          </p>
-        </div>
-      ) : tables.length === 0 ? (
+      {tables.length === 0 ? (
         <div className="flex flex-1 items-center justify-center px-6">
           <p className="text-center text-sm text-muted-foreground">
             Chưa có bàn nào trong chi nhánh. Liên hệ quản lý để thiết lập.
@@ -159,15 +111,13 @@ export function PosTableGate({
         </ScrollArea>
       )}
 
-      {orderType === "dine_in" && (
-        <div className="border-t bg-background px-4 py-3 sm:px-6">
-          <p className="text-center text-xs text-muted-foreground">
-            {selectedTableId == null
-              ? "Chọn một bàn trống để mở thực đơn và đặt món."
-              : "Đã chọn bàn — thực đơn sẽ hiển thị bên cạnh."}
-          </p>
-        </div>
-      )}
+      <div className="border-t bg-background px-4 py-3 sm:px-6">
+        <p className="text-center text-xs text-muted-foreground">
+          {selectedTableId == null
+            ? "Chạm bàn trống để gán bàn và mở thực đơn."
+            : "Đã chọn bàn — thực đơn hiển thị bên trái."}
+        </p>
+      </div>
     </div>
   );
 }

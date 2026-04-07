@@ -14,7 +14,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Clock, DoorOpen, LogOut, Monitor } from "lucide-react";
+import { Clock, DoorOpen, LogOut, Monitor, X } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import type { CategoryType } from "@comtammatu/shared";
 import { CATEGORY_TYPE_LABELS } from "@comtammatu/shared/menu";
@@ -512,6 +512,33 @@ export function PosMenu({
           </Button>
         </div>
 
+        {appendTarget != null && (
+          <div
+            className="flex items-center justify-between gap-2 border-b bg-amber-500/15 px-3 py-2 dark:bg-amber-500/20"
+            role="status"
+          >
+            <p className="min-w-0 text-xs leading-snug text-amber-950 dark:text-amber-50">
+              <span className="font-semibold">
+                Thêm món vào đơn #{appendTarget.orderNumber}
+              </span>
+              <span className="text-amber-900/90 dark:text-amber-100/90">
+                {" "}
+                — chọn món trên lưới bên dưới
+              </span>
+            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 shrink-0 gap-1 px-2 text-xs text-amber-950 hover:bg-amber-500/25 dark:text-amber-50"
+              onClick={() => setAppendTarget(null)}
+            >
+              <X className="size-3.5" />
+              Hủy
+            </Button>
+          </div>
+        )}
+
         {orderContextReady ? (
           availableMenuZones.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center text-muted-foreground">
@@ -635,8 +662,6 @@ export function PosMenu({
         ) : (
           <PosTableGate
             tables={localTables}
-            orderType={orderType}
-            onOrderTypeChange={handleOrderTypeChange}
             selectedTableId={selectedTableId}
             onTableSelect={handleTableSelect}
           />
