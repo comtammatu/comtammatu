@@ -64,6 +64,8 @@ export function StationsClient({
     firstBranch?.id ?? null,
   );
   const [dialogOpen, setDialogOpen] = useState(false);
+  /** Remount dialog to reset useActionState — stale success + create flow wiped category rows */
+  const [dialogSession, setDialogSession] = useState(0);
   const [editStation, setEditStation] = useState<StationRow | null>(null);
 
   const filteredStations = stations.filter(
@@ -198,8 +200,14 @@ export function StationsClient({
 
       {selectedBranchId !== null && (
         <StationFormDialog
+          key={dialogSession}
           open={dialogOpen}
-          onOpenChange={setDialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) {
+              setDialogSession((s) => s + 1);
+            }
+          }}
           branchId={selectedBranchId}
           station={editStation}
           categories={categories}

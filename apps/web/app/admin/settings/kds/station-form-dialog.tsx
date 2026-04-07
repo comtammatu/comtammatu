@@ -60,28 +60,32 @@ export function StationFormDialog({
 
   // Handle successful form submission — save categories then close
   useEffect(() => {
-    if (state?.success) {
-      const stationId = isEdit
-        ? station?.id
-        : (state.data as { id: number } | undefined)?.id;
-      const cats = Array.from(selectedCategories);
+    // Must run only while dialog is open; stale state.success after close used to re-fire
+    // with empty selectedCategories and wrong stationId for "create" (see dialog key reset).
+    if (!open || !state?.success) {
+      return;
+    }
 
-      if (stationId) {
-        startCategoryTransition(async () => {
-          const catResult = await saveStationCategories(stationId, cats);
-          if (!catResult.success) {
-            toast.error(catResult.error ?? "Không thể lưu danh mục");
-            return;
-          }
-          onOpenChange(false);
-          toast.success(isEdit ? "Đã cập nhật trạm KDS" : "Đã tạo trạm KDS");
-        });
-      } else {
+    const stationId = isEdit
+      ? station?.id
+      : (state.data as { id: number } | undefined)?.id;
+    const cats = Array.from(selectedCategories);
+
+    if (stationId) {
+      startCategoryTransition(async () => {
+        const catResult = await saveStationCategories(stationId, cats);
+        if (!catResult.success) {
+          toast.error(catResult.error ?? "Không thể lưu danh mục");
+          return;
+        }
         onOpenChange(false);
         toast.success(isEdit ? "Đã cập nhật trạm KDS" : "Đã tạo trạm KDS");
-      }
+      });
+    } else {
+      onOpenChange(false);
+      toast.success(isEdit ? "Đã cập nhật trạm KDS" : "Đã tạo trạm KDS");
     }
-  }, [state, isEdit, station, selectedCategories, onOpenChange]);
+  }, [open, state, isEdit, station, selectedCategories, onOpenChange]);
 
   const toggleCategory = (categoryId: number) => {
     setSelectedCategories((prev) => {
