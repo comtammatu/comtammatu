@@ -1,13 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Badge } from "@comtammatu/ui/components/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { ChefHat } from "lucide-react";
+import { ChefHat, Filter } from "lucide-react";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { OrderCard } from "./order-card";
 import type { KdsStation, KdsTicket, KdsOrderInfo, KdsOrderItem } from "./page";
@@ -31,6 +39,52 @@ interface KdsBoardProps {
   initialTickets: KdsTicket[];
   initialOrders: KdsOrderInfo[];
   initialOrderItems: KdsOrderItem[];
+}
+
+/** URL query: `status` — lọc đơn theo trạng thái ticket */
+type TicketStatusFilter = "all" | "active" | "pending" | "preparing" | "ready";
+
+/** URL query: `orderType` */
+type OrderTypeFilter = "all" | "dine_in" | "takeaway";
+
+const TICKET_STATUS_OPTIONS: { value: TicketStatusFilter; label: string }[] = [
+  { value: "all", label: "Tất cả" },
+  { value: "active", label: "Còn việc" },
+  { value: "pending", label: "Có món chờ" },
+  { value: "preparing", label: "Có món đang làm" },
+  { value: "ready", label: "Có món xong" },
+];
+
+const ORDER_TYPE_OPTIONS: { value: OrderTypeFilter; label: string }[] = [
+  { value: "all", label: "Tất cả" },
+  { value: "dine_in", label: "Tại chỗ" },
+  { value: "takeaway", label: "Mang đi" },
+];
+
+function parseTicketStatusFilter(v: string | null): TicketStatusFilter {
+  if (v === "active" || v === "pending" || v === "preparing" || v === "ready") {
+    return v;
+  }
+  return "all";
+}
+
+function parseOrderTypeFilter(v: string | null): OrderTypeFilter {
+  if (v === "dine_in" || v === "takeaway") return v;
+  return "all";
+}
+
+function orderMatchesTicketStatus(
+  tickets: KdsTicket[],
+  filter: TicketStatusFilter,
+): boolean {
+  if (filter === "all") return true;
+  const statuses = tickets.map((t) => t.status);
+  if (filter === "active") {
+    return statuses.some((s) => s === "pending" || s === "preparing");
+  }
+  if (filter === "pending") return statuses.some((s) => s === "pending");
+  if (filter === "preparing") return statuses.some((s) => s === "preparing");
+  return statuses.some((s) => s === "ready");
 }
 
 /* ─── Audio beep helper (reuses single AudioContext) ─── */
@@ -68,6 +122,10 @@ export function KdsBoard({
   initialOrders,
   initialOrderItems,
 }: KdsBoardProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [tickets, setTickets] = useState<KdsTicket[]>(initialTickets);
   const [orders, setOrders] = useState<Map<number, KdsOrderInfo>>(
     () => new Map(initialOrders.map((o) => [o.id, o])),
@@ -83,10 +141,40 @@ export function KdsBoard({
       return map;
     },
   );
-  const [activeStationId, setActiveStationId] = useState<number | null>(null);
   const supabaseRef = useRef(createClient());
   const prevTicketCountRef = useRef(tickets.length);
   const ordersRef = useRef(orders);
+
+  const replaceQuery = useCallback(
+    (updates: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === null || value === "") params.delete(key);
+        else params.set(key, value);
+      }
+      const q = params.toString();
+      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const activeStationId = useMemo((): number | null => {
+    const raw = searchParams.get("station");
+    if (!raw || raw === "all") return null;
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return null;
+    return stations.some((s) => s.id === n) ? n : null;
+  }, [searchParams, stations]);
+
+  const ticketStatusFilter = useMemo(
+    () => parseTicketStatusFilter(searchParams.get("status")),
+    [searchParams],
+  );
+
+  const orderTypeFilter = useMemo(
+    () => parseOrderTypeFilter(searchParams.get("orderType")),
+    [searchParams],
+  );
 
   // Keep ordersRef in sync
   useEffect(() => {
@@ -217,6 +305,19 @@ export function KdsBoard({
     return result;
   }, [filteredTickets, orders, orderItems]);
 
+  const displayOrders = useMemo(() => {
+    let list = groupedOrders;
+    if (orderTypeFilter !== "all") {
+      list = list.filter((o) => o.orderType === orderTypeFilter);
+    }
+    if (ticketStatusFilter !== "all") {
+      list = list.filter((o) =>
+        orderMatchesTicketStatus(o.tickets, ticketStatusFilter),
+      );
+    }
+    return list;
+  }, [groupedOrders, orderTypeFilter, ticketStatusFilter]);
+
   // Optimistic bump handler
   const handleBump = useCallback(
     async (ticketId: number) => {
@@ -336,11 +437,8 @@ export function KdsBoard({
             <Button
               variant={activeStationId === null ? "default" : "ghost"}
               size="sm"
-              className={cn(
-                "min-h-11 shrink-0 text-sm",
-                activeStationId === null && "shadow-sm",
-              )}
-              onClick={() => setActiveStationId(null)}
+              className="min-h-11 shrink-0 text-sm shadow-none"
+              onClick={() => replaceQuery({ station: null })}
             >
               Tất cả
               <Badge
@@ -359,11 +457,8 @@ export function KdsBoard({
                 key={station.id}
                 variant={activeStationId === station.id ? "default" : "ghost"}
                 size="sm"
-                className={cn(
-                  "min-h-11 shrink-0 text-sm",
-                  activeStationId === station.id && "shadow-sm",
-                )}
-                onClick={() => setActiveStationId(station.id)}
+                className="min-h-11 shrink-0 text-sm shadow-none"
+                onClick={() => replaceQuery({ station: String(station.id) })}
               >
                 {station.name}
                 <Badge
@@ -382,20 +477,76 @@ export function KdsBoard({
         </ScrollArea>
       </div>
 
+      {/* Filters: trạng thái + loại đơn (URL: status, orderType) */}
+      <div
+        className={cn(
+          "flex shrink-0 flex-wrap items-center gap-2 border-b border-border/50 bg-muted/20 px-2 py-2 sm:px-3",
+        )}
+      >
+        <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+          <Filter className="size-4 shrink-0" aria-hidden />
+          <span className="hidden text-xs font-medium sm:inline">Lọc</span>
+        </div>
+        <Select
+          value={ticketStatusFilter}
+          onValueChange={(v) => {
+            if (v === "all") replaceQuery({ status: null });
+            else replaceQuery({ status: v });
+          }}
+        >
+          <SelectTrigger
+            className="h-11 min-h-11 w-[min(100%,11rem)] min-w-[9.5rem] sm:w-52"
+            aria-label="Lọc theo trạng thái món"
+          >
+            <SelectValue placeholder="Trạng thái" />
+          </SelectTrigger>
+          <SelectContent>
+            {TICKET_STATUS_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={orderTypeFilter}
+          onValueChange={(v) => {
+            if (v === "all") replaceQuery({ orderType: null });
+            else replaceQuery({ orderType: v });
+          }}
+        >
+          <SelectTrigger
+            className="h-11 min-h-11 w-[min(100%,11rem)] min-w-[9.5rem] sm:w-44"
+            aria-label="Lọc theo loại đơn"
+          >
+            <SelectValue placeholder="Loại đơn" />
+          </SelectTrigger>
+          <SelectContent>
+            {ORDER_TYPE_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Order cards grid */}
       <ScrollArea className="flex-1">
-        {groupedOrders.length === 0 ? (
+        {displayOrders.length === 0 ? (
           <div className="flex h-full min-h-[60vh] items-center justify-center">
             <div className="text-center">
               <ChefHat className="mx-auto size-16 text-muted-foreground/50" />
               <p className="mt-4 text-lg text-muted-foreground">
-                Không có đơn hàng nào đang chờ
+                {groupedOrders.length > 0
+                  ? "Không có đơn phù hợp bộ lọc"
+                  : "Không có đơn hàng nào đang chờ"}
               </p>
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {groupedOrders.map((order) => (
+            {displayOrders.map((order) => (
               <OrderCard
                 key={order.orderId}
                 order={order}

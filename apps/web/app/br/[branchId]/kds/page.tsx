@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims, canAccess } from "@comtammatu/shared/auth";
 import { redirect } from "next/navigation";
@@ -125,12 +126,20 @@ export default async function KdsPage({
   }
 
   return (
-    <KdsBoard
-      branchId={branchIdNum}
-      stations={stations}
-      initialTickets={tickets}
-      initialOrders={orders}
-      initialOrderItems={orderItems}
-    />
+    <Suspense
+      fallback={
+        <div className="flex min-h-0 flex-1 items-center justify-center p-8">
+          <p className="text-sm text-muted-foreground">Đang tải KDS…</p>
+        </div>
+      }
+    >
+      <KdsBoard
+        branchId={branchIdNum}
+        stations={stations}
+        initialTickets={tickets}
+        initialOrders={orders}
+        initialOrderItems={orderItems}
+      />
+    </Suspense>
   );
 }
