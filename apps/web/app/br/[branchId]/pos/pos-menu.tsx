@@ -25,7 +25,8 @@ import { CloseSessionDialog } from "./close-session-dialog";
 import { BillReceipt } from "./bill-receipt";
 import { OrderHistory } from "./order-history";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
-import { submitOrder, fetchSessionOrders } from "./actions";
+import { submitOrder, fetchSessionOrders, appendOrderItems } from "./actions";
+import { OrderDetailSheet } from "./order-detail-sheet";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import { calcCartTotal } from "./types";
 import type { BranchTable, ActiveSession } from "./page";
@@ -140,6 +141,12 @@ export function PosMenu({
   const [isPending, startTransition] = useTransition();
   const [showCloseSession, setShowCloseSession] = useState(false);
   const [billOrderId, setBillOrderId] = useState<number | null>(null);
+  const [orderDetailId, setOrderDetailId] = useState<number | null>(null);
+  const [orderNote, setOrderNote] = useState("");
+  const [appendTarget, setAppendTarget] = useState<{
+    orderId: number;
+    orderNumber: string;
+  } | null>(null);
   const [localTables, setLocalTables] = useState<BranchTable[]>(initialTables);
   const [sessionOrders, setSessionOrders] = useState<SessionOrder[]>([]);
   const [showOrders, setShowOrders] = useState(false);
@@ -322,6 +329,7 @@ export function PosMenu({
             items: cartItems,
             order_type: orderType,
             table_id: selectedTableId ?? undefined,
+            note: orderNote.trim() || undefined,
           },
           session.id,
           idempotencyKey,
@@ -359,6 +367,7 @@ export function PosMenu({
         }
 
         setCartItems([]);
+        setOrderNote("");
         if (orderType === "takeaway") {
           setSelectedTableId(null);
           syncTableToUrl(null);
@@ -377,6 +386,7 @@ export function PosMenu({
     selectedTableId,
     session.id,
     syncTableToUrl,
+    orderNote,
   ]);
 
   const handleItemTap = useCallback(
@@ -385,13 +395,43 @@ export function PosMenu({
       const hasModifiers = item.menu_item_modifiers.length > 0;
       const hasSides = item.menu_item_available_sides.length > 0;
 
+      if (appendTarget) {
+        if (hasVariants || hasModifiers || hasSides) {
+          setCustomizerItem(item);
+        } else {
+          startTransition(async () => {
+            const key = makeCartKey(item.id, undefined, [], []);
+            const line: CartItem = {
+              key,
+              menu_item_id: item.id,
+              item_name: item.name,
+              quantity: 1,
+              unit_price: item.base_price,
+              modifiers: [],
+              sides: [],
+            };
+            const r = await appendOrderItems(branchId, appendTarget.orderId, [
+              line,
+            ]);
+            if (r.success) {
+              toast.success(`Đã thêm món vào đơn #${appendTarget.orderNumber}`);
+              setAppendTarget(null);
+              void loadSessionOrders();
+            } else {
+              toast.error(r.error ?? "Không thể thêm món");
+            }
+          });
+        }
+        return;
+      }
+
       if (hasVariants || hasModifiers || hasSides) {
         setCustomizerItem(item);
       } else {
         addToCart(item);
       }
     },
-    [addToCart],
+    [addToCart, appendTarget, branchId, loadSessionOrders],
   );
 
   const handleCustomizerConfirm = useCallback(
@@ -403,10 +443,38 @@ export function PosMenu({
       modifiers: CartModifier[],
       sides: CartSide[],
     ) => {
+      if (appendTarget) {
+        startTransition(async () => {
+          const key = makeCartKey(item.id, variantId, modifiers, sides);
+          const line: CartItem = {
+            key,
+            menu_item_id: item.id,
+            item_name: item.name,
+            variant_id: variantId,
+            variant_name: variantName,
+            quantity: 1,
+            unit_price: unitPrice,
+            modifiers,
+            sides,
+          };
+          const r = await appendOrderItems(branchId, appendTarget.orderId, [
+            line,
+          ]);
+          if (r.success) {
+            toast.success(`Đã thêm món vào đơn #${appendTarget.orderNumber}`);
+            setAppendTarget(null);
+            setCustomizerItem(null);
+            void loadSessionOrders();
+          } else {
+            toast.error(r.error ?? "Không thể thêm món");
+          }
+        });
+        return;
+      }
       addToCart(item, variantId, variantName, unitPrice, modifiers, sides);
       setCustomizerItem(null);
     },
-    [addToCart],
+    [addToCart, appendTarget, branchId, loadSessionOrders],
   );
 
   return (
@@ -645,7 +713,8 @@ export function PosMenu({
             </div>
             <OrderHistory
               orders={sessionOrders}
-              onViewBill={(orderId) => setBillOrderId(orderId)}
+              onViewBill={(id) => setBillOrderId(id)}
+              onViewDetail={(id) => setOrderDetailId(id)}
             />
           </div>
         ) : (
@@ -664,6 +733,8 @@ export function PosMenu({
             onOrderTypeChange={handleOrderTypeChange}
             onRequestChangeTable={handleRequestChangeTable}
             onSubmitOrder={handleSubmitOrder}
+            orderNote={orderNote}
+            onOrderNoteChange={setOrderNote}
           />
         )}
       </div>
@@ -673,6 +744,36 @@ export function PosMenu({
         item={customizerItem}
         onClose={() => setCustomizerItem(null)}
         onConfirm={handleCustomizerConfirm}
+        mode={appendTarget ? "append" : "new"}
+        appendOrderLabel={appendTarget?.orderNumber ?? null}
+      />
+
+      <OrderDetailSheet
+        orderId={orderDetailId}
+        onClose={() => setOrderDetailId(null)}
+        onOpenBill={(id) => {
+          setOrderDetailId(null);
+          setBillOrderId(id);
+        }}
+        onStartAppend={(oid, onum) => {
+          setOrderDetailId(null);
+          setAppendTarget({ orderId: oid, orderNumber: onum });
+          setShowOrders(false);
+          toast.message("Chọn món trên menu để thêm vào đơn");
+        }}
+        onReorderToCart={(items, skippedCount) => {
+          setCartItems(items);
+          setShowOrders(false);
+          if (skippedCount > 0) {
+            toast.message(
+              `Đã bỏ qua ${String(skippedCount)} món không còn trong thực đơn.`,
+            );
+          } else {
+            toast.success("Đã thêm món vào giỏ từ đơn cũ");
+          }
+        }}
+        tables={localTables}
+        onTablesChange={setLocalTables}
       />
 
       {/* Close Session Dialog */}

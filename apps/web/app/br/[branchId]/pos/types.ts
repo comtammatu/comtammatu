@@ -49,7 +49,7 @@ export const cartStateSchema = z.object({
   items: z.array(cartItemSchema),
   order_type: z.enum(ORDER_TYPES),
   table_id: z.number().int().positive().optional(),
-  note: z.string().optional(),
+  note: z.string().max(500).optional(),
 });
 
 export type CartState = z.infer<typeof cartStateSchema>;

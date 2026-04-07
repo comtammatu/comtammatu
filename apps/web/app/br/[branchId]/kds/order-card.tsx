@@ -24,6 +24,10 @@ const STATUS_CONFIG = {
     label: "Xong",
     className: "bg-green-600 text-green-100",
   },
+  cancelled: {
+    label: "Đã hủy",
+    className: "bg-red-700 text-red-50",
+  },
 } as const;
 
 function getStatusConfig(status: string) {
@@ -90,6 +94,28 @@ function getElapsedColor(minutes: number): string {
   return "text-red-400";
 }
 
+/** PR2: void/cancel — nổi badge, mờ dần sau 30s */
+function CancelledTicketOverlay() {
+  const [faded, setFaded] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setFaded(true), 30000);
+    return () => window.clearTimeout(t);
+  }, []);
+  return (
+    <div
+      className={cn(
+        "pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-destructive/15 motion-safe:transition-opacity motion-safe:duration-500",
+        faded && "opacity-40",
+      )}
+      aria-hidden
+    >
+      <span className="rounded bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground">
+        Đã hủy
+      </span>
+    </div>
+  );
+}
+
 /* ─── Component ─── */
 
 interface OrderCardProps {
@@ -113,17 +139,22 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
   // Determine overall order status for card border
   const overallStatus = useMemo(() => {
     const statuses = order.tickets.map((t) => t.status);
+    if (statuses.length > 0 && statuses.every((s) => s === "cancelled")) {
+      return "cancelled";
+    }
     if (statuses.every((s) => s === "ready")) return "ready";
     if (statuses.some((s) => s === "preparing")) return "preparing";
     return "pending";
   }, [order.tickets]);
 
   const borderColor =
-    overallStatus === "ready"
-      ? "border-green-600/50"
-      : overallStatus === "preparing"
-        ? "border-yellow-600/50"
-        : "border-border";
+    overallStatus === "cancelled"
+      ? "border-red-700/40"
+      : overallStatus === "ready"
+        ? "border-green-600/50"
+        : overallStatus === "preparing"
+          ? "border-yellow-600/50"
+          : "border-border";
 
   return (
     <Card
@@ -163,17 +194,22 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
           const ticket = ticketByItemId.get(item.id);
           const status = ticket?.status ?? "pending";
           const config = getStatusConfig(status);
-          const canBump = status === "pending" || status === "preparing";
-          const canRecall = status === "preparing" || status === "ready";
+          const isCancelled = status === "cancelled";
+          const canBump =
+            !isCancelled && (status === "pending" || status === "preparing");
+          const canRecall =
+            !isCancelled && (status === "preparing" || status === "ready");
 
           return (
             <div
               key={item.id}
               className={cn(
-                "flex items-center gap-2 px-3 py-2",
+                "relative flex items-center gap-2 px-3 py-2",
                 status === "ready" && "opacity-50",
+                isCancelled && "opacity-100",
               )}
             >
+              {isCancelled && <CancelledTicketOverlay />}
               {/* Item info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-1.5">

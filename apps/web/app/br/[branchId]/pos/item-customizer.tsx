@@ -28,12 +28,17 @@ interface ItemCustomizerProps {
     modifiers: CartModifier[],
     sides: CartSide[],
   ) => void;
+  /** Thêm món vào đơn đã có (copy nút/tiêu đề) */
+  mode?: "new" | "append";
+  appendOrderLabel?: string | null;
 }
 
 export function ItemCustomizer({
   item,
   onClose,
   onConfirm,
+  mode = "new",
+  appendOrderLabel,
 }: ItemCustomizerProps) {
   const [selectedVariant, setSelectedVariant] = useState<MenuVariant | null>(
     null,
@@ -162,10 +167,15 @@ export function ItemCustomizer({
             <SheetHeader className="px-4 pt-4">
               <SheetTitle className="text-left">{item.name}</SheetTitle>
               <SheetDescription
-                className={cn("text-left", !item.description && "sr-only")}
+                className={cn(
+                  "text-left",
+                  mode === "new" && !item.description && "sr-only",
+                )}
               >
-                {item.description ??
-                  "Tùy chọn món (biến thể, topping, món kèm)"}
+                {mode === "append" && appendOrderLabel
+                  ? `Thêm món vào đơn #${appendOrderLabel}`
+                  : (item.description ??
+                    "Tùy chọn món (biến thể, topping, món kèm)")}
               </SheetDescription>
             </SheetHeader>
 
@@ -265,8 +275,12 @@ export function ItemCustomizer({
                   {formatVND(totalPrice)}
                 </p>
               </div>
-              <Button size="lg" onClick={handleConfirm}>
-                Thêm vào giỏ
+              <Button
+                size="lg"
+                className="min-h-11 min-w-[10rem]"
+                onClick={handleConfirm}
+              >
+                {mode === "append" ? "Thêm vào đơn" : "Thêm vào giỏ"}
               </Button>
             </div>
           </div>

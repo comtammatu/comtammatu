@@ -43,9 +43,14 @@ function formatTime(dateStr: string): string {
 interface OrderHistoryProps {
   orders: SessionOrder[];
   onViewBill: (orderId: number) => void;
+  onViewDetail: (orderId: number) => void;
 }
 
-export function OrderHistory({ orders, onViewBill }: OrderHistoryProps) {
+export function OrderHistory({
+  orders,
+  onViewBill,
+  onViewDetail,
+}: OrderHistoryProps) {
   if (orders.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
@@ -92,19 +97,29 @@ export function OrderHistory({ orders, onViewBill }: OrderHistoryProps) {
                 </span>
               </div>
 
-              <div className="mt-2 flex items-center justify-between">
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-sm font-semibold text-primary">
                   {formatVND(order.total_amount)}
                 </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => onViewBill(order.id)}
-                >
-                  <Receipt className="mr-1 size-3" />
-                  Hóa đơn
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 min-h-9 min-w-[4.5rem] text-xs"
+                    onClick={() => onViewDetail(order.id)}
+                  >
+                    Chi tiết
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 min-h-9 min-w-[4.5rem] text-xs"
+                    onClick={() => onViewBill(order.id)}
+                  >
+                    <Receipt className="mr-1 size-3" />
+                    Hóa đơn
+                  </Button>
+                </div>
               </div>
             </div>
           );

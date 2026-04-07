@@ -16,6 +16,7 @@ import {
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
   Loader2,
   Minus,
@@ -46,6 +47,8 @@ interface CartSidebarProps {
   onOrderTypeChange: (type: OrderType) => void;
   onRequestChangeTable: () => void;
   onSubmitOrder: () => void;
+  orderNote: string;
+  onOrderNoteChange: (note: string) => void;
 }
 
 export function CartSidebar({
@@ -63,6 +66,8 @@ export function CartSidebar({
   onOrderTypeChange,
   onRequestChangeTable,
   onSubmitOrder,
+  orderNote,
+  onOrderNoteChange,
 }: CartSidebarProps) {
   const selectedTableNumber =
     selectedTableId != null
@@ -274,14 +279,38 @@ export function CartSidebar({
           {/* Footer */}
           <div className="border-t p-4">
             <Separator className="mb-3" />
-            <div className="flex items-center justify-between">
+            <div className="space-y-1.5">
+              <label
+                htmlFor="pos-order-note"
+                className="text-xs font-medium text-muted-foreground"
+              >
+                Ghi chú đơn
+              </label>
+              <Textarea
+                id="pos-order-note"
+                value={orderNote}
+                onChange={(e) => onOrderNoteChange(e.target.value)}
+                placeholder="Ví dụ: ít đường, không hành…"
+                maxLength={500}
+                rows={2}
+                className="resize-none text-sm"
+                aria-describedby="pos-order-note-hint"
+              />
+              <p
+                id="pos-order-note-hint"
+                className="text-[10px] text-muted-foreground"
+              >
+                Áp dụng cho toàn bộ đơn khi đặt món (tối đa 500 ký tự).
+              </p>
+            </div>
+            <div className="mt-3 flex items-center justify-between">
               <span className="text-sm font-medium">Tạm tính</span>
               <span className="text-lg font-bold text-primary">
                 {formatVND(total)}
               </span>
             </div>
             <Button
-              className="mt-3 w-full"
+              className="mt-3 min-h-11 w-full"
               size="lg"
               disabled={!canSubmit || isSubmitting}
               onClick={onSubmitOrder}

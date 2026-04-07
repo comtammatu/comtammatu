@@ -28,6 +28,7 @@ interface StockLevelRow {
   id: number;
   ingredient_id: number;
   current_quantity: number;
+  avg_unit_cost: number | null;
   last_counted_at: string | null;
   ingredient_name: string;
   ingredient_unit: string;
@@ -66,6 +67,7 @@ export function StockLevelsTable({
         id: number;
         ingredient_id: number;
         current_quantity: number;
+        avg_unit_cost: number | null;
         last_counted_at: string | null;
         ingredients:
           | {
@@ -93,6 +95,7 @@ export function StockLevelsTable({
             id: sl.id,
             ingredient_id: sl.ingredient_id,
             current_quantity: sl.current_quantity,
+            avg_unit_cost: sl.avg_unit_cost,
             last_counted_at: sl.last_counted_at,
             ingredient_name: ing?.name ?? "—",
             ingredient_unit: ing?.unit ?? "",
@@ -216,6 +219,9 @@ export function StockLevelsTable({
               <TableRow>
                 <TableHead>Nguyên liệu</TableHead>
                 <TableHead className="text-right">Tồn hiện tại</TableHead>
+                <TableHead className="hidden md:table-cell text-right">
+                  Giá vốn TB
+                </TableHead>
                 <TableHead className="hidden sm:table-cell text-right">
                   Tối thiểu
                 </TableHead>
@@ -228,7 +234,7 @@ export function StockLevelsTable({
               {stockRows.length === 0 && !isPending && (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={7}
                     className="py-12 text-center text-sm text-muted-foreground"
                   >
                     Không có dữ liệu tồn kho cho chi nhánh này
@@ -253,6 +259,11 @@ export function StockLevelsTable({
                       }`}
                     >
                       {row.current_quantity.toLocaleString("vi-VN")}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-right font-mono text-muted-foreground text-xs">
+                      {row.avg_unit_cost != null
+                        ? `${row.avg_unit_cost.toLocaleString("vi-VN")} ₫`
+                        : "—"}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-right font-mono text-muted-foreground">
                       {row.min_stock_level.toLocaleString("vi-VN")}

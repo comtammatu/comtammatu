@@ -7,10 +7,30 @@ export type Json =
   | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.4";
+  graphql_public: {
+    Tables: {
+      [_ in never]: never;
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json;
+          operationName?: string;
+          query?: string;
+          variables?: Json;
+        };
+        Returns: Json;
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
   public: {
     Tables: {
@@ -317,6 +337,170 @@ export type Database = {
           },
           {
             foreignKeyName: "employees_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      goods_received_notes: {
+        Row: {
+          branch_id: number;
+          created_at: string;
+          created_by: string;
+          grn_number: string;
+          id: number;
+          notes: string | null;
+          po_id: number | null;
+          received_by: string | null;
+          received_date: string;
+          status: string;
+          supplier_id: number;
+          tenant_id: number;
+          updated_at: string;
+        };
+        Insert: {
+          branch_id: number;
+          created_at?: string;
+          created_by: string;
+          grn_number: string;
+          id?: never;
+          notes?: string | null;
+          po_id?: number | null;
+          received_by?: string | null;
+          received_date?: string;
+          status?: string;
+          supplier_id: number;
+          tenant_id: number;
+          updated_at?: string;
+        };
+        Update: {
+          branch_id?: number;
+          created_at?: string;
+          created_by?: string;
+          grn_number?: string;
+          id?: never;
+          notes?: string | null;
+          po_id?: number | null;
+          received_by?: string | null;
+          received_date?: string;
+          status?: string;
+          supplier_id?: number;
+          tenant_id?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "goods_received_notes_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "goods_received_notes_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "goods_received_notes_po_id_fkey";
+            columns: ["po_id"];
+            isOneToOne: false;
+            referencedRelation: "purchase_orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "goods_received_notes_received_by_fkey";
+            columns: ["received_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "goods_received_notes_supplier_id_fkey";
+            columns: ["supplier_id"];
+            isOneToOne: false;
+            referencedRelation: "suppliers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "goods_received_notes_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      grn_items: {
+        Row: {
+          batch_number: string | null;
+          expiry_date: string | null;
+          grn_id: number;
+          id: number;
+          ingredient_id: number;
+          po_quantity: number | null;
+          quality_status: string;
+          received_quantity: number;
+          rejected_quantity: number;
+          rejection_reason: string | null;
+          tenant_id: number;
+          total_cost: number;
+          unit: string;
+          unit_cost: number;
+        };
+        Insert: {
+          batch_number?: string | null;
+          expiry_date?: string | null;
+          grn_id: number;
+          id?: never;
+          ingredient_id: number;
+          po_quantity?: number | null;
+          quality_status?: string;
+          received_quantity: number;
+          rejected_quantity?: number;
+          rejection_reason?: string | null;
+          tenant_id: number;
+          total_cost: number;
+          unit: string;
+          unit_cost: number;
+        };
+        Update: {
+          batch_number?: string | null;
+          expiry_date?: string | null;
+          grn_id?: number;
+          id?: never;
+          ingredient_id?: number;
+          po_quantity?: number | null;
+          quality_status?: string;
+          received_quantity?: number;
+          rejected_quantity?: number;
+          rejection_reason?: string | null;
+          tenant_id?: number;
+          total_cost?: number;
+          unit?: string;
+          unit_cost?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "grn_items_grn_id_fkey";
+            columns: ["grn_id"];
+            isOneToOne: false;
+            referencedRelation: "goods_received_notes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "grn_items_ingredient_id_fkey";
+            columns: ["ingredient_id"];
+            isOneToOne: false;
+            referencedRelation: "ingredients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "grn_items_tenant_id_fkey";
             columns: ["tenant_id"];
             isOneToOne: false;
             referencedRelation: "tenants";
@@ -1447,6 +1631,187 @@ export type Database = {
           },
         ];
       };
+      purchase_order_items: {
+        Row: {
+          id: number;
+          ingredient_id: number;
+          line_total: number | null;
+          po_id: number;
+          quantity: number;
+          tenant_id: number;
+          unit: string;
+          unit_price_est: number | null;
+        };
+        Insert: {
+          id?: never;
+          ingredient_id: number;
+          line_total?: number | null;
+          po_id: number;
+          quantity: number;
+          tenant_id: number;
+          unit: string;
+          unit_price_est?: number | null;
+        };
+        Update: {
+          id?: never;
+          ingredient_id?: number;
+          line_total?: number | null;
+          po_id?: number;
+          quantity?: number;
+          tenant_id?: number;
+          unit?: string;
+          unit_price_est?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_ingredient_id_fkey";
+            columns: ["ingredient_id"];
+            isOneToOne: false;
+            referencedRelation: "ingredients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "purchase_order_items_po_id_fkey";
+            columns: ["po_id"];
+            isOneToOne: false;
+            referencedRelation: "purchase_orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "purchase_order_items_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      purchase_orders: {
+        Row: {
+          branch_id: number;
+          created_at: string;
+          created_by: string;
+          id: number;
+          notes: string | null;
+          ordered_at: string;
+          po_number: string;
+          status: string;
+          supplier_id: number;
+          tenant_id: number;
+          updated_at: string;
+        };
+        Insert: {
+          branch_id: number;
+          created_at?: string;
+          created_by: string;
+          id?: never;
+          notes?: string | null;
+          ordered_at?: string;
+          po_number: string;
+          status?: string;
+          supplier_id: number;
+          tenant_id: number;
+          updated_at?: string;
+        };
+        Update: {
+          branch_id?: number;
+          created_at?: string;
+          created_by?: string;
+          id?: never;
+          notes?: string | null;
+          ordered_at?: string;
+          po_number?: string;
+          status?: string;
+          supplier_id?: number;
+          tenant_id?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "purchase_orders_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey";
+            columns: ["supplier_id"];
+            isOneToOne: false;
+            referencedRelation: "suppliers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "purchase_orders_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      recipes: {
+        Row: {
+          created_at: string;
+          id: number;
+          ingredient_id: number;
+          menu_item_id: number;
+          note: string | null;
+          quantity: number;
+          tenant_id: number;
+          unit: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: never;
+          ingredient_id: number;
+          menu_item_id: number;
+          note?: string | null;
+          quantity: number;
+          tenant_id: number;
+          unit: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: never;
+          ingredient_id?: number;
+          menu_item_id?: number;
+          note?: string | null;
+          quantity?: number;
+          tenant_id?: number;
+          unit?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "recipes_ingredient_id_fkey";
+            columns: ["ingredient_id"];
+            isOneToOne: false;
+            referencedRelation: "ingredients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "recipes_menu_item_id_fkey";
+            columns: ["menu_item_id"];
+            isOneToOne: false;
+            referencedRelation: "menu_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "recipes_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       shift_assignments: {
         Row: {
           branch_id: number;
@@ -1559,6 +1924,7 @@ export type Database = {
       };
       stock_levels: {
         Row: {
+          avg_unit_cost: number | null;
           branch_id: number;
           current_quantity: number;
           id: number;
@@ -1568,6 +1934,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          avg_unit_cost?: number | null;
           branch_id: number;
           current_quantity?: number;
           id?: never;
@@ -1577,6 +1944,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          avg_unit_cost?: number | null;
           branch_id?: number;
           current_quantity?: number;
           id?: never;
@@ -1614,34 +1982,46 @@ export type Database = {
           branch_id: number;
           created_at: string;
           created_by: string;
+          grn_id: number | null;
           id: number;
           ingredient_id: number;
+          order_id: number | null;
           quantity_change: number;
           reason: string | null;
           tenant_id: number;
+          transfer_id: number | null;
           type: string;
+          unit_cost: number | null;
         };
         Insert: {
           branch_id: number;
           created_at?: string;
           created_by: string;
+          grn_id?: number | null;
           id?: never;
           ingredient_id: number;
+          order_id?: number | null;
           quantity_change: number;
           reason?: string | null;
           tenant_id: number;
+          transfer_id?: number | null;
           type: string;
+          unit_cost?: number | null;
         };
         Update: {
           branch_id?: number;
           created_at?: string;
           created_by?: string;
+          grn_id?: number | null;
           id?: never;
           ingredient_id?: number;
+          order_id?: number | null;
           quantity_change?: number;
           reason?: string | null;
           tenant_id?: number;
+          transfer_id?: number | null;
           type?: string;
+          unit_cost?: number | null;
         };
         Relationships: [
           {
@@ -1659,6 +2039,13 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "stock_movements_grn_id_fkey";
+            columns: ["grn_id"];
+            isOneToOne: false;
+            referencedRelation: "goods_received_notes";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "stock_movements_ingredient_id_fkey";
             columns: ["ingredient_id"];
             isOneToOne: false;
@@ -1666,7 +2053,293 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "stock_movements_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "stock_movements_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stock_movements_transfer_id_fkey";
+            columns: ["transfer_id"];
+            isOneToOne: false;
+            referencedRelation: "stock_transfers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      stock_transfer_items: {
+        Row: {
+          id: number;
+          ingredient_id: number;
+          quantity: number;
+          quantity_received: number | null;
+          tenant_id: number;
+          transfer_id: number;
+          unit: string;
+          unit_cost_at_ship: number | null;
+        };
+        Insert: {
+          id?: never;
+          ingredient_id: number;
+          quantity: number;
+          quantity_received?: number | null;
+          tenant_id: number;
+          transfer_id: number;
+          unit: string;
+          unit_cost_at_ship?: number | null;
+        };
+        Update: {
+          id?: never;
+          ingredient_id?: number;
+          quantity?: number;
+          quantity_received?: number | null;
+          tenant_id?: number;
+          transfer_id?: number;
+          unit?: string;
+          unit_cost_at_ship?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "stock_transfer_items_ingredient_id_fkey";
+            columns: ["ingredient_id"];
+            isOneToOne: false;
+            referencedRelation: "ingredients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stock_transfer_items_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stock_transfer_items_transfer_id_fkey";
+            columns: ["transfer_id"];
+            isOneToOne: false;
+            referencedRelation: "stock_transfers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      stock_transfers: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          from_branch_id: number;
+          id: number;
+          notes: string | null;
+          received_at: string | null;
+          shipped_at: string | null;
+          status: string;
+          tenant_id: number;
+          to_branch_id: number;
+          transfer_number: string;
+          updated_at: string;
+          vehicle_info: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          from_branch_id: number;
+          id?: never;
+          notes?: string | null;
+          received_at?: string | null;
+          shipped_at?: string | null;
+          status?: string;
+          tenant_id: number;
+          to_branch_id: number;
+          transfer_number: string;
+          updated_at?: string;
+          vehicle_info?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          from_branch_id?: number;
+          id?: never;
+          notes?: string | null;
+          received_at?: string | null;
+          shipped_at?: string | null;
+          status?: string;
+          tenant_id?: number;
+          to_branch_id?: number;
+          transfer_number?: string;
+          updated_at?: string;
+          vehicle_info?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "stock_transfers_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stock_transfers_from_branch_id_fkey";
+            columns: ["from_branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stock_transfers_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stock_transfers_to_branch_id_fkey";
+            columns: ["to_branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      supplier_invoices: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          grn_id: number | null;
+          id: number;
+          invoice_date: string;
+          invoice_number: string;
+          matching_notes: string | null;
+          matching_status: string;
+          po_id: number | null;
+          subtotal: number;
+          supplier_id: number;
+          tenant_id: number;
+          total_amount: number;
+          updated_at: string;
+          vat_amount: number;
+          vat_rate: number;
+        };
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          grn_id?: number | null;
+          id?: never;
+          invoice_date: string;
+          invoice_number: string;
+          matching_notes?: string | null;
+          matching_status?: string;
+          po_id?: number | null;
+          subtotal: number;
+          supplier_id: number;
+          tenant_id: number;
+          total_amount: number;
+          updated_at?: string;
+          vat_amount: number;
+          vat_rate?: number;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          grn_id?: number | null;
+          id?: never;
+          invoice_date?: string;
+          invoice_number?: string;
+          matching_notes?: string | null;
+          matching_status?: string;
+          po_id?: number | null;
+          subtotal?: number;
+          supplier_id?: number;
+          tenant_id?: number;
+          total_amount?: number;
+          updated_at?: string;
+          vat_amount?: number;
+          vat_rate?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "supplier_invoices_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "supplier_invoices_grn_id_fkey";
+            columns: ["grn_id"];
+            isOneToOne: false;
+            referencedRelation: "goods_received_notes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "supplier_invoices_po_id_fkey";
+            columns: ["po_id"];
+            isOneToOne: false;
+            referencedRelation: "purchase_orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "supplier_invoices_supplier_id_fkey";
+            columns: ["supplier_id"];
+            isOneToOne: false;
+            referencedRelation: "suppliers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "supplier_invoices_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      suppliers: {
+        Row: {
+          address: string | null;
+          created_at: string;
+          id: number;
+          is_active: boolean;
+          name: string;
+          notes: string | null;
+          phone: string | null;
+          tax_code: string | null;
+          tenant_id: number;
+          updated_at: string;
+        };
+        Insert: {
+          address?: string | null;
+          created_at?: string;
+          id?: never;
+          is_active?: boolean;
+          name: string;
+          notes?: string | null;
+          phone?: string | null;
+          tax_code?: string | null;
+          tenant_id: number;
+          updated_at?: string;
+        };
+        Update: {
+          address?: string | null;
+          created_at?: string;
+          id?: never;
+          is_active?: boolean;
+          name?: string;
+          notes?: string | null;
+          phone?: string | null;
+          tax_code?: string | null;
+          tenant_id?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_tenant_id_fkey";
             columns: ["tenant_id"];
             isOneToOne: false;
             referencedRelation: "tenants";
@@ -2020,6 +2693,8 @@ export type Database = {
         Args: { p_closing_cash: number; p_note?: string; p_session_id: number };
         Returns: Json;
       };
+      confirm_goods_receipt_note: { Args: { p_grn_id: number }; Returns: Json };
+      consume_stock_for_order: { Args: { p_order_id: number }; Returns: Json };
       create_order: {
         Args: {
           p_branch_id: number;
@@ -2050,6 +2725,10 @@ export type Database = {
       };
       custom_access_token_hook: { Args: { event: Json }; Returns: Json };
       recall_kds_ticket: { Args: { p_ticket_id: number }; Returns: string };
+      recompute_supplier_invoice_matching: {
+        Args: { p_invoice_id: number };
+        Returns: Json;
+      };
       release_table: { Args: { p_table_id: number }; Returns: undefined };
       route_order_to_kds: { Args: { p_order_id: number }; Returns: undefined };
       save_item_modifiers: {
@@ -2069,6 +2748,18 @@ export type Database = {
         Returns: undefined;
       };
       set_headquarters: { Args: { p_branch_id: number }; Returns: undefined };
+      stock_transfer_confirm_ship: {
+        Args: { p_transfer_id: number };
+        Returns: Json;
+      };
+      stock_transfer_mark_in_transit: {
+        Args: { p_transfer_id: number };
+        Returns: Json;
+      };
+      stock_transfer_receive: {
+        Args: { p_items?: Json; p_transfer_id: number };
+        Returns: Json;
+      };
       toggle_category_active: { Args: { p_id: number }; Returns: boolean };
       toggle_item_active: { Args: { p_id: number }; Returns: boolean };
       toggle_profile_active: {
@@ -2235,6 +2926,9 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       staff_role: [

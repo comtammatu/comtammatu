@@ -150,6 +150,7 @@ export async function fetchStockLevels(
       `
       id,
       current_quantity,
+      avg_unit_cost,
       last_counted_at,
       ingredient_id,
       ingredients (

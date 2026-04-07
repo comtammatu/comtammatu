@@ -554,3 +554,67 @@ POS UI                Server Action           RPC                    KDS
 | DX Review     | `/plan-devex-review`  | Developer experience gaps       | 0    | --           | --                                  |
 
 **VERDICT:** CEO + ENG + DESIGN CLEARED. Ready to implement.
+
+---
+
+## POS UX & Accessibility — supplement
+
+### Mental model (sau khi đặt món)
+
+Luồng nhận thức: **Giỏ hàng** chỉ dùng cho **đơn mới** (chưa gửi bếp). Sau khi bấm **Đặt món**, đơn chuyển sang **đơn đang phục vụ**; mọi thao tác lặp (thêm món, xem trạng thái từng món, phục vụ/hoàn thành, hủy…) xảy ra từ **Sheet chi tiết đơn** (hoặc tương đương), mở từ tab **Đơn hàng** — tránh nhầm với giỏ.
+
+```mermaid
+flowchart LR
+  subgraph newCart [Don_moi]
+    G[Gio_hang]
+    S[Dat_mon]
+  end
+  subgraph active [Don_dang_phuc_vu]
+    D[Sheet_chi_tiet]
+    A[Them_mon]
+    P[Phuc_vu_Hoan_thanh]
+  end
+  newCart --> active
+  active --> A
+```
+
+### Chuẩn hóa copy (UI tiếng Việt)
+
+| Không dùng        | Dùng trên UI      |
+| ----------------- | ----------------- |
+| Them mon          | Thêm món          |
+| Khac...           | Khác…             |
+| Huy mon / Huy don | Hủy món / Hủy đơn |
+| Phuc vu           | Phục vụ           |
+| Hoan thanh        | Hoàn thành        |
+| Dat lai           | Đặt lại           |
+
+### Quy ước Sheet & focus
+
+- Mở Sheet chi tiết đơn: focus vào tiêu đề hoặc nút đóng (Radix Sheet thường trap focus).
+- Đóng Sheet: trả focus về nút kích hoạt (mục đơn trong lịch sử / “Hóa đơn”) bằng `ref` + `requestAnimationFrame` nếu cần.
+- **Không** mở đồng thời hai Sheet chồng nhau (chi tiết đơn vs hóa đơn/thanh toán): đóng Sheet chi tiết trước khi mở `BillReceipt`, hoặc gom luồng thanh toán thành bước kế tiếp có kiểm soát.
+
+### Ghi chú đơn (cart)
+
+- Trường ghi chú đặt phía trên nút **Đặt món**; `aria-label` hoặc `aria-describedby` mô tả ngắn (ví dụ “Ghi chú cho toàn bộ đơn”).
+- Giới hạn độ dài: theo DB `TEXT`; UI có thể `maxLength` mềm (ví dụ 500) nếu product chốt.
+- Hiển thị lại trên Sheet chi tiết + `BillReceipt` khi có dữ liệu.
+
+### Append mode (customizer)
+
+- Tiêu đề / mô tả: **Thêm món vào đơn #…** (mã đơn hiển thị).
+- Nút xác nhậnh: **Thêm vào đơn** (không dùng “Thêm vào giỏ” trong mode này).
+
+### Tiêu chí Accessibility (triển khai)
+
+- **Bàn phím:** Thoát Sheet/Dialog bằng Escape; Tab không bị bẫy; nút đóng có tên rõ (`aria-label="Đóng"` nếu chỉ icon).
+- **Screen reader:** `SheetTitle` / `SheetDescription` mô tả đơn; trạng thái món có **icon + nhãn** hoặc `sr-only`, không chỉ màu.
+- **Touch:** Nút thao tác chính (Đặt món, Thêm món, Xác nhận) tối thiểu ~44×44px; tránh hai nút hủy/xác nhận quá sát.
+- **Giảm chuyển động:** Spinner / animation tôn trọng `prefers-reduced-motion` (`motion-safe:`).
+
+### PR1 completion criteria (bổ sung)
+
+- [ ] Append mode: copy tiêu đề + nút đúng như mục “Append mode”.
+- [ ] Đóng Sheet chi tiết: focus trả về mục kích hoạt khi khả thi.
+- [ ] Trường ghi chú đơn: label + mô tả trợ năng cơ bản.
