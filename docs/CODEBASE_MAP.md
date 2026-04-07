@@ -3,7 +3,7 @@
 > **Audience:** New engineers onboarding, feature owners planning Sprint 1+
 > **Primary tasks:** (1) Understand system structure and auth flow, (2) Know where to add new features, (3) Identify blast radius of changes
 > **Decision horizon:** Sprint planning, onboarding, architecture review
-> **Out of scope:** Business requirements (see `docs/ref/`), sprint details (see `docs/plan/`)
+> **Out of scope:** Business requirements (see `docs/ref/`), sprint details and feature specs (see `docs/plan/`, e.g. [`m2-order-lifecycle.md`](plan/m2-order-lifecycle.md))
 
 ## Status
 

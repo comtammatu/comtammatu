@@ -1,6 +1,7 @@
 # Sprint 2a: POS + KDS + Payments
 
 > **Module mapping:** M2 (POS) + M3 (KDS) + M4 (Payment) — see `roadmap.md`
+> **Follow-up spec:** [M2-Ext: POS Order Lifecycle](m2-order-lifecycle.md) — thêm món / void / cancel sau khi flow sprint này ổn (PLANNED)
 > Depends on: M0+M1 (Admin Shell + Menu)
 > Sessions: 6 | Estimate: 5-7 ngày
 > North Star: "Order → thanh toán — dưới 2 phút"

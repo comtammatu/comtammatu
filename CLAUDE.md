@@ -89,6 +89,7 @@ Money: `NUMERIC(15,2)` | Time: `TIMESTAMPTZ` | PK: `BIGINT GENERATED ALWAYS AS I
 ### Planning & specs
 
 - Roadmap + phases: `docs/plan/roadmap.md`
+- M2-Ext POS order lifecycle (planned): `docs/plan/m2-order-lifecycle.md`
 - Architecture decisions: `docs/plan/decisions.md`
 - System architecture: `docs/spec/architecture.md`
 - Database schema: `docs/spec/database-schema.md`

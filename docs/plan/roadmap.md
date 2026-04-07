@@ -21,6 +21,10 @@ Không phải CRM, không phải ERP tổng hợp. Mỗi module giải quyết m
 | M6  | Finance     | HĐĐT, VAT, dashboard, reports, VAS accounting        | SHIPPED |
 | M7  | HR/Payroll  | Employees, shifts, attendance, payroll, PIT          | SHIPPED |
 
+**Feature specs (beyond module rows):**
+
+- [M2-Ext: POS Order Lifecycle](m2-order-lifecycle.md) — thêm món sau submit, đồng bộ trạng thái KDS → dòng món, void/cancel/chuyển bàn, đặt lại (PLANNED)
+
 Post-v1.0 (lên kế hoạch riêng):
 
 - Local-First per Branch (mini PC + SQLite, offline-capable POS/KDS)
@@ -121,6 +125,7 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 > Status: DONE | Depends: M0, M1 | Shipped: 2026-04-06
 > North Star: "Order → gửi bếp — dưới 30 giây"
+> **M2-Ext (planned):** [POS Order Lifecycle](m2-order-lifecycle.md) — lifecycle sau khi đã gửi đơn (thêm món, hủy, chuyển bàn…)
 
 **Scope:** Giao diện bán hàng tại quầy. Nhân viên chọn món, chọn bàn, gửi order. In bill. Thanh toán tiền mặt cơ bản.
 

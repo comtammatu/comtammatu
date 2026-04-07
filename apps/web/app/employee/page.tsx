@@ -40,6 +40,10 @@ export default async function EmployeePage() {
   const canPos = canAccess(claims.user_role, "pos");
   const canKds = canAccess(claims.user_role, "kds");
   const branchId = claims.branch_id;
+  const posHref = branchId ? `/br/${branchId}/pos` : "/employee";
+  const kdsHref = branchId ? `/br/${branchId}/kds` : "/employee";
+  const posDisabled = !canPos || !branchId;
+  const kdsDisabled = !canKds || !branchId;
 
   let branchName: string | null = null;
   if (branchId) {
@@ -88,18 +92,33 @@ export default async function EmployeePage() {
             <p className="text-sm font-medium">Lối tắt</p>
           </div>
           <div className="mt-3 flex flex-col gap-2">
-            <Button asChild disabled={!canPos || !branchId}>
-              <Link href={branchId ? `/br/${branchId}/pos` : "/employee"}>
+            {posDisabled ? (
+              <Button disabled>
                 <Monitor className="mr-2 size-4" />
                 Vào POS
-              </Link>
-            </Button>
-            <Button asChild variant="secondary" disabled={!canKds || !branchId}>
-              <Link href={branchId ? `/br/${branchId}/kds` : "/employee"}>
+              </Button>
+            ) : (
+              <Button asChild>
+                <Link href={posHref}>
+                  <Monitor className="mr-2 size-4" />
+                  Vào POS
+                </Link>
+              </Button>
+            )}
+
+            {kdsDisabled ? (
+              <Button variant="secondary" disabled>
                 <ChefHat className="mr-2 size-4" />
                 Vào KDS
-              </Link>
-            </Button>
+              </Button>
+            ) : (
+              <Button asChild variant="secondary">
+                <Link href={kdsHref}>
+                  <ChefHat className="mr-2 size-4" />
+                  Vào KDS
+                </Link>
+              </Button>
+            )}
           </div>
           {!branchId && (canPos || canKds) && (
             <p className="mt-2 text-xs text-muted-foreground">
