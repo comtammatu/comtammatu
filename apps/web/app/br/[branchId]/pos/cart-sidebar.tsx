@@ -77,9 +77,9 @@ export function CartSidebar({
   );
 
   return (
-    <div className="flex w-[320px] shrink-0 flex-col border-l bg-background lg:w-[360px]">
+    <div className="flex flex-1 flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between border-b px-4 py-3">
+      <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2">
           <ShoppingCart className="size-4" />
           <span className="font-semibold">Giỏ hàng</span>

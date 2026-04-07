@@ -34,28 +34,15 @@ export function getScope(claims: JwtClaims): ScopeIds {
 
 /** Determine the default redirect path for a role after login */
 export function getDefaultRedirect(claims: JwtClaims): string {
-  const { user_role, branch_id } = claims;
+  const { user_role } = claims;
 
   if (ADMIN_ROLES.includes(user_role)) {
     return "/admin/dashboard";
   }
 
-  if (BRANCH_ROLES.includes(user_role) && branch_id) {
-    switch (user_role) {
-      case "chef":
-        return `/br/${branch_id}/kds`;
-      case "cashier":
-      case "waiter":
-        return `/br/${branch_id}/pos`;
-    }
-  }
-
-  if (user_role === "office") {
-    return "/employee";
-  }
-
-  // Fallback
-  return "/admin/dashboard";
+  // All non-admin staff land on Employee Portal
+  // (cashier, waiter, chef, office)
+  return "/employee";
 }
 
 /** Check if a role is admin-level */

@@ -161,11 +161,12 @@ export function ItemCustomizer({
           <div className="flex h-full flex-col">
             <SheetHeader className="px-4 pt-4">
               <SheetTitle className="text-left">{item.name}</SheetTitle>
-              {item.description && (
-                <SheetDescription className="text-left">
-                  {item.description}
-                </SheetDescription>
-              )}
+              <SheetDescription
+                className={cn("text-left", !item.description && "sr-only")}
+              >
+                {item.description ??
+                  "Tùy chọn món (biến thể, topping, món kèm)"}
+              </SheetDescription>
             </SheetHeader>
 
             <ScrollArea className="flex-1 px-4">

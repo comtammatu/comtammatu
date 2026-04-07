@@ -1,22 +1,31 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Clock, LogOut, Monitor } from "lucide-react";
+import { Clock, DoorOpen, LogOut, Monitor } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { CATEGORY_TYPE_LABELS } from "@comtammatu/shared/menu";
 import { CartSidebar } from "./cart-sidebar";
 import { ItemCustomizer } from "./item-customizer";
 import { CloseSessionDialog } from "./close-session-dialog";
 import { BillReceipt } from "./bill-receipt";
-import { submitOrder } from "./actions";
+import { OrderHistory } from "./order-history";
+import { submitOrder, fetchSessionOrders } from "./actions";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import { calcCartTotal } from "./types";
 import type { BranchTable, ActiveSession } from "./page";
+import type { SessionOrder } from "./order-history";
 
 /* ─── Menu data types (derived from fetchMenuForPos action) ─── */
 
@@ -98,7 +107,7 @@ interface PosMenuProps {
 export function PosMenu({
   branchId,
   categories,
-  tables,
+  tables: initialTables,
   session,
 }: PosMenuProps) {
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(
@@ -111,6 +120,39 @@ export function PosMenu({
   const [isPending, startTransition] = useTransition();
   const [showCloseSession, setShowCloseSession] = useState(false);
   const [billOrderId, setBillOrderId] = useState<number | null>(null);
+  const [localTables, setLocalTables] = useState<BranchTable[]>(initialTables);
+  const [sessionOrders, setSessionOrders] = useState<SessionOrder[]>([]);
+  const [showOrders, setShowOrders] = useState(false);
+
+  useEffect(() => {
+    setLocalTables(initialTables);
+  }, [initialTables]);
+
+  // Preserve activeCategoryId across RSC re-renders that pass new categories
+  const activeCategoryIdRef = useRef(activeCategoryId);
+  activeCategoryIdRef.current = activeCategoryId;
+  useEffect(() => {
+    const stillExists = categories.some(
+      (c) => c.id === activeCategoryIdRef.current,
+    );
+    if (!stillExists) {
+      setActiveCategoryId(categories[0]?.id ?? null);
+    }
+  }, [categories]);
+
+  const loadSessionOrders = useCallback(async () => {
+    const result = await fetchSessionOrders(branchId, session.id);
+    if (result.success && result.data) {
+      setSessionOrders(result.data as SessionOrder[]);
+    }
+  }, [branchId, session.id]);
+
+  const loadedRef = useRef(false);
+  useEffect(() => {
+    if (loadedRef.current) return;
+    loadedRef.current = true;
+    void loadSessionOrders();
+  }, [loadSessionOrders]);
 
   const activeCategory = useMemo(
     () => categories.find((c) => c.id === activeCategoryId),
@@ -207,13 +249,32 @@ export function PosMenu({
             onClick: () => setBillOrderId(orderId),
           },
         });
+
+        if (orderType === "dine_in" && selectedTableId !== null) {
+          const occupiedTableId = selectedTableId;
+          setLocalTables((prev) =>
+            prev.map((t) =>
+              t.id === occupiedTableId ? { ...t, status: "occupied" } : t,
+            ),
+          );
+        }
+
         setCartItems([]);
         setSelectedTableId(null);
+        void loadSessionOrders();
       } else {
         toast.error(result.error ?? "Không thể tạo đơn hàng");
       }
     });
-  }, [canSubmit, branchId, cartItems, orderType, selectedTableId, session.id]);
+  }, [
+    canSubmit,
+    branchId,
+    cartItems,
+    loadSessionOrders,
+    orderType,
+    selectedTableId,
+    session.id,
+  ]);
 
   const handleItemTap = useCallback(
     (item: MenuItem) => {
@@ -344,22 +405,97 @@ export function PosMenu({
         </ScrollArea>
       </div>
 
-      {/* Right Panel — Cart */}
-      <CartSidebar
-        items={cartItems}
-        total={cartTotal}
-        orderType={orderType}
-        selectedTableId={selectedTableId}
-        tables={tables}
-        canSubmit={canSubmit}
-        isSubmitting={isPending}
-        onUpdateQuantity={updateQuantity}
-        onRemoveItem={removeItem}
-        onClearCart={clearCart}
-        onOrderTypeChange={handleOrderTypeChange}
-        onTableSelect={setSelectedTableId}
-        onSubmitOrder={handleSubmitOrder}
-      />
+      {/* Right Panel — Cart / Orders */}
+      <div className="flex w-[320px] shrink-0 flex-col border-l bg-background lg:w-[360px]">
+        <div className="border-b px-2 py-2">
+          <div
+            role="tablist"
+            aria-label="POS sidebar"
+            className="flex gap-1 rounded-lg bg-muted p-1"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={!showOrders}
+              className={cn(
+                "flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                !showOrders
+                  ? "bg-background shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              onClick={() => setShowOrders(false)}
+            >
+              Giỏ hàng
+              {cartItems.length > 0 && (
+                <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
+                  {cartItems.reduce((sum, i) => sum + i.quantity, 0)}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={showOrders}
+              className={cn(
+                "flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                showOrders
+                  ? "bg-background shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+              onClick={() => {
+                setShowOrders(true);
+                void loadSessionOrders();
+              }}
+            >
+              Đơn hàng
+            </button>
+          </div>
+        </div>
+
+        {showOrders ? (
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold">Đơn hàng</span>
+                {sessionOrders.length > 0 && (
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    {sessionOrders.length}
+                  </span>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => void loadSessionOrders()}
+              >
+                <DoorOpen className="mr-1 size-3" />
+                Tải lại
+              </Button>
+            </div>
+            <OrderHistory
+              orders={sessionOrders}
+              onViewBill={(orderId) => setBillOrderId(orderId)}
+            />
+          </div>
+        ) : (
+          <CartSidebar
+            items={cartItems}
+            total={cartTotal}
+            orderType={orderType}
+            selectedTableId={selectedTableId}
+            tables={localTables}
+            canSubmit={canSubmit}
+            isSubmitting={isPending}
+            onUpdateQuantity={updateQuantity}
+            onRemoveItem={removeItem}
+            onClearCart={clearCart}
+            onOrderTypeChange={handleOrderTypeChange}
+            onTableSelect={setSelectedTableId}
+            onSubmitOrder={handleSubmitOrder}
+          />
+        )}
+      </div>
 
       {/* Item Customizer Sheet */}
       <ItemCustomizer
