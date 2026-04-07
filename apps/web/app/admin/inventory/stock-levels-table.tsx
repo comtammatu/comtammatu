@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition, useCallback } from "react";
+import { useState, useTransition, useCallback, useMemo } from "react";
+import { formatVND } from "@comtammatu/shared/format";
 import { AlertTriangle, RefreshCw, Sliders } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -15,6 +16,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -41,11 +43,29 @@ interface StockLevelsTableProps {
   ingredients: IngredientRow[];
   branches: BranchOption[];
   defaultBranchId: number | null;
+  /** Hiển thị cột thành tiền (WAC / giá tham chiếu) — cùng phạm vi xem "theo chi nhánh" */
+  showLineValue?: boolean;
+}
+
+function lineStockValue(
+  qty: number,
+  avgUnitCost: number | null,
+  fallbackUnitCost: number | null,
+): number {
+  const unit =
+    avgUnitCost != null
+      ? avgUnitCost
+      : fallbackUnitCost != null
+        ? fallbackUnitCost
+        : 0;
+  return qty * unit;
 }
 
 export function StockLevelsTable({
   branches,
   defaultBranchId,
+  ingredients,
+  showLineValue = false,
 }: StockLevelsTableProps) {
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(
     defaultBranchId,
@@ -54,6 +74,14 @@ export function StockLevelsTable({
   const [loaded, setLoaded] = useState(false);
   const [adjustTarget, setAdjustTarget] = useState<StockLevelRow | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const unitCostByIngredientId = useMemo(() => {
+    const m = new Map<number, number | null>();
+    for (const ing of ingredients) {
+      m.set(ing.id, ing.unit_cost);
+    }
+    return m;
+  }, [ingredients]);
 
   const loadStock = useCallback((branchId: number) => {
     startTransition(async () => {
@@ -134,6 +162,20 @@ export function StockLevelsTable({
   }
 
   const alertCount = stockRows.filter((r) => getAlertLevel(r) !== "ok").length;
+
+  const branchStockTotal =
+    loaded && showLineValue
+      ? stockRows.reduce(
+          (sum, row) =>
+            sum +
+            lineStockValue(
+              row.current_quantity,
+              row.avg_unit_cost,
+              unitCostByIngredientId.get(row.ingredient_id) ?? null,
+            ),
+          0,
+        )
+      : null;
 
   return (
     <>
@@ -222,6 +264,11 @@ export function StockLevelsTable({
                 <TableHead className="hidden md:table-cell text-right">
                   Giá vốn TB
                 </TableHead>
+                {showLineValue && (
+                  <TableHead className="hidden lg:table-cell text-right">
+                    Thành tiền
+                  </TableHead>
+                )}
                 <TableHead className="hidden sm:table-cell text-right">
                   Tối thiểu
                 </TableHead>
@@ -234,7 +281,7 @@ export function StockLevelsTable({
               {stockRows.length === 0 && !isPending && (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={showLineValue ? 8 : 7}
                     className="py-12 text-center text-sm text-muted-foreground"
                   >
                     Không có dữ liệu tồn kho cho chi nhánh này
@@ -265,6 +312,18 @@ export function StockLevelsTable({
                         ? `${row.avg_unit_cost.toLocaleString("vi-VN")} ₫`
                         : "—"}
                     </TableCell>
+                    {showLineValue && (
+                      <TableCell className="hidden lg:table-cell text-right font-mono text-sm tabular-nums">
+                        {formatVND(
+                          lineStockValue(
+                            row.current_quantity,
+                            row.avg_unit_cost,
+                            unitCostByIngredientId.get(row.ingredient_id) ??
+                              null,
+                          ),
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell className="hidden sm:table-cell text-right font-mono text-muted-foreground">
                       {row.min_stock_level.toLocaleString("vi-VN")}
                     </TableCell>
@@ -306,6 +365,21 @@ export function StockLevelsTable({
                 );
               })}
             </TableBody>
+            {showLineValue &&
+              branchStockTotal != null &&
+              stockRows.length > 0 && (
+                <TableFooter>
+                  <TableRow className="bg-muted/50">
+                    <TableCell
+                      colSpan={8}
+                      className="text-right font-medium font-mono tabular-nums"
+                    >
+                      Tổng giá trị (chi nhánh đang xem):{" "}
+                      {formatVND(branchStockTotal)}
+                    </TableCell>
+                  </TableRow>
+                </TableFooter>
+              )}
           </Table>
         </div>
       )}

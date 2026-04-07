@@ -16,5 +16,12 @@ export {
   isAdminRole,
   isBranchRole,
 } from "./scope";
+export {
+  canViewInventoryValueSystem,
+  canViewInventoryValueByArea,
+  canViewInventoryValueByBranch,
+  getInventoryValueVisibility,
+} from "./inventory-value";
+export type { InventoryValueVisibility } from "./inventory-value";
 export type { NavItemConfig, NavGroupConfig } from "./nav-config";
 export { ADMIN_NAV_GROUPS } from "./nav-config";

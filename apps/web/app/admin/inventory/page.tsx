@@ -1,5 +1,8 @@
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
+import {
+  extractClaims,
+  getInventoryValueVisibility,
+} from "@comtammatu/shared/auth";
 import { fetchIngredients } from "./actions";
 import { InventoryClient } from "./inventory-client";
 
@@ -11,6 +14,10 @@ export default async function InventoryPage() {
   } = await supabase.auth.getUser();
 
   const claims = user ? extractClaims(user.app_metadata) : null;
+
+  const inventoryValueVisibility = claims
+    ? getInventoryValueVisibility(claims.user_role)
+    : { system: false, area: false, branch: false };
 
   // Fetch ingredients and branches in parallel
   const [ingredientsResult, branchesRes] = await Promise.all([
@@ -46,6 +53,7 @@ export default async function InventoryPage() {
         ingredients={ingredients}
         branches={branches}
         defaultBranchId={defaultBranchId}
+        inventoryValueVisibility={inventoryValueVisibility}
       />
     </div>
   );
