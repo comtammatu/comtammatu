@@ -46,6 +46,11 @@ const TABS: Tab[] = [
     allowedRoles: BRANCH_FLOOR_SETTINGS_ROLES,
   },
   {
+    href: "/admin/settings/pos",
+    label: "POS",
+    allowedRoles: BRANCH_FLOOR_SETTINGS_ROLES,
+  },
+  {
     href: "/admin/settings/kds",
     label: "Trạm bếp",
     allowedRoles: BRANCH_FLOOR_SETTINGS_ROLES,

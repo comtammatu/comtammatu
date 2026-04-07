@@ -429,7 +429,7 @@ export function KdsBoard({
           "pt-[max(0.25rem,env(safe-area-inset-top,0px))]",
         )}
       >
-        <div className="flex shrink-0 items-center border-r border-border/40 pl-1 sm:pl-1.5">
+        <div className="flex shrink-0 items-center border-x border-border/40 px-1 sm:px-1.5">
           <EmployeePortalBackControl className="h-11 justify-center rounded-none sm:rounded-md" />
         </div>
         <ScrollArea className="min-w-0 flex-1">
