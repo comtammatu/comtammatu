@@ -1,21 +1,62 @@
-import { Receipt } from "lucide-react";
+import { getAuthContext } from "../_lib/auth";
+import { fetchOrders } from "./actions";
+import { OrdersClient } from "./orders-client";
+import type { StaffRole } from "@comtammatu/shared/auth";
 
-export default function OrdersPage() {
+const ALLOWED_ROLES: StaffRole[] = [
+  "owner",
+  "super_manager",
+  "area_manager",
+  "branch_manager",
+  "cashier",
+];
+
+export default async function OrdersPage() {
+  const ctx = await getAuthContext(ALLOWED_ROLES);
+  if (!ctx) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <p className="text-sm text-muted-foreground">Không có quyền truy cập</p>
+      </div>
+    );
+  }
+
+  const result = await fetchOrders();
+
+  if (!result.success || !result.data) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Đơn hàng</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Lịch sử và quản lý đơn hàng
+          </p>
+        </div>
+        <p className="text-sm text-destructive">
+          {result.error ?? "Không thể tải đơn hàng"}
+        </p>
+      </div>
+    );
+  }
+
+  const { orders, branches } = result.data;
+  const isManagerOrAbove = ["owner", "super_manager", "area_manager"].includes(
+    ctx.claims.user_role,
+  );
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Đơn hàng</h1>
-        <p className="mt-1 text-muted-foreground">
-          Lịch sử đơn hàng và trạng thái
-        </p>
-      </div>
-      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-24 text-center">
-        <Receipt className="size-12 text-muted-foreground" />
-        <h2 className="mt-4 text-lg font-medium">Tính năng đang phát triển</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Quản lý đơn hàng sẽ có trong M2 (POS).
+          Lịch sử và quản lý đơn hàng
         </p>
       </div>
+      <OrdersClient
+        initialOrders={orders}
+        branches={branches}
+        showBranchFilter={isManagerOrAbove}
+      />
     </div>
   );
 }

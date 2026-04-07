@@ -1,0 +1,149 @@
+"use server";
+
+import type { StaffRole } from "@comtammatu/shared/auth";
+import { getAuthContext } from "../_lib/auth";
+
+const DASHBOARD_ROLES: readonly StaffRole[] = [
+  "owner",
+  "super_manager",
+  "area_manager",
+  "branch_manager",
+];
+
+export interface RecentOrder {
+  id: number;
+  order_number: string;
+  branch_name: string;
+  total_amount: number;
+  status: string;
+  payment_status: string | null;
+  created_at: string;
+}
+
+export interface DashboardStats {
+  todayRevenue: number;
+  todayOrders: number;
+  yesterdayRevenue: number;
+  yesterdayOrders: number;
+  avgOrderValue: number;
+  recentOrders: RecentOrder[];
+}
+
+export async function fetchDashboardStats(): Promise<DashboardStats> {
+  const fallback: DashboardStats = {
+    todayRevenue: 0,
+    todayOrders: 0,
+    yesterdayRevenue: 0,
+    yesterdayOrders: 0,
+    avgOrderValue: 0,
+    recentOrders: [],
+  };
+
+  const ctx = await getAuthContext(DASHBOARD_ROLES);
+  if (!ctx) return fallback;
+
+  const { supabase, claims } = ctx;
+
+  // Compute date strings in local time (Vietnam UTC+7)
+  const now = new Date();
+  // Use ISO date strings — Supabase TIMESTAMPTZ comparisons work with date strings
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const tomorrowStart = new Date(todayStart);
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+  const yesterdayStart = new Date(todayStart);
+  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+
+  const todayIso = todayStart.toISOString();
+  const tomorrowIso = tomorrowStart.toISOString();
+  const yesterdayIso = yesterdayStart.toISOString();
+
+  // Scope to branch for branch_manager
+  const branchFilter = claims.branch_id !== null ? claims.branch_id : undefined;
+
+  // Build base query for today paid orders
+  let todayQuery = supabase
+    .from("orders")
+    .select("total_amount")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("payment_status", "paid")
+    .gte("created_at", todayIso)
+    .lt("created_at", tomorrowIso);
+
+  if (branchFilter !== undefined) {
+    todayQuery = todayQuery.eq("branch_id", branchFilter);
+  }
+
+  let yesterdayQuery = supabase
+    .from("orders")
+    .select("total_amount")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("payment_status", "paid")
+    .gte("created_at", yesterdayIso)
+    .lt("created_at", todayIso);
+
+  if (branchFilter !== undefined) {
+    yesterdayQuery = yesterdayQuery.eq("branch_id", branchFilter);
+  }
+
+  // Recent orders with branch name
+  let recentQuery = supabase
+    .from("orders")
+    .select(
+      "id, order_number, total_amount, status, payment_status, created_at, branches!orders_branch_id_fkey(name)",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  if (branchFilter !== undefined) {
+    recentQuery = recentQuery.eq("branch_id", branchFilter);
+  }
+
+  const [todayResult, yesterdayResult, recentResult] = await Promise.all([
+    todayQuery,
+    yesterdayQuery,
+    recentQuery,
+  ]);
+
+  const todayRows = todayResult.data ?? [];
+  const yesterdayRows = yesterdayResult.data ?? [];
+  const recentRows = recentResult.data ?? [];
+
+  const todayRevenue = todayRows.reduce(
+    (sum, r) => sum + Number(r.total_amount),
+    0,
+  );
+  const todayOrders = todayRows.length;
+
+  const yesterdayRevenue = yesterdayRows.reduce(
+    (sum, r) => sum + Number(r.total_amount),
+    0,
+  );
+  const yesterdayOrders = yesterdayRows.length;
+
+  const avgOrderValue = todayOrders > 0 ? todayRevenue / todayOrders : 0;
+
+  const recentOrders: RecentOrder[] = recentRows.map((r) => {
+    // branches is a joined object due to foreign key select
+    const branches = r.branches as { name: string } | null;
+    return {
+      id: r.id,
+      order_number: r.order_number,
+      branch_name: branches?.name ?? "—",
+      total_amount: Number(r.total_amount),
+      status: r.status,
+      payment_status: r.payment_status,
+      created_at: r.created_at,
+    };
+  });
+
+  return {
+    todayRevenue,
+    todayOrders,
+    yesterdayRevenue,
+    yesterdayOrders,
+    avgOrderValue,
+    recentOrders,
+  };
+}

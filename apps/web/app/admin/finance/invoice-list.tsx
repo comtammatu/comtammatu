@@ -1,0 +1,191 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { FileX2, Receipt } from "lucide-react";
+import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@comtammatu/ui/components/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@comtammatu/ui/components/table";
+import { toast } from "@comtammatu/ui/components/sonner";
+import { formatVND } from "@comtammatu/shared/format";
+import { cancelTaxInvoice } from "./actions";
+import type { InvoiceRow } from "./page";
+
+const STATUS_LABEL: Record<string, string> = {
+  draft: "Nháp",
+  issued: "Đã phát hành",
+  cancelled: "Đã hủy",
+};
+
+const STATUS_VARIANT: Record<
+  string,
+  "secondary" | "default" | "destructive" | "outline"
+> = {
+  draft: "secondary",
+  issued: "default",
+  cancelled: "destructive",
+};
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+interface InvoiceListProps {
+  initialInvoices: InvoiceRow[];
+}
+
+export function InvoiceList({ initialInvoices }: InvoiceListProps) {
+  const [invoices, setInvoices] = useState(initialInvoices);
+  const [cancelTarget, setCancelTarget] = useState<InvoiceRow | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleCancel() {
+    if (!cancelTarget) return;
+    const id = cancelTarget.id;
+    startTransition(async () => {
+      const result = await cancelTaxInvoice(id, "Hủy theo yêu cầu");
+      if (!result.success) {
+        toast.error(result.error ?? "Không thể hủy hóa đơn");
+        setCancelTarget(null);
+        return;
+      }
+      toast.success("Đã hủy hóa đơn");
+      setInvoices((prev) =>
+        prev.map((inv) =>
+          inv.id === id ? { ...inv, status: "cancelled" } : inv,
+        ),
+      );
+      setCancelTarget(null);
+    });
+  }
+
+  return (
+    <>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Số HĐ</TableHead>
+              <TableHead>Đơn hàng</TableHead>
+              <TableHead>Người mua</TableHead>
+              <TableHead className="text-right">Giá trị</TableHead>
+              <TableHead>Trạng thái</TableHead>
+              <TableHead>Thời gian</TableHead>
+              <TableHead className="w-16" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {invoices.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={7} className="py-12 text-center">
+                  <Receipt className="mx-auto size-8 text-muted-foreground" />
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Chưa có hóa đơn nào
+                  </p>
+                </TableCell>
+              </TableRow>
+            )}
+            {invoices.map((inv) => (
+              <TableRow key={inv.id}>
+                <TableCell className="font-mono text-sm">
+                  {inv.invoice_number ?? "—"}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {inv.orders?.order_number ?? `#${inv.id}`}
+                </TableCell>
+                <TableCell>
+                  {inv.buyer_name ? (
+                    <div>
+                      <p className="text-sm">{inv.buyer_name}</p>
+                      {inv.buyer_tax_code && (
+                        <p className="text-xs text-muted-foreground">
+                          MST: {inv.buyer_tax_code}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right font-mono text-sm">
+                  {formatVND(inv.total_amount)}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={STATUS_VARIANT[inv.status] ?? "secondary"}>
+                    {STATUS_LABEL[inv.status] ?? inv.status}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {formatDate(inv.issued_at ?? inv.created_at)}
+                </TableCell>
+                <TableCell>
+                  {inv.status === "issued" && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 text-destructive hover:text-destructive"
+                      onClick={() => setCancelTarget(inv)}
+                    >
+                      <FileX2 className="size-4" />
+                      <span className="sr-only">Hủy hóa đơn</span>
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <AlertDialog
+        open={!!cancelTarget}
+        onOpenChange={(open) => !open && setCancelTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận hủy hóa đơn</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hủy hóa đơn{" "}
+              <strong>
+                {cancelTarget?.invoice_number ?? `#${cancelTarget?.id}`}
+              </strong>
+              ? Hành động này không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Không</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancel}
+              disabled={isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Hủy hóa đơn
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}

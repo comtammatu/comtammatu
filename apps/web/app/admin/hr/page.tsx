@@ -1,21 +1,69 @@
-import { Briefcase } from "lucide-react";
+import { createClient } from "@comtammatu/database/supabase/server";
+import { fetchEmployees } from "./actions";
+import { HrClient } from "./hr-client";
 
-export default function HrPage() {
+export default async function HrPage() {
+  const supabase = await createClient();
+
+  const [employeesResult, { data: branches }] = await Promise.all([
+    fetchEmployees(),
+    supabase
+      .from("branches")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("name"),
+  ]);
+
+  const employees = employeesResult.success
+    ? ((employeesResult.data as EmployeeRow[]) ?? [])
+    : [];
+
+  const branchOptions = (branches ?? []) as BranchOption[];
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Nhân sự & Lương</h1>
-        <p className="mt-1 text-muted-foreground">
-          Hồ sơ nhân viên, ca làm, bảng lương, BHXH
-        </p>
-      </div>
-      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-24 text-center">
-        <Briefcase className="size-12 text-muted-foreground" />
-        <h2 className="mt-4 text-lg font-medium">Tính năng đang phát triển</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Quản lý nhân sự và bảng lương sẽ có trong M7 (HR/Payroll).
+          Hồ sơ nhân viên, ca làm việc
         </p>
       </div>
+      <HrClient employees={employees} branches={branchOptions} />
     </div>
   );
+}
+
+// Re-export types so client components can share them
+export interface BranchOption {
+  id: number;
+  name: string;
+}
+
+export interface EmployeeRow {
+  id: number;
+  employee_code: string | null;
+  id_number: string | null;
+  bank_account: string | null;
+  bank_name: string | null;
+  base_salary: number | null;
+  start_date: string | null;
+  contract_type: string | null;
+  dependents_count: number;
+  is_active: boolean;
+  profiles: {
+    id: string;
+    full_name: string;
+    phone: string | null;
+    role: string;
+    branch_id: number | null;
+    branches: { name: string } | null;
+  } | null;
+}
+
+export interface ShiftRow {
+  id: number;
+  name: string;
+  start_time: string;
+  end_time: string;
+  is_active: boolean;
 }
