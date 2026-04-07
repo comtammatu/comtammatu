@@ -8,6 +8,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ChefHat } from "lucide-react";
+import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { OrderCard } from "./order-card";
 import type { KdsStation, KdsTicket, KdsOrderInfo, KdsOrderItem } from "./page";
 
@@ -319,10 +320,18 @@ export function KdsBoard({
   );
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Station filter tabs */}
-      <div className="border-b border-border/50 bg-background/50">
-        <ScrollArea className="w-full">
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
+      {/* Back (narrow column) + station tabs — one bar, tabs scroll horizontally */}
+      <div
+        className={cn(
+          "flex shrink-0 items-stretch border-b border-border/50 bg-background/50",
+          "pt-[max(0.25rem,env(safe-area-inset-top,0px))]",
+        )}
+      >
+        <div className="flex shrink-0 items-center border-r border-border/40 pl-1 sm:pl-1.5">
+          <EmployeePortalBackControl className="h-11 justify-center rounded-none sm:rounded-md" />
+        </div>
+        <ScrollArea className="min-w-0 flex-1">
           <div className="flex gap-1 p-2">
             <Button
               variant={activeStationId === null ? "default" : "ghost"}

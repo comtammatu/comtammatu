@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims, canAccess } from "@comtammatu/shared/auth";
-import { EmployeePortalBackBar } from "../employee-portal-back-bar";
 
 export default async function KdsLayout({
   children,
@@ -32,10 +31,7 @@ export default async function KdsLayout({
 
   return (
     <div className="dark flex h-dvh flex-col touch-manipulation overflow-hidden bg-background text-foreground">
-      <EmployeePortalBackBar />
-      <div className="flex min-h-0 flex-1 flex-row overflow-hidden">
-        {children}
-      </div>
+      {children}
     </div>
   );
 }

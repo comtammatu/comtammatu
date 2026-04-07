@@ -77,7 +77,7 @@ export default async function KdsPage({
 
   if (stationsError) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex min-h-0 flex-1 items-center justify-center px-4">
         <p className="text-lg text-destructive">
           Không thể tải trạm KDS. Vui lòng thử lại.
         </p>

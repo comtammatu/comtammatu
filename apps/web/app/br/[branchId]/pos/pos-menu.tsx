@@ -22,6 +22,7 @@ import { ItemCustomizer } from "./item-customizer";
 import { CloseSessionDialog } from "./close-session-dialog";
 import { BillReceipt } from "./bill-receipt";
 import { OrderHistory } from "./order-history";
+import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { submitOrder, fetchSessionOrders } from "./actions";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import { calcCartTotal } from "./types";
@@ -377,22 +378,30 @@ export function PosMenu({
     <>
       {/* Left Panel — Menu Browse */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Session header */}
-        <div className="flex items-center justify-between border-b bg-background px-3 py-2">
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Monitor className="size-3" />
-              {session.pos_terminals?.name ?? "POS"}
-            </span>
-            <span className="flex items-center gap-1">
-              <Clock className="size-3" />
-              Ca mở lúc {formatTime(session.opened_at)}
-            </span>
+        {/* Session header — back + meta + đóng ca (no extra full-width row) */}
+        <div className="flex items-center justify-between gap-2 border-b bg-background px-2 py-2 sm:px-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <EmployeePortalBackControl />
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Monitor className="size-3 shrink-0" />
+                <span className="truncate">
+                  {session.pos_terminals?.name ?? "POS"}
+                </span>
+              </span>
+              <span className="flex min-w-0 items-center gap-1">
+                <Clock className="size-3 shrink-0" />
+                <span className="truncate">
+                  <span className="hidden sm:inline">Ca mở lúc </span>
+                  {formatTime(session.opened_at)}
+                </span>
+              </span>
+            </div>
           </div>
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 text-xs"
+            className="h-7 shrink-0 text-xs"
             onClick={() => setShowCloseSession(true)}
           >
             <LogOut className="mr-1 size-3" />

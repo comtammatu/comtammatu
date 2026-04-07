@@ -14,6 +14,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Loader2, Monitor } from "lucide-react";
+import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { openPosSession } from "./actions";
 
 interface PosTerminal {
@@ -61,69 +62,72 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
   }, [canOpen, branchId, terminalId, openingCash, router]);
 
   return (
-    <div className="flex flex-1 items-center justify-center bg-muted/30">
-      <div className="mx-4 w-full max-w-sm rounded-xl border bg-card p-6 shadow-sm">
-        <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-primary/10">
-            <Monitor className="size-6 text-primary" />
-          </div>
-          <h1 className="text-lg font-bold">Mở ca bán hàng</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Chọn máy POS và nhập tiền đầu ca
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="terminal">Máy POS</Label>
-            {terminals.length === 0 ? (
-              <p className="text-sm text-destructive">
-                Chưa có máy POS nào. Liên hệ quản lý để thiết lập.
-              </p>
-            ) : (
-              <Select value={terminalId} onValueChange={setTerminalId}>
-                <SelectTrigger id="terminal">
-                  <SelectValue placeholder="Chọn máy POS" />
-                </SelectTrigger>
-                <SelectContent>
-                  {terminals.map((t) => (
-                    <SelectItem key={t.id} value={String(t.id)}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+    <div className="relative flex flex-1 flex-col bg-muted/30">
+      <EmployeePortalBackControl className="absolute left-2 top-[max(0.5rem,env(safe-area-inset-top,0px))] z-10 sm:left-3" />
+      <div className="flex flex-1 items-center justify-center px-4 py-8">
+        <div className="w-full max-w-sm rounded-xl border bg-card p-6 shadow-sm">
+          <div className="mb-6 text-center">
+            <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-primary/10">
+              <Monitor className="size-6 text-primary" />
+            </div>
+            <h1 className="text-lg font-bold">Mở ca bán hàng</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Chọn máy POS và nhập tiền đầu ca
+            </p>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="opening-cash">Tiền đầu ca (VNĐ)</Label>
-            <Input
-              id="opening-cash"
-              type="number"
-              min="0"
-              step="1000"
-              value={openingCash}
-              onChange={(e) => setOpeningCash(e.target.value)}
-              placeholder="0"
-            />
-          </div>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="terminal">Máy POS</Label>
+              {terminals.length === 0 ? (
+                <p className="text-sm text-destructive">
+                  Chưa có máy POS nào. Liên hệ quản lý để thiết lập.
+                </p>
+              ) : (
+                <Select value={terminalId} onValueChange={setTerminalId}>
+                  <SelectTrigger id="terminal">
+                    <SelectValue placeholder="Chọn máy POS" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {terminals.map((t) => (
+                      <SelectItem key={t.id} value={String(t.id)}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
 
-          <Button
-            className="mt-2 w-full"
-            size="lg"
-            disabled={!canOpen}
-            onClick={handleOpen}
-          >
-            {isPending ? (
-              <>
-                <Loader2 className="mr-2 size-4 animate-spin" />
-                Đang mở ca...
-              </>
-            ) : (
-              "Mở ca"
-            )}
-          </Button>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="opening-cash">Tiền đầu ca (VNĐ)</Label>
+              <Input
+                id="opening-cash"
+                type="number"
+                min="0"
+                step="1000"
+                value={openingCash}
+                onChange={(e) => setOpeningCash(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+
+            <Button
+              className="mt-2 w-full"
+              size="lg"
+              disabled={!canOpen}
+              onClick={handleOpen}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Đang mở ca...
+                </>
+              ) : (
+                "Mở ca"
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
