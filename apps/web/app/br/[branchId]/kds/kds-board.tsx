@@ -8,12 +8,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { ChefHat } from "lucide-react";
 import { OrderCard } from "./order-card";
-import type {
-  KdsStation,
-  KdsTicket,
-  KdsOrderInfo,
-  KdsOrderItem,
-} from "./page";
+import type { KdsStation, KdsTicket, KdsOrderInfo, KdsOrderItem } from "./page";
 
 /* ─── Types ─── */
 
@@ -104,44 +99,41 @@ export function KdsBoard({
     prevTicketCountRef.current = tickets.length;
   }, [tickets.length]);
 
-  const fetchOrderInfo = useCallback(
-    async (orderId: number) => {
-      const supabase = supabaseRef.current;
+  const fetchOrderInfo = useCallback(async (orderId: number) => {
+    const supabase = supabaseRef.current;
 
-      const [orderRes, itemsRes] = await Promise.all([
-        supabase
-          .from("orders")
-          .select(
-            "id, order_number, order_type, table_id, created_at, tables(number)",
-          )
-          .eq("id", orderId)
-          .single(),
-        supabase
-          .from("order_items")
-          .select(
-            "id, order_id, item_name, variant_name, quantity, unit_price, status",
-          )
-          .eq("order_id", orderId),
-      ]);
+    const [orderRes, itemsRes] = await Promise.all([
+      supabase
+        .from("orders")
+        .select(
+          "id, order_number, order_type, table_id, created_at, tables(number)",
+        )
+        .eq("id", orderId)
+        .single(),
+      supabase
+        .from("order_items")
+        .select(
+          "id, order_id, item_name, variant_name, quantity, unit_price, status",
+        )
+        .eq("order_id", orderId),
+    ]);
 
-      if (orderRes.data) {
-        setOrders((prev) => {
-          const next = new Map(prev);
-          next.set(orderId, orderRes.data as unknown as KdsOrderInfo);
-          return next;
-        });
-      }
+    if (orderRes.data) {
+      setOrders((prev) => {
+        const next = new Map(prev);
+        next.set(orderId, orderRes.data as unknown as KdsOrderInfo);
+        return next;
+      });
+    }
 
-      if (itemsRes.data) {
-        setOrderItems((prev) => {
-          const next = new Map(prev);
-          next.set(orderId, itemsRes.data as unknown as KdsOrderItem[]);
-          return next;
-        });
-      }
-    },
-    [],
-  );
+    if (itemsRes.data) {
+      setOrderItems((prev) => {
+        const next = new Map(prev);
+        next.set(orderId, itemsRes.data as unknown as KdsOrderItem[]);
+        return next;
+      });
+    }
+  }, []);
 
   // Subscribe to kds_tickets realtime
   useEffect(() => {

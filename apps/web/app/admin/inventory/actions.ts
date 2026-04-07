@@ -23,7 +23,9 @@ const ingredientSchema = z.object({
   min_stock_level: z.coerce.number().min(0).default(0),
   max_stock_level: z.coerce.number().min(0).optional(),
   reorder_point: z.coerce.number().min(0).optional(),
-  storage_type: z.enum(["ambient", "refrigerated", "frozen"]).default("ambient"),
+  storage_type: z
+    .enum(["ambient", "refrigerated", "frozen"])
+    .default("ambient"),
   shelf_life_days: z.coerce.number().int().positive().optional(),
 });
 
@@ -97,6 +99,12 @@ export async function updateIngredient(
     return { success: false, error: "ID không hợp lệ" };
   }
 
+  const updateSchema = ingredientSchema.partial();
+  const parsedInput = updateSchema.safeParse(input);
+  if (!parsedInput.success) {
+    return { success: false, error: "Dữ liệu không hợp lệ" };
+  }
+
   const ctx = await getAuthContext(INVENTORY_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
@@ -104,13 +112,16 @@ export async function updateIngredient(
 
   const { error } = await supabase
     .from("ingredients")
-    .update(input)
+    .update(parsedInput.data)
     .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id);
 
   if (error) {
     if (error.code === "23505") {
-      return { success: false, error: "Tên hoặc mã nguyên liệu đã tồn tại." };
+      return {
+        success: false,
+        error: "Tên hoặc mã nguyên liệu đã tồn tại.",
+      };
     }
     return { success: false, error: "Không thể cập nhật nguyên liệu." };
   }
@@ -245,7 +256,11 @@ export async function fetchStockAlerts(
 
   // Filter for items below min or above max
   const alerts = (data ?? []).filter((sl) => {
-    const ing = sl.ingredients as unknown as { min_stock_level: number; max_stock_level: number | null; is_active: boolean } | null;
+    const ing = sl.ingredients as unknown as {
+      min_stock_level: number;
+      max_stock_level: number | null;
+      is_active: boolean;
+    } | null;
     if (!ing || !ing.is_active) return false;
     if (sl.current_quantity < ing.min_stock_level) return true;
     if (ing.max_stock_level && sl.current_quantity > ing.max_stock_level)

@@ -41,9 +41,7 @@ export function StaffFormDialog({
   const action = isEdit ? updateStaff : createStaff;
   const [state, formAction, isPending] = useActionState(action, null);
   const formRef = useRef<HTMLFormElement>(null);
-  const [selectedRole, setSelectedRole] = useState(
-    staff?.role ?? "waiter",
-  );
+  const [selectedRole, setSelectedRole] = useState(staff?.role ?? "waiter");
   const isTenantLevel = TENANT_LEVEL_ROLES.includes(
     selectedRole as (typeof TENANT_LEVEL_ROLES)[number],
   );
@@ -151,9 +149,7 @@ export function StaffFormDialog({
               <SelectTrigger id="branch_id">
                 <SelectValue
                   placeholder={
-                    isTenantLevel
-                      ? "Không áp dụng"
-                      : "Chọn chi nhánh"
+                    isTenantLevel ? "Không áp dụng" : "Chọn chi nhánh"
                   }
                 />
               </SelectTrigger>

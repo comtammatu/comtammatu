@@ -59,18 +59,18 @@ Defined in `packages/database/package.json`:
 | `branch_zones`              | manager+ write            | Dining zones per branch (Tầng 1, Sân vườn)  | S1-S5  |
 | `tables`                    | manager+ write            | Physical tables with zone, capacity, status | S1-S5  |
 | `orders`                    | branch-scoped RLS         | Order header: status, totals, table ref     | M2     |
-| `order_items`               | via order RLS             | Line items with price, quantity, modifiers   | M2     |
-| `order_status_history`      | via order RLS             | State machine audit trail                    | M2     |
-| `pos_terminals`             | branch-scoped RLS         | POS device registration per branch           | M2     |
-| `pos_sessions`              | branch-scoped RLS         | Cashier shift sessions (open/close)          | M2     |
-| `printer_configs`           | branch-scoped RLS         | Receipt printer configuration per branch     | M2     |
+| `order_items`               | via order RLS             | Line items with price, quantity, modifiers  | M2     |
+| `order_status_history`      | via order RLS             | State machine audit trail                   | M2     |
+| `pos_terminals`             | branch-scoped RLS         | POS device registration per branch          | M2     |
+| `pos_sessions`              | branch-scoped RLS         | Cashier shift sessions (open/close)         | M2     |
+| `printer_configs`           | branch-scoped RLS         | Receipt printer configuration per branch    | M2     |
 
 **RPCs added in M2:**
 
-| Function              | Purpose                                       |
-| --------------------- | --------------------------------------------- |
+| Function              | Purpose                                                                          |
+| --------------------- | -------------------------------------------------------------------------------- |
 | `create_order()`      | Atomic order + items insert (client pricing — deferred server rehydration to M4) |
-| `close_pos_session()` | Close session with totals reconciliation       |
+| `close_pos_session()` | Close session with totals reconciliation                                         |
 
 Full schema reference: `docs/spec/database-schema.md`
 

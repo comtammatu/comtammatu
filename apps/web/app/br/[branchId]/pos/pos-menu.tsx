@@ -199,10 +199,12 @@ export function PosMenu({
       );
 
       if (result.success && result.data) {
-        toast.success(`Đặt món thành công — #${result.data.order_number}`, {
+        const orderId = result.data.order_id;
+        const orderNumber = result.data.order_number;
+        toast.success(`Đặt món thành công — #${orderNumber}`, {
           action: {
             label: "Xem hóa đơn",
-            onClick: () => setBillOrderId(result.data!.order_id),
+            onClick: () => setBillOrderId(orderId),
           },
         });
         setCartItems([]);
@@ -374,10 +376,7 @@ export function PosMenu({
       />
 
       {/* Bill Receipt Sheet */}
-      <BillReceipt
-        orderId={billOrderId}
-        onClose={() => setBillOrderId(null)}
-      />
+      <BillReceipt orderId={billOrderId} onClose={() => setBillOrderId(null)} />
     </>
   );
 }

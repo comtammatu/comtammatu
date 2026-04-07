@@ -62,9 +62,9 @@ export default async function KdsSettingsPage() {
     categoriesQuery,
   ]);
 
-  if (branchesRes.error) throw new Error("Khong the tai chi nhanh");
-  if (stationsRes.error) throw new Error("Khong the tai tram KDS");
-  if (categoriesRes.error) throw new Error("Khong the tai danh muc");
+  if (branchesRes.error) throw new Error("Không thể tải chi nhánh");
+  if (stationsRes.error) throw new Error("Không thể tải trạm KDS");
+  if (categoriesRes.error) throw new Error("Không thể tải danh mục");
 
   const branches = branchesRes.data;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,9 +77,9 @@ export default async function KdsSettingsPage() {
     position: s.position as number,
     is_active: s.is_active as boolean,
     category_ids:
-      (s.kds_station_categories as { id: number; category_id: number }[] | null)?.map(
-        (sc: { category_id: number }) => sc.category_id,
-      ) ?? [],
+      (
+        s.kds_station_categories as { id: number; category_id: number }[] | null
+      )?.map((sc: { category_id: number }) => sc.category_id) ?? [],
   }));
   const categories = categoriesRes.data as CategoryOption[];
 

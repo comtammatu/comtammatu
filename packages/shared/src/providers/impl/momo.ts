@@ -45,10 +45,12 @@ export class MoMoProvider implements PaymentProvider {
     };
   }
 
-  verifyWebhook(
-    payload: unknown,
-    signature: string,
-  ): WebhookVerification {
+  verifyWebhook(payload: unknown, signature: string): WebhookVerification {
+    // Guard: mock provider must never be used in production
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("MoMo mock provider cannot be used in production");
+    }
+
     // TODO: Real HMAC-SHA256 verification
     // rawData = `amount=${amount}&message=${message}&orderId=${orderId}&...`
     // expectedSig = HMAC-SHA256(secretKey, rawData)

@@ -14,6 +14,7 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import { Loader2, Printer } from "lucide-react";
 import { fetchOrderForBill } from "./actions";
+import type { CartModifier, CartSide } from "./types";
 
 interface OrderItem {
   id: number;
@@ -22,8 +23,8 @@ interface OrderItem {
   quantity: number;
   unit_price: number;
   subtotal: number;
-  modifiers: unknown;
-  sides: unknown;
+  modifiers: CartModifier[];
+  sides: CartSide[];
   note: string | null;
 }
 

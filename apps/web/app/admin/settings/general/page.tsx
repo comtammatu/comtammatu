@@ -11,10 +11,7 @@ export default async function GeneralSettingsPage() {
     data: { user },
   } = await supabase.auth.getUser();
   const claims = user ? extractClaims(user.app_metadata) : null;
-  if (
-    !claims ||
-    !["owner", "super_manager"].includes(claims.user_role)
-  ) {
+  if (!claims || !["owner", "super_manager"].includes(claims.user_role)) {
     redirect("/admin/settings/tables");
   }
 

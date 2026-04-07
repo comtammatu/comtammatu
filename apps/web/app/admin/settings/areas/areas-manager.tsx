@@ -7,6 +7,14 @@ import { Card } from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Plus, X, MapPin } from "lucide-react";
+import { toast } from "@comtammatu/ui/components/sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import {
   createArea,
   assignBranchToArea,
@@ -44,6 +52,8 @@ export function AreasManager({ initialAreas, branches }: AreasManagerProps) {
       if (result.success) {
         setNewAreaName("");
         router.refresh();
+      } else {
+        toast.error(result.error ?? "Có lỗi xảy ra, vui lòng thử lại");
       }
     });
   };
@@ -53,6 +63,8 @@ export function AreasManager({ initialAreas, branches }: AreasManagerProps) {
       const result = await assignBranchToArea(areaId, branchId);
       if (result.success) {
         router.refresh();
+      } else {
+        toast.error(result.error ?? "Có lỗi xảy ra, vui lòng thử lại");
       }
     });
   };
@@ -62,6 +74,8 @@ export function AreasManager({ initialAreas, branches }: AreasManagerProps) {
       const result = await removeBranchFromArea(areaBranchId);
       if (result.success) {
         router.refresh();
+      } else {
+        toast.error(result.error ?? "Có lỗi xảy ra, vui lòng thử lại");
       }
     });
   };
@@ -143,25 +157,25 @@ export function AreasManager({ initialAreas, branches }: AreasManagerProps) {
                 {/* Add branch */}
                 {availableBranches.length > 0 && (
                   <div className="mt-3">
-                    <select
-                      className="w-full rounded border bg-background px-2 py-1 text-sm"
-                      defaultValue=""
-                      onChange={(e) => {
-                        const branchId = Number(e.target.value);
+                    <Select
+                      value=""
+                      onValueChange={(val) => {
+                        const branchId = Number(val);
                         if (branchId) handleAssignBranch(area.id, branchId);
-                        e.target.value = "";
                       }}
                       disabled={isPending}
                     >
-                      <option value="" disabled>
-                        + Thêm chi nhánh...
-                      </option>
-                      {availableBranches.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="+ Thêm chi nhánh..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableBranches.map((b) => (
+                          <SelectItem key={b.id} value={b.id.toString()}>
+                            {b.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
               </Card>

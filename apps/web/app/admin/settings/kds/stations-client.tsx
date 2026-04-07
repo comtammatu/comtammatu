@@ -75,7 +75,7 @@ export function StationsClient({
   if (branches.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        Chua co chi nhanh nao. Vui long tao chi nhanh truoc.
+        Chưa có chi nhánh nào. Vui lòng tạo chi nhánh trước.
       </p>
     );
   }
@@ -83,13 +83,13 @@ export function StationsClient({
   return (
     <>
       <div className="flex items-center gap-4">
-        <label className="text-sm font-medium">Chi nhanh:</label>
+        <label className="text-sm font-medium">Chi nhánh:</label>
         <Select
           value={selectedBranchId?.toString() ?? ""}
           onValueChange={(v) => setSelectedBranchId(Number(v))}
         >
           <SelectTrigger className="w-[240px]">
-            <SelectValue placeholder="Chon chi nhanh" />
+            <SelectValue placeholder="Chọn chi nhánh" />
           </SelectTrigger>
           <SelectContent>
             {branches.map((b) => (
@@ -185,7 +185,7 @@ export function StationsClient({
                         }}
                       >
                         <Pencil className="size-4" />
-                        <span className="sr-only">Chinh sua</span>
+                        <span className="sr-only">Chỉnh sửa</span>
                       </Button>
                     </TableCell>
                   </TableRow>

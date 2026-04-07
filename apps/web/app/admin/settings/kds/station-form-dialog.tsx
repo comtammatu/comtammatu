@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
@@ -100,8 +106,8 @@ export function StationFormDialog({
           </DialogTitle>
           <DialogDescription className="sr-only">
             {isEdit
-              ? "Chinh sua thong tin tram KDS"
-              : "Nhap thong tin tram KDS moi"}
+              ? "Chỉnh sửa thông tin trạm KDS"
+              : "Nhập thông tin trạm KDS mới"}
           </DialogDescription>
         </DialogHeader>
 
@@ -116,7 +122,7 @@ export function StationFormDialog({
               name="name"
               required
               defaultValue={station?.name ?? ""}
-              placeholder="VD: Bep chinh, Bep phu, Nuoc"
+              placeholder="VD: Bếp chính, Bếp phụ, Nước"
             />
           </div>
 
@@ -172,7 +178,7 @@ export function StationFormDialog({
               ))}
               {categories.length === 0 && (
                 <p className="text-xs text-muted-foreground">
-                  Chua co danh muc nao.
+                  Chưa có danh mục nào.
                 </p>
               )}
             </div>
@@ -191,11 +197,11 @@ export function StationFormDialog({
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
-              Huy
+              Hủy
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
-              {isEdit ? "Cap nhat" : "Tao moi"}
+              {isEdit ? "Cập nhật" : "Tạo mới"}
             </Button>
           </DialogFooter>
         </form>

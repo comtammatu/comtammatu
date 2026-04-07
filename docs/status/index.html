@@ -1,1538 +1,2178 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi" data-theme="light">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cơm Tấm Má Tư — Project Status</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet" />
-  <style>
-    /* ─── Reset & Base ─────────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --amber-50:  #fffbeb;
-      --amber-100: #fef3c7;
-      --amber-200: #fde68a;
-      --amber-400: #fbbf24;
-      --amber-500: #f59e0b;
-      --amber-600: #d97706;
-      --amber-700: #b45309;
-      --amber-900: #78350f;
-
-      --orange-500: #f97316;
-      --orange-600: #ea580c;
-
-      --green-500: #22c55e;
-      --green-600: #16a34a;
-      --blue-500:  #3b82f6;
-      --blue-600:  #2563eb;
-      --slate-400: #94a3b8;
-      --slate-500: #64748b;
-
-      /* Light theme */
-      --bg:           #fafaf8;
-      --bg-card:      #ffffff;
-      --bg-card-2:    #fef9f0;
-      --bg-muted:     #f5f0e8;
-      --border:       #e8dfc8;
-      --border-soft:  #f0e8d5;
-      --text:         #1c1208;
-      --text-2:       #4a3a20;
-      --text-3:       #7a6040;
-      --text-muted:   #a08060;
-      --accent:       #d97706;
-      --accent-light: #fef3c7;
-      --shadow-sm:    0 1px 3px rgba(180,120,30,0.08);
-      --shadow-md:    0 4px 16px rgba(180,120,30,0.12);
-      --shadow-lg:    0 8px 32px rgba(180,120,30,0.16);
-    }
-
-    [data-theme="dark"] {
-      --bg:           #0f0b05;
-      --bg-card:      #1a1308;
-      --bg-card-2:    #1f1a0d;
-      --bg-muted:     #251e10;
-      --border:       #3a2e18;
-      --border-soft:  #2e2412;
-      --text:         #f5ead8;
-      --text-2:       #d4b896;
-      --text-3:       #a08060;
-      --text-muted:   #6a5040;
-      --accent:       #f59e0b;
-      --accent-light: #2a1f08;
-      --shadow-sm:    0 1px 3px rgba(0,0,0,0.4);
-      --shadow-md:    0 4px 16px rgba(0,0,0,0.5);
-      --shadow-lg:    0 8px 32px rgba(0,0,0,0.6);
-    }
-
-    html {
-      font-family: 'Be Vietnam Pro', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      font-size: 15px;
-      line-height: 1.6;
-      transition: background 0.3s, color 0.3s;
-      scroll-behavior: smooth;
-    }
-
-    body {
-      min-height: 100vh;
-      padding-bottom: 4rem;
-    }
-
-    /* ─── Animations ────────────────────────────────────────────────── */
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(24px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateX(-16px); }
-      to   { opacity: 1; transform: translateX(0); }
-    }
-    @keyframes fillBar {
-      from { width: 0%; }
-      to   { width: var(--target-width); }
-    }
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50%       { opacity: 0.5; transform: scale(1.4); }
-    }
-    @keyframes shimmer {
-      0%   { background-position: -200% 0; }
-      100% { background-position: 200% 0; }
-    }
-
-    .animate-fade-up { animation: fadeUp 0.6s ease both; }
-    .delay-1 { animation-delay: 0.1s; }
-    .delay-2 { animation-delay: 0.2s; }
-    .delay-3 { animation-delay: 0.3s; }
-    .delay-4 { animation-delay: 0.4s; }
-    .delay-5 { animation-delay: 0.5s; }
-    .delay-6 { animation-delay: 0.6s; }
-    .delay-7 { animation-delay: 0.7s; }
-    .delay-8 { animation-delay: 0.8s; }
-
-    /* ─── Layout ────────────────────────────────────────────────────── */
-    .container {
-      max-width: 1080px;
-      margin: 0 auto;
-      padding: 0 1.5rem;
-    }
-
-    section { padding: 3rem 0; }
-
-    /* ─── Top Bar ───────────────────────────────────────────────────── */
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: var(--bg);
-      border-bottom: 1px solid var(--border-soft);
-      backdrop-filter: blur(12px);
-      padding: 0.75rem 0;
-      transition: background 0.3s, border-color 0.3s;
-    }
-
-    .topbar-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .topbar-brand {
-      font-weight: 700;
-      font-size: 0.9rem;
-      color: var(--accent);
-      letter-spacing: -0.01em;
-    }
-
-    .topbar-nav {
-      display: flex;
-      align-items: center;
-      gap: 1.5rem;
-    }
-
-    .topbar-nav a {
-      font-size: 0.8rem;
-      font-weight: 500;
-      color: var(--text-3);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-    .topbar-nav a:hover { color: var(--accent); }
-
-    .theme-toggle {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      background: var(--bg-muted);
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      padding: 0.3rem 0.75rem;
-      cursor: pointer;
-      font-size: 0.78rem;
-      font-weight: 600;
-      font-family: inherit;
-      color: var(--text-2);
-      transition: all 0.2s;
-    }
-    .theme-toggle:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    /* ─── Hero / Header ─────────────────────────────────────────────── */
-    .hero {
-      padding: 4rem 0 3rem;
-      text-align: center;
-    }
-
-    .hero-eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: var(--accent-light);
-      border: 1px solid var(--amber-200);
-      border-radius: 999px;
-      padding: 0.3rem 1rem;
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: var(--amber-700);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      margin-bottom: 1.25rem;
-    }
-    [data-theme="dark"] .hero-eyebrow { border-color: #3a2e18; }
-
-    .hero-eyebrow-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--amber-500);
-      animation: pulse-dot 1.8s ease-in-out infinite;
-    }
-
-    .hero-title {
-      font-size: clamp(2.4rem, 6vw, 4rem);
-      font-weight: 900;
-      line-height: 1.1;
-      letter-spacing: -0.03em;
-      color: var(--text);
-      margin-bottom: 0.6rem;
-    }
-
-    .hero-title span {
-      background: linear-gradient(135deg, var(--amber-600) 0%, var(--orange-500) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .hero-subtitle {
-      font-size: 1.05rem;
-      color: var(--text-3);
-      font-weight: 400;
-      margin-bottom: 2rem;
-    }
-
-    /* Stack Badges */
-    .stack-badges {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 0.5rem;
-      margin-bottom: 0;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.35rem 0.75rem;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--text-2);
-      font-family: 'Be Vietnam Pro', monospace;
-      transition: border-color 0.2s, color 0.2s;
-      box-shadow: var(--shadow-sm);
-    }
-    .badge:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-    .badge-dot {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: var(--accent);
-    }
-
-    /* ─── Divider ───────────────────────────────────────────────────── */
-    .divider {
-      height: 1px;
-      background: linear-gradient(to right, transparent, var(--border), transparent);
-    }
-
-    /* ─── Section Header ────────────────────────────────────────────── */
-    .section-header {
-      margin-bottom: 2rem;
-    }
-
-    .section-label {
-      font-size: 0.7rem;
-      font-weight: 800;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 0.4rem;
-    }
-
-    .section-title {
-      font-size: 1.6rem;
-      font-weight: 800;
-      letter-spacing: -0.025em;
-      color: var(--text);
-      line-height: 1.2;
-    }
-
-    .section-desc {
-      margin-top: 0.4rem;
-      color: var(--text-3);
-      font-size: 0.9rem;
-    }
-
-    /* ─── Stats Row ─────────────────────────────────────────────────── */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 1rem;
-    }
-
-    @media (min-width: 640px) {
-      .stats-grid { grid-template-columns: repeat(4, 1fr); }
-    }
-
-    .stat-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1.25rem 1.25rem 1rem;
-      text-align: center;
-      box-shadow: var(--shadow-sm);
-      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-    }
-    .stat-card:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-md);
-      border-color: var(--accent);
-    }
-
-    .stat-number {
-      font-size: 2.25rem;
-      font-weight: 900;
-      letter-spacing: -0.04em;
-      line-height: 1;
-      background: linear-gradient(135deg, var(--amber-600) 0%, var(--orange-500) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 0.3rem;
-    }
-
-    .stat-label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--text-3);
-      line-height: 1.3;
-    }
-
-    /* ─── Module Cards ──────────────────────────────────────────────── */
-    .modules-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 0.875rem;
-    }
-
-    @media (min-width: 640px) {
-      .modules-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    @media (min-width: 900px) {
-      .modules-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    .module-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1.25rem 1.5rem;
-      box-shadow: var(--shadow-sm);
-      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .module-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: var(--module-accent, var(--border));
-      border-radius: 14px 14px 0 0;
-    }
-
-    .module-card:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-md);
-    }
-
-    .module-card.shipped  { --module-accent: var(--green-500); }
-    .module-card.next     { --module-accent: var(--blue-500); border-color: #bfdbfe; }
-    .module-card.planned  { --module-accent: var(--border); }
-
-    [data-theme="dark"] .module-card.next { border-color: #1e3a5f; }
-
-    .module-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 0.75rem;
-      margin-bottom: 0.875rem;
-    }
-
-    .module-id {
-      font-size: 0.68rem;
-      font-weight: 800;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-    }
-
-    .module-name {
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.015em;
-    }
-
-    .module-name-vn {
-      font-size: 0.8rem;
-      font-weight: 400;
-      color: var(--text-3);
-    }
-
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-      border-radius: 999px;
-      padding: 0.2rem 0.65rem;
-      font-size: 0.68rem;
-      font-weight: 800;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-
-    .status-badge.shipped {
-      background: #dcfce7;
-      color: #15803d;
-    }
-    [data-theme="dark"] .status-badge.shipped {
-      background: #0f2d18;
-      color: #4ade80;
-    }
-
-    .status-badge.next {
-      background: #dbeafe;
-      color: #1d4ed8;
-    }
-    [data-theme="dark"] .status-badge.next {
-      background: #0f1e3a;
-      color: #60a5fa;
-    }
-
-    .status-badge.planned {
-      background: var(--bg-muted);
-      color: var(--text-muted);
-    }
-
-    .status-dot {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: currentColor;
-    }
-
-    .status-badge.shipped .status-dot { animation: pulse-dot 2s ease-in-out infinite; }
-
-    /* Progress Bar */
-    .progress-wrap {
-      margin-top: 0.5rem;
-    }
-
-    .progress-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.4rem;
-    }
-
-    .progress-label {
-      font-size: 0.72rem;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-
-    .progress-pct {
-      font-size: 0.8rem;
-      font-weight: 800;
-      color: var(--text-2);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .progress-track {
-      height: 6px;
-      background: var(--bg-muted);
-      border-radius: 999px;
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      border-radius: 999px;
-      width: 0%;
-      transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .progress-fill.shipped {
-      background: linear-gradient(90deg, var(--green-500), #4ade80);
-    }
-
-    .progress-fill.next {
-      background: linear-gradient(90deg, var(--blue-500), #60a5fa);
-      /* Animated shimmer */
-      background-size: 200% 100%;
-      animation: shimmer 2s linear infinite;
-      background-image: linear-gradient(90deg, var(--blue-600), var(--blue-500), #93c5fd, var(--blue-500), var(--blue-600));
-    }
-
-    .progress-fill.planned {
-      background: var(--border);
-    }
-
-    /* ─── Dependency Graph ──────────────────────────────────────────── */
-    .dep-graph-wrap {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 2rem 1.5rem;
-      box-shadow: var(--shadow-sm);
-      overflow-x: auto;
-    }
-
-    .dep-graph {
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
-      min-width: 520px;
-    }
-
-    .dep-row {
-      display: flex;
-      align-items: center;
-      gap: 0;
-    }
-
-    .dep-node {
-      display: inline-flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-      background: var(--bg-muted);
-      border: 2px solid var(--border);
-      border-radius: 10px;
-      padding: 0.5rem 0.875rem;
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: var(--text-2);
-      white-space: nowrap;
-      transition: all 0.2s;
-      cursor: default;
-    }
-
-    .dep-node:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-md);
-    }
-
-    .dep-node.shipped {
-      background: #dcfce7;
-      border-color: var(--green-500);
-      color: #15803d;
-    }
-    [data-theme="dark"] .dep-node.shipped {
-      background: #0f2d18;
-      border-color: #16a34a;
-      color: #4ade80;
-    }
-
-    .dep-node.next {
-      background: #dbeafe;
-      border-color: var(--blue-500);
-      color: #1d4ed8;
-    }
-    [data-theme="dark"] .dep-node.next {
-      background: #0f1e3a;
-      border-color: var(--blue-500);
-      color: #60a5fa;
-    }
-
-    .dep-node.planned {
-      opacity: 0.6;
-    }
-
-    .dep-node-id {
-      font-size: 0.65rem;
-      opacity: 0.7;
-    }
-
-    .dep-arrow {
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      padding: 0 0.25rem;
-    }
-
-    .dep-arrow svg {
-      color: var(--text-muted);
-    }
-
-    .dep-branch {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      position: relative;
-    }
-
-    .dep-branch-row {
-      display: flex;
-      align-items: center;
-      gap: 0;
-    }
-
-    .dep-branch-line {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 0 0.25rem;
-      position: relative;
-    }
-
-    /* ─── Architecture ──────────────────────────────────────────────── */
-    .arch-flow {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.5rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1.5rem 2rem;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .arch-node {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      background: var(--bg-muted);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 0.625rem 1rem;
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: var(--text-2);
-      text-align: center;
-      transition: all 0.2s;
-    }
-
-    .arch-node:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-      transform: translateY(-2px);
-    }
-
-    .arch-node-sub {
-      font-size: 0.62rem;
-      font-weight: 400;
-      color: var(--text-muted);
-    }
-
-    .arch-arrow {
-      color: var(--accent);
-      font-size: 1.1rem;
-      font-weight: 700;
-      flex-shrink: 0;
-    }
-
-    .arch-node.accent {
-      background: var(--accent-light);
-      border-color: var(--amber-400);
-      color: var(--amber-700);
-    }
-
-    /* ─── Shipped / Next sections ───────────────────────────────────── */
-    .two-col {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1.5rem;
-    }
-    @media (min-width: 700px) {
-      .two-col { grid-template-columns: 1fr 1fr; }
-    }
-
-    .info-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1.5rem;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .info-card-title {
-      font-size: 0.85rem;
-      font-weight: 800;
-      color: var(--text);
-      margin-bottom: 1rem;
-      padding-bottom: 0.75rem;
-      border-bottom: 1px solid var(--border-soft);
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .info-card-icon {
-      width: 24px;
-      height: 24px;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.8rem;
-      flex-shrink: 0;
-    }
-    .icon-green { background: #dcfce7; }
-    [data-theme="dark"] .icon-green { background: #0f2d18; }
-    .icon-blue  { background: #dbeafe; }
-    [data-theme="dark"] .icon-blue  { background: #0f1e3a; }
-
-    .module-section {
-      margin-bottom: 1rem;
-    }
-    .module-section:last-child { margin-bottom: 0; }
-
-    .module-section-name {
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: var(--text-2);
-      margin-bottom: 0.35rem;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-
-    .module-section-name::before {
-      content: '';
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 2px;
-      background: var(--accent);
-      flex-shrink: 0;
-    }
-
-    .bullet-list {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-
-    .bullet-list li {
-      font-size: 0.8rem;
-      color: var(--text-3);
-      padding-left: 1rem;
-      position: relative;
-    }
-
-    .bullet-list li::before {
-      content: '—';
-      position: absolute;
-      left: 0;
-      color: var(--text-muted);
-    }
-
-    /* ─── Deferred ──────────────────────────────────────────────────── */
-    .deferred-card {
-      background: var(--bg-card-2);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1.5rem;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .deferred-item {
-      display: flex;
-      gap: 0.75rem;
-      padding: 0.75rem 0;
-      border-bottom: 1px solid var(--border-soft);
-    }
-    .deferred-item:last-child { border-bottom: none; padding-bottom: 0; }
-    .deferred-item:first-child { padding-top: 0; }
-
-    .deferred-tag {
-      flex-shrink: 0;
-      background: var(--bg-muted);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 0.15rem 0.5rem;
-      font-size: 0.65rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      align-self: flex-start;
-      margin-top: 2px;
-    }
-
-    .deferred-text {
-      font-size: 0.82rem;
-      color: var(--text-2);
-      font-weight: 500;
-    }
-
-    .deferred-sub {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-top: 0.15rem;
-    }
-
-    /* ─── Footer ────────────────────────────────────────────────────── */
-    footer {
-      margin-top: 2rem;
-      padding: 2rem 0;
-      border-top: 1px solid var(--border-soft);
-      text-align: center;
-    }
-
-    .footer-inner {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .footer-tech {
-      font-size: 0.8rem;
-      color: var(--text-3);
-    }
-
-    .footer-meta {
-      font-size: 0.72rem;
-      color: var(--text-muted);
-    }
-
-    .footer-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--text-3);
-      text-decoration: none;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.3rem 0.75rem;
-      transition: all 0.2s;
-    }
-    .footer-link:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    /* ─── Responsive nav hide ───────────────────────────────────────── */
-    @media (max-width: 560px) {
-      .topbar-nav a { display: none; }
-    }
-    @media (max-width: 480px) {
-      .hero { padding: 2.5rem 0 2rem; }
-      .dep-graph-wrap { padding: 1.25rem 1rem; }
-    }
-  </style>
-</head>
-<body>
-
-  <!-- Top Bar -->
-  <nav class="topbar">
-    <div class="container topbar-inner">
-      <div class="topbar-brand">Cơm Tấm Má Tư</div>
-      <div class="topbar-nav">
-        <a href="#modules">Modules</a>
-        <a href="#shipped">Shipped</a>
-        <a href="#next">Roadmap</a>
-        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">
-          <span id="theme-icon">☽</span>
-          <span id="theme-label">Dark</span>
-        </button>
-      </div>
-    </div>
-  </nav>
-
-  <!-- Hero -->
-  <header class="hero">
-    <div class="container">
-      <div class="animate-fade-up">
-        <div class="hero-eyebrow">
-          <div class="hero-eyebrow-dot"></div>
-          Active Development · Sprint 3
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cơm Tấm Má Tư — Project Status</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ─── Reset & Base ─────────────────────────────────────────────── */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --amber-50: #fffbeb;
+        --amber-100: #fef3c7;
+        --amber-200: #fde68a;
+        --amber-400: #fbbf24;
+        --amber-500: #f59e0b;
+        --amber-600: #d97706;
+        --amber-700: #b45309;
+        --amber-900: #78350f;
+
+        --orange-500: #f97316;
+        --orange-600: #ea580c;
+
+        --green-500: #22c55e;
+        --green-600: #16a34a;
+        --blue-500: #3b82f6;
+        --blue-600: #2563eb;
+        --slate-400: #94a3b8;
+        --slate-500: #64748b;
+
+        /* Light theme */
+        --bg: #fafaf8;
+        --bg-card: #ffffff;
+        --bg-card-2: #fef9f0;
+        --bg-muted: #f5f0e8;
+        --border: #e8dfc8;
+        --border-soft: #f0e8d5;
+        --text: #1c1208;
+        --text-2: #4a3a20;
+        --text-3: #7a6040;
+        --text-muted: #a08060;
+        --accent: #d97706;
+        --accent-light: #fef3c7;
+        --shadow-sm: 0 1px 3px rgba(180, 120, 30, 0.08);
+        --shadow-md: 0 4px 16px rgba(180, 120, 30, 0.12);
+        --shadow-lg: 0 8px 32px rgba(180, 120, 30, 0.16);
+      }
+
+      [data-theme="dark"] {
+        --bg: #0f0b05;
+        --bg-card: #1a1308;
+        --bg-card-2: #1f1a0d;
+        --bg-muted: #251e10;
+        --border: #3a2e18;
+        --border-soft: #2e2412;
+        --text: #f5ead8;
+        --text-2: #d4b896;
+        --text-3: #a08060;
+        --text-muted: #6a5040;
+        --accent: #f59e0b;
+        --accent-light: #2a1f08;
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+        --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+        --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+      }
+
+      html {
+        font-family: "Be Vietnam Pro", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 15px;
+        line-height: 1.6;
+        transition:
+          background 0.3s,
+          color 0.3s;
+        scroll-behavior: smooth;
+      }
+
+      body {
+        min-height: 100vh;
+        padding-bottom: 4rem;
+      }
+
+      /* ─── Animations ────────────────────────────────────────────────── */
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(24px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(-16px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+      @keyframes fillBar {
+        from {
+          width: 0%;
+        }
+        to {
+          width: var(--target-width);
+        }
+      }
+      @keyframes pulse-dot {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.5;
+          transform: scale(1.4);
+        }
+      }
+      @keyframes shimmer {
+        0% {
+          background-position: -200% 0;
+        }
+        100% {
+          background-position: 200% 0;
+        }
+      }
+
+      .animate-fade-up {
+        animation: fadeUp 0.6s ease both;
+      }
+      .delay-1 {
+        animation-delay: 0.1s;
+      }
+      .delay-2 {
+        animation-delay: 0.2s;
+      }
+      .delay-3 {
+        animation-delay: 0.3s;
+      }
+      .delay-4 {
+        animation-delay: 0.4s;
+      }
+      .delay-5 {
+        animation-delay: 0.5s;
+      }
+      .delay-6 {
+        animation-delay: 0.6s;
+      }
+      .delay-7 {
+        animation-delay: 0.7s;
+      }
+      .delay-8 {
+        animation-delay: 0.8s;
+      }
+
+      /* ─── Layout ────────────────────────────────────────────────────── */
+      .container {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 0 1.5rem;
+      }
+
+      section {
+        padding: 3rem 0;
+      }
+
+      /* ─── Top Bar ───────────────────────────────────────────────────── */
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--bg);
+        border-bottom: 1px solid var(--border-soft);
+        backdrop-filter: blur(12px);
+        padding: 0.75rem 0;
+        transition:
+          background 0.3s,
+          border-color 0.3s;
+      }
+
+      .topbar-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .topbar-brand {
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: var(--accent);
+        letter-spacing: -0.01em;
+      }
+
+      .topbar-nav {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+      }
+
+      .topbar-nav a {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--text-3);
+        text-decoration: none;
+        transition: color 0.2s;
+      }
+      .topbar-nav a:hover {
+        color: var(--accent);
+      }
+
+      .theme-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: var(--bg-muted);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 0.3rem 0.75rem;
+        cursor: pointer;
+        font-size: 0.78rem;
+        font-weight: 600;
+        font-family: inherit;
+        color: var(--text-2);
+        transition: all 0.2s;
+      }
+      .theme-toggle:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      /* ─── Hero / Header ─────────────────────────────────────────────── */
+      .hero {
+        padding: 4rem 0 3rem;
+        text-align: center;
+      }
+
+      .hero-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: var(--accent-light);
+        border: 1px solid var(--amber-200);
+        border-radius: 999px;
+        padding: 0.3rem 1rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--amber-700);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 1.25rem;
+      }
+      [data-theme="dark"] .hero-eyebrow {
+        border-color: #3a2e18;
+      }
+
+      .hero-eyebrow-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--amber-500);
+        animation: pulse-dot 1.8s ease-in-out infinite;
+      }
+
+      .hero-title {
+        font-size: clamp(2.4rem, 6vw, 4rem);
+        font-weight: 900;
+        line-height: 1.1;
+        letter-spacing: -0.03em;
+        color: var(--text);
+        margin-bottom: 0.6rem;
+      }
+
+      .hero-title span {
+        background: linear-gradient(
+          135deg,
+          var(--amber-600) 0%,
+          var(--orange-500) 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .hero-subtitle {
+        font-size: 1.05rem;
+        color: var(--text-3);
+        font-weight: 400;
+        margin-bottom: 2rem;
+      }
+
+      /* Stack Badges */
+      .stack-badges {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 0;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-2);
+        font-family: "Be Vietnam Pro", monospace;
+        transition:
+          border-color 0.2s,
+          color 0.2s;
+        box-shadow: var(--shadow-sm);
+      }
+      .badge:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .badge-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+
+      /* ─── Divider ───────────────────────────────────────────────────── */
+      .divider {
+        height: 1px;
+        background: linear-gradient(
+          to right,
+          transparent,
+          var(--border),
+          transparent
+        );
+      }
+
+      /* ─── Section Header ────────────────────────────────────────────── */
+      .section-header {
+        margin-bottom: 2rem;
+      }
+
+      .section-label {
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 0.4rem;
+      }
+
+      .section-title {
+        font-size: 1.6rem;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        color: var(--text);
+        line-height: 1.2;
+      }
+
+      .section-desc {
+        margin-top: 0.4rem;
+        color: var(--text-3);
+        font-size: 0.9rem;
+      }
+
+      /* ─── Stats Row ─────────────────────────────────────────────────── */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+      }
+
+      @media (min-width: 640px) {
+        .stats-grid {
+          grid-template-columns: repeat(4, 1fr);
+        }
+      }
+
+      .stat-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.25rem 1.25rem 1rem;
+        text-align: center;
+        box-shadow: var(--shadow-sm);
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s,
+          border-color 0.2s;
+      }
+      .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--accent);
+      }
+
+      .stat-number {
+        font-size: 2.25rem;
+        font-weight: 900;
+        letter-spacing: -0.04em;
+        line-height: 1;
+        background: linear-gradient(
+          135deg,
+          var(--amber-600) 0%,
+          var(--orange-500) 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.3rem;
+      }
+
+      .stat-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-3);
+        line-height: 1.3;
+      }
+
+      /* ─── Module Cards ──────────────────────────────────────────────── */
+      .modules-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.875rem;
+      }
+
+      @media (min-width: 640px) {
+        .modules-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media (min-width: 900px) {
+        .modules-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      .module-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.25rem 1.5rem;
+        box-shadow: var(--shadow-sm);
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s,
+          border-color 0.2s;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .module-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--module-accent, var(--border));
+        border-radius: 14px 14px 0 0;
+      }
+
+      .module-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+      }
+
+      .module-card.shipped {
+        --module-accent: var(--green-500);
+      }
+      .module-card.next {
+        --module-accent: var(--blue-500);
+        border-color: #bfdbfe;
+      }
+      .module-card.planned {
+        --module-accent: var(--border);
+      }
+
+      [data-theme="dark"] .module-card.next {
+        border-color: #1e3a5f;
+      }
+
+      .module-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.875rem;
+      }
+
+      .module-id {
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+
+      .module-name {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: -0.015em;
+      }
+
+      .module-name-vn {
+        font-size: 0.8rem;
+        font-weight: 400;
+        color: var(--text-3);
+      }
+
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        border-radius: 999px;
+        padding: 0.2rem 0.65rem;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .status-badge.shipped {
+        background: #dcfce7;
+        color: #15803d;
+      }
+      [data-theme="dark"] .status-badge.shipped {
+        background: #0f2d18;
+        color: #4ade80;
+      }
+
+      .status-badge.next {
+        background: #dbeafe;
+        color: #1d4ed8;
+      }
+      [data-theme="dark"] .status-badge.next {
+        background: #0f1e3a;
+        color: #60a5fa;
+      }
+
+      .status-badge.planned {
+        background: var(--bg-muted);
+        color: var(--text-muted);
+      }
+
+      .status-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+
+      .status-badge.shipped .status-dot {
+        animation: pulse-dot 2s ease-in-out infinite;
+      }
+
+      /* Progress Bar */
+      .progress-wrap {
+        margin-top: 0.5rem;
+      }
+
+      .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.4rem;
+      }
+
+      .progress-label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: var(--text-muted);
+      }
+
+      .progress-pct {
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: var(--text-2);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .progress-track {
+        height: 6px;
+        background: var(--bg-muted);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        height: 100%;
+        border-radius: 999px;
+        width: 0%;
+        transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .progress-fill.shipped {
+        background: linear-gradient(90deg, var(--green-500), #4ade80);
+      }
+
+      .progress-fill.next {
+        background: linear-gradient(90deg, var(--blue-500), #60a5fa);
+        /* Animated shimmer */
+        background-size: 200% 100%;
+        animation: shimmer 2s linear infinite;
+        background-image: linear-gradient(
+          90deg,
+          var(--blue-600),
+          var(--blue-500),
+          #93c5fd,
+          var(--blue-500),
+          var(--blue-600)
+        );
+      }
+
+      .progress-fill.planned {
+        background: var(--border);
+      }
+
+      /* ─── Dependency Graph ──────────────────────────────────────────── */
+      .dep-graph-wrap {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 2rem 1.5rem;
+        box-shadow: var(--shadow-sm);
+        overflow-x: auto;
+      }
+
+      .dep-graph {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        min-width: 520px;
+      }
+
+      .dep-row {
+        display: flex;
+        align-items: center;
+        gap: 0;
+      }
+
+      .dep-node {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        background: var(--bg-muted);
+        border: 2px solid var(--border);
+        border-radius: 10px;
+        padding: 0.5rem 0.875rem;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--text-2);
+        white-space: nowrap;
+        transition: all 0.2s;
+        cursor: default;
+      }
+
+      .dep-node:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+      }
+
+      .dep-node.shipped {
+        background: #dcfce7;
+        border-color: var(--green-500);
+        color: #15803d;
+      }
+      [data-theme="dark"] .dep-node.shipped {
+        background: #0f2d18;
+        border-color: #16a34a;
+        color: #4ade80;
+      }
+
+      .dep-node.next {
+        background: #dbeafe;
+        border-color: var(--blue-500);
+        color: #1d4ed8;
+      }
+      [data-theme="dark"] .dep-node.next {
+        background: #0f1e3a;
+        border-color: var(--blue-500);
+        color: #60a5fa;
+      }
+
+      .dep-node.planned {
+        opacity: 0.6;
+      }
+
+      .dep-node-id {
+        font-size: 0.65rem;
+        opacity: 0.7;
+      }
+
+      .dep-arrow {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        padding: 0 0.25rem;
+      }
+
+      .dep-arrow svg {
+        color: var(--text-muted);
+      }
+
+      .dep-branch {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        position: relative;
+      }
+
+      .dep-branch-row {
+        display: flex;
+        align-items: center;
+        gap: 0;
+      }
+
+      .dep-branch-line {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0 0.25rem;
+        position: relative;
+      }
+
+      /* ─── Architecture ──────────────────────────────────────────────── */
+      .arch-flow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.5rem 2rem;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .arch-node {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        background: var(--bg-muted);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.625rem 1rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-2);
+        text-align: center;
+        transition: all 0.2s;
+      }
+
+      .arch-node:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        transform: translateY(-2px);
+      }
+
+      .arch-node-sub {
+        font-size: 0.62rem;
+        font-weight: 400;
+        color: var(--text-muted);
+      }
+
+      .arch-arrow {
+        color: var(--accent);
+        font-size: 1.1rem;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+
+      .arch-node.accent {
+        background: var(--accent-light);
+        border-color: var(--amber-400);
+        color: var(--amber-700);
+      }
+
+      /* ─── Shipped / Next sections ───────────────────────────────────── */
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      @media (min-width: 700px) {
+        .two-col {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      .info-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .info-card-title {
+        font-size: 0.85rem;
+        font-weight: 800;
+        color: var(--text);
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border-soft);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .info-card-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        flex-shrink: 0;
+      }
+      .icon-green {
+        background: #dcfce7;
+      }
+      [data-theme="dark"] .icon-green {
+        background: #0f2d18;
+      }
+      .icon-blue {
+        background: #dbeafe;
+      }
+      [data-theme="dark"] .icon-blue {
+        background: #0f1e3a;
+      }
+
+      .module-section {
+        margin-bottom: 1rem;
+      }
+      .module-section:last-child {
+        margin-bottom: 0;
+      }
+
+      .module-section-name {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-2);
+        margin-bottom: 0.35rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+
+      .module-section-name::before {
+        content: "";
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 2px;
+        background: var(--accent);
+        flex-shrink: 0;
+      }
+
+      .bullet-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .bullet-list li {
+        font-size: 0.8rem;
+        color: var(--text-3);
+        padding-left: 1rem;
+        position: relative;
+      }
+
+      .bullet-list li::before {
+        content: "—";
+        position: absolute;
+        left: 0;
+        color: var(--text-muted);
+      }
+
+      /* ─── Deferred ──────────────────────────────────────────────────── */
+      .deferred-card {
+        background: var(--bg-card-2);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .deferred-item {
+        display: flex;
+        gap: 0.75rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--border-soft);
+      }
+      .deferred-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+      .deferred-item:first-child {
+        padding-top: 0;
+      }
+
+      .deferred-tag {
+        flex-shrink: 0;
+        background: var(--bg-muted);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0.15rem 0.5rem;
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        align-self: flex-start;
+        margin-top: 2px;
+      }
+
+      .deferred-text {
+        font-size: 0.82rem;
+        color: var(--text-2);
+        font-weight: 500;
+      }
+
+      .deferred-sub {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 0.15rem;
+      }
+
+      /* ─── Footer ────────────────────────────────────────────────────── */
+      footer {
+        margin-top: 2rem;
+        padding: 2rem 0;
+        border-top: 1px solid var(--border-soft);
+        text-align: center;
+      }
+
+      .footer-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .footer-tech {
+        font-size: 0.8rem;
+        color: var(--text-3);
+      }
+
+      .footer-meta {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+      }
+
+      .footer-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--text-3);
+        text-decoration: none;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.3rem 0.75rem;
+        transition: all 0.2s;
+      }
+      .footer-link:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      /* ─── Responsive nav hide ───────────────────────────────────────── */
+      @media (max-width: 560px) {
+        .topbar-nav a {
+          display: none;
+        }
+      }
+      @media (max-width: 480px) {
+        .hero {
+          padding: 2.5rem 0 2rem;
+        }
+        .dep-graph-wrap {
+          padding: 1.25rem 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Top Bar -->
+    <nav class="topbar">
+      <div class="container topbar-inner">
+        <div class="topbar-brand">Cơm Tấm Má Tư</div>
+        <div class="topbar-nav">
+          <a href="#modules">Modules</a>
+          <a href="#shipped">Shipped</a>
+          <a href="#next">Roadmap</a>
+          <button
+            class="theme-toggle"
+            onclick="toggleTheme()"
+            aria-label="Toggle dark mode"
+          >
+            <span id="theme-icon">☽</span>
+            <span id="theme-label">Dark</span>
+          </button>
         </div>
       </div>
-      <h1 class="hero-title animate-fade-up delay-1">
-        <span>Cơm Tấm Má Tư</span>
-      </h1>
-      <p class="hero-subtitle animate-fade-up delay-2">
-        Hệ thống Quản lý Vận hành Nhà hàng &mdash; Restaurant Management System
-      </p>
-      <div class="stack-badges animate-fade-up delay-3">
-        <span class="badge"><span class="badge-dot"></span>Next.js 16.2</span>
-        <span class="badge"><span class="badge-dot"></span>React 19.2</span>
-        <span class="badge"><span class="badge-dot"></span>TypeScript 6.0</span>
-        <span class="badge"><span class="badge-dot"></span>Tailwind 4.2</span>
-        <span class="badge"><span class="badge-dot"></span>Supabase</span>
-        <span class="badge"><span class="badge-dot"></span>Turborepo 2.9</span>
-      </div>
-    </div>
-  </header>
+    </nav>
 
-  <div class="divider"></div>
-
-  <!-- Stats -->
-  <section>
-    <div class="container">
-      <div class="stats-grid">
-        <div class="stat-card animate-fade-up delay-1">
-          <div class="stat-number">19</div>
-          <div class="stat-label">Database Tables</div>
+    <!-- Hero -->
+    <header class="hero">
+      <div class="container">
+        <div class="animate-fade-up">
+          <div class="hero-eyebrow">
+            <div class="hero-eyebrow-dot"></div>
+            Active Development · Sprint 3
+          </div>
         </div>
-        <div class="stat-card animate-fade-up delay-2">
-          <div class="stat-number">6</div>
-          <div class="stat-label">RPC Functions</div>
-        </div>
-        <div class="stat-card animate-fade-up delay-3">
-          <div class="stat-number">8</div>
-          <div class="stat-label">Staff Roles</div>
-        </div>
-        <div class="stat-card animate-fade-up delay-4">
-          <div class="stat-number">13</div>
-          <div class="stat-label">ACL-Protected Modules</div>
+        <h1 class="hero-title animate-fade-up delay-1">
+          <span>Cơm Tấm Má Tư</span>
+        </h1>
+        <p class="hero-subtitle animate-fade-up delay-2">
+          Hệ thống Quản lý Vận hành Nhà hàng &mdash; Restaurant Management
+          System
+        </p>
+        <div class="stack-badges animate-fade-up delay-3">
+          <span class="badge"><span class="badge-dot"></span>Next.js 16.2</span>
+          <span class="badge"><span class="badge-dot"></span>React 19.2</span>
+          <span class="badge"
+            ><span class="badge-dot"></span>TypeScript 6.0</span
+          >
+          <span class="badge"><span class="badge-dot"></span>Tailwind 4.2</span>
+          <span class="badge"><span class="badge-dot"></span>Supabase</span>
+          <span class="badge"
+            ><span class="badge-dot"></span>Turborepo 2.9</span
+          >
         </div>
       </div>
-    </div>
-  </section>
+    </header>
 
-  <div class="divider"></div>
+    <div class="divider"></div>
 
-  <!-- Module Progress -->
-  <section id="modules">
-    <div class="container">
-      <div class="section-header animate-fade-up">
-        <div class="section-label">Module Progress</div>
-        <h2 class="section-title">Tiến độ phát triển</h2>
-        <p class="section-desc">8 modules · 3 shipped · 1 in queue · 4 planned</p>
+    <!-- Stats -->
+    <section>
+      <div class="container">
+        <div class="stats-grid">
+          <div class="stat-card animate-fade-up delay-1">
+            <div class="stat-number">19</div>
+            <div class="stat-label">Database Tables</div>
+          </div>
+          <div class="stat-card animate-fade-up delay-2">
+            <div class="stat-number">6</div>
+            <div class="stat-label">RPC Functions</div>
+          </div>
+          <div class="stat-card animate-fade-up delay-3">
+            <div class="stat-number">8</div>
+            <div class="stat-label">Staff Roles</div>
+          </div>
+          <div class="stat-card animate-fade-up delay-4">
+            <div class="stat-number">13</div>
+            <div class="stat-label">ACL-Protected Modules</div>
+          </div>
+        </div>
       </div>
-      <div class="modules-grid">
+    </section>
 
-        <!-- M0 -->
-        <div class="module-card shipped animate-fade-up delay-1">
-          <div class="module-head">
-            <div>
-              <div class="module-id">M0</div>
-              <div class="module-name">Admin Shell <span class="module-name-vn">· Khung quản trị</span></div>
-            </div>
-            <div class="status-badge shipped"><span class="status-dot"></span>Shipped</div>
-          </div>
-          <div class="progress-wrap">
-            <div class="progress-header">
-              <span class="progress-label">Hoàn thành</span>
-              <span class="progress-pct">100%</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill shipped" data-width="100%"></div>
-            </div>
-          </div>
+    <div class="divider"></div>
+
+    <!-- Module Progress -->
+    <section id="modules">
+      <div class="container">
+        <div class="section-header animate-fade-up">
+          <div class="section-label">Module Progress</div>
+          <h2 class="section-title">Tiến độ phát triển</h2>
+          <p class="section-desc">
+            8 modules · 3 shipped · 1 in queue · 4 planned
+          </p>
         </div>
-
-        <!-- M1 -->
-        <div class="module-card shipped animate-fade-up delay-2">
-          <div class="module-head">
-            <div>
-              <div class="module-id">M1</div>
-              <div class="module-name">Thực đơn <span class="module-name-vn">· Menu</span></div>
-            </div>
-            <div class="status-badge shipped"><span class="status-dot"></span>Shipped</div>
-          </div>
-          <div class="progress-wrap">
-            <div class="progress-header">
-              <span class="progress-label">Hoàn thành</span>
-              <span class="progress-pct">100%</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill shipped" data-width="100%"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- M2 -->
-        <div class="module-card shipped animate-fade-up delay-3">
-          <div class="module-head">
-            <div>
-              <div class="module-id">M2</div>
-              <div class="module-name">POS <span class="module-name-vn">· Point of Sale</span></div>
-            </div>
-            <div class="status-badge shipped"><span class="status-dot"></span>Shipped</div>
-          </div>
-          <div class="progress-wrap">
-            <div class="progress-header">
-              <span class="progress-label">Hoàn thành</span>
-              <span class="progress-pct">100%</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill shipped" data-width="100%"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- M3 -->
-        <div class="module-card shipped animate-fade-up delay-4">
-          <div class="module-head">
-            <div>
-              <div class="module-id">M3</div>
-              <div class="module-name">KDS <span class="module-name-vn">· Kitchen Display</span></div>
-            </div>
-            <div class="status-badge shipped"><span class="status-dot"></span>Done</div>
-          </div>
-          <div class="progress-wrap">
-            <div class="progress-header">
-              <span class="progress-label">Schema + UI + Realtime</span>
-              <span class="progress-pct">100%</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill shipped" data-width="100%"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- M4 -->
-        <div class="module-card shipped animate-fade-up delay-5">
-          <div class="module-head">
-            <div>
-              <div class="module-id">M4</div>
-              <div class="module-name">Thanh toán <span class="module-name-vn">· Payment</span></div>
-            </div>
-            <div class="status-badge shipped"><span class="status-dot"></span>Done</div>
-          </div>
-          <div class="progress-wrap">
-            <div class="progress-header">
-              <span class="progress-label">Schema + Actions + Webhook (MVP)</span>
-              <span class="progress-pct">70%</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill shipped" data-width="70%"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- M5 -->
-        <div class="module-card shipped animate-fade-up delay-6">
-          <div class="module-head">
-            <div>
-              <div class="module-id">M5</div>
-              <div class="module-name">Kho hàng <span class="module-name-vn">· Stock</span></div>
-            </div>
-            <div class="status-badge shipped"><span class="status-dot"></span>Done</div>
-          </div>
-          <div class="progress-wrap">
-            <div class="progress-header">
-              <span class="progress-label">Schema + CRUD + Adjustments (MVP)</span>
-              <span class="progress-pct">60%</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill shipped" data-width="60%"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- M6 -->
-        <div class="module-card shipped animate-fade-up delay-7">
-          <div class="module-head">
-            <div>
-              <div class="module-id">M6</div>
-              <div class="module-name">Kế toán <span class="module-name-vn">· Finance</span></div>
-            </div>
-            <div class="status-badge shipped"><span class="status-dot"></span>Done</div>
-          </div>
-          <div class="progress-wrap">
-            <div class="progress-header">
-              <span class="progress-label">HĐĐT + Revenue Dashboard (MVP)</span>
-              <span class="progress-pct">50%</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill shipped" data-width="50%"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- M7 -->
-        <div class="module-card shipped animate-fade-up delay-8">
-          <div class="module-head">
-            <div>
-              <div class="module-id">M7</div>
-              <div class="module-name">Nhân sự <span class="module-name-vn">· HR / Payroll</span></div>
-            </div>
-            <div class="status-badge shipped"><span class="status-dot"></span>Done</div>
-          </div>
-          <div class="progress-wrap">
-            <div class="progress-header">
-              <span class="progress-label">Employees + Shifts + Attendance (MVP)</span>
-              <span class="progress-pct">50%</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill shipped" data-width="50%"></div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </section>
-
-  <div class="divider"></div>
-
-  <!-- Dependency Graph -->
-  <section>
-    <div class="container">
-      <div class="section-header animate-fade-up">
-        <div class="section-label">Dependency Graph</div>
-        <h2 class="section-title">Sơ đồ phụ thuộc</h2>
-        <p class="section-desc">Each module builds on the foundation of the previous</p>
-      </div>
-      <div class="dep-graph-wrap animate-fade-up delay-2">
-        <svg width="100%" viewBox="0 0 780 160" xmlns="http://www.w3.org/2000/svg" style="overflow: visible; font-family: 'Be Vietnam Pro', sans-serif;">
-          <defs>
-            <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-              <path d="M0,0 L0,6 L8,3 z" fill="#22c55e"/>
-            </marker>
-            <marker id="arrow-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-              <path d="M0,0 L0,6 L8,3 z" fill="#3b82f6"/>
-            </marker>
-            <marker id="arrow-gray" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-              <path d="M0,0 L0,6 L8,3 z" fill="#94a3b8"/>
-            </marker>
-          </defs>
-
-          <!-- Row 1: M0 → M1 → M2 → M3 -->
+        <div class="modules-grid">
           <!-- M0 -->
-          <g transform="translate(10, 50)">
-            <rect width="80" height="52" rx="8" fill="var(--dep-shipped-bg, #dcfce7)" stroke="#22c55e" stroke-width="2"/>
-            <text x="40" y="18" text-anchor="middle" font-size="9" font-weight="800" fill="#6b7280" letter-spacing="1">M0</text>
-            <text x="40" y="32" text-anchor="middle" font-size="11" font-weight="700" fill="#15803d">Admin</text>
-            <text x="40" y="46" text-anchor="middle" font-size="10" fill="#16a34a">✅ Shipped</text>
-          </g>
-
-          <!-- Arrow M0→M1 -->
-          <line x1="90" y1="76" x2="118" y2="76" stroke="#22c55e" stroke-width="2" marker-end="url(#arrow-green)"/>
+          <div class="module-card shipped animate-fade-up delay-1">
+            <div class="module-head">
+              <div>
+                <div class="module-id">M0</div>
+                <div class="module-name">
+                  Admin Shell
+                  <span class="module-name-vn">· Khung quản trị</span>
+                </div>
+              </div>
+              <div class="status-badge shipped">
+                <span class="status-dot"></span>Shipped
+              </div>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress-header">
+                <span class="progress-label">Hoàn thành</span>
+                <span class="progress-pct">100%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill shipped" data-width="100%"></div>
+              </div>
+            </div>
+          </div>
 
           <!-- M1 -->
-          <g transform="translate(120, 50)">
-            <rect width="80" height="52" rx="8" fill="var(--dep-shipped-bg, #dcfce7)" stroke="#22c55e" stroke-width="2"/>
-            <text x="40" y="18" text-anchor="middle" font-size="9" font-weight="800" fill="#6b7280" letter-spacing="1">M1</text>
-            <text x="40" y="32" text-anchor="middle" font-size="11" font-weight="700" fill="#15803d">Thực đơn</text>
-            <text x="40" y="46" text-anchor="middle" font-size="10" fill="#16a34a">✅ Shipped</text>
-          </g>
-
-          <!-- Arrow M1→M2 -->
-          <line x1="200" y1="76" x2="228" y2="76" stroke="#22c55e" stroke-width="2" marker-end="url(#arrow-green)"/>
+          <div class="module-card shipped animate-fade-up delay-2">
+            <div class="module-head">
+              <div>
+                <div class="module-id">M1</div>
+                <div class="module-name">
+                  Thực đơn <span class="module-name-vn">· Menu</span>
+                </div>
+              </div>
+              <div class="status-badge shipped">
+                <span class="status-dot"></span>Shipped
+              </div>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress-header">
+                <span class="progress-label">Hoàn thành</span>
+                <span class="progress-pct">100%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill shipped" data-width="100%"></div>
+              </div>
+            </div>
+          </div>
 
           <!-- M2 -->
-          <g transform="translate(230, 50)">
-            <rect width="80" height="52" rx="8" fill="var(--dep-shipped-bg, #dcfce7)" stroke="#22c55e" stroke-width="2"/>
-            <text x="40" y="18" text-anchor="middle" font-size="9" font-weight="800" fill="#6b7280" letter-spacing="1">M2</text>
-            <text x="40" y="32" text-anchor="middle" font-size="11" font-weight="700" fill="#15803d">POS</text>
-            <text x="40" y="46" text-anchor="middle" font-size="10" fill="#16a34a">✅ Shipped</text>
-          </g>
-
-          <!-- Arrow M2→M3 (upper) -->
-          <line x1="310" y1="65" x2="338" y2="53" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrow-blue)"/>
-
-          <!-- Arrow M2→M4 (lower) -->
-          <line x1="310" y1="87" x2="338" y2="107" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-gray)"/>
+          <div class="module-card shipped animate-fade-up delay-3">
+            <div class="module-head">
+              <div>
+                <div class="module-id">M2</div>
+                <div class="module-name">
+                  POS <span class="module-name-vn">· Point of Sale</span>
+                </div>
+              </div>
+              <div class="status-badge shipped">
+                <span class="status-dot"></span>Shipped
+              </div>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress-header">
+                <span class="progress-label">Hoàn thành</span>
+                <span class="progress-pct">100%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill shipped" data-width="100%"></div>
+              </div>
+            </div>
+          </div>
 
           <!-- M3 -->
-          <g transform="translate(340, 20)">
-            <rect width="80" height="52" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
-            <text x="40" y="18" text-anchor="middle" font-size="9" font-weight="800" fill="#6b7280" letter-spacing="1">M3</text>
-            <text x="40" y="32" text-anchor="middle" font-size="11" font-weight="700" fill="#1d4ed8">KDS</text>
-            <text x="40" y="46" text-anchor="middle" font-size="10" fill="#2563eb">🔜 Next</text>
-          </g>
+          <div class="module-card shipped animate-fade-up delay-4">
+            <div class="module-head">
+              <div>
+                <div class="module-id">M3</div>
+                <div class="module-name">
+                  KDS <span class="module-name-vn">· Kitchen Display</span>
+                </div>
+              </div>
+              <div class="status-badge shipped">
+                <span class="status-dot"></span>Done
+              </div>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress-header">
+                <span class="progress-label">Schema + UI + Realtime</span>
+                <span class="progress-pct">100%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill shipped" data-width="100%"></div>
+              </div>
+            </div>
+          </div>
 
           <!-- M4 -->
-          <g transform="translate(340, 88)">
-            <rect width="80" height="52" rx="8" fill="var(--bg-muted-svg, #f5f0e8)" stroke="#d1d5db" stroke-width="1.5" opacity="0.9"/>
-            <text x="40" y="18" text-anchor="middle" font-size="9" font-weight="800" fill="#6b7280" letter-spacing="1">M4</text>
-            <text x="40" y="32" text-anchor="middle" font-size="11" font-weight="700" fill="#6b7280">Payment</text>
-            <text x="40" y="46" text-anchor="middle" font-size="10" fill="#9ca3af">⏳ Planned</text>
-          </g>
-
-          <!-- Arrow M4→M5 -->
-          <line x1="420" y1="114" x2="448" y2="114" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-gray)"/>
+          <div class="module-card shipped animate-fade-up delay-5">
+            <div class="module-head">
+              <div>
+                <div class="module-id">M4</div>
+                <div class="module-name">
+                  Thanh toán <span class="module-name-vn">· Payment</span>
+                </div>
+              </div>
+              <div class="status-badge shipped">
+                <span class="status-dot"></span>Done
+              </div>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress-header">
+                <span class="progress-label"
+                  >Schema + Actions + Webhook (MVP)</span
+                >
+                <span class="progress-pct">70%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill shipped" data-width="70%"></div>
+              </div>
+            </div>
+          </div>
 
           <!-- M5 -->
-          <g transform="translate(450, 88)">
-            <rect width="80" height="52" rx="8" fill="var(--bg-muted-svg, #f5f0e8)" stroke="#d1d5db" stroke-width="1.5" opacity="0.9"/>
-            <text x="40" y="18" text-anchor="middle" font-size="9" font-weight="800" fill="#6b7280" letter-spacing="1">M5</text>
-            <text x="40" y="32" text-anchor="middle" font-size="11" font-weight="700" fill="#6b7280">Kho hàng</text>
-            <text x="40" y="46" text-anchor="middle" font-size="10" fill="#9ca3af">⏳ Planned</text>
-          </g>
-
-          <!-- Arrow M5→M6 -->
-          <line x1="530" y1="114" x2="558" y2="114" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-gray)"/>
+          <div class="module-card shipped animate-fade-up delay-6">
+            <div class="module-head">
+              <div>
+                <div class="module-id">M5</div>
+                <div class="module-name">
+                  Kho hàng <span class="module-name-vn">· Stock</span>
+                </div>
+              </div>
+              <div class="status-badge shipped">
+                <span class="status-dot"></span>Done
+              </div>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress-header">
+                <span class="progress-label"
+                  >Schema + CRUD + Adjustments (MVP)</span
+                >
+                <span class="progress-pct">60%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill shipped" data-width="60%"></div>
+              </div>
+            </div>
+          </div>
 
           <!-- M6 -->
-          <g transform="translate(560, 88)">
-            <rect width="80" height="52" rx="8" fill="var(--bg-muted-svg, #f5f0e8)" stroke="#d1d5db" stroke-width="1.5" opacity="0.9"/>
-            <text x="40" y="18" text-anchor="middle" font-size="9" font-weight="800" fill="#6b7280" letter-spacing="1">M6</text>
-            <text x="40" y="32" text-anchor="middle" font-size="11" font-weight="700" fill="#6b7280">Kế toán</text>
-            <text x="40" y="46" text-anchor="middle" font-size="10" fill="#9ca3af">⏳ Planned</text>
-          </g>
-
-          <!-- Arrow M6→M7 -->
-          <line x1="640" y1="114" x2="668" y2="114" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrow-gray)"/>
+          <div class="module-card shipped animate-fade-up delay-7">
+            <div class="module-head">
+              <div>
+                <div class="module-id">M6</div>
+                <div class="module-name">
+                  Kế toán <span class="module-name-vn">· Finance</span>
+                </div>
+              </div>
+              <div class="status-badge shipped">
+                <span class="status-dot"></span>Done
+              </div>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress-header">
+                <span class="progress-label"
+                  >HĐĐT + Revenue Dashboard (MVP)</span
+                >
+                <span class="progress-pct">50%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill shipped" data-width="50%"></div>
+              </div>
+            </div>
+          </div>
 
           <!-- M7 -->
-          <g transform="translate(670, 88)">
-            <rect width="80" height="52" rx="8" fill="var(--bg-muted-svg, #f5f0e8)" stroke="#d1d5db" stroke-width="1.5" opacity="0.9"/>
-            <text x="40" y="18" text-anchor="middle" font-size="9" font-weight="800" fill="#6b7280" letter-spacing="1">M7</text>
-            <text x="40" y="32" text-anchor="middle" font-size="11" font-weight="700" fill="#6b7280">Nhân sự</text>
-            <text x="40" y="46" text-anchor="middle" font-size="10" fill="#9ca3af">⏳ Planned</text>
-          </g>
-
-          <!-- Legend -->
-          <g transform="translate(10, 130)">
-            <rect width="10" height="10" rx="2" fill="#dcfce7" stroke="#22c55e" stroke-width="1.5"/>
-            <text x="15" y="9" font-size="9" fill="#6b7280">Shipped</text>
-            <rect x="70" width="10" height="10" rx="2" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
-            <text x="85" y="9" font-size="9" fill="#6b7280">Next</text>
-            <rect x="120" width="10" height="10" rx="2" fill="#f5f0e8" stroke="#d1d5db" stroke-width="1.5"/>
-            <text x="135" y="9" font-size="9" fill="#6b7280">Planned</text>
-            <line x1="190" y1="5" x2="215" y2="5" stroke="#22c55e" stroke-width="1.5"/>
-            <text x="218" y="9" font-size="9" fill="#6b7280">Direct dep</text>
-            <line x1="290" y1="5" x2="315" y2="5" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3,2"/>
-            <text x="318" y="9" font-size="9" fill="#6b7280">Sequential</text>
-          </g>
-        </svg>
-      </div>
-    </div>
-  </section>
-
-  <div class="divider"></div>
-
-  <!-- Architecture -->
-  <section>
-    <div class="container">
-      <div class="section-header animate-fade-up">
-        <div class="section-label">Architecture</div>
-        <h2 class="section-title">System Architecture</h2>
-        <p class="section-desc">Request flow from browser to database</p>
-      </div>
-      <div class="arch-flow animate-fade-up delay-2">
-        <div class="arch-node">
-          <span>Browser</span>
-          <span class="arch-node-sub">React 19 / RSC</span>
-        </div>
-        <div class="arch-arrow">→</div>
-        <div class="arch-node accent">
-          <span>proxy.ts</span>
-          <span class="arch-node-sub">Auth · ACL · Rate limit</span>
-        </div>
-        <div class="arch-arrow">→</div>
-        <div class="arch-node">
-          <span>App Router</span>
-          <span class="arch-node-sub">Next.js 16 · Server Actions</span>
-        </div>
-        <div class="arch-arrow">→</div>
-        <div class="arch-node">
-          <span>Supabase</span>
-          <span class="arch-node-sub">PostgREST · Auth · RLS</span>
-        </div>
-      </div>
-
-      <div style="margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem;" class="animate-fade-up delay-3">
-        <span class="badge">Single-tenant · Multi-branch</span>
-        <span class="badge">L0 Tenant → L1 Branch</span>
-        <span class="badge">JWT claims: tenant_id · branch_id · role</span>
-        <span class="badge">RLS on every table</span>
-        <span class="badge">NUMERIC(15,2) money</span>
-        <span class="badge">BIGINT identity PK</span>
-      </div>
-    </div>
-  </section>
-
-  <div class="divider"></div>
-
-  <!-- Shipped + Next -->
-  <section id="shipped">
-    <div class="container">
-      <div class="section-header animate-fade-up">
-        <div class="section-label">Features</div>
-        <h2 class="section-title">Đã làm &amp; Sắp đến</h2>
-        <p class="section-desc">Breakdown of shipped features and upcoming work</p>
-      </div>
-      <div class="two-col">
-
-        <!-- Shipped -->
-        <div class="info-card animate-fade-up delay-1">
-          <div class="info-card-title">
-            <div class="info-card-icon icon-green">✅</div>
-            Đã hoàn thành (M0 – M2)
-          </div>
-
-          <div class="module-section">
-            <div class="module-section-name">M0 · Admin Shell</div>
-            <ul class="bullet-list">
-              <li>Admin layout &amp; sidebar navigation</li>
-              <li>Branch management (multi-branch)</li>
-              <li>Staff CRUD with role assignment</li>
-              <li>System settings &amp; ACL module</li>
-            </ul>
-          </div>
-
-          <div class="module-section">
-            <div class="module-section-name">M1 · Thực đơn (Menu)</div>
-            <ul class="bullet-list">
-              <li>Categories &amp; menu items</li>
-              <li>Variants: size / portion / combo</li>
-              <li>Modifiers (add-ons, toppings)</li>
-              <li>Side dishes management</li>
-            </ul>
-          </div>
-
-          <div class="module-section">
-            <div class="module-section-name">M2 · POS Terminal</div>
-            <ul class="bullet-list">
-              <li>POS terminal with cart &amp; search</li>
-              <li>Table / zone selection</li>
-              <li>Order submit &amp; bill printing</li>
-              <li>Cash register session management</li>
-            </ul>
+          <div class="module-card shipped animate-fade-up delay-8">
+            <div class="module-head">
+              <div>
+                <div class="module-id">M7</div>
+                <div class="module-name">
+                  Nhân sự <span class="module-name-vn">· HR / Payroll</span>
+                </div>
+              </div>
+              <div class="status-badge shipped">
+                <span class="status-dot"></span>Done
+              </div>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress-header">
+                <span class="progress-label"
+                  >Employees + Shifts + Attendance (MVP)</span
+                >
+                <span class="progress-pct">50%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill shipped" data-width="50%"></div>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
+    </section>
 
-        <!-- Done MVP -->
-        <div id="next">
-          <div class="info-card animate-fade-up delay-2">
+    <div class="divider"></div>
+
+    <!-- Dependency Graph -->
+    <section>
+      <div class="container">
+        <div class="section-header animate-fade-up">
+          <div class="section-label">Dependency Graph</div>
+          <h2 class="section-title">Sơ đồ phụ thuộc</h2>
+          <p class="section-desc">
+            Each module builds on the foundation of the previous
+          </p>
+        </div>
+        <div class="dep-graph-wrap animate-fade-up delay-2">
+          <svg
+            width="100%"
+            viewBox="0 0 780 160"
+            xmlns="http://www.w3.org/2000/svg"
+            style="
+              overflow: visible;
+              font-family: &quot;Be Vietnam Pro&quot;, sans-serif;
+            "
+          >
+            <defs>
+              <marker
+                id="arrow-green"
+                markerWidth="8"
+                markerHeight="8"
+                refX="6"
+                refY="3"
+                orient="auto"
+              >
+                <path d="M0,0 L0,6 L8,3 z" fill="#22c55e" />
+              </marker>
+              <marker
+                id="arrow-blue"
+                markerWidth="8"
+                markerHeight="8"
+                refX="6"
+                refY="3"
+                orient="auto"
+              >
+                <path d="M0,0 L0,6 L8,3 z" fill="#3b82f6" />
+              </marker>
+              <marker
+                id="arrow-gray"
+                markerWidth="8"
+                markerHeight="8"
+                refX="6"
+                refY="3"
+                orient="auto"
+              >
+                <path d="M0,0 L0,6 L8,3 z" fill="#94a3b8" />
+              </marker>
+            </defs>
+
+            <!-- Row 1: M0 → M1 → M2 → M3 -->
+            <!-- M0 -->
+            <g transform="translate(10, 50)">
+              <rect
+                width="80"
+                height="52"
+                rx="8"
+                fill="var(--dep-shipped-bg, #dcfce7)"
+                stroke="#22c55e"
+                stroke-width="2"
+              />
+              <text
+                x="40"
+                y="18"
+                text-anchor="middle"
+                font-size="9"
+                font-weight="800"
+                fill="#6b7280"
+                letter-spacing="1"
+              >
+                M0
+              </text>
+              <text
+                x="40"
+                y="32"
+                text-anchor="middle"
+                font-size="11"
+                font-weight="700"
+                fill="#15803d"
+              >
+                Admin
+              </text>
+              <text
+                x="40"
+                y="46"
+                text-anchor="middle"
+                font-size="10"
+                fill="#16a34a"
+              >
+                ✅ Shipped
+              </text>
+            </g>
+
+            <!-- Arrow M0→M1 -->
+            <line
+              x1="90"
+              y1="76"
+              x2="118"
+              y2="76"
+              stroke="#22c55e"
+              stroke-width="2"
+              marker-end="url(#arrow-green)"
+            />
+
+            <!-- M1 -->
+            <g transform="translate(120, 50)">
+              <rect
+                width="80"
+                height="52"
+                rx="8"
+                fill="var(--dep-shipped-bg, #dcfce7)"
+                stroke="#22c55e"
+                stroke-width="2"
+              />
+              <text
+                x="40"
+                y="18"
+                text-anchor="middle"
+                font-size="9"
+                font-weight="800"
+                fill="#6b7280"
+                letter-spacing="1"
+              >
+                M1
+              </text>
+              <text
+                x="40"
+                y="32"
+                text-anchor="middle"
+                font-size="11"
+                font-weight="700"
+                fill="#15803d"
+              >
+                Thực đơn
+              </text>
+              <text
+                x="40"
+                y="46"
+                text-anchor="middle"
+                font-size="10"
+                fill="#16a34a"
+              >
+                ✅ Shipped
+              </text>
+            </g>
+
+            <!-- Arrow M1→M2 -->
+            <line
+              x1="200"
+              y1="76"
+              x2="228"
+              y2="76"
+              stroke="#22c55e"
+              stroke-width="2"
+              marker-end="url(#arrow-green)"
+            />
+
+            <!-- M2 -->
+            <g transform="translate(230, 50)">
+              <rect
+                width="80"
+                height="52"
+                rx="8"
+                fill="var(--dep-shipped-bg, #dcfce7)"
+                stroke="#22c55e"
+                stroke-width="2"
+              />
+              <text
+                x="40"
+                y="18"
+                text-anchor="middle"
+                font-size="9"
+                font-weight="800"
+                fill="#6b7280"
+                letter-spacing="1"
+              >
+                M2
+              </text>
+              <text
+                x="40"
+                y="32"
+                text-anchor="middle"
+                font-size="11"
+                font-weight="700"
+                fill="#15803d"
+              >
+                POS
+              </text>
+              <text
+                x="40"
+                y="46"
+                text-anchor="middle"
+                font-size="10"
+                fill="#16a34a"
+              >
+                ✅ Shipped
+              </text>
+            </g>
+
+            <!-- Arrow M2→M3 (upper) -->
+            <line
+              x1="310"
+              y1="65"
+              x2="338"
+              y2="53"
+              stroke="#3b82f6"
+              stroke-width="2"
+              marker-end="url(#arrow-blue)"
+            />
+
+            <!-- Arrow M2→M4 (lower) -->
+            <line
+              x1="310"
+              y1="87"
+              x2="338"
+              y2="107"
+              stroke="#94a3b8"
+              stroke-width="1.5"
+              stroke-dasharray="4,3"
+              marker-end="url(#arrow-gray)"
+            />
+
+            <!-- M3 -->
+            <g transform="translate(340, 20)">
+              <rect
+                width="80"
+                height="52"
+                rx="8"
+                fill="#dbeafe"
+                stroke="#3b82f6"
+                stroke-width="2"
+              />
+              <text
+                x="40"
+                y="18"
+                text-anchor="middle"
+                font-size="9"
+                font-weight="800"
+                fill="#6b7280"
+                letter-spacing="1"
+              >
+                M3
+              </text>
+              <text
+                x="40"
+                y="32"
+                text-anchor="middle"
+                font-size="11"
+                font-weight="700"
+                fill="#1d4ed8"
+              >
+                KDS
+              </text>
+              <text
+                x="40"
+                y="46"
+                text-anchor="middle"
+                font-size="10"
+                fill="#2563eb"
+              >
+                🔜 Next
+              </text>
+            </g>
+
+            <!-- M4 -->
+            <g transform="translate(340, 88)">
+              <rect
+                width="80"
+                height="52"
+                rx="8"
+                fill="var(--bg-muted-svg, #f5f0e8)"
+                stroke="#d1d5db"
+                stroke-width="1.5"
+                opacity="0.9"
+              />
+              <text
+                x="40"
+                y="18"
+                text-anchor="middle"
+                font-size="9"
+                font-weight="800"
+                fill="#6b7280"
+                letter-spacing="1"
+              >
+                M4
+              </text>
+              <text
+                x="40"
+                y="32"
+                text-anchor="middle"
+                font-size="11"
+                font-weight="700"
+                fill="#6b7280"
+              >
+                Payment
+              </text>
+              <text
+                x="40"
+                y="46"
+                text-anchor="middle"
+                font-size="10"
+                fill="#9ca3af"
+              >
+                ⏳ Planned
+              </text>
+            </g>
+
+            <!-- Arrow M4→M5 -->
+            <line
+              x1="420"
+              y1="114"
+              x2="448"
+              y2="114"
+              stroke="#94a3b8"
+              stroke-width="1.5"
+              stroke-dasharray="4,3"
+              marker-end="url(#arrow-gray)"
+            />
+
+            <!-- M5 -->
+            <g transform="translate(450, 88)">
+              <rect
+                width="80"
+                height="52"
+                rx="8"
+                fill="var(--bg-muted-svg, #f5f0e8)"
+                stroke="#d1d5db"
+                stroke-width="1.5"
+                opacity="0.9"
+              />
+              <text
+                x="40"
+                y="18"
+                text-anchor="middle"
+                font-size="9"
+                font-weight="800"
+                fill="#6b7280"
+                letter-spacing="1"
+              >
+                M5
+              </text>
+              <text
+                x="40"
+                y="32"
+                text-anchor="middle"
+                font-size="11"
+                font-weight="700"
+                fill="#6b7280"
+              >
+                Kho hàng
+              </text>
+              <text
+                x="40"
+                y="46"
+                text-anchor="middle"
+                font-size="10"
+                fill="#9ca3af"
+              >
+                ⏳ Planned
+              </text>
+            </g>
+
+            <!-- Arrow M5→M6 -->
+            <line
+              x1="530"
+              y1="114"
+              x2="558"
+              y2="114"
+              stroke="#94a3b8"
+              stroke-width="1.5"
+              stroke-dasharray="4,3"
+              marker-end="url(#arrow-gray)"
+            />
+
+            <!-- M6 -->
+            <g transform="translate(560, 88)">
+              <rect
+                width="80"
+                height="52"
+                rx="8"
+                fill="var(--bg-muted-svg, #f5f0e8)"
+                stroke="#d1d5db"
+                stroke-width="1.5"
+                opacity="0.9"
+              />
+              <text
+                x="40"
+                y="18"
+                text-anchor="middle"
+                font-size="9"
+                font-weight="800"
+                fill="#6b7280"
+                letter-spacing="1"
+              >
+                M6
+              </text>
+              <text
+                x="40"
+                y="32"
+                text-anchor="middle"
+                font-size="11"
+                font-weight="700"
+                fill="#6b7280"
+              >
+                Kế toán
+              </text>
+              <text
+                x="40"
+                y="46"
+                text-anchor="middle"
+                font-size="10"
+                fill="#9ca3af"
+              >
+                ⏳ Planned
+              </text>
+            </g>
+
+            <!-- Arrow M6→M7 -->
+            <line
+              x1="640"
+              y1="114"
+              x2="668"
+              y2="114"
+              stroke="#94a3b8"
+              stroke-width="1.5"
+              stroke-dasharray="4,3"
+              marker-end="url(#arrow-gray)"
+            />
+
+            <!-- M7 -->
+            <g transform="translate(670, 88)">
+              <rect
+                width="80"
+                height="52"
+                rx="8"
+                fill="var(--bg-muted-svg, #f5f0e8)"
+                stroke="#d1d5db"
+                stroke-width="1.5"
+                opacity="0.9"
+              />
+              <text
+                x="40"
+                y="18"
+                text-anchor="middle"
+                font-size="9"
+                font-weight="800"
+                fill="#6b7280"
+                letter-spacing="1"
+              >
+                M7
+              </text>
+              <text
+                x="40"
+                y="32"
+                text-anchor="middle"
+                font-size="11"
+                font-weight="700"
+                fill="#6b7280"
+              >
+                Nhân sự
+              </text>
+              <text
+                x="40"
+                y="46"
+                text-anchor="middle"
+                font-size="10"
+                fill="#9ca3af"
+              >
+                ⏳ Planned
+              </text>
+            </g>
+
+            <!-- Legend -->
+            <g transform="translate(10, 130)">
+              <rect
+                width="10"
+                height="10"
+                rx="2"
+                fill="#dcfce7"
+                stroke="#22c55e"
+                stroke-width="1.5"
+              />
+              <text x="15" y="9" font-size="9" fill="#6b7280">Shipped</text>
+              <rect
+                x="70"
+                width="10"
+                height="10"
+                rx="2"
+                fill="#dbeafe"
+                stroke="#3b82f6"
+                stroke-width="1.5"
+              />
+              <text x="85" y="9" font-size="9" fill="#6b7280">Next</text>
+              <rect
+                x="120"
+                width="10"
+                height="10"
+                rx="2"
+                fill="#f5f0e8"
+                stroke="#d1d5db"
+                stroke-width="1.5"
+              />
+              <text x="135" y="9" font-size="9" fill="#6b7280">Planned</text>
+              <line
+                x1="190"
+                y1="5"
+                x2="215"
+                y2="5"
+                stroke="#22c55e"
+                stroke-width="1.5"
+              />
+              <text x="218" y="9" font-size="9" fill="#6b7280">Direct dep</text>
+              <line
+                x1="290"
+                y1="5"
+                x2="315"
+                y2="5"
+                stroke="#94a3b8"
+                stroke-width="1.5"
+                stroke-dasharray="3,2"
+              />
+              <text x="318" y="9" font-size="9" fill="#6b7280">Sequential</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Architecture -->
+    <section>
+      <div class="container">
+        <div class="section-header animate-fade-up">
+          <div class="section-label">Architecture</div>
+          <h2 class="section-title">System Architecture</h2>
+          <p class="section-desc">Request flow from browser to database</p>
+        </div>
+        <div class="arch-flow animate-fade-up delay-2">
+          <div class="arch-node">
+            <span>Browser</span>
+            <span class="arch-node-sub">React 19 / RSC</span>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-node accent">
+            <span>proxy.ts</span>
+            <span class="arch-node-sub">Auth · ACL · Rate limit</span>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-node">
+            <span>App Router</span>
+            <span class="arch-node-sub">Next.js 16 · Server Actions</span>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-node">
+            <span>Supabase</span>
+            <span class="arch-node-sub">PostgREST · Auth · RLS</span>
+          </div>
+        </div>
+
+        <div
+          style="margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem"
+          class="animate-fade-up delay-3"
+        >
+          <span class="badge">Single-tenant · Multi-branch</span>
+          <span class="badge">L0 Tenant → L1 Branch</span>
+          <span class="badge">JWT claims: tenant_id · branch_id · role</span>
+          <span class="badge">RLS on every table</span>
+          <span class="badge">NUMERIC(15,2) money</span>
+          <span class="badge">BIGINT identity PK</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Shipped + Next -->
+    <section id="shipped">
+      <div class="container">
+        <div class="section-header animate-fade-up">
+          <div class="section-label">Features</div>
+          <h2 class="section-title">Đã làm &amp; Sắp đến</h2>
+          <p class="section-desc">
+            Breakdown of shipped features and upcoming work
+          </p>
+        </div>
+        <div class="two-col">
+          <!-- Shipped -->
+          <div class="info-card animate-fade-up delay-1">
             <div class="info-card-title">
-              <div class="info-card-icon icon-blue">✅</div>
-              MVP Done (M3 – M7) — Pending: Admin UI + Real API Integration
+              <div class="info-card-icon icon-green">✅</div>
+              Đã hoàn thành (M0 – M2)
             </div>
 
             <div class="module-section">
-              <div class="module-section-name">M3 · KDS — Kitchen Display System ✅</div>
+              <div class="module-section-name">M0 · Admin Shell</div>
               <ul class="bullet-list">
-                <li>✅ Realtime kitchen order queue (derived from order_items)</li>
-                <li>✅ Bump workflow per station with optimistic locking</li>
-                <li>✅ Station + category configuration</li>
-                <li>✅ Order age indicators &amp; alerts</li>
+                <li>Admin layout &amp; sidebar navigation</li>
+                <li>Branch management (multi-branch)</li>
+                <li>Staff CRUD with role assignment</li>
+                <li>System settings &amp; ACL module</li>
               </ul>
             </div>
 
             <div class="module-section">
-              <div class="module-section-name">M4 · Thanh toán (Payment) ✅ MVP</div>
+              <div class="module-section-name">M1 · Thực đơn (Menu)</div>
               <ul class="bullet-list">
-                <li>✅ Cash, VietQR, MoMo provider interfaces (SOLID)</li>
-                <li>✅ Atomic payment RPC (race-condition safe)</li>
-                <li>✅ MoMo webhook with HMAC + amount validation</li>
-                <li>✅ End-of-day reconciliation</li>
-                <li>⏳ Real VietQR/MoMo API integration (mock)</li>
-                <li>⏳ Refund flows</li>
+                <li>Categories &amp; menu items</li>
+                <li>Variants: size / portion / combo</li>
+                <li>Modifiers (add-ons, toppings)</li>
+                <li>Side dishes management</li>
               </ul>
             </div>
 
             <div class="module-section">
-              <div class="module-section-name">M5 · Kho hàng (Stock) ✅ MVP</div>
+              <div class="module-section-name">M2 · POS Terminal</div>
               <ul class="bullet-list">
-                <li>✅ Ingredients CRUD + stock levels per branch</li>
-                <li>✅ Stock movements with auto-update trigger</li>
-                <li>✅ Min/max stock alerts</li>
-                <li>⏳ PO/GRN/3-way matching (post-pilot)</li>
-              </ul>
-            </div>
-
-            <div class="module-section">
-              <div class="module-section-name">M6 · Kế toán (Finance) ✅ MVP</div>
-              <ul class="bullet-list">
-                <li>✅ HĐĐT invoice provider interface (MISA ready)</li>
-                <li>✅ Revenue dashboard (materialized views)</li>
-                <li>✅ VAT rate from system settings</li>
-                <li>⏳ Real MISA API integration (mock)</li>
-                <li>⏳ VAS accounting / financial statements</li>
-              </ul>
-            </div>
-
-            <div class="module-section">
-              <div class="module-section-name">M7 · Nhân sự (HR) ✅ MVP</div>
-              <ul class="bullet-list">
-                <li>✅ Employee records (extends profiles)</li>
-                <li>✅ Shifts + shift assignments</li>
-                <li>✅ Attendance check-in/check-out</li>
-                <li>⏳ Payroll calculation (manual for pilot)</li>
+                <li>POS terminal with cart &amp; search</li>
+                <li>Table / zone selection</li>
+                <li>Order submit &amp; bill printing</li>
+                <li>Cash register session management</li>
               </ul>
             </div>
           </div>
-        </div>
 
-      </div>
-    </div>
-  </section>
+          <!-- Done MVP -->
+          <div id="next">
+            <div class="info-card animate-fade-up delay-2">
+              <div class="info-card-title">
+                <div class="info-card-icon icon-blue">✅</div>
+                MVP Done (M3 – M7) — Pending: Admin UI + Real API Integration
+              </div>
 
-  <div class="divider"></div>
+              <div class="module-section">
+                <div class="module-section-name">
+                  M3 · KDS — Kitchen Display System ✅
+                </div>
+                <ul class="bullet-list">
+                  <li>
+                    ✅ Realtime kitchen order queue (derived from order_items)
+                  </li>
+                  <li>✅ Bump workflow per station with optimistic locking</li>
+                  <li>✅ Station + category configuration</li>
+                  <li>✅ Order age indicators &amp; alerts</li>
+                </ul>
+              </div>
 
-  <!-- Deferred -->
-  <section>
-    <div class="container">
-      <div class="section-header animate-fade-up">
-        <div class="section-label">Scope Management</div>
-        <h2 class="section-title">Deferred Items</h2>
-        <p class="section-desc">Known items intentionally deferred to a future sprint</p>
-      </div>
-      <div class="deferred-card animate-fade-up delay-2">
+              <div class="module-section">
+                <div class="module-section-name">
+                  M4 · Thanh toán (Payment) ✅ MVP
+                </div>
+                <ul class="bullet-list">
+                  <li>✅ Cash, VietQR, MoMo provider interfaces (SOLID)</li>
+                  <li>✅ Atomic payment RPC (race-condition safe)</li>
+                  <li>✅ MoMo webhook with HMAC + amount validation</li>
+                  <li>✅ End-of-day reconciliation</li>
+                  <li>⏳ Real VietQR/MoMo API integration (mock)</li>
+                  <li>⏳ Refund flows</li>
+                </ul>
+              </div>
 
-        <div class="deferred-item">
-          <div class="deferred-tag">M4</div>
-          <div>
-            <div class="deferred-text">Server-side price validation</div>
-            <div class="deferred-sub">Cart total must be re-validated at checkout server action — deferred to Payment module where refund/reconciliation logic lives</div>
+              <div class="module-section">
+                <div class="module-section-name">
+                  M5 · Kho hàng (Stock) ✅ MVP
+                </div>
+                <ul class="bullet-list">
+                  <li>✅ Ingredients CRUD + stock levels per branch</li>
+                  <li>✅ Stock movements with auto-update trigger</li>
+                  <li>✅ Min/max stock alerts</li>
+                  <li>⏳ PO/GRN/3-way matching (post-pilot)</li>
+                </ul>
+              </div>
+
+              <div class="module-section">
+                <div class="module-section-name">
+                  M6 · Kế toán (Finance) ✅ MVP
+                </div>
+                <ul class="bullet-list">
+                  <li>✅ HĐĐT invoice provider interface (MISA ready)</li>
+                  <li>✅ Revenue dashboard (materialized views)</li>
+                  <li>✅ VAT rate from system settings</li>
+                  <li>⏳ Real MISA API integration (mock)</li>
+                  <li>⏳ VAS accounting / financial statements</li>
+                </ul>
+              </div>
+
+              <div class="module-section">
+                <div class="module-section-name">M7 · Nhân sự (HR) ✅ MVP</div>
+                <ul class="bullet-list">
+                  <li>✅ Employee records (extends profiles)</li>
+                  <li>✅ Shifts + shift assignments</li>
+                  <li>✅ Attendance check-in/check-out</li>
+                  <li>⏳ Payroll calculation (manual for pilot)</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
+    </section>
 
-        <div class="deferred-item">
-          <div class="deferred-tag">Future</div>
-          <div>
-            <div class="deferred-text">Area manager branch scoping</div>
-            <div class="deferred-sub">Role allowing a manager to oversee multiple but not all branches — requires additional JWT claims design; deferred to post-v1.0</div>
+    <div class="divider"></div>
+
+    <!-- Deferred -->
+    <section>
+      <div class="container">
+        <div class="section-header animate-fade-up">
+          <div class="section-label">Scope Management</div>
+          <h2 class="section-title">Deferred Items</h2>
+          <p class="section-desc">
+            Known items intentionally deferred to a future sprint
+          </p>
+        </div>
+        <div class="deferred-card animate-fade-up delay-2">
+          <div class="deferred-item">
+            <div class="deferred-tag">M4</div>
+            <div>
+              <div class="deferred-text">Server-side price validation</div>
+              <div class="deferred-sub">
+                Cart total must be re-validated at checkout server action —
+                deferred to Payment module where refund/reconciliation logic
+                lives
+              </div>
+            </div>
+          </div>
+
+          <div class="deferred-item">
+            <div class="deferred-tag">Future</div>
+            <div>
+              <div class="deferred-text">Area manager branch scoping</div>
+              <div class="deferred-sub">
+                Role allowing a manager to oversee multiple but not all branches
+                — requires additional JWT claims design; deferred to post-v1.0
+              </div>
+            </div>
           </div>
         </div>
-
       </div>
-    </div>
-  </section>
+    </section>
 
-  <div class="divider"></div>
+    <div class="divider"></div>
 
-  <!-- Footer -->
-  <footer>
-    <div class="container">
-      <div class="footer-inner">
-        <p class="footer-tech">Built with Next.js 16 + Supabase · Turborepo monorepo</p>
-        <p class="footer-meta">Last updated: 2026-04-06 &nbsp;·&nbsp; Single-tenant multi-branch architecture</p>
-        <a class="footer-link" href="https://github.com/personal/comtammatu" target="_blank" rel="noopener">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
-          GitHub
-        </a>
+    <!-- Footer -->
+    <footer>
+      <div class="container">
+        <div class="footer-inner">
+          <p class="footer-tech">
+            Built with Next.js 16 + Supabase · Turborepo monorepo
+          </p>
+          <p class="footer-meta">
+            Last updated: 2026-04-06 &nbsp;·&nbsp; Single-tenant multi-branch
+            architecture
+          </p>
+          <a
+            class="footer-link"
+            href="https://github.com/personal/comtammatu"
+            target="_blank"
+            rel="noopener"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+              />
+            </svg>
+            GitHub
+          </a>
+        </div>
       </div>
-    </div>
-  </footer>
+    </footer>
 
-  <script>
-    // ─── Theme Toggle ────────────────────────────────────────────────
-    const html = document.documentElement;
+    <script>
+      // ─── Theme Toggle ────────────────────────────────────────────────
+      const html = document.documentElement;
 
-    function getPreferred() {
-      const stored = localStorage.getItem('ctmt-theme');
-      if (stored) return stored;
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
+      function getPreferred() {
+        const stored = localStorage.getItem("ctmt-theme");
+        if (stored) return stored;
+        return window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+      }
 
-    function applyTheme(theme) {
-      html.setAttribute('data-theme', theme);
-      const icon  = document.getElementById('theme-icon');
-      const label = document.getElementById('theme-label');
-      if (theme === 'dark') { icon.textContent = '☀'; label.textContent = 'Light'; }
-      else                   { icon.textContent = '☽'; label.textContent = 'Dark'; }
-      localStorage.setItem('ctmt-theme', theme);
-    }
-
-    function toggleTheme() {
-      const current = html.getAttribute('data-theme');
-      applyTheme(current === 'dark' ? 'light' : 'dark');
-    }
-
-    applyTheme(getPreferred());
-
-    // ─── Animate Progress Bars ───────────────────────────────────────
-    function animateBars() {
-      const fills = document.querySelectorAll('.progress-fill');
-      fills.forEach((fill, i) => {
-        const target = fill.getAttribute('data-width') || '0%';
-        setTimeout(() => {
-          fill.style.width = target;
-        }, 200 + i * 80);
-      });
-    }
-
-    // Use IntersectionObserver to fire when modules section is visible
-    const modulesSection = document.getElementById('modules');
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          animateBars();
-          observer.disconnect();
+      function applyTheme(theme) {
+        html.setAttribute("data-theme", theme);
+        const icon = document.getElementById("theme-icon");
+        const label = document.getElementById("theme-label");
+        if (theme === "dark") {
+          icon.textContent = "☀";
+          label.textContent = "Light";
+        } else {
+          icon.textContent = "☽";
+          label.textContent = "Dark";
         }
-      });
-    }, { threshold: 0.1 });
+        localStorage.setItem("ctmt-theme", theme);
+      }
 
-    if (modulesSection) observer.observe(modulesSection);
-    else animateBars();
+      function toggleTheme() {
+        const current = html.getAttribute("data-theme");
+        applyTheme(current === "dark" ? "light" : "dark");
+      }
 
-    // ─── SVG dark mode adaptation ────────────────────────────────────
-    // The SVG uses hardcoded colors for cross-browser compatibility.
-    // We swap the "planned" node backgrounds for dark mode.
-    function adaptSvg(theme) {
-      const plannedRects = document.querySelectorAll('svg rect[fill="var(--bg-muted-svg, #f5f0e8)"]');
-      plannedRects.forEach(r => {
-        r.setAttribute('fill', theme === 'dark' ? '#251e10' : '#f5f0e8');
-      });
-      const shippedRects = document.querySelectorAll('svg rect[fill="var(--dep-shipped-bg, #dcfce7)"]');
-      shippedRects.forEach(r => {
-        r.setAttribute('fill', theme === 'dark' ? '#0f2d18' : '#dcfce7');
-      });
-    }
+      applyTheme(getPreferred());
 
-    // Watch for theme changes
-    const themeObserver = new MutationObserver(() => {
-      adaptSvg(html.getAttribute('data-theme'));
-    });
-    themeObserver.observe(html, { attributes: true, attributeFilter: ['data-theme'] });
-    adaptSvg(getPreferred());
-  </script>
-</body>
+      // ─── Animate Progress Bars ───────────────────────────────────────
+      function animateBars() {
+        const fills = document.querySelectorAll(".progress-fill");
+        fills.forEach((fill, i) => {
+          const target = fill.getAttribute("data-width") || "0%";
+          setTimeout(
+            () => {
+              fill.style.width = target;
+            },
+            200 + i * 80,
+          );
+        });
+      }
+
+      // Use IntersectionObserver to fire when modules section is visible
+      const modulesSection = document.getElementById("modules");
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              animateBars();
+              observer.disconnect();
+            }
+          });
+        },
+        { threshold: 0.1 },
+      );
+
+      if (modulesSection) observer.observe(modulesSection);
+      else animateBars();
+
+      // ─── SVG dark mode adaptation ────────────────────────────────────
+      // The SVG uses hardcoded colors for cross-browser compatibility.
+      // We swap the "planned" node backgrounds for dark mode.
+      function adaptSvg(theme) {
+        const plannedRects = document.querySelectorAll(
+          'svg rect[fill="var(--bg-muted-svg, #f5f0e8)"]',
+        );
+        plannedRects.forEach((r) => {
+          r.setAttribute("fill", theme === "dark" ? "#251e10" : "#f5f0e8");
+        });
+        const shippedRects = document.querySelectorAll(
+          'svg rect[fill="var(--dep-shipped-bg, #dcfce7)"]',
+        );
+        shippedRects.forEach((r) => {
+          r.setAttribute("fill", theme === "dark" ? "#0f2d18" : "#dcfce7");
+        });
+      }
+
+      // Watch for theme changes
+      const themeObserver = new MutationObserver(() => {
+        adaptSvg(html.getAttribute("data-theme"));
+      });
+      themeObserver.observe(html, {
+        attributes: true,
+        attributeFilter: ["data-theme"],
+      });
+      adaptSvg(getPreferred());
+    </script>
+  </body>
 </html>

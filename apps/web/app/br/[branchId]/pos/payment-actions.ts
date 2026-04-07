@@ -44,8 +44,7 @@ export async function createPayment(
   if (!parsedPayment.success) {
     return {
       success: false,
-      error:
-        parsedPayment.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+      error: parsedPayment.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
     };
   }
 
@@ -179,13 +178,17 @@ export async function confirmPayment(
 
   const { supabase, claims } = ctx;
 
+  if (claims.branch_id === null) {
+    return { success: false, error: "Không xác định được chi nhánh" };
+  }
+
   // Fetch payment — scope by tenant + branch for defense in depth
   const { data: payment, error: fetchErr } = await supabase
     .from("payments")
     .select("id, order_id, branch_id, status")
     .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
-    .eq("branch_id", claims.branch_id ?? 0)
+    .eq("branch_id", claims.branch_id)
     .single();
 
   if (fetchErr || !payment) {
@@ -237,11 +240,16 @@ export async function fetchPaymentForOrder(
 
   const { supabase, claims } = ctx;
 
+  if (claims.branch_id === null) {
+    return { success: false, error: "Không xác định được chi nhánh" };
+  }
+
   const { data, error } = await supabase
     .from("payments")
     .select("id, method, amount, status, provider_ref, paid_at, created_at")
     .eq("order_id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
+    .eq("branch_id", claims.branch_id)
     .neq("status", "failed")
     .maybeSingle();
 
@@ -277,9 +285,10 @@ export async function fetchDailyReconciliation(
 
   const dateSchema = z.string().date().optional();
   const parsedDate = dateSchema.safeParse(date);
-  const targetDate = parsedDate.success && parsedDate.data
-    ? parsedDate.data
-    : new Date().toISOString().split("T")[0]!;
+  const targetDate =
+    parsedDate.success && parsedDate.data
+      ? parsedDate.data
+      : new Date().toISOString().split("T")[0]!;
 
   // Next day for exclusive upper bound (avoids sub-millisecond boundary bug)
   const nextDay = new Date(targetDate + "T00:00:00");
@@ -315,9 +324,7 @@ export async function fetchDailyReconciliation(
   const allOrders = orders ?? [];
   const allPayments = payments ?? [];
 
-  const completedPayments = allPayments.filter(
-    (p) => p.status === "completed",
-  );
+  const completedPayments = allPayments.filter((p) => p.status === "completed");
 
   const summary = {
     date: targetDate,

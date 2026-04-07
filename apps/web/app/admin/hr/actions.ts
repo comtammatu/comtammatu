@@ -103,8 +103,12 @@ export async function createEmployee(
 const shiftSchema = z.object({
   branchId: z.coerce.number().int().positive(),
   name: z.string().min(1, { error: "Tên ca không được để trống" }),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/, { message: "Giờ bắt đầu không hợp lệ (HH:MM)" }),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/, { message: "Giờ kết thúc không hợp lệ (HH:MM)" }),
+  startTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, { error: "Giờ bắt đầu không hợp lệ (HH:MM)" }),
+  endTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, { error: "Giờ kết thúc không hợp lệ (HH:MM)" }),
 });
 
 export async function fetchShifts(branchId: number): Promise<ActionResult> {
@@ -117,6 +121,14 @@ export async function fetchShifts(branchId: number): Promise<ActionResult> {
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
+
+  // Branch scope: branch_manager can only access their own branch
+  if (
+    claims.user_role === "branch_manager" &&
+    claims.branch_id !== parsedBranch.data
+  ) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
 
   const { data, error } = await supabase
     .from("shifts")
@@ -199,6 +211,14 @@ export async function fetchAttendance(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
+
+  // Branch scope: branch_manager can only access their own branch
+  if (
+    claims.user_role === "branch_manager" &&
+    claims.branch_id !== parsedBranch.data
+  ) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
 
   const startDate = `${parsedMonth.data}-01`;
   // Calculate end of month
@@ -287,9 +307,7 @@ export async function checkIn(
   return { success: true, data };
 }
 
-export async function checkOut(
-  attendanceId: number,
-): Promise<ActionResult> {
+export async function checkOut(attendanceId: number): Promise<ActionResult> {
   const parsedId = z.coerce.number().int().positive().safeParse(attendanceId);
   if (!parsedId.success) {
     return { success: false, error: "ID không hợp lệ" };

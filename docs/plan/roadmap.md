@@ -95,10 +95,10 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 
 > Sửa lỗi phân quyền phát hiện sau khi ship M0+M1.
 
-| #   | Task                                              | Status |
-| --- | ------------------------------------------------- | ------ |
-| H1  | Settings ACL: thêm branch_manager + area_manager  | ✅     |
-| H2  | Tables page: branch_manager chỉ thấy branch mình | ✅     |
+| #   | Task                                                                                                   | Status |
+| --- | ------------------------------------------------------------------------------------------------------ | ------ |
+| H1  | Settings ACL: thêm branch_manager + area_manager                                                       | ✅     |
+| H2  | Tables page: branch_manager chỉ thấy branch mình                                                       | ✅     |
 | H3  | area_manager scope: tạo `areas` + `area_branches` mapping, area_manager chỉ thấy branches mình quản lý | TODO   |
 
 ### H3: area_manager branch scope
@@ -163,10 +163,10 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 **Routes:** `/br/[branchId]/kds`
 
 | Session | Task                   | Tables                               |
-| ------- | ---------------------- | ------------------------------------ |
-| S1      | KDS station config     | kds_stations, kds_station_categories | ✅ |
-| S2      | Realtime order queue   | kds_tickets                          | ✅ |
-| S3      | Bump/complete + alerts | —                                    | ✅ |
+| ------- | ---------------------- | ------------------------------------ | --- |
+| S1      | KDS station config     | kds_stations, kds_station_categories | ✅  |
+| S2      | Realtime order queue   | kds_tickets                          | ✅  |
+| S3      | Bump/complete + alerts | —                                    | ✅  |
 
 **Ship criteria:**
 
@@ -331,15 +331,15 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 ## Version History
 
-| Version | Date       | What                                     |
-| ------- | ---------- | ---------------------------------------- |
-| v0.1.0  | 2026-04-01 | Foundation (auth, proxy, RLS, monorepo)  |
-| v0.1.1  | 2026-04-02 | Security hardening (RLS, DML lockdown)   |
-| M0+M1   | 2026-04-03 | Admin Shell + Menu shipped (ex Sprint 1) |
-| M2      | 2026-04-06 | POS shipped — order, cart, bill, cash     |
+| Version | Date       | What                                                  |
+| ------- | ---------- | ----------------------------------------------------- |
+| v0.1.0  | 2026-04-01 | Foundation (auth, proxy, RLS, monorepo)               |
+| v0.1.1  | 2026-04-02 | Security hardening (RLS, DML lockdown)                |
+| M0+M1   | 2026-04-03 | Admin Shell + Menu shipped (ex Sprint 1)              |
+| M2      | 2026-04-06 | POS shipped — order, cart, bill, cash                 |
 | M3      | 2026-04-06 | KDS shipped — station config, realtime, bump/complete |
-| M4      | 2026-04-06 | Payment — cash, VietQR, Momo, refunds     |
-| M5      | 2026-04-06 | Stock — ingredients, recipes, stock levels |
-| M6      | 2026-04-06 | Finance — HĐĐT, revenue dashboard, VAS    |
-| M7      | 2026-04-06 | HR/Payroll — employees, shifts, attendance, payroll |
-| v1.0.0  | 2026-04-07 | All modules shipped, QA verified, deployed to Vercel |
+| M4      | 2026-04-06 | Payment — cash, VietQR, Momo, refunds                 |
+| M5      | 2026-04-06 | Stock — ingredients, recipes, stock levels            |
+| M6      | 2026-04-06 | Finance — HĐĐT, revenue dashboard, VAS                |
+| M7      | 2026-04-06 | HR/Payroll — employees, shifts, attendance, payroll   |
+| v1.0.0  | 2026-04-07 | All modules shipped, QA verified, deployed to Vercel  |

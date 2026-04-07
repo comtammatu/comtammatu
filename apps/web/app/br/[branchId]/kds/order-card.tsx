@@ -119,9 +119,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
             </Badge>
           )}
         </div>
-        <span
-          className={cn("text-sm font-semibold", getElapsedColor(elapsed))}
-        >
+        <span className={cn("text-sm font-semibold", getElapsedColor(elapsed))}>
           {elapsed}p
         </span>
       </div>
@@ -146,9 +144,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
               {/* Item info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-sm font-medium">
-                    {item.quantity}x
-                  </span>
+                  <span className="text-sm font-medium">{item.quantity}x</span>
                   <span className="truncate text-sm">{item.item_name}</span>
                 </div>
                 {item.variant_name && (
@@ -212,9 +208,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                     Món #{String(ticket.order_item_id)}
                   </span>
                 </div>
-                <Badge
-                  className={cn("shrink-0 text-[10px]", config.className)}
-                >
+                <Badge className={cn("shrink-0 text-[10px]", config.className)}>
                   {config.label}
                 </Badge>
                 <div className="flex shrink-0 gap-1">

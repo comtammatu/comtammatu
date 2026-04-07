@@ -1,3 +1,5 @@
+import type { CartModifier, CartSide } from "../pos/types";
+
 /** KDS station with assigned categories */
 export interface KdsStation {
   id: number;
@@ -14,8 +16,8 @@ export interface KdsOrderItem {
   item_name: string;
   variant_name: string | null;
   quantity: number;
-  modifiers: unknown;
-  sides: unknown;
+  modifiers: CartModifier[];
+  sides: CartSide[];
   note: string | null;
   status: string;
   created_at: string;

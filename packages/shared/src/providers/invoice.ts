@@ -54,7 +54,13 @@ export interface InvoiceResult {
 }
 
 export interface InvoiceStatus {
-  status: "draft" | "signing" | "submitted" | "issued" | "cancelled" | "replaced";
+  status:
+    | "draft"
+    | "signing"
+    | "submitted"
+    | "issued"
+    | "cancelled"
+    | "replaced";
   invoiceNumber: string | null;
 }
 

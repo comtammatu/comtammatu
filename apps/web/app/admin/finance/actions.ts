@@ -69,16 +69,19 @@ export async function createTaxInvoice(
   }
 
   if (order.payment_status !== "paid") {
-    return { success: false, error: "Đơn hàng chưa thanh toán. Không thể xuất hóa đơn." };
+    return {
+      success: false,
+      error: "Đơn hàng chưa thanh toán. Không thể xuất hóa đơn.",
+    };
   }
 
   // Branch scope check
   // TODO(H3): validate area_manager can only access branches in their assigned area
-  if (
-    claims.branch_id !== null &&
-    claims.branch_id !== order.branch_id
-  ) {
-    return { success: false, error: "Không có quyền xuất hóa đơn cho chi nhánh này." };
+  if (claims.branch_id !== null && claims.branch_id !== order.branch_id) {
+    return {
+      success: false,
+      error: "Không có quyền xuất hóa đơn cho chi nhánh này.",
+    };
   }
 
   // Check no existing active invoice for this order
@@ -160,7 +163,9 @@ export async function createTaxInvoice(
       total_amount: Number(order.total_amount),
       provider: invoiceProvider?.name ?? "mock",
       provider_ref: providerRef,
-      provider_data: providerData ? JSON.parse(JSON.stringify(providerData)) : null,
+      provider_data: providerData
+        ? JSON.parse(JSON.stringify(providerData))
+        : null,
       issued_at: invoiceStatus === "issued" ? new Date().toISOString() : null,
       created_by: user.id,
     })
@@ -229,6 +234,16 @@ export async function cancelTaxInvoice(
 export async function fetchTaxInvoices(
   branchId?: number,
 ): Promise<ActionResult> {
+  const parsedBranch = z.coerce
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .safeParse(branchId);
+  if (!parsedBranch.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
   const ctx = await getAuthContext(FINANCE_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
@@ -247,8 +262,8 @@ export async function fetchTaxInvoices(
     .eq("tenant_id", claims.tenant_id)
     .order("created_at", { ascending: false });
 
-  if (branchId) {
-    query = query.eq("branch_id", branchId);
+  if (parsedBranch.data) {
+    query = query.eq("branch_id", parsedBranch.data);
   }
 
   const { data, error } = await query;
@@ -308,6 +323,17 @@ export async function fetchTopItems(
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
+  const parsedPeriod = z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .safeParse(periodStart);
+  if (!parsedPeriod.success) {
+    return {
+      success: false,
+      error: "Ngày bắt đầu không hợp lệ (YYYY-MM-DD)",
+    };
+  }
+
   const ctx = await getAuthContext(REPORT_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
@@ -318,7 +344,7 @@ export async function fetchTopItems(
     .select("*")
     .eq("branch_id", parsedBranch.data)
     .eq("tenant_id", claims.tenant_id)
-    .eq("period_start", periodStart)
+    .eq("period_start", parsedPeriod.data)
     .order("quantity_sold", { ascending: false })
     .limit(20);
 

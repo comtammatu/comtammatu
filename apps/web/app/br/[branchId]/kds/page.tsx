@@ -79,7 +79,7 @@ export default async function KdsPage({
     return (
       <div className="flex h-full items-center justify-center">
         <p className="text-lg text-destructive">
-          Khong the tai tram KDS. Vui long thu lai.
+          Không thể tải trạm KDS. Vui lòng thử lại.
         </p>
       </div>
     );
@@ -88,7 +88,9 @@ export default async function KdsPage({
   // Fetch active tickets for this branch
   const { data: rawTickets } = await sb
     .from("kds_tickets")
-    .select("id, station_id, order_id, order_item_id, status, bumped_at, created_at")
+    .select(
+      "id, station_id, order_id, order_item_id, status, bumped_at, created_at",
+    )
     .eq("branch_id", branchIdNum)
     .in("status", ["pending", "preparing", "ready"])
     .order("created_at");
@@ -106,11 +108,15 @@ export default async function KdsPage({
     const [ordersRes, itemsRes] = await Promise.all([
       supabase
         .from("orders")
-        .select("id, order_number, order_type, table_id, created_at, tables(number)")
+        .select(
+          "id, order_number, order_type, table_id, created_at, tables(number)",
+        )
         .in("id", orderIds),
       supabase
         .from("order_items")
-        .select("id, order_id, item_name, variant_name, quantity, unit_price, status")
+        .select(
+          "id, order_id, item_name, variant_name, quantity, unit_price, status",
+        )
         .in("order_id", orderIds),
     ]);
 
