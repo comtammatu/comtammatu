@@ -112,6 +112,7 @@ export function ItemCustomizer({
         side_item_id: s.side_item.id,
         name: s.side_item.name,
         is_default: s.is_default,
+        price: s.side_item.base_price,
         quantity: selectedSides.get(s.side_item.id) ?? 1,
       }));
 
@@ -274,7 +275,9 @@ export function ItemCustomizer({
                                   variant="outline"
                                   size="icon"
                                   className="size-7"
-                                  onClick={() => adjustSideQty(s.side_item.id, -1)}
+                                  onClick={() =>
+                                    adjustSideQty(s.side_item.id, -1)
+                                  }
                                 >
                                   <Minus className="size-3" />
                                 </Button>
@@ -285,7 +288,9 @@ export function ItemCustomizer({
                                   variant="outline"
                                   size="icon"
                                   className="size-7"
-                                  onClick={() => adjustSideQty(s.side_item.id, 1)}
+                                  onClick={() =>
+                                    adjustSideQty(s.side_item.id, 1)
+                                  }
                                 >
                                   <Plus className="size-3" />
                                 </Button>
