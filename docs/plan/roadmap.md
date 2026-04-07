@@ -1,7 +1,7 @@
 # Roadmap — Cơm Tấm Má Tư
 
 > Hệ thống Quản lý Vận hành Nhà hàng (Restaurant Operations Management System)
-> Updated: 2026-04-06 | Structure: Module-based
+> Updated: 2026-04-07 | Structure: Module-based
 
 ## Product Identity
 
@@ -16,10 +16,10 @@ Không phải CRM, không phải ERP tổng hợp. Mỗi module giải quyết m
 | M1  | Menu        | Categories, items, variants, modifiers, sides        | SHIPPED |
 | M2  | POS         | Cart, table/zone, order submit, bill printing        | SHIPPED |
 | M3  | KDS         | Realtime queue, bump/complete, station config        | SHIPPED |
-| M4  | Payment     | Cash, VietQR, Momo, refunds, reconciliation          | NEXT    |
-| M5  | Stock       | Ingredients, recipes, stock levels, procurement, GRN | —       |
-| M6  | Finance     | HĐĐT, VAT, dashboard, reports, VAS accounting        | —       |
-| M7  | HR/Payroll  | Employees, shifts, attendance, payroll, PIT          | —       |
+| M4  | Payment     | Cash, VietQR, Momo, refunds, reconciliation          | SHIPPED |
+| M5  | Stock       | Ingredients, recipes, stock levels, procurement, GRN | SHIPPED |
+| M6  | Finance     | HĐĐT, VAT, dashboard, reports, VAS accounting        | SHIPPED |
+| M7  | HR/Payroll  | Employees, shifts, attendance, payroll, PIT          | SHIPPED |
 
 Post-v1.0 (lên kế hoạch riêng):
 
@@ -35,11 +35,10 @@ M0 (Admin Shell) ✅
 M1 (Menu) ✅
   └── M2 (POS) ✅
       ├── M3 (KDS) ✅
-      └── M4 (Payment) ← NEXT
-          ├── M6-lite (HĐĐT only) = PILOT v1.0
-          └── M5 (Stock) ← v1.1
-              └── M6-full (Finance) ← v1.1
-                  └── M7 (HR/Payroll) ← v1.2
+      └── M4 (Payment) ✅
+          ├── M5 (Stock) ✅
+          ├── M6 (Finance) ✅
+          └── M7 (HR/Payroll) ✅
 ```
 
 ## "Ready to Ship" — Định nghĩa chung
@@ -181,7 +180,7 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 ## M4: Payment — Thanh toán
 
-> Status: — | Depends: M2
+> Status: SHIPPED | Depends: M2 | Shipped: 2026-04-06
 > Ref: `docs/ref/third-party-integrations.md`
 
 **Scope:** Các phương thức thanh toán: tiền mặt, VietQR (chuyển khoản), Momo. Xử lý hoàn tiền. Đối soát cuối ngày.
@@ -190,27 +189,27 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 **Tables owned:** payments, payment_webhooks, refunds
 
-| Session | Task                      | Tables           |
-| ------- | ------------------------- | ---------------- |
-| S1      | Payment schema            | payments         |
-| S2      | VietQR integration        | —                |
-| S3      | Momo integration          | payment_webhooks |
-| S4      | Refunds                   | refunds          |
-| S5      | End-of-day reconciliation | —                |
+| Session | Task                      | Tables           | Status |
+| ------- | ------------------------- | ---------------- | ------ |
+| S1      | Payment schema            | payments         | ✅     |
+| S2      | VietQR integration        | —                | ✅     |
+| S3      | Momo integration          | payment_webhooks | ✅     |
+| S4      | Refunds                   | refunds          | ✅     |
+| S5      | End-of-day reconciliation | —                | ✅     |
 
 **Ship criteria:**
 
-- [ ] Thanh toán tiền mặt + VietQR + Momo
-- [ ] Hoàn tiền (partial + full)
-- [ ] Đối soát cuối ngày chính xác
-- [ ] `/cso` passes (sensitive: payments)
-- [ ] `/verify` + `/review` passes
+- [x] Thanh toán tiền mặt + VietQR + Momo
+- [x] Hoàn tiền (partial + full)
+- [x] Đối soát cuối ngày chính xác
+- [x] `/cso` passes (sensitive: payments)
+- [x] `/verify` + `/review` passes
 
 ---
 
 ## M5: Stock — Kho & Mua hàng
 
-> Status: — | Depends: M4
+> Status: SHIPPED | Depends: M4 | Shipped: 2026-04-06
 > Ref: `docs/ref/inventory.md`
 
 **Scope:** Quản lý nguyên liệu, công thức (recipe), tồn kho, nhập kho (GRN), đặt hàng nhà cung cấp (PO), đối chiếu hóa đơn nhà cung cấp (3-way matching).
@@ -219,27 +218,27 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 **Tables owned:** ingredients, recipes, stock_levels, stock_movements, suppliers, purchase_orders, purchase_order_items, goods_received_notes, grn_items, supplier_invoices
 
-| Session | Task                            | Tables                                           |
-| ------- | ------------------------------- | ------------------------------------------------ |
-| S1      | Ingredients + recipes           | ingredients, recipes                             |
-| S2      | Stock levels + movements        | stock_levels, stock_movements                    |
-| S3      | Suppliers + Purchase Orders     | suppliers, purchase_orders, purchase_order_items |
-| S4      | GRN + auto stock update         | goods_received_notes, grn_items                  |
-| S5      | Supplier invoices + 3-way match | supplier_invoices                                |
+| Session | Task                            | Tables                                           | Status |
+| ------- | ------------------------------- | ------------------------------------------------ | ------ |
+| S1      | Ingredients + recipes           | ingredients, recipes                             | ✅     |
+| S2      | Stock levels + movements        | stock_levels, stock_movements                    | ✅     |
+| S3      | Suppliers + Purchase Orders     | suppliers, purchase_orders, purchase_order_items | ✅     |
+| S4      | GRN + auto stock update         | goods_received_notes, grn_items                  | ✅     |
+| S5      | Supplier invoices + 3-way match | supplier_invoices                                | ✅     |
 
 **Ship criteria:**
 
-- [ ] CRUD nguyên liệu + công thức
-- [ ] Tồn kho tự động cập nhật khi GRN
-- [ ] PO → GRN → Supplier Invoice flow hoàn chỉnh
-- [ ] 3-way matching hoạt động
-- [ ] `/verify` + `/review` passes
+- [x] CRUD nguyên liệu + công thức
+- [x] Tồn kho tự động cập nhật khi GRN
+- [x] PO → GRN → Supplier Invoice flow hoàn chỉnh
+- [x] 3-way matching hoạt động
+- [x] `/verify` + `/review` passes
 
 ---
 
 ## M6: Finance — Tài chính & HĐĐT
 
-> Status: — | Depends: M4, M5
+> Status: SHIPPED | Depends: M4, M5 | Shipped: 2026-04-06
 > Ref: `docs/ref/einvoice-tax.md`
 
 **Scope:** Hóa đơn điện tử (HĐĐT), VAT, dashboard doanh thu, báo cáo tài chính theo chuẩn VAS, hệ thống tài khoản kế toán.
@@ -248,30 +247,30 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 **Tables owned:** tax_invoices, chart_of_accounts, journal_entries, mv_daily_revenue, mv_top_items, mv_food_cost
 
-| Session | Task                        | Tables                             |
-| ------- | --------------------------- | ---------------------------------- |
-| S1      | HĐĐT schema + Edge Function | tax_invoices                       |
-| S2      | HĐĐT UI + provider config   | —                                  |
-| S3      | Revenue dashboard           | mv_daily_revenue, mv_top_items     |
-| S4      | Food cost analysis          | mv_food_cost                       |
-| S5      | Chart of accounts (VAS)     | chart_of_accounts, journal_entries |
-| S6      | Financial statements        | —                                  |
-| S7      | MV refresh + audit logging  | audit_logs                         |
+| Session | Task                        | Tables                             | Status |
+| ------- | --------------------------- | ---------------------------------- | ------ |
+| S1      | HĐĐT schema + Edge Function | tax_invoices                       | ✅     |
+| S2      | HĐĐT UI + provider config   | —                                  | ✅     |
+| S3      | Revenue dashboard           | mv_daily_revenue, mv_top_items     | ✅     |
+| S4      | Food cost analysis          | mv_food_cost                       | ✅     |
+| S5      | Chart of accounts (VAS)     | chart_of_accounts, journal_entries | ✅     |
+| S6      | Financial statements        | —                                  | ✅     |
+| S7      | MV refresh + audit logging  | audit_logs                         | ✅     |
 
 **Ship criteria:**
 
-- [ ] HĐĐT xuất/hủy hoạt động với provider
-- [ ] Dashboard doanh thu chính xác
-- [ ] Food cost report đúng
-- [ ] BCTC theo chuẩn VAS
-- [ ] `/cso` passes (sensitive: finance)
-- [ ] `/verify` + `/review` passes
+- [x] HĐĐT xuất/hủy hoạt động với provider
+- [x] Dashboard doanh thu chính xác
+- [x] Food cost report đúng
+- [x] BCTC theo chuẩn VAS
+- [x] `/cso` passes (sensitive: finance)
+- [x] `/verify` + `/review` passes
 
 ---
 
 ## M7: HR/Payroll — Nhân sự & Lương
 
-> Status: — | Depends: M6
+> Status: SHIPPED | Depends: M6 | Shipped: 2026-04-06
 > Ref: `docs/ref/labor-contracts.md`, `docs/ref/payroll-pit.md`
 
 **Scope:** Hồ sơ nhân viên (mở rộng từ profiles), ca làm, chấm công, tính lương, thuế TNCN, BHXH.
@@ -280,22 +279,22 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 **Tables owned:** employees, shifts, attendance_records, payroll_periods, payroll_entries
 
-| Session | Task                  | Tables                           |
-| ------- | --------------------- | -------------------------------- |
-| S1      | Employee records      | employees                        |
-| S2      | Shifts + attendance   | shifts, attendance_records       |
-| S3      | Payroll calculation   | —                                |
-| S4      | Payroll processing    | payroll_periods, payroll_entries |
-| S5      | Payroll reports + PIT | —                                |
+| Session | Task                  | Tables                           | Status |
+| ------- | --------------------- | -------------------------------- | ------ |
+| S1      | Employee records      | employees                        | ✅     |
+| S2      | Shifts + attendance   | shifts, attendance_records       | ✅     |
+| S3      | Payroll calculation   | —                                | ✅     |
+| S4      | Payroll processing    | payroll_periods, payroll_entries | ✅     |
+| S5      | Payroll reports + PIT | —                                | ✅     |
 
 **Ship criteria:**
 
-- [ ] Quản lý hồ sơ nhân viên đầy đủ
-- [ ] Lập ca, chấm công
-- [ ] Tính lương + BHXH + thuế TNCN chính xác
-- [ ] Bảng lương hàng tháng
-- [ ] `/cso` passes (sensitive: payroll)
-- [ ] `/verify` + `/review` passes
+- [x] Quản lý hồ sơ nhân viên đầy đủ
+- [x] Lập ca, chấm công
+- [x] Tính lương + BHXH + thuế TNCN chính xác
+- [x] Bảng lương hàng tháng
+- [x] `/cso` passes (sensitive: payroll)
+- [x] `/verify` + `/review` passes
 
 ---
 
@@ -339,3 +338,8 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 | M0+M1   | 2026-04-03 | Admin Shell + Menu shipped (ex Sprint 1) |
 | M2      | 2026-04-06 | POS shipped — order, cart, bill, cash     |
 | M3      | 2026-04-06 | KDS shipped — station config, realtime, bump/complete |
+| M4      | 2026-04-06 | Payment — cash, VietQR, Momo, refunds     |
+| M5      | 2026-04-06 | Stock — ingredients, recipes, stock levels |
+| M6      | 2026-04-06 | Finance — HĐĐT, revenue dashboard, VAS    |
+| M7      | 2026-04-06 | HR/Payroll — employees, shifts, attendance, payroll |
+| v1.0.0  | 2026-04-07 | All modules shipped, QA verified, deployed to Vercel |

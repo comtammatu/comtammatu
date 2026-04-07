@@ -9,12 +9,12 @@ Single-tenant, multi-branch. Không phải CRM, không phải ERP tổng hợp.
 | --- | ----------- | --------------------------------------------- | ------- |
 | M0  | Admin Shell | Layout, sidebar, branches, staff, settings    | SHIPPED |
 | M1  | Menu        | Categories, items, variants, modifiers, sides | SHIPPED |
-| M2  | POS         | Cart, table/zone, order submit, bill printing | NEXT    |
-| M3  | KDS         | Realtime queue, bump/complete, station config | NEXT    |
-| M4  | Payment     | Cash, VietQR, Momo, refunds, reconciliation   | Planned |
-| M5  | Stock       | Ingredients, recipes, stock levels, GRN       | Planned |
-| M6  | Finance     | HĐĐT, VAT, dashboard, VAS accounting          | Planned |
-| M7  | HR/Payroll  | Shifts, attendance, payroll, PIT              | Planned |
+| M2  | POS         | Cart, table/zone, order submit, bill printing | SHIPPED |
+| M3  | KDS         | Realtime queue, bump/complete, station config | SHIPPED |
+| M4  | Payment     | Cash, VietQR, Momo, refunds, reconciliation   | SHIPPED |
+| M5  | Stock       | Ingredients, recipes, stock levels, GRN       | SHIPPED |
+| M6  | Finance     | HĐĐT, VAT, dashboard, VAS accounting          | SHIPPED |
+| M7  | HR/Payroll  | Shifts, attendance, payroll, PIT              | SHIPPED |
 
 ## Tech Stack
 

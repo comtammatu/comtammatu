@@ -3,26 +3,30 @@
 > Active work items for the current session/phase.
 > Update during work, clear completed items regularly.
 
-## M3 KDS — Kitchen Display System ✅ SHIPPED
+## All Modules SHIPPED (M0-M7) ✅
 
-- [x] S1: KDS station config (kds_stations, kds_station_categories)
-- [x] S2: Realtime order queue (kds_tickets, route_order_to_kds RPC)
-- [x] S3: Bump/complete + recall (bump_kds_ticket, recall_kds_ticket, check_order_ready RPCs)
-- [x] Security hardening: tenant/branch isolation on RPCs + RLS
-- [x] Code review fixes: race condition (FOR UPDATE), is_active check, atomic save_station_categories, localization
+All 8 modules shipped and QA verified on 2026-04-07.
 
-## Deferred to M4 (Payment)
+### Completed
 
-- [ ] Server-side price rehydration in create_order RPC — DONE in M3 (create_order now re-fetches prices server-side). Remaining: payment integration, VietQR, Momo.
+- [x] M0: Admin Shell — layout, sidebar, branches, staff, settings
+- [x] M1: Menu — categories, items, variants, modifiers, sides
+- [x] M2: POS — cart, table/zone, order submit, bill printing
+- [x] M3: KDS — realtime queue, bump/complete, station config
+- [x] M4: Payment — cash, VietQR, Momo, refunds, reconciliation
+- [x] M5: Stock — ingredients, recipes, stock levels, procurement
+- [x] M6: Finance — HĐĐT, VAT, dashboard, VAS accounting
+- [x] M7: HR/Payroll — employees, shifts, attendance, payroll
 
 ## Deferred (area_manager scoping)
 
 - [ ] H3: area_manager branch scope — create `areas` + `area_branches` mapping (see roadmap Sprint Hotfix section)
 
-## Up Next: M4 Payment
+## Post-v1.0 (Tier 2)
 
-- [ ] S1: Payment schema (payments table)
-- [ ] S2: VietQR integration
-- [ ] S3: Momo integration (payment_webhooks)
-- [ ] S4: Refunds (refunds table)
-- [ ] S5: End-of-day reconciliation
+- [ ] Local-First Branch (mini PC + SQLite, offline POS/KDS)
+- [ ] QR Self-Order (khách scan QR tại bàn)
+- [ ] Loyalty / Vouchers (tích điểm, khuyến mãi)
+- [ ] Advanced Analytics
+- [ ] VNPay integration
+- [ ] Employee portal full features (currently placeholder)
