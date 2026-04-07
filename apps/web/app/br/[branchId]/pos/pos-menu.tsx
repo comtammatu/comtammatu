@@ -16,7 +16,9 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Clock, DoorOpen, LogOut, Monitor } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
+import type { CategoryType } from "@comtammatu/shared";
 import { CATEGORY_TYPE_LABELS } from "@comtammatu/shared/menu";
+import { PosTableGate } from "./pos-table-gate";
 import { CartSidebar } from "./cart-sidebar";
 import { ItemCustomizer } from "./item-customizer";
 import { CloseSessionDialog } from "./close-session-dialog";
@@ -71,6 +73,13 @@ export interface MenuCategory {
   menu_items: MenuItem[];
 }
 
+const MENU_ZONE_ORDER: CategoryType[] = [
+  "main_dish",
+  "side_dish",
+  "drink",
+  "dessert",
+];
+
 /* ─── Helpers ─── */
 
 function formatTime(dateStr: string): string {
@@ -121,6 +130,9 @@ export function PosMenu({
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(
     categories[0]?.id ?? null,
   );
+  const [activeMenuZone, setActiveMenuZone] = useState<CategoryType | null>(
+    null,
+  );
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [customizerItem, setCustomizerItem] = useState<MenuItem | null>(null);
   const [orderType, setOrderType] = useState<OrderType>("dine_in");
@@ -155,6 +167,11 @@ export function PosMenu({
     [syncTableToUrl],
   );
 
+  const handleRequestChangeTable = useCallback(() => {
+    setSelectedTableId(null);
+    syncTableToUrl(null);
+  }, [syncTableToUrl]);
+
   useEffect(() => {
     if (initialTableId == null) return;
     const t = initialTables.find((x) => x.id === initialTableId);
@@ -163,17 +180,35 @@ export function PosMenu({
     }
   }, [initialTableId, initialTables]);
 
-  // Preserve activeCategoryId across RSC re-renders that pass new categories
-  const activeCategoryIdRef = useRef(activeCategoryId);
-  activeCategoryIdRef.current = activeCategoryId;
-  useEffect(() => {
-    const stillExists = categories.some(
-      (c) => c.id === activeCategoryIdRef.current,
-    );
-    if (!stillExists) {
-      setActiveCategoryId(categories[0]?.id ?? null);
+  const availableMenuZones = useMemo(
+    () =>
+      MENU_ZONE_ORDER.filter((z) =>
+        categories.some((c) => c.type === z && c.menu_items.length > 0),
+      ),
+    [categories],
+  );
+
+  const effectiveMenuZone = useMemo(() => {
+    if (activeMenuZone != null && availableMenuZones.includes(activeMenuZone)) {
+      return activeMenuZone;
     }
-  }, [categories]);
+    return availableMenuZones[0] ?? "main_dish";
+  }, [activeMenuZone, availableMenuZones]);
+
+  const categoriesInActiveZone = useMemo(
+    () => categories.filter((c) => c.type === effectiveMenuZone),
+    [categories, effectiveMenuZone],
+  );
+
+  useEffect(() => {
+    setActiveCategoryId((prev) => {
+      const ok = categoriesInActiveZone.some((c) => c.id === prev);
+      return ok ? prev : (categoriesInActiveZone[0]?.id ?? null);
+    });
+  }, [categoriesInActiveZone]);
+
+  const orderContextReady =
+    orderType === "takeaway" || selectedTableId !== null;
 
   const loadSessionOrders = useCallback(async () => {
     const result = await fetchSessionOrders(branchId, session.id);
@@ -409,76 +444,135 @@ export function PosMenu({
           </Button>
         </div>
 
-        {/* Category tabs */}
-        <div className="border-b bg-muted/30">
-          <ScrollArea className="w-full">
-            <div className="flex gap-1 p-2">
-              {categories.map((cat) => (
-                <Button
-                  key={cat.id}
-                  variant={activeCategoryId === cat.id ? "default" : "ghost"}
-                  size="sm"
-                  className={cn(
-                    "shrink-0 text-sm",
-                    activeCategoryId === cat.id && "shadow-sm",
-                  )}
-                  onClick={() => setActiveCategoryId(cat.id)}
-                >
-                  {cat.name}
-                  <Badge
-                    variant="secondary"
-                    className={cn(
-                      "ml-1.5 text-[10px]",
-                      activeCategoryId === cat.id &&
-                        "bg-primary-foreground/20 text-primary-foreground",
-                    )}
+        {orderContextReady ? (
+          availableMenuZones.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center text-muted-foreground">
+              <p className="text-sm font-medium">Chưa có món trong thực đơn</p>
+              <p className="text-xs">
+                Thêm danh mục và món trong quản trị để phục vụ tại POS.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Khu thực đơn (món chính / phụ / nước / tráng miệng) */}
+              <div className="border-b bg-muted/30">
+                <ScrollArea className="w-full">
+                  <div
+                    className="flex gap-1 p-2"
+                    role="tablist"
+                    aria-label="Khu thực đơn"
                   >
-                    {cat.menu_items.length}
-                  </Badge>
-                </Button>
-              ))}
-            </div>
-          </ScrollArea>
-          {activeCategory && (
-            <div className="px-3 pb-2">
-              <span className="text-xs text-muted-foreground">
-                {CATEGORY_TYPE_LABELS[activeCategory.type] ??
-                  activeCategory.type}
-              </span>
-            </div>
-          )}
-        </div>
+                    {availableMenuZones.map((z) => (
+                      <Button
+                        key={z}
+                        type="button"
+                        role="tab"
+                        aria-selected={effectiveMenuZone === z}
+                        variant={effectiveMenuZone === z ? "default" : "ghost"}
+                        size="sm"
+                        className={cn(
+                          "shrink-0 text-sm",
+                          effectiveMenuZone === z && "shadow-sm",
+                        )}
+                        onClick={() => setActiveMenuZone(z)}
+                      >
+                        {CATEGORY_TYPE_LABELS[z] ?? z}
+                      </Button>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
 
-        {/* Item grid */}
-        <ScrollArea className="flex-1">
-          <div className="grid grid-cols-2 gap-2 p-2 sm:grid-cols-3 lg:grid-cols-4">
-            {activeCategory?.menu_items.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className="flex flex-col rounded-lg border bg-card p-3 text-left transition-colors hover:bg-accent active:scale-[0.98]"
-                onClick={() => handleItemTap(item)}
-              >
-                <span className="line-clamp-2 text-sm font-medium">
-                  {item.name}
-                </span>
-                {item.menu_item_variants.length > 0 && (
-                  <span className="mt-1 text-[10px] text-muted-foreground">
-                    {item.menu_item_variants.length} lựa chọn
-                  </span>
+              {/* Danh mục trong khu (nếu có nhiều danh mục) */}
+              {categoriesInActiveZone.length > 1 ? (
+                <div className="border-b bg-muted/30">
+                  <ScrollArea className="w-full">
+                    <div
+                      className="flex gap-1 p-2"
+                      role="tablist"
+                      aria-label="Danh mục món"
+                    >
+                      {categoriesInActiveZone.map((cat) => (
+                        <Button
+                          key={cat.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={activeCategoryId === cat.id}
+                          variant={
+                            activeCategoryId === cat.id ? "secondary" : "ghost"
+                          }
+                          size="sm"
+                          className={cn(
+                            "shrink-0 text-sm",
+                            activeCategoryId === cat.id && "shadow-sm",
+                          )}
+                          onClick={() => setActiveCategoryId(cat.id)}
+                        >
+                          {cat.name}
+                          <Badge
+                            variant="outline"
+                            className="ml-1.5 text-[10px]"
+                          >
+                            {cat.menu_items.length}
+                          </Badge>
+                        </Button>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              ) : (
+                activeCategory && (
+                  <div className="border-b px-3 py-2">
+                    <p className="text-sm font-medium">{activeCategory.name}</p>
+                    <span className="text-xs text-muted-foreground">
+                      {CATEGORY_TYPE_LABELS[activeCategory.type] ??
+                        activeCategory.type}
+                    </span>
+                  </div>
+                )
+              )}
+
+              {/* Lưới món */}
+              <ScrollArea className="flex-1">
+                <div className="grid grid-cols-2 gap-2 p-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {activeCategory?.menu_items.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className="flex flex-col rounded-lg border bg-card p-3 text-left transition-colors hover:bg-accent active:scale-[0.98]"
+                      onClick={() => handleItemTap(item)}
+                    >
+                      <span className="line-clamp-2 text-sm font-medium">
+                        {item.name}
+                      </span>
+                      {item.menu_item_variants.length > 0 && (
+                        <span className="mt-1 text-[10px] text-muted-foreground">
+                          {item.menu_item_variants.length} lựa chọn
+                        </span>
+                      )}
+                      <span className="mt-auto pt-2 text-sm font-semibold text-primary">
+                        {formatVND(item.base_price)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {activeCategory?.menu_items.length === 0 && (
+                  <div className="flex items-center justify-center py-12 text-muted-foreground">
+                    Không có món trong danh mục này
+                  </div>
                 )}
-                <span className="mt-auto pt-2 text-sm font-semibold text-primary">
-                  {formatVND(item.base_price)}
-                </span>
-              </button>
-            ))}
-          </div>
-          {activeCategory?.menu_items.length === 0 && (
-            <div className="flex items-center justify-center py-12 text-muted-foreground">
-              Không có món trong danh mục này
-            </div>
-          )}
-        </ScrollArea>
+              </ScrollArea>
+            </>
+          )
+        ) : (
+          <PosTableGate
+            tables={localTables}
+            orderType={orderType}
+            onOrderTypeChange={handleOrderTypeChange}
+            selectedTableId={selectedTableId}
+            onTableSelect={handleTableSelect}
+          />
+        )}
       </div>
 
       {/* Right Panel — Cart / Orders */}
@@ -563,11 +657,12 @@ export function PosMenu({
             tables={localTables}
             canSubmit={canSubmit}
             isSubmitting={isPending}
+            contextLocked={!orderContextReady}
             onUpdateQuantity={updateQuantity}
             onRemoveItem={removeItem}
             onClearCart={clearCart}
             onOrderTypeChange={handleOrderTypeChange}
-            onTableSelect={handleTableSelect}
+            onRequestChangeTable={handleRequestChangeTable}
             onSubmitOrder={handleSubmitOrder}
           />
         )}

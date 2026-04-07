@@ -22,7 +22,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   // Fetch branches for filters + form
   const { data: branches } = await supabase
     .from("branches")
-    .select("id, name")
+    .select("id, name, is_headquarters")
     .eq("is_active", true)
     .order("name");
 

@@ -23,6 +23,8 @@ import { createStaff, updateStaff } from "./actions";
 import type { StaffRow, BranchOption } from "./staff-table";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { MANAGEABLE_ROLES, TENANT_LEVEL_ROLES } from "./role-labels";
+import { HQ_EXCLUDED_OPERATIONAL_ROLES } from "@comtammatu/shared/auth";
+import type { StaffRole } from "@comtammatu/shared/auth";
 
 interface StaffFormDialogProps {
   open: boolean;
@@ -45,6 +47,12 @@ export function StaffFormDialog({
   const isTenantLevel = TENANT_LEVEL_ROLES.includes(
     selectedRole as (typeof TENANT_LEVEL_ROLES)[number],
   );
+
+  const branchChoices = HQ_EXCLUDED_OPERATIONAL_ROLES.includes(
+    selectedRole as StaffRole,
+  )
+    ? branches.filter((b) => b.is_headquarters !== true)
+    : branches;
 
   useEffect(() => {
     if (state?.success) {
@@ -142,6 +150,7 @@ export function StaffFormDialog({
           <div className="space-y-2">
             <Label htmlFor="branch_id">Chi nhánh</Label>
             <Select
+              key={`${selectedRole}-${staff?.id ?? "new"}`}
               name="branch_id"
               defaultValue={staff?.branch_id?.toString() ?? ""}
               disabled={isTenantLevel}
@@ -154,7 +163,7 @@ export function StaffFormDialog({
                 />
               </SelectTrigger>
               <SelectContent>
-                {branches.map((b) => (
+                {branchChoices.map((b) => (
                   <SelectItem key={b.id} value={b.id.toString()}>
                     {b.name}
                   </SelectItem>
@@ -164,7 +173,8 @@ export function StaffFormDialog({
             {!isTenantLevel && (
               <p className="text-xs text-muted-foreground">
                 Bắt buộc cho vai trò vận hành (thu ngân, phục vụ, bếp, QL chi
-                nhánh)
+                nhánh). Chi nhánh trụ sở (HQ) chỉ dành cho văn phòng — không
+                chọn HQ cho các vai trò sàn.
               </p>
             )}
           </div>

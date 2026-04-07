@@ -83,6 +83,8 @@ function mapRpcError(msg: string): string {
     return "Vai trò vận hành phải thuộc một chi nhánh";
   if (msg.includes("branch_id does not belong"))
     return "Chi nhánh không hợp lệ";
+  if (msg.includes("operational roles cannot be assigned to headquarters"))
+    return "Chi nhánh trụ sở (HQ) không có POS/KDS — không gán vai trò vận hành tại đây";
   if (msg.includes("insufficient privileges"))
     return "Không có quyền quản lý nhân viên";
   return "Không thể cập nhật. Vui lòng thử lại.";
@@ -123,7 +125,7 @@ export async function createStaff(
   const ctx = await getAuthContext(MANAGER_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { claims } = ctx;
+  const { claims, supabase } = ctx;
 
   // Hierarchy ceiling — can't create roles above your level
   const roleError = canAssignRole(claims.user_role, role);
@@ -137,6 +139,22 @@ export async function createStaff(
       return {
         success: false,
         error: "Không có quyền tạo nhân viên ở chi nhánh khác",
+      };
+    }
+  }
+
+  if (OPS_ROLES.includes(role) && branch_id) {
+    const { data: br } = await supabase
+      .from("branches")
+      .select("is_headquarters")
+      .eq("id", branch_id)
+      .eq("tenant_id", claims.tenant_id)
+      .maybeSingle();
+    if (br?.is_headquarters === true) {
+      return {
+        success: false,
+        error:
+          "Chi nhánh trụ sở (HQ) không có POS/KDS — không gán vai trò vận hành tại đây",
       };
     }
   }

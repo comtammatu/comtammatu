@@ -38,11 +38,13 @@ interface CartSidebarProps {
   tables: BranchTable[];
   canSubmit: boolean;
   isSubmitting: boolean;
+  /** True while user must finish table / order-type on the table gate */
+  contextLocked: boolean;
   onUpdateQuantity: (key: string, delta: number) => void;
   onRemoveItem: (key: string) => void;
   onClearCart: () => void;
   onOrderTypeChange: (type: OrderType) => void;
-  onTableSelect: (tableId: number | null) => void;
+  onRequestChangeTable: () => void;
   onSubmitOrder: () => void;
 }
 
@@ -54,27 +56,18 @@ export function CartSidebar({
   tables,
   canSubmit,
   isSubmitting,
+  contextLocked,
   onUpdateQuantity,
   onRemoveItem,
   onClearCart,
   onOrderTypeChange,
-  onTableSelect,
+  onRequestChangeTable,
   onSubmitOrder,
 }: CartSidebarProps) {
-  // Group tables by zone
-  const tablesByZone = tables.reduce<Map<string, BranchTable[]>>(
-    (acc, table) => {
-      const zoneName = table.branch_zones?.name ?? "Không có khu vực";
-      const group = acc.get(zoneName);
-      if (group) {
-        group.push(table);
-      } else {
-        acc.set(zoneName, [table]);
-      }
-      return acc;
-    },
-    new Map(),
-  );
+  const selectedTableNumber =
+    selectedTableId != null
+      ? tables.find((t) => t.id === selectedTableId)?.number
+      : undefined;
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -120,121 +113,92 @@ export function CartSidebar({
         )}
       </div>
 
-      {/* Order type toggle */}
-      <div className="border-b px-3 py-2">
-        <div
-          role="radiogroup"
-          aria-label="Loại đơn hàng"
-          className="flex gap-1 rounded-lg bg-muted p-1"
-        >
-          <button
-            type="button"
-            role="radio"
-            aria-checked={orderType === "dine_in"}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              orderType === "dine_in"
-                ? "bg-background shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            onClick={() => onOrderTypeChange("dine_in")}
-          >
-            <UtensilsCrossed className="size-3.5" />
-            Tại bàn
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={orderType === "takeaway"}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              orderType === "takeaway"
-                ? "bg-background shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            onClick={() => onOrderTypeChange("takeaway")}
-          >
-            <Package className="size-3.5" />
-            Mang về
-          </button>
-        </div>
-      </div>
-
-      {/* Table picker (dine_in only) */}
-      {orderType === "dine_in" && (
-        <div className="border-b px-3 py-2">
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">
-            Chọn bàn
-          </p>
-          {tables.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              Không có bàn nào khả dụng
-            </p>
-          ) : (
-            <ScrollArea className="max-h-[120px]">
-              <div className="flex flex-col gap-1.5">
-                {Array.from(tablesByZone.entries()).map(
-                  ([zoneName, zoneTables]) => (
-                    <div key={zoneName}>
-                      {tablesByZone.size > 1 && (
-                        <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                          {zoneName}
-                        </p>
-                      )}
-                      <div className="flex flex-wrap gap-1">
-                        {zoneTables.map((table) => {
-                          const isAvailable = table.status === "available";
-                          const isSelected = selectedTableId === table.id;
-                          return (
-                            <button
-                              key={table.id}
-                              type="button"
-                              disabled={!isAvailable}
-                              aria-label={
-                                isAvailable
-                                  ? `Bàn ${String(table.number)}`
-                                  : `Bàn ${String(table.number)} — đang sử dụng`
-                              }
-                              className={cn(
-                                "min-h-10 min-w-10 rounded-md border px-3 py-2 text-xs font-medium transition-colors",
-                                isSelected
-                                  ? "border-primary bg-primary/10 text-primary"
-                                  : isAvailable
-                                    ? "border-border hover:bg-accent"
-                                    : "border-border/50 text-muted-foreground/50",
-                              )}
-                              onClick={() =>
-                                onTableSelect(isSelected ? null : table.id)
-                              }
-                            >
-                              {table.number}
-                              {!isAvailable && (
-                                <span
-                                  aria-hidden="true"
-                                  className="ml-0.5 text-xs"
-                                >
-                                  ●
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ),
+      {/* Order context — hidden while table gate is active (gate owns this step) */}
+      {!contextLocked && (
+        <>
+          <div className="border-b px-3 py-2">
+            <div
+              role="radiogroup"
+              aria-label="Loại đơn hàng"
+              className="flex gap-1 rounded-lg bg-muted p-1"
+            >
+              <button
+                type="button"
+                role="radio"
+                aria-checked={orderType === "dine_in"}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  orderType === "dine_in"
+                    ? "bg-background shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
+                onClick={() => onOrderTypeChange("dine_in")}
+              >
+                <UtensilsCrossed className="size-3.5" />
+                Tại bàn
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={orderType === "takeaway"}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  orderType === "takeaway"
+                    ? "bg-background shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+                onClick={() => onOrderTypeChange("takeaway")}
+              >
+                <Package className="size-3.5" />
+                Mang về
+              </button>
+            </div>
+          </div>
+
+          {orderType === "dine_in" && selectedTableNumber != null && (
+            <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+              <div className="min-w-0">
+                <p className="text-[10px] font-medium uppercase text-muted-foreground">
+                  Bàn phục vụ
+                </p>
+                <p className="truncate text-sm font-semibold">
+                  Bàn {selectedTableNumber}
+                </p>
               </div>
-            </ScrollArea>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 shrink-0 text-xs"
+                type="button"
+                onClick={onRequestChangeTable}
+              >
+                Đổi bàn
+              </Button>
+            </div>
           )}
+        </>
+      )}
+
+      {contextLocked && (
+        <div className="border-b px-3 py-3">
+          <p className="text-xs text-muted-foreground">
+            Hoàn tất bước{" "}
+            <span className="font-medium text-foreground">Chọn bàn</span> bên
+            trái để mở thực đơn và thêm món vào giỏ.
+          </p>
         </div>
       )}
 
       {/* Cart items */}
       {items.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 text-center text-muted-foreground">
           <ShoppingCart className="size-10 opacity-30" />
           <p className="text-sm">Chưa có món</p>
-          <p className="text-xs">Chọn món từ menu bên trái</p>
+          <p className="text-xs">
+            {contextLocked
+              ? "Mở thực đơn sau khi chọn bàn."
+              : "Chọn món từ menu bên trái."}
+          </p>
         </div>
       ) : (
         <>

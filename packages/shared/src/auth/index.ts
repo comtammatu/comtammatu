@@ -3,6 +3,7 @@ export {
   STAFF_ROLES,
   ADMIN_ROLES,
   BRANCH_ROLES,
+  HQ_EXCLUDED_OPERATIONAL_ROLES,
   BRANCH_FLOOR_SETTINGS_ROLES,
   canManageBranchFloorSettings,
 } from "./types";

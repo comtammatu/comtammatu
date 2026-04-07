@@ -54,7 +54,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Refresh session + get user
-  const { user, response } = await updateSession(request);
+  const { user, response, supabase } = await updateSession(request);
 
   // Login page: special handling
   if (pathname === "/login") {
@@ -91,6 +91,27 @@ export async function proxy(request: NextRequest) {
       url.pathname = getDefaultRedirect(fallbackClaims);
       url.searchParams.set("forbidden", "1");
       return redirectWithCookies(url, response);
+    }
+
+    // POS/KDS are not available on headquarters (office-only branch)
+    if ((moduleKey === "pos" || moduleKey === "kds") && claims) {
+      const pathMatch = pathname.match(/^\/br\/(\d+)\//);
+      if (pathMatch) {
+        const routeBranchId = Number(pathMatch[1]);
+        const { data: hqRow } = await supabase
+          .from("branches")
+          .select("id")
+          .eq("id", routeBranchId)
+          .eq("tenant_id", claims.tenant_id)
+          .eq("is_headquarters", true)
+          .maybeSingle();
+        if (hqRow) {
+          const url = request.nextUrl.clone();
+          url.pathname = getDefaultRedirect(claims);
+          url.searchParams.set("forbidden", "1");
+          return redirectWithCookies(url, response);
+        }
+      }
     }
   }
 

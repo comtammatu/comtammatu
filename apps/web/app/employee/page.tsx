@@ -40,21 +40,24 @@ export default async function EmployeePage() {
   const canPos = canAccess(claims.user_role, "pos");
   const canKds = canAccess(claims.user_role, "kds");
   const branchId = claims.branch_id;
-  const posHref = branchId ? `/br/${branchId}/pos` : "/employee";
-  const kdsHref = branchId ? `/br/${branchId}/kds` : "/employee";
-  const posDisabled = !canPos || !branchId;
-  const kdsDisabled = !canKds || !branchId;
 
   let branchName: string | null = null;
+  let branchIsHq = false;
   if (branchId) {
     const { data } = await supabase
       .from("branches")
-      .select("name")
+      .select("name, is_headquarters")
       .eq("id", branchId)
       .eq("tenant_id", claims.tenant_id)
       .maybeSingle();
     branchName = data?.name ?? null;
+    branchIsHq = data?.is_headquarters === true;
   }
+
+  const posHref = branchId ? `/br/${branchId}/pos` : "/employee";
+  const kdsHref = branchId ? `/br/${branchId}/kds` : "/employee";
+  const posDisabled = !canPos || !branchId || branchIsHq;
+  const kdsDisabled = !canKds || !branchId || branchIsHq;
 
   return (
     <div className="flex flex-col gap-4">
@@ -71,6 +74,7 @@ export default async function EmployeePage() {
                 · Chi nhánh:{" "}
                 <span className="font-medium text-foreground">
                   {branchName ?? `#${String(branchId)}`}
+                  {branchIsHq ? " (Trụ sở)" : ""}
                 </span>
               </>
             ) : null}
@@ -123,6 +127,12 @@ export default async function EmployeePage() {
           {!branchId && (canPos || canKds) && (
             <p className="mt-2 text-xs text-muted-foreground">
               Tài khoản chưa gắn chi nhánh.
+            </p>
+          )}
+          {branchId && branchIsHq && (canPos || canKds) && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Trụ sở không có sàn POS/KDS — chỉ dùng cho văn phòng; quản lý HQ
+              qua trang quản trị (Owner / Quản lý tổng).
             </p>
           )}
         </Card>

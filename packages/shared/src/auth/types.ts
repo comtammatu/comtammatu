@@ -31,6 +31,17 @@ export const BRANCH_ROLES: readonly StaffRole[] = [
 ] as const;
 
 /**
+ * Operational / floor roles that must belong to a store branch — not headquarters
+ * (HQ is office-only: no POS/KDS).
+ */
+export const HQ_EXCLUDED_OPERATIONAL_ROLES: readonly StaffRole[] = [
+  "cashier",
+  "waiter",
+  "chef",
+  "branch_manager",
+] as const;
+
+/**
  * Settings → Bàn, Trạm bếp (cấu hình sàn, không phải chiến lược chuỗi).
  * Owner không gồm — chủ sở hữu xem tổng thể vận hành; chi tiết sàn/bếp do quản lý điều hành.
  */

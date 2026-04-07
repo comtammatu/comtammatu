@@ -32,6 +32,7 @@ import { ROLE_LABELS } from "./role-labels";
 export interface BranchOption {
   id: number;
   name: string;
+  is_headquarters?: boolean | null;
 }
 
 export interface StaffRow {
