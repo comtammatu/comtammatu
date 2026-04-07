@@ -283,6 +283,20 @@ export async function submitOrder(
   );
 
   if (error) {
+    const errCode = String(error.code ?? "");
+    const errMsg = String(error.message ?? "").toLowerCase();
+    // Postgres insufficient_privilege (often stale RPC overload missing GRANT)
+    if (
+      errCode === "42501" ||
+      errMsg.includes("42501") ||
+      errMsg.includes("permission denied")
+    ) {
+      return {
+        success: false,
+        error:
+          "Không có quyền tạo đơn (hệ thống). Vui lòng đăng nhập lại hoặc liên hệ quản lý.",
+      };
+    }
     // Postgres advisory lock not available (another order creation in-flight)
     // Avoid hanging the POS UI waiting for a long DB lock.
     if (error.code === "55P03") {
