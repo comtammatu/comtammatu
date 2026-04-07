@@ -7,6 +7,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Card } from "@comtammatu/ui/components/card";
 import { ChevronRight, Undo2 } from "lucide-react";
 import type { KdsOrder } from "./kds-board";
+import type { KdsTicket } from "./page";
 
 /* ─── Status helpers ─── */
 
@@ -41,21 +42,46 @@ const ORDER_TYPE_LABELS: Record<string, string> = {
 
 /* ─── Elapsed time hook ─── */
 
-function useElapsedMinutes(createdAt: string): number {
-  const [elapsed, setElapsed] = useState(() =>
-    Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000),
+/** When every ticket is ready, kitchen time stops at the last bump-to-ready (max bumped_at). */
+function getKitchenCompleteAtMs(tickets: KdsTicket[]): number | null {
+  if (tickets.length === 0) return null;
+  if (!tickets.every((t) => t.status === "ready")) return null;
+  const times = tickets.map((t) => {
+    const raw = t.bumped_at ?? t.created_at;
+    return new Date(raw).getTime();
+  });
+  return Math.max(...times);
+}
+
+function useKitchenElapsedMinutes(
+  createdAt: string,
+  tickets: KdsTicket[],
+): number {
+  const createdMs = new Date(createdAt).getTime();
+
+  const completeAtMs = useMemo(
+    () => getKitchenCompleteAtMs(tickets),
+    [tickets],
+  );
+
+  const [liveMinutes, setLiveMinutes] = useState(() =>
+    Math.floor((Date.now() - createdMs) / 60000),
   );
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setElapsed(
-        Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000),
-      );
-    }, 15000); // update every 15s
-    return () => clearInterval(interval);
-  }, [createdAt]);
+    if (completeAtMs !== null) return;
 
-  return elapsed;
+    setLiveMinutes(Math.floor((Date.now() - createdMs) / 60000));
+    const interval = setInterval(() => {
+      setLiveMinutes(Math.floor((Date.now() - createdMs) / 60000));
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [completeAtMs, createdMs]);
+
+  if (completeAtMs !== null) {
+    return Math.max(0, Math.floor((completeAtMs - createdMs) / 60000));
+  }
+  return liveMinutes;
 }
 
 function getElapsedColor(minutes: number): string {
@@ -73,7 +99,7 @@ interface OrderCardProps {
 }
 
 export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
-  const elapsed = useElapsedMinutes(order.createdAt);
+  const elapsed = useKitchenElapsedMinutes(order.createdAt, order.tickets);
 
   // Build a map from order_item_id to ticket
   const ticketByItemId = useMemo(() => {
@@ -119,7 +145,14 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
             </Badge>
           )}
         </div>
-        <span className={cn("text-sm font-semibold", getElapsedColor(elapsed))}>
+        <span
+          className={cn(
+            "text-sm font-semibold",
+            overallStatus === "ready"
+              ? "text-green-400"
+              : getElapsedColor(elapsed),
+          )}
+        >
           {elapsed}p
         </span>
       </div>
