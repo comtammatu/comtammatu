@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
@@ -24,77 +25,71 @@ import {
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
-  fetchStockTransferDetail,
-  transferConfirmReceive,
-  transferConfirmShip,
-  transferMarkInTransit,
-  transferReceive,
-  upsertTransferLine,
-} from "../../transfer-actions";
+  deletePurchaseOrderLine,
+  fetchPurchaseOrderDetail,
+  upsertPurchaseOrderLine,
+} from "../../procurement-actions";
 import type { IngredientRow } from "../../page";
 
-interface TransferRecord {
+export interface PurchaseOrderDetailRecord {
   id: number;
-  transfer_number: string;
+  po_number: string;
   status: string;
+  ordered_at: string;
   notes: string | null;
-  vehicle_info: string | null;
-  shipped_at: string | null;
-  received_at: string | null;
-  receive_started_at?: string | null;
-  from_branch_id: number;
-  to_branch_id: number;
+  supplier_id: number;
+  branch_id: number;
+  suppliers: { id: number; name: string } | null;
 }
 
-interface TLineRow {
+export interface PoLineRow {
   id: number;
   ingredient_id: number;
   quantity: number;
   unit: string;
-  unit_cost_at_ship: number | null;
-  quantity_received: number | null;
+  unit_price_est: number | null;
+  line_total: number | null;
   ingredients: { id: number; name: string; unit: string } | null;
 }
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "Nháp",
-  confirmed_ship: "Đã xuất kho",
-  in_transit: "Đang VC",
-  confirmed_receive: "Đang kiểm nhận",
-  received: "Đã nhận",
+  sent: "Đã gửi",
+  partially_received: "Nhận một phần",
+  received: "Đã nhận đủ",
   cancelled: "Đã hủy",
 };
 
-export function TransferDetailClient({
-  transferId,
-  initialTransfer,
+export function PoDetailClient({
+  poId,
+  initialPo,
   initialLines,
   ingredients,
-  hqBranchId,
 }: {
-  transferId: number;
-  initialTransfer: TransferRecord;
-  initialLines: TLineRow[];
+  poId: number;
+  initialPo: PurchaseOrderDetailRecord;
+  initialLines: PoLineRow[];
   ingredients: IngredientRow[];
-  hqBranchId: number | null;
 }) {
   const router = useRouter();
-  const [tr, setTr] = useState(initialTransfer);
+  const [po, setPo] = useState(initialPo);
   const [lines, setLines] = useState(initialLines);
   const [ingredientId, setIngredientId] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  const shipFromIsHq = hqBranchId != null && tr.from_branch_id === hqBranchId;
-  const receiveToIsHq = hqBranchId != null && tr.to_branch_id === hqBranchId;
+  const isDraft = po.status === "draft";
 
   async function reload() {
-    const res = await fetchStockTransferDetail(transferId);
+    const res = await fetchPurchaseOrderDetail(poId);
     if (!res.success || !res.data) {
       toast.error("Không tải lại được");
       return;
     }
-    const d = res.data as { transfer: TransferRecord; lines: TLineRow[] };
-    setTr(d.transfer);
+    const d = res.data as {
+      po: PurchaseOrderDetailRecord;
+      lines: PoLineRow[];
+    };
+    setPo(d.po);
     setLines(d.lines);
     router.refresh();
   }
@@ -110,16 +105,26 @@ export function TransferDetailClient({
     const ing = ingredients.find((x) => x.id === iid);
     const unit = String(fd.get("unit") ?? ing?.unit ?? "");
     const qty = Number(fd.get("qty"));
+    const priceRaw = String(fd.get("unitPriceEst") ?? "").trim();
+    const unitPriceEst = priceRaw === "" ? null : Number(priceRaw);
     if (!unit || !Number.isFinite(qty) || qty <= 0) {
       toast.error("Kiểm tra số lượng và đơn vị");
       return;
     }
+    if (
+      unitPriceEst != null &&
+      (!Number.isFinite(unitPriceEst) || unitPriceEst < 0)
+    ) {
+      toast.error("Đơn giá dự kiến không hợp lệ");
+      return;
+    }
     startTransition(async () => {
-      const res = await upsertTransferLine({
-        transferId,
+      const res = await upsertPurchaseOrderLine({
+        poId,
         ingredientId: iid,
         quantity: qty,
         unit,
+        unitPriceEst,
       });
       if (!res.success) {
         toast.error(res.error ?? "Không lưu được dòng");
@@ -131,131 +136,39 @@ export function TransferDetailClient({
     });
   }
 
-  function ship() {
+  function removeLine(lineId: number) {
     startTransition(async () => {
-      const res = await transferConfirmShip(transferId);
+      const res = await deletePurchaseOrderLine({ poId, lineId });
       if (!res.success) {
-        toast.error(res.error ?? "Không xác nhận xuất");
+        toast.error(res.error ?? "Không xóa được");
         return;
       }
-      toast.success(
-        shipFromIsHq
-          ? "Đã xác nhận xuất tại Trụ sở"
-          : "Đã xác nhận xuất tại chi nhánh gửi",
-      );
+      toast.success("Đã xóa dòng");
       await reload();
     });
   }
-
-  function transit() {
-    startTransition(async () => {
-      const res = await transferMarkInTransit(transferId);
-      if (!res.success) {
-        toast.error(res.error ?? "Không cập nhật được");
-        return;
-      }
-      toast.success("Đã chuyển sang đang vận chuyển");
-      await reload();
-    });
-  }
-
-  function confirmReceiveStart() {
-    startTransition(async () => {
-      const res = await transferConfirmReceive(transferId);
-      if (!res.success) {
-        toast.error(res.error ?? "Không cập nhật được");
-        return;
-      }
-      toast.success(
-        receiveToIsHq
-          ? "Trụ sở bắt đầu kiểm nhận"
-          : "Chi nhánh nhận bắt đầu kiểm nhận",
-      );
-      await reload();
-    });
-  }
-
-  function receiveFull() {
-    startTransition(async () => {
-      const res = await transferReceive(transferId, null);
-      if (!res.success) {
-        toast.error(res.error ?? "Không nhập được kho");
-        return;
-      }
-      toast.success(
-        receiveToIsHq
-          ? "Trụ sở đã nhập đủ — tồn đã cập nhật"
-          : "Chi nhánh đã nhận đủ — tồn đã cập nhật",
-      );
-      await reload();
-    });
-  }
-
-  const isDraft = tr.status === "draft";
-  const isShipped = tr.status === "confirmed_ship";
-  const isTransit = tr.status === "in_transit";
-  const isConfirmedReceive = tr.status === "confirmed_receive";
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
-            <Link href="/admin/inventory/transfers">← Danh sách</Link>
+            <Link href="/admin/inventory/purchase-orders">← Danh sách PO</Link>
           </Button>
           <h1 className="text-2xl font-bold tracking-tight font-mono">
-            {tr.transfer_number}
+            {po.po_number}
           </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {po.suppliers?.name ?? "—"} ·{" "}
+            {new Date(po.ordered_at).toLocaleString("vi-VN")}
+          </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <Badge>{STATUS_LABEL[tr.status] ?? tr.status}</Badge>
-            {tr.vehicle_info && (
-              <span className="text-sm text-muted-foreground">
-                Xe: {tr.vehicle_info}
-              </span>
-            )}
+            <Badge variant="secondary">
+              {STATUS_LABEL[po.status] ?? po.status}
+            </Badge>
           </div>
-          {tr.receive_started_at && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Bắt đầu kiểm nhận:{" "}
-              {new Date(tr.receive_started_at).toLocaleString("vi-VN")}
-            </p>
-          )}
-          {tr.notes && (
-            <p className="mt-2 text-sm text-muted-foreground">{tr.notes}</p>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {isDraft && (
-            <Button
-              type="button"
-              onClick={ship}
-              disabled={isPending || lines.length === 0}
-            >
-              {shipFromIsHq ? "Xác nhận xuất (TS)" : "Xác nhận xuất (CN gửi)"}
-            </Button>
-          )}
-          {isShipped && (
-            <Button type="button" onClick={transit} disabled={isPending}>
-              {isPending ? "…" : "Đang vận chuyển"}
-            </Button>
-          )}
-          {isTransit && (
-            <Button
-              type="button"
-              onClick={confirmReceiveStart}
-              disabled={isPending}
-            >
-              {isPending ? "…" : "Bắt đầu kiểm nhận"}
-            </Button>
-          )}
-          {isConfirmedReceive && (
-            <Button type="button" onClick={receiveFull} disabled={isPending}>
-              {isPending
-                ? "…"
-                : receiveToIsHq
-                  ? "Xác nhận nhập Trụ sở"
-                  : "Xác nhận nhập chi nhánh"}
-            </Button>
+          {po.notes && (
+            <p className="mt-2 text-sm text-muted-foreground">{po.notes}</p>
           )}
         </div>
       </div>
@@ -265,26 +178,27 @@ export function TransferDetailClient({
           <TableHeader>
             <TableRow>
               <TableHead>Nguyên liệu</TableHead>
-              <TableHead className="text-right">SL gửi</TableHead>
+              <TableHead className="text-right">Số lượng</TableHead>
               <TableHead>Đơn vị</TableHead>
               <TableHead className="hidden sm:table-cell text-right">
-                Giá xuất
+                Đơn giá dự kiến
               </TableHead>
-              <TableHead className="hidden sm:table-cell text-right">
-                SL nhận
+              <TableHead className="hidden md:table-cell text-right">
+                Thành tiền
               </TableHead>
+              {isDraft && <TableHead className="w-14" />}
             </TableRow>
           </TableHeader>
           <TableBody>
             {lines.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={isDraft ? 6 : 5}
                   className="py-8 text-center text-muted-foreground"
                 >
                   {isDraft
-                    ? "Thêm dòng chi tiết trước khi xác nhận xuất."
-                    : "Không có dòng."}
+                    ? "Chưa có dòng — thêm nguyên liệu bên dưới."
+                    : "Không có dòng chi tiết."}
                 </TableCell>
               </TableRow>
             )}
@@ -298,15 +212,30 @@ export function TransferDetailClient({
                 </TableCell>
                 <TableCell>{l.unit}</TableCell>
                 <TableCell className="hidden sm:table-cell text-right font-mono text-muted-foreground">
-                  {l.unit_cost_at_ship != null
-                    ? `${l.unit_cost_at_ship.toLocaleString("vi-VN")} ₫`
+                  {l.unit_price_est != null
+                    ? `${l.unit_price_est.toLocaleString("vi-VN")} ₫`
                     : "—"}
                 </TableCell>
-                <TableCell className="hidden sm:table-cell text-right font-mono">
-                  {l.quantity_received != null
-                    ? l.quantity_received.toLocaleString("vi-VN")
+                <TableCell className="hidden md:table-cell text-right font-mono">
+                  {l.line_total != null
+                    ? `${l.line_total.toLocaleString("vi-VN")} ₫`
                     : "—"}
                 </TableCell>
+                {isDraft && (
+                  <TableCell>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive"
+                      disabled={isPending}
+                      onClick={() => removeLine(l.id)}
+                      aria-label="Xóa dòng"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
@@ -353,6 +282,19 @@ export function TransferDetailClient({
             <div className="space-y-1.5">
               <Label htmlFor="unit">Đơn vị</Label>
               <Input id="unit" name="unit" required placeholder="kg" />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="unitPriceEst">
+                Đơn giá dự kiến (₫, tùy chọn)
+              </Label>
+              <Input
+                id="unitPriceEst"
+                name="unitPriceEst"
+                type="number"
+                step="any"
+                min="0"
+                placeholder="Để trống nếu chưa có"
+              />
             </div>
           </div>
           <Button type="submit" size="sm" disabled={isPending || !ingredientId}>

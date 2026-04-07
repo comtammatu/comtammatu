@@ -132,13 +132,14 @@ export function PurchaseOrdersClient({
               <TableHead>NCC</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead className="hidden sm:table-cell">Ngày</TableHead>
+              <TableHead className="w-28" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={4}
+                  colSpan={5}
                   className="py-12 text-center text-muted-foreground"
                 >
                   Chưa có PO
@@ -158,6 +159,13 @@ export function PurchaseOrdersClient({
                 </TableCell>
                 <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
                   {new Date(r.ordered_at).toLocaleString("vi-VN")}
+                </TableCell>
+                <TableCell>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/admin/inventory/purchase-orders/${r.id}`}>
+                      Chi tiết
+                    </Link>
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}

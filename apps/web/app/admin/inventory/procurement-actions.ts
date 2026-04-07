@@ -121,6 +121,135 @@ export async function createPurchaseOrder(
   return { success: true, data };
 }
 
+export async function fetchPurchaseOrderDetail(
+  poId: number,
+): Promise<ActionResult> {
+  const id = z.coerce.number().int().positive().safeParse(poId);
+  if (!id.success) return { success: false, error: "ID không hợp lệ" };
+  const ctx = await getAuthContext(ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims } = ctx;
+  const { data: po, error: e1 } = await supabase
+    .from("purchase_orders")
+    .select("*, suppliers ( id, name )")
+    .eq("id", id.data)
+    .eq("tenant_id", claims.tenant_id)
+    .single();
+  if (e1 || !po)
+    return { success: false, error: "Không tìm thấy đơn đặt hàng." };
+  const { data: lines, error: e2 } = await supabase
+    .from("purchase_order_items")
+    .select("*, ingredients ( id, name, unit )")
+    .eq("po_id", id.data)
+    .eq("tenant_id", claims.tenant_id)
+    .order("id");
+  if (e2) return { success: false, error: "Không tải được dòng PO." };
+  return { success: true, data: { po, lines: lines ?? [] } };
+}
+
+const poLineSchema = z.object({
+  poId: z.coerce.number().int().positive(),
+  ingredientId: z.coerce.number().int().positive(),
+  quantity: z.coerce.number().positive({ error: "Số lượng phải lớn hơn 0" }),
+  unit: z.string().min(1, { error: "Đơn vị không được để trống" }),
+  unitPriceEst: z.union([z.number().min(0), z.null()]).optional(),
+});
+
+export async function upsertPurchaseOrderLine(
+  input: z.infer<typeof poLineSchema>,
+): Promise<ActionResult> {
+  const parsed = poLineSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+  const ctx = await getAuthContext(ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims } = ctx;
+  const d = parsed.data;
+  const { data: po, error: pe } = await supabase
+    .from("purchase_orders")
+    .select("id, status")
+    .eq("id", d.poId)
+    .eq("tenant_id", claims.tenant_id)
+    .single();
+  if (pe || !po) {
+    return { success: false, error: "Không tìm thấy PO." };
+  }
+  if (po.status !== "draft") {
+    return {
+      success: false,
+      error: "Chỉ chỉnh sửa dòng khi PO đang ở trạng thái nháp.",
+    };
+  }
+  const unitPrice = d.unitPriceEst ?? null;
+  const lineTotal =
+    unitPrice != null ? Number((d.quantity * unitPrice).toFixed(2)) : null;
+  const { error } = await supabase.from("purchase_order_items").upsert(
+    {
+      tenant_id: claims.tenant_id,
+      po_id: d.poId,
+      ingredient_id: d.ingredientId,
+      quantity: d.quantity,
+      unit: d.unit,
+      unit_price_est: unitPrice,
+      line_total: lineTotal,
+    },
+    { onConflict: "po_id,ingredient_id,tenant_id" },
+  );
+  if (error) {
+    return { success: false, error: "Không thể lưu dòng PO." };
+  }
+  return { success: true };
+}
+
+const deletePoLineSchema = z.object({
+  poId: z.coerce.number().int().positive(),
+  lineId: z.coerce.number().int().positive(),
+});
+
+export async function deletePurchaseOrderLine(
+  input: z.infer<typeof deletePoLineSchema>,
+): Promise<ActionResult> {
+  const parsed = deletePoLineSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+  const ctx = await getAuthContext(ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims } = ctx;
+  const { data: po, error: pe } = await supabase
+    .from("purchase_orders")
+    .select("id, status")
+    .eq("id", parsed.data.poId)
+    .eq("tenant_id", claims.tenant_id)
+    .single();
+  if (pe || !po) {
+    return { success: false, error: "Không tìm thấy PO." };
+  }
+  if (po.status !== "draft") {
+    return {
+      success: false,
+      error: "Chỉ xóa dòng khi PO đang ở trạng thái nháp.",
+    };
+  }
+  const { error } = await supabase
+    .from("purchase_order_items")
+    .delete()
+    .eq("id", parsed.data.lineId)
+    .eq("po_id", parsed.data.poId)
+    .eq("tenant_id", claims.tenant_id);
+  if (error) {
+    return { success: false, error: "Không thể xóa dòng." };
+  }
+  return { success: true };
+}
+
 export async function fetchGrnDetail(grnId: number): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(grnId);
   if (!id.success) return { success: false, error: "ID không hợp lệ" };

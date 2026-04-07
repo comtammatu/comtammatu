@@ -25,7 +25,7 @@
 **Nguyên tắc vận hành:**
 
 - **Kho Trụ sở (chi nhánh có `is_headquarters = true`):** là **điểm nhập duy nhất** từ nhà cung cấp ngoài. Mọi **PO**, **GRN**, cập nhật **giá vốn (WAC)** và **3-way matching** với **hóa đơn đầu vào** đều gắn với kho này.
-- **Kho từng chi nhánh vận hành:** **không** tạo PO/GRN với NCC. Mọi nhập tại chi nhánh là **nhận nội bộ từ Trụ sở** qua **phiếu luân chuyển** (có trạng thái xuất / vận chuyển / nhận).
+- **Kho từng chi nhánh vận hành:** **không** tạo PO/GRN với NCC. Nhập/xuất giữa các kho nội bộ dùng **phiếu luân chuyển** (xuất tại kho gửi → vận chuyển → nhập tại kho nhận). Cho phép: **Trụ sở → chi nhánh**, **chi nhánh → Trụ sở**, **chi nhánh → chi nhánh** (không cho hai đầu cùng là Trụ sở).
 
 ```
 NCC → [PO] → [GRN] → Tồn kho Trụ sở
@@ -39,27 +39,28 @@ NCC → [PO] → [GRN] → Tồn kho Trụ sở
                    Kiểm kê định kỳ, cảnh báo min/max
 ```
 
-### 1b. Luồng Trụ sở → chi nhánh (state machine)
+### 1b. Luân chuyển nội bộ (cùng state machine)
 
-| Bước                     | Trạng thái (DB)  | Việc làm                                                                            |
-| ------------------------ | ---------------- | ----------------------------------------------------------------------------------- |
-| Tạo phiếu                | `draft`          | Liệt kê nguyên liệu, SL, chi nhánh đích                                             |
-| Xác nhận xuất tại Trụ sở | `confirmed_ship` | Trừ tồn HQ (`transfer_out`), ghi cost theo WAC tại HQ                               |
-| Đang vận chuyển          | `in_transit`     | Theo dõi (biển số / ghi chú — tùy pha UI)                                           |
-| Xác nhận nhập tại CN     | `received`       | Cộng tồn CN (`transfer_in`), ghi nhận SL thực nhận (lệch → điều chỉnh dòng / lý do) |
+| Bước                           | Trạng thái (DB)     | Việc làm                                                                                       |
+| ------------------------------ | ------------------- | ---------------------------------------------------------------------------------------------- |
+| Tạo phiếu                      | `draft`             | Chọn kho **gửi** / **nhận** (TS↔CN hoặc CN↔CN), liệt kê nguyên liệu và SL                      |
+| Xác nhận xuất tại kho gửi      | `confirmed_ship`    | Trừ tồn tại `from_branch_id` (`transfer_out`), snapshot WAC vào dòng phiếu                     |
+| Đang vận chuyển                | `in_transit`        | Theo dõi (biển số / ghi chú — tùy pha UI)                                                      |
+| Bắt đầu kiểm nhận tại kho nhận | `confirmed_receive` | Kho nhận mở kiểm đếm (`receive_started_at`); chưa cộng tồn                                     |
+| Xác nhận nhập tại kho nhận     | `received`          | Cộng tồn tại `to_branch_id` (`transfer_in`), ghi nhận SL thực nhận (lệch → điều chỉnh / lý do) |
 
 Trạng thái `cancelled` khi hủy phiếu (theo quyền); không ghi nhận tồn nếu chưa từng `confirmed_ship` (hoặc hoàn tác theo policy nội bộ — ưu tiên tránh xóa bản ghi, dùng workflow hủy).
 
 ### Các loại phiếu kho
 
-| Loại phiếu                  | Mô tả                                | `stock_movements.type` |
-| --------------------------- | ------------------------------------ | ---------------------- |
-| **Nhập từ NCC (GRN)**       | Chỉ tại Trụ sở                       | `grn_receipt`          |
-| **Xuất đi chi nhánh**       | Trừ HQ khi xác nhận xuất luân chuyển | `transfer_out`         |
-| **Nhận từ Trụ sở**          | Cộng CN khi hoàn tất nhận            | `transfer_in`          |
-| **Xuất theo bán**           | Theo recipe khi order `completed`    | `consumption`          |
-| **Điều chỉnh / hỏng / mất** | Thủ công                             | `adjustment`           |
-| **Kiểm kê**                 | Điều chỉnh sau đếm                   | `count_adjustment`     |
+| Loại phiếu                  | Mô tả                                            | `stock_movements.type` |
+| --------------------------- | ------------------------------------------------ | ---------------------- |
+| **Nhập từ NCC (GRN)**       | Chỉ tại Trụ sở                                   | `grn_receipt`          |
+| **Xuất luân chuyển**        | Trừ kho gửi (`from_branch_id`) khi xác nhận xuất | `transfer_out`         |
+| **Nhận luân chuyển**        | Cộng kho nhận (`to_branch_id`) khi hoàn tất nhận | `transfer_in`          |
+| **Xuất theo bán**           | Theo recipe khi order `completed`                | `consumption`          |
+| **Điều chỉnh / hỏng / mất** | Thủ công                                         | `adjustment`           |
+| **Kiểm kê**                 | Điều chỉnh sau đếm                               | `count_adjustment`     |
 
 ---
 

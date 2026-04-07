@@ -5,6 +5,9 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "../_lib/auth";
 import { fetchHeadquartersBranchId } from "./_lib/headquarters";
+import type { Database, SupabaseClient } from "@comtammatu/database";
+
+type TenantSupabase = SupabaseClient<Database>;
 
 const ROLES: readonly StaffRole[] = [
   "owner",
@@ -12,6 +15,13 @@ const ROLES: readonly StaffRole[] = [
   "area_manager",
   "branch_manager",
 ];
+
+/** For RSC/UI: id chi nhánh Trụ sở (nhãn nút luân chuyển). */
+export async function resolveHeadquartersBranchId(): Promise<number | null> {
+  const ctx = await getAuthContext(ROLES);
+  if (!ctx) return null;
+  return fetchHeadquartersBranchId(ctx.supabase, ctx.claims.tenant_id);
+}
 
 export async function fetchStockTransferDetail(
   transferId: number,
@@ -45,7 +55,7 @@ export async function fetchStockTransfers(): Promise<ActionResult> {
   const { data: transfers, error } = await supabase
     .from("stock_transfers")
     .select(
-      "id, transfer_number, status, notes, vehicle_info, shipped_at, received_at, from_branch_id, to_branch_id, created_at",
+      "id, transfer_number, status, notes, vehicle_info, shipped_at, received_at, receive_started_at, from_branch_id, to_branch_id, created_at",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("created_at", { ascending: false });
@@ -65,11 +75,42 @@ export async function fetchStockTransfers(): Promise<ActionResult> {
   return { success: true, data: enriched };
 }
 
-const transferCreateSchema = z.object({
-  toBranchId: z.coerce.number().int().positive(),
-  notes: z.string().optional(),
-  vehicleInfo: z.string().optional(),
-});
+const transferCreateSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("hq_to_branch"),
+    toBranchId: z.coerce.number().int().positive(),
+    notes: z.string().optional(),
+    vehicleInfo: z.string().optional(),
+  }),
+  z.object({
+    kind: z.literal("branch_to_hq"),
+    fromBranchId: z.coerce.number().int().positive(),
+    notes: z.string().optional(),
+    vehicleInfo: z.string().optional(),
+  }),
+  z.object({
+    kind: z.literal("branch_to_branch"),
+    fromBranchId: z.coerce.number().int().positive(),
+    toBranchId: z.coerce.number().int().positive(),
+    notes: z.string().optional(),
+    vehicleInfo: z.string().optional(),
+  }),
+]);
+
+async function loadBranchHeadquartersFlag(
+  supabase: TenantSupabase,
+  tenantId: number,
+  branchId: number,
+): Promise<boolean | null> {
+  const { data, error } = await supabase
+    .from("branches")
+    .select("is_headquarters")
+    .eq("tenant_id", tenantId)
+    .eq("id", branchId)
+    .single();
+  if (error || !data) return null;
+  return data.is_headquarters;
+}
 
 export async function createStockTransfer(
   input: z.infer<typeof transferCreateSchema>,
@@ -88,16 +129,73 @@ export async function createStockTransfer(
   if (!hqId) {
     return { success: false, error: "Chưa cấu hình Trụ sở." };
   }
-  if (parsed.data.toBranchId === hqId) {
-    return { success: false, error: "Chi nhánh đích phải khác Trụ sở." };
+
+  let fromBranchId: number;
+  let toBranchId: number;
+
+  if (parsed.data.kind === "hq_to_branch") {
+    const toHq = await loadBranchHeadquartersFlag(
+      supabase,
+      claims.tenant_id,
+      parsed.data.toBranchId,
+    );
+    if (toHq == null || toHq === true || parsed.data.toBranchId === hqId) {
+      return {
+        success: false,
+        error: "Chi nhánh nhận phải là chi nhánh vận hành (không phải Trụ sở).",
+      };
+    }
+    fromBranchId = hqId;
+    toBranchId = parsed.data.toBranchId;
+  } else if (parsed.data.kind === "branch_to_hq") {
+    const fromHq = await loadBranchHeadquartersFlag(
+      supabase,
+      claims.tenant_id,
+      parsed.data.fromBranchId,
+    );
+    if (
+      fromHq == null ||
+      fromHq === true ||
+      parsed.data.fromBranchId === hqId
+    ) {
+      return {
+        success: false,
+        error: "Chi nhánh gửi phải là chi nhánh vận hành (không phải Trụ sở).",
+      };
+    }
+    fromBranchId = parsed.data.fromBranchId;
+    toBranchId = hqId;
+  } else {
+    if (parsed.data.fromBranchId === parsed.data.toBranchId) {
+      return { success: false, error: "Chi nhánh gửi và nhận phải khác nhau." };
+    }
+    const fromHq = await loadBranchHeadquartersFlag(
+      supabase,
+      claims.tenant_id,
+      parsed.data.fromBranchId,
+    );
+    const toHq = await loadBranchHeadquartersFlag(
+      supabase,
+      claims.tenant_id,
+      parsed.data.toBranchId,
+    );
+    if (fromHq == null || toHq == null || fromHq === true || toHq === true) {
+      return {
+        success: false,
+        error: "Luân chuyển chi nhánh — cả hai đầu phải là chi nhánh vận hành.",
+      };
+    }
+    fromBranchId = parsed.data.fromBranchId;
+    toBranchId = parsed.data.toBranchId;
   }
+
   const transferNumber = `TRF-${Date.now()}`;
   const { data, error } = await supabase
     .from("stock_transfers")
     .insert({
       tenant_id: claims.tenant_id,
-      from_branch_id: hqId,
-      to_branch_id: parsed.data.toBranchId,
+      from_branch_id: fromBranchId,
+      to_branch_id: toBranchId,
       transfer_number: transferNumber,
       status: "draft",
       notes: parsed.data.notes ?? null,
@@ -188,6 +286,27 @@ export async function transferMarkInTransit(
   return { success: true };
 }
 
+export async function transferConfirmReceive(
+  transferId: number,
+): Promise<ActionResult> {
+  const id = z.coerce.number().int().positive().safeParse(transferId);
+  if (!id.success) return { success: false, error: "ID không hợp lệ" };
+  const ctx = await getAuthContext(ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase } = ctx;
+  const { error } = await supabase.rpc("stock_transfer_confirm_receive", {
+    p_transfer_id: id.data,
+  });
+  if (error) {
+    console.error("transferConfirmReceive", error);
+    return {
+      success: false,
+      error: "Không thể bắt đầu kiểm nhận (phiếu phải đang vận chuyển).",
+    };
+  }
+  return { success: true };
+}
+
 export async function transferReceive(
   transferId: number,
   items: Record<string, number> | null,
@@ -203,7 +322,7 @@ export async function transferReceive(
   });
   if (error) {
     console.error("transferReceive", error);
-    return { success: false, error: "Không thể xác nhận nhập chi nhánh." };
+    return { success: false, error: "Không thể xác nhận nhập kho đích." };
   }
   return { success: true };
 }
@@ -219,6 +338,5 @@ export async function fetchBranchesForTransfer(): Promise<ActionResult> {
     .eq("is_active", true)
     .order("name");
   if (error) return { success: false, error: "Không thể tải chi nhánh." };
-  const ops = (data ?? []).filter((b) => !b.is_headquarters);
-  return { success: true, data: ops };
+  return { success: true, data: data ?? [] };
 }
