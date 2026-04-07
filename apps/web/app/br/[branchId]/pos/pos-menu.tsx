@@ -14,7 +14,15 @@ import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Clock, DoorOpen, LogOut, Monitor, X } from "lucide-react";
+import {
+  Clock,
+  DoorOpen,
+  LogOut,
+  Monitor,
+  Package,
+  UtensilsCrossed,
+  X,
+} from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import type { CategoryType } from "@comtammatu/shared";
 import { CATEGORY_TYPE_LABELS } from "@comtammatu/shared/menu";
@@ -116,6 +124,8 @@ interface PosMenuProps {
   session: ActiveSession;
   /** From URL `?table=` — preselect dine-in table when valid */
   initialTableId?: number;
+  /** From server: `dine_in` when `?table=` matches a non-maintenance table; else `takeaway` */
+  initialOrderType: OrderType;
 }
 
 export function PosMenu({
@@ -124,6 +134,7 @@ export function PosMenu({
   tables: initialTables,
   session,
   initialTableId,
+  initialOrderType,
 }: PosMenuProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -136,7 +147,7 @@ export function PosMenu({
   );
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [customizerItem, setCustomizerItem] = useState<MenuItem | null>(null);
-  const [orderType, setOrderType] = useState<OrderType>("dine_in");
+  const [orderType, setOrderType] = useState<OrderType>(initialOrderType);
   const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
   const [showCloseSession, setShowCloseSession] = useState(false);
@@ -477,292 +488,355 @@ export function PosMenu({
     [addToCart, appendTarget, branchId, loadSessionOrders],
   );
 
+  const sessionHeader = (
+    <div className="flex items-center justify-between gap-2 border-b bg-background px-2 py-2 sm:px-3">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <EmployeePortalBackControl />
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Monitor className="size-3 shrink-0" />
+            <span className="truncate">
+              {session.pos_terminals?.name ?? "POS"}
+            </span>
+          </span>
+          <span className="flex min-w-0 items-center gap-1">
+            <Clock className="size-3 shrink-0" />
+            <span className="truncate">
+              <span className="hidden sm:inline">Ca mở lúc </span>
+              {formatTime(session.opened_at)}
+            </span>
+          </span>
+        </div>
+      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 shrink-0 text-xs"
+        onClick={() => setShowCloseSession(true)}
+      >
+        <LogOut className="mr-1 size-3" />
+        Đóng ca
+      </Button>
+    </div>
+  );
+
+  const appendBannerRow =
+    appendTarget != null ? (
+      <div
+        className="flex items-center justify-between gap-2 border-b bg-amber-500/15 px-3 py-2 dark:bg-amber-500/20"
+        role="status"
+      >
+        <p className="min-w-0 text-xs leading-snug text-amber-950 dark:text-amber-50">
+          <span className="font-semibold">
+            Thêm món vào đơn #{appendTarget.orderNumber}
+          </span>
+          <span className="text-amber-900/90 dark:text-amber-100/90">
+            {" "}
+            — chọn món trên lưới bên dưới
+          </span>
+        </p>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 shrink-0 gap-1 px-2 text-xs text-amber-950 hover:bg-amber-500/25 dark:text-amber-50"
+          onClick={() => setAppendTarget(null)}
+        >
+          <X className="size-3.5" />
+          Hủy
+        </Button>
+      </div>
+    ) : null;
+
+  const orderTypeRow = (
+    <div className="border-b bg-background px-3 py-2">
+      <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        Loại đơn
+      </p>
+      <div
+        role="radiogroup"
+        aria-label="Loại đơn hàng"
+        className="flex gap-1 rounded-lg bg-muted p-1"
+      >
+        <button
+          type="button"
+          role="radio"
+          aria-checked={orderType === "dine_in"}
+          className={cn(
+            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+            orderType === "dine_in"
+              ? "bg-background shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+          onClick={() => handleOrderTypeChange("dine_in")}
+        >
+          <UtensilsCrossed className="size-3.5" />
+          Tại bàn
+        </button>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={orderType === "takeaway"}
+          className={cn(
+            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+            orderType === "takeaway"
+              ? "bg-background shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+          onClick={() => handleOrderTypeChange("takeaway")}
+        >
+          <Package className="size-3.5" />
+          Mang về
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <>
-      {/* Left Panel — Menu Browse */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Session header — back + meta + đóng ca (no extra full-width row) */}
-        <div className="flex items-center justify-between gap-2 border-b bg-background px-2 py-2 sm:px-3">
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <EmployeePortalBackControl />
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Monitor className="size-3 shrink-0" />
-                <span className="truncate">
-                  {session.pos_terminals?.name ?? "POS"}
-                </span>
-              </span>
-              <span className="flex min-w-0 items-center gap-1">
-                <Clock className="size-3 shrink-0" />
-                <span className="truncate">
-                  <span className="hidden sm:inline">Ca mở lúc </span>
-                  {formatTime(session.opened_at)}
-                </span>
-              </span>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 shrink-0 text-xs"
-            onClick={() => setShowCloseSession(true)}
-          >
-            <LogOut className="mr-1 size-3" />
-            Đóng ca
-          </Button>
+      {!orderContextReady ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {sessionHeader}
+          {appendBannerRow}
+          {orderTypeRow}
+          <PosTableGate
+            tables={localTables}
+            selectedTableId={selectedTableId}
+            onTableSelect={handleTableSelect}
+            className="min-h-0 flex-1"
+          />
         </div>
+      ) : (
+        <>
+          <div className="flex flex-1 flex-col overflow-hidden">
+            {sessionHeader}
+            {appendBannerRow}
 
-        {appendTarget != null && (
-          <div
-            className="flex items-center justify-between gap-2 border-b bg-amber-500/15 px-3 py-2 dark:bg-amber-500/20"
-            role="status"
-          >
-            <p className="min-w-0 text-xs leading-snug text-amber-950 dark:text-amber-50">
-              <span className="font-semibold">
-                Thêm món vào đơn #{appendTarget.orderNumber}
-              </span>
-              <span className="text-amber-900/90 dark:text-amber-100/90">
-                {" "}
-                — chọn món trên lưới bên dưới
-              </span>
-            </p>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 shrink-0 gap-1 px-2 text-xs text-amber-950 hover:bg-amber-500/25 dark:text-amber-50"
-              onClick={() => setAppendTarget(null)}
-            >
-              <X className="size-3.5" />
-              Hủy
-            </Button>
-          </div>
-        )}
-
-        {orderContextReady ? (
-          availableMenuZones.length === 0 ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center text-muted-foreground">
-              <p className="text-sm font-medium">Chưa có món trong thực đơn</p>
-              <p className="text-xs">
-                Thêm danh mục và món trong quản trị để phục vụ tại POS.
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* Khu thực đơn (món chính / phụ / nước / tráng miệng) */}
-              <div className="border-b bg-muted/30">
-                <ScrollArea className="w-full">
-                  <div
-                    className="flex gap-1 p-2"
-                    role="tablist"
-                    aria-label="Khu thực đơn"
-                  >
-                    {availableMenuZones.map((z) => (
-                      <Button
-                        key={z}
-                        type="button"
-                        role="tab"
-                        aria-selected={effectiveMenuZone === z}
-                        variant={effectiveMenuZone === z ? "default" : "ghost"}
-                        size="sm"
-                        className={cn(
-                          "shrink-0 text-sm",
-                          effectiveMenuZone === z && "shadow-sm",
-                        )}
-                        onClick={() => setActiveMenuZone(z)}
-                      >
-                        {CATEGORY_TYPE_LABELS[z] ?? z}
-                      </Button>
-                    ))}
-                  </div>
-                </ScrollArea>
+            {availableMenuZones.length === 0 ? (
+              <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center text-muted-foreground">
+                <p className="text-sm font-medium">
+                  Chưa có món trong thực đơn
+                </p>
+                <p className="text-xs">
+                  Thêm danh mục và món trong quản trị để phục vụ tại POS.
+                </p>
               </div>
-
-              {/* Danh mục trong khu (nếu có nhiều danh mục) */}
-              {categoriesInActiveZone.length > 1 ? (
+            ) : (
+              <>
+                {/* Khu thực đơn (món chính / phụ / nước / tráng miệng) */}
                 <div className="border-b bg-muted/30">
                   <ScrollArea className="w-full">
                     <div
                       className="flex gap-1 p-2"
                       role="tablist"
-                      aria-label="Danh mục món"
+                      aria-label="Khu thực đơn"
                     >
-                      {categoriesInActiveZone.map((cat) => (
+                      {availableMenuZones.map((z) => (
                         <Button
-                          key={cat.id}
+                          key={z}
                           type="button"
                           role="tab"
-                          aria-selected={activeCategoryId === cat.id}
+                          aria-selected={effectiveMenuZone === z}
                           variant={
-                            activeCategoryId === cat.id ? "secondary" : "ghost"
+                            effectiveMenuZone === z ? "default" : "ghost"
                           }
                           size="sm"
                           className={cn(
                             "shrink-0 text-sm",
-                            activeCategoryId === cat.id && "shadow-sm",
+                            effectiveMenuZone === z && "shadow-sm",
                           )}
-                          onClick={() => setActiveCategoryId(cat.id)}
+                          onClick={() => setActiveMenuZone(z)}
                         >
-                          {cat.name}
-                          <Badge
-                            variant="outline"
-                            className="ml-1.5 text-[10px]"
-                          >
-                            {cat.menu_items.length}
-                          </Badge>
+                          {CATEGORY_TYPE_LABELS[z] ?? z}
                         </Button>
                       ))}
                     </div>
                   </ScrollArea>
                 </div>
-              ) : (
-                activeCategory && (
-                  <div className="border-b px-3 py-2">
-                    <p className="text-sm font-medium">{activeCategory.name}</p>
-                    <span className="text-xs text-muted-foreground">
-                      {CATEGORY_TYPE_LABELS[activeCategory.type] ??
-                        activeCategory.type}
-                    </span>
-                  </div>
-                )
-              )}
 
-              {/* Lưới món */}
-              <ScrollArea className="flex-1">
-                <div className="grid grid-cols-2 gap-2 p-2 sm:grid-cols-3 lg:grid-cols-4">
-                  {activeCategory?.menu_items.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className="flex flex-col rounded-lg border bg-card p-3 text-left transition-colors hover:bg-accent active:scale-[0.98]"
-                      onClick={() => handleItemTap(item)}
-                    >
-                      <span className="line-clamp-2 text-sm font-medium">
-                        {item.name}
+                {/* Danh mục trong khu (nếu có nhiều danh mục) */}
+                {categoriesInActiveZone.length > 1 ? (
+                  <div className="border-b bg-muted/30">
+                    <ScrollArea className="w-full">
+                      <div
+                        className="flex gap-1 p-2"
+                        role="tablist"
+                        aria-label="Danh mục món"
+                      >
+                        {categoriesInActiveZone.map((cat) => (
+                          <Button
+                            key={cat.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={activeCategoryId === cat.id}
+                            variant={
+                              activeCategoryId === cat.id
+                                ? "secondary"
+                                : "ghost"
+                            }
+                            size="sm"
+                            className={cn(
+                              "shrink-0 text-sm",
+                              activeCategoryId === cat.id && "shadow-sm",
+                            )}
+                            onClick={() => setActiveCategoryId(cat.id)}
+                          >
+                            {cat.name}
+                            <Badge
+                              variant="outline"
+                              className="ml-1.5 text-[10px]"
+                            >
+                              {cat.menu_items.length}
+                            </Badge>
+                          </Button>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                ) : (
+                  activeCategory && (
+                    <div className="border-b px-3 py-2">
+                      <p className="text-sm font-medium">
+                        {activeCategory.name}
+                      </p>
+                      <span className="text-xs text-muted-foreground">
+                        {CATEGORY_TYPE_LABELS[activeCategory.type] ??
+                          activeCategory.type}
                       </span>
-                      {item.menu_item_variants.length > 0 && (
-                        <span className="mt-1 text-[10px] text-muted-foreground">
-                          {item.menu_item_variants.length} lựa chọn
+                    </div>
+                  )
+                )}
+
+                {/* Lưới món */}
+                <ScrollArea className="flex-1">
+                  <div className="grid grid-cols-2 gap-2 p-2 sm:grid-cols-3 lg:grid-cols-4">
+                    {activeCategory?.menu_items.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className="flex flex-col rounded-lg border bg-card p-3 text-left transition-colors hover:bg-accent active:scale-[0.98]"
+                        onClick={() => handleItemTap(item)}
+                      >
+                        <span className="line-clamp-2 text-sm font-medium">
+                          {item.name}
                         </span>
-                      )}
-                      <span className="mt-auto pt-2 text-sm font-semibold text-primary">
-                        {formatVND(item.base_price)}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-                {activeCategory?.menu_items.length === 0 && (
-                  <div className="flex items-center justify-center py-12 text-muted-foreground">
-                    Không có món trong danh mục này
+                        {item.menu_item_variants.length > 0 && (
+                          <span className="mt-1 text-[10px] text-muted-foreground">
+                            {item.menu_item_variants.length} lựa chọn
+                          </span>
+                        )}
+                        <span className="mt-auto pt-2 text-sm font-semibold text-primary">
+                          {formatVND(item.base_price)}
+                        </span>
+                      </button>
+                    ))}
                   </div>
-                )}
-              </ScrollArea>
-            </>
-          )
-        ) : (
-          <PosTableGate
-            tables={localTables}
-            selectedTableId={selectedTableId}
-            onTableSelect={handleTableSelect}
-          />
-        )}
-      </div>
-
-      {/* Right Panel — Cart / Orders */}
-      <div className="flex w-[320px] shrink-0 flex-col border-l bg-background lg:w-[360px]">
-        <div className="border-b px-2 py-2">
-          <div
-            role="tablist"
-            aria-label="POS sidebar"
-            className="flex gap-1 rounded-lg bg-muted p-1"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={!showOrders}
-              className={cn(
-                "flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                !showOrders
-                  ? "bg-background shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-              onClick={() => setShowOrders(false)}
-            >
-              Giỏ hàng
-              {cartItems.length > 0 && (
-                <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
-                  {cartItems.reduce((sum, i) => sum + i.quantity, 0)}
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={showOrders}
-              className={cn(
-                "flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                showOrders
-                  ? "bg-background shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-              onClick={() => {
-                setShowOrders(true);
-                void loadSessionOrders();
-              }}
-            >
-              Đơn hàng
-            </button>
+                  {activeCategory?.menu_items.length === 0 && (
+                    <div className="flex items-center justify-center py-12 text-muted-foreground">
+                      Không có món trong danh mục này
+                    </div>
+                  )}
+                </ScrollArea>
+              </>
+            )}
           </div>
-        </div>
 
-        {showOrders ? (
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold">Đơn hàng</span>
-                {sessionOrders.length > 0 && (
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                    {sessionOrders.length}
-                  </span>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => void loadSessionOrders()}
+          {/* Right Panel — Cart / Orders */}
+          <div className="flex w-[320px] shrink-0 flex-col border-l bg-background lg:w-[360px]">
+            <div className="border-b px-2 py-2">
+              <div
+                role="tablist"
+                aria-label="POS sidebar"
+                className="flex gap-1 rounded-lg bg-muted p-1"
               >
-                <DoorOpen className="mr-1 size-3" />
-                Tải lại
-              </Button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={!showOrders}
+                  className={cn(
+                    "flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    !showOrders
+                      ? "bg-background shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                  onClick={() => setShowOrders(false)}
+                >
+                  Giỏ hàng
+                  {cartItems.length > 0 && (
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
+                      {cartItems.reduce((sum, i) => sum + i.quantity, 0)}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={showOrders}
+                  className={cn(
+                    "flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    showOrders
+                      ? "bg-background shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                  onClick={() => {
+                    setShowOrders(true);
+                    void loadSessionOrders();
+                  }}
+                >
+                  Đơn hàng
+                </button>
+              </div>
             </div>
-            <OrderHistory
-              orders={sessionOrders}
-              onViewBill={(id) => setBillOrderId(id)}
-              onViewDetail={(id) => setOrderDetailId(id)}
-            />
+
+            {showOrders ? (
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">Đơn hàng</span>
+                    {sessionOrders.length > 0 && (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        {sessionOrders.length}
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => void loadSessionOrders()}
+                  >
+                    <DoorOpen className="mr-1 size-3" />
+                    Tải lại
+                  </Button>
+                </div>
+                <OrderHistory
+                  orders={sessionOrders}
+                  onViewBill={(id) => setBillOrderId(id)}
+                  onViewDetail={(id) => setOrderDetailId(id)}
+                />
+              </div>
+            ) : (
+              <CartSidebar
+                items={cartItems}
+                total={cartTotal}
+                orderType={orderType}
+                selectedTableId={selectedTableId}
+                tables={localTables}
+                canSubmit={canSubmit}
+                isSubmitting={isPending}
+                onUpdateQuantity={updateQuantity}
+                onRemoveItem={removeItem}
+                onClearCart={clearCart}
+                onOrderTypeChange={handleOrderTypeChange}
+                onRequestChangeTable={handleRequestChangeTable}
+                onSubmitOrder={handleSubmitOrder}
+                orderNote={orderNote}
+                onOrderNoteChange={setOrderNote}
+              />
+            )}
           </div>
-        ) : (
-          <CartSidebar
-            items={cartItems}
-            total={cartTotal}
-            orderType={orderType}
-            selectedTableId={selectedTableId}
-            tables={localTables}
-            canSubmit={canSubmit}
-            isSubmitting={isPending}
-            contextLocked={!orderContextReady}
-            onUpdateQuantity={updateQuantity}
-            onRemoveItem={removeItem}
-            onClearCart={clearCart}
-            onOrderTypeChange={handleOrderTypeChange}
-            onRequestChangeTable={handleRequestChangeTable}
-            onSubmitOrder={handleSubmitOrder}
-            orderNote={orderNote}
-            onOrderNoteChange={setOrderNote}
-          />
-        )}
-      </div>
+        </>
+      )}
 
       {/* Item Customizer Sheet */}
       <ItemCustomizer

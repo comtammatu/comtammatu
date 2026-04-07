@@ -10,12 +10,14 @@ interface PosTableGateProps {
   tables: BranchTable[];
   selectedTableId: number | null;
   onTableSelect: (tableId: number | null) => void;
+  className?: string;
 }
 
 export function PosTableGate({
   tables,
   selectedTableId,
   onTableSelect,
+  className,
 }: PosTableGateProps) {
   const tablesByZone = useMemo(() => {
     const map = new Map<string, BranchTable[]>();
@@ -29,7 +31,12 @@ export function PosTableGate({
   }, [tables]);
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden bg-muted/20">
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/20",
+        className,
+      )}
+    >
       <div className="border-b bg-background px-4 py-4 sm:px-6">
         <div className="flex items-center gap-2 text-primary">
           <LayoutGrid className="size-6 shrink-0" />
@@ -39,8 +46,8 @@ export function PosTableGate({
             </h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
               Chọn một bàn trống để mở thực đơn. Khách mang đi — chọn{" "}
-              <span className="font-medium text-foreground">Mang về</span> ở cột
-              phải.
+              <span className="font-medium text-foreground">Mang về</span> ở
+              thanh trên.
             </p>
           </div>
         </div>
@@ -53,8 +60,8 @@ export function PosTableGate({
           </p>
         </div>
       ) : (
-        <ScrollArea className="flex-1">
-          <div className="space-y-6 p-4 sm:p-6">
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="mx-auto w-full max-w-4xl space-y-6 p-4 sm:p-6">
             {Array.from(tablesByZone.entries()).map(
               ([zoneName, zoneTables]) => (
                 <div key={zoneName}>
@@ -115,7 +122,7 @@ export function PosTableGate({
         <p className="text-center text-xs text-muted-foreground">
           {selectedTableId == null
             ? "Chạm bàn trống để gán bàn và mở thực đơn."
-            : "Đã chọn bàn — thực đơn hiển thị bên trái."}
+            : "Đã chọn bàn — thực đơn và giỏ hàng sẽ mở."}
         </p>
       </div>
     </div>

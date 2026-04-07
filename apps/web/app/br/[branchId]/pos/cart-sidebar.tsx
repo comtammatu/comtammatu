@@ -39,8 +39,6 @@ interface CartSidebarProps {
   tables: BranchTable[];
   canSubmit: boolean;
   isSubmitting: boolean;
-  /** True when đơn tại bàn và chưa chọn bàn (chưa mở thực đơn) */
-  contextLocked: boolean;
   onUpdateQuantity: (key: string, delta: number) => void;
   onRemoveItem: (key: string) => void;
   onClearCart: () => void;
@@ -59,7 +57,6 @@ export function CartSidebar({
   tables,
   canSubmit,
   isSubmitting,
-  contextLocked,
   onUpdateQuantity,
   onRemoveItem,
   onClearCart,
@@ -160,51 +157,34 @@ export function CartSidebar({
         </div>
       </div>
 
-      {contextLocked && (
-        <div className="border-b bg-muted/40 px-3 py-2.5">
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            <span className="font-medium text-foreground">Tại bàn:</span> chọn
-            bàn trống bên trái.{" "}
-            <span className="font-medium text-foreground">Mang về:</span> thực
-            đơn mở ngay, không cần bàn.
-          </p>
+      {orderType === "dine_in" && selectedTableNumber != null && (
+        <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+          <div className="min-w-0">
+            <p className="text-[10px] font-medium uppercase text-muted-foreground">
+              Bàn phục vụ
+            </p>
+            <p className="truncate text-sm font-semibold">
+              Bàn {selectedTableNumber}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 shrink-0 text-xs"
+            type="button"
+            onClick={onRequestChangeTable}
+          >
+            Đổi bàn
+          </Button>
         </div>
       )}
-
-      {!contextLocked &&
-        orderType === "dine_in" &&
-        selectedTableNumber != null && (
-          <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
-            <div className="min-w-0">
-              <p className="text-[10px] font-medium uppercase text-muted-foreground">
-                Bàn phục vụ
-              </p>
-              <p className="truncate text-sm font-semibold">
-                Bàn {selectedTableNumber}
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 shrink-0 text-xs"
-              type="button"
-              onClick={onRequestChangeTable}
-            >
-              Đổi bàn
-            </Button>
-          </div>
-        )}
 
       {/* Cart items */}
       {items.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 text-center text-muted-foreground">
           <ShoppingCart className="size-10 opacity-30" />
           <p className="text-sm">Chưa có món</p>
-          <p className="text-xs">
-            {contextLocked
-              ? "Chọn bàn trống bên trái, hoặc Mang về ở trên."
-              : "Chọn món từ menu bên trái."}
-          </p>
+          <p className="text-xs">Chọn món từ menu bên trái.</p>
         </div>
       ) : (
         <>

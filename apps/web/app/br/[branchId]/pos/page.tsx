@@ -8,6 +8,7 @@ import {
 import { PosMenu } from "./pos-menu";
 import type { MenuCategory } from "./pos-menu";
 import { SessionGate } from "./session-gate";
+import type { OrderType } from "./types";
 
 export default async function PosPage({
   params,
@@ -68,6 +69,16 @@ export default async function PosPage({
     fetchTablesForBranch(branchIdNum),
   ]);
 
+  const tablesList = (tablesResult.data ?? []) as BranchTable[];
+  const tableParamValidForDineIn =
+    initialTableId != null &&
+    tablesList.some(
+      (t) => t.id === initialTableId && t.status !== "maintenance",
+    );
+  const initialOrderType: OrderType = tableParamValidForDineIn
+    ? "dine_in"
+    : "takeaway";
+
   if (!menuResult.success || !menuResult.data) {
     return (
       <div className="flex flex-1 items-center justify-center">
@@ -94,9 +105,10 @@ export default async function PosPage({
       <PosMenu
         branchId={branchIdNum}
         categories={menuResult.data as MenuCategory[]}
-        tables={(tablesResult.data ?? []) as BranchTable[]}
+        tables={tablesList}
         session={session}
         initialTableId={initialTableId}
+        initialOrderType={initialOrderType}
       />
     </Suspense>
   );
