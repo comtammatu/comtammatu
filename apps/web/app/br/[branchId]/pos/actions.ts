@@ -657,6 +657,8 @@ export async function fetchOrderForBill(
       order_number,
       order_type,
       status,
+      payment_status,
+      payment_method,
       subtotal,
       tax_amount,
       service_charge,

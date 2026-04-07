@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@comtammatu/ui";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import {
+  BRANCH_FLOOR_SETTINGS_ROLES,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 
 interface Tab {
   href: string;
@@ -11,31 +14,41 @@ interface Tab {
   allowedRoles: readonly StaffRole[];
 }
 
+const TENANT_STRATEGY_ROLES = [
+  "owner",
+  "super_manager",
+] as const satisfies readonly StaffRole[];
+
 const TABS: Tab[] = [
   {
     href: "/admin/settings/branches",
     label: "Chi nhánh",
-    allowedRoles: ["owner", "super_manager"],
+    allowedRoles: TENANT_STRATEGY_ROLES,
   },
   {
     href: "/admin/settings/general",
     label: "Chung",
-    allowedRoles: ["owner", "super_manager"],
+    allowedRoles: TENANT_STRATEGY_ROLES,
+  },
+  {
+    href: "/admin/settings/payments",
+    label: "Thanh toán",
+    allowedRoles: TENANT_STRATEGY_ROLES,
   },
   {
     href: "/admin/settings/areas",
     label: "Khu vực",
-    allowedRoles: ["owner", "super_manager"],
+    allowedRoles: TENANT_STRATEGY_ROLES,
   },
   {
     href: "/admin/settings/tables",
     label: "Bàn",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    allowedRoles: BRANCH_FLOOR_SETTINGS_ROLES,
   },
   {
     href: "/admin/settings/kds",
     label: "Trạm bếp",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    allowedRoles: BRANCH_FLOOR_SETTINGS_ROLES,
   },
 ];
 

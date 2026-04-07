@@ -3,19 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@comtammatu/database/supabase/server";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import {
+  BRANCH_FLOOR_SETTINGS_ROLES,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "../../_lib/auth";
 import { TABLE_STATUSES } from "./constants";
 
 /* ─── Helpers ─── */
 
-const SETTINGS_ROLES: StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-];
+const SETTINGS_ROLES: readonly StaffRole[] = BRANCH_FLOOR_SETTINGS_ROLES;
 
 async function verifyBranchOwnership(
   supabase: Awaited<ReturnType<typeof createClient>>,

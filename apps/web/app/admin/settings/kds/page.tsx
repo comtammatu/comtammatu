@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
+import {
+  canManageBranchFloorSettings,
+  extractClaims,
+} from "@comtammatu/shared/auth";
 import { StationsClient } from "./stations-client";
 import type { StationRow, CategoryOption } from "./stations-client";
 
@@ -16,6 +19,10 @@ export default async function KdsSettingsPage() {
 
   const claims = extractClaims(user.app_metadata);
   if (!claims) redirect("/login");
+
+  if (!canManageBranchFloorSettings(claims.user_role)) {
+    redirect("/admin/settings");
+  }
 
   // branch_manager: only their branch. Others: all branches.
   const branchFilter = claims.branch_id;

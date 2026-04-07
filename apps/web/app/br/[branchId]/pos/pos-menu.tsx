@@ -588,7 +588,11 @@ export function PosMenu({
       />
 
       {/* Bill Receipt Sheet */}
-      <BillReceipt orderId={billOrderId} onClose={() => setBillOrderId(null)} />
+      <BillReceipt
+        branchId={branchId}
+        orderId={billOrderId}
+        onClose={() => setBillOrderId(null)}
+      />
     </>
   );
 }

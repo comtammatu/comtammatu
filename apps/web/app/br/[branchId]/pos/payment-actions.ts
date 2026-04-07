@@ -5,9 +5,16 @@ import { MODULE_ACL } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   getPaymentProvider,
+  getRegisteredMethods,
   type PaymentMethod,
 } from "@comtammatu/shared/providers";
+import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
+import { ensurePaymentProvidersRegistered } from "../../../../lib/payment-providers-init";
 import { getAuthContext } from "../../_lib/auth";
+
+type PosSupabase = NonNullable<
+  Awaited<ReturnType<typeof getAuthContext>>
+>["supabase"];
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 
@@ -22,6 +29,92 @@ const paymentSchema = z.object({
   amount: z.coerce.number().positive({ error: "Số tiền không hợp lệ" }),
 });
 
+export interface CreatePaymentSuccessData {
+  payment_id: number;
+  status: string;
+  qr_data?: string;
+  redirect_url?: string;
+}
+
+function truthySetting(v: string | undefined): boolean {
+  return v === "true" || v === "1";
+}
+
+async function resolveAllowedPaymentMethods(
+  supabase: PosSupabase,
+  tenantId: number,
+): Promise<PaymentMethod[]> {
+  ensurePaymentProvidersRegistered();
+
+  const { data: rows } = await supabase
+    .from("system_settings")
+    .select("key, value")
+    .eq("tenant_id", tenantId)
+    .in("key", [
+      SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR,
+      SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO,
+    ]);
+
+  const settings: Record<string, string> = {};
+  if (rows) {
+    for (const row of rows) {
+      settings[row.key] = row.value;
+    }
+  }
+
+  const registered = new Set(getRegisteredMethods());
+  const methods: PaymentMethod[] = [];
+
+  if (registered.has("cash")) {
+    methods.push("cash");
+  }
+  if (
+    truthySetting(settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR]) &&
+    registered.has("vietqr")
+  ) {
+    methods.push("vietqr");
+  }
+  if (
+    truthySetting(settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO]) &&
+    registered.has("momo")
+  ) {
+    methods.push("momo");
+  }
+
+  return methods;
+}
+
+/* ─── fetchPaymentMethodsForPos ─── */
+
+/**
+ * Methods available on POS for this tenant: cash + enabled e-wallets
+ * with registered providers (env credentials).
+ */
+export async function fetchPaymentMethodsForPos(
+  branchId: number,
+): Promise<ActionResult<{ methods: PaymentMethod[] }>> {
+  const parsedBranch = branchIdSchema.safeParse(branchId);
+  if (!parsedBranch.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const ctx = await getAuthContext(POS_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  if (claims.branch_id !== parsedBranch.data) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const methods = await resolveAllowedPaymentMethods(
+    supabase,
+    claims.tenant_id,
+  );
+
+  return { success: true, data: { methods } };
+}
+
 /* ─── createPayment ─── */
 
 /**
@@ -34,7 +127,7 @@ export async function createPayment(
   orderId: number,
   method: "cash" | "vietqr" | "momo",
   amount: number,
-): Promise<ActionResult<{ payment_id: number; status: string }>> {
+): Promise<ActionResult<CreatePaymentSuccessData>> {
   const parsedBranch = branchIdSchema.safeParse(branchId);
   if (!parsedBranch.success) {
     return { success: false, error: "Branch ID không hợp lệ" };
@@ -86,6 +179,17 @@ export async function createPayment(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { success: false, error: "Phiên đăng nhập hết hạn" };
+
+  const allowedMethods = await resolveAllowedPaymentMethods(
+    supabase,
+    claims.tenant_id,
+  );
+  if (!allowedMethods.includes(parsedPayment.data.method as PaymentMethod)) {
+    return {
+      success: false,
+      error: "Phương thức thanh toán không được phép hoặc chưa cấu hình.",
+    };
+  }
 
   // Use provider interface — swap implementation without changing this code
   const provider = getPaymentProvider(

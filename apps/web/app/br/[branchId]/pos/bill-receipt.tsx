@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { formatVND } from "@comtammatu/shared/format";
+import type { PaymentMethod } from "@comtammatu/shared/providers";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
@@ -12,8 +13,10 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@comtammatu/ui/components/sheet";
-import { Loader2, Printer } from "lucide-react";
+import { Loader2, Printer, ExternalLink } from "lucide-react";
+import { toast } from "@comtammatu/ui/components/sonner";
 import { fetchOrderForBill } from "./actions";
+import { createPayment, fetchPaymentMethodsForPos } from "./payment-actions";
 import type { CartModifier, CartSide } from "./types";
 
 interface OrderItem {
@@ -33,6 +36,8 @@ interface OrderData {
   order_number: string;
   order_type: string;
   status: string;
+  payment_status: string | null;
+  payment_method: string | null;
   subtotal: number;
   tax_amount: number;
   service_charge: number;
@@ -47,20 +52,35 @@ interface OrderData {
   order_items: OrderItem[];
 }
 
+const METHOD_LABELS: Record<string, string> = {
+  cash: "Tiền mặt",
+  vietqr: "VietQR",
+  momo: "MoMo",
+};
+
 interface BillReceiptProps {
+  branchId: number;
   orderId: number | null;
   onClose: () => void;
 }
 
-export function BillReceipt({ orderId, onClose }: BillReceiptProps) {
+export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
   const [order, setOrder] = useState<OrderData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [payPending, startPayTransition] = useTransition();
+  const [refreshTick, setRefreshTick] = useState(0);
+  const [methods, setMethods] = useState<PaymentMethod[]>([]);
+  const [pendingExtras, setPendingExtras] = useState<{
+    qr_data?: string;
+    redirect_url?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (orderId === null) {
       setOrder(null);
       setError(null);
+      setPendingExtras(null);
       return;
     }
 
@@ -72,6 +92,7 @@ export function BillReceipt({ orderId, onClose }: BillReceiptProps) {
       if (result.success && result.data) {
         setOrder(result.data as OrderData);
         setError(null);
+        setPendingExtras(null);
       } else {
         setError(result.error ?? "Không thể tải đơn hàng");
       }
@@ -80,7 +101,19 @@ export function BillReceipt({ orderId, onClose }: BillReceiptProps) {
     return () => {
       cancelled = true;
     };
-  }, [orderId]);
+  }, [orderId, refreshTick]);
+
+  useEffect(() => {
+    if (orderId === null) {
+      setMethods([]);
+      return;
+    }
+    void fetchPaymentMethodsForPos(branchId).then((r) => {
+      if (r.success && r.data) {
+        setMethods(r.data.methods);
+      }
+    });
+  }, [branchId, orderId]);
 
   const handlePrint = useCallback(() => {
     window.print();
@@ -91,9 +124,44 @@ export function BillReceipt({ orderId, onClose }: BillReceiptProps) {
       if (!open) {
         onClose();
         setOrder(null);
+        setPendingExtras(null);
       }
     },
     [onClose],
+  );
+
+  const handlePay = useCallback(
+    (method: PaymentMethod) => {
+      if (orderId === null || !order) return;
+      startPayTransition(async () => {
+        const result = await createPayment(
+          branchId,
+          orderId,
+          method,
+          Number(order.total_amount),
+        );
+        if (result.success && result.data) {
+          if (method === "cash") {
+            toast.success("Đã thanh toán tiền mặt");
+            setRefreshTick((t) => t + 1);
+            return;
+          }
+          if (result.data.status === "pending") {
+            toast.message("Đang chờ thanh toán", {
+              description: "Quý khách hoàn tất trên app / chuyển khoản.",
+            });
+            setPendingExtras({
+              qr_data: result.data.qr_data,
+              redirect_url: result.data.redirect_url,
+            });
+            setRefreshTick((t) => t + 1);
+          }
+        } else {
+          toast.error(result.error ?? "Không thể thanh toán");
+        }
+      });
+    },
+    [branchId, order, orderId],
   );
 
   const formatDate = (dateStr: string) => {
@@ -106,6 +174,9 @@ export function BillReceipt({ orderId, onClose }: BillReceiptProps) {
       minute: "2-digit",
     });
   };
+
+  const isPaid = order?.payment_status === "paid";
+  const showPaySection = order && !isPaid && methods.length > 0;
 
   return (
     <Sheet open={orderId !== null} onOpenChange={handleOpenChange}>
@@ -172,6 +243,16 @@ export function BillReceipt({ orderId, onClose }: BillReceiptProps) {
                       <span>{order.tables.number}</span>
                     </div>
                   )}
+                  <div className="flex justify-between">
+                    <span>Thanh toán:</span>
+                    <span className="font-medium">
+                      {isPaid
+                        ? (METHOD_LABELS[order.payment_method ?? ""] ??
+                          order.payment_method ??
+                          "Đã thanh toán")
+                        : "Chưa thanh toán"}
+                    </span>
+                  </div>
                 </div>
 
                 <Separator className="my-2" />
@@ -249,6 +330,65 @@ export function BillReceipt({ orderId, onClose }: BillReceiptProps) {
                   Cảm ơn quý khách!
                 </p>
               </div>
+
+              {/* Payment actions — not printed */}
+              {showPaySection && (
+                <div className="border-t px-4 py-3 print:hidden">
+                  <p className="mb-2 text-sm font-medium">Thanh toán</p>
+                  <div className="flex flex-col gap-2">
+                    {methods.map((m) => (
+                      <Button
+                        key={m}
+                        type="button"
+                        variant={m === "cash" ? "default" : "secondary"}
+                        disabled={payPending}
+                        className="w-full justify-center"
+                        onClick={() => handlePay(m)}
+                      >
+                        {payPending && (
+                          <Loader2 className="mr-2 size-4 animate-spin" />
+                        )}
+                        {METHOD_LABELS[m] ?? m}
+                      </Button>
+                    ))}
+                  </div>
+                  {pendingExtras?.redirect_url && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="mt-2 w-full"
+                      asChild
+                    >
+                      <a
+                        href={pendingExtras.redirect_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="mr-2 size-4" />
+                        Mở trang thanh toán MoMo
+                      </a>
+                    </Button>
+                  )}
+                  {pendingExtras?.qr_data &&
+                    pendingExtras.qr_data.startsWith("http") && (
+                      <>
+                        {/* Dynamic QR URL from payment provider */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={pendingExtras.qr_data}
+                          alt="QR thanh toán"
+                          className="mt-2 max-h-48 w-full object-contain"
+                        />
+                      </>
+                    )}
+                  {pendingExtras?.qr_data &&
+                    !pendingExtras.qr_data.startsWith("http") && (
+                      <pre className="mt-2 max-h-32 overflow-auto rounded border bg-muted p-2 text-[10px]">
+                        {pendingExtras.qr_data}
+                      </pre>
+                    )}
+                </div>
+              )}
             </ScrollArea>
 
             {/* Print button (hidden in print) */}

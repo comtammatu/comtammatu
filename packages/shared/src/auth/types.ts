@@ -30,6 +30,21 @@ export const BRANCH_ROLES: readonly StaffRole[] = [
   "chef",
 ] as const;
 
+/**
+ * Settings → Bàn, Trạm bếp (cấu hình sàn, không phải chiến lược chuỗi).
+ * Owner không gồm — chủ sở hữu xem tổng thể vận hành; chi tiết sàn/bếp do quản lý điều hành.
+ */
+export const BRANCH_FLOOR_SETTINGS_ROLES: readonly StaffRole[] = [
+  "super_manager",
+  "area_manager",
+  "branch_manager",
+] as const;
+
+/** Settings → Bàn, trạm bếp (owner không tham gia) */
+export function canManageBranchFloorSettings(role: StaffRole): boolean {
+  return BRANCH_FLOOR_SETTINGS_ROLES.some((r) => r === role);
+}
+
 /** JWT custom claims injected by Supabase auth hook */
 export interface JwtClaims {
   tenant_id: number;

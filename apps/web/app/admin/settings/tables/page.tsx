@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
+import {
+  canManageBranchFloorSettings,
+  extractClaims,
+} from "@comtammatu/shared/auth";
 import { TablesClient } from "./tables-client";
 
 export default async function TablesPage() {
@@ -13,6 +16,10 @@ export default async function TablesPage() {
 
   const claims = extractClaims(user.app_metadata);
   if (!claims) redirect("/login");
+
+  if (!canManageBranchFloorSettings(claims.user_role)) {
+    redirect("/admin/settings");
+  }
 
   // branch_manager: only their branch. Others: all branches.
   const branchFilter = claims.branch_id;

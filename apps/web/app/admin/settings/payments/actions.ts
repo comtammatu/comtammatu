@@ -6,48 +6,29 @@ import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import {
-  GENERAL_SYSTEM_SETTING_KEYS,
-  SYSTEM_SETTING_KEYS,
-} from "@comtammatu/shared/settings";
+import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 
-const settingsSchema = z.object({
-  [SYSTEM_SETTING_KEYS.VAT_RATE]: z
-    .string()
-    .min(1, { error: "Thuế VAT không được để trống" })
-    .refine((v) => !isNaN(Number(v)) && Number(v) >= 0 && Number(v) <= 100, {
-      error: "Thuế VAT phải từ 0-100%",
-    }),
-  [SYSTEM_SETTING_KEYS.SERVICE_CHARGE]: z
-    .string()
-    .min(1, { error: "Phí dịch vụ không được để trống" })
-    .refine((v) => !isNaN(Number(v)) && Number(v) >= 0 && Number(v) <= 100, {
-      error: "Phí dịch vụ phải từ 0-100%",
-    }),
-  [SYSTEM_SETTING_KEYS.CURRENCY]: z
-    .string()
-    .min(1, { error: "Đơn vị tiền tệ không được để trống" }),
-  [SYSTEM_SETTING_KEYS.STORE_PHONE]: z.string().optional().default(""),
-  [SYSTEM_SETTING_KEYS.STORE_EMAIL]: z
-    .string()
-    .optional()
-    .default("")
-    .refine((v) => v === "" || z.email().safeParse(v).success, {
-      error: "Email không hợp lệ",
-    }),
+const paymentSettingsSchema = z.object({
+  [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR]: z.enum(["true", "false"]),
+  [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO]: z.enum(["true", "false"]),
 });
 
-export async function updateSettings(
+export async function updatePaymentSettings(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  const keys = [...GENERAL_SYSTEM_SETTING_KEYS];
-  const raw: Record<string, unknown> = {};
-  for (const key of keys) {
-    raw[key] = formData.get(key) ?? "";
-  }
+  const raw = {
+    [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR]:
+      formData.get(SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR) === "true"
+        ? "true"
+        : "false",
+    [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO]:
+      formData.get(SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO) === "true"
+        ? "true"
+        : "false",
+  };
 
-  const parsed = settingsSchema.safeParse(raw);
+  const parsed = paymentSettingsSchema.safeParse(raw);
   if (!parsed.success) {
     return {
       success: false,
@@ -69,7 +50,6 @@ export async function updateSettings(
     return { success: false, error: "Không có quyền" };
   }
 
-  // Upsert each setting
   const entries = Object.entries(parsed.data) as [string, string][];
   for (const [key, value] of entries) {
     const { error } = await supabase
@@ -87,6 +67,6 @@ export async function updateSettings(
     }
   }
 
-  revalidatePath("/admin/settings/general");
+  revalidatePath("/admin/settings/payments");
   return { success: true };
 }

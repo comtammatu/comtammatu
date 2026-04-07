@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
+import { extractClaims, isAdminRole } from "@comtammatu/shared/auth";
 import { SettingsNav } from "./settings-nav";
 
 export default async function SettingsLayout({
@@ -19,12 +19,18 @@ export default async function SettingsLayout({
   const claims = extractClaims(user.app_metadata);
   if (!claims) redirect("/login");
 
+  const isOwner = claims.user_role === "owner";
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Cài đặt</h1>
         <p className="mt-1 text-muted-foreground">
-          Quản lý chi nhánh, bàn và cấu hình hệ thống
+          {isOwner
+            ? "Cấu hình chuỗi: chi nhánh, thương hiệu, thanh toán và phân vùng. Thiết lập bàn, bếp và ca POS do quản lý điều hành."
+            : isAdminRole(claims.user_role)
+              ? "Quản lý chi nhánh, sàn ăn, bếp và cấu hình hệ thống"
+              : "Cấu hình theo chi nhánh được phân công"}
         </p>
       </div>
       <SettingsNav role={claims.user_role} />
