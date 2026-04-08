@@ -10,7 +10,7 @@ import { LoginForm } from "./login-form";
 
 function BrandPanel() {
   return (
-    <div className="hidden lg:flex relative flex-col items-center justify-center overflow-hidden bg-primary p-12 text-primary-foreground">
+    <div className="hidden lg:flex relative flex-col items-center justify-center overflow-hidden bg-zinc-950 p-12 text-white">
       {/* Decorative circles */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-24 -left-24 size-96 rounded-full bg-white/5" />
@@ -128,7 +128,7 @@ export default function LoginPage() {
       <div className="flex flex-col items-center justify-center bg-background px-4 py-12">
         <div className="w-full max-w-sm space-y-8">
           <div className="flex flex-col items-center space-y-3 text-center">
-            <div className="flex size-16 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/25">
+            <div className="flex size-16 items-center justify-center rounded-2xl bg-primary shadow-sm shadow-black/10">
               <UtensilsCrossed className="size-8 text-primary-foreground" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight">Đăng nhập</h1>
