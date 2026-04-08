@@ -96,7 +96,7 @@ export function PurchaseOrdersClient({
     <>
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-3xl font-bold tracking-tight">
             Đơn đặt hàng (PO)
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">

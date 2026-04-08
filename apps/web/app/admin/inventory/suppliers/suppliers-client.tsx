@@ -68,7 +68,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
     <>
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Nhà cung cấp</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Nhà cung cấp</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Chỉ dùng cho nhập hàng tại{" "}
             <Link href="/admin/settings/branches" className="underline">

@@ -92,7 +92,7 @@ export function RecipesClient({
   return (
     <>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Công thức (BOM)</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Công thức (BOM)</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Định mức nguyên liệu theo món. Khi đơn hàng chuyển sang hoàn thành, hệ
           thống trừ tồn theo công thức (nếu đã cấu hình).

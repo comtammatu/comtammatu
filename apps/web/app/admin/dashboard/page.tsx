@@ -26,17 +26,20 @@ function StatCard({ title, value, change, icon: Icon }: StatCardProps) {
   const isPositive = change >= 0;
 
   return (
-    <Card>
+    <Card className="relative overflow-hidden">
+      <div className="absolute right-0 top-0 size-24 -translate-y-4 translate-x-4 rounded-full bg-primary/5" />
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}
         </CardTitle>
-        <Icon className="size-4 text-muted-foreground" />
+        <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
+          <Icon className="size-5 text-primary" />
+        </div>
       </CardHeader>
       <CardContent>
-        <p className="text-2xl font-bold tabular-nums">{value}</p>
-        <p
-          className={`mt-1 flex items-center gap-1 text-xs ${isPositive ? "text-emerald-600" : "text-destructive"}`}
+        <p className="text-3xl font-bold tracking-tight tabular-nums">{value}</p>
+        <div
+          className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${isPositive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}
         >
           {isPositive ? (
             <ArrowUp className="size-3" />
@@ -44,7 +47,7 @@ function StatCard({ title, value, change, icon: Icon }: StatCardProps) {
             <ArrowDown className="size-3" />
           )}
           {Math.abs(change).toFixed(1)}% so với hôm qua
-        </p>
+        </div>
       </CardContent>
     </Card>
   );
@@ -100,9 +103,9 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Tổng quan</h1>
-        <p className="mt-1 text-muted-foreground">
-          Tổng quan hoạt động kinh doanh
+        <h1 className="text-3xl font-bold tracking-tight">Tổng quan</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Tổng quan hoạt động kinh doanh hôm nay
         </p>
       </div>
 
@@ -129,17 +132,17 @@ export default async function DashboardPage() {
 
       {stats.recentOrders.length > 0 && (
         <div>
-          <h2 className="mb-4 text-lg font-semibold">Đơn hàng gần đây</h2>
+          <h2 className="mb-4 text-lg font-semibold tracking-tight">Đơn hàng gần đây</h2>
           <Card>
             <CardContent className="p-0">
-              <ul className="divide-y">
+              <ul className="divide-y divide-border/60">
                 {stats.recentOrders.map((order) => (
                   <li
                     key={order.id}
-                    className="flex items-center justify-between gap-4 px-4 py-3"
+                    className="flex items-center justify-between gap-4 px-5 py-3.5 transition-colors hover:bg-muted/40"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">
+                      <p className="truncate text-sm font-semibold">
                         #{order.order_number}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -154,7 +157,7 @@ export default async function DashboardPage() {
                       >
                         {ORDER_STATUS_LABELS[order.status] ?? order.status}
                       </Badge>
-                      <span className="text-sm font-medium tabular-nums">
+                      <span className="min-w-[80px] text-right text-sm font-semibold tabular-nums">
                         {formatVND(order.total_amount)}
                       </span>
                     </div>

@@ -4,7 +4,7 @@ export default function CrmPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Khách hàng</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Khách hàng</h1>
         <p className="mt-1 text-muted-foreground">
           Quản lý khách hàng và chương trình thành viên
         </p>

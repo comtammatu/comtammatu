@@ -13,55 +13,57 @@
 @theme inline {
   --font-sans: var(--font-be-vietnam-pro), system-ui, -apple-system, sans-serif;
 
-  --color-background: oklch(0.98 0.005 80);
-  --color-foreground: oklch(0.15 0.02 55);
+  /* Primary: Appetizing warm red — the hero color for CTAs, brand identity */
+  --color-background: oklch(0.985 0.003 75);
+  --color-foreground: oklch(0.18 0.03 30);
 
-  --color-primary: oklch(0.5 0.14 55);
+  --color-primary: oklch(0.52 0.2 25);
   --color-primary-foreground: oklch(0.98 0.005 80);
 
-  --color-secondary: oklch(0.94 0.01 80);
-  --color-secondary-foreground: oklch(0.25 0.02 55);
+  --color-secondary: oklch(0.95 0.008 75);
+  --color-secondary-foreground: oklch(0.3 0.03 30);
 
-  --color-accent: oklch(0.7 0.14 80);
-  --color-accent-foreground: oklch(0.15 0.02 55);
+  /* Accent: Warm gold — highlights, badges, active states */
+  --color-accent: oklch(0.72 0.16 85);
+  --color-accent-foreground: oklch(0.2 0.03 55);
 
-  --color-muted: oklch(0.94 0.01 80);
-  --color-muted-foreground: oklch(0.55 0.02 55);
+  --color-muted: oklch(0.95 0.006 75);
+  --color-muted-foreground: oklch(0.5 0.02 55);
 
   --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.15 0.02 55);
+  --color-card-foreground: oklch(0.18 0.03 30);
 
   --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.15 0.02 55);
+  --color-popover-foreground: oklch(0.18 0.03 30);
 
-  --color-border: oklch(0.88 0.01 80);
-  --color-input: oklch(0.88 0.01 80);
-  --color-ring: oklch(0.5 0.14 55);
-  --color-ring-offset: oklch(0.98 0.005 80);
+  --color-border: oklch(0.9 0.008 75);
+  --color-input: oklch(0.9 0.008 75);
+  --color-ring: oklch(0.52 0.2 25);
+  --color-ring-offset: oklch(0.985 0.003 75);
 
-  --color-destructive: oklch(0.55 0.2 27);
+  --color-destructive: oklch(0.55 0.22 27);
   --color-destructive-foreground: oklch(0.98 0.005 0);
 
   /* Status colors */
-  --color-success: oklch(0.55 0.17 155);
-  --color-warning: oklch(0.7 0.16 80);
+  --color-success: oklch(0.6 0.18 155);
+  --color-warning: oklch(0.75 0.15 85);
   --color-info: oklch(0.6 0.15 240);
 
-  /* Sidebar */
-  --color-sidebar: oklch(0.96 0.008 80);
-  --color-sidebar-foreground: oklch(0.25 0.02 55);
-  --color-sidebar-primary: oklch(0.5 0.14 55);
-  --color-sidebar-primary-foreground: oklch(0.98 0.005 80);
-  --color-sidebar-accent: oklch(0.91 0.015 80);
-  --color-sidebar-accent-foreground: oklch(0.25 0.02 55);
-  --color-sidebar-border: oklch(0.88 0.01 80);
-  --color-sidebar-ring: oklch(0.5 0.14 55);
+  /* Sidebar: Dark warm — professional contrast against light content */
+  --color-sidebar: oklch(0.22 0.035 30);
+  --color-sidebar-foreground: oklch(0.88 0.01 75);
+  --color-sidebar-primary: oklch(0.72 0.16 85);
+  --color-sidebar-primary-foreground: oklch(0.18 0.03 30);
+  --color-sidebar-accent: oklch(0.28 0.04 30);
+  --color-sidebar-accent-foreground: oklch(0.92 0.01 75);
+  --color-sidebar-border: oklch(0.3 0.03 30);
+  --color-sidebar-ring: oklch(0.72 0.16 85);
 
-  /* Radius */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
+  /* Radius — rounder for modern feel */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 1rem;
 
   /* Animations */
   --animate-fade-in: fade-in 0.2s ease-out;
@@ -141,49 +143,49 @@
 /* Dark mode variant */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Dark mode overrides */
+/* Dark mode overrides (KDS uses .dark) */
 .dark {
-  --color-background: oklch(0.16 0.02 55);
-  --color-foreground: oklch(0.93 0.01 80);
+  --color-background: oklch(0.14 0.02 30);
+  --color-foreground: oklch(0.93 0.008 75);
 
-  --color-primary: oklch(0.65 0.14 55);
-  --color-primary-foreground: oklch(0.13 0.02 55);
+  --color-primary: oklch(0.65 0.18 25);
+  --color-primary-foreground: oklch(0.12 0.02 30);
 
-  --color-secondary: oklch(0.24 0.02 55);
-  --color-secondary-foreground: oklch(0.93 0.01 80);
+  --color-secondary: oklch(0.22 0.02 30);
+  --color-secondary-foreground: oklch(0.93 0.008 75);
 
-  --color-accent: oklch(0.6 0.12 80);
-  --color-accent-foreground: oklch(0.93 0.01 80);
+  --color-accent: oklch(0.68 0.14 85);
+  --color-accent-foreground: oklch(0.93 0.008 75);
 
-  --color-muted: oklch(0.24 0.02 55);
-  --color-muted-foreground: oklch(0.6 0.02 55);
+  --color-muted: oklch(0.22 0.02 30);
+  --color-muted-foreground: oklch(0.58 0.02 55);
 
-  --color-card: oklch(0.2 0.02 55);
-  --color-card-foreground: oklch(0.93 0.01 80);
+  --color-card: oklch(0.18 0.02 30);
+  --color-card-foreground: oklch(0.93 0.008 75);
 
-  --color-popover: oklch(0.2 0.02 55);
-  --color-popover-foreground: oklch(0.93 0.01 80);
+  --color-popover: oklch(0.18 0.02 30);
+  --color-popover-foreground: oklch(0.93 0.008 75);
 
-  --color-border: oklch(0.3 0.02 55);
-  --color-input: oklch(0.3 0.02 55);
-  --color-ring: oklch(0.65 0.14 55);
-  --color-ring-offset: oklch(0.16 0.02 55);
+  --color-border: oklch(0.28 0.02 30);
+  --color-input: oklch(0.28 0.02 30);
+  --color-ring: oklch(0.65 0.18 25);
+  --color-ring-offset: oklch(0.14 0.02 30);
 
-  --color-destructive: oklch(0.45 0.18 27);
-  --color-destructive-foreground: oklch(0.93 0.01 0);
+  --color-destructive: oklch(0.5 0.2 27);
+  --color-destructive-foreground: oklch(0.93 0.008 0);
 
   --color-success: oklch(0.65 0.17 155);
-  --color-warning: oklch(0.75 0.14 80);
+  --color-warning: oklch(0.75 0.14 85);
   --color-info: oklch(0.65 0.13 240);
 
-  --color-sidebar: oklch(0.18 0.02 55);
-  --color-sidebar-foreground: oklch(0.9 0.01 80);
-  --color-sidebar-primary: oklch(0.65 0.14 55);
-  --color-sidebar-primary-foreground: oklch(0.13 0.02 55);
-  --color-sidebar-accent: oklch(0.26 0.02 55);
-  --color-sidebar-accent-foreground: oklch(0.9 0.01 80);
-  --color-sidebar-border: oklch(0.3 0.02 55);
-  --color-sidebar-ring: oklch(0.65 0.14 55);
+  --color-sidebar: oklch(0.14 0.02 30);
+  --color-sidebar-foreground: oklch(0.9 0.008 75);
+  --color-sidebar-primary: oklch(0.68 0.14 85);
+  --color-sidebar-primary-foreground: oklch(0.12 0.02 30);
+  --color-sidebar-accent: oklch(0.22 0.025 30);
+  --color-sidebar-accent-foreground: oklch(0.9 0.008 75);
+  --color-sidebar-border: oklch(0.28 0.02 30);
+  --color-sidebar-ring: oklch(0.68 0.14 85);
 }
 
 /* Base layer */

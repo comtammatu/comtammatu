@@ -24,7 +24,7 @@ export default async function SettingsLayout({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Cài đặt</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Cài đặt</h1>
         <p className="mt-1 text-muted-foreground">
           {isOwner
             ? "Cấu hình chuỗi: chi nhánh, thương hiệu, thanh toán và phân vùng. Thiết lập bàn, bếp và ca POS do quản lý điều hành."

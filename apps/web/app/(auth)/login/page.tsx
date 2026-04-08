@@ -127,9 +127,9 @@ export default function LoginPage() {
       {/* Form panel */}
       <div className="flex flex-col items-center justify-center bg-background px-4 py-12">
         <div className="w-full max-w-sm space-y-8">
-          <div className="flex flex-col items-center space-y-2 text-center">
-            <div className="flex size-14 items-center justify-center rounded-full bg-primary">
-              <UtensilsCrossed className="size-7 text-primary-foreground" />
+          <div className="flex flex-col items-center space-y-3 text-center">
+            <div className="flex size-16 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/25">
+              <UtensilsCrossed className="size-8 text-primary-foreground" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight">Đăng nhập</h1>
             <p className="text-sm text-muted-foreground">
@@ -137,7 +137,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <Card>
+          <Card className="shadow-xl shadow-black/5">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg">Tài khoản</CardTitle>
               <CardDescription>

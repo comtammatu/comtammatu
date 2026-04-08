@@ -119,13 +119,13 @@ function SidebarNav({
   onNavigate?: () => void;
 }) {
   return (
-    <nav className="space-y-6">
+    <nav className="space-y-5">
       {groups.map((group) => (
         <div key={group.title}>
-          <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+          <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
             {group.title}
           </p>
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {group.items.map((item) => {
               const isActive = pathname.startsWith(item.href);
               const Icon = item.icon;
@@ -135,13 +135,16 @@ function SidebarNav({
                   href={item.href}
                   onClick={onNavigate}
                   className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
                     isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                      : "text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
                   )}
                 >
-                  <Icon className="size-5 shrink-0" />
+                  {isActive && (
+                    <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-sidebar-primary" />
+                  )}
+                  <Icon className={cn("size-[18px] shrink-0 transition-colors", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/70")} />
                   {item.label}
                 </Link>
               );
@@ -164,18 +167,18 @@ function SidebarUserFooter({
 }) {
   return (
     <>
-      <Separator />
+      <Separator className="bg-sidebar-border" />
       <div className="flex items-center gap-3 p-4">
-        <Avatar className="size-8">
-          <AvatarFallback className="bg-muted text-xs font-medium">
+        <Avatar className="size-9 ring-2 ring-sidebar-primary/20">
+          <AvatarFallback className="bg-sidebar-accent text-xs font-semibold text-sidebar-accent-foreground">
             {getInitials(user.name)}
           </AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-sidebar-foreground">
+          <p className="truncate text-sm font-semibold text-sidebar-foreground">
             {user.name}
           </p>
-          <p className="truncate text-xs text-sidebar-foreground/50">{role}</p>
+          <p className="truncate text-[11px] font-medium text-sidebar-foreground/45">{role}</p>
         </div>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -219,13 +222,18 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
         {/* ── Desktop Sidebar (hidden on mobile) ── */}
         <aside className="hidden w-64 flex-col border-r bg-sidebar md:flex">
           {/* Brand */}
-          <div className="flex h-14 items-center gap-2 border-b px-4">
-            <div className="flex size-8 items-center justify-center rounded-md bg-primary">
-              <UtensilsCrossed className="size-4 text-primary-foreground" />
+          <div className="flex h-14 items-center gap-3 border-b border-sidebar-border px-4">
+            <div className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary shadow-sm">
+              <UtensilsCrossed className="size-5 text-sidebar-primary-foreground" />
             </div>
-            <span className="font-semibold text-sidebar-foreground">
-              Cơm Tấm Má Tư
-            </span>
+            <div>
+              <span className="text-[15px] font-bold tracking-tight text-sidebar-foreground">
+                Cơm Tấm Má Tư
+              </span>
+              <p className="text-[10px] font-medium uppercase tracking-widest text-sidebar-foreground/40">
+                Quản lý
+              </p>
+            </div>
           </div>
 
           {/* Nav */}
@@ -240,7 +248,7 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
         {/* ── Main Area ── */}
         <div className="flex flex-1 flex-col">
           {/* Header */}
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-6">
+          <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-border/60 bg-background/80 px-4 backdrop-blur-xl sm:px-6">
             {/* Mobile: sidebar toggle */}
             <Button
               variant="ghost"
@@ -303,13 +311,18 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetContent side="left" className="w-72 bg-sidebar p-0">
             <SheetTitle className="sr-only">Menu điều hướng</SheetTitle>
-            <div className="flex h-14 items-center gap-2 border-b px-4">
-              <div className="flex size-8 items-center justify-center rounded-md bg-primary">
-                <UtensilsCrossed className="size-4 text-primary-foreground" />
+            <div className="flex h-14 items-center gap-3 border-b border-sidebar-border px-4">
+              <div className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary shadow-sm">
+                <UtensilsCrossed className="size-5 text-sidebar-primary-foreground" />
               </div>
-              <span className="font-semibold text-sidebar-foreground">
-                Cơm Tấm Má Tư
-              </span>
+              <div>
+                <span className="text-[15px] font-bold tracking-tight text-sidebar-foreground">
+                  Cơm Tấm Má Tư
+                </span>
+                <p className="text-[10px] font-medium uppercase tracking-widest text-sidebar-foreground/40">
+                  Quản lý
+                </p>
+              </div>
             </div>
             <ScrollArea className="flex-1 px-3 py-4">
               <SidebarNav

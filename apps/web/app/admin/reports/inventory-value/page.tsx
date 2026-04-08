@@ -18,7 +18,7 @@ export default async function InventoryValueReportPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Giá trị tồn kho</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Giá trị tồn kho</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Tổng hợp giá trị tồn theo phạm vi được phân quyền xem (giám sát / báo
           cáo).

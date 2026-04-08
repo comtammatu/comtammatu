@@ -27,7 +27,7 @@ export default async function OrdersPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Đơn hàng</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Đơn hàng</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Lịch sử và quản lý đơn hàng
           </p>
@@ -47,7 +47,7 @@ export default async function OrdersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Đơn hàng</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Đơn hàng</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Lịch sử và quản lý đơn hàng
         </p>

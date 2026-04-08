@@ -45,7 +45,7 @@ export default async function InventoryPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Kho hàng</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Kho hàng</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Quản lý nguyên liệu và mức tồn kho theo chi nhánh
         </p>

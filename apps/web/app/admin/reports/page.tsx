@@ -5,7 +5,7 @@ export default function ReportsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Báo cáo</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Báo cáo</h1>
         <p className="mt-1 text-muted-foreground">
           Doanh thu, top món, food cost
         </p>

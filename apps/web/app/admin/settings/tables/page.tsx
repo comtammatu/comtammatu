@@ -74,7 +74,7 @@ export default async function TablesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Bàn & Khu vực</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Bàn & Khu vực</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Quản lý khu vực và bàn ăn theo chi nhánh
         </p>
