@@ -275,20 +275,17 @@ export async function submitOrder(
     note: item.note ?? null,
   }));
 
-  const { data, error } = await (supabase.rpc as CallableFunction)(
-    "create_order",
-    {
-      p_tenant_id: claims.tenant_id,
-      p_branch_id: parsedBranchId.data,
-      p_created_by: user.id,
-      p_items: rpcItems,
-      p_order_type: parsedCart.data.order_type,
-      p_table_id: parsedCart.data.table_id ?? null,
-      p_pos_session_id: parsedSessionId.data ?? null,
-      p_note: parsedCart.data.note ?? null,
-      p_idempotency_key: idempotencyKey ?? null,
-    },
-  );
+  const { data, error } = await supabase.rpc("create_order", {
+    p_tenant_id: claims.tenant_id,
+    p_branch_id: parsedBranchId.data,
+    p_created_by: user.id,
+    p_items: rpcItems,
+    p_order_type: parsedCart.data.order_type,
+    p_table_id: parsedCart.data.table_id ?? undefined,
+    p_pos_session_id: parsedSessionId.data ?? undefined,
+    p_note: parsedCart.data.note ?? undefined,
+    p_idempotency_key: idempotencyKey ?? undefined,
+  });
 
   if (error) {
     const errCode = String(error.code ?? "");
@@ -608,14 +605,11 @@ export async function closePosSession(
 
   const { supabase } = ctx;
 
-  const { data, error } = await (supabase.rpc as CallableFunction)(
-    "close_pos_session",
-    {
-      p_session_id: parsed.data.sessionId,
-      p_closing_cash: parsed.data.closingCash,
-      p_note: parsed.data.note ?? null,
-    },
-  );
+  const { data, error } = await supabase.rpc("close_pos_session", {
+    p_session_id: parsed.data.sessionId,
+    p_closing_cash: parsed.data.closingCash,
+    p_note: parsed.data.note ?? undefined,
+  });
 
   if (error) {
     if (error.message?.includes("not found")) {
@@ -853,13 +847,10 @@ export async function appendOrderItems(
     note: item.note ?? null,
   }));
 
-  const { data, error } = await (supabase.rpc as CallableFunction)(
-    "append_order_items",
-    {
-      p_order_id: parsed.data.orderId,
-      p_items: rpcItems,
-    },
-  );
+  const { data, error } = await supabase.rpc("append_order_items", {
+    p_order_id: parsed.data.orderId,
+    p_items: rpcItems,
+  });
 
   if (error) {
     const msg = String(error.message ?? "").toLowerCase();
@@ -927,13 +918,10 @@ export async function voidOrderItem(
 
   const { supabase } = ctx;
 
-  const { data, error } = await (supabase.rpc as CallableFunction)(
-    "void_order_item",
-    {
-      p_order_item_id: parsed.data.orderItemId,
-      p_reason: parsed.data.reason,
-    },
-  );
+  const { data, error } = await supabase.rpc("void_order_item", {
+    p_order_item_id: parsed.data.orderItemId,
+    p_reason: parsed.data.reason,
+  });
 
   if (error) {
     const msg = String(error.message ?? "").toLowerCase();
@@ -982,7 +970,7 @@ export async function cancelOrder(
 
   const { supabase } = ctx;
 
-  const { error } = await (supabase.rpc as CallableFunction)("cancel_order", {
+  const { error } = await supabase.rpc("cancel_order", {
     p_order_id: parsed.data.orderId,
     p_reason: parsed.data.reason,
   });
@@ -1028,13 +1016,10 @@ export async function transferOrderTable(
 
   const { supabase } = ctx;
 
-  const { error } = await (supabase.rpc as CallableFunction)(
-    "transfer_order_table",
-    {
-      p_order_id: parsed.data.orderId,
-      p_new_table_id: parsed.data.newTableId,
-    },
-  );
+  const { error } = await supabase.rpc("transfer_order_table", {
+    p_order_id: parsed.data.orderId,
+    p_new_table_id: parsed.data.newTableId,
+  });
 
   if (error) {
     const msg = String(error.message ?? "").toLowerCase();
@@ -1083,13 +1068,10 @@ export async function updateOrderStatus(
 
   const { supabase } = ctx;
 
-  const { error } = await (supabase.rpc as CallableFunction)(
-    "update_pos_order_status",
-    {
-      p_order_id: parsed.data.orderId,
-      p_new_status: parsed.data.newStatus,
-    },
-  );
+  const { error } = await supabase.rpc("update_pos_order_status", {
+    p_order_id: parsed.data.orderId,
+    p_new_status: parsed.data.newStatus,
+  });
 
   if (error) {
     const msg = String(error.message ?? "").toLowerCase();

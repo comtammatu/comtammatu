@@ -1,7 +1,6 @@
 "use server";
 
 import { z } from "zod";
-import { createClient } from "@comtammatu/database/supabase/server";
 import { MODULE_ACL } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "../../_lib/auth";
@@ -9,18 +8,6 @@ import { getAuthContext } from "../../_lib/auth";
 /* ─── Constants ─── */
 
 const KDS_ROLES = MODULE_ACL.kds.allowedRoles;
-
-/**
- * Typed wrapper for supabase.from() on KDS tables not yet in generated types.
- * Remove after migrations applied + pnpm db:types.
- */
-function fromTable(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  table: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): any {
-  return (supabase.from as CallableFunction)(table);
-}
 
 /* ─── Input Schemas ─── */
 
@@ -61,7 +48,8 @@ export async function fetchKdsTickets(
   }
 
   // kds_tickets not yet in generated types — remove cast after pnpm db:types
-  let query = fromTable(supabase, "kds_tickets")
+  let query = supabase
+    .from("kds_tickets")
     .select(
       `
       id,
@@ -143,7 +131,8 @@ export async function fetchKdsStations(
   }
 
   // kds_stations not yet in generated types — remove cast after pnpm db:types
-  const { data: stations, error } = await fromTable(supabase, "kds_stations")
+  const { data: stations, error } = await supabase
+    .from("kds_stations")
     .select("id, name, position")
     .eq("branch_id", parsedBranchId.data)
     .eq("tenant_id", claims.tenant_id)
@@ -179,10 +168,9 @@ export async function bumpTicket(
 
   const { supabase } = ctx;
 
-  const { data, error } = await (supabase.rpc as CallableFunction)(
-    "bump_kds_ticket",
-    { p_ticket_id: parsedId.data },
-  );
+  const { data, error } = await supabase.rpc("bump_kds_ticket", {
+    p_ticket_id: parsedId.data,
+  });
 
   if (error) {
     if (error.message?.includes("not found")) {
@@ -224,10 +212,9 @@ export async function recallTicket(
 
   const { supabase } = ctx;
 
-  const { data, error } = await (supabase.rpc as CallableFunction)(
-    "recall_kds_ticket",
-    { p_ticket_id: parsedId.data },
-  );
+  const { data, error } = await supabase.rpc("recall_kds_ticket", {
+    p_ticket_id: parsedId.data,
+  });
 
   if (error) {
     if (error.message?.includes("not found")) {

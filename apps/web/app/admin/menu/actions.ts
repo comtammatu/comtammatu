@@ -303,18 +303,14 @@ export async function saveVariants(
 
   const { supabase } = ctx;
 
-  // RPC types available after migration applied + pnpm db:types
-  const { error } = await (supabase.rpc as CallableFunction)(
-    "save_item_variants",
-    {
-      p_item_id: parsedId.data,
-      p_variants: parsed.data.map((v, idx) => ({
-        name: v.name,
-        price_adjustment: v.price_adjustment,
-        sort_order: v.sort_order ?? idx,
-      })),
-    },
-  );
+  const { error } = await supabase.rpc("save_item_variants", {
+    p_item_id: parsedId.data,
+    p_variants: parsed.data.map((v, idx) => ({
+      name: v.name,
+      price_adjustment: v.price_adjustment,
+      sort_order: v.sort_order ?? idx,
+    })),
+  });
 
   if (error) {
     if (error.message === "item not found") {
@@ -346,18 +342,14 @@ export async function saveModifiers(
 
   const { supabase } = ctx;
 
-  // RPC types available after migration applied + pnpm db:types
-  const { error } = await (supabase.rpc as CallableFunction)(
-    "save_item_modifiers",
-    {
-      p_item_id: parsedId.data,
-      p_modifiers: parsed.data.map((m, idx) => ({
-        name: m.name,
-        price: m.price,
-        sort_order: m.sort_order ?? idx,
-      })),
-    },
-  );
+  const { error } = await supabase.rpc("save_item_modifiers", {
+    p_item_id: parsedId.data,
+    p_modifiers: parsed.data.map((m, idx) => ({
+      name: m.name,
+      price: m.price,
+      sort_order: m.sort_order ?? idx,
+    })),
+  });
 
   if (error) {
     if (error.message === "item not found") {
@@ -399,17 +391,13 @@ export async function saveSides(
   const validatedItemId = parsed.data.mainItemId;
   const validatedSides = parsed.data.sideItemIds;
 
-  // RPC types available after migration applied + pnpm db:types
-  const { error } = await (supabase.rpc as CallableFunction)(
-    "save_item_sides",
-    {
-      p_main_item_id: validatedItemId,
-      p_sides: validatedSides.map((s) => ({
-        side_item_id: s.id,
-        is_default: s.is_default,
-      })),
-    },
-  );
+  const { error } = await supabase.rpc("save_item_sides", {
+    p_main_item_id: validatedItemId,
+    p_sides: validatedSides.map((s) => ({
+      side_item_id: s.id,
+      is_default: s.is_default,
+    })),
+  });
 
   if (error) {
     if (error.message === "item not found") {

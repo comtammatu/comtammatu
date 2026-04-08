@@ -263,11 +263,9 @@ export async function toggleStaffActive(
 
   const { supabase } = ctx;
 
-  // RPC types available after migration applied + pnpm db:types
-  const { error } = await (supabase.rpc as CallableFunction)(
-    "toggle_profile_active",
-    { p_target_id: parsedId.data },
-  );
+  const { error } = await supabase.rpc("toggle_profile_active", {
+    p_target_id: parsedId.data,
+  });
 
   if (error) {
     return { success: false, error: mapRpcError(error.message) };

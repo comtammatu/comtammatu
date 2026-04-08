@@ -43,18 +43,6 @@ function mapStationDbError(code: string | undefined): string {
   return "Không thể thực hiện. Vui lòng thử lại.";
 }
 
-/**
- * Typed wrapper for supabase.from() on KDS tables not yet in generated types.
- * Remove after migrations applied + pnpm db:types.
- */
-function fromTable(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  table: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): any {
-  return (supabase.from as CallableFunction)(table);
-}
-
 /* ─── Schemas ─── */
 
 const createStationSchema = z.object({
@@ -105,7 +93,8 @@ export async function fetchStations(branchId?: number): Promise<ActionResult> {
   }
 
   // kds_stations not yet in generated types — remove cast after pnpm db:types
-  let query = fromTable(supabase, "kds_stations")
+  let query = supabase
+    .from("kds_stations")
     .select(
       `
       id,
@@ -185,7 +174,8 @@ export async function createStation(
   }
 
   // kds_stations not yet in generated types — remove cast after pnpm db:types
-  const { data, error } = await fromTable(supabase, "kds_stations")
+  const { data, error } = await supabase
+    .from("kds_stations")
     .insert({
       tenant_id: claims.tenant_id,
       branch_id: parsed.data.branch_id,
@@ -249,7 +239,8 @@ export async function updateStation(
   }
 
   // kds_stations not yet in generated types — remove cast after pnpm db:types
-  let query = fromTable(supabase, "kds_stations")
+  let query = supabase
+    .from("kds_stations")
     .update(updatePayload)
     .eq("id", parsed.data.id)
     .eq("tenant_id", claims.tenant_id);
@@ -307,7 +298,8 @@ export async function saveStationCategories(
   const { supabase, claims } = ctx;
 
   // Verify station belongs to user's tenant (and branch if branch_manager)
-  const { data: station } = await fromTable(supabase, "kds_stations")
+  const { data: station } = await supabase
+    .from("kds_stations")
     .select("id, branch_id")
     .eq("id", parsedStationId.data)
     .eq("tenant_id", claims.tenant_id)

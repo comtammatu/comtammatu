@@ -212,19 +212,16 @@ export async function createPayment(
 
   // Atomic RPC: insert payment + update order in one transaction
   // Prevents race condition where payment exists but order status is stale
-  const { data, error: rpcError } = await (supabase.rpc as CallableFunction)(
-    "create_payment",
-    {
-      p_tenant_id: claims.tenant_id,
-      p_branch_id: parsedBranch.data,
-      p_order_id: parsedPayment.data.orderId,
-      p_method: parsedPayment.data.method,
-      p_amount: parsedPayment.data.amount,
-      p_created_by: user.id,
-      p_provider_ref: providerResult.providerRef,
-      p_status: providerResult.status,
-    },
-  );
+  const { data, error: rpcError } = await supabase.rpc("create_payment", {
+    p_tenant_id: claims.tenant_id,
+    p_branch_id: parsedBranch.data,
+    p_order_id: parsedPayment.data.orderId,
+    p_method: parsedPayment.data.method,
+    p_amount: parsedPayment.data.amount,
+    p_created_by: user.id,
+    p_provider_ref: providerResult.providerRef ?? undefined,
+    p_status: providerResult.status,
+  });
 
   if (rpcError) {
     const msg = rpcError.message ?? "";
