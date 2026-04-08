@@ -209,7 +209,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
   return (
     <Card
       className={cn(
-        "flex flex-col overflow-hidden border-2 border-l-4 bg-card",
+        "flex flex-col overflow-hidden border border-l-2 bg-card",
         borderClass,
         getCardLeftAccent(overallStatus, elapsed),
       )}

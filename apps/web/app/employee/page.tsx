@@ -133,8 +133,8 @@ export default async function EmployeePage() {
               disabled
               className="touch-target-lg flex h-16 cursor-not-allowed items-center gap-4 rounded-xl border border-border bg-muted/40 px-5 opacity-50"
             >
-              <div className="flex size-10 items-center justify-center rounded-lg bg-accent/10">
-                <ChefHat className="size-5 text-accent" />
+              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
+                <ChefHat className="size-5 text-primary" />
               </div>
               <div className="text-left">
                 <p className="text-sm font-semibold">Vào KDS</p>
@@ -146,8 +146,8 @@ export default async function EmployeePage() {
               href={kdsHref}
               className="touch-target-lg focus-ring-standard flex h-16 items-center gap-4 rounded-xl border border-border bg-card px-5 shadow-sm transition-colors hover:bg-muted/40"
             >
-              <div className="flex size-10 items-center justify-center rounded-lg bg-accent/10">
-                <ChefHat className="size-5 text-accent" />
+              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
+                <ChefHat className="size-5 text-primary" />
               </div>
               <div className="text-left">
                 <p className="text-sm font-semibold">Vào KDS</p>

@@ -26,8 +26,7 @@ function StatCard({ title, value, change, icon: Icon }: StatCardProps) {
   const isPositive = change >= 0;
 
   return (
-    <Card className="relative overflow-hidden">
-      <div className="absolute right-0 top-0 size-24 -translate-y-4 translate-x-4 rounded-full bg-primary/5" />
+    <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}
