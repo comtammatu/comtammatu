@@ -54,7 +54,7 @@ export default async function PosSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">POS</h1>
+        <h2 className="text-xl font-semibold">POS</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Quản lý máy bán hàng (terminal) theo chi nhánh — dùng khi mở ca và
           chọn máy tại quầy

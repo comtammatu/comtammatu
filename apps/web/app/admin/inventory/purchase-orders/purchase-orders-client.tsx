@@ -124,36 +124,43 @@ export function PurchaseOrdersClient({
         </p>
       )}
 
-      <div className="rounded-md border">
+      <div className="rounded-md border shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Số PO</TableHead>
-              <TableHead>NCC</TableHead>
-              <TableHead>Trạng thái</TableHead>
-              <TableHead className="hidden sm:table-cell">Ngày</TableHead>
+            <TableRow className="bg-muted/50">
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">Số PO</TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">NCC</TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">Trạng thái</TableHead>
+              <TableHead className="hidden sm:table-cell text-xs uppercase tracking-wider font-semibold">Ngày</TableHead>
               <TableHead className="w-28" />
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="divide-y divide-border/60">
             {rows.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={5}
-                  className="py-12 text-center text-muted-foreground"
+                  className="py-16 text-center"
                 >
-                  Chưa có PO
+                  <p className="text-sm font-medium text-muted-foreground">Chưa có đơn đặt hàng</p>
+                  <p className="mt-1 text-xs text-muted-foreground/70">Nhấn &quot;Tạo PO&quot; để tạo đơn đặt hàng đầu tiên</p>
                 </TableCell>
               </TableRow>
             )}
             {rows.map((r) => (
-              <TableRow key={r.id}>
+              <TableRow key={r.id} className="hover:bg-muted/40 transition-colors">
                 <TableCell className="font-mono text-sm">
                   {r.po_number}
                 </TableCell>
                 <TableCell>{r.suppliers?.name ?? "—"}</TableCell>
                 <TableCell>
-                  <Badge variant="secondary">
+                  <Badge className={
+                    r.status === "received" ? "bg-success/10 text-success border-success/20" :
+                    r.status === "partially_received" ? "bg-warning/10 text-warning border-warning/20" :
+                    r.status === "cancelled" ? "bg-destructive/10 text-destructive border-destructive/20" :
+                    r.status === "sent" ? "bg-info/10 text-info border-info/20" :
+                    "bg-muted text-muted-foreground"
+                  }>
                     {STATUS_LABEL[r.status] ?? r.status}
                   </Badge>
                 </TableCell>
@@ -161,7 +168,7 @@ export function PurchaseOrdersClient({
                   {new Date(r.ordered_at).toLocaleString("vi-VN")}
                 </TableCell>
                 <TableCell>
-                  <Button variant="outline" size="sm" asChild>
+                  <Button variant="ghost" size="sm" asChild>
                     <Link href={`/admin/inventory/purchase-orders/${r.id}`}>
                       Chi tiết
                     </Link>

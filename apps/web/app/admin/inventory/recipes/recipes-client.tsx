@@ -169,37 +169,38 @@ export function RecipesClient({
         </Button>
       </form>
 
-      <div className="rounded-md border">
+      <div className="rounded-md border shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Món</TableHead>
-              <TableHead>Nguyên liệu</TableHead>
-              <TableHead className="text-right">Định mức</TableHead>
-              <TableHead>Đơn vị</TableHead>
-              <TableHead className="hidden sm:table-cell">Ghi chú</TableHead>
+            <TableRow className="bg-muted/50">
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">Món</TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">Nguyên liệu</TableHead>
+              <TableHead className="text-right text-xs uppercase tracking-wider font-semibold">Định mức</TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">Đơn vị</TableHead>
+              <TableHead className="hidden sm:table-cell text-xs uppercase tracking-wider font-semibold">Ghi chú</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="divide-y divide-border/60">
             {rows.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={5}
-                  className="py-12 text-center text-muted-foreground"
+                  className="py-16 text-center"
                 >
-                  Chưa có công thức
+                  <p className="text-sm font-medium text-muted-foreground">Chưa có công thức nào</p>
+                  <p className="mt-1 text-xs text-muted-foreground/70">Thêm dòng công thức qua biểu mẫu phía trên</p>
                 </TableCell>
               </TableRow>
             )}
             {rows.map((r) => (
-              <TableRow key={r.id}>
+              <TableRow key={r.id} className="hover:bg-muted/40 transition-colors">
                 <TableCell className="font-medium">
                   {r.menu_items?.name ?? `#${r.menu_item_id}`}
                 </TableCell>
                 <TableCell>
                   {r.ingredients?.name ?? `#${r.ingredient_id}`}
                 </TableCell>
-                <TableCell className="text-right font-mono">
+                <TableCell className="text-right font-mono tabular-nums">
                   {r.quantity.toLocaleString("vi-VN")}
                 </TableCell>
                 <TableCell>{r.unit}</TableCell>

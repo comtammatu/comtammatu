@@ -28,10 +28,10 @@ export default async function GeneralSettingsPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Cài đặt chung</h2>
-        <p className="text-sm text-muted-foreground">
+        <h2 className="text-xl font-semibold">Cài đặt chung</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Thuế, phí dịch vụ và thông tin cửa hàng
         </p>
       </div>

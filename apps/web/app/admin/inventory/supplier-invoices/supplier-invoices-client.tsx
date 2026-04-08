@@ -159,31 +159,32 @@ export function SupplierInvoicesClient({
         </Button>
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-md border shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Số HĐ</TableHead>
-              <TableHead>NCC</TableHead>
-              <TableHead className="hidden sm:table-cell">GRN</TableHead>
-              <TableHead className="text-right">Tổng</TableHead>
-              <TableHead>Khớp</TableHead>
+            <TableRow className="bg-muted/50">
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">Số HĐ</TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">NCC</TableHead>
+              <TableHead className="hidden sm:table-cell text-xs uppercase tracking-wider font-semibold">GRN</TableHead>
+              <TableHead className="text-right text-xs uppercase tracking-wider font-semibold">Tổng</TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">Khớp</TableHead>
               <TableHead className="w-28" />
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="divide-y divide-border/60">
             {rows.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={6}
-                  className="py-12 text-center text-muted-foreground"
+                  className="py-16 text-center"
                 >
-                  Chưa có hóa đơn
+                  <p className="text-sm font-medium text-muted-foreground">Chưa có hóa đơn</p>
+                  <p className="mt-1 text-xs text-muted-foreground/70">Nhấn &quot;Thêm HĐ&quot; để thêm hóa đơn nhà cung cấp</p>
                 </TableCell>
               </TableRow>
             )}
             {rows.map((r) => (
-              <TableRow key={r.id}>
+              <TableRow key={r.id} className="hover:bg-muted/40 transition-colors">
                 <TableCell className="font-mono text-sm">
                   {r.invoice_number}
                 </TableCell>
@@ -191,18 +192,22 @@ export function SupplierInvoicesClient({
                 <TableCell className="hidden sm:table-cell font-mono text-xs">
                   {r.goods_received_notes?.grn_number ?? "—"}
                 </TableCell>
-                <TableCell className="text-right font-mono">
+                <TableCell className="text-right font-mono tabular-nums">
                   {r.total_amount.toLocaleString("vi-VN")} ₫
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline">
+                  <Badge className={
+                    r.matching_status === "matched" || r.matching_status === "approved" ? "bg-success/10 text-success border-success/20" :
+                    r.matching_status === "discrepancy" ? "bg-destructive/10 text-destructive border-destructive/20" :
+                    "bg-warning/10 text-warning border-warning/20"
+                  }>
                     {MATCH_LABEL[r.matching_status] ?? r.matching_status}
                   </Badge>
                 </TableCell>
                 <TableCell>
                   <Button
                     type="button"
-                    variant="secondary"
+                    variant="ghost"
                     size="sm"
                     onClick={() => recompute(r.id)}
                     disabled={isPending}

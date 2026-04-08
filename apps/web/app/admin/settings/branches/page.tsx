@@ -22,11 +22,11 @@ export default async function BranchesPage() {
     .order("name");
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Chi nhánh</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-xl font-semibold">Chi nhánh</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             {branches?.length ?? 0} chi nhánh
           </p>
         </div>

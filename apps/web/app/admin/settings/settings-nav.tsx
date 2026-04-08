@@ -63,7 +63,7 @@ export function SettingsNav({ role }: { role: StaffRole }) {
   const visibleTabs = TABS.filter((tab) => tab.allowedRoles.includes(role));
 
   return (
-    <nav className="flex gap-1 border-b">
+    <nav className="flex gap-0.5 border-b">
       {visibleTabs.map((tab) => {
         const isActive = pathname.startsWith(tab.href);
         return (
@@ -71,10 +71,10 @@ export function SettingsNav({ role }: { role: StaffRole }) {
             key={tab.href}
             href={tab.href}
             className={cn(
-              "border-b-2 px-4 py-2 text-sm font-medium transition-colors",
+              "relative -mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors duration-150",
               isActive
                 ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground",
+                : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
             )}
           >
             {tab.label}

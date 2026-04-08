@@ -37,10 +37,10 @@ export default async function PaymentSettingsPage() {
     !!process.env.MOMO_SECRET_KEY;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Thanh toán</h2>
-        <p className="text-sm text-muted-foreground">
+        <h2 className="text-xl font-semibold">Thanh toán</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Bật VietQR và MoMo trên POS sau khi đã đặt biến môi trường trên
           hosting (Vercel / server).
         </p>

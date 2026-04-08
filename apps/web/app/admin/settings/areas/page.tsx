@@ -27,10 +27,10 @@ export default async function AreasPage() {
     .order("name");
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Quản lý Khu vực</h2>
-        <p className="text-sm text-muted-foreground">
+        <h2 className="text-xl font-semibold">Khu vực</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Nhóm các chi nhánh thành khu vực để phân quyền cho Quản lý vùng
           (area_manager).
         </p>

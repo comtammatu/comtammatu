@@ -54,25 +54,37 @@ export default async function MenuPage() {
       </div>
 
       <Tabs defaultValue="items">
-        <TabsList>
-          <TabsTrigger value="items">Món ăn ({items.length})</TabsTrigger>
-          <TabsTrigger value="categories">
-            Danh mục ({categories.length})
+        <TabsList className="h-10">
+          <TabsTrigger value="items" className="px-5">
+            Món ăn
+            <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
+              {items.length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="px-5">
+            Danh mục
+            <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
+              {categories.length}
+            </span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="items" className="mt-4 space-y-4">
+        <TabsContent value="items" className="mt-6 space-y-4">
           <div className="flex justify-end">
             <AddItemButton categories={categories} />
           </div>
-          <ItemTable items={items} categories={categories} />
+          <div className="rounded-lg border shadow-sm">
+            <ItemTable items={items} categories={categories} />
+          </div>
         </TabsContent>
 
-        <TabsContent value="categories" className="mt-4 space-y-4">
+        <TabsContent value="categories" className="mt-6 space-y-4">
           <div className="flex justify-end">
             <AddCategoryButton />
           </div>
-          <CategoryTable categories={categories} />
+          <div className="rounded-lg border shadow-sm">
+            <CategoryTable categories={categories} />
+          </div>
         </TabsContent>
       </Tabs>
     </div>

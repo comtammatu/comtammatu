@@ -83,28 +83,29 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
         </Button>
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-md border shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Tên</TableHead>
-              <TableHead className="hidden sm:table-cell">Mã số thuế</TableHead>
-              <TableHead className="hidden md:table-cell">Điện thoại</TableHead>
+            <TableRow className="bg-muted/50">
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">Tên</TableHead>
+              <TableHead className="hidden sm:table-cell text-xs uppercase tracking-wider font-semibold">Mã số thuế</TableHead>
+              <TableHead className="hidden md:table-cell text-xs uppercase tracking-wider font-semibold">Điện thoại</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="divide-y divide-border/60">
             {rows.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={3}
-                  className="py-12 text-center text-muted-foreground"
+                  className="py-16 text-center"
                 >
-                  Chưa có nhà cung cấp
+                  <p className="text-sm font-medium text-muted-foreground">Chưa có nhà cung cấp</p>
+                  <p className="mt-1 text-xs text-muted-foreground/70">Nhấn &quot;Thêm NCC&quot; để thêm nhà cung cấp đầu tiên</p>
                 </TableCell>
               </TableRow>
             )}
             {rows.map((s) => (
-              <TableRow key={s.id}>
+              <TableRow key={s.id} className="hover:bg-muted/40 transition-colors">
                 <TableCell className="font-medium">{s.name}</TableCell>
                 <TableCell className="hidden sm:table-cell text-muted-foreground">
                   {s.tax_code ?? "—"}

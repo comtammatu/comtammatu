@@ -130,36 +130,41 @@ export function GrnListClient({
         </p>
       )}
 
-      <div className="rounded-md border">
+      <div className="rounded-md border shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Số phiếu</TableHead>
-              <TableHead>NCC</TableHead>
-              <TableHead>Trạng thái</TableHead>
-              <TableHead className="hidden sm:table-cell">Ngày</TableHead>
+            <TableRow className="bg-muted/50">
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">Số phiếu</TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">NCC</TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">Trạng thái</TableHead>
+              <TableHead className="hidden sm:table-cell text-xs uppercase tracking-wider font-semibold">Ngày</TableHead>
               <TableHead className="w-24" />
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="divide-y divide-border/60">
             {rows.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={5}
-                  className="py-12 text-center text-muted-foreground"
+                  className="py-16 text-center"
                 >
-                  Chưa có phiếu nhập
+                  <p className="text-sm font-medium text-muted-foreground">Chưa có phiếu nhập kho</p>
+                  <p className="mt-1 text-xs text-muted-foreground/70">Nhấn &quot;Tạo GRN&quot; để ghi nhận hàng nhập</p>
                 </TableCell>
               </TableRow>
             )}
             {rows.map((r) => (
-              <TableRow key={r.id}>
+              <TableRow key={r.id} className="hover:bg-muted/40 transition-colors">
                 <TableCell className="font-mono text-sm">
                   {r.grn_number}
                 </TableCell>
                 <TableCell>{r.suppliers?.name ?? "—"}</TableCell>
                 <TableCell>
-                  <Badge variant="secondary">
+                  <Badge className={
+                    r.status === "confirmed" ? "bg-success/10 text-success border-success/20" :
+                    r.status === "cancelled" ? "bg-destructive/10 text-destructive border-destructive/20" :
+                    "bg-muted text-muted-foreground"
+                  }>
                     {STATUS_LABEL[r.status] ?? r.status}
                   </Badge>
                 </TableCell>
@@ -167,7 +172,7 @@ export function GrnListClient({
                   {new Date(r.received_date).toLocaleString("vi-VN")}
                 </TableCell>
                 <TableCell>
-                  <Button variant="outline" size="sm" asChild>
+                  <Button variant="ghost" size="sm" asChild>
                     <Link href={`/admin/inventory/grn/${r.id}`}>Chi tiết</Link>
                   </Button>
                 </TableCell>

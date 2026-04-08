@@ -9,7 +9,6 @@ import {
   Monitor,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card } from "@comtammatu/ui/components/card";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims, canAccess } from "@comtammatu/shared/auth";
 
@@ -60,103 +59,140 @@ export default async function EmployeePage() {
   const kdsDisabled = !canKds || !branchId || branchIsHq;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-6">
+      {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs text-muted-foreground">Cổng nhân viên</p>
-          <h1 className="mt-1 text-lg font-semibold">Xin chào</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Vai trò:{" "}
-            <span className="font-medium text-foreground">{roleLabel}</span>
-            {branchId ? (
-              <>
-                {" "}
-                · Chi nhánh:{" "}
-                <span className="font-medium text-foreground">
-                  {branchName ?? `#${String(branchId)}`}
-                  {branchIsHq ? " (Trụ sở)" : ""}
-                </span>
-              </>
-            ) : null}
+          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            Cổng nhân viên
           </p>
+          <h1 className="mt-2 text-2xl font-bold">Xin chào!</h1>
+          <div className="mt-2 flex flex-col gap-1">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">{roleLabel}</span>
+            </p>
+            {branchId && (
+              <p className="text-sm text-muted-foreground">
+                {branchName ?? `Chi nhánh #${String(branchId)}`}
+                {branchIsHq ? (
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    (Trụ sở)
+                  </span>
+                ) : null}
+              </p>
+            )}
+          </div>
         </div>
 
         <form action="/api/auth/signout" method="post">
-          <Button variant="outline" size="sm" className="h-8">
-            <LogOut className="mr-1 size-3" />
+          <Button variant="outline" size="sm">
+            <LogOut className="mr-1.5 size-4" />
             Đăng xuất
           </Button>
         </form>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Card className="p-4">
-          <div className="flex items-center gap-2">
-            <Home className="size-4 text-muted-foreground" />
-            <p className="text-sm font-medium">Lối tắt</p>
-          </div>
-          <div className="mt-3 flex flex-col gap-2">
-            {posDisabled ? (
-              <Button disabled>
-                <Monitor className="mr-2 size-4" />
-                Vào POS
-              </Button>
-            ) : (
-              <Button asChild>
-                <Link href={posHref}>
-                  <Monitor className="mr-2 size-4" />
-                  Vào POS
-                </Link>
-              </Button>
-            )}
-
-            {kdsDisabled ? (
-              <Button variant="secondary" disabled>
-                <ChefHat className="mr-2 size-4" />
-                Vào KDS
-              </Button>
-            ) : (
-              <Button asChild variant="secondary">
-                <Link href={kdsHref}>
-                  <ChefHat className="mr-2 size-4" />
-                  Vào KDS
-                </Link>
-              </Button>
-            )}
-          </div>
-          {!branchId && (canPos || canKds) && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Tài khoản chưa gắn chi nhánh.
-            </p>
+      {/* Quick actions */}
+      <div>
+        <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          Truy cập nhanh
+        </p>
+        <div className="flex flex-col gap-3">
+          {posDisabled ? (
+            <button
+              disabled
+              className="flex h-16 cursor-not-allowed items-center gap-4 rounded-xl border border-border bg-muted/40 px-5 opacity-50"
+            >
+              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
+                <Monitor className="size-5 text-primary" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold">Vào POS</p>
+                <p className="text-xs text-muted-foreground">
+                  Màn hình bán hàng
+                </p>
+              </div>
+            </button>
+          ) : (
+            <Link
+              href={posHref}
+              className="flex h-16 items-center gap-4 rounded-xl border border-border bg-card px-5 shadow-sm transition-colors hover:bg-muted/40"
+            >
+              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
+                <Monitor className="size-5 text-primary" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold">Vào POS</p>
+                <p className="text-xs text-muted-foreground">
+                  Màn hình bán hàng
+                </p>
+              </div>
+            </Link>
           )}
-          {branchId && branchIsHq && (canPos || canKds) && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Trụ sở không có sàn POS/KDS — chỉ dùng cho văn phòng; quản lý HQ
-              qua trang quản trị (Owner / Quản lý tổng).
-            </p>
-          )}
-        </Card>
 
-        <Card className="p-4">
-          <div className="flex items-center gap-2">
-            <CreditCard className="size-4 text-muted-foreground" />
-            <p className="text-sm font-medium">Sắp có</p>
-          </div>
-          <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            <li className="flex items-center gap-2">
-              <DoorOpen className="size-4" />
-              Ca làm việc & chấm công
-            </li>
-            <li className="flex items-center gap-2">
-              <DoorOpen className="size-4" />
-              Lương & thuế TNCN
-            </li>
-            <li className="flex items-center gap-2">
-              <DoorOpen className="size-4" />
-              Hồ sơ cá nhân
-            </li>
-          </ul>
-        </Card>
+          {kdsDisabled ? (
+            <button
+              disabled
+              className="flex h-16 cursor-not-allowed items-center gap-4 rounded-xl border border-border bg-muted/40 px-5 opacity-50"
+            >
+              <div className="flex size-10 items-center justify-center rounded-lg bg-accent/10">
+                <ChefHat className="size-5 text-accent" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold">Vào KDS</p>
+                <p className="text-xs text-muted-foreground">
+                  Màn hình bếp
+                </p>
+              </div>
+            </button>
+          ) : (
+            <Link
+              href={kdsHref}
+              className="flex h-16 items-center gap-4 rounded-xl border border-border bg-card px-5 shadow-sm transition-colors hover:bg-muted/40"
+            >
+              <div className="flex size-10 items-center justify-center rounded-lg bg-accent/10">
+                <ChefHat className="size-5 text-accent" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold">Vào KDS</p>
+                <p className="text-xs text-muted-foreground">Màn hình bếp</p>
+              </div>
+            </Link>
+          )}
+        </div>
+
+        {!branchId && (canPos || canKds) && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Tài khoản chưa gắn chi nhánh — liên hệ quản lý để được phân công.
+          </p>
+        )}
+        {branchId && branchIsHq && (canPos || canKds) && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Trụ sở không có sàn POS/KDS. Vui lòng dùng trang quản trị.
+          </p>
+        )}
+      </div>
+
+      {/* Coming soon */}
+      <div>
+        <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+          Sắp có
+        </p>
+        <div className="flex flex-col gap-2">
+          {[
+            { icon: DoorOpen, label: "Ca làm việc & chấm công" },
+            { icon: CreditCard, label: "Lương & thuế TNCN" },
+            { icon: Home, label: "Hồ sơ cá nhân" },
+          ].map(({ icon: Icon, label }) => (
+            <div
+              key={label}
+              className="flex h-12 items-center gap-3 rounded-lg border border-dashed border-border px-4 text-sm text-muted-foreground"
+            >
+              <Icon className="size-4 shrink-0" />
+              {label}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
