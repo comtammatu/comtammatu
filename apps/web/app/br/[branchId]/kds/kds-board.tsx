@@ -17,6 +17,7 @@ import { ChefHat, Filter } from "lucide-react";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { OrderCard } from "./order-card";
 import type { KdsStation, KdsTicket, KdsOrderInfo, KdsOrderItem } from "./page";
+import { EmptyState } from "@/components/foundation/ui-patterns";
 
 /* ─── Types ─── */
 
@@ -423,7 +424,7 @@ export function KdsBoard({
       {/* ── Station tabs bar ── */}
       <div
         className={cn(
-          "flex shrink-0 items-stretch border-b border-border/40 bg-zinc-950",
+          "flex shrink-0 items-stretch border-b border-border/40 bg-background",
           "pt-[max(0px,env(safe-area-inset-top,0px))]",
         )}
       >
@@ -441,8 +442,8 @@ export function KdsBoard({
               className={cn(
                 "flex min-h-14 shrink-0 cursor-pointer items-center gap-2 rounded-xl px-5 text-base font-bold transition-colors duration-150",
                 activeStationId === null
-                  ? "bg-amber-500 text-zinc-950 shadow-sm"
-                  : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100",
+                  ? "bg-accent text-accent-foreground shadow-sm"
+                  : "bg-secondary text-secondary-foreground hover:bg-muted",
               )}
               onClick={() => replaceQuery({ station: null })}
             >
@@ -451,8 +452,8 @@ export function KdsBoard({
                 className={cn(
                   "flex size-6 items-center justify-center rounded-full text-xs font-black tabular-nums",
                   activeStationId === null
-                    ? "bg-zinc-950/30 text-zinc-950"
-                    : "bg-zinc-700 text-zinc-200",
+                    ? "bg-accent-foreground/15 text-accent-foreground"
+                    : "bg-muted text-muted-foreground",
                 )}
               >
                 {totalActiveCount}
@@ -470,8 +471,8 @@ export function KdsBoard({
                   className={cn(
                     "flex min-h-14 shrink-0 cursor-pointer items-center gap-2 rounded-xl px-5 text-base font-bold transition-colors duration-150",
                     isActive
-                      ? "bg-amber-500 text-zinc-950 shadow-sm"
-                      : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100",
+                      ? "bg-accent text-accent-foreground shadow-sm"
+                      : "bg-secondary text-secondary-foreground hover:bg-muted",
                   )}
                   onClick={() => replaceQuery({ station: String(station.id) })}
                 >
@@ -480,10 +481,10 @@ export function KdsBoard({
                     className={cn(
                       "flex size-6 items-center justify-center rounded-full text-xs font-black tabular-nums",
                       isActive
-                        ? "bg-zinc-950/30 text-zinc-950"
+                        ? "bg-accent-foreground/15 text-accent-foreground"
                         : count > 0
-                          ? "bg-amber-700/60 text-amber-200"
-                          : "bg-zinc-700 text-zinc-400",
+                          ? "bg-warning/20 text-warning"
+                          : "bg-muted text-muted-foreground",
                     )}
                   >
                     {count}
@@ -496,7 +497,7 @@ export function KdsBoard({
       </div>
 
       {/* ── Filter bar ── */}
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border/30 bg-zinc-900/80 px-3 py-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border/30 bg-secondary/70 px-3 py-2">
         <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
           <Filter className="size-4 shrink-0" aria-hidden />
           <span className="hidden text-sm font-medium sm:inline">Lọc</span>
@@ -555,20 +556,21 @@ export function KdsBoard({
       {/* ── Order cards grid ── */}
       <ScrollArea className="flex-1">
         {displayOrders.length === 0 ? (
-          <div className="flex h-full min-h-[60vh] items-center justify-center">
-            <div className="text-center">
-              <ChefHat className="mx-auto size-20 text-muted-foreground/30" />
-              <p className="mt-5 text-xl font-semibold text-muted-foreground">
-                {groupedOrders.length > 0
+          <div className="p-3">
+            <EmptyState
+              icon={<ChefHat className="size-12" />}
+              title={
+                groupedOrders.length > 0
                   ? "Không có đơn phù hợp bộ lọc"
-                  : "Bếp đang rảnh"}
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground/60">
-                {groupedOrders.length > 0
-                  ? "Thử thay đổi bộ lọc"
-                  : "Chưa có đơn hàng mới"}
-              </p>
-            </div>
+                  : "Bếp đang rảnh"
+              }
+              description={
+                groupedOrders.length > 0
+                  ? "Thử thay đổi bộ lọc để xem thêm đơn."
+                  : "Chưa có đơn hàng mới."
+              }
+              className="min-h-[60vh]"
+            />
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

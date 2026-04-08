@@ -457,7 +457,7 @@ export function TransfersListClient({
       </div>
 
       {!canCreate && (
-        <p className="text-sm text-amber-700 dark:text-amber-400">
+        <p className="text-warning text-sm">
           Cần cấu hình Trụ sở và ít nhất một chi nhánh vận hành hoạt động.
         </p>
       )}

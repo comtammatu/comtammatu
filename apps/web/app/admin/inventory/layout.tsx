@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims, canAccess } from "@comtammatu/shared/auth";
 import { InventorySubNav } from "./inventory-sub-nav";
+import { PageHeader } from "@/components/foundation/ui-patterns";
 
 export default async function InventoryLayout({
   children,
@@ -22,6 +23,10 @@ export default async function InventoryLayout({
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        title="Kho và mua hàng"
+        description="Quản lý tồn kho, công thức, nhập hàng, chuyển kho và nhà cung cấp theo chuẩn vận hành đa chi nhánh."
+      />
       <InventorySubNav
         showProcurement={showProcurement}
         showBranchIngredientSettings={showBranchIngredientSettings}

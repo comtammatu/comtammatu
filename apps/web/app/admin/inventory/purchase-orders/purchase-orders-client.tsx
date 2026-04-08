@@ -118,13 +118,13 @@ export function PurchaseOrdersClient({
 
       {suppliers.length === 0 && (
         <EmptyStatePanel
-          className="border-amber-500/40 bg-amber-500/10 py-6"
+          className="border-warning/40 bg-warning/10 py-6"
           title="Chưa có nhà cung cấp"
           description="Cần tạo nhà cung cấp trước khi lập đơn đặt hàng."
         >
           <Link
             href="/admin/inventory/suppliers"
-            className="text-sm font-medium text-amber-800 underline hover:text-amber-900 dark:text-amber-300 dark:hover:text-amber-200"
+            className="text-warning text-sm font-medium underline hover:opacity-80"
           >
             Đi đến trang Nhà cung cấp
           </Link>

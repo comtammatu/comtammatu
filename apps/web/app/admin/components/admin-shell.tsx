@@ -199,7 +199,7 @@ function SidebarNav({
                   href={item.href}
                   onClick={onNavigate}
                   className={cn(
-                    "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                    "touch-target group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
                     isActive
                       ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                       : "text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
@@ -260,7 +260,7 @@ function SidebarUserFooter({
                 type="submit"
                 variant="ghost"
                 size="icon"
-                className="size-8 text-sidebar-foreground/50 hover:text-sidebar-foreground"
+                className="touch-target size-8 text-sidebar-foreground/50 hover:text-sidebar-foreground"
                 aria-label="Đăng xuất"
               >
                 <LogOut className="size-4" />
@@ -334,7 +334,7 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden"
+              className="touch-target md:hidden"
               aria-label="Mở menu"
               onClick={() => setSheetOpen(true)}
             >
@@ -399,7 +399,7 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-8"
+                    className="touch-target size-8"
                     aria-label="Menu tài khoản"
                   >
                     <Avatar className="size-8">

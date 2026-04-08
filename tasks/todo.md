@@ -21,10 +21,10 @@ All 8 modules shipped and QA verified on 2026-04-07.
 ## Known Issues (from 2026-04-08 security review)
 
 - [ ] P1: area_manager chưa có branch scope trong finance/HR/inventory (TODO H3 — cần area-branch mapping)
-- [ ] P2: 16x `(supabase.rpc as CallableFunction)` type safety bypass — cần `pnpm db:types` sau khi apply migrations
+- [x] P2: 16x `(supabase.rpc as CallableFunction)` type safety bypass — fixed `48ed4ac`
 - [ ] P3: Draft invoice number collision — `DRAFT-${branch_id}-${Date.now()}` không unique nếu concurrent
 - [ ] P3: Login rate limit fail-open khi Upstash unreachable — documented design decision, cần observability
-- [ ] Migration pending: `20260413000000_fix_void_cancel_branch_scope.sql` — owner apply sau merge
+- [x] Migration applied: `20260413000000_fix_void_cancel_branch_scope.sql` — applied + types regenerated
 
 ## Post-v1.0 (Tier 2)
 

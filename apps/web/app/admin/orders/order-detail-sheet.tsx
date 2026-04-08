@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import type { OrderRow } from "./actions";
+import { StatusBadge } from "@/components/foundation/ui-patterns";
 
 /* ─── Helpers ─── */
 
@@ -41,18 +42,20 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   refunded: "Hoàn tiền",
 };
 
-function orderStatusBadgeClass(status: string): string {
+function orderStatusTone(
+  status: string,
+): "neutral" | "success" | "warning" | "danger" | "info" {
   switch (status) {
     case "completed":
-      return "bg-green-500 text-white";
+      return "success";
     case "in_progress":
-      return "border-yellow-500 text-yellow-700";
+      return "warning";
     case "ready":
-      return "bg-blue-500 text-white";
+      return "info";
     case "cancelled":
-      return "bg-destructive text-destructive-foreground";
+      return "danger";
     default:
-      return "";
+      return "neutral";
   }
 }
 
@@ -106,14 +109,9 @@ export function OrderDetailSheet({
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             <span className="text-muted-foreground">Trạng thái</span>
             <div>
-              <Badge
-                variant={
-                  order.status === "cancelled" ? "destructive" : "secondary"
-                }
-                className={orderStatusBadgeClass(order.status)}
-              >
+              <StatusBadge tone={orderStatusTone(order.status)}>
                 {ORDER_STATUS_LABELS[order.status] ?? order.status}
-              </Badge>
+              </StatusBadge>
             </div>
 
             <span className="text-muted-foreground">Chi nhánh</span>
@@ -248,7 +246,7 @@ export function OrderDetailSheet({
               <span className="font-mono">{formatVND(order.subtotal)}</span>
             </div>
             {hasDiscount && (
-              <div className="flex justify-between text-green-700">
+              <div className="text-success flex justify-between">
                 <span>Giảm giá</span>
                 <span className="font-mono">
                   -{formatVND(order.discount_amount)}

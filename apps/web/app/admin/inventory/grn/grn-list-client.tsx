@@ -122,7 +122,7 @@ export function GrnListClient({
       </div>
 
       {suppliers.length === 0 && (
-        <p className="text-sm text-amber-700 dark:text-amber-400">
+        <p className="text-warning text-sm">
           Cần có NCC —{" "}
           <Link href="/admin/inventory/suppliers" className="underline">
             thêm nhà cung cấp

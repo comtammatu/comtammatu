@@ -511,7 +511,7 @@ export function PosMenu({
       <Button
         variant="ghost"
         size="sm"
-        className="h-9 shrink-0 gap-1.5 px-3 text-xs text-muted-foreground hover:text-destructive"
+        className="touch-target h-9 shrink-0 gap-1.5 px-3 text-xs text-muted-foreground hover:text-destructive"
         onClick={() => setShowCloseSession(true)}
       >
         <LogOut className="size-3.5" />
@@ -523,14 +523,14 @@ export function PosMenu({
   const appendBannerRow =
     appendTarget != null ? (
       <div
-        className="flex items-center justify-between gap-2 border-b bg-amber-500/15 px-3 py-2 dark:bg-amber-500/20"
+        className="flex items-center justify-between gap-2 border-b bg-warning/15 px-3 py-2 dark:bg-warning/20"
         role="status"
       >
-        <p className="min-w-0 text-xs leading-snug text-amber-950 dark:text-amber-50">
+        <p className="min-w-0 text-xs leading-snug text-foreground">
           <span className="font-semibold">
             Thêm món vào đơn #{appendTarget.orderNumber}
           </span>
-          <span className="text-amber-900/90 dark:text-amber-100/90">
+          <span className="text-muted-foreground">
             {" "}
             — chọn món trên lưới bên dưới
           </span>
@@ -539,7 +539,7 @@ export function PosMenu({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-8 shrink-0 gap-1 px-2 text-xs text-amber-950 hover:bg-amber-500/25 dark:text-amber-50"
+          className="touch-target h-8 shrink-0 gap-1 px-2 text-xs text-foreground hover:bg-warning/25"
           onClick={() => setAppendTarget(null)}
         >
           <X className="size-3.5" />
@@ -638,7 +638,7 @@ export function PosMenu({
                           role="tab"
                           aria-selected={effectiveMenuZone === z}
                           className={cn(
-                            "flex h-11 shrink-0 cursor-pointer items-center rounded-md px-4 text-sm font-semibold transition-colors",
+                            "touch-target flex h-11 shrink-0 cursor-pointer items-center rounded-md px-4 text-sm font-semibold transition-colors",
                             effectiveMenuZone === z
                               ? "bg-primary text-primary-foreground shadow-sm"
                               : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -668,7 +668,7 @@ export function PosMenu({
                             role="tab"
                             aria-selected={activeCategoryId === cat.id}
                             className={cn(
-                              "flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors",
+                              "touch-target flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors",
                               activeCategoryId === cat.id
                                 ? "bg-primary/10 text-primary font-semibold"
                                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -712,7 +712,7 @@ export function PosMenu({
                       <button
                         key={item.id}
                         type="button"
-                        className="flex min-h-[80px] cursor-pointer flex-col rounded-xl border border-border bg-card p-3.5 text-left shadow-sm transition-all hover:border-primary/30 hover:shadow-md active:scale-[0.97]"
+                        className="touch-target-lg focus-ring-standard flex min-h-[80px] cursor-pointer flex-col rounded-xl border border-border bg-card p-3.5 text-left shadow-sm transition-all hover:border-primary/30 hover:shadow-md active:scale-[0.97]"
                         onClick={() => handleItemTap(item)}
                       >
                         <span className="line-clamp-2 text-base font-semibold leading-snug">

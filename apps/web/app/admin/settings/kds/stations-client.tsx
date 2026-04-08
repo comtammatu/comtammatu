@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { cn } from "@comtammatu/ui";
 import {
   Select,
   SelectContent,
@@ -22,6 +21,7 @@ import {
 import { Plus, Pencil } from "lucide-react";
 import { StationFormDialog } from "./station-form-dialog";
 import { EmptyStatePanel } from "../../components/empty-state-panel";
+import { StatusBadge } from "@/components/foundation/ui-patterns";
 
 /* ─── Types ─── */
 
@@ -168,17 +168,12 @@ export function StationsClient({
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge
-                        variant={station.is_active ? "default" : "secondary"}
-                        className={cn(
-                          "text-xs",
-                          station.is_active
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                            : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
-                        )}
+                      <StatusBadge
+                        tone={station.is_active ? "success" : "neutral"}
+                        className="text-xs"
                       >
                         {station.is_active ? "Hoạt động" : "Tạm tắt"}
-                      </Badge>
+                      </StatusBadge>
                     </TableCell>
                     <TableCell>
                       <Button

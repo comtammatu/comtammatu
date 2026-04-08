@@ -1,6 +1,6 @@
 # Design System — Cơm Tấm Má Tư
 
-> Version: 2.0.0 | Updated: 2026-04-08
+> Version: 3.0.0 | Updated: 2026-04-09
 > Stack: Next.js 16.2 · React 19.2 · Tailwind CSS 4.2 · shadcn/ui · TypeScript 6.0
 > Research: UI/UX Pro Max skill (product, color, typography, style, UX domains)
 
@@ -20,6 +20,41 @@ Restaurant management app = **operational tool used 8+ hours/day** by staff in a
 - NOT cold tech/SaaS blue
 - NOT playful/vibrant neon
 - Professional warmth — like a well-designed restaurant interior
+
+## Design System Governance (v3)
+
+This document is the canonical design source for implementation. Recommendation artifacts from `ui-ux-pro-max` are stored under:
+
+- `design-system/com-tam-ma-tu/MASTER.md`
+- `design-system/com-tam-ma-tu/pages/admin.md`
+- `design-system/com-tam-ma-tu/pages/pos.md`
+- `design-system/com-tam-ma-tu/pages/kds.md`
+
+Rules for using these artifacts:
+
+1. Tool output is input material, not direct truth.
+2. Final tokens, typography, spacing, and interaction standards must match this spec and `apps/web/app/globals.css`.
+3. Page overrides can only narrow behavior by context (KDS/POS/Admin), never break shared semantics.
+
+## Product Surface Overrides (v3)
+
+### Admin surfaces
+
+- Data-dense, calm hierarchy, low decorative noise.
+- Reuse one spacing rhythm and one table/filter idiom.
+- Keep warm accent usage subtle, mostly for action and status highlight.
+
+### POS surfaces
+
+- Touch-first with comfortable targets (44x44 minimum, 56x56 preferred).
+- Fast scan hierarchy for menu/cart/payment flow.
+- Strong state clarity for loading, disabled, and error feedback near action.
+
+### KDS surfaces
+
+- Dark-surface, high-contrast readability at distance.
+- Status and urgency semantics are centralized and reused across badge, border, timer, and action cues.
+- Avoid raw palette drift by mapping visual states to semantic tokens.
 
 ## Color Palette
 
@@ -83,7 +118,7 @@ Same hue family (30), inverted luminance. KDS gets `.dark` class automatically.
 
 **Rule:** Max 2 font sizes per section. No text smaller than 12px.
 
-## Spacing & Radius
+## Spacing, Elevation, and Radius
 
 | Token       | Value | Notes                 |
 | ----------- | ----- | --------------------- |
@@ -93,6 +128,15 @@ Same hue family (30), inverted luminance. KDS gets `.dark` class automatically.
 | `radius-xl` | 16px  | Large containers      |
 
 **Spacing:** 4px base unit. Multiples: 4, 8, 12, 16, 24, 32, 48.
+
+**Elevation scale (v3):**
+
+- `elevation-0`: flat
+- `elevation-1`: low emphasis cards
+- `elevation-2`: raised controls and dropdowns
+- `elevation-3`: modal/sheet
+
+**Z-index scale (v3):** 10, 20, 30, 40, 50
 
 ## Component Patterns
 
@@ -165,6 +209,8 @@ Same hue family (30), inverted luminance. KDS gets `.dark` class automatically.
 - No text < 12px
 - cursor-pointer on all clickable elements
 - Transitions: 150-300ms ease
+- No one-off spacing systems outside the 4px base rhythm
+- No duplicated visual mapping for the same status in different components
 
 ## Checklist
 

@@ -11,6 +11,7 @@ import {
 import { Button } from "@comtammatu/ui/components/button";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims, canAccess } from "@comtammatu/shared/auth";
+import { PageContainer, PageHeader } from "@/components/foundation/ui-patterns";
 
 const ROLE_LABELS: Record<string, string> = {
   owner: "Chủ hệ thống",
@@ -59,14 +60,11 @@ export default async function EmployeePage() {
   const kdsDisabled = !canKds || !branchId || branchIsHq;
 
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-6">
+    <PageContainer className="mx-auto flex max-w-md flex-col gap-6 px-4 py-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Cổng nhân viên
-          </p>
-          <h1 className="mt-2 text-2xl font-bold">Xin chào!</h1>
+        <div className="w-full">
+          <PageHeader title="Xin chào!" description="Cổng nhân viên" />
           <div className="mt-2 flex flex-col gap-1">
             <p className="text-sm text-muted-foreground">
               <span className="font-medium text-foreground">{roleLabel}</span>
@@ -85,7 +83,7 @@ export default async function EmployeePage() {
         </div>
 
         <form action="/api/auth/signout" method="post">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="touch-target">
             <LogOut className="mr-1.5 size-4" />
             Đăng xuất
           </Button>
@@ -101,7 +99,7 @@ export default async function EmployeePage() {
           {posDisabled ? (
             <button
               disabled
-              className="flex h-16 cursor-not-allowed items-center gap-4 rounded-xl border border-border bg-muted/40 px-5 opacity-50"
+              className="touch-target-lg flex h-16 cursor-not-allowed items-center gap-4 rounded-xl border border-border bg-muted/40 px-5 opacity-50"
             >
               <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
                 <Monitor className="size-5 text-primary" />
@@ -116,7 +114,7 @@ export default async function EmployeePage() {
           ) : (
             <Link
               href={posHref}
-              className="flex h-16 items-center gap-4 rounded-xl border border-border bg-card px-5 shadow-sm transition-colors hover:bg-muted/40"
+              className="touch-target-lg focus-ring-standard flex h-16 items-center gap-4 rounded-xl border border-border bg-card px-5 shadow-sm transition-colors hover:bg-muted/40"
             >
               <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
                 <Monitor className="size-5 text-primary" />
@@ -133,7 +131,7 @@ export default async function EmployeePage() {
           {kdsDisabled ? (
             <button
               disabled
-              className="flex h-16 cursor-not-allowed items-center gap-4 rounded-xl border border-border bg-muted/40 px-5 opacity-50"
+              className="touch-target-lg flex h-16 cursor-not-allowed items-center gap-4 rounded-xl border border-border bg-muted/40 px-5 opacity-50"
             >
               <div className="flex size-10 items-center justify-center rounded-lg bg-accent/10">
                 <ChefHat className="size-5 text-accent" />
@@ -146,7 +144,7 @@ export default async function EmployeePage() {
           ) : (
             <Link
               href={kdsHref}
-              className="flex h-16 items-center gap-4 rounded-xl border border-border bg-card px-5 shadow-sm transition-colors hover:bg-muted/40"
+              className="touch-target-lg focus-ring-standard flex h-16 items-center gap-4 rounded-xl border border-border bg-card px-5 shadow-sm transition-colors hover:bg-muted/40"
             >
               <div className="flex size-10 items-center justify-center rounded-lg bg-accent/10">
                 <ChefHat className="size-5 text-accent" />
@@ -192,6 +190,6 @@ export default async function EmployeePage() {
           ))}
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

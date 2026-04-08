@@ -5,28 +5,32 @@ import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Card } from "@comtammatu/ui/components/card";
-import { ChevronRight, RotateCcw, UtensilsCrossed } from "lucide-react";
+import { Check, ChevronRight, RotateCcw, UtensilsCrossed } from "lucide-react";
 import type { KdsOrder } from "./kds-board";
 import type { KdsTicket } from "./page";
+import {
+  ActionIconButton,
+  StatusBadge,
+} from "@/components/foundation/ui-patterns";
 
 /* ─── Status config ─── */
 
 const STATUS_CONFIG = {
   pending: {
     label: "Chờ",
-    badgeClass: "bg-zinc-700 text-zinc-100 border-zinc-600",
+    badgeClass: "bg-muted text-muted-foreground border-border",
   },
   preparing: {
     label: "Đang làm",
-    badgeClass: "bg-amber-600 text-amber-50 border-amber-500",
+    badgeClass: "bg-warning/20 text-warning border-warning/30",
   },
   ready: {
     label: "Xong",
-    badgeClass: "bg-emerald-600 text-emerald-50 border-emerald-500",
+    badgeClass: "bg-success/20 text-success border-success/30",
   },
   cancelled: {
     label: "Đã hủy",
-    badgeClass: "bg-red-800 text-red-100 border-red-700",
+    badgeClass: "bg-destructive/20 text-destructive border-destructive/30",
   },
 } as const;
 
@@ -34,7 +38,7 @@ function getStatusConfig(status: string) {
   return (
     STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] ?? {
       label: status,
-      badgeClass: "bg-zinc-700 text-zinc-100 border-zinc-600",
+      badgeClass: "bg-muted text-muted-foreground border-border",
     }
   );
 }
@@ -43,11 +47,11 @@ const ORDER_TYPE_CONFIG: Record<string, { label: string; className: string }> =
   {
     dine_in: {
       label: "Tại chỗ",
-      className: "bg-blue-900/60 text-blue-200 border-blue-700/50",
+      className: "bg-info/20 text-info border-info/30",
     },
     takeaway: {
       label: "Mang đi",
-      className: "bg-purple-900/60 text-purple-200 border-purple-700/50",
+      className: "bg-accent/20 text-accent-foreground border-accent/40",
     },
   };
 
@@ -55,7 +59,7 @@ function getOrderTypeConfig(type: string) {
   return (
     ORDER_TYPE_CONFIG[type] ?? {
       label: type,
-      className: "bg-zinc-800 text-zinc-300 border-zinc-600",
+      className: "bg-muted text-muted-foreground border-border",
     }
   );
 }
@@ -69,22 +73,33 @@ function getOrderTypeConfig(type: string) {
  * ≥ 10 min: red (old — needs attention)
  */
 function getAgeStyle(minutes: number, isComplete: boolean) {
-  if (isComplete) return { text: "text-emerald-400", bg: "" };
-  if (minutes < 5) return { text: "text-emerald-400", bg: "" };
-  if (minutes < 10) return { text: "text-amber-400", bg: "bg-amber-950/40" };
-  return { text: "text-red-400", bg: "bg-red-950/50" };
+  if (isComplete) return { text: "text-success", bg: "" };
+  if (minutes < 5) return { text: "text-success", bg: "" };
+  if (minutes < 10) return { text: "text-warning", bg: "bg-warning/10" };
+  return { text: "text-destructive", bg: "bg-destructive/10" };
 }
 
 /* ─── Card border per overall status ─── */
 
 function getCardBorder(overallStatus: string, ageMinutes: number): string {
-  if (overallStatus === "cancelled") return "border-red-800/60";
-  if (overallStatus === "ready") return "border-emerald-600/60";
-  if (overallStatus === "preparing") return "border-amber-500/60";
+  if (overallStatus === "cancelled") return "border-destructive/60";
+  if (overallStatus === "ready") return "border-success/60";
+  if (overallStatus === "preparing") return "border-warning/60";
   // pending — age-tinted border
-  if (ageMinutes >= 10) return "border-red-600/70";
-  if (ageMinutes >= 5) return "border-amber-700/60";
-  return "border-zinc-600/50";
+  if (ageMinutes >= 10) return "border-destructive/70";
+  if (ageMinutes >= 5) return "border-warning/70";
+  return "border-border";
+}
+
+/* ─── Card left-border accent — vivid color stripe ─── */
+
+function getCardLeftAccent(overallStatus: string, ageMinutes: number): string {
+  if (overallStatus === "cancelled") return "border-l-destructive";
+  if (overallStatus === "ready") return "border-l-success";
+  if (overallStatus === "preparing") return "border-l-warning";
+  if (ageMinutes >= 10) return "border-l-destructive";
+  if (ageMinutes >= 5) return "border-l-warning";
+  return "border-l-muted-foreground";
 }
 
 /* ─── Cancelled overlay ─── */
@@ -194,8 +209,9 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
   return (
     <Card
       className={cn(
-        "flex flex-col overflow-hidden border-2 bg-card",
+        "flex flex-col overflow-hidden border-2 border-l-4 bg-card",
         borderClass,
+        getCardLeftAccent(overallStatus, elapsed),
       )}
     >
       {/* ── Header ── */}
@@ -224,7 +240,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
             {order.tableNumber !== null && (
               <Badge
                 variant="secondary"
-                className="bg-zinc-700/60 px-2 py-0.5 text-xs font-semibold text-zinc-200"
+                className="bg-secondary px-2 py-0.5 text-xs font-semibold text-secondary-foreground"
               >
                 Bàn {order.tableNumber}
               </Badge>
@@ -232,18 +248,27 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
           </div>
         </div>
 
-        {/* Right: elapsed timer — color-coded age */}
-        <div className="flex shrink-0 flex-col items-end">
-          <span
-            className={cn(
-              "text-2xl font-black tabular-nums leading-none",
-              ageStyle.text,
-            )}
-          >
+        {/* Right: elapsed timer — pill badge */}
+        <Badge
+          variant="outline"
+          className={cn(
+            "flex shrink-0 flex-col items-center gap-0 rounded-lg border px-3 py-1.5",
+            isComplete
+              ? "border-success/40 bg-success/15 text-success"
+              : elapsed >= 10
+                ? "border-destructive/40 bg-destructive/15 text-destructive animate-pulse"
+                : elapsed >= 5
+                  ? "border-warning/40 bg-warning/15 text-warning"
+                  : "border-border/50 bg-card text-muted-foreground",
+          )}
+        >
+          <span className="text-2xl font-black leading-none tabular-nums">
             {elapsed}
           </span>
-          <span className={cn("text-xs font-medium", ageStyle.text)}>phút</span>
-        </div>
+          <span className="text-[9px] font-bold uppercase tracking-wider opacity-70">
+            phút
+          </span>
+        </Badge>
       </div>
 
       {/* ── Items list ── */}
@@ -273,7 +298,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-2">
                   {/* Quantity — gold accent, very prominent */}
-                  <span className="text-xl font-black leading-tight text-amber-400 tabular-nums">
+                  <span className="text-xl font-black leading-tight text-warning tabular-nums">
                     {item.quantity}×
                   </span>
                   <span className="text-xl font-bold leading-tight">
@@ -287,46 +312,60 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                 )}
               </div>
 
-              {/* Status badge — readable at distance */}
-              <Badge
-                className={cn(
-                  "shrink-0 border px-2 py-1 text-xs font-bold",
-                  config.badgeClass,
-                )}
-              >
-                {config.label}
-              </Badge>
+              {/* Status dot + badge */}
+              <div className="flex shrink-0 items-center gap-1.5">
+                <span
+                  className={cn(
+                    "size-2 rounded-full",
+                    status === "preparing" && "animate-pulse",
+                    status === "preparing"
+                      ? "bg-warning"
+                      : status === "ready"
+                        ? "bg-success"
+                        : status === "cancelled"
+                          ? "bg-destructive"
+                          : "bg-muted-foreground",
+                  )}
+                  aria-hidden
+                />
+                <StatusBadge
+                  className={cn(
+                    "px-2 py-1 text-xs font-bold",
+                    config.badgeClass,
+                  )}
+                >
+                  {config.label}
+                </StatusBadge>
+              </div>
 
               {/* Action buttons — 56px min touch target */}
               <div className="flex shrink-0 gap-1">
                 {ticket && canRecall && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-14 min-h-14 min-w-14 rounded-xl text-muted-foreground hover:bg-zinc-700/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    aria-label="Thu hồi món"
+                  <ActionIconButton
+                    icon={<RotateCcw className="size-5" />}
+                    label="Thu hồi món"
+                    className="size-14 min-h-14 min-w-14 rounded-xl border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     onClick={() => void onRecall(ticket.id)}
-                  >
-                    <RotateCcw className="size-5" />
-                    <span className="sr-only">Thu hồi</span>
-                  </Button>
+                  />
                 )}
                 {ticket && canBump && (
-                  <Button
-                    variant="secondary"
-                    size="icon"
+                  <ActionIconButton
+                    icon={
+                      status === "preparing" ? (
+                        <Check className="size-6" />
+                      ) : (
+                        <ChevronRight className="size-6" />
+                      )
+                    }
+                    label="Chuyển trạng thái món"
                     className={cn(
                       "size-14 min-h-14 min-w-14 rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                       status === "preparing"
-                        ? "bg-emerald-700 text-emerald-50 hover:bg-emerald-600"
-                        : "bg-zinc-700 text-zinc-100 hover:bg-zinc-600",
+                        ? "border-success/30 bg-success/20 text-success hover:bg-success/30"
+                        : "border-warning/30 bg-warning/20 text-warning hover:bg-warning/30",
                     )}
-                    aria-label="Chuyển trạng thái món"
                     onClick={() => void onBump(ticket.id)}
-                  >
-                    <ChevronRight className="size-6" />
-                    <span className="sr-only">Bump</span>
-                  </Button>
+                  />
                 )}
               </div>
             </div>
@@ -353,38 +392,30 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                     Món #{String(ticket.order_item_id)}
                   </span>
                 </div>
-                <Badge
+                <StatusBadge
                   className={cn(
-                    "shrink-0 border px-2 py-1 text-xs font-bold",
+                    "shrink-0 px-2 py-1 text-xs font-bold",
                     config.badgeClass,
                   )}
                 >
                   {config.label}
-                </Badge>
+                </StatusBadge>
                 <div className="flex shrink-0 gap-1">
                   {canRecall && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-14 min-h-14 min-w-14 rounded-xl text-muted-foreground hover:bg-zinc-700/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      aria-label="Thu hồi món"
+                    <ActionIconButton
+                      icon={<RotateCcw className="size-5" />}
+                      label="Thu hồi món"
+                      className="size-14 min-h-14 min-w-14 rounded-xl border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       onClick={() => void onRecall(ticket.id)}
-                    >
-                      <RotateCcw className="size-5" />
-                      <span className="sr-only">Thu hồi</span>
-                    </Button>
+                    />
                   )}
                   {canBump && (
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      className="size-14 min-h-14 min-w-14 rounded-xl bg-zinc-700 text-zinc-100 hover:bg-zinc-600 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      aria-label="Chuyển trạng thái món"
+                    <ActionIconButton
+                      icon={<ChevronRight className="size-6" />}
+                      label="Chuyển trạng thái món"
+                      className="size-14 min-h-14 min-w-14 rounded-xl border-warning/30 bg-warning/20 text-warning hover:bg-warning/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       onClick={() => void onBump(ticket.id)}
-                    >
-                      <ChevronRight className="size-6" />
-                      <span className="sr-only">Bump</span>
-                    </Button>
+                    />
                   )}
                 </div>
               </div>
@@ -401,8 +432,8 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
               "min-h-14 w-full rounded-xl text-base font-bold",
               // Gold accent for "ready to serve" state (all preparing → ready)
               bumpableTickets.every((t) => t.status === "preparing")
-                ? "bg-emerald-600 text-white hover:bg-emerald-500"
-                : "bg-amber-600 text-white hover:bg-amber-500",
+                ? "bg-success text-white hover:opacity-90"
+                : "bg-warning text-white hover:opacity-90",
             )}
             onClick={() => {
               void Promise.all(bumpableTickets.map((t) => onBump(t.id)));

@@ -78,11 +78,9 @@ export function PaymentsForm({
               <p className="text-xs text-muted-foreground">
                 Trạng thái env:{" "}
                 {vietqrEnvConfigured ? (
-                  <span className="text-emerald-600">✓ Đã cấu hình</span>
+                  <span className="text-success">✓ Đã cấu hình</span>
                 ) : (
-                  <span className="text-amber-600">
-                    Chưa đủ biến môi trường
-                  </span>
+                  <span className="text-warning">Chưa đủ biến môi trường</span>
                 )}
               </p>
             </div>
@@ -123,11 +121,9 @@ export function PaymentsForm({
               <p className="text-xs text-muted-foreground">
                 Trạng thái env:{" "}
                 {momoEnvConfigured ? (
-                  <span className="text-emerald-600">✓ Đã cấu hình</span>
+                  <span className="text-success">✓ Đã cấu hình</span>
                 ) : (
-                  <span className="text-amber-600">
-                    Chưa đủ biến môi trường
-                  </span>
+                  <span className="text-warning">Chưa đủ biến môi trường</span>
                 )}
               </p>
             </div>

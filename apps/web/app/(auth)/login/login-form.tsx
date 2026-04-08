@@ -24,7 +24,7 @@ export function LoginForm() {
           autoComplete="email"
           spellCheck={false}
           placeholder="email@comtammatu.com"
-          className="h-11"
+          className="touch-target h-11 focus-ring-standard"
         />
       </div>
 
@@ -38,7 +38,7 @@ export function LoginForm() {
           type="password"
           required
           autoComplete="current-password"
-          className="h-11"
+          className="touch-target h-11 focus-ring-standard"
         />
       </div>
 
@@ -50,7 +50,7 @@ export function LoginForm() {
 
       <Button
         type="submit"
-        className="h-11 w-full shadow-sm transition-shadow hover:shadow-md"
+        className="touch-target h-11 w-full shadow-sm transition-shadow hover:shadow-md"
         disabled={isPending}
       >
         {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}

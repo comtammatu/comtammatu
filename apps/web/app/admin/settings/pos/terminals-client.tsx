@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { cn } from "@comtammatu/ui";
 import {
   Select,
   SelectContent,
@@ -11,7 +10,6 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Button } from "@comtammatu/ui/components/button";
-import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Table,
   TableBody,
@@ -23,6 +21,7 @@ import {
 import { ExternalLink, Pencil, Plus } from "lucide-react";
 import { TerminalFormDialog } from "./terminal-form-dialog";
 import { EmptyStatePanel } from "../../components/empty-state-panel";
+import { StatusBadge } from "@/components/foundation/ui-patterns";
 
 export interface TerminalRow {
   id: number;
@@ -137,17 +136,12 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
                       {terminal.device_id ?? "—"}
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge
-                        variant={terminal.is_active ? "default" : "secondary"}
-                        className={cn(
-                          "text-xs",
-                          terminal.is_active
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                            : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
-                        )}
+                      <StatusBadge
+                        tone={terminal.is_active ? "success" : "neutral"}
+                        className="text-xs"
                       >
                         {terminal.is_active ? "Hoạt động" : "Tạm tắt"}
-                      </Badge>
+                      </StatusBadge>
                     </TableCell>
                     <TableCell>
                       <Button

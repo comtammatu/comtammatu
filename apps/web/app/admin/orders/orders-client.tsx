@@ -26,6 +26,7 @@ import { fetchOrders } from "./actions";
 import { OrderDetailSheet } from "./order-detail-sheet";
 import type { OrderRow, FetchOrdersFilters } from "./actions";
 import { TableEmptyStateRow } from "../components/table-empty-state-row";
+import { FilterBar, StatusBadge } from "@/components/foundation/ui-patterns";
 
 /* ─── Status config ─── */
 
@@ -41,20 +42,20 @@ type OrderStatus = (typeof ORDER_STATUSES)[number]["value"];
 
 function statusBadgeVariant(
   status: string,
-): "secondary" | "outline" | "default" | "destructive" {
+): "neutral" | "info" | "success" | "danger" | "warning" {
   switch (status as OrderStatus) {
     case "pending":
-      return "secondary";
+      return "warning";
     case "in_progress":
-      return "outline";
+      return "info";
     case "ready":
-      return "default";
+      return "success";
     case "completed":
-      return "default";
+      return "success";
     case "cancelled":
-      return "destructive";
+      return "danger";
     default:
-      return "secondary";
+      return "neutral";
   }
 }
 
@@ -128,7 +129,7 @@ export function OrdersClient({
   return (
     <>
       {/* ─── Filter bar ─── */}
-      <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4">
+      <FilterBar>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="date-from" className="text-xs">
             Từ ngày
@@ -209,7 +210,7 @@ export function OrdersClient({
             </Button>
           )}
         </div>
-      </div>
+      </FilterBar>
 
       {/* ─── Summary ─── */}
       <p className="text-sm text-muted-foreground">
@@ -281,20 +282,9 @@ export function OrdersClient({
                   )}
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant={statusBadgeVariant(order.status)}
-                    className={
-                      order.status === "completed"
-                        ? "bg-green-500 text-white hover:bg-green-500"
-                        : order.status === "in_progress"
-                          ? "border-yellow-500 text-yellow-700"
-                          : order.status === "ready"
-                            ? "bg-blue-500 text-white hover:bg-blue-500"
-                            : ""
-                    }
-                  >
+                  <StatusBadge tone={statusBadgeVariant(order.status)}>
                     {statusLabel(order.status)}
-                  </Badge>
+                  </StatusBadge>
                 </TableCell>
               </TableRow>
             ))}

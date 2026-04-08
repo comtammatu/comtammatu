@@ -2,6 +2,7 @@ import { getAuthContext } from "../_lib/auth";
 import { fetchOrders } from "./actions";
 import { OrdersClient } from "./orders-client";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { PageContainer, PageHeader } from "@/components/foundation/ui-patterns";
 
 const ALLOWED_ROLES: StaffRole[] = [
   "owner",
@@ -25,17 +26,15 @@ export default async function OrdersPage() {
 
   if (!result.success || !result.data) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Đơn hàng</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Lịch sử và quản lý đơn hàng
-          </p>
-        </div>
+      <PageContainer>
+        <PageHeader
+          title="Đơn hàng"
+          description="Lịch sử và quản lý đơn hàng"
+        />
         <p className="text-sm text-destructive">
           {result.error ?? "Không thể tải đơn hàng"}
         </p>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -45,18 +44,13 @@ export default async function OrdersPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Đơn hàng</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Lịch sử và quản lý đơn hàng
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader title="Đơn hàng" description="Lịch sử và quản lý đơn hàng" />
       <OrdersClient
         initialOrders={orders}
         branches={branches}
         showBranchFilter={isManagerOrAbove}
       />
-    </div>
+    </PageContainer>
   );
 }

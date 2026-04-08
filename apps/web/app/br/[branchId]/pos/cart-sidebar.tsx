@@ -89,7 +89,7 @@ export function CartSidebar({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 text-xs text-muted-foreground"
+                className="touch-target h-7 text-xs text-muted-foreground"
               >
                 <Trash2 className="mr-1 size-3" />
                 Xóa
@@ -128,7 +128,7 @@ export function CartSidebar({
             role="radio"
             aria-checked={orderType === "dine_in"}
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              "touch-target flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
               orderType === "dine_in"
                 ? "bg-background shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
@@ -143,7 +143,7 @@ export function CartSidebar({
             role="radio"
             aria-checked={orderType === "takeaway"}
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              "touch-target flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
               orderType === "takeaway"
                 ? "bg-background shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
@@ -220,7 +220,7 @@ export function CartSidebar({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="size-7 shrink-0 text-muted-foreground hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        className="touch-target size-7 shrink-0 text-muted-foreground hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         aria-label={`Xóa ${item.item_name} khỏi giỏ`}
                         onClick={() => onRemoveItem(item.key)}
                       >
@@ -232,7 +232,7 @@ export function CartSidebar({
                         <Button
                           variant="outline"
                           size="icon"
-                          className="size-11 rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          className="touch-target size-11 rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                           aria-label={`Giảm số lượng ${item.item_name}`}
                           onClick={() => onUpdateQuantity(item.key, -1)}
                         >
@@ -244,7 +244,7 @@ export function CartSidebar({
                         <Button
                           variant="outline"
                           size="icon"
-                          className="size-11 rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          className="touch-target size-11 rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                           aria-label={`Tăng số lượng ${item.item_name}`}
                           onClick={() => onUpdateQuantity(item.key, 1)}
                         >
@@ -296,7 +296,7 @@ export function CartSidebar({
               </span>
             </div>
             <Button
-              className="mt-3 h-14 w-full text-base font-bold tracking-wide shadow-md"
+              className="touch-target-lg mt-3 h-14 w-full text-base font-bold tracking-wide shadow-md"
               size="lg"
               disabled={!canSubmit || isSubmitting}
               onClick={onSubmitOrder}
