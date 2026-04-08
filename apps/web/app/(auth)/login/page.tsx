@@ -14,7 +14,7 @@ function BrandPanel() {
       {/* Decorative circles */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-24 -left-24 size-96 rounded-full bg-white/5" />
-        <div className="absolute -bottom-32 -right-32 size-[28rem] rounded-full bg-white/5" />
+        <div className="absolute -bottom-32 -right-32 size-112 rounded-full bg-white/5" />
         <div className="absolute top-1/3 right-12 size-48 rounded-full bg-white/[0.03]" />
       </div>
 

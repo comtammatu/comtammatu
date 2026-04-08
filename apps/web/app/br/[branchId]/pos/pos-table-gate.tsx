@@ -85,7 +85,7 @@ export function PosTableGate({
                               : `Bàn ${String(table.number)} — đang sử dụng`
                           }
                           className={cn(
-                            "flex min-h-[52px] min-w-[52px] flex-col items-center justify-center rounded-xl border-2 px-4 py-3 text-sm font-semibold transition-all",
+                            "flex min-h-13 min-w-13 flex-col items-center justify-center rounded-xl border-2 px-4 py-3 text-sm font-semibold transition-all",
                             isSelected
                               ? "border-primary bg-primary/10 text-primary shadow-sm"
                               : isAvailable
@@ -98,12 +98,12 @@ export function PosTableGate({
                         >
                           <span>{table.number}</span>
                           {table.capacity > 0 && (
-                            <span className="text-[10px] font-normal text-muted-foreground">
+                            <span className="text-xs font-normal text-muted-foreground">
                               {table.capacity} chỗ
                             </span>
                           )}
                           {!isAvailable && (
-                            <span className="text-[10px] text-destructive">
+                            <span className="text-xs text-destructive">
                               Đang dùng
                             </span>
                           )}

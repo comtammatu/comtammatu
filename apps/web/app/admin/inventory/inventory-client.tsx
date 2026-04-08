@@ -32,7 +32,7 @@ export function InventoryClient({
     useState<IngredientRow[]>(ingredients);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <InventoryValuePanel visibility={inventoryValueVisibility} />
 
       <Tabs defaultValue="ingredients">

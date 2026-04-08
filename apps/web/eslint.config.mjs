@@ -4,6 +4,7 @@ import globals from "globals";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import nextPlugin from "@next/eslint-plugin-next";
+import designSystem from "./eslint-plugins/no-arbitrary-tailwind-value.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -32,6 +33,15 @@ export default tseslint.config(
     rules: {
       ...nextPlugin.configs.recommended.rules,
       ...nextPlugin.configs["core-web-vitals"].rules,
+    },
+  },
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    plugins: {
+      "design-system": designSystem,
+    },
+    rules: {
+      "design-system/no-arbitrary-tailwind-value": "error",
     },
   },
   {

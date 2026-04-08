@@ -265,7 +265,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
           <span className="text-2xl font-black leading-none tabular-nums">
             {elapsed}
           </span>
-          <span className="text-[9px] font-bold uppercase tracking-wider opacity-70">
+          <span className="text-xs font-bold uppercase tracking-wider opacity-70">
             phút
           </span>
         </Badge>

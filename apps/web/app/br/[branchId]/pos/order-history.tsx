@@ -75,7 +75,7 @@ export function OrderHistory({
                 <span className="text-sm font-semibold">
                   #{order.order_number}
                 </span>
-                <Badge variant={statusInfo.variant} className="text-[10px]">
+                <Badge variant={statusInfo.variant} className="text-xs">
                   {statusInfo.label}
                 </Badge>
               </div>
@@ -105,7 +105,7 @@ export function OrderHistory({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-9 min-h-9 min-w-[4.5rem] text-xs"
+                    className="h-9 min-h-9 min-w-18 text-xs"
                     onClick={() => onViewDetail(order.id)}
                   >
                     Chi tiết
@@ -113,7 +113,7 @@ export function OrderHistory({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-9 min-h-9 min-w-[4.5rem] text-xs"
+                    className="h-9 min-h-9 min-w-18 text-xs"
                     onClick={() => onViewBill(order.id)}
                   >
                     <Receipt className="mr-1 size-3" />

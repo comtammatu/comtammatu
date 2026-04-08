@@ -92,7 +92,7 @@ export function StationsClient({
           value={selectedBranchId?.toString() ?? ""}
           onValueChange={(v) => setSelectedBranchId(Number(v))}
         >
-          <SelectTrigger className="w-[240px]">
+          <SelectTrigger className="w-60">
             <SelectValue placeholder="Chọn chi nhánh" />
           </SelectTrigger>
           <SelectContent>
@@ -128,15 +128,11 @@ export function StationsClient({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[200px]">Tên trạm</TableHead>
-                  <TableHead className="w-[100px] text-center">
-                    Thứ tự
-                  </TableHead>
+                  <TableHead className="w-50">Tên trạm</TableHead>
+                  <TableHead className="w-25 text-center">Thứ tự</TableHead>
                   <TableHead>Danh mục món ăn</TableHead>
-                  <TableHead className="w-[100px] text-center">
-                    Trạng thái
-                  </TableHead>
-                  <TableHead className="w-[80px]" />
+                  <TableHead className="w-25 text-center">Trạng thái</TableHead>
+                  <TableHead className="w-20" />
                 </TableRow>
               </TableHeader>
               <TableBody>

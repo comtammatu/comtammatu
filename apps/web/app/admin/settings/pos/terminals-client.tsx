@@ -72,7 +72,7 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
             value={selectedBranchId?.toString() ?? ""}
             onValueChange={(v) => setSelectedBranchId(Number(v))}
           >
-            <SelectTrigger className="w-[240px]">
+            <SelectTrigger className="w-60">
               <SelectValue placeholder="Chọn chi nhánh" />
             </SelectTrigger>
             <SelectContent>
@@ -118,12 +118,10 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[200px]">Tên máy</TableHead>
+                  <TableHead className="w-50">Tên máy</TableHead>
                   <TableHead>Thiết bị (device_id)</TableHead>
-                  <TableHead className="w-[100px] text-center">
-                    Trạng thái
-                  </TableHead>
-                  <TableHead className="w-[80px]" />
+                  <TableHead className="w-25 text-center">Trạng thái</TableHead>
+                  <TableHead className="w-20" />
                 </TableRow>
               </TableHeader>
               <TableBody>

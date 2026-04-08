@@ -186,7 +186,7 @@ function SidebarNav({
     <nav className="space-y-5">
       {groups.map((group) => (
         <div key={group.title}>
-          <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+          <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/40">
             {group.title}
           </p>
           <div className="space-y-0.5">
@@ -206,11 +206,11 @@ function SidebarNav({
                   )}
                 >
                   {isActive && (
-                    <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-sidebar-primary" />
+                    <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-sidebar-primary" />
                   )}
                   <Icon
                     className={cn(
-                      "size-[18px] shrink-0 transition-colors",
+                      "size-4.5 shrink-0 transition-colors",
                       isActive
                         ? "text-sidebar-primary"
                         : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/70",
@@ -249,7 +249,7 @@ function SidebarUserFooter({
           <p className="truncate text-sm font-semibold text-sidebar-foreground">
             {user.name}
           </p>
-          <p className="truncate text-[11px] font-medium text-sidebar-foreground/45">
+          <p className="truncate text-xs font-medium text-sidebar-foreground/45">
             {role}
           </p>
         </div>
@@ -308,10 +308,10 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
               <UtensilsCrossed className="size-5 text-sidebar-primary-foreground" />
             </div>
             <div>
-              <span className="text-[15px] font-bold tracking-tight text-sidebar-foreground">
+              <span className="text-base font-bold tracking-tight text-sidebar-foreground">
                 Cơm Tấm Má Tư
               </span>
-              <p className="text-[10px] font-medium uppercase tracking-widest text-sidebar-foreground/40">
+              <p className="text-xs font-medium uppercase tracking-widest text-sidebar-foreground/40">
                 Quản lý
               </p>
             </div>
@@ -445,10 +445,10 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
                 <UtensilsCrossed className="size-5 text-sidebar-primary-foreground" />
               </div>
               <div>
-                <span className="text-[15px] font-bold tracking-tight text-sidebar-foreground">
+                <span className="text-base font-bold tracking-tight text-sidebar-foreground">
                   Cơm Tấm Má Tư
                 </span>
-                <p className="text-[10px] font-medium uppercase tracking-widest text-sidebar-foreground/40">
+                <p className="text-xs font-medium uppercase tracking-widest text-sidebar-foreground/40">
                   Quản lý
                 </p>
               </div>

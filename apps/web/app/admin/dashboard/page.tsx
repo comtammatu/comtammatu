@@ -27,7 +27,7 @@ function StatCard({ title, value, change, icon: Icon }: StatCardProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}
         </CardTitle>
@@ -102,7 +102,7 @@ export default async function DashboardPage() {
   const avgChange = computeChange(stats.avgOrderValue, yesterdayAvg);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Tổng quan</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -142,7 +142,7 @@ export default async function DashboardPage() {
                 {stats.recentOrders.map((order) => (
                   <li
                     key={order.id}
-                    className="flex items-center justify-between gap-4 px-5 py-3.5 transition-colors hover:bg-muted/40"
+                    className="flex items-center justify-between gap-4 px-6 py-4 transition-colors hover:bg-muted/40"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold">
@@ -160,7 +160,7 @@ export default async function DashboardPage() {
                       >
                         {ORDER_STATUS_LABELS[order.status] ?? order.status}
                       </Badge>
-                      <span className="min-w-[80px] text-right text-sm font-semibold tabular-nums">
+                      <span className="min-w-20 text-right text-sm font-semibold tabular-nums">
                         {formatVND(order.total_amount)}
                       </span>
                     </div>

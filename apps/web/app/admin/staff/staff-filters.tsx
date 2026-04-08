@@ -35,7 +35,7 @@ export function StaffFilters({ branches }: StaffFiltersProps) {
         value={searchParams.get("role") ?? "all"}
         onValueChange={(v) => updateFilter("role", v)}
       >
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-45">
           <SelectValue placeholder="Tất cả vai trò" />
         </SelectTrigger>
         <SelectContent>
@@ -52,7 +52,7 @@ export function StaffFilters({ branches }: StaffFiltersProps) {
         value={searchParams.get("branch") ?? "all"}
         onValueChange={(v) => updateFilter("branch", v)}
       >
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-45">
           <SelectValue placeholder="Tất cả chi nhánh" />
         </SelectTrigger>
         <SelectContent>
@@ -69,7 +69,7 @@ export function StaffFilters({ branches }: StaffFiltersProps) {
         value={searchParams.get("status") ?? "all"}
         onValueChange={(v) => updateFilter("status", v)}
       >
-        <SelectTrigger className="w-[160px]">
+        <SelectTrigger className="w-40">
           <SelectValue placeholder="Tất cả trạng thái" />
         </SelectTrigger>
         <SelectContent>

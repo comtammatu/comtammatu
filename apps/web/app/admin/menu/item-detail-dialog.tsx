@@ -258,7 +258,7 @@ export function ItemDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-dialog overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{item.name} — Chi tiết</DialogTitle>
         </DialogHeader>

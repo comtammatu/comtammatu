@@ -21,20 +21,16 @@ Restaurant management app = **operational tool used 8+ hours/day** by staff in a
 - NOT playful/vibrant neon
 - Professional warmth — like a well-designed restaurant interior
 
-## Design System Governance (v3)
+## Governance
 
-This document is the canonical design source for implementation. Recommendation artifacts from `ui-ux-pro-max` are stored under:
+This file is the **single source of truth** for design decisions. Implementation must match `globals.css` `@theme`.
 
-- `design-system/com-tam-ma-tu/MASTER.md`
-- `design-system/com-tam-ma-tu/pages/admin.md`
-- `design-system/com-tam-ma-tu/pages/pos.md`
-- `design-system/com-tam-ma-tu/pages/kds.md`
+Rules:
 
-Rules for using these artifacts:
-
-1. Tool output is input material, not direct truth.
-2. Final tokens, typography, spacing, and interaction standards must match this spec and `apps/web/app/globals.css`.
-3. Page overrides can only narrow behavior by context (KDS/POS/Admin), never break shared semantics.
+1. No secondary design spec files. Tool outputs (`ui-ux-pro-max`, etc.) are input material — never commit as spec.
+2. All tokens, typography, spacing, and interaction standards must match this spec and `apps/web/app/globals.css`.
+3. Surface overrides (KDS/POS/Admin sections below) can narrow behavior by context, never break shared semantics.
+4. ESLint rule `no-arbitrary-tailwind-value` enforces no `[Xpx]`/`[Xrem]` — extend `@theme` instead.
 
 ## Product Surface Overrides (v3)
 
@@ -138,6 +134,66 @@ Same hue family (30), inverted luminance. KDS gets `.dark` class automatically.
 
 **Z-index scale (v3):** 10, 20, 30, 40, 50
 
+## Spacing Rules
+
+### Allowed spacing scale
+
+Only these Tailwind values. Anything outside requires team review:
+
+| Token | Value | Use for                             |
+| ----- | ----- | ----------------------------------- |
+| `0.5` | 2px   | Tight inline gaps (icon + text)     |
+| `1`   | 4px   | Compact element spacing             |
+| `1.5` | 6px   | Form field internal                 |
+| `2`   | 8px   | Related element gaps, compact lists |
+| `3`   | 12px  | Filter bar gaps, button groups      |
+| `4`   | 16px  | Card grid gaps, section sub-gaps    |
+| `6`   | 24px  | Page section spacing, card padding  |
+| `8`   | 32px  | Major section breaks                |
+| `12`  | 48px  | Page-level hero spacing             |
+
+### Page layout spacing
+
+All admin pages MUST follow:
+
+| Element               | Class       | Value                   |
+| --------------------- | ----------- | ----------------------- |
+| Page sections         | `space-y-6` | 24px between sections   |
+| Page header → content | (in above)  | Included in `space-y-6` |
+| Stat card grid        | `gap-4`     | 16px                    |
+| Table → next section  | (in above)  | Included in `space-y-6` |
+
+### Card spacing
+
+Never override Card internal padding with `className`. Use composition:
+
+| Element     | Default    | Override allowed? |
+| ----------- | ---------- | ----------------- |
+| CardHeader  | `p-6`      | NO                |
+| CardContent | `p-6 pt-0` | NO                |
+| CardFooter  | `p-6 pt-0` | NO                |
+
+If you need different padding, create a Card variant — don't `className` override.
+
+### Dialog max-widths
+
+One size per dialog type:
+
+| Type               | Max-width      | When                    |
+| ------------------ | -------------- | ----------------------- |
+| Simple form        | `sm:max-w-lg`  | Default for all forms   |
+| Wide table/complex | `sm:max-w-2xl` | Only with explicit need |
+
+### Grid gaps
+
+| Context         | Gap     | Example                |
+| --------------- | ------- | ---------------------- |
+| Stat cards      | `gap-4` | Dashboard stats grid   |
+| Form fields     | `gap-4` | Form field grid        |
+| Filter controls | `gap-3` | Filter bar items       |
+| Compact list    | `gap-2` | Dropdown items, badges |
+| Button group    | `gap-2` | Action button row      |
+
 ## Component Patterns
 
 ### Stat Cards (Dashboard)
@@ -211,6 +267,10 @@ Same hue family (30), inverted luminance. KDS gets `.dark` class automatically.
 - Transitions: 150-300ms ease
 - No one-off spacing systems outside the 4px base rhythm
 - No duplicated visual mapping for the same status in different components
+- No `space-y-8` on admin pages — use `space-y-6`
+- No CardHeader/CardContent `className` padding overrides — create variant instead
+- No arbitrary dimension values `[Xpx]`, `[Xrem]` — extend `@theme` in globals.css
+- No `py-32`, `py-24`, `py-16` empty state padding — use `EmptyState` component
 
 ## Checklist
 

@@ -4,7 +4,7 @@ import { EmptyStatePanel } from "../components/empty-state-panel";
 
 export default function ReportsPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Báo cáo</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -30,7 +30,7 @@ export default function ReportsPage() {
       </div>
 
       <EmptyStatePanel
-        className="py-32"
+        className="py-12"
         title="Chưa có dữ liệu"
         description="Báo cáo doanh thu và top món sẽ hiển thị khi có đơn hàng hoàn thành."
         icon={

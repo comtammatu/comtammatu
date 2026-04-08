@@ -550,7 +550,7 @@ export function PosMenu({
 
   const orderTypeRow = (
     <div className="border-b bg-background px-3 py-2">
-      <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         Loại đơn
       </p>
       <div
@@ -679,7 +679,7 @@ export function PosMenu({
                             <Badge
                               variant="outline"
                               className={cn(
-                                "text-[10px]",
+                                "text-xs",
                                 activeCategoryId === cat.id &&
                                   "border-primary/30 bg-primary/10 text-primary",
                               )}
@@ -712,7 +712,7 @@ export function PosMenu({
                       <button
                         key={item.id}
                         type="button"
-                        className="touch-target-lg focus-ring-standard flex min-h-[80px] cursor-pointer flex-col rounded-xl border border-border bg-card p-3.5 text-left shadow-sm transition-all hover:border-primary/30 hover:shadow-md active:scale-[0.97]"
+                        className="touch-target-lg focus-ring-standard flex min-h-20 cursor-pointer flex-col rounded-xl border border-border bg-card p-3.5 text-left shadow-sm transition-all hover:border-primary/30 hover:shadow-md active:scale-[0.97]"
                         onClick={() => handleItemTap(item)}
                       >
                         <span className="line-clamp-2 text-base font-semibold leading-snug">
@@ -740,7 +740,7 @@ export function PosMenu({
           </div>
 
           {/* Right Panel — Cart / Orders */}
-          <div className="flex w-[320px] shrink-0 flex-col border-l bg-background lg:w-[360px]">
+          <div className="flex w-80 shrink-0 flex-col border-l bg-background lg:w-90">
             <div className="border-b px-2 py-2">
               <div
                 role="tablist"
@@ -761,7 +761,7 @@ export function PosMenu({
                 >
                   Giỏ hàng
                   {cartItems.length > 0 && (
-                    <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
                       {cartItems.reduce((sum, i) => sum + i.quantity, 0)}
                     </span>
                   )}
@@ -792,7 +792,7 @@ export function PosMenu({
                   <div className="flex items-center gap-2">
                     <span className="font-semibold">Đơn hàng</span>
                     {sessionOrders.length > 0 && (
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                         {sessionOrders.length}
                       </span>
                     )}

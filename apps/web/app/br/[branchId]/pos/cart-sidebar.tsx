@@ -78,7 +78,7 @@ export function CartSidebar({
           <ShoppingCart className="size-4" />
           <span className="font-semibold">Giỏ hàng</span>
           {items.length > 0 && (
-            <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
+            <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
               {items.reduce((sum, i) => sum + i.quantity, 0)}
             </span>
           )}
@@ -115,7 +115,7 @@ export function CartSidebar({
       </div>
 
       <div className="border-b px-3 py-2">
-        <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Loại đơn
         </p>
         <div
@@ -159,7 +159,7 @@ export function CartSidebar({
       {orderType === "dine_in" && selectedTableNumber != null && (
         <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
           <div className="min-w-0">
-            <p className="text-[10px] font-medium uppercase text-muted-foreground">
+            <p className="text-xs font-medium uppercase text-muted-foreground">
               Bàn phục vụ
             </p>
             <p className="truncate text-sm font-semibold">
@@ -282,7 +282,7 @@ export function CartSidebar({
               />
               <p
                 id="pos-order-note-hint"
-                className="text-[10px] text-muted-foreground"
+                className="text-xs text-muted-foreground"
               >
                 Tối đa 500 ký tự. Áp dụng cho toàn đơn.
               </p>

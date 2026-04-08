@@ -161,7 +161,7 @@ export function ItemCustomizer({
 
   return (
     <Sheet open={item !== null} onOpenChange={resetAndSetItem}>
-      <SheetContent side="bottom" className="h-[70dvh] p-0">
+      <SheetContent side="bottom" className="h-sheet-customizer p-0">
         {item && (
           <div className="flex h-full flex-col">
             <SheetHeader className="px-4 pt-4">
@@ -277,7 +277,7 @@ export function ItemCustomizer({
               </div>
               <Button
                 size="lg"
-                className="min-h-11 min-w-[10rem]"
+                className="min-h-11 min-w-40"
                 onClick={handleConfirm}
               >
                 {mode === "append" ? "Thêm vào đơn" : "Thêm vào giỏ"}

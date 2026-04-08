@@ -228,4 +228,23 @@
   .focus-ring-standard {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
+
+  /* Dialog/sheet max heights — replaces arbitrary max-h-[Xvh] */
+  .max-h-dialog {
+    max-height: 80vh;
+  }
+
+  .max-h-dialog-lg {
+    max-height: 90vh;
+  }
+
+  /* KDS board min height */
+  .min-h-kds-board {
+    min-height: 60vh;
+  }
+
+  /* POS item customizer sheet height */
+  .h-sheet-customizer {
+    height: 70dvh;
+  }
 }

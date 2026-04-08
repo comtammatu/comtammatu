@@ -64,7 +64,7 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
           value={selectedBranchId?.toString() ?? ""}
           onValueChange={(v) => setSelectedBranchId(Number(v))}
         >
-          <SelectTrigger className="w-[240px]">
+          <SelectTrigger className="w-60">
             <SelectValue placeholder="Chọn chi nhánh" />
           </SelectTrigger>
           <SelectContent>

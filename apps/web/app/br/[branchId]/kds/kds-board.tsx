@@ -510,7 +510,7 @@ export function KdsBoard({
           }}
         >
           <SelectTrigger
-            className="h-11 min-h-11 w-[min(100%,13rem)] min-w-[10rem] text-sm"
+            className="h-11 min-h-11 w-[min(100%,13rem)] min-w-40 text-sm"
             aria-label="Lọc theo trạng thái món"
           >
             <SelectValue placeholder="Trạng thái" />
@@ -531,7 +531,7 @@ export function KdsBoard({
           }}
         >
           <SelectTrigger
-            className="h-11 min-h-11 w-[min(100%,11rem)] min-w-[9rem] text-sm"
+            className="h-11 min-h-11 w-[min(100%,11rem)] min-w-36 text-sm"
             aria-label="Lọc theo loại đơn"
           >
             <SelectValue placeholder="Loại đơn" />
@@ -569,7 +569,7 @@ export function KdsBoard({
                   ? "Thử thay đổi bộ lọc để xem thêm đơn."
                   : "Chưa có đơn hàng mới."
               }
-              className="min-h-[60vh]"
+              className="min-h-kds-board"
             />
           </div>
         ) : (

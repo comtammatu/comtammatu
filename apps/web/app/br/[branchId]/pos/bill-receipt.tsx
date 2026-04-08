@@ -180,7 +180,7 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
 
   return (
     <Sheet open={orderId !== null} onOpenChange={handleOpenChange}>
-      <SheetContent side="right" className="w-[380px] p-0 sm:max-w-[380px]">
+      <SheetContent side="right" className="w-95 p-0 sm:max-w-95">
         {isPending ? (
           <div className="flex h-full items-center justify-center">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -383,7 +383,7 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
                     )}
                   {pendingExtras?.qr_data &&
                     !pendingExtras.qr_data.startsWith("http") && (
-                      <pre className="mt-2 max-h-32 overflow-auto rounded border bg-muted p-2 text-[10px]">
+                      <pre className="mt-2 max-h-32 overflow-auto rounded border bg-muted p-2 text-xs">
                         {pendingExtras.qr_data}
                       </pre>
                     )}

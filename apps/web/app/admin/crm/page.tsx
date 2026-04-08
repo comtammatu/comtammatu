@@ -2,14 +2,14 @@ import { Heart } from "lucide-react";
 
 export default function CrmPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Khách hàng</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Quản lý khách hàng và chương trình thành viên
         </p>
       </div>
-      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 py-32 text-center">
+      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 py-12 text-center">
         <div className="rounded-full bg-primary/10 p-4">
           <Heart className="size-8 text-primary" />
         </div>
