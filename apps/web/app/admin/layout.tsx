@@ -11,19 +11,19 @@ export default async function AdminLayout({
 }) {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user) redirect("/login");
+  if (!session?.user) redirect("/login");
 
-  const claims = extractClaims(user.app_metadata);
+  const claims = extractClaims(session.user.app_metadata);
   if (!claims || !isAdminRole(claims.user_role)) {
     redirect("/login");
   }
 
   return (
     <AdminShell
-      user={{ name: user.user_metadata?.["display_name"] ?? user.email ?? "" }}
+      user={{ name: session.user.user_metadata?.["display_name"] ?? session.user.email ?? "" }}
       role={claims.user_role}
     >
       {children}

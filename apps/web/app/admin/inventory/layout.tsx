@@ -10,9 +10,9 @@ export default async function InventoryLayout({
 }) {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const claims = user ? extractClaims(user.app_metadata) : null;
+    data: { session },
+  } = await supabase.auth.getSession();
+  const claims = session?.user ? extractClaims(session.user.app_metadata) : null;
   const showProcurement = claims
     ? canAccess(claims.user_role, "inventory_procurement")
     : false;

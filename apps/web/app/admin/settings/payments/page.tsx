@@ -8,9 +8,9 @@ export default async function PaymentSettingsPage() {
   const supabase = await createClient();
 
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const claims = user ? extractClaims(user.app_metadata) : null;
+    data: { session },
+  } = await supabase.auth.getSession();
+  const claims = session?.user ? extractClaims(session.user.app_metadata) : null;
   if (!claims || !["owner", "super_manager"].includes(claims.user_role)) {
     redirect("/admin/settings/tables");
   }

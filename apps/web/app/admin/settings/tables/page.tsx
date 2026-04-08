@@ -10,11 +10,11 @@ export default async function TablesPage() {
   const supabase = await createClient();
 
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.user) redirect("/login");
 
-  const claims = extractClaims(user.app_metadata);
+  const claims = extractClaims(session.user.app_metadata);
   if (!claims) redirect("/login");
 
   if (!canManageBranchFloorSettings(claims.user_role)) {

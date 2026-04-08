@@ -93,6 +93,8 @@ export async function fetchOrders(
       : parsed.data.branchId;
 
   // Build orders query with joins
+  // List view: exclude order_items to keep RSC payload small.
+  // Items are loaded on-demand when user opens order detail.
   let query = supabase
     .from("orders")
     .select(
@@ -110,11 +112,10 @@ export async function fetchOrders(
        created_at,
        branches(name),
        profiles(full_name),
-       order_items(id, item_name, quantity, unit_price, subtotal, variant_name),
        payments(method, amount, status)`,
     )
     .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(50);
 
   if (parsed.data.status) {
     query = query.eq("status", parsed.data.status);
@@ -159,16 +160,7 @@ export async function fetchOrders(
       branch_name: (row.branches as { name: string } | null)?.name ?? "—",
       created_by_name:
         (row.profiles as { full_name: string } | null)?.full_name ?? "—",
-      items: (Array.isArray(row.order_items) ? row.order_items : []).map(
-        (item) => ({
-          id: item.id,
-          item_name: item.item_name,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          subtotal: item.subtotal,
-          variant_name: item.variant_name ?? null,
-        }),
-      ),
+      items: [],
       payment: firstPayment
         ? {
             method: firstPayment.method,

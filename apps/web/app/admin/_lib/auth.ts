@@ -8,16 +8,20 @@ import type { StaffRole } from "@comtammatu/shared/auth";
  */
 export async function getAuthContext(allowedRoles: readonly StaffRole[]) {
   const supabase = await createClient();
+
+  // Use getSession() instead of getUser() to avoid an extra HTTP roundtrip
+  // to Supabase Auth. The middleware (proxy.ts) already called getUser() which
+  // refreshed the session cookie — so the session here is guaranteed fresh.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user) return null;
+  if (!session?.user) return null;
 
-  const claims = extractClaims(user.app_metadata);
+  const claims = extractClaims(session.user.app_metadata);
   if (!claims) return null;
 
   if (!allowedRoles.includes(claims.user_role)) return null;
 
-  return { supabase, claims, user };
+  return { supabase, claims, user: session.user };
 }

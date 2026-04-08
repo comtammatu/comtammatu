@@ -8,9 +8,9 @@ import { InventoryValuePanel } from "../../inventory/inventory-value-panel";
 export default async function InventoryValueReportPage() {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const claims = user ? extractClaims(user.app_metadata) : null;
+    data: { session },
+  } = await supabase.auth.getSession();
+  const claims = session?.user ? extractClaims(session.user.app_metadata) : null;
   const inventoryValueVisibility = claims
     ? getInventoryValueVisibility(claims.user_role)
     : { system: false, area: false, branch: false };

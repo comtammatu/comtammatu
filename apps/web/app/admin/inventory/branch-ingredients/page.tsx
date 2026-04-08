@@ -7,9 +7,9 @@ import { BranchIngredientsClient } from "./branch-ingredients-client";
 export default async function BranchIngredientsPage() {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const claims = user ? extractClaims(user.app_metadata) : null;
+    data: { session },
+  } = await supabase.auth.getSession();
+  const claims = session?.user ? extractClaims(session.user.app_metadata) : null;
   if (claims?.user_role !== "super_manager") {
     notFound();
   }

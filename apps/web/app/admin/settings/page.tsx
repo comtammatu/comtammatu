@@ -5,12 +5,12 @@ import { extractClaims } from "@comtammatu/shared/auth";
 export default async function SettingsPage() {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user) redirect("/login");
+  if (!session?.user) redirect("/login");
 
-  const claims = extractClaims(user.app_metadata);
+  const claims = extractClaims(session.user.app_metadata);
   if (!claims) redirect("/login");
 
   if (
