@@ -1,13 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { Be_Vietnam_Pro } from "next/font/google";
+import { Geist } from "next/font/google";
 import { Toaster } from "@comtammatu/ui/components/sonner";
 import "./globals.css";
 
-const beVietnamPro = Be_Vietnam_Pro({
-  subsets: ["vietnamese", "latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-be-vietnam-pro",
+const geist = Geist({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-geist",
   display: "swap",
 });
 
@@ -19,14 +18,14 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fafaf8" },
-    { media: "(prefers-color-scheme: dark)", color: "#171311" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#ffffff" },
   ],
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="vi" className={beVietnamPro.variable} suppressHydrationWarning>
+    <html lang="vi" className={geist.variable} suppressHydrationWarning>
       <body className="min-h-screen font-sans antialiased">
         <a
           href="#main-content"

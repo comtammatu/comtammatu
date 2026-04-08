@@ -32,7 +32,7 @@ export default async function KdsLayout({
   return (
     <main
       id="main-content"
-      className="dark flex h-dvh flex-col touch-manipulation overflow-hidden bg-background font-sans text-foreground antialiased"
+      className="flex h-dvh flex-col touch-manipulation overflow-hidden bg-background font-sans text-foreground antialiased"
     >
       {children}
     </main>

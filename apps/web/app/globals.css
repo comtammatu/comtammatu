@@ -7,65 +7,67 @@
 /* ============================================================
    Cơm Tấm Má Tư — Design Tokens
    Tailwind CSS v4 — CSS-first configuration
+   Style: Neutral Minimal + Rose accent
    Ref: docs/spec/design-system.md
    ============================================================ */
 
 @theme inline {
-  --font-sans: var(--font-be-vietnam-pro), system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-geist), system-ui, -apple-system, sans-serif;
 
-  /* Primary: Appetizing warm red — the hero color for CTAs, brand identity */
-  --color-background: oklch(0.985 0.003 75);
-  --color-foreground: oklch(0.18 0.03 30);
+  /* Neutral Minimal — zinc scale */
+  --color-background: oklch(1 0 0);
+  --color-foreground: oklch(0.145 0 0);
 
-  --color-primary: oklch(0.52 0.2 25);
-  --color-primary-foreground: oklch(0.98 0.005 80);
+  /* Primary: Rose-600 (#E11D48) — CTA, active states, brand accent */
+  --color-primary: oklch(0.586 0.253 17.585);
+  --color-primary-foreground: oklch(0.985 0 0);
 
-  --color-secondary: oklch(0.95 0.008 75);
-  --color-secondary-foreground: oklch(0.3 0.03 30);
+  --color-secondary: oklch(0.961 0 0);
+  --color-secondary-foreground: oklch(0.205 0 0);
 
-  /* Accent: Warm gold — highlights, badges, active states */
-  --color-accent: oklch(0.72 0.16 85);
-  --color-accent-foreground: oklch(0.2 0.03 55);
+  /* Accent: same as secondary for neutral minimal */
+  --color-accent: oklch(0.961 0 0);
+  --color-accent-foreground: oklch(0.205 0 0);
 
-  --color-muted: oklch(0.95 0.006 75);
-  --color-muted-foreground: oklch(0.5 0.02 55);
+  --color-muted: oklch(0.961 0 0);
+  --color-muted-foreground: oklch(0.556 0 0);
 
   --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.18 0.03 30);
+  --color-card-foreground: oklch(0.145 0 0);
 
   --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.18 0.03 30);
+  --color-popover-foreground: oklch(0.145 0 0);
 
-  --color-border: oklch(0.9 0.008 75);
-  --color-input: oklch(0.9 0.008 75);
-  --color-ring: oklch(0.52 0.2 25);
-  --color-ring-offset: oklch(0.985 0.003 75);
+  --color-border: oklch(0.922 0 0);
+  --color-input: oklch(0.922 0 0);
+  --color-ring: oklch(0.586 0.253 17.585);
+  --color-ring-offset: oklch(1 0 0);
 
-  --color-destructive: oklch(0.55 0.22 27);
-  --color-destructive-foreground: oklch(0.98 0.005 0);
+  --color-destructive: oklch(0.577 0.245 27.325);
+  --color-destructive-foreground: oklch(0.985 0 0);
 
   /* Status colors */
   --color-success: oklch(0.6 0.18 155);
   --color-warning: oklch(0.75 0.15 85);
   --color-info: oklch(0.6 0.15 240);
 
-  /* Sidebar: Dark warm — professional contrast against light content */
-  --color-sidebar: oklch(0.22 0.035 30);
-  --color-sidebar-foreground: oklch(0.88 0.01 75);
-  --color-sidebar-primary: oklch(0.72 0.16 85);
-  --color-sidebar-primary-foreground: oklch(0.18 0.03 30);
-  --color-sidebar-accent: oklch(0.28 0.04 30);
-  --color-sidebar-accent-foreground: oklch(0.92 0.01 75);
-  --color-sidebar-border: oklch(0.3 0.03 30);
-  --color-sidebar-ring: oklch(0.72 0.16 85);
+  /* Sidebar: Neutral zinc-900 dark */
+  --color-sidebar: oklch(0.21 0 0);
+  --color-sidebar-foreground: oklch(0.985 0 0);
+  --color-sidebar-primary: oklch(0.586 0.253 17.585);
+  --color-sidebar-primary-foreground: oklch(0.985 0 0);
+  --color-sidebar-accent: oklch(0.269 0 0);
+  --color-sidebar-accent-foreground: oklch(0.985 0 0);
+  --color-sidebar-border: oklch(0.274 0 0);
+  --color-sidebar-ring: oklch(0.586 0.253 17.585);
 
-  /* Surface and state semantics for v3 rollout */
+  /* Surface semantics */
   --color-surface-raised: oklch(1 0 0);
-  --color-surface-sunken: oklch(0.965 0.004 75);
+  --color-surface-sunken: oklch(0.977 0 0);
   --color-state-pending: oklch(0.75 0.15 85);
   --color-state-processing: oklch(0.66 0.14 85);
   --color-state-ready: oklch(0.65 0.17 155);
-  --color-state-cancelled: oklch(0.6 0.08 28);
+  --color-state-cancelled: oklch(0.556 0 0);
 
   /* Spacing and layout scales */
   --space-1: 0.25rem;
@@ -76,17 +78,17 @@
   --space-8: 2rem;
   --space-12: 3rem;
 
-  /* Elevation and layering */
-  --elevation-1: 0 1px 2px rgb(28 18 8 / 0.08);
-  --elevation-2: 0 8px 20px rgb(28 18 8 / 0.12);
-  --elevation-3: 0 18px 40px rgb(28 18 8 / 0.18);
+  /* Elevation — neutral shadows */
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.06);
+  --elevation-2: 0 8px 20px rgb(0 0 0 / 0.08);
+  --elevation-3: 0 18px 40px rgb(0 0 0 / 0.12);
   --z-overlay-1: 10;
   --z-overlay-2: 20;
   --z-overlay-3: 30;
   --z-overlay-4: 40;
   --z-overlay-5: 50;
 
-  /* Radius — rounder for modern feel */
+  /* Radius */
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.625rem;
@@ -165,65 +167,6 @@
       height: 0;
     }
   }
-}
-
-/* Dark mode variant */
-@custom-variant dark (&:where(.dark, .dark *));
-
-/* Dark mode overrides (KDS uses .dark) */
-.dark {
-  --color-background: oklch(0.14 0.02 30);
-  --color-foreground: oklch(0.93 0.008 75);
-
-  --color-primary: oklch(0.65 0.18 25);
-  --color-primary-foreground: oklch(0.12 0.02 30);
-
-  --color-secondary: oklch(0.22 0.02 30);
-  --color-secondary-foreground: oklch(0.93 0.008 75);
-
-  --color-accent: oklch(0.68 0.14 85);
-  --color-accent-foreground: oklch(0.93 0.008 75);
-
-  --color-muted: oklch(0.22 0.02 30);
-  --color-muted-foreground: oklch(0.58 0.02 55);
-
-  --color-card: oklch(0.18 0.02 30);
-  --color-card-foreground: oklch(0.93 0.008 75);
-
-  --color-popover: oklch(0.18 0.02 30);
-  --color-popover-foreground: oklch(0.93 0.008 75);
-
-  --color-border: oklch(0.28 0.02 30);
-  --color-input: oklch(0.28 0.02 30);
-  --color-ring: oklch(0.65 0.18 25);
-  --color-ring-offset: oklch(0.14 0.02 30);
-
-  --color-destructive: oklch(0.5 0.2 27);
-  --color-destructive-foreground: oklch(0.93 0.008 0);
-
-  --color-success: oklch(0.65 0.17 155);
-  --color-warning: oklch(0.75 0.14 85);
-  --color-info: oklch(0.65 0.13 240);
-
-  --color-sidebar: oklch(0.14 0.02 30);
-  --color-sidebar-foreground: oklch(0.9 0.008 75);
-  --color-sidebar-primary: oklch(0.68 0.14 85);
-  --color-sidebar-primary-foreground: oklch(0.12 0.02 30);
-  --color-sidebar-accent: oklch(0.22 0.025 30);
-  --color-sidebar-accent-foreground: oklch(0.9 0.008 75);
-  --color-sidebar-border: oklch(0.28 0.02 30);
-  --color-sidebar-ring: oklch(0.68 0.14 85);
-
-  --color-surface-raised: oklch(0.2 0.02 30);
-  --color-surface-sunken: oklch(0.16 0.02 30);
-  --color-state-pending: oklch(0.74 0.14 85);
-  --color-state-processing: oklch(0.67 0.13 85);
-  --color-state-ready: oklch(0.67 0.16 155);
-  --color-state-cancelled: oklch(0.58 0.07 28);
-
-  --elevation-1: 0 2px 6px rgb(0 0 0 / 0.25);
-  --elevation-2: 0 12px 28px rgb(0 0 0 / 0.35);
-  --elevation-3: 0 24px 50px rgb(0 0 0 / 0.45);
 }
 
 /* Base layer */

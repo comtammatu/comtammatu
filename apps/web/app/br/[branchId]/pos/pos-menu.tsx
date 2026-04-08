@@ -523,7 +523,7 @@ export function PosMenu({
   const appendBannerRow =
     appendTarget != null ? (
       <div
-        className="flex items-center justify-between gap-2 border-b bg-warning/15 px-3 py-2 dark:bg-warning/20"
+        className="flex items-center justify-between gap-2 border-b bg-warning/15 px-3 py-2"
         role="status"
       >
         <p className="min-w-0 text-xs leading-snug text-foreground">
