@@ -19,6 +19,7 @@ import {
   syncBranchIngredients,
 } from "../branch-ingredients-actions";
 import type { IngredientRow } from "../page";
+import { EmptyStatePanel } from "../../components/empty-state-panel";
 
 type BranchOpt = {
   id: number;
@@ -165,9 +166,10 @@ export function BranchIngredientsClient({
               </label>
             ))}
             {sorted.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                Chưa có nguyên liệu trong danh mục.
-              </p>
+              <EmptyStatePanel
+                className="bg-transparent py-10"
+                title="Chưa có nguyên liệu trong danh mục"
+              />
             )}
           </div>
         </ScrollArea>

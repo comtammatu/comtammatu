@@ -473,9 +473,7 @@ export function KdsBoard({
                       ? "bg-amber-500 text-zinc-950 shadow-sm"
                       : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100",
                   )}
-                  onClick={() =>
-                    replaceQuery({ station: String(station.id) })
-                  }
+                  onClick={() => replaceQuery({ station: String(station.id) })}
                 >
                   {station.name}
                   <span

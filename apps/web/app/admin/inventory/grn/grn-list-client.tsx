@@ -33,6 +33,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { createGrnDraft, fetchGrns } from "../procurement-actions";
 import type { SupplierRow } from "../suppliers/suppliers-client";
 import type { PurchaseOrderRow } from "../purchase-orders/purchase-orders-client";
+import { TableEmptyStateRow } from "../../components/table-empty-state-row";
 
 export interface GrnListRow {
   id: number;
@@ -134,37 +135,49 @@ export function GrnListClient({
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">Số phiếu</TableHead>
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">NCC</TableHead>
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">Trạng thái</TableHead>
-              <TableHead className="hidden sm:table-cell text-xs uppercase tracking-wider font-semibold">Ngày</TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">
+                Số phiếu
+              </TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">
+                NCC
+              </TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">
+                Trạng thái
+              </TableHead>
+              <TableHead className="hidden sm:table-cell text-xs uppercase tracking-wider font-semibold">
+                Ngày
+              </TableHead>
               <TableHead className="w-24" />
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-border/60">
             {rows.length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="py-16 text-center"
-                >
-                  <p className="text-sm font-medium text-muted-foreground">Chưa có phiếu nhập kho</p>
-                  <p className="mt-1 text-xs text-muted-foreground/70">Nhấn &quot;Tạo GRN&quot; để ghi nhận hàng nhập</p>
-                </TableCell>
-              </TableRow>
+              <TableEmptyStateRow
+                colSpan={5}
+                paddingClassName="py-16"
+                title="Chưa có phiếu nhập kho"
+                description='Nhấn "Tạo GRN" để ghi nhận hàng nhập'
+              />
             )}
             {rows.map((r) => (
-              <TableRow key={r.id} className="hover:bg-muted/40 transition-colors">
+              <TableRow
+                key={r.id}
+                className="hover:bg-muted/40 transition-colors"
+              >
                 <TableCell className="font-mono text-sm">
                   {r.grn_number}
                 </TableCell>
                 <TableCell>{r.suppliers?.name ?? "—"}</TableCell>
                 <TableCell>
-                  <Badge className={
-                    r.status === "confirmed" ? "bg-success/10 text-success border-success/20" :
-                    r.status === "cancelled" ? "bg-destructive/10 text-destructive border-destructive/20" :
-                    "bg-muted text-muted-foreground"
-                  }>
+                  <Badge
+                    className={
+                      r.status === "confirmed"
+                        ? "bg-success/10 text-success border-success/20"
+                        : r.status === "cancelled"
+                          ? "bg-destructive/10 text-destructive border-destructive/20"
+                          : "bg-muted text-muted-foreground"
+                    }
+                  >
                     {STATUS_LABEL[r.status] ?? r.status}
                   </Badge>
                 </TableCell>

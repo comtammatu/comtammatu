@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BarChart3, Package } from "lucide-react";
+import { EmptyStatePanel } from "../components/empty-state-panel";
 
 export default function ReportsPage() {
   return (
@@ -28,15 +29,16 @@ export default function ReportsPage() {
         </Link>
       </div>
 
-      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 py-32 text-center">
-        <div className="rounded-full bg-primary/10 p-4">
-          <BarChart3 className="size-8 text-primary" />
-        </div>
-        <h2 className="mt-5 text-lg font-semibold">Chưa có dữ liệu</h2>
-        <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-          Báo cáo doanh thu và top món sẽ hiển thị khi có đơn hàng hoàn thành.
-        </p>
-      </div>
+      <EmptyStatePanel
+        className="py-32"
+        title="Chưa có dữ liệu"
+        description="Báo cáo doanh thu và top món sẽ hiển thị khi có đơn hàng hoàn thành."
+        icon={
+          <div className="rounded-full bg-primary/10 p-4">
+            <BarChart3 className="size-8 text-primary" />
+          </div>
+        }
+      />
     </div>
   );
 }

@@ -563,7 +563,7 @@ export function PosMenu({
           role="radio"
           aria-checked={orderType === "dine_in"}
           className={cn(
-            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
             orderType === "dine_in"
               ? "bg-background shadow-sm"
               : "text-muted-foreground hover:text-foreground",
@@ -578,7 +578,7 @@ export function PosMenu({
           role="radio"
           aria-checked={orderType === "takeaway"}
           className={cn(
-            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
             orderType === "takeaway"
               ? "bg-background shadow-sm"
               : "text-muted-foreground hover:text-foreground",

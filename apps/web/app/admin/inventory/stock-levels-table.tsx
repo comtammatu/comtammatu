@@ -25,6 +25,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { fetchStockLevels } from "./actions";
 import { AdjustStockDialog } from "./adjust-stock-dialog";
 import type { IngredientRow, BranchOption } from "./page";
+import { EmptyStatePanel } from "../components/empty-state-panel";
 
 interface StockLevelRow {
   id: number;
@@ -238,20 +239,18 @@ export function StockLevelsTable({
       </div>
 
       {!selectedBranchId && (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
-          <Sliders className="size-8 text-muted-foreground" />
-          <p className="mt-2 text-sm text-muted-foreground">
-            Chọn chi nhánh để xem tồn kho
-          </p>
-        </div>
+        <EmptyStatePanel
+          className="py-16"
+          title="Chọn chi nhánh để xem tồn kho"
+          icon={<Sliders className="size-8 text-muted-foreground" />}
+        />
       )}
 
       {selectedBranchId && !loaded && !isPending && (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
-          <p className="text-sm text-muted-foreground">
-            Nhấn &quot;Tải tồn kho&quot; để xem dữ liệu
-          </p>
-        </div>
+        <EmptyStatePanel
+          className="py-16"
+          title='Nhấn "Tải tồn kho" để xem dữ liệu'
+        />
       )}
 
       {(loaded || isPending) && (

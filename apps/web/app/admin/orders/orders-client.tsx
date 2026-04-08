@@ -25,6 +25,7 @@ import {
 import { fetchOrders } from "./actions";
 import { OrderDetailSheet } from "./order-detail-sheet";
 import type { OrderRow, FetchOrdersFilters } from "./actions";
+import { TableEmptyStateRow } from "../components/table-empty-state-row";
 
 /* ─── Status config ─── */
 
@@ -231,14 +232,14 @@ export function OrdersClient({
           </TableHeader>
           <TableBody>
             {displayOrders.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="py-16 text-center">
+              <TableEmptyStateRow
+                colSpan={7}
+                paddingClassName="py-16"
+                title="Không có đơn hàng nào"
+                icon={
                   <ShoppingBag className="mx-auto size-8 text-muted-foreground" />
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Không có đơn hàng nào
-                  </p>
-                </TableCell>
-              </TableRow>
+                }
+              />
             )}
             {displayOrders.map((order) => (
               <TableRow

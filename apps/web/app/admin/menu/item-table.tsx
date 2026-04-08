@@ -32,6 +32,7 @@ import { ItemFormDialog } from "./item-form-dialog";
 import { ItemDetailDialog } from "./item-detail-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import type { CategoryRow } from "./category-table";
+import { TableEmptyStateRow } from "../components/table-empty-state-row";
 
 export interface ItemRow {
   id: number;
@@ -81,14 +82,13 @@ export function ItemTable({ items, categories }: ItemTableProps) {
           </TableHeader>
           <TableBody>
             {items.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="py-12 text-center">
+              <TableEmptyStateRow
+                colSpan={5}
+                title="Chưa có món ăn nào"
+                icon={
                   <UtensilsCrossed className="mx-auto size-8 text-muted-foreground" />
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Chưa có món ăn nào
-                  </p>
-                </TableCell>
-              </TableRow>
+                }
+              />
             )}
             {items.map((item) => (
               <TableRow key={item.id} className={isPending ? "opacity-60" : ""}>

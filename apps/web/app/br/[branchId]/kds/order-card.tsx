@@ -39,19 +39,17 @@ function getStatusConfig(status: string) {
   );
 }
 
-const ORDER_TYPE_CONFIG: Record<
-  string,
-  { label: string; className: string }
-> = {
-  dine_in: {
-    label: "Tại chỗ",
-    className: "bg-blue-900/60 text-blue-200 border-blue-700/50",
-  },
-  takeaway: {
-    label: "Mang đi",
-    className: "bg-purple-900/60 text-purple-200 border-purple-700/50",
-  },
-};
+const ORDER_TYPE_CONFIG: Record<string, { label: string; className: string }> =
+  {
+    dine_in: {
+      label: "Tại chỗ",
+      className: "bg-blue-900/60 text-blue-200 border-blue-700/50",
+    },
+    takeaway: {
+      label: "Mang đi",
+      className: "bg-purple-900/60 text-purple-200 border-purple-700/50",
+    },
+  };
 
 function getOrderTypeConfig(type: string) {
   return (
@@ -79,10 +77,7 @@ function getAgeStyle(minutes: number, isComplete: boolean) {
 
 /* ─── Card border per overall status ─── */
 
-function getCardBorder(
-  overallStatus: string,
-  ageMinutes: number,
-): string {
+function getCardBorder(overallStatus: string, ageMinutes: number): string {
   if (overallStatus === "cancelled") return "border-red-800/60";
   if (overallStatus === "ready") return "border-emerald-600/60";
   if (overallStatus === "preparing") return "border-amber-500/60";
@@ -308,7 +303,8 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-14 min-h-14 min-w-14 rounded-xl text-muted-foreground hover:bg-zinc-700/60 hover:text-foreground"
+                    className="size-14 min-h-14 min-w-14 rounded-xl text-muted-foreground hover:bg-zinc-700/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    aria-label="Thu hồi món"
                     onClick={() => void onRecall(ticket.id)}
                   >
                     <RotateCcw className="size-5" />
@@ -320,11 +316,12 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                     variant="secondary"
                     size="icon"
                     className={cn(
-                      "size-14 min-h-14 min-w-14 rounded-xl",
+                      "size-14 min-h-14 min-w-14 rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                       status === "preparing"
                         ? "bg-emerald-700 text-emerald-50 hover:bg-emerald-600"
                         : "bg-zinc-700 text-zinc-100 hover:bg-zinc-600",
                     )}
+                    aria-label="Chuyển trạng thái món"
                     onClick={() => void onBump(ticket.id)}
                   >
                     <ChevronRight className="size-6" />
@@ -369,7 +366,8 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-14 min-h-14 min-w-14 rounded-xl text-muted-foreground hover:bg-zinc-700/60 hover:text-foreground"
+                      className="size-14 min-h-14 min-w-14 rounded-xl text-muted-foreground hover:bg-zinc-700/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      aria-label="Thu hồi món"
                       onClick={() => void onRecall(ticket.id)}
                     >
                       <RotateCcw className="size-5" />
@@ -380,7 +378,8 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                     <Button
                       variant="secondary"
                       size="icon"
-                      className="size-14 min-h-14 min-w-14 rounded-xl bg-zinc-700 text-zinc-100 hover:bg-zinc-600"
+                      className="size-14 min-h-14 min-w-14 rounded-xl bg-zinc-700 text-zinc-100 hover:bg-zinc-600 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      aria-label="Chuyển trạng thái món"
                       onClick={() => void onBump(ticket.id)}
                     >
                       <ChevronRight className="size-6" />

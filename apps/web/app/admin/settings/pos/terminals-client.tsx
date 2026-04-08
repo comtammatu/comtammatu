@@ -22,6 +22,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { ExternalLink, Pencil, Plus } from "lucide-react";
 import { TerminalFormDialog } from "./terminal-form-dialog";
+import { EmptyStatePanel } from "../../components/empty-state-panel";
 
 export interface TerminalRow {
   id: number;
@@ -56,9 +57,10 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
 
   if (branches.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
-        Chưa có chi nhánh nào. Vui lòng tạo chi nhánh trước.
-      </p>
+      <EmptyStatePanel
+        title="Chưa có chi nhánh nào"
+        description="Vui lòng tạo chi nhánh trước."
+      />
     );
   }
 
@@ -108,9 +110,10 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
         </div>
 
         {filteredTerminals.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            Chưa có máy POS nào cho chi nhánh này.
-          </p>
+          <EmptyStatePanel
+            className="py-8"
+            title="Chưa có máy POS nào cho chi nhánh này"
+          />
         ) : (
           <div className="rounded-md border">
             <Table>

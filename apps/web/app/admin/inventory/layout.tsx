@@ -12,7 +12,9 @@ export default async function InventoryLayout({
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  const claims = session?.user ? extractClaims(session.user.app_metadata) : null;
+  const claims = session?.user
+    ? extractClaims(session.user.app_metadata)
+    : null;
   const showProcurement = claims
     ? canAccess(claims.user_role, "inventory_procurement")
     : false;

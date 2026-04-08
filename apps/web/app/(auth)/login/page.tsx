@@ -121,7 +121,7 @@ function BrandPanel() {
 
 export default function LoginPage() {
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
+    <main id="main-content" className="grid min-h-screen lg:grid-cols-2">
       <BrandPanel />
 
       {/* Form panel */}
@@ -154,6 +154,6 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

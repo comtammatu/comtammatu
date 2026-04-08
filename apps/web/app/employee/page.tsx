@@ -140,9 +140,7 @@ export default async function EmployeePage() {
               </div>
               <div className="text-left">
                 <p className="text-sm font-semibold">Vào KDS</p>
-                <p className="text-xs text-muted-foreground">
-                  Màn hình bếp
-                </p>
+                <p className="text-xs text-muted-foreground">Màn hình bếp</p>
               </div>
             </button>
           ) : (

@@ -1,13 +1,15 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Briefcase,
+  ChevronRight,
   Heart,
+  Home,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -90,6 +92,11 @@ interface ResolvedNavGroup {
   items: ResolvedNavItem[];
 }
 
+interface BreadcrumbItem {
+  label: string;
+  href?: string;
+}
+
 function resolveNavGroups(role: StaffRole): ResolvedNavGroup[] {
   return ADMIN_NAV_GROUPS.map((group) => ({
     title: group.title,
@@ -105,6 +112,63 @@ function resolveNavGroups(role: StaffRole): ResolvedNavGroup[] {
         };
       }),
   })).filter((group) => group.items.length > 0);
+}
+
+function toBreadcrumbLabel(segment: string): string {
+  if (/^\d+$/.test(segment)) return `#${segment}`;
+  return segment
+    .replaceAll("-", " ")
+    .replaceAll("_", " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
+    .join(" ");
+}
+
+function buildBreadcrumb(
+  pathname: string,
+  navItems: ResolvedNavItem[],
+): { title: string; items: BreadcrumbItem[] } {
+  const matchedItem = navItems
+    .filter(
+      (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
+    )
+    .sort((a, b) => b.href.length - a.href.length)[0];
+
+  if (!matchedItem) {
+    return {
+      title: "Admin",
+      items: [{ label: "Admin", href: "/admin" }],
+    };
+  }
+
+  const pathTail = pathname
+    .slice(matchedItem.href.length)
+    .split("/")
+    .filter(Boolean);
+  const tailItems = pathTail.map((segment, index) => {
+    const isLast = index === pathTail.length - 1;
+    return {
+      label: toBreadcrumbLabel(decodeURIComponent(segment)),
+      href: isLast
+        ? undefined
+        : `${matchedItem.href}/${pathTail.slice(0, index + 1).join("/")}`,
+    };
+  });
+
+  const items: BreadcrumbItem[] = [
+    { label: "Admin", href: "/admin" },
+    {
+      label: matchedItem.label,
+      href: pathTail.length > 0 ? matchedItem.href : undefined,
+    },
+    ...tailItems,
+  ];
+
+  return {
+    title: tailItems.at(-1)?.label ?? matchedItem.label,
+    items,
+  };
 }
 
 /* ─── Sidebar Navigation (shared between desktop & mobile sheet) ─── */
@@ -144,7 +208,14 @@ function SidebarNav({
                   {isActive && (
                     <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-sidebar-primary" />
                   )}
-                  <Icon className={cn("size-[18px] shrink-0 transition-colors", isActive ? "text-sidebar-primary" : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/70")} />
+                  <Icon
+                    className={cn(
+                      "size-[18px] shrink-0 transition-colors",
+                      isActive
+                        ? "text-sidebar-primary"
+                        : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/70",
+                    )}
+                  />
                   {item.label}
                 </Link>
               );
@@ -178,7 +249,9 @@ function SidebarUserFooter({
           <p className="truncate text-sm font-semibold text-sidebar-foreground">
             {user.name}
           </p>
-          <p className="truncate text-[11px] font-medium text-sidebar-foreground/45">{role}</p>
+          <p className="truncate text-[11px] font-medium text-sidebar-foreground/45">
+            {role}
+          </p>
         </div>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -215,6 +288,14 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
   const mobileSignOutFormRef = useRef<HTMLFormElement>(null);
 
   const filteredGroups = resolveNavGroups(role);
+  const navItems = useMemo(
+    () => filteredGroups.flatMap((group) => group.items),
+    [filteredGroups],
+  );
+  const headerBreadcrumb = useMemo(
+    () => buildBreadcrumb(pathname, navItems),
+    [pathname, navItems],
+  );
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -260,8 +341,56 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
               <Menu className="size-5" />
             </Button>
 
-            {/* Breadcrumb area — placeholder, Sprint 1 S1 will build */}
-            <div className="flex-1" />
+            {/* Breadcrumb + page title */}
+            <div className="min-w-0 flex-1">
+              <nav
+                aria-label="Breadcrumb"
+                className="hidden items-center gap-1 text-xs text-muted-foreground md:flex"
+              >
+                {headerBreadcrumb.items.map((item, index) => {
+                  const isLast = index === headerBreadcrumb.items.length - 1;
+                  return (
+                    <div
+                      key={`${item.label}-${index}`}
+                      className="flex items-center gap-1"
+                    >
+                      {index > 0 && (
+                        <ChevronRight className="size-3 text-muted-foreground/70" />
+                      )}
+                      {item.href ? (
+                        <Link
+                          href={item.href}
+                          className="truncate hover:text-foreground focus-visible:outline-none focus-visible:underline"
+                        >
+                          {index === 0 ? (
+                            <span className="inline-flex items-center gap-1">
+                              <Home className="size-3.5" />
+                              {item.label}
+                            </span>
+                          ) : (
+                            item.label
+                          )}
+                        </Link>
+                      ) : (
+                        <span
+                          className={cn(
+                            "truncate font-medium",
+                            isLast
+                              ? "text-foreground"
+                              : "text-muted-foreground",
+                          )}
+                        >
+                          {item.label}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </nav>
+              <p className="truncate text-sm font-semibold text-foreground md:hidden">
+                {headerBreadcrumb.title}
+              </p>
+            </div>
 
             {/* Mobile only: user avatar with dropdown */}
             <div className="md:hidden">
@@ -300,7 +429,7 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
           </header>
 
           {/* Content */}
-          <main className="flex-1 overflow-y-auto">
+          <main id="main-content" className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
               {children}
             </div>

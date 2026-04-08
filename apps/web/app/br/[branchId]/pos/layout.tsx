@@ -30,8 +30,11 @@ export default async function PosLayout({
   }
 
   return (
-    <div className="flex h-dvh touch-manipulation overflow-hidden">
+    <main
+      id="main-content"
+      className="flex h-dvh touch-manipulation overflow-hidden"
+    >
       {children}
-    </div>
+    </main>
   );
 }

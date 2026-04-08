@@ -28,6 +28,7 @@ import { toggleStaffActive } from "./actions";
 import { StaffFormDialog } from "./staff-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ROLE_LABELS } from "./role-labels";
+import { TableEmptyStateRow } from "../components/table-empty-state-row";
 
 export interface BranchOption {
   id: number;
@@ -89,14 +90,13 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
           </TableHeader>
           <TableBody>
             {staff.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="py-12 text-center">
+              <TableEmptyStateRow
+                colSpan={6}
+                title="Chưa có nhân viên nào"
+                icon={
                   <Users className="mx-auto size-8 text-muted-foreground" />
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Chưa có nhân viên nào
-                  </p>
-                </TableCell>
-              </TableRow>
+                }
+              />
             )}
             {staff.map((member) => (
               <TableRow

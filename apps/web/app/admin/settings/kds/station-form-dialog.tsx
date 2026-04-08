@@ -24,6 +24,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { createStation, updateStation, saveStationCategories } from "./actions";
 import type { StationRow, CategoryOption } from "./stations-client";
+import { EmptyStatePanel } from "../../components/empty-state-panel";
 
 interface StationFormDialogProps {
   open: boolean;
@@ -181,9 +182,10 @@ export function StationFormDialog({
                 </label>
               ))}
               {categories.length === 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Chưa có danh mục nào.
-                </p>
+                <EmptyStatePanel
+                  className="bg-transparent py-6"
+                  title="Chưa có danh mục nào"
+                />
               )}
             </div>
           </div>

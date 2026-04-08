@@ -10,7 +10,9 @@ export default async function AreasPage() {
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  const claims = session?.user ? extractClaims(session.user.app_metadata) : null;
+  const claims = session?.user
+    ? extractClaims(session.user.app_metadata)
+    : null;
 
   if (!claims || !["owner", "super_manager"].includes(claims.user_role)) {
     redirect("/admin/settings/tables");

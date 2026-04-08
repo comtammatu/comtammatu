@@ -32,6 +32,7 @@ import {
   fetchInventoryValueByBranch,
   fetchInventoryValueSystem,
 } from "./inventory-value-actions";
+import { EmptyStatePanel } from "../components/empty-state-panel";
 
 interface InventoryValuePanelProps {
   visibility: InventoryValueVisibility;
@@ -177,9 +178,10 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               {areaRows == null ? (
                 <p className="text-sm text-muted-foreground">Đang tải…</p>
               ) : areaRows.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Không có dữ liệu khu vực
-                </p>
+                <EmptyStatePanel
+                  className="bg-transparent py-10"
+                  title="Không có dữ liệu khu vực"
+                />
               ) : (
                 <div className="rounded-md border">
                   <Table>
@@ -238,9 +240,10 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               {branchRows == null ? (
                 <p className="text-sm text-muted-foreground">Đang tải…</p>
               ) : branchRows.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Không có chi nhánh trong phạm vi
-                </p>
+                <EmptyStatePanel
+                  className="bg-transparent py-10"
+                  title="Không có chi nhánh trong phạm vi"
+                />
               ) : (
                 <div className="rounded-md border">
                   <Table>

@@ -10,7 +10,9 @@ export default async function InventoryValueReportPage() {
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  const claims = session?.user ? extractClaims(session.user.app_metadata) : null;
+  const claims = session?.user
+    ? extractClaims(session.user.app_metadata)
+    : null;
   const inventoryValueVisibility = claims
     ? getInventoryValueVisibility(claims.user_role)
     : { system: false, area: false, branch: false };

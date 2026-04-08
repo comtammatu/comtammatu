@@ -12,6 +12,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { formatVND } from "@comtammatu/shared/format";
 import type { EmployeeRow } from "./page";
+import { TableEmptyStateRow } from "../components/table-empty-state-row";
 
 const CONTRACT_LABELS: Record<string, string> = {
   probation: "Thử việc",
@@ -40,14 +41,11 @@ export function EmployeeTable({ employees }: EmployeeTableProps) {
         </TableHeader>
         <TableBody>
           {employees.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={7} className="py-12 text-center">
-                <Users className="mx-auto size-8 text-muted-foreground" />
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Chưa có hồ sơ nhân viên nào
-                </p>
-              </TableCell>
-            </TableRow>
+            <TableEmptyStateRow
+              colSpan={7}
+              title="Chưa có hồ sơ nhân viên nào"
+              icon={<Users className="mx-auto size-8 text-muted-foreground" />}
+            />
           )}
           {employees.map((emp) => (
             <TableRow key={emp.id}>

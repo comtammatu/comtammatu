@@ -99,10 +99,10 @@ These files have the most dependents. Changes here affect many parts of the syst
 
 ## Critical Unknowns
 
-| #   | Unknown                                                     | Verification Step                                  | Impact                   |
-| --- | ----------------------------------------------------------- | -------------------------------------------------- | ------------------------ |
-| 1   | area_manager has tenant-wide access (no area scoping table) | Deferred — see roadmap H3                          | May need migration later |
-| 2   | No integration tests exist yet                              | Add before v1.0.0 pilot                            | Regressions possible     |
+| #   | Unknown                                                     | Verification Step         | Impact                   |
+| --- | ----------------------------------------------------------- | ------------------------- | ------------------------ |
+| 1   | area_manager has tenant-wide access (no area scoping table) | Deferred — see roadmap H3 | May need migration later |
+| 2   | No integration tests exist yet                              | Add before v1.0.0 pilot   | Regressions possible     |
 
 ## Priority Recommendations
 

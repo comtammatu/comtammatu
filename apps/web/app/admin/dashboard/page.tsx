@@ -37,7 +37,9 @@ function StatCard({ title, value, change, icon: Icon }: StatCardProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-bold tracking-tight tabular-nums">{value}</p>
+        <p className="text-3xl font-bold tracking-tight tabular-nums">
+          {value}
+        </p>
         <div
           className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${isPositive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}
         >
@@ -132,7 +134,9 @@ export default async function DashboardPage() {
 
       {stats.recentOrders.length > 0 && (
         <div>
-          <h2 className="mb-4 text-lg font-semibold tracking-tight">Đơn hàng gần đây</h2>
+          <h2 className="mb-4 text-lg font-semibold tracking-tight">
+            Đơn hàng gần đây
+          </h2>
           <Card>
             <CardContent className="p-0">
               <ul className="divide-y divide-border/60">

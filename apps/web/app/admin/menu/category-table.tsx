@@ -28,6 +28,7 @@ import { toggleCategoryActive } from "./actions";
 import { CategoryFormDialog } from "./category-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { CATEGORY_TYPE_LABELS } from "./category-labels";
+import { TableEmptyStateRow } from "../components/table-empty-state-row";
 
 export interface CategoryRow {
   id: number;
@@ -69,14 +70,13 @@ export function CategoryTable({ categories }: CategoryTableProps) {
           </TableHeader>
           <TableBody>
             {categories.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="py-12 text-center">
+              <TableEmptyStateRow
+                colSpan={5}
+                title="Chưa có danh mục nào"
+                icon={
                   <FolderOpen className="mx-auto size-8 text-muted-foreground" />
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Chưa có danh mục nào
-                  </p>
-                </TableCell>
-              </TableRow>
+                }
+              />
             )}
             {categories.map((cat) => (
               <TableRow key={cat.id} className={isPending ? "opacity-60" : ""}>

@@ -14,6 +14,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { ShiftFormDialog } from "./shift-form-dialog";
 import type { BranchOption, ShiftRow } from "./page";
+import { TableEmptyStateRow } from "../components/table-empty-state-row";
 
 interface ShiftsTableProps {
   shifts: ShiftRow[];
@@ -60,16 +61,17 @@ export function ShiftsTable({
           </TableHeader>
           <TableBody>
             {shifts.length === 0 && !isPending && (
-              <TableRow>
-                <TableCell colSpan={5} className="py-12 text-center">
+              <TableEmptyStateRow
+                colSpan={5}
+                title={
+                  selectedBranchId === null
+                    ? "Chọn chi nhánh để xem ca làm việc"
+                    : "Chưa có ca làm việc nào"
+                }
+                icon={
                   <CalendarClock className="mx-auto size-8 text-muted-foreground" />
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {selectedBranchId === null
-                      ? "Chọn chi nhánh để xem ca làm việc"
-                      : "Chưa có ca làm việc nào"}
-                  </p>
-                </TableCell>
-              </TableRow>
+                }
+              />
             )}
             {shifts.map((shift) => {
               const branchName =

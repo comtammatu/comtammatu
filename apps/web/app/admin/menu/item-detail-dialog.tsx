@@ -23,6 +23,7 @@ import { SIDE_DISH_TYPE } from "./category-labels";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { createClient } from "@comtammatu/database/supabase/client";
 import type { ItemRow } from "./item-table";
+import { EmptyStatePanel } from "../components/empty-state-panel";
 
 /* ─── Local Types ─── */
 
@@ -422,10 +423,11 @@ export function ItemDetailDialog({
             {/* ─── Sides Tab ─── */}
             <TabsContent value="sides" className="space-y-3 mt-4">
               {sideItems.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">
-                  Chưa có món phụ nào. Tạo danh mục loại &quot;Món phụ&quot; và
-                  thêm món trước.
-                </p>
+                <EmptyStatePanel
+                  className="bg-transparent py-6"
+                  title="Chưa có món phụ nào"
+                  description='Tạo danh mục loại "Món phụ" và thêm món trước.'
+                />
               ) : (
                 <>
                   <p className="text-sm text-muted-foreground">

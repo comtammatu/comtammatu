@@ -26,6 +26,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { formatVND } from "@comtammatu/shared/format";
 import { cancelTaxInvoice } from "./actions";
 import type { InvoiceRow } from "./page";
+import { TableEmptyStateRow } from "../components/table-empty-state-row";
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "Nháp",
@@ -98,14 +99,13 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
           </TableHeader>
           <TableBody>
             {invoices.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="py-12 text-center">
+              <TableEmptyStateRow
+                colSpan={7}
+                title="Chưa có hóa đơn nào"
+                icon={
                   <Receipt className="mx-auto size-8 text-muted-foreground" />
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Chưa có hóa đơn nào
-                  </p>
-                </TableCell>
-              </TableRow>
+                }
+              />
             )}
             {invoices.map((inv) => (
               <TableRow key={inv.id}>

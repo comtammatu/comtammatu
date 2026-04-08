@@ -36,6 +36,7 @@ import {
 } from "../procurement-actions";
 import type { SupplierRow } from "../suppliers/suppliers-client";
 import type { GrnListRow } from "../grn/grn-list-client";
+import { TableEmptyStateRow } from "../../components/table-empty-state-row";
 
 export interface SupplierInvoiceRow {
   id: number;
@@ -163,28 +164,38 @@ export function SupplierInvoicesClient({
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">Số HĐ</TableHead>
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">NCC</TableHead>
-              <TableHead className="hidden sm:table-cell text-xs uppercase tracking-wider font-semibold">GRN</TableHead>
-              <TableHead className="text-right text-xs uppercase tracking-wider font-semibold">Tổng</TableHead>
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">Khớp</TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">
+                Số HĐ
+              </TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">
+                NCC
+              </TableHead>
+              <TableHead className="hidden sm:table-cell text-xs uppercase tracking-wider font-semibold">
+                GRN
+              </TableHead>
+              <TableHead className="text-right text-xs uppercase tracking-wider font-semibold">
+                Tổng
+              </TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">
+                Khớp
+              </TableHead>
               <TableHead className="w-28" />
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-border/60">
             {rows.length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="py-16 text-center"
-                >
-                  <p className="text-sm font-medium text-muted-foreground">Chưa có hóa đơn</p>
-                  <p className="mt-1 text-xs text-muted-foreground/70">Nhấn &quot;Thêm HĐ&quot; để thêm hóa đơn nhà cung cấp</p>
-                </TableCell>
-              </TableRow>
+              <TableEmptyStateRow
+                colSpan={6}
+                paddingClassName="py-16"
+                title="Chưa có hóa đơn"
+                description='Nhấn "Thêm HĐ" để thêm hóa đơn nhà cung cấp'
+              />
             )}
             {rows.map((r) => (
-              <TableRow key={r.id} className="hover:bg-muted/40 transition-colors">
+              <TableRow
+                key={r.id}
+                className="hover:bg-muted/40 transition-colors"
+              >
                 <TableCell className="font-mono text-sm">
                   {r.invoice_number}
                 </TableCell>
@@ -196,11 +207,16 @@ export function SupplierInvoicesClient({
                   {r.total_amount.toLocaleString("vi-VN")} ₫
                 </TableCell>
                 <TableCell>
-                  <Badge className={
-                    r.matching_status === "matched" || r.matching_status === "approved" ? "bg-success/10 text-success border-success/20" :
-                    r.matching_status === "discrepancy" ? "bg-destructive/10 text-destructive border-destructive/20" :
-                    "bg-warning/10 text-warning border-warning/20"
-                  }>
+                  <Badge
+                    className={
+                      r.matching_status === "matched" ||
+                      r.matching_status === "approved"
+                        ? "bg-success/10 text-success border-success/20"
+                        : r.matching_status === "discrepancy"
+                          ? "bg-destructive/10 text-destructive border-destructive/20"
+                          : "bg-warning/10 text-warning border-warning/20"
+                    }
+                  >
                     {MATCH_LABEL[r.matching_status] ?? r.matching_status}
                   </Badge>
                 </TableCell>

@@ -9,7 +9,9 @@ export default async function BranchIngredientsPage() {
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  const claims = session?.user ? extractClaims(session.user.app_metadata) : null;
+  const claims = session?.user
+    ? extractClaims(session.user.app_metadata)
+    : null;
   if (claims?.user_role !== "super_manager") {
     notFound();
   }

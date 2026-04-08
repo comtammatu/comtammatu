@@ -21,6 +21,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { Plus, Pencil } from "lucide-react";
 import { StationFormDialog } from "./station-form-dialog";
+import { EmptyStatePanel } from "../../components/empty-state-panel";
 
 /* ─── Types ─── */
 
@@ -76,9 +77,10 @@ export function StationsClient({
 
   if (branches.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
-        Chưa có chi nhánh nào. Vui lòng tạo chi nhánh trước.
-      </p>
+      <EmptyStatePanel
+        title="Chưa có chi nhánh nào"
+        description="Vui lòng tạo chi nhánh trước."
+      />
     );
   }
 
@@ -117,9 +119,10 @@ export function StationsClient({
         </div>
 
         {filteredStations.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            Chưa có trạm KDS nào cho chi nhánh này.
-          </p>
+          <EmptyStatePanel
+            className="py-8"
+            title="Chưa có trạm KDS nào cho chi nhánh này"
+          />
         ) : (
           <div className="rounded-md border">
             <Table>

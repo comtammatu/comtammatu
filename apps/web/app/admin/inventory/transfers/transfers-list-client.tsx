@@ -42,6 +42,7 @@ import { fetchIngredientsForBranch } from "../actions";
 import { createStockTransfer, fetchStockTransfers } from "../transfer-actions";
 import { IngredientSearchDialog } from "./transfer-ingredient-dialog";
 import type { IngredientRow } from "../page";
+import { TableEmptyStateRow } from "../../components/table-empty-state-row";
 
 export interface TransferListRow {
   id: number;
@@ -465,27 +466,35 @@ export function TransfersListClient({
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">Số phiếu</TableHead>
-              <TableHead className="hidden md:table-cell text-xs uppercase tracking-wider font-semibold">Từ</TableHead>
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">Đến</TableHead>
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">Trạng thái</TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">
+                Số phiếu
+              </TableHead>
+              <TableHead className="hidden md:table-cell text-xs uppercase tracking-wider font-semibold">
+                Từ
+              </TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">
+                Đến
+              </TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">
+                Trạng thái
+              </TableHead>
               <TableHead className="w-24" />
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-border/60">
             {rows.length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="py-16 text-center"
-                >
-                  <p className="text-sm font-medium text-muted-foreground">Chưa có phiếu luân chuyển</p>
-                  <p className="mt-1 text-xs text-muted-foreground/70">Nhấn &quot;Tạo phiếu&quot; để tạo phiếu luân chuyển đầu tiên</p>
-                </TableCell>
-              </TableRow>
+              <TableEmptyStateRow
+                colSpan={5}
+                paddingClassName="py-16"
+                title="Chưa có phiếu luân chuyển"
+                description='Nhấn "Tạo phiếu" để tạo phiếu luân chuyển đầu tiên'
+              />
             )}
             {rows.map((r) => (
-              <TableRow key={r.id} className="hover:bg-muted/40 transition-colors">
+              <TableRow
+                key={r.id}
+                className="hover:bg-muted/40 transition-colors"
+              >
                 <TableCell className="font-mono text-sm">
                   {r.transfer_number}
                 </TableCell>
@@ -494,13 +503,20 @@ export function TransfersListClient({
                 </TableCell>
                 <TableCell>{r.to_branch_name}</TableCell>
                 <TableCell>
-                  <Badge className={
-                    r.status === "received" ? "bg-success/10 text-success border-success/20" :
-                    r.status === "in_transit" || r.status === "confirmed_ship" ? "bg-info/10 text-info border-info/20" :
-                    r.status === "confirmed_receive" ? "bg-warning/10 text-warning border-warning/20" :
-                    r.status === "cancelled" ? "bg-destructive/10 text-destructive border-destructive/20" :
-                    "bg-muted text-muted-foreground"
-                  }>
+                  <Badge
+                    className={
+                      r.status === "received"
+                        ? "bg-success/10 text-success border-success/20"
+                        : r.status === "in_transit" ||
+                            r.status === "confirmed_ship"
+                          ? "bg-info/10 text-info border-info/20"
+                          : r.status === "confirmed_receive"
+                            ? "bg-warning/10 text-warning border-warning/20"
+                            : r.status === "cancelled"
+                              ? "bg-destructive/10 text-destructive border-destructive/20"
+                              : "bg-muted text-muted-foreground"
+                    }
+                  >
                     {STATUS_LABEL[r.status] ?? r.status}
                   </Badge>
                 </TableCell>

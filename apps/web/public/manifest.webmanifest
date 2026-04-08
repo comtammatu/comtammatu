@@ -1,0 +1,10 @@
+{
+  "name": "Cơm Tấm Má Tư",
+  "short_name": "CTMT",
+  "description": "Hệ thống quản lý nhà hàng Cơm Tấm Má Tư",
+  "lang": "vi",
+  "display": "standalone",
+  "start_url": "/",
+  "background_color": "#fafaf8",
+  "theme_color": "#fafaf8"
+}

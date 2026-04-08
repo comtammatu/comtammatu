@@ -23,7 +23,12 @@ export default async function AdminLayout({
 
   return (
     <AdminShell
-      user={{ name: session.user.user_metadata?.["display_name"] ?? session.user.email ?? "" }}
+      user={{
+        name:
+          session.user.user_metadata?.["display_name"] ??
+          session.user.email ??
+          "",
+      }}
       role={claims.user_role}
     >
       {children}

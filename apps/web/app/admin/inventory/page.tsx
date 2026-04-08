@@ -13,7 +13,9 @@ export default async function InventoryPage() {
     data: { session },
   } = await supabase.auth.getSession();
 
-  const claims = session?.user ? extractClaims(session.user.app_metadata) : null;
+  const claims = session?.user
+    ? extractClaims(session.user.app_metadata)
+    : null;
 
   const inventoryValueVisibility = claims
     ? getInventoryValueVisibility(claims.user_role)

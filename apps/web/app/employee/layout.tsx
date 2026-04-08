@@ -20,7 +20,10 @@ export default async function EmployeeLayout({
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <main className="mx-auto w-full max-w-lg flex-1 px-4 py-6">
+      <main
+        id="main-content"
+        className="mx-auto w-full max-w-lg flex-1 px-4 py-6"
+      >
         {children}
       </main>
     </div>

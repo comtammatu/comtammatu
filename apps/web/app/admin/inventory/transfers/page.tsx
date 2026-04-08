@@ -18,7 +18,9 @@ export default async function TransfersPage() {
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  const claims = session?.user ? extractClaims(session.user.app_metadata) : null;
+  const claims = session?.user
+    ? extractClaims(session.user.app_metadata)
+    : null;
 
   const [trRes, brRes, hqBranchId] = await Promise.all([
     fetchStockTransfers(),

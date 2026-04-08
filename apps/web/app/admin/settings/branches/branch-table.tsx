@@ -29,6 +29,7 @@ import {
 import { toggleBranchActive, setHeadquarters } from "./actions";
 import { BranchFormDialog } from "./branch-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { TableEmptyStateRow } from "../../components/table-empty-state-row";
 
 export interface BranchRow {
   id: number;
@@ -80,14 +81,13 @@ export function BranchTable({ branches }: BranchTableProps) {
           </TableHeader>
           <TableBody>
             {branches.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="py-12 text-center">
+              <TableEmptyStateRow
+                colSpan={5}
+                title="Chưa có chi nhánh nào"
+                icon={
                   <Building2 className="mx-auto size-8 text-muted-foreground" />
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Chưa có chi nhánh nào
-                  </p>
-                </TableCell>
-              </TableRow>
+                }
+              />
             )}
             {branches.map((branch) => (
               <TableRow

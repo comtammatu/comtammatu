@@ -22,6 +22,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { fetchRecipes, upsertRecipe } from "../procurement-actions";
 import type { IngredientRow } from "../page";
+import { TableEmptyStateRow } from "../../components/table-empty-state-row";
 
 interface MenuItemOpt {
   id: number;
@@ -173,27 +174,37 @@ export function RecipesClient({
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">Món</TableHead>
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">Nguyên liệu</TableHead>
-              <TableHead className="text-right text-xs uppercase tracking-wider font-semibold">Định mức</TableHead>
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">Đơn vị</TableHead>
-              <TableHead className="hidden sm:table-cell text-xs uppercase tracking-wider font-semibold">Ghi chú</TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">
+                Món
+              </TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">
+                Nguyên liệu
+              </TableHead>
+              <TableHead className="text-right text-xs uppercase tracking-wider font-semibold">
+                Định mức
+              </TableHead>
+              <TableHead className="text-xs uppercase tracking-wider font-semibold">
+                Đơn vị
+              </TableHead>
+              <TableHead className="hidden sm:table-cell text-xs uppercase tracking-wider font-semibold">
+                Ghi chú
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-border/60">
             {rows.length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="py-16 text-center"
-                >
-                  <p className="text-sm font-medium text-muted-foreground">Chưa có công thức nào</p>
-                  <p className="mt-1 text-xs text-muted-foreground/70">Thêm dòng công thức qua biểu mẫu phía trên</p>
-                </TableCell>
-              </TableRow>
+              <TableEmptyStateRow
+                colSpan={5}
+                paddingClassName="py-16"
+                title="Chưa có công thức nào"
+                description="Thêm dòng công thức qua biểu mẫu phía trên"
+              />
             )}
             {rows.map((r) => (
-              <TableRow key={r.id} className="hover:bg-muted/40 transition-colors">
+              <TableRow
+                key={r.id}
+                className="hover:bg-muted/40 transition-colors"
+              >
                 <TableCell className="font-medium">
                   {r.menu_items?.name ?? `#${r.menu_item_id}`}
                 </TableCell>

@@ -20,6 +20,7 @@ import {
   assignBranchToArea,
   removeBranchFromArea,
 } from "./actions";
+import { EmptyStatePanel } from "../../components/empty-state-panel";
 
 interface AreaBranch {
   id: number;
@@ -108,12 +109,12 @@ export function AreasManager({ initialAreas, branches }: AreasManagerProps) {
 
       {/* Area list */}
       {areas.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center p-8 text-center">
-          <MapPin className="size-10 text-muted-foreground" />
-          <p className="mt-2 text-sm text-muted-foreground">
-            Chưa có khu vực nào. Tạo khu vực để phân nhóm chi nhánh.
-          </p>
-        </Card>
+        <EmptyStatePanel
+          title="Chưa có khu vực nào"
+          description="Tạo khu vực để phân nhóm chi nhánh."
+          icon={<MapPin className="size-10 text-muted-foreground" />}
+          className="p-8"
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {areas.map((area) => {

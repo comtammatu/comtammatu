@@ -31,6 +31,7 @@ import {
 import { deleteZone } from "./actions";
 import { ZoneFormDialog } from "./zone-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { TableEmptyStateRow } from "../../components/table-empty-state-row";
 
 export interface ZoneRow {
   id: number;
@@ -73,14 +74,13 @@ export function ZoneTable({ zones }: ZoneTableProps) {
           </TableHeader>
           <TableBody>
             {zones.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={3} className="py-12 text-center">
+              <TableEmptyStateRow
+                colSpan={3}
+                title="Chưa có khu vực nào"
+                icon={
                   <MapPin className="mx-auto size-8 text-muted-foreground" />
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Chưa có khu vực nào
-                  </p>
-                </TableCell>
-              </TableRow>
+                }
+              />
             )}
             {zones.map((zone) => (
               <TableRow key={zone.id} className={isPending ? "opacity-60" : ""}>

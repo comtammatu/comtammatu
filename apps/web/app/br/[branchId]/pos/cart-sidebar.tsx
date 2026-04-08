@@ -220,7 +220,8 @@ export function CartSidebar({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="size-7 shrink-0 text-muted-foreground hover:text-destructive"
+                        className="size-7 shrink-0 text-muted-foreground hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        aria-label={`Xóa ${item.item_name} khỏi giỏ`}
                         onClick={() => onRemoveItem(item.key)}
                       >
                         <X className="size-3.5" />
@@ -231,7 +232,8 @@ export function CartSidebar({
                         <Button
                           variant="outline"
                           size="icon"
-                          className="size-11 rounded-lg"
+                          className="size-11 rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          aria-label={`Giảm số lượng ${item.item_name}`}
                           onClick={() => onUpdateQuantity(item.key, -1)}
                         >
                           <Minus className="size-4" />
@@ -242,7 +244,8 @@ export function CartSidebar({
                         <Button
                           variant="outline"
                           size="icon"
-                          className="size-11 rounded-lg"
+                          className="size-11 rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          aria-label={`Tăng số lượng ${item.item_name}`}
                           onClick={() => onUpdateQuantity(item.key, 1)}
                         >
                           <Plus className="size-4" />
@@ -285,7 +288,9 @@ export function CartSidebar({
               </p>
             </div>
             <div className="mt-4 flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2.5">
-              <span className="text-sm font-semibold text-muted-foreground">Tạm tính</span>
+              <span className="text-sm font-semibold text-muted-foreground">
+                Tạm tính
+              </span>
               <span className="text-xl font-bold text-primary tabular-nums">
                 {formatVND(total)}
               </span>

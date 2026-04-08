@@ -35,6 +35,7 @@ import type { TableStatus } from "./constants";
 import { TableFormDialog } from "./table-form-dialog";
 import type { ZoneRow } from "./zone-table";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { TableEmptyStateRow } from "../../components/table-empty-state-row";
 
 export interface TableRow {
   id: number;
@@ -84,14 +85,13 @@ export function TableTable({ tables, zones }: TableTableProps) {
           </TableHeader>
           <TableBody>
             {tables.length === 0 && (
-              <TRow>
-                <TableCell colSpan={5} className="py-12 text-center">
+              <TableEmptyStateRow
+                colSpan={5}
+                title="Chưa có bàn nào"
+                icon={
                   <UtensilsCrossed className="mx-auto size-8 text-muted-foreground" />
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Chưa có bàn nào
-                  </p>
-                </TableCell>
-              </TRow>
+                }
+              />
             )}
             {tables.map((table) => (
               <TRow

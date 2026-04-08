@@ -22,6 +22,7 @@ import { TableTable } from "./table-table";
 import { TableFormDialog } from "./table-form-dialog";
 import type { ZoneRow } from "./zone-table";
 import type { TableRow } from "./table-table";
+import { EmptyStatePanel } from "../../components/empty-state-panel";
 
 export interface BranchOption {
   id: number;
@@ -48,9 +49,10 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
 
   if (branches.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
-        Chưa có chi nhánh nào. Vui lòng tạo chi nhánh trước.
-      </p>
+      <EmptyStatePanel
+        title="Chưa có chi nhánh nào"
+        description="Vui lòng tạo chi nhánh trước."
+      />
     );
   }
 

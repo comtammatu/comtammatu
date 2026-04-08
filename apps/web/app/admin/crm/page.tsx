@@ -13,7 +13,9 @@ export default function CrmPage() {
         <div className="rounded-full bg-primary/10 p-4">
           <Heart className="size-8 text-primary" />
         </div>
-        <h2 className="mt-5 text-lg font-semibold">Tính năng đang phát triển</h2>
+        <h2 className="mt-5 text-lg font-semibold">
+          Tính năng đang phát triển
+        </h2>
         <p className="mt-2 max-w-sm text-sm text-muted-foreground">
           Loyalty program và quản lý khách hàng thân thiết sẽ ra mắt sau v1.0.
         </p>
