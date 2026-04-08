@@ -194,6 +194,52 @@ export type Database = {
           },
         ];
       };
+      branch_ingredients: {
+        Row: {
+          branch_id: number;
+          created_at: string;
+          id: number;
+          ingredient_id: number;
+          tenant_id: number;
+        };
+        Insert: {
+          branch_id: number;
+          created_at?: string;
+          id?: never;
+          ingredient_id: number;
+          tenant_id: number;
+        };
+        Update: {
+          branch_id?: number;
+          created_at?: string;
+          id?: never;
+          ingredient_id?: number;
+          tenant_id?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "branch_ingredients_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "branch_ingredients_ingredient_id_fkey";
+            columns: ["ingredient_id"];
+            isOneToOne: false;
+            referencedRelation: "ingredients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "branch_ingredients_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       branch_zones: {
         Row: {
           branch_id: number;
@@ -276,52 +322,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "branches_tenant_id_fkey";
-            columns: ["tenant_id"];
-            isOneToOne: false;
-            referencedRelation: "tenants";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      branch_ingredients: {
-        Row: {
-          branch_id: number;
-          created_at: string;
-          id: number;
-          ingredient_id: number;
-          tenant_id: number;
-        };
-        Insert: {
-          branch_id: number;
-          created_at?: string;
-          id?: never;
-          ingredient_id: number;
-          tenant_id: number;
-        };
-        Update: {
-          branch_id?: number;
-          created_at?: string;
-          id?: never;
-          ingredient_id?: number;
-          tenant_id?: number;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "branch_ingredients_branch_id_fkey";
-            columns: ["branch_id"];
-            isOneToOne: false;
-            referencedRelation: "branches";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "branch_ingredients_ingredient_id_fkey";
-            columns: ["ingredient_id"];
-            isOneToOne: false;
-            referencedRelation: "ingredients";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "branch_ingredients_tenant_id_fkey";
             columns: ["tenant_id"];
             isOneToOne: false;
             referencedRelation: "tenants";
@@ -2810,15 +2810,6 @@ export type Database = {
         Returns: undefined;
       };
       set_headquarters: { Args: { p_branch_id: number }; Returns: undefined };
-      stock_transfer_list_branches: {
-        Args: never;
-        Returns: {
-          id: number;
-          name: string;
-          is_headquarters: boolean;
-          is_active: boolean;
-        }[];
-      };
       stock_transfer_confirm_receive: {
         Args: { p_transfer_id: number };
         Returns: Json;
@@ -2826,6 +2817,15 @@ export type Database = {
       stock_transfer_confirm_ship: {
         Args: { p_transfer_id: number };
         Returns: Json;
+      };
+      stock_transfer_list_branches: {
+        Args: never;
+        Returns: {
+          id: number;
+          is_active: boolean;
+          is_headquarters: boolean;
+          name: string;
+        }[];
       };
       stock_transfer_mark_in_transit: {
         Args: { p_transfer_id: number };
