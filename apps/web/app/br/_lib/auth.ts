@@ -8,16 +8,18 @@ import type { StaffRole } from "@comtammatu/shared/auth";
  */
 export async function getAuthContext(allowedRoles: readonly StaffRole[]) {
   const supabase = await createClient();
+  // Server Actions use getUser() — validates JWT against Supabase Auth server.
+  // Ensures banned/deleted users are rejected immediately.
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session?.user) return null;
+  if (!user) return null;
 
-  const claims = extractClaims(session.user.app_metadata);
+  const claims = extractClaims(user.app_metadata);
   if (!claims) return null;
 
   if (!allowedRoles.includes(claims.user_role)) return null;
 
-  return { supabase, claims };
+  return { supabase, claims, user };
 }

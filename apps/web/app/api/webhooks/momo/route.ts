@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
-import { createClient } from "@comtammatu/database/supabase/server";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { rateLimit } from "@comtammatu/security";
 
 const MOMO_SECRET_KEY = process.env.MOMO_SECRET_KEY ?? "";
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
   // resultCode 0 = success
   if (payload.resultCode !== 0) {
     // Payment failed — update status
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     // Scope by provider_ref which includes tenant context
     await supabase
       .from("payments")
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
   }
 
   // Payment succeeded
-  const supabase = await createClient();
+  const supabase = createServiceClient();
 
   // Atomic: find pending payment AND update to completed in one query
   // This prevents race conditions from MoMo retrying webhooks

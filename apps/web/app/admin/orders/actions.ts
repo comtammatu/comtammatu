@@ -21,8 +21,8 @@ const ALLOWED_ROLES: StaffRole[] = [
 const fetchOrdersSchema = z.object({
   status: z.string().optional(),
   branchId: z.coerce.number().int().positive().optional(),
-  dateFrom: z.string().optional(),
-  dateTo: z.string().optional(),
+  dateFrom: z.string().date().optional(),
+  dateTo: z.string().date().optional(),
 });
 
 /* ─── Types ─── */

@@ -9,19 +9,20 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 export async function getAuthContext(allowedRoles: readonly StaffRole[]) {
   const supabase = await createClient();
 
-  // Use getSession() instead of getUser() to avoid an extra HTTP roundtrip
-  // to Supabase Auth. The middleware (proxy.ts) already called getUser() which
-  // refreshed the session cookie — so the session here is guaranteed fresh.
+  // Server Actions use getUser() — it validates the JWT against Supabase Auth
+  // server, ensuring banned/deleted users are rejected immediately.
+  // Pages/layouts can use getSession() (middleware already verified), but
+  // mutations must re-verify for defense in depth.
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session?.user) return null;
+  if (!user) return null;
 
-  const claims = extractClaims(session.user.app_metadata);
+  const claims = extractClaims(user.app_metadata);
   if (!claims) return null;
 
   if (!allowedRoles.includes(claims.user_role)) return null;
 
-  return { supabase, claims, user: session.user };
+  return { supabase, claims, user };
 }
