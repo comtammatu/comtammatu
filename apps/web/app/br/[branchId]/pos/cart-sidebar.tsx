@@ -15,7 +15,6 @@ import {
 } from "@comtammatu/ui/components/alert-dialog";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import { Separator } from "@comtammatu/ui/components/separator";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
   Loader2,
@@ -195,23 +194,25 @@ export function CartSidebar({
                 return (
                   <div
                     key={item.key}
-                    className="rounded-md border bg-card p-2.5"
+                    className="rounded-xl border border-border bg-card p-3 shadow-sm"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
-                        <p className="text-sm font-medium">{item.item_name}</p>
+                        <p className="text-sm font-semibold leading-snug">
+                          {item.item_name}
+                        </p>
                         {item.variant_name && (
-                          <p className="text-xs text-muted-foreground">
+                          <p className="mt-0.5 text-xs text-muted-foreground">
                             {item.variant_name}
                           </p>
                         )}
                         {item.modifiers.length > 0 && (
-                          <p className="text-xs text-muted-foreground">
+                          <p className="mt-0.5 text-xs text-muted-foreground">
                             + {item.modifiers.map((m) => m.name).join(", ")}
                           </p>
                         )}
                         {item.sides.length > 0 && (
-                          <p className="text-xs text-muted-foreground">
+                          <p className="mt-0.5 text-xs text-muted-foreground">
                             Kèm: {item.sides.map((s) => s.name).join(", ")}
                           </p>
                         )}
@@ -219,35 +220,35 @@ export function CartSidebar({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="size-6 shrink-0 text-muted-foreground hover:text-destructive"
+                        className="size-7 shrink-0 text-muted-foreground hover:text-destructive"
                         onClick={() => onRemoveItem(item.key)}
                       >
-                        <X className="size-3" />
+                        <X className="size-3.5" />
                       </Button>
                     </div>
-                    <div className="mt-2 flex items-center justify-between">
+                    <div className="mt-2.5 flex items-center justify-between">
                       <div className="flex items-center gap-1">
                         <Button
                           variant="outline"
                           size="icon"
-                          className="size-10"
+                          className="size-11 rounded-lg"
                           onClick={() => onUpdateQuantity(item.key, -1)}
                         >
                           <Minus className="size-4" />
                         </Button>
-                        <span className="w-8 text-center text-sm font-medium">
+                        <span className="w-9 text-center text-base font-bold tabular-nums">
                           {item.quantity}
                         </span>
                         <Button
                           variant="outline"
                           size="icon"
-                          className="size-10"
+                          className="size-11 rounded-lg"
                           onClick={() => onUpdateQuantity(item.key, 1)}
                         >
                           <Plus className="size-4" />
                         </Button>
                       </div>
-                      <span className="text-sm font-semibold">
+                      <span className="text-sm font-bold text-foreground">
                         {formatVND(subtotal)}
                       </span>
                     </div>
@@ -258,8 +259,7 @@ export function CartSidebar({
           </ScrollArea>
 
           {/* Footer */}
-          <div className="border-t p-4">
-            <Separator className="mb-3" />
+          <div className="border-t bg-background p-4">
             <div className="space-y-1.5">
               <label
                 htmlFor="pos-order-note"
@@ -281,24 +281,24 @@ export function CartSidebar({
                 id="pos-order-note-hint"
                 className="text-[10px] text-muted-foreground"
               >
-                Áp dụng cho toàn bộ đơn khi đặt món (tối đa 500 ký tự).
+                Tối đa 500 ký tự. Áp dụng cho toàn đơn.
               </p>
             </div>
-            <div className="mt-3 flex items-center justify-between">
-              <span className="text-sm font-medium">Tạm tính</span>
-              <span className="text-lg font-bold text-primary">
+            <div className="mt-4 flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2.5">
+              <span className="text-sm font-semibold text-muted-foreground">Tạm tính</span>
+              <span className="text-xl font-bold text-primary tabular-nums">
                 {formatVND(total)}
               </span>
             </div>
             <Button
-              className="mt-3 min-h-11 w-full"
+              className="mt-3 h-14 w-full text-base font-bold tracking-wide shadow-md"
               size="lg"
               disabled={!canSubmit || isSubmitting}
               onClick={onSubmitOrder}
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  <Loader2 className="mr-2 size-5 animate-spin" />
                   Đang xử lý...
                 </>
               ) : (
@@ -306,7 +306,7 @@ export function CartSidebar({
               )}
             </Button>
             {!canSubmit && items.length > 0 && orderType === "dine_in" && (
-              <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
+              <p className="mt-2 text-center text-xs text-muted-foreground">
                 Vui lòng chọn bàn để đặt món
               </p>
             )}

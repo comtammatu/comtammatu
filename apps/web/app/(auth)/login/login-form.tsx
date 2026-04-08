@@ -13,7 +13,9 @@ export function LoginForm() {
   return (
     <form action={formAction} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email" className="text-sm font-medium">
+          Email
+        </Label>
         <Input
           id="email"
           name="email"
@@ -22,17 +24,21 @@ export function LoginForm() {
           autoComplete="email"
           spellCheck={false}
           placeholder="email@comtammatu.com"
+          className="h-11"
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password">Mật khẩu</Label>
+        <Label htmlFor="password" className="text-sm font-medium">
+          Mật khẩu
+        </Label>
         <Input
           id="password"
           name="password"
           type="password"
           required
           autoComplete="current-password"
+          className="h-11"
         />
       </div>
 
@@ -42,7 +48,11 @@ export function LoginForm() {
         </p>
       )}
 
-      <Button type="submit" className="w-full" disabled={isPending}>
+      <Button
+        type="submit"
+        className="h-11 w-full shadow-sm transition-shadow hover:shadow-md"
+        disabled={isPending}
+      >
         {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
         {isPending ? "Đang đăng nhập…" : "Đăng nhập"}
       </Button>

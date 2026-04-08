@@ -149,23 +149,29 @@ function IngredientFormContent({
         {/* Row 1: name + unit */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="ing-name">Tên nguyên liệu *</Label>
+            <Label htmlFor="ing-name" className="text-sm font-medium">
+              Tên nguyên liệu *
+            </Label>
             <Input
               id="ing-name"
               name="name"
               required
               defaultValue={ingredient?.name ?? ""}
               placeholder="VD: Sườn cốt lết"
+              className="h-10"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="ing-unit">Đơn vị *</Label>
+            <Label htmlFor="ing-unit" className="text-sm font-medium">
+              Đơn vị *
+            </Label>
             <Input
               id="ing-unit"
               name="unit"
               required
               defaultValue={ingredient?.unit ?? ""}
               placeholder="kg, lít, cái..."
+              className="h-10"
             />
           </div>
         </div>
@@ -173,21 +179,27 @@ function IngredientFormContent({
         {/* Row 2: sku + category */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="ing-sku">Mã SKU</Label>
+            <Label htmlFor="ing-sku" className="text-sm font-medium">
+              Mã SKU
+            </Label>
             <Input
               id="ing-sku"
               name="sku"
               defaultValue={ingredient?.sku ?? ""}
               placeholder="SKU-001"
+              className="h-10"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="ing-category">Danh mục</Label>
+            <Label htmlFor="ing-category" className="text-sm font-medium">
+              Danh mục
+            </Label>
             <Input
               id="ing-category"
               name="category"
               defaultValue={ingredient?.category ?? ""}
               placeholder="Thịt, Rau củ..."
+              className="h-10"
             />
           </div>
         </div>
@@ -195,7 +207,9 @@ function IngredientFormContent({
         {/* Row 3: unit_cost + storage_type */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="ing-unit-cost">Giá nhập (VND)</Label>
+            <Label htmlFor="ing-unit-cost" className="text-sm font-medium">
+              Giá nhập (VND)
+            </Label>
             <Input
               id="ing-unit-cost"
               name="unit_cost"
@@ -204,12 +218,15 @@ function IngredientFormContent({
               step={1000}
               defaultValue={ingredient?.unit_cost ?? ""}
               placeholder="0"
+              className="h-10"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="ing-storage">Kiểu lưu trữ</Label>
+            <Label htmlFor="ing-storage" className="text-sm font-medium">
+              Kiểu lưu trữ
+            </Label>
             <Select value={storageType} onValueChange={setStorageType}>
-              <SelectTrigger id="ing-storage">
+              <SelectTrigger id="ing-storage" className="h-10">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -224,7 +241,9 @@ function IngredientFormContent({
         {/* Row 4: min / max / reorder */}
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="ing-min">Tồn tối thiểu</Label>
+            <Label htmlFor="ing-min" className="text-sm font-medium">
+              Tồn tối thiểu
+            </Label>
             <Input
               id="ing-min"
               name="min_stock_level"
@@ -232,10 +251,13 @@ function IngredientFormContent({
               min={0}
               step={0.01}
               defaultValue={ingredient?.min_stock_level ?? 0}
+              className="h-10"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="ing-max">Tồn tối đa</Label>
+            <Label htmlFor="ing-max" className="text-sm font-medium">
+              Tồn tối đa
+            </Label>
             <Input
               id="ing-max"
               name="max_stock_level"
@@ -243,10 +265,13 @@ function IngredientFormContent({
               min={0}
               step={0.01}
               defaultValue={ingredient?.max_stock_level ?? ""}
+              className="h-10"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="ing-reorder">Điểm đặt hàng</Label>
+            <Label htmlFor="ing-reorder" className="text-sm font-medium">
+              Điểm đặt hàng
+            </Label>
             <Input
               id="ing-reorder"
               name="reorder_point"
@@ -254,13 +279,16 @@ function IngredientFormContent({
               min={0}
               step={0.01}
               defaultValue={ingredient?.reorder_point ?? ""}
+              className="h-10"
             />
           </div>
         </div>
 
         {/* shelf_life_days */}
         <div className="space-y-2">
-          <Label htmlFor="ing-shelf">Hạn sử dụng (ngày)</Label>
+          <Label htmlFor="ing-shelf" className="text-sm font-medium">
+            Hạn sử dụng (ngày)
+          </Label>
           <Input
             id="ing-shelf"
             name="shelf_life_days"
@@ -269,6 +297,7 @@ function IngredientFormContent({
             step={1}
             defaultValue={ingredient?.shelf_life_days ?? ""}
             placeholder="VD: 7"
+            className="h-10"
           />
         </div>
 
@@ -278,16 +307,17 @@ function IngredientFormContent({
           </p>
         )}
 
-        <DialogFooter>
+        <DialogFooter className="pt-2">
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isPending}
+            className="h-10"
           >
             Hủy
           </Button>
-          <Button type="submit" disabled={isPending}>
+          <Button type="submit" disabled={isPending} className="h-10">
             {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
             {isEdit ? "Cập nhật" : "Tạo mới"}
           </Button>

@@ -489,18 +489,18 @@ export function PosMenu({
   );
 
   const sessionHeader = (
-    <div className="flex items-center justify-between gap-2 border-b bg-background px-2 py-2 sm:px-3">
+    <div className="flex items-center justify-between gap-2 border-b bg-background px-3 py-2.5">
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <EmployeePortalBackControl />
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Monitor className="size-3 shrink-0" />
+          <span className="flex items-center gap-1.5 font-medium text-foreground">
+            <Monitor className="size-3.5 shrink-0 text-primary" />
             <span className="truncate">
               {session.pos_terminals?.name ?? "POS"}
             </span>
           </span>
-          <span className="flex min-w-0 items-center gap-1">
-            <Clock className="size-3 shrink-0" />
+          <span className="flex min-w-0 items-center gap-1.5">
+            <Clock className="size-3.5 shrink-0" />
             <span className="truncate">
               <span className="hidden sm:inline">Ca mở lúc </span>
               {formatTime(session.opened_at)}
@@ -511,10 +511,10 @@ export function PosMenu({
       <Button
         variant="ghost"
         size="sm"
-        className="h-7 shrink-0 text-xs"
+        className="h-9 shrink-0 gap-1.5 px-3 text-xs text-muted-foreground hover:text-destructive"
         onClick={() => setShowCloseSession(true)}
       >
-        <LogOut className="mr-1 size-3" />
+        <LogOut className="size-3.5" />
         Đóng ca
       </Button>
     </div>
@@ -624,31 +624,29 @@ export function PosMenu({
             ) : (
               <>
                 {/* Khu thực đơn (món chính / phụ / nước / tráng miệng) */}
-                <div className="border-b bg-muted/30">
+                <div className="border-b bg-background">
                   <ScrollArea className="w-full">
                     <div
-                      className="flex gap-1 p-2"
+                      className="flex gap-1 px-3 py-2"
                       role="tablist"
                       aria-label="Khu thực đơn"
                     >
                       {availableMenuZones.map((z) => (
-                        <Button
+                        <button
                           key={z}
                           type="button"
                           role="tab"
                           aria-selected={effectiveMenuZone === z}
-                          variant={
-                            effectiveMenuZone === z ? "default" : "ghost"
-                          }
-                          size="sm"
                           className={cn(
-                            "shrink-0 text-sm",
-                            effectiveMenuZone === z && "shadow-sm",
+                            "flex h-11 shrink-0 cursor-pointer items-center rounded-md px-4 text-sm font-semibold transition-colors",
+                            effectiveMenuZone === z
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
                           )}
                           onClick={() => setActiveMenuZone(z)}
                         >
                           {CATEGORY_TYPE_LABELS[z] ?? z}
-                        </Button>
+                        </button>
                       ))}
                     </div>
                   </ScrollArea>
@@ -656,47 +654,47 @@ export function PosMenu({
 
                 {/* Danh mục trong khu (nếu có nhiều danh mục) */}
                 {categoriesInActiveZone.length > 1 ? (
-                  <div className="border-b bg-muted/30">
+                  <div className="border-b bg-muted/20">
                     <ScrollArea className="w-full">
                       <div
-                        className="flex gap-1 p-2"
+                        className="flex gap-1 px-3 py-1.5"
                         role="tablist"
                         aria-label="Danh mục món"
                       >
                         {categoriesInActiveZone.map((cat) => (
-                          <Button
+                          <button
                             key={cat.id}
                             type="button"
                             role="tab"
                             aria-selected={activeCategoryId === cat.id}
-                            variant={
-                              activeCategoryId === cat.id
-                                ? "secondary"
-                                : "ghost"
-                            }
-                            size="sm"
                             className={cn(
-                              "shrink-0 text-sm",
-                              activeCategoryId === cat.id && "shadow-sm",
+                              "flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors",
+                              activeCategoryId === cat.id
+                                ? "bg-primary/10 text-primary font-semibold"
+                                : "text-muted-foreground hover:bg-muted hover:text-foreground",
                             )}
                             onClick={() => setActiveCategoryId(cat.id)}
                           >
                             {cat.name}
                             <Badge
                               variant="outline"
-                              className="ml-1.5 text-[10px]"
+                              className={cn(
+                                "text-[10px]",
+                                activeCategoryId === cat.id &&
+                                  "border-primary/30 bg-primary/10 text-primary",
+                              )}
                             >
                               {cat.menu_items.length}
                             </Badge>
-                          </Button>
+                          </button>
                         ))}
                       </div>
                     </ScrollArea>
                   </div>
                 ) : (
                   activeCategory && (
-                    <div className="border-b px-3 py-2">
-                      <p className="text-sm font-medium">
+                    <div className="border-b bg-muted/20 px-3 py-2">
+                      <p className="text-sm font-semibold text-foreground">
                         {activeCategory.name}
                       </p>
                       <span className="text-xs text-muted-foreground">
@@ -709,30 +707,30 @@ export function PosMenu({
 
                 {/* Lưới món */}
                 <ScrollArea className="flex-1">
-                  <div className="grid grid-cols-2 gap-2 p-2 sm:grid-cols-3 lg:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-2.5 p-3 sm:grid-cols-3 lg:grid-cols-4">
                     {activeCategory?.menu_items.map((item) => (
                       <button
                         key={item.id}
                         type="button"
-                        className="flex flex-col rounded-lg border bg-card p-3 text-left transition-colors hover:bg-accent active:scale-[0.98]"
+                        className="flex min-h-[80px] cursor-pointer flex-col rounded-xl border border-border bg-card p-3.5 text-left shadow-sm transition-all hover:border-primary/30 hover:shadow-md active:scale-[0.97]"
                         onClick={() => handleItemTap(item)}
                       >
-                        <span className="line-clamp-2 text-sm font-medium">
+                        <span className="line-clamp-2 text-base font-semibold leading-snug">
                           {item.name}
                         </span>
                         {item.menu_item_variants.length > 0 && (
-                          <span className="mt-1 text-[10px] text-muted-foreground">
+                          <span className="mt-1 text-xs text-muted-foreground">
                             {item.menu_item_variants.length} lựa chọn
                           </span>
                         )}
-                        <span className="mt-auto pt-2 text-sm font-semibold text-primary">
+                        <span className="mt-auto pt-2.5 text-base font-bold text-primary">
                           {formatVND(item.base_price)}
                         </span>
                       </button>
                     ))}
                   </div>
                   {activeCategory?.menu_items.length === 0 && (
-                    <div className="flex items-center justify-center py-12 text-muted-foreground">
+                    <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
                       Không có món trong danh mục này
                     </div>
                   )}

@@ -80,18 +80,23 @@ export function StaffFormDialog({
           {!isEdit && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
+                <Label htmlFor="email" className="text-sm font-medium">
+                  Email *
+                </Label>
                 <Input
                   id="email"
                   name="email"
                   type="email"
                   required
                   placeholder="nhanvien@comtammatu.com"
+                  className="h-11"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Mật khẩu *</Label>
+                <Label htmlFor="password" className="text-sm font-medium">
+                  Mật khẩu *
+                </Label>
                 <Input
                   id="password"
                   name="password"
@@ -99,42 +104,51 @@ export function StaffFormDialog({
                   required
                   minLength={8}
                   placeholder="Tối thiểu 8 ký tự"
+                  className="h-11"
                 />
               </div>
             </>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="full_name">Họ tên *</Label>
+            <Label htmlFor="full_name" className="text-sm font-medium">
+              Họ tên *
+            </Label>
             <Input
               id="full_name"
               name="full_name"
               required
               defaultValue={staff?.full_name ?? ""}
               placeholder="Nguyễn Văn A"
+              className="h-11"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Số điện thoại</Label>
+            <Label htmlFor="phone" className="text-sm font-medium">
+              Số điện thoại
+            </Label>
             <Input
               id="phone"
               name="phone"
               type="tel"
               defaultValue={staff?.phone ?? ""}
               placeholder="0901 234 567"
+              className="h-11"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="role">Vai trò *</Label>
+            <Label htmlFor="role" className="text-sm font-medium">
+              Vai trò *
+            </Label>
             <Select
               name="role"
               value={selectedRole}
               onValueChange={setSelectedRole}
               required
             >
-              <SelectTrigger id="role">
+              <SelectTrigger id="role" className="h-11">
                 <SelectValue placeholder="Chọn vai trò" />
               </SelectTrigger>
               <SelectContent>
@@ -148,14 +162,16 @@ export function StaffFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="branch_id">Chi nhánh</Label>
+            <Label htmlFor="branch_id" className="text-sm font-medium">
+              Chi nhánh
+            </Label>
             <Select
               key={`${selectedRole}-${staff?.id ?? "new"}`}
               name="branch_id"
               defaultValue={staff?.branch_id?.toString() ?? ""}
               disabled={isTenantLevel}
             >
-              <SelectTrigger id="branch_id">
+              <SelectTrigger id="branch_id" className="h-11">
                 <SelectValue
                   placeholder={
                     isTenantLevel ? "Không áp dụng" : "Chọn chi nhánh"
@@ -185,16 +201,17 @@ export function StaffFormDialog({
             </p>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="pt-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isPending}
+              className="h-10"
             >
               Hủy
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending} className="h-10">
               {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
               {isEdit ? "Cập nhật" : "Tạo mới"}
             </Button>

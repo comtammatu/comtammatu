@@ -68,12 +68,22 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Nhân viên</TableHead>
-              <TableHead className="hidden sm:table-cell">Vai trò</TableHead>
-              <TableHead className="hidden md:table-cell">Chi nhánh</TableHead>
-              <TableHead className="hidden lg:table-cell">SĐT</TableHead>
-              <TableHead>Trạng thái</TableHead>
+            <TableRow className="bg-muted/50 hover:bg-muted/50">
+              <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Nhân viên
+              </TableHead>
+              <TableHead className="hidden text-xs font-medium uppercase tracking-wider text-muted-foreground sm:table-cell">
+                Vai trò
+              </TableHead>
+              <TableHead className="hidden text-xs font-medium uppercase tracking-wider text-muted-foreground md:table-cell">
+                Chi nhánh
+              </TableHead>
+              <TableHead className="hidden text-xs font-medium uppercase tracking-wider text-muted-foreground lg:table-cell">
+                SĐT
+              </TableHead>
+              <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Trạng thái
+              </TableHead>
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
@@ -91,7 +101,7 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
             {staff.map((member) => (
               <TableRow
                 key={member.id}
-                className={isPending ? "opacity-60" : ""}
+                className={`transition-colors hover:bg-muted/30 ${isPending ? "opacity-60" : ""}`}
               >
                 <TableCell>
                   <span className="font-medium">{member.full_name}</span>

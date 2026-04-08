@@ -98,14 +98,16 @@ export function AdjustStockDialog({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="adjust-type">Loại điều chỉnh</Label>
+            <Label htmlFor="adjust-type" className="text-sm font-medium">
+              Loại điều chỉnh
+            </Label>
             <Select
               value={adjustType}
               onValueChange={(v) =>
                 setAdjustType(v as "adjustment" | "count_adjustment")
               }
             >
-              <SelectTrigger id="adjust-type">
+              <SelectTrigger id="adjust-type" className="h-11">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -116,7 +118,7 @@ export function AdjustStockDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="adjust-qty">
+            <Label htmlFor="adjust-qty" className="text-sm font-medium">
               Số lượng ({unit}) — dương = nhập, âm = xuất
             </Label>
             <Input
@@ -127,15 +129,19 @@ export function AdjustStockDialog({
               required
               placeholder="VD: 10 hoặc -5"
               autoFocus
+              className="h-11"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="adjust-reason">Lý do (tùy chọn)</Label>
+            <Label htmlFor="adjust-reason" className="text-sm font-medium">
+              Lý do (tùy chọn)
+            </Label>
             <Input
               id="adjust-reason"
               name="reason"
               placeholder="VD: Nhập hàng sáng, Hao hụt..."
+              className="h-11"
             />
           </div>
 
@@ -145,16 +151,17 @@ export function AdjustStockDialog({
             </p>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="pt-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isPending}
+              className="h-10"
             >
               Hủy
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending} className="h-10">
               {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
               Xác nhận
             </Button>

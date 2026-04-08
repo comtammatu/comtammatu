@@ -3,9 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@comtammatu/ui";
-import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Select,
   SelectContent,
@@ -422,70 +420,88 @@ export function KdsBoard({
 
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
-      {/* Back (narrow column) + station tabs — one bar, tabs scroll horizontally */}
+      {/* ── Station tabs bar ── */}
       <div
         className={cn(
-          "flex shrink-0 items-stretch border-b border-border/50 bg-background/50",
-          "pt-[max(0.25rem,env(safe-area-inset-top,0px))]",
+          "flex shrink-0 items-stretch border-b border-border/40 bg-zinc-950",
+          "pt-[max(0px,env(safe-area-inset-top,0px))]",
         )}
       >
-        <div className="flex shrink-0 items-center border-x border-border/40 px-1 sm:px-1.5">
-          <EmployeePortalBackControl className="h-11 justify-center rounded-none sm:rounded-md" />
+        {/* Back button */}
+        <div className="flex shrink-0 items-center border-r border-border/40 px-1">
+          <EmployeePortalBackControl className="min-h-14 justify-center rounded-none" />
         </div>
+
+        {/* Station tabs — horizontally scrollable, 56px tall */}
         <ScrollArea className="min-w-0 flex-1">
-          <div className="flex gap-1 p-2">
-            <Button
-              variant={activeStationId === null ? "default" : "ghost"}
-              size="sm"
-              className="min-h-11 shrink-0 text-sm shadow-none"
+          <div className="flex gap-1.5 p-2">
+            {/* "All" tab */}
+            <button
+              type="button"
+              className={cn(
+                "flex min-h-14 shrink-0 cursor-pointer items-center gap-2 rounded-xl px-5 text-base font-bold transition-colors duration-150",
+                activeStationId === null
+                  ? "bg-amber-500 text-zinc-950 shadow-sm"
+                  : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100",
+              )}
               onClick={() => replaceQuery({ station: null })}
             >
               Tất cả
-              <Badge
-                variant="secondary"
+              <span
                 className={cn(
-                  "ml-1.5 text-[10px]",
-                  activeStationId === null &&
-                    "bg-primary-foreground/20 text-primary-foreground",
+                  "flex size-6 items-center justify-center rounded-full text-xs font-black tabular-nums",
+                  activeStationId === null
+                    ? "bg-zinc-950/30 text-zinc-950"
+                    : "bg-zinc-700 text-zinc-200",
                 )}
               >
                 {totalActiveCount}
-              </Badge>
-            </Button>
-            {stations.map((station) => (
-              <Button
-                key={station.id}
-                variant={activeStationId === station.id ? "default" : "ghost"}
-                size="sm"
-                className="min-h-11 shrink-0 text-sm shadow-none"
-                onClick={() => replaceQuery({ station: String(station.id) })}
-              >
-                {station.name}
-                <Badge
-                  variant="secondary"
+              </span>
+            </button>
+
+            {/* Per-station tabs */}
+            {stations.map((station) => {
+              const isActive = activeStationId === station.id;
+              const count = stationCounts.get(station.id) ?? 0;
+              return (
+                <button
+                  key={station.id}
+                  type="button"
                   className={cn(
-                    "ml-1.5 text-[10px]",
-                    activeStationId === station.id &&
-                      "bg-primary-foreground/20 text-primary-foreground",
+                    "flex min-h-14 shrink-0 cursor-pointer items-center gap-2 rounded-xl px-5 text-base font-bold transition-colors duration-150",
+                    isActive
+                      ? "bg-amber-500 text-zinc-950 shadow-sm"
+                      : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100",
                   )}
+                  onClick={() =>
+                    replaceQuery({ station: String(station.id) })
+                  }
                 >
-                  {stationCounts.get(station.id) ?? 0}
-                </Badge>
-              </Button>
-            ))}
+                  {station.name}
+                  <span
+                    className={cn(
+                      "flex size-6 items-center justify-center rounded-full text-xs font-black tabular-nums",
+                      isActive
+                        ? "bg-zinc-950/30 text-zinc-950"
+                        : count > 0
+                          ? "bg-amber-700/60 text-amber-200"
+                          : "bg-zinc-700 text-zinc-400",
+                    )}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </ScrollArea>
       </div>
 
-      {/* Filters: trạng thái + loại đơn (URL: status, orderType) */}
-      <div
-        className={cn(
-          "flex shrink-0 flex-wrap items-center gap-2 border-b border-border/50 bg-muted/20 px-2 py-2 sm:px-3",
-        )}
-      >
+      {/* ── Filter bar ── */}
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border/30 bg-zinc-900/80 px-3 py-2">
         <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
           <Filter className="size-4 shrink-0" aria-hidden />
-          <span className="hidden text-xs font-medium sm:inline">Lọc</span>
+          <span className="hidden text-sm font-medium sm:inline">Lọc</span>
         </div>
         <Select
           value={ticketStatusFilter}
@@ -495,14 +511,14 @@ export function KdsBoard({
           }}
         >
           <SelectTrigger
-            className="h-11 min-h-11 w-[min(100%,11rem)] min-w-[9.5rem] sm:w-52"
+            className="h-11 min-h-11 w-[min(100%,13rem)] min-w-[10rem] text-sm"
             aria-label="Lọc theo trạng thái món"
           >
             <SelectValue placeholder="Trạng thái" />
           </SelectTrigger>
           <SelectContent>
             {TICKET_STATUS_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
+              <SelectItem key={opt.value} value={opt.value} className="text-sm">
                 {opt.label}
               </SelectItem>
             ))}
@@ -516,31 +532,43 @@ export function KdsBoard({
           }}
         >
           <SelectTrigger
-            className="h-11 min-h-11 w-[min(100%,11rem)] min-w-[9.5rem] sm:w-44"
+            className="h-11 min-h-11 w-[min(100%,11rem)] min-w-[9rem] text-sm"
             aria-label="Lọc theo loại đơn"
           >
             <SelectValue placeholder="Loại đơn" />
           </SelectTrigger>
           <SelectContent>
             {ORDER_TYPE_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
+              <SelectItem key={opt.value} value={opt.value} className="text-sm">
                 {opt.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+
+        {/* Live order count indicator */}
+        {displayOrders.length > 0 && (
+          <span className="ml-auto text-sm font-semibold tabular-nums text-muted-foreground">
+            {displayOrders.length} đơn
+          </span>
+        )}
       </div>
 
-      {/* Order cards grid */}
+      {/* ── Order cards grid ── */}
       <ScrollArea className="flex-1">
         {displayOrders.length === 0 ? (
           <div className="flex h-full min-h-[60vh] items-center justify-center">
             <div className="text-center">
-              <ChefHat className="mx-auto size-16 text-muted-foreground/50" />
-              <p className="mt-4 text-lg text-muted-foreground">
+              <ChefHat className="mx-auto size-20 text-muted-foreground/30" />
+              <p className="mt-5 text-xl font-semibold text-muted-foreground">
                 {groupedOrders.length > 0
                   ? "Không có đơn phù hợp bộ lọc"
-                  : "Không có đơn hàng nào đang chờ"}
+                  : "Bếp đang rảnh"}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground/60">
+                {groupedOrders.length > 0
+                  ? "Thử thay đổi bộ lọc"
+                  : "Chưa có đơn hàng mới"}
               </p>
             </div>
           </div>
