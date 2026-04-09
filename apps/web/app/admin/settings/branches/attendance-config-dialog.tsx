@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState, useTransition } from "react";
-import { Key, MapPin, Loader2, Copy, RefreshCw } from "lucide-react";
+import { Key, MapPin, Loader2, Copy, RefreshCw, Locate } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
@@ -43,6 +43,10 @@ export function AttendanceConfigDialog({
   const [isPending, startTransition] = useTransition();
   const [todayCode, setTodayCode] = useState<string | null>(null);
   const [todayDate, setTodayDate] = useState<string | null>(null);
+  const [lat, setLat] = useState(branch.latitude?.toString() ?? "");
+  const [lng, setLng] = useState(branch.longitude?.toString() ?? "");
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
 
   // Toast on coords save success
   useEffect(() => {
@@ -51,6 +55,13 @@ export function AttendanceConfigDialog({
     }
   }, [coordsState]);
 
+  // Sync coords when branch changes
+  useEffect(() => {
+    setLat(branch.latitude?.toString() ?? "");
+    setLng(branch.longitude?.toString() ?? "");
+    setGeoError(null);
+  }, [branch.id, branch.latitude, branch.longitude]);
+
   // Reset code when dialog opens/closes
   useEffect(() => {
     if (!open) {
@@ -58,6 +69,31 @@ export function AttendanceConfigDialog({
       setTodayDate(null);
     }
   }, [open]);
+
+  function handleGetLocation() {
+    if (!navigator.geolocation) {
+      setGeoError("Trình duyệt không hỗ trợ GPS");
+      return;
+    }
+    setGeoLoading(true);
+    setGeoError(null);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLat(position.coords.latitude.toFixed(7));
+        setLng(position.coords.longitude.toFixed(7));
+        setGeoLoading(false);
+      },
+      (err) => {
+        setGeoLoading(false);
+        setGeoError(
+          err.code === 1
+            ? "Bạn đã từ chối quyền GPS. Vui lòng bật và thử lại."
+            : "Không xác định được vị trí. Vui lòng thử lại.",
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+    );
+  }
 
   function handleGenerateSecret() {
     startTransition(async () => {
@@ -116,7 +152,8 @@ export function AttendanceConfigDialog({
                     type="number"
                     step="0.0000001"
                     placeholder="10.7769"
-                    defaultValue={branch.latitude?.toString() ?? ""}
+                    value={lat}
+                    onChange={(e) => setLat(e.target.value)}
                     required
                   />
                 </div>
@@ -128,11 +165,30 @@ export function AttendanceConfigDialog({
                     type="number"
                     step="0.0000001"
                     placeholder="106.7009"
-                    defaultValue={branch.longitude?.toString() ?? ""}
+                    value={lng}
+                    onChange={(e) => setLng(e.target.value)}
                     required
                   />
                 </div>
               </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={handleGetLocation}
+                disabled={geoLoading}
+              >
+                {geoLoading ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <Locate className="mr-2 size-4" />
+                )}
+                Lấy vị trí hiện tại
+              </Button>
+              {geoError && (
+                <p className="text-sm text-destructive">{geoError}</p>
+              )}
               {coordsState?.error && (
                 <p className="text-sm text-destructive">{coordsState.error}</p>
               )}
