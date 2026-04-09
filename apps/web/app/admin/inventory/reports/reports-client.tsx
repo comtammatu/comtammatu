@@ -30,6 +30,7 @@ import {
 } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   fetchStockMovementReport,
   fetchBranchMovementSummary,
@@ -83,6 +84,7 @@ export function ReportsClient({
     defaultBranchId ? String(defaultBranchId) : "_all",
   );
   const [isPending, startTransition] = useTransition();
+  const isMobile = useIsMobile();
 
   // Data states
   const [movementRows, setMovementRows] = useState<MovementReportRow[]>([]);
@@ -157,7 +159,12 @@ export function ReportsClient({
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-wrap items-end gap-4">
+          <div
+            className={cn(
+              "flex items-end gap-4",
+              isMobile ? "flex-col items-stretch" : "flex-wrap",
+            )}
+          >
             <div className="space-y-1.5">
               <Label htmlFor="startDate">Từ ngày</Label>
               <Input
@@ -165,7 +172,7 @@ export function ReportsClient({
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-40"
+                className={isMobile ? "w-full" : "w-40"}
               />
             </div>
             <div className="space-y-1.5">
@@ -175,13 +182,13 @@ export function ReportsClient({
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-40"
+                className={isMobile ? "w-full" : "w-40"}
               />
             </div>
             <div className="space-y-1.5">
               <Label>Chi nhánh</Label>
               <Select value={branchId} onValueChange={setBranchId}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className={isMobile ? "w-full" : "w-48"}>
                   <SelectValue placeholder="Tất cả" />
                 </SelectTrigger>
                 <SelectContent>
@@ -198,6 +205,7 @@ export function ReportsClient({
               type="button"
               onClick={() => loadReport(activeTab)}
               disabled={isPending || !startDate || !endDate}
+              className={isMobile ? "w-full" : ""}
             >
               {isPending ? (
                 <>
@@ -231,6 +239,64 @@ export function ReportsClient({
         <TabsContent value="movement" className="mt-4">
           {!loaded["movement"] ? (
             <EmptyReportState />
+          ) : isMobile ? (
+            <div className="rounded-lg border shadow-sm overflow-hidden divide-y">
+              {movementRows.length === 0 && (
+                <div className="py-16 text-center">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Không có dữ liệu
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground/70">
+                    Chọn khoảng thời gian và nhấn Xem báo cáo
+                  </p>
+                </div>
+              )}
+              {movementRows.map((r) => (
+                <div key={r.ingredient_id} className="px-4 py-3 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium truncate">
+                      {r.ingredient_name}
+                    </span>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {r.unit}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs font-mono tabular-nums">
+                    <span>{fmtNum(r.opening)}</span>
+                    <span className="text-muted-foreground">→</span>
+                    <span className="font-semibold">{fmtNum(r.closing)}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                    {r.grn_receipt > 0 && (
+                      <span className="text-success">
+                        +{fmtNum(r.grn_receipt)} nhập
+                      </span>
+                    )}
+                    {r.consumption < 0 && (
+                      <span className="text-destructive">
+                        {fmtNum(r.consumption)} tiêu hao
+                      </span>
+                    )}
+                    {r.transfer_in > 0 && (
+                      <span className="text-success">
+                        +{fmtNum(r.transfer_in)} chuyển vào
+                      </span>
+                    )}
+                    {r.transfer_out < 0 && (
+                      <span className="text-destructive">
+                        {fmtNum(r.transfer_out)} chuyển ra
+                      </span>
+                    )}
+                    {r.adjustment !== 0 && (
+                      <span>
+                        {r.adjustment > 0 ? "+" : ""}
+                        {fmtNum(r.adjustment)} điều chỉnh
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="rounded-lg border shadow-sm overflow-hidden">
               <Table>
@@ -318,6 +384,52 @@ export function ReportsClient({
         <TabsContent value="branch" className="mt-4">
           {!loaded["branch"] ? (
             <EmptyReportState />
+          ) : isMobile ? (
+            <div className="rounded-lg border shadow-sm overflow-hidden divide-y">
+              {branchSummary.length === 0 && (
+                <div className="py-16 text-center">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Không có dữ liệu
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground/70">
+                    Chọn khoảng thời gian và nhấn Xem báo cáo
+                  </p>
+                </div>
+              )}
+              {branchSummary.map((r) => (
+                <div key={r.branch_id} className="px-4 py-3 space-y-1.5">
+                  <p className="text-sm font-medium">{r.branch_name}</p>
+                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs font-mono tabular-nums">
+                    {r.grn_receipt > 0 && (
+                      <span className="text-success">
+                        +{fmtNum(r.grn_receipt)} nhập
+                      </span>
+                    )}
+                    {r.transfer_in > 0 && (
+                      <span className="text-success">
+                        +{fmtNum(r.transfer_in)} chuyển vào
+                      </span>
+                    )}
+                    {r.transfer_out < 0 && (
+                      <span className="text-destructive">
+                        {fmtNum(r.transfer_out)} chuyển ra
+                      </span>
+                    )}
+                    {r.consumption < 0 && (
+                      <span className="text-destructive">
+                        {fmtNum(r.consumption)} tiêu hao
+                      </span>
+                    )}
+                    {r.adjustment !== 0 && (
+                      <span className="text-muted-foreground">
+                        {r.adjustment > 0 ? "+" : ""}
+                        {fmtNum(r.adjustment)} điều chỉnh
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="rounded-lg border shadow-sm overflow-hidden">
               <Table>
@@ -387,6 +499,65 @@ export function ReportsClient({
         <TabsContent value="ap-aging" className="mt-4">
           {!loaded["ap-aging"] ? (
             <EmptyReportState />
+          ) : isMobile ? (
+            <div className="rounded-lg border shadow-sm overflow-hidden divide-y">
+              {apAgingRows.length === 0 && (
+                <div className="py-16 text-center">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Không có công nợ
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground/70">
+                    Tất cả hóa đơn đã thanh toán
+                  </p>
+                </div>
+              )}
+              {apAgingRows.map((r) => {
+                const hasOverdue =
+                  r.buckets.days_61_90.total > 0 ||
+                  r.buckets.days_over_90.total > 0;
+                return (
+                  <div key={r.supplier_id} className="px-4 py-3 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium truncate">
+                        {r.supplier_name}
+                      </span>
+                      <span className="text-sm font-mono tabular-nums font-semibold shrink-0">
+                        {fmtMoney(r.total_outstanding)}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {r.buckets.days_1_30.total > 0 && (
+                        <Badge className="text-xs bg-warning/10 text-warning border-warning/30">
+                          1-30d: {fmtMoney(r.buckets.days_1_30.total)}
+                        </Badge>
+                      )}
+                      {r.buckets.days_31_60.total > 0 && (
+                        <Badge className="text-xs bg-warning/10 text-warning border-warning/30">
+                          31-60d: {fmtMoney(r.buckets.days_31_60.total)}
+                        </Badge>
+                      )}
+                      {r.buckets.days_61_90.total > 0 && (
+                        <Badge className="text-xs bg-destructive/10 text-destructive border-destructive/30">
+                          61-90d: {fmtMoney(r.buckets.days_61_90.total)}
+                        </Badge>
+                      )}
+                      {r.buckets.days_over_90.total > 0 && (
+                        <Badge className="text-xs bg-destructive/10 text-destructive border-destructive/30">
+                          &gt;90d: {fmtMoney(r.buckets.days_over_90.total)}
+                        </Badge>
+                      )}
+                      {!hasOverdue &&
+                        r.buckets.days_1_30.total === 0 &&
+                        r.buckets.days_31_60.total === 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            Chưa đến hạn
+                          </span>
+                        )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <div className="rounded-lg border shadow-sm overflow-hidden">
               <Table>
@@ -479,6 +650,64 @@ export function ReportsClient({
         <TabsContent value="variance" className="mt-4">
           {!loaded["variance"] ? (
             <EmptyReportState />
+          ) : isMobile ? (
+            <div className="rounded-lg border shadow-sm overflow-hidden divide-y">
+              {varianceRows.length === 0 && (
+                <div className="py-16 text-center">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Không có dữ liệu
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground/70">
+                    Chọn chi nhánh và nhấn Xem báo cáo
+                  </p>
+                </div>
+              )}
+              {varianceRows.map((r) => {
+                const flagMeta = FLAG_META[r.flag] ?? {
+                  label: r.flag,
+                  className: "bg-muted text-muted-foreground",
+                };
+                return (
+                  <div
+                    key={r.ingredient_id}
+                    className={cn(
+                      "px-4 py-3 space-y-1.5",
+                      r.flag === "critical" && "bg-destructive/5",
+                      r.flag === "warning" && "bg-warning/5",
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium truncate">
+                        {r.ingredient_name}
+                      </span>
+                      <Badge className={cn("text-xs shrink-0", flagMeta.className)}>
+                        {flagMeta.label}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs font-mono tabular-nums">
+                      <span>
+                        LT: {fmtNum(r.theoretical)} {r.unit}
+                      </span>
+                      <span>TT: {fmtNum(r.actual)}</span>
+                      <span
+                        className={cn(
+                          r.variance > 0
+                            ? "text-destructive"
+                            : r.variance < 0
+                              ? "text-success"
+                              : "",
+                        )}
+                      >
+                        {r.variance > 0 ? "+" : ""}
+                        {fmtNum(r.variance)} (
+                        {r.variance_pct > 0 ? "+" : ""}
+                        {fmtNum(r.variance_pct)}%)
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <div className="rounded-lg border shadow-sm overflow-hidden">
               <Table>

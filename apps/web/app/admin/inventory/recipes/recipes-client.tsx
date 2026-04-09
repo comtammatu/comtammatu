@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { Search } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
@@ -20,6 +21,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { fetchRecipes, upsertRecipe } from "../procurement-actions";
 import type { IngredientRow } from "../page";
 import { TableEmptyStateRow } from "../../components/table-empty-state-row";
@@ -54,7 +56,30 @@ export function RecipesClient({
   const [rows, setRows] = useState(initial);
   const [menuItemId, setMenuItemId] = useState("");
   const [ingredientId, setIngredientId] = useState("");
+  const [search, setSearch] = useState("");
+  const [menuFilter, setMenuFilter] = useState("_all");
   const [isPending, startTransition] = useTransition();
+  const isMobile = useIsMobile();
+
+  const filtered = useMemo(() => {
+    let items = rows;
+
+    if (menuFilter !== "_all") {
+      const mid = Number(menuFilter);
+      items = items.filter((r) => r.menu_item_id === mid);
+    }
+
+    const q = search.trim().toLowerCase();
+    if (q) {
+      items = items.filter(
+        (r) =>
+          (r.menu_items?.name ?? "").toLowerCase().includes(q) ||
+          (r.ingredients?.name ?? "").toLowerCase().includes(q),
+      );
+    }
+
+    return items;
+  }, [rows, search, menuFilter]);
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -95,7 +120,7 @@ export function RecipesClient({
   return (
     <>
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Công thức (BOM)</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Công thức (BOM)</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Định mức nguyên liệu theo món. Khi đơn hàng chuyển sang hoàn thành, hệ
           thống trừ tồn theo công thức (nếu đã cấu hình).
@@ -189,66 +214,145 @@ export function RecipesClient({
         </Button>
       </form>
 
-      <div className="rounded-md border shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">
-                Món
-              </TableHead>
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">
-                Nguyên liệu
-              </TableHead>
-              <TableHead className="text-right text-xs uppercase tracking-wider font-semibold">
-                Định mức
-              </TableHead>
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">
-                Đơn vị
-              </TableHead>
-              <TableHead className="text-right text-xs uppercase tracking-wider font-semibold">
-                Hao hụt
-              </TableHead>
-              <TableHead className="hidden sm:table-cell text-xs uppercase tracking-wider font-semibold">
-                Ghi chú
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody className="divide-y divide-border/60">
-            {rows.length === 0 && (
-              <TableEmptyStateRow
-                colSpan={6}
-                paddingClassName="py-16"
-                title="Chưa có công thức nào"
-                description="Thêm dòng công thức qua biểu mẫu phía trên"
-              />
+      {/* Recipe table card */}
+      <div className="rounded-lg border shadow-sm overflow-hidden">
+        {/* Search + filter bar */}
+        <div className="flex flex-wrap items-center gap-3 border-b bg-muted/20 px-4 py-3">
+          <div className="flex flex-1 items-center gap-3 min-w-0">
+            <Search className="size-4 shrink-0 text-muted-foreground" />
+            <Input
+              placeholder="Tìm theo tên món hoặc nguyên liệu…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Select value={menuFilter} onValueChange={setMenuFilter}>
+              <SelectTrigger className="h-8 w-36 text-xs">
+                <SelectValue placeholder="Món" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_all">Tất cả món</SelectItem>
+                {menuItems.map((m) => (
+                  <SelectItem key={m.id} value={String(m.id)}>
+                    {m.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="shrink-0 text-xs text-muted-foreground">
+              {filtered.length} / {rows.length}
+            </span>
+          </div>
+        </div>
+
+        {/* Mobile: card layout */}
+        {isMobile ? (
+          <div className="divide-y">
+            {filtered.length === 0 && (
+              <div className="py-16 text-center">
+                <p className="text-sm font-medium text-muted-foreground">
+                  {search || menuFilter !== "_all"
+                    ? "Không tìm thấy công thức nào"
+                    : "Chưa có công thức nào"}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground/70">
+                  {search || menuFilter !== "_all"
+                    ? "Thử bộ lọc khác"
+                    : "Thêm dòng công thức qua biểu mẫu phía trên"}
+                </p>
+              </div>
             )}
-            {rows.map((r) => (
-              <TableRow
-                key={r.id}
-                className="hover:bg-muted/40 transition-colors"
-              >
-                <TableCell className="font-medium">
+            {filtered.map((r) => (
+              <div key={r.id} className="px-4 py-3 space-y-1">
+                <p className="text-sm font-medium">
                   {r.menu_items?.name ?? `#${r.menu_item_id}`}
-                </TableCell>
-                <TableCell>
-                  {r.ingredients?.name ?? `#${r.ingredient_id}`}
-                </TableCell>
-                <TableCell className="text-right font-mono tabular-nums">
-                  {r.quantity.toLocaleString("vi-VN")}
-                </TableCell>
-                <TableCell>{r.unit}</TableCell>
-                <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
-                  {r.yield_factor != null && r.yield_factor < 1
-                    ? `${((1 - r.yield_factor) * 100).toFixed(1)}%`
-                    : "0%"}
-                </TableCell>
-                <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
-                  {r.note ?? "—"}
-                </TableCell>
-              </TableRow>
+                  <span className="text-muted-foreground font-normal">
+                    {" → "}
+                    {r.ingredients?.name ?? `#${r.ingredient_id}`}
+                  </span>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {r.quantity.toLocaleString("vi-VN")} {r.unit}
+                  {r.yield_factor != null && r.yield_factor < 1 && (
+                    <> · Hao hụt {((1 - r.yield_factor) * 100).toFixed(1)}%</>
+                  )}
+                  {r.note && <> · {r.note}</>}
+                </p>
+              </div>
             ))}
-          </TableBody>
-        </Table>
+          </div>
+        ) : (
+          /* Desktop: table layout */
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/20 hover:bg-muted/20">
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  Món
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  Nguyên liệu
+                </TableHead>
+                <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
+                  Định mức
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  Đơn vị
+                </TableHead>
+                <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
+                  Hao hụt
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  Ghi chú
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 && (
+                <TableEmptyStateRow
+                  colSpan={6}
+                  paddingClassName="py-16"
+                  title={
+                    search || menuFilter !== "_all"
+                      ? "Không tìm thấy công thức nào"
+                      : "Chưa có công thức nào"
+                  }
+                  description={
+                    search || menuFilter !== "_all"
+                      ? "Thử bộ lọc khác"
+                      : "Thêm dòng công thức qua biểu mẫu phía trên"
+                  }
+                />
+              )}
+              {filtered.map((r) => (
+                <TableRow
+                  key={r.id}
+                  className="hover:bg-muted/30 transition-colors"
+                >
+                  <TableCell className="font-medium">
+                    {r.menu_items?.name ?? `#${r.menu_item_id}`}
+                  </TableCell>
+                  <TableCell>
+                    {r.ingredients?.name ?? `#${r.ingredient_id}`}
+                  </TableCell>
+                  <TableCell className="text-right font-mono tabular-nums">
+                    {r.quantity.toLocaleString("vi-VN")}
+                  </TableCell>
+                  <TableCell>{r.unit}</TableCell>
+                  <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
+                    {r.yield_factor != null && r.yield_factor < 1
+                      ? `${((1 - r.yield_factor) * 100).toFixed(1)}%`
+                      : "0%"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {r.note ?? "—"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
     </>
   );

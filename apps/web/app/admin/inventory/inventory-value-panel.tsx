@@ -21,6 +21,7 @@ import {
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   fetchInventoryValueByArea,
   fetchInventoryValueByBranch,
@@ -41,6 +42,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
     { branchId: number; branchName: string; totalValue: number }[] | null
   >(null);
   const [isPending, startTransition] = useTransition();
+  const isMobile = useIsMobile();
 
   const loadSystem = useCallback(() => {
     startTransition(async () => {
@@ -171,6 +173,22 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               className="py-10"
               title="Không có dữ liệu khu vực"
             />
+          ) : isMobile ? (
+            <div className="overflow-hidden rounded-lg border shadow-sm divide-y">
+              {areaRows.map((r) => (
+                <div
+                  key={r.areaId}
+                  className="flex items-center justify-between gap-3 px-4 py-3"
+                >
+                  <span className="text-sm font-medium truncate">
+                    {r.areaName}
+                  </span>
+                  <span className="text-sm font-mono tabular-nums shrink-0">
+                    {formatVND(r.totalValue)}
+                  </span>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="overflow-hidden rounded-lg border shadow-sm">
               <Table>
@@ -212,6 +230,22 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               className="py-10"
               title="Không có chi nhánh trong phạm vi"
             />
+          ) : isMobile ? (
+            <div className="overflow-hidden rounded-lg border shadow-sm divide-y">
+              {branchRows.map((r) => (
+                <div
+                  key={r.branchId}
+                  className="flex items-center justify-between gap-3 px-4 py-3"
+                >
+                  <span className="text-sm font-medium truncate">
+                    {r.branchName}
+                  </span>
+                  <span className="text-sm font-mono tabular-nums shrink-0">
+                    {formatVND(r.totalValue)}
+                  </span>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="overflow-hidden rounded-lg border shadow-sm">
               <Table>

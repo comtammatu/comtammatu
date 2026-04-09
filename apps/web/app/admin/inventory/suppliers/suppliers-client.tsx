@@ -1,8 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@comtammatu/ui/components/alert-dialog";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Dialog,
@@ -23,6 +33,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   createSupplier,
   deleteSupplier,
@@ -45,12 +56,27 @@ type DialogMode = "create" | "edit";
 
 export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
   const [rows, setRows] = useState(initial);
+  const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<DialogMode>("create");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingRow, setEditingRow] = useState<SupplierRow | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
+  const isMobile = useIsMobile();
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        (s.tax_code ?? "").toLowerCase().includes(q) ||
+        (s.phone ?? "").toLowerCase().includes(q),
+    );
+  }, [rows, search]);
+
+  const deleteTarget = rows.find((r) => r.id === deleteConfirmId);
 
   async function reload() {
     const again = await fetchSuppliers();
@@ -124,7 +150,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
     <>
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Nhà cung cấp</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Nhà cung cấp</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Chỉ dùng cho nhập hàng tại{" "}
             <Link href="/admin/settings/branches" className="underline">
@@ -139,71 +165,149 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
         </Button>
       </div>
 
-      <div className="rounded-md border shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">
-                Tên
-              </TableHead>
-              <TableHead className="hidden sm:table-cell text-xs uppercase tracking-wider font-semibold">
-                Mã số thuế
-              </TableHead>
-              <TableHead className="hidden md:table-cell text-xs uppercase tracking-wider font-semibold">
-                Điện thoại
-              </TableHead>
-              <TableHead className="w-24 text-right text-xs uppercase tracking-wider font-semibold">
-                Thao tác
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody className="divide-y divide-border/60">
-            {rows.length === 0 && (
-              <TableEmptyStateRow
-                colSpan={4}
-                paddingClassName="py-16"
-                title="Chưa có nhà cung cấp"
-                description='Nhấn "Thêm NCC" để thêm nhà cung cấp đầu tiên'
-              />
+      {/* Table card */}
+      <div className="rounded-lg border shadow-sm overflow-hidden">
+        {/* Search bar */}
+        <div className="flex items-center gap-3 border-b bg-muted/20 px-4 py-3">
+          <Search className="size-4 shrink-0 text-muted-foreground" />
+          <Input
+            placeholder="Tìm tên, mã số thuế, điện thoại…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8 min-w-0 flex-1 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+          />
+          <span className="shrink-0 text-xs text-muted-foreground">
+            {filtered.length} / {rows.length}
+          </span>
+        </div>
+
+        {/* Mobile: card layout */}
+        {isMobile ? (
+          <div className="divide-y">
+            {filtered.length === 0 && (
+              <div className="py-16 text-center">
+                <p className="text-sm font-medium text-muted-foreground">
+                  {search
+                    ? "Không tìm thấy nhà cung cấp nào"
+                    : "Chưa có nhà cung cấp"}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground/70">
+                  {search
+                    ? "Thử từ khóa khác"
+                    : 'Nhấn "Thêm NCC" để thêm nhà cung cấp đầu tiên'}
+                </p>
+              </div>
             )}
-            {rows.map((s) => (
-              <TableRow
+            {filtered.map((s) => (
+              <div
                 key={s.id}
-                className="hover:bg-muted/40 transition-colors"
+                className="flex items-center justify-between gap-3 px-4 py-3"
               >
-                <TableCell className="font-medium">{s.name}</TableCell>
-                <TableCell className="hidden sm:table-cell text-muted-foreground">
-                  {s.tax_code ?? "—"}
-                </TableCell>
-                <TableCell className="hidden md:table-cell">
-                  {s.phone ?? "—"}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8"
-                      onClick={() => openEdit(s)}
-                    >
-                      <Pencil className="size-4" />
-                      <span className="sr-only">Sửa</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 text-destructive hover:text-destructive"
-                      onClick={() => setDeleteConfirmId(s.id)}
-                    >
-                      <Trash2 className="size-4" />
-                      <span className="sr-only">Xóa</span>
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
+                <div className="min-w-0 space-y-1">
+                  <p className="text-sm font-medium truncate">{s.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {s.tax_code && <>{s.tax_code}</>}
+                    {s.tax_code && s.phone && " · "}
+                    {s.phone && <>{s.phone}</>}
+                    {!s.tax_code && !s.phone && "—"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    aria-label={`Sửa ${s.name}`}
+                    onClick={() => openEdit(s)}
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 text-destructive hover:text-destructive"
+                    aria-label={`Xóa ${s.name}`}
+                    onClick={() => setDeleteConfirmId(s.id)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              </div>
             ))}
-          </TableBody>
-        </Table>
+          </div>
+        ) : (
+          /* Desktop: table layout */
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/20 hover:bg-muted/20">
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  Tên
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  Mã số thuế
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  Điện thoại
+                </TableHead>
+                <TableHead className="w-24 text-right text-xs font-semibold uppercase tracking-wider">
+                  Thao tác
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 && (
+                <TableEmptyStateRow
+                  colSpan={4}
+                  paddingClassName="py-16"
+                  title={
+                    search
+                      ? "Không tìm thấy nhà cung cấp nào"
+                      : "Chưa có nhà cung cấp"
+                  }
+                  description={
+                    search
+                      ? "Thử từ khóa khác"
+                      : 'Nhấn "Thêm NCC" để thêm nhà cung cấp đầu tiên'
+                  }
+                />
+              )}
+              {filtered.map((s) => (
+                <TableRow
+                  key={s.id}
+                  className="hover:bg-muted/30 transition-colors"
+                >
+                  <TableCell className="font-medium">{s.name}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {s.tax_code ?? "—"}
+                  </TableCell>
+                  <TableCell>{s.phone ?? "—"}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        aria-label={`Sửa ${s.name}`}
+                        onClick={() => openEdit(s)}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-destructive hover:text-destructive"
+                        aria-label={`Xóa ${s.name}`}
+                        onClick={() => setDeleteConfirmId(s.id)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
       {/* Create / Edit Dialog */}
@@ -289,42 +393,34 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog
+      {/* Delete Confirmation — AlertDialog */}
+      <AlertDialog
         open={deleteConfirmId != null}
         onOpenChange={(o) => {
           if (!o) setDeleteConfirmId(null);
         }}
       >
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Xác nhận xóa</DialogTitle>
-            <DialogDescription>
-              Bạn chắc chắn muốn xóa nhà cung cấp &ldquo;
-              {rows.find((r) => r.id === deleteConfirmId)?.name}
-              &rdquo;? Không thể hoàn tác.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setDeleteConfirmId(null)}
-            >
-              Hủy
-            </Button>
-            <Button
-              variant="destructive"
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
+            <AlertDialogDescription>
+              Xóa NCC &ldquo;{deleteTarget?.name}&rdquo;? Không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
+            <AlertDialogAction
               disabled={isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
                 if (deleteConfirmId != null) handleDelete(deleteConfirmId);
               }}
             >
               {isPending ? "Đang xóa…" : "Xóa"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

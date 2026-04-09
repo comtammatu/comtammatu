@@ -1,7 +1,7 @@
 # Roadmap — Cơm Tấm Má Tư
 
 > Hệ thống Quản lý Vận hành Nhà hàng (Restaurant Operations Management System)
-> Updated: 2026-04-09 | Structure: Module-based
+> Updated: 2026-04-10 | Structure: Module-based
 
 ## Product Identity
 
@@ -422,3 +422,6 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 | M6      | 2026-04-06 | Finance — HĐĐT, revenue dashboard, VAS                |
 | M7      | 2026-04-06 | HR/Payroll — employees, shifts, attendance, payroll   |
 | v1.0.0  | 2026-04-07 | All modules shipped, QA verified, deployed to Vercel  |
+| UX-A    | 2026-04-09 | Inventory UX redesign Session A — PO + GRN + Invoice  |
+| UX-B    | 2026-04-09 | Inventory UX redesign Session B — Transfers + Stocktake + Issues |
+| UX-C    | 2026-04-10 | Inventory UX redesign Session C — Catalog + Support pages |
