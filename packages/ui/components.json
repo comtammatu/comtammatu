@@ -6,7 +6,7 @@
   "tailwind": {
     "config": "",
     "css": "../../apps/web/app/globals.css",
-    "baseColor": "stone",
+    "baseColor": "zinc",
     "cssVariables": true
   },
   "aliases": {

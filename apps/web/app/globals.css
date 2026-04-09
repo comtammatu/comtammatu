@@ -7,7 +7,7 @@
 /* ============================================================
    Cơm Tấm Má Tư — Design Tokens
    Tailwind CSS v4 — CSS-first configuration
-   Style: Neutral Minimal + Rose accent
+   Style: Pure Minimal — White / Black / Red
    Ref: docs/spec/design-system.md
    ============================================================ */
 
@@ -15,18 +15,22 @@
   --font-sans: var(--font-be-vietnam-pro), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-  /* Neutral Minimal — zinc scale */
+  /* Data-dense font size: 13px — optimized for tables, lists, numbers */
+  --text-data: 0.8125rem;
+  --text-data--line-height: 1.25rem;
+
+  /* Pure Minimal — zinc scale, no warm tint */
   --color-background: oklch(1 0 0);
   --color-foreground: oklch(0.145 0 0);
 
-  /* Primary: Rose-600 (#E11D48) — CTA, active states, brand accent */
-  --color-primary: oklch(0.586 0.253 17.585);
-  --color-primary-foreground: oklch(0.985 0 0);
+  /* Primary: Red-600 (#DC2626) — CTA, active states, brand accent */
+  --color-primary: oklch(0.577 0.245 27.325);
+  --color-primary-foreground: oklch(1 0 0);
 
   --color-secondary: oklch(0.961 0 0);
   --color-secondary-foreground: oklch(0.205 0 0);
 
-  /* Accent: same as secondary for neutral minimal */
+  /* Accent: same as secondary for pure minimal */
   --color-accent: oklch(0.961 0 0);
   --color-accent-foreground: oklch(0.205 0 0);
 
@@ -39,32 +43,32 @@
   --color-popover: oklch(1 0 0);
   --color-popover-foreground: oklch(0.145 0 0);
 
-  --color-border: oklch(0.922 0 0);
-  --color-input: oklch(0.922 0 0);
-  --color-ring: oklch(0.586 0.253 17.585);
+  --color-border: oklch(0.918 0 0);
+  --color-input: oklch(0.918 0 0);
+  --color-ring: oklch(0.577 0.245 27.325);
   --color-ring-offset: oklch(1 0 0);
 
   --color-destructive: oklch(0.577 0.245 27.325);
-  --color-destructive-foreground: oklch(0.985 0 0);
+  --color-destructive-foreground: oklch(1 0 0);
 
   /* Status colors */
   --color-success: oklch(0.6 0.18 155);
   --color-warning: oklch(0.75 0.15 85);
   --color-info: oklch(0.6 0.15 240);
 
-  /* Sidebar: Neutral zinc-900 dark */
-  --color-sidebar: oklch(0.21 0 0);
-  --color-sidebar-foreground: oklch(0.985 0 0);
-  --color-sidebar-primary: oklch(0.586 0.253 17.585);
-  --color-sidebar-primary-foreground: oklch(0.985 0 0);
-  --color-sidebar-accent: oklch(0.269 0 0);
-  --color-sidebar-accent-foreground: oklch(0.985 0 0);
-  --color-sidebar-border: oklch(0.274 0 0);
-  --color-sidebar-ring: oklch(0.586 0.253 17.585);
+  /* Sidebar: Pure black */
+  --color-sidebar: oklch(0.09 0 0);
+  --color-sidebar-foreground: oklch(0.96 0 0);
+  --color-sidebar-primary: oklch(0.577 0.245 27.325);
+  --color-sidebar-primary-foreground: oklch(1 0 0);
+  --color-sidebar-accent: oklch(0.16 0 0);
+  --color-sidebar-accent-foreground: oklch(0.96 0 0);
+  --color-sidebar-border: oklch(0.2 0 0);
+  --color-sidebar-ring: oklch(0.577 0.245 27.325);
 
   /* Surface semantics */
   --color-surface-raised: oklch(1 0 0);
-  --color-surface-sunken: oklch(0.977 0 0);
+  --color-surface-sunken: oklch(0.97 0 0);
   --color-state-pending: oklch(0.75 0.15 85);
   --color-state-processing: oklch(0.66 0.14 85);
   --color-state-ready: oklch(0.65 0.17 155);
