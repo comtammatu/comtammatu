@@ -31,20 +31,23 @@ export async function login(
 
   const { email, password } = parsed.data;
 
-  // Rate limiting — 5 attempts per 15 min, keyed by IP
-  const headerStore = await headers();
-  const ip =
-    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    headerStore.get("x-real-ip") ??
-    "unknown";
-  try {
-    const { success: allowed } = await loginRateLimit.limit(ip);
-    if (!allowed) {
-      return { error: "Quá nhiều lần thử. Vui lòng đợi 15 phút." };
+  // Rate limiting — 10 attempts per 5 min, keyed by IP
+  // Bypass in dev via DISABLE_LOGIN_RATE_LIMIT=true
+  if (process.env.DISABLE_LOGIN_RATE_LIMIT !== "true") {
+    const headerStore = await headers();
+    const ip =
+      headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      headerStore.get("x-real-ip") ??
+      "unknown";
+    try {
+      const { success: allowed } = await loginRateLimit.limit(ip);
+      if (!allowed) {
+        return { error: "Quá nhiều lần thử. Vui lòng đợi 5 phút." };
+      }
+    } catch (error) {
+      // Fail open — Upstash unreachable, allow login to proceed
+      console.error("loginRateLimit.limit failed (fail-open)", { ip, error });
     }
-  } catch (error) {
-    // Fail open — Upstash unreachable, allow login to proceed
-    console.error("loginRateLimit.limit failed (fail-open)", { ip, error });
   }
 
   const supabase = await createClient();

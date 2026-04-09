@@ -15,9 +15,9 @@ export const rateLimit = new Ratelimit({
   prefix: "rl:api",
 });
 
-/** Login-specific rate limiter: 5 attempts per 15 minutes */
+/** Login-specific rate limiter: 10 attempts per 5 minutes */
 export const loginRateLimit = new Ratelimit({
   redis: getRedis(),
-  limiter: Ratelimit.slidingWindow(5, "15 m"),
+  limiter: Ratelimit.slidingWindow(10, "5 m"),
   prefix: "rl:login",
 });
