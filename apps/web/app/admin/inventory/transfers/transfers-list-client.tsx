@@ -1,28 +1,13 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, MoveRight, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowRight, MoveRight, Plus, Search } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
 import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
 import {
   Table,
   TableBody,
@@ -31,18 +16,15 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@comtammatu/ui/components/tabs";
-import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
-import { createStockTransfer, fetchStockTransfers } from "../transfer-actions";
-import { IngredientSearchDialog } from "./transfer-ingredient-dialog";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { fetchStockTransfers } from "../transfer-actions";
+import { CreateTransferDialog } from "./create-transfer-dialog";
+import type { BranchForTransfer } from "./create-transfer-dialog";
 import type { IngredientRow } from "../page";
 import { TableEmptyStateRow } from "../../components/table-empty-state-row";
+
+export type { BranchForTransfer };
 
 export interface TransferListRow {
   id: number;
@@ -59,24 +41,6 @@ export interface TransferListRow {
   from_branch_name: string;
   to_branch_name: string;
 }
-
-export interface BranchForTransfer {
-  id: number;
-  name: string;
-  is_headquarters: boolean;
-  is_active: boolean;
-}
-
-type SlipKind = "inbound" | "outbound";
-type OutboundDest = "hq" | "other_branch";
-
-type DraftLine = {
-  key: string;
-  ingredientId: number;
-  name: string;
-  quantity: string;
-  unit: string;
-};
 
 const STATUS_META: Record<string, { label: string; className: string }> = {
   draft: {
@@ -121,296 +85,47 @@ export function TransfersListClient({
   userRole: StaffRole;
 }) {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [rows, setRows] = useState(initial);
   const [open, setOpen] = useState(false);
-  const [slipKind, setSlipKind] = useState<SlipKind>("outbound");
-  const [outboundDest, setOutboundDest] = useState<OutboundDest>("hq");
-  const [outboundOtherBranchId, setOutboundOtherBranchId] = useState("");
-  const [inboundFromBranchId, setInboundFromBranchId] = useState("");
-  const [inboundToBranchId, setInboundToBranchId] = useState("");
-  const [outboundToBranchId, setOutboundToBranchId] = useState("");
-  const [draftLines, setDraftLines] = useState<DraftLine[]>([]);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [isPending, startTransition] = useTransition();
-  const pickerIngredients = ingredients;
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   const hq = branches.find((b) => b.is_headquarters);
   const operational = branches.filter((b) => !b.is_headquarters);
-  const canBranchToBranch = operational.length >= 2;
-
-  const isUserHq =
-    hqBranchId != null && userBranchId != null && userBranchId === hqBranchId;
-  const isUserOperational =
-    hqBranchId != null && userBranchId != null && userBranchId !== hqBranchId;
-  const isBranchManager = userRole === "branch_manager";
-
-  const myBranchName = useMemo(() => {
-    if (userBranchId == null) return null;
-    return branches.find((b) => b.id === userBranchId)?.name ?? null;
-  }, [branches, userBranchId]);
-
   const canCreate = Boolean(hq && operational.length >= 1);
 
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const r of rows) {
+      counts[r.status] = (counts[r.status] ?? 0) + 1;
+    }
+    return counts;
+  }, [rows]);
+
   const filtered = useMemo(() => {
+    let list = rows;
+    if (statusFilter) {
+      list = list.filter((r) => r.status === statusFilter);
+    }
     const q = search.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
-      (r) =>
-        r.transfer_number.toLowerCase().includes(q) ||
-        r.from_branch_name.toLowerCase().includes(q) ||
-        r.to_branch_name.toLowerCase().includes(q),
-    );
-  }, [rows, search]);
-
-  function resetForm() {
-    setSlipKind("outbound");
-    setOutboundDest("hq");
-    setOutboundOtherBranchId("");
-    setInboundFromBranchId("");
-    setInboundToBranchId("");
-    setOutboundToBranchId("");
-    setDraftLines([]);
-  }
-
-  function addIngredientLine(ing: IngredientRow) {
-    setDraftLines((prev) => [
-      ...prev,
-      {
-        key: `${ing.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        ingredientId: ing.id,
-        name: ing.name,
-        quantity: "",
-        unit: ing.unit,
-      },
-    ]);
-  }
-
-  function removeLine(key: string) {
-    setDraftLines((prev) => prev.filter((l) => l.key !== key));
-  }
-
-  function updateLine(
-    key: string,
-    patch: Partial<Pick<DraftLine, "quantity" | "unit">>,
-  ) {
-    setDraftLines((prev) =>
-      prev.map((l) => (l.key === key ? { ...l, ...patch } : l)),
-    );
-  }
-
-  function buildLinesPayload(
-    lines: DraftLine[],
-  ): { ingredientId: number; quantity: number; unit: string }[] | undefined {
-    const out: { ingredientId: number; quantity: number; unit: string }[] = [];
-    for (const l of lines) {
-      const q = Number(l.quantity);
-      const u = l.unit.trim();
-      if (!Number.isFinite(q) || q <= 0 || !u) {
-        toast.error("Kiểm tra số lượng và đơn vị cho từng dòng");
-        return undefined;
-      }
-      out.push({ ingredientId: l.ingredientId, quantity: q, unit: u });
+    if (q) {
+      list = list.filter(
+        (r) =>
+          r.transfer_number.toLowerCase().includes(q) ||
+          r.from_branch_name.toLowerCase().includes(q) ||
+          r.to_branch_name.toLowerCase().includes(q),
+      );
     }
-    return out.length > 0 ? out : undefined;
-  }
+    return list;
+  }, [rows, search, statusFilter]);
 
-  function submit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const notes = String(fd.get("notes") ?? "") || undefined;
-    const vehicleInfo = String(fd.get("vehicleInfo") ?? "") || undefined;
-
-    const linesPayload = buildLinesPayload(draftLines);
-    if (linesPayload === undefined) return;
-
-    if (slipKind === "inbound") {
-      if (hqBranchId == null) {
-        toast.error("Chưa cấu hình Trụ sở.");
-        return;
-      }
-      if (isUserOperational && userBranchId != null) {
-        startTransition(async () => {
-          const res = await createStockTransfer({
-            kind: "hq_to_branch",
-            toBranchId: userBranchId,
-            notes,
-            vehicleInfo,
-            lines: linesPayload,
-          });
-          if (!res.success || !res.data) {
-            toast.error(res.error ?? "Không tạo được phiếu");
-            return;
-          }
-          toast.success("Đã tạo phiếu nhập");
-          setOpen(false);
-          resetForm();
-          const id = (res.data as { id: number }).id;
-          const again = await fetchStockTransfers();
-          if (again.success) setRows((again.data ?? []) as TransferListRow[]);
-          router.push(`/admin/inventory/transfers/${id}`);
-        });
-        return;
-      }
-
-      if (isUserHq) {
-        const f = Number(inboundFromBranchId);
-        if (!f) {
-          toast.error("Chọn chi nhánh gửi");
-          return;
-        }
-        startTransition(async () => {
-          const res = await createStockTransfer({
-            kind: "branch_to_hq",
-            fromBranchId: f,
-            notes,
-            vehicleInfo,
-            lines: linesPayload,
-          });
-          if (!res.success || !res.data) {
-            toast.error(res.error ?? "Không tạo được phiếu");
-            return;
-          }
-          toast.success("Đã tạo phiếu nhập");
-          setOpen(false);
-          resetForm();
-          const id = (res.data as { id: number }).id;
-          const again = await fetchStockTransfers();
-          if (again.success) setRows((again.data ?? []) as TransferListRow[]);
-          router.push(`/admin/inventory/transfers/${id}`);
-        });
-        return;
-      }
-
-      const t = Number(inboundToBranchId);
-      if (!t) {
-        toast.error("Chọn chi nhánh nhận");
-        return;
-      }
-      startTransition(async () => {
-        const res = await createStockTransfer({
-          kind: "hq_to_branch",
-          toBranchId: t,
-          notes,
-          vehicleInfo,
-          lines: linesPayload,
-        });
-        if (!res.success || !res.data) {
-          toast.error(res.error ?? "Không tạo được phiếu");
-          return;
-        }
-        toast.success("Đã tạo phiếu nhập");
-        setOpen(false);
-        resetForm();
-        const id = (res.data as { id: number }).id;
-        const again = await fetchStockTransfers();
-        if (again.success) setRows((again.data ?? []) as TransferListRow[]);
-        router.push(`/admin/inventory/transfers/${id}`);
-      });
-      return;
-    }
-
-    /* outbound */
-    if (hqBranchId == null) {
-      toast.error("Chưa cấu hình Trụ sở.");
-      return;
-    }
-
-    if (isUserOperational && userBranchId != null) {
-      if (outboundDest === "hq") {
-        startTransition(async () => {
-          const res = await createStockTransfer({
-            kind: "branch_to_hq",
-            fromBranchId: userBranchId,
-            notes,
-            vehicleInfo,
-            lines: linesPayload,
-          });
-          if (!res.success || !res.data) {
-            toast.error(res.error ?? "Không tạo được phiếu");
-            return;
-          }
-          toast.success("Đã tạo phiếu xuất");
-          setOpen(false);
-          resetForm();
-          const id = (res.data as { id: number }).id;
-          const again = await fetchStockTransfers();
-          if (again.success) setRows((again.data ?? []) as TransferListRow[]);
-          router.push(`/admin/inventory/transfers/${id}`);
-        });
-        return;
-      }
-      const other = Number(outboundOtherBranchId);
-      if (!other || other === userBranchId) {
-        toast.error("Chọn chi nhánh nhận");
-        return;
-      }
-      startTransition(async () => {
-        const res = await createStockTransfer({
-          kind: "branch_to_branch",
-          fromBranchId: userBranchId,
-          toBranchId: other,
-          notes,
-          vehicleInfo,
-          lines: linesPayload,
-        });
-        if (!res.success || !res.data) {
-          toast.error(res.error ?? "Không tạo được phiếu");
-          return;
-        }
-        toast.success("Đã tạo phiếu xuất");
-        setOpen(false);
-        resetForm();
-        const id = (res.data as { id: number }).id;
-        const again = await fetchStockTransfers();
-        if (again.success) setRows((again.data ?? []) as TransferListRow[]);
-        router.push(`/admin/inventory/transfers/${id}`);
-      });
-      return;
-    }
-
-    /* HQ / tenant-wide */
-    const to = Number(outboundToBranchId);
-    if (!to) {
-      toast.error("Chọn chi nhánh nhận");
-      return;
-    }
-    startTransition(async () => {
-      const res = await createStockTransfer({
-        kind: "hq_to_branch",
-        toBranchId: to,
-        notes,
-        vehicleInfo,
-        lines: linesPayload,
-      });
-      if (!res.success || !res.data) {
-        toast.error(res.error ?? "Không tạo được phiếu");
-        return;
-      }
-      toast.success("Đã tạo phiếu xuất");
-      setOpen(false);
-      resetForm();
-      const id = (res.data as { id: number }).id;
-      const again = await fetchStockTransfers();
-      if (again.success) setRows((again.data ?? []) as TransferListRow[]);
-      router.push(`/admin/inventory/transfers/${id}`);
+  function handleCreated(id: number) {
+    fetchStockTransfers().then((res) => {
+      if (res.success) setRows((res.data ?? []) as TransferListRow[]);
     });
+    router.push(`/admin/inventory/transfers/${id}`);
   }
-
-  const submitDisabled =
-    isPending ||
-    (slipKind === "outbound" &&
-      isUserOperational &&
-      outboundDest === "other_branch" &&
-      (!outboundOtherBranchId ||
-        outboundOtherBranchId === String(userBranchId ?? ""))) ||
-    (slipKind === "outbound" && !isUserOperational && !outboundToBranchId) ||
-    (slipKind === "inbound" &&
-      !isUserOperational &&
-      !isUserHq &&
-      !inboundToBranchId) ||
-    (slipKind === "inbound" && isUserHq && !inboundFromBranchId) ||
-    draftLines.length === 0;
 
   return (
     <>
@@ -441,6 +156,41 @@ export function TransfersListClient({
         </p>
       )}
 
+      {/* Status count badges */}
+      <div className="flex flex-wrap gap-1.5">
+        {Object.entries(STATUS_META).map(([key, meta]) => {
+          const count = statusCounts[key] ?? 0;
+          if (count === 0) return null;
+          const isActive = statusFilter === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setStatusFilter(isActive ? null : key)}
+              className="transition-opacity"
+            >
+              <Badge
+                className={cn(
+                  "text-xs cursor-pointer",
+                  isActive ? meta.className : "bg-muted/60 text-muted-foreground",
+                )}
+              >
+                {meta.label} {count}
+              </Badge>
+            </button>
+          );
+        })}
+        {statusFilter && (
+          <button
+            type="button"
+            onClick={() => setStatusFilter(null)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Xóa bộ lọc
+          </button>
+        )}
+      </div>
+
       {/* Table card */}
       <div className="rounded-lg border shadow-sm overflow-hidden">
         {/* Search bar */}
@@ -457,387 +207,188 @@ export function TransfersListClient({
           </span>
         </div>
 
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/20 hover:bg-muted/20">
-              <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                Số phiếu
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                Lộ trình
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                Trạng thái
-              </TableHead>
-              <TableHead className="hidden md:table-cell text-xs font-semibold uppercase tracking-wider">
-                Ngày tạo
-              </TableHead>
-              <TableHead className="hidden lg:table-cell text-xs font-semibold uppercase tracking-wider">
-                Ngày xuất / nhận
-              </TableHead>
-              <TableHead className="w-10" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        {/* Mobile card layout */}
+        {isMobile ? (
+          <div className="divide-y">
             {filtered.length === 0 && (
-              <TableEmptyStateRow
-                colSpan={6}
-                paddingClassName="py-16"
-                title={
-                  search
+              <div className="px-4 py-16 text-center">
+                <p className="text-sm font-medium text-muted-foreground">
+                  {search || statusFilter
                     ? "Không tìm thấy phiếu nào"
-                    : "Chưa có phiếu luân chuyển"
-                }
-                description={
-                  search
+                    : "Chưa có phiếu luân chuyển"}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {search || statusFilter
                     ? "Thử từ khóa khác"
-                    : 'Nhấn "Tạo phiếu" để tạo phiếu luân chuyển đầu tiên'
-                }
-              />
+                    : 'Nhấn "Tạo phiếu" để tạo phiếu luân chuyển đầu tiên'}
+                </p>
+              </div>
             )}
             {filtered.map((r) => {
               const meta = STATUS_META[r.status] ?? {
                 label: r.status,
                 className: "bg-muted text-muted-foreground",
               };
-              const dateDisplay = r.shipped_at
-                ? new Date(r.shipped_at).toLocaleDateString("vi-VN", {
-                    day: "2-digit",
-                    month: "2-digit",
-                  })
-                : r.received_at
-                  ? new Date(r.received_at).toLocaleDateString("vi-VN", {
+              return (
+                <Link
+                  key={r.id}
+                  href={`/admin/inventory/transfers/${r.id}`}
+                  className="block px-4 py-3 hover:bg-muted/20 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-sm font-medium">
+                      {r.transfer_number}
+                    </span>
+                    <Badge className={cn("text-xs shrink-0", meta.className)}>
+                      {meta.label}
+                    </Badge>
+                  </div>
+                  <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span>{r.from_branch_name}</span>
+                    <MoveRight className="size-3 shrink-0" />
+                    <span>{r.to_branch_name}</span>
+                    <span className="ml-auto tabular-nums">
+                      {new Date(r.created_at).toLocaleDateString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          /* Desktop table layout */
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/20 hover:bg-muted/20">
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  Số phiếu
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  Lộ trình
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  Trạng thái
+                </TableHead>
+                <TableHead className="hidden md:table-cell text-xs font-semibold uppercase tracking-wider">
+                  Ngày tạo
+                </TableHead>
+                <TableHead className="hidden lg:table-cell text-xs font-semibold uppercase tracking-wider">
+                  Ngày xuất / nhận
+                </TableHead>
+                <TableHead className="w-10" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 && (
+                <TableEmptyStateRow
+                  colSpan={6}
+                  paddingClassName="py-16"
+                  title={
+                    search || statusFilter
+                      ? "Không tìm thấy phiếu nào"
+                      : "Chưa có phiếu luân chuyển"
+                  }
+                  description={
+                    search || statusFilter
+                      ? "Thử từ khóa khác"
+                      : 'Nhấn "Tạo phiếu" để tạo phiếu luân chuyển đầu tiên'
+                  }
+                />
+              )}
+              {filtered.map((r) => {
+                const meta = STATUS_META[r.status] ?? {
+                  label: r.status,
+                  className: "bg-muted text-muted-foreground",
+                };
+                const dateDisplay = r.shipped_at
+                  ? new Date(r.shipped_at).toLocaleDateString("vi-VN", {
                       day: "2-digit",
                       month: "2-digit",
                     })
-                  : "—";
-              const dateLabel = r.shipped_at
-                ? "Xuất"
-                : r.received_at
-                  ? "Nhận"
-                  : null;
+                  : r.received_at
+                    ? new Date(r.received_at).toLocaleDateString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                      })
+                    : "—";
+                const dateLabel = r.shipped_at
+                  ? "Xuất"
+                  : r.received_at
+                    ? "Nhận"
+                    : null;
 
-              return (
-                <TableRow
-                  key={r.id}
-                  className="group hover:bg-muted/30 transition-colors"
-                >
-                  <TableCell className="font-mono text-sm font-medium">
-                    {r.transfer_number}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <span className="font-medium">{r.from_branch_name}</span>
-                      <MoveRight className="size-3.5 shrink-0 text-muted-foreground" />
-                      <span className="font-medium">{r.to_branch_name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={cn("text-xs", meta.className)}>
-                      {meta.label}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-sm text-muted-foreground tabular-nums">
-                    {new Date(r.created_at).toLocaleDateString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })}
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    {dateLabel ? (
-                      <span className="text-sm text-muted-foreground tabular-nums">
-                        <span className="mr-1 text-xs text-muted-foreground/70">
-                          {dateLabel}:
+                return (
+                  <TableRow
+                    key={r.id}
+                    className="group hover:bg-muted/30 transition-colors"
+                  >
+                    <TableCell className="font-mono text-sm font-medium">
+                      {r.transfer_number}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5 text-sm">
+                        <span className="font-medium">{r.from_branch_name}</span>
+                        <MoveRight className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span className="font-medium">{r.to_branch_name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={cn("text-xs", meta.className)}>
+                        {meta.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground tabular-nums">
+                      {new Date(r.created_at).toLocaleDateString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {dateLabel ? (
+                        <span className="text-sm text-muted-foreground tabular-nums">
+                          <span className="mr-1 text-xs text-muted-foreground/70">
+                            {dateLabel}:
+                          </span>
+                          {dateDisplay}
                         </span>
-                        {dateDisplay}
-                      </span>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                      asChild
-                    >
-                      <Link href={`/admin/inventory/transfers/${r.id}`}>
-                        <ArrowRight className="size-4" />
-                        <span className="sr-only">Chi tiết</span>
-                      </Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        asChild
+                        aria-label="Chi tiết"
+                      >
+                        <Link href={`/admin/inventory/transfers/${r.id}`}>
+                          <ArrowRight className="size-4" />
+                        </Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
-      {/* Create dialog — logic unchanged */}
-      <Dialog
+      <CreateTransferDialog
         open={open}
-        onOpenChange={(o) => {
-          setOpen(o);
-          if (!o) resetForm();
-        }}
-      >
-        <DialogContent className="max-h-[min(92vh,900px)] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Tạo phiếu luân chuyển</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={submit} className="space-y-4">
-            <Tabs
-              value={slipKind}
-              onValueChange={(v) => setSlipKind(v as SlipKind)}
-            >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="inbound">Phiếu nhập</TabsTrigger>
-                <TabsTrigger value="outbound">Phiếu xuất</TabsTrigger>
-              </TabsList>
-              <TabsContent value="inbound" className="space-y-3 pt-2">
-                <p className="text-sm text-muted-foreground">
-                  {isUserOperational && myBranchName
-                    ? `Nhập từ Trụ sở về ${myBranchName}.`
-                    : isUserHq
-                      ? "Nhập từ chi nhánh về Trụ sở."
-                      : "Nhập từ Trụ sở về chi nhánh được chọn."}
-                </p>
-                {!isUserOperational && !isUserHq && (
-                  <div className="space-y-1.5">
-                    <Label>Chi nhánh nhận *</Label>
-                    <Select
-                      value={inboundToBranchId}
-                      onValueChange={setInboundToBranchId}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Chọn chi nhánh" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {operational.map((b) => (
-                          <SelectItem key={b.id} value={String(b.id)}>
-                            {b.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                {isUserHq && (
-                  <div className="space-y-1.5">
-                    <Label>Chi nhánh gửi *</Label>
-                    <Select
-                      value={inboundFromBranchId}
-                      onValueChange={setInboundFromBranchId}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Chọn chi nhánh gửi" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {operational.map((b) => (
-                          <SelectItem key={b.id} value={String(b.id)}>
-                            {b.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </TabsContent>
-              <TabsContent value="outbound" className="space-y-3 pt-2">
-                <p className="text-sm text-muted-foreground">
-                  {isUserOperational && myBranchName
-                    ? `Xuất từ ${myBranchName} — chọn kho nhận.`
-                    : "Xuất từ Trụ sở — chọn chi nhánh nhận."}
-                </p>
-                {isUserOperational && userBranchId != null && (
-                  <>
-                    <div className="space-y-1.5">
-                      <Label>Kho nhận *</Label>
-                      <Select
-                        value={outboundDest}
-                        onValueChange={(v) =>
-                          setOutboundDest(v as OutboundDest)
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="hq">Trụ sở</SelectItem>
-                          <SelectItem
-                            value="other_branch"
-                            disabled={!canBranchToBranch}
-                          >
-                            Chi nhánh khác
-                            {!canBranchToBranch ? " (cần ≥ 2 CN)" : ""}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {outboundDest === "other_branch" && (
-                      <div className="space-y-1.5">
-                        <Label>Chi nhánh nhận *</Label>
-                        <Select
-                          value={outboundOtherBranchId}
-                          onValueChange={setOutboundOtherBranchId}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Chọn chi nhánh" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {operational
-                              .filter((b) => b.id !== userBranchId)
-                              .map((b) => (
-                                <SelectItem key={b.id} value={String(b.id)}>
-                                  {b.name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </>
-                )}
-                {!isUserOperational && (
-                  <div className="space-y-1.5">
-                    <Label>Chi nhánh nhận *</Label>
-                    <Select
-                      value={outboundToBranchId}
-                      onValueChange={setOutboundToBranchId}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Chọn chi nhánh nhận" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {operational.map((b) => (
-                          <SelectItem key={b.id} value={String(b.id)}>
-                            {b.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
-
-            {/* Ingredient lines */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <Label>Nguyên liệu &amp; số lượng *</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPickerOpen(true)}
-                >
-                  Chọn nguyên liệu…
-                </Button>
-              </div>
-              {draftLines.length === 0 ? (
-                <p className="rounded-md border border-dashed px-4 py-3 text-center text-sm text-muted-foreground">
-                  Thêm ít nhất một dòng từ bảng nguyên liệu.
-                </p>
-              ) : (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nguyên liệu</TableHead>
-                        <TableHead className="w-28">SL</TableHead>
-                        <TableHead className="w-24">ĐVT</TableHead>
-                        <TableHead className="w-10" />
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {draftLines.map((l) => (
-                        <TableRow key={l.key}>
-                          <TableCell className="font-medium">
-                            {l.name}
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              step="any"
-                              min="0"
-                              className="h-8"
-                              value={l.quantity}
-                              onChange={(e) =>
-                                updateLine(l.key, { quantity: e.target.value })
-                              }
-                              required
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              className="h-8"
-                              value={l.unit}
-                              onChange={(e) =>
-                                updateLine(l.key, { unit: e.target.value })
-                              }
-                              required
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="size-8"
-                              onClick={() => removeLine(l.key)}
-                              aria-label="Xóa dòng"
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="vehicleInfo">Xe / người giao</Label>
-              <Input id="vehicleInfo" name="vehicleInfo" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="notes">Ghi chú</Label>
-              <Input id="notes" name="notes" />
-            </div>
-
-            {isBranchManager && (
-              <p className="text-xs text-muted-foreground">
-                Tài khoản chi nhánh: phiếu nhập chỉ nhận về kho của bạn; phiếu
-                xuất chỉ gửi từ kho của bạn.
-              </p>
-            )}
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-              >
-                Hủy
-              </Button>
-              <Button type="submit" disabled={submitDisabled}>
-                {isPending ? "Đang tạo…" : "Tạo phiếu"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <IngredientSearchDialog
-        open={pickerOpen}
-        onOpenChange={setPickerOpen}
-        ingredients={pickerIngredients}
-        onPick={addIngredientLine}
+        onOpenChange={setOpen}
+        branches={branches}
+        ingredients={ingredients}
+        hqBranchId={hqBranchId}
+        userBranchId={userBranchId}
+        userRole={userRole}
+        onCreated={handleCreated}
       />
     </>
   );

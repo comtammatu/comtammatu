@@ -4,10 +4,27 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Printer } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@comtammatu/ui/components/alert-dialog";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import {
   Table,
   TableBody,
@@ -17,6 +34,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   fetchStockTransferDetail,
   transferConfirmReceive,
@@ -25,7 +43,6 @@ import {
   transferReceive,
   upsertTransferLine,
 } from "../../transfer-actions";
-import { IngredientSearchDialog } from "../transfer-ingredient-dialog";
 import type { IngredientRow } from "../../page";
 
 interface TransferRecord {
@@ -76,17 +93,23 @@ export function TransferDetailClient({
   branchNames: Record<number, string>;
 }) {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [tr, setTr] = useState(initialTransfer);
   const [lines, setLines] = useState(initialLines);
   const [ingredientId, setIngredientId] = useState("");
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [shipConfirmOpen, setShipConfirmOpen] = useState(false);
 
   const shipFromIsHq = hqBranchId != null && tr.from_branch_id === hqBranchId;
   const receiveToIsHq = hqBranchId != null && tr.to_branch_id === hqBranchId;
   const selectedIngredient = ingredients.find(
     (x) => String(x.id) === ingredientId,
   );
+
+  const fromName =
+    branchNames[tr.from_branch_id] ?? `#${String(tr.from_branch_id)}`;
+  const toName =
+    branchNames[tr.to_branch_id] ?? `#${String(tr.to_branch_id)}`;
 
   async function reload() {
     const res = await fetchStockTransferDetail(transferId);
@@ -132,11 +155,7 @@ export function TransferDetailClient({
     });
   }
 
-  function pickIngredient(ing: IngredientRow) {
-    setIngredientId(String(ing.id));
-  }
-
-  function ship() {
+  function doShip() {
     startTransition(async () => {
       const res = await transferConfirmShip(transferId);
       if (!res.success) {
@@ -234,7 +253,7 @@ export function TransferDetailClient({
             {isDraft && (
               <Button
                 type="button"
-                onClick={ship}
+                onClick={() => setShipConfirmOpen(true)}
                 disabled={isPending || lines.length === 0}
               >
                 {shipFromIsHq ? "Xác nhận xuất (TS)" : "Xác nhận xuất (CN gửi)"}
@@ -268,6 +287,7 @@ export function TransferDetailClient({
               variant="outline"
               onClick={() => window.print()}
               disabled={lines.length === 0}
+              aria-label="In phiếu"
             >
               <Printer className="mr-1.5 size-4" />
               In phiếu
@@ -275,59 +295,98 @@ export function TransferDetailClient({
           </div>
         </div>
 
-        <div className="rounded-md border print:border-none">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nguyên liệu</TableHead>
-                <TableHead className="text-right">SL gửi</TableHead>
-                <TableHead>Đơn vị</TableHead>
-                <TableHead className="hidden sm:table-cell text-right">
-                  Giá xuất
-                </TableHead>
-                <TableHead className="hidden sm:table-cell text-right">
-                  SL nhận
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {lines.length === 0 && (
+        {/* Line items — mobile cards / desktop table */}
+        {isMobile ? (
+          <div className="rounded-md border divide-y">
+            {lines.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground text-sm">
+                {isDraft
+                  ? "Thêm dòng chi tiết trước khi xác nhận xuất."
+                  : "Không có dòng."}
+              </div>
+            ) : (
+              lines.map((l) => (
+                <div key={l.id} className="p-3 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-sm truncate">
+                      {l.ingredients?.name ?? `#${l.ingredient_id}`}
+                    </span>
+                    <span className="font-mono text-sm tabular-nums shrink-0">
+                      {l.quantity.toLocaleString("vi-VN")} {l.unit}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>
+                      {l.unit_cost_at_ship != null
+                        ? `Giá: ${l.unit_cost_at_ship.toLocaleString("vi-VN")} ₫`
+                        : "—"}
+                    </span>
+                    <span>
+                      {l.quantity_received != null
+                        ? `Nhận: ${l.quantity_received.toLocaleString("vi-VN")}`
+                        : ""}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        ) : (
+          <div className="rounded-md border print:border-none">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="py-8 text-center text-muted-foreground"
-                  >
-                    {isDraft
-                      ? "Thêm dòng chi tiết trước khi xác nhận xuất."
-                      : "Không có dòng."}
-                  </TableCell>
+                  <TableHead>Nguyên liệu</TableHead>
+                  <TableHead className="text-right">SL gửi</TableHead>
+                  <TableHead>Đơn vị</TableHead>
+                  <TableHead className="hidden sm:table-cell text-right">
+                    Giá xuất
+                  </TableHead>
+                  <TableHead className="hidden sm:table-cell text-right">
+                    SL nhận
+                  </TableHead>
                 </TableRow>
-              )}
-              {lines.map((l) => (
-                <TableRow key={l.id}>
-                  <TableCell className="font-medium">
-                    {l.ingredients?.name ?? `#${l.ingredient_id}`}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {l.quantity.toLocaleString("vi-VN")}
-                  </TableCell>
-                  <TableCell>{l.unit}</TableCell>
-                  <TableCell className="hidden sm:table-cell text-right font-mono text-muted-foreground">
-                    {l.unit_cost_at_ship != null
-                      ? `${l.unit_cost_at_ship.toLocaleString("vi-VN")} ₫`
-                      : "—"}
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell text-right font-mono">
-                    {l.quantity_received != null
-                      ? l.quantity_received.toLocaleString("vi-VN")
-                      : "—"}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {lines.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className="py-8 text-center text-muted-foreground"
+                    >
+                      {isDraft
+                        ? "Thêm dòng chi tiết trước khi xác nhận xuất."
+                        : "Không có dòng."}
+                    </TableCell>
+                  </TableRow>
+                )}
+                {lines.map((l) => (
+                  <TableRow key={l.id}>
+                    <TableCell className="font-medium">
+                      {l.ingredients?.name ?? `#${l.ingredient_id}`}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {l.quantity.toLocaleString("vi-VN")}
+                    </TableCell>
+                    <TableCell>{l.unit}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-right font-mono text-muted-foreground">
+                      {l.unit_cost_at_ship != null
+                        ? `${l.unit_cost_at_ship.toLocaleString("vi-VN")} ₫`
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-right font-mono">
+                      {l.quantity_received != null
+                        ? l.quantity_received.toLocaleString("vi-VN")
+                        : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
 
+        {/* Add line — inline ingredient picker (draft only) */}
         {isDraft && (
           <form
             onSubmit={addLine}
@@ -338,24 +397,20 @@ export function TransferDetailClient({
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
                 <Label>Nguyên liệu</Label>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPickerOpen(true)}
-                  >
-                    {ingredientId
-                      ? (ingredients.find((x) => String(x.id) === ingredientId)
-                          ?.name ?? "Đã chọn")
-                      : "Chọn trong bảng nguyên liệu…"}
-                  </Button>
-                  {ingredientId && (
-                    <span className="text-xs text-muted-foreground">
-                      Có thể tìm theo tên, SKU, danh mục trong popup.
-                    </span>
-                  )}
-                </div>
+                <Select value={ingredientId} onValueChange={setIngredientId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn nguyên liệu…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ingredients
+                      .filter((x) => x.is_active)
+                      .map((i) => (
+                        <SelectItem key={i.id} value={String(i.id)}>
+                          {i.name} ({i.unit})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="qty">Số lượng</Label>
@@ -389,17 +444,39 @@ export function TransferDetailClient({
             </Button>
           </form>
         )}
-
-        <IngredientSearchDialog
-          open={pickerOpen}
-          onOpenChange={setPickerOpen}
-          ingredients={ingredients}
-          onPick={pickIngredient}
-        />
       </div>
 
-      {/* Print-only template — hidden on screen, visible when printing */}
-      <div className="hidden print:block print:absolute print:inset-0 print:z-50 print:bg-white print:p-8 print:text-black [print&]:text-xs">
+      {/* Ship confirmation dialog */}
+      <AlertDialog open={shipConfirmOpen} onOpenChange={setShipConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xuất kho?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Xuất <strong>{lines.length} nguyên liệu</strong> từ kho{" "}
+              <strong>{fromName}</strong> đến <strong>{toName}</strong>.
+              Sau khi xác nhận, tồn kho gửi sẽ bị trừ.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShipConfirmOpen(false);
+                doShip();
+              }}
+              disabled={isPending}
+            >
+              {isPending ? "Đang xử lý…" : "Xác nhận xuất"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Print-only template */}
+      <div
+        aria-hidden="true"
+        className="hidden print:block print:absolute print:inset-0 print:z-50 print:bg-white print:p-8 print:text-black [print&]:text-xs"
+      >
         <div className="space-y-6">
           <div className="text-center">
             <h1 className="text-xl font-bold">PHIẾU LUÂN CHUYỂN KHO</h1>
@@ -409,13 +486,10 @@ export function TransferDetailClient({
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p>
-                <strong>Kho xuất:</strong>{" "}
-                {branchNames[tr.from_branch_id] ??
-                  `#${String(tr.from_branch_id)}`}
+                <strong>Kho xuất:</strong> {fromName}
               </p>
               <p>
-                <strong>Kho nhận:</strong>{" "}
-                {branchNames[tr.to_branch_id] ?? `#${String(tr.to_branch_id)}`}
+                <strong>Kho nhận:</strong> {toName}
               </p>
             </div>
             <div className="text-right">

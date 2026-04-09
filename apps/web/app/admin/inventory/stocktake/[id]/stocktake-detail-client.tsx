@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Ban,
+  Check,
   CheckCircle2,
   ClipboardCheck,
   XCircle,
@@ -32,6 +33,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   cancelStocktake,
   completeStocktake,
@@ -39,7 +41,7 @@ import {
   updateStocktakeLine,
 } from "../../actions";
 
-/* ─── Types (as any casts, migration not applied) ─── */
+/* ─── Types ─── */
 
 interface StocktakeSession {
   id: number;
@@ -70,15 +72,15 @@ interface StocktakeLine {
 
 const STATUS_META: Record<string, { label: string; className: string }> = {
   in_progress: {
-    label: "\u0110ang th\u1ef1c hi\u1ec7n",
+    label: "Đang thực hiện",
     className: "bg-warning/10 text-warning border-warning/30",
   },
   completed: {
-    label: "Ho\u00e0n t\u1ea5t",
+    label: "Hoàn tất",
     className: "bg-success/10 text-success border-success/30",
   },
   cancelled: {
-    label: "\u0110\u00e3 h\u1ee7y",
+    label: "Đã hủy",
     className: "bg-muted text-muted-foreground",
   },
 };
@@ -92,6 +94,7 @@ export function StocktakeDetailClient({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   lines: any[];
 }) {
+  const isMobile = useIsMobile();
   const [isPending, startTransition] = useTransition();
   const [session, setSession] = useState<StocktakeSession>(
     initialSession as StocktakeSession,
@@ -99,6 +102,7 @@ export function StocktakeDetailClient({
   const [lines, setLines] = useState<StocktakeLine[]>(
     initialLines as StocktakeLine[],
   );
+  const [savedLines, setSavedLines] = useState<Set<number>>(new Set());
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
@@ -111,6 +115,9 @@ export function StocktakeDetailClient({
     () => lines.filter((l) => l.counted_quantity != null).length,
     [lines],
   );
+
+  const progressPct =
+    lines.length > 0 ? Math.round((countedCount / lines.length) * 100) : 0;
 
   const refreshData = useCallback(() => {
     startTransition(async () => {
@@ -126,18 +133,9 @@ export function StocktakeDetailClient({
     });
   }, [session.id, startTransition]);
 
-  function handleLineBlur(
-    lineId: number,
-    value: string,
-    field: "counted_quantity",
-  ) {
+  function handleLineBlur(lineId: number, value: string) {
     const num = Number(value);
-    if (
-      field === "counted_quantity" &&
-      value !== "" &&
-      Number.isFinite(num) &&
-      num >= 0
-    ) {
+    if (value !== "" && Number.isFinite(num) && num >= 0) {
       const currentLine = lines.find((l) => l.id === lineId);
       if (currentLine && currentLine.counted_quantity !== num) {
         startTransition(async () => {
@@ -147,8 +145,9 @@ export function StocktakeDetailClient({
             varianceReason: currentLine.variance_reason ?? undefined,
           });
           if (!res.success) {
-            toast.error(res.error ?? "Kh\u00f4ng th\u1ec3 c\u1eadp nh\u1eadt");
+            toast.error(res.error ?? "Không thể cập nhật");
           } else {
+            setSavedLines((prev) => new Set(prev).add(lineId));
             refreshData();
           }
         });
@@ -168,8 +167,9 @@ export function StocktakeDetailClient({
         varianceReason: reason || undefined,
       });
       if (!res.success) {
-        toast.error(res.error ?? "Kh\u00f4ng th\u1ec3 c\u1eadp nh\u1eadt");
+        toast.error(res.error ?? "Không thể cập nhật");
       } else {
+        setSavedLines((prev) => new Set(prev).add(lineId));
         refreshData();
       }
     });
@@ -179,14 +179,11 @@ export function StocktakeDetailClient({
     startTransition(async () => {
       const res = await completeStocktake(session.id);
       if (!res.success) {
-        toast.error(
-          res.error ??
-            "Kh\u00f4ng th\u1ec3 ho\u00e0n t\u1ea5t ki\u1ec3m k\u00ea.",
-        );
+        toast.error(res.error ?? "Không thể hoàn tất kiểm kê.");
         setCompleteDialogOpen(false);
         return;
       }
-      toast.success("\u0110\u00e3 ho\u00e0n t\u1ea5t ki\u1ec3m k\u00ea");
+      toast.success("Đã hoàn tất kiểm kê");
       setCompleteDialogOpen(false);
       refreshData();
     });
@@ -196,25 +193,14 @@ export function StocktakeDetailClient({
     startTransition(async () => {
       const res = await cancelStocktake(session.id);
       if (!res.success) {
-        toast.error(
-          res.error ??
-            "Kh\u00f4ng th\u1ec3 h\u1ee7y phi\u00ean ki\u1ec3m k\u00ea.",
-        );
+        toast.error(res.error ?? "Không thể hủy phiên kiểm kê.");
         setCancelDialogOpen(false);
         return;
       }
-      toast.success("\u0110\u00e3 h\u1ee7y phi\u00ean ki\u1ec3m k\u00ea");
+      toast.success("Đã hủy phiên kiểm kê");
       setCancelDialogOpen(false);
       refreshData();
     });
-  }
-
-  function getVarianceColor(line: StocktakeLine): string {
-    if (line.variance == null || line.system_quantity === 0) return "";
-    const ratio = Math.abs(line.variance) / line.system_quantity;
-    if (ratio < 0.01) return "text-success";
-    if (ratio < 0.05) return "text-warning";
-    return "text-destructive";
   }
 
   return (
@@ -224,21 +210,21 @@ export function StocktakeDetailClient({
         <Button variant="ghost" size="icon" className="size-8" asChild>
           <Link href="/admin/inventory/stocktake">
             <ArrowLeft className="size-4" />
-            <span className="sr-only">Quay l\u1ea1i</span>
+            <span className="sr-only">Quay lại</span>
           </Link>
         </Button>
         <Link
           href="/admin/inventory"
           className="hover:text-foreground transition-colors"
         >
-          Kho h\u00e0ng
+          Kho hàng
         </Link>
         <span>/</span>
         <Link
           href="/admin/inventory/stocktake"
           className="hover:text-foreground transition-colors"
         >
-          Ki\u1ec3m k\u00ea
+          Kiểm kê
         </Link>
         <span>/</span>
         <span className="font-medium text-foreground">KK-{session.id}</span>
@@ -256,7 +242,7 @@ export function StocktakeDetailClient({
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            Ng\u00e0y t\u1ea1o:{" "}
+            Ngày tạo:{" "}
             {new Date(session.created_at).toLocaleDateString("vi-VN", {
               day: "2-digit",
               month: "2-digit",
@@ -266,7 +252,7 @@ export function StocktakeDetailClient({
             })}
             {session.completed_at && (
               <>
-                {" \u2022 "}Ho\u00e0n t\u1ea5t:{" "}
+                {" • "}Hoàn tất:{" "}
                 {new Date(session.completed_at).toLocaleDateString("vi-VN", {
                   day: "2-digit",
                   month: "2-digit",
@@ -279,7 +265,7 @@ export function StocktakeDetailClient({
           </p>
           {session.notes && (
             <p className="text-sm text-muted-foreground">
-              Ghi ch\u00fa: {session.notes}
+              Ghi chú: {session.notes}
             </p>
           )}
         </div>
@@ -292,14 +278,14 @@ export function StocktakeDetailClient({
               disabled={isPending}
             >
               <Ban className="mr-2 size-4" />
-              H\u1ee7y ki\u1ec3m k\u00ea
+              Hủy kiểm kê
             </Button>
             <Button
               onClick={() => setCompleteDialogOpen(true)}
               disabled={isPending}
             >
               <CheckCircle2 className="mr-2 size-4" />
-              Ho\u00e0n t\u1ea5t ki\u1ec3m k\u00ea
+              Hoàn tất kiểm kê
             </Button>
           </div>
         )}
@@ -307,15 +293,21 @@ export function StocktakeDetailClient({
 
       {/* Progress (in_progress only) */}
       {session.status === "in_progress" && (
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-3 text-sm">
           <ClipboardCheck className="size-4 text-muted-foreground" />
           <span className="text-muted-foreground">
-            Ti\u1ebfn \u0111\u1ed9:{" "}
+            Tiến độ:{" "}
             <span className="font-medium text-foreground">
               {countedCount}/{lines.length}
             </span>{" "}
-            \u0111\u00e3 \u0111\u1ebfm
+            đã đếm ({progressPct}%)
           </span>
+          <div className="h-2 flex-1 max-w-48 rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary transition-all"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
         </div>
       )}
 
@@ -324,115 +316,331 @@ export function StocktakeDetailClient({
         <div className="flex items-center gap-3 rounded-lg border border-muted bg-muted/30 px-4 py-6">
           <XCircle className="size-5 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            Phi\u00ean ki\u1ec3m k\u00ea n\u00e0y \u0111\u00e3 b\u1ecb h\u1ee7y.
+            Phiên kiểm kê này đã bị hủy.
           </p>
         </div>
       )}
 
-      {/* Counting table (in_progress) */}
+      {/* Counting phase (in_progress) */}
       {session.status === "in_progress" && (
-        <div className="overflow-hidden rounded-lg border shadow-sm">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/20 hover:bg-muted/20">
-                <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  Nguy\u00ean li\u1ec7u
-                </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  \u0110\u01a1n v\u1ecb
-                </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  SL th\u1ef1c \u0111\u1ebfm
-                </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  L\u00fd do ch\u00eanh l\u1ec7ch
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {lines.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={4}
-                    className="py-12 text-center text-muted-foreground"
-                  >
-                    Kh\u00f4ng c\u00f3 nguy\u00ean li\u1ec7u n\u00e0o trong kho
-                    \u0111\u1ec3 ki\u1ec3m k\u00ea.
-                  </TableCell>
-                </TableRow>
-              )}
-              {lines.map((line) => (
-                <TableRow key={line.id}>
-                  <TableCell className="text-sm font-medium">
-                    {line.ingredients?.name ?? `#${line.ingredient_id}`}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {line.ingredients?.unit ?? "\u2014"}
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      min={0}
-                      step="any"
-                      defaultValue={
-                        line.counted_quantity != null
-                          ? String(line.counted_quantity)
-                          : ""
-                      }
-                      placeholder="0"
-                      className="h-8 w-24 tabular-nums"
-                      onBlur={(e) =>
-                        handleLineBlur(
-                          line.id,
-                          e.target.value,
-                          "counted_quantity",
-                        )
-                      }
-                      disabled={isPending}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="text"
-                      defaultValue={line.variance_reason ?? ""}
-                      placeholder="L\u00fd do (tu\u1ef3 ch\u1ecdn)"
-                      className="h-8 w-48 text-sm"
-                      onBlur={(e) =>
-                        handleReasonBlur(line.id, e.target.value.trim())
-                      }
-                      disabled={isPending}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <CountingPhase
+          lines={lines}
+          savedLines={savedLines}
+          isPending={isPending}
+          isMobile={isMobile}
+          onLineBlur={handleLineBlur}
+          onReasonBlur={handleReasonBlur}
+        />
       )}
 
-      {/* Results table (completed) */}
+      {/* Results phase (completed) */}
       {session.status === "completed" && (
+        <ResultsPhase lines={lines} isMobile={isMobile} />
+      )}
+
+      {/* Complete confirm dialog */}
+      <AlertDialog
+        open={completeDialogOpen}
+        onOpenChange={setCompleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hoàn tất kiểm kê?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hành động này sẽ tính chênh lệch và cập nhật tồn kho. Bạn
+              không thể hoàn tác sau khi hoàn tất.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={handleComplete} disabled={isPending}>
+              {isPending ? "Đang xử lý..." : "Hoàn tất"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cancel confirm dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hủy phiên kiểm kê?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tất cả dữ liệu đã đếm sẽ bị hủy. Bạn có chắc không?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Quay lại</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancel}
+              disabled={isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isPending ? "Đang xử lý..." : "Xác nhận hủy"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+/* ─── CountingPhase ─── */
+
+function CountingPhase({
+  lines,
+  savedLines,
+  isPending,
+  isMobile,
+  onLineBlur,
+  onReasonBlur,
+}: {
+  lines: StocktakeLine[];
+  savedLines: Set<number>;
+  isPending: boolean;
+  isMobile: boolean;
+  onLineBlur: (lineId: number, value: string) => void;
+  onReasonBlur: (lineId: number, reason: string) => void;
+}) {
+  if (isMobile) {
+    return (
+      <div className="rounded-lg border divide-y">
+        {lines.length === 0 && (
+          <div className="py-12 text-center text-muted-foreground text-sm">
+            Không có nguyên liệu nào trong kho để kiểm kê.
+          </div>
+        )}
+        {lines.map((line) => (
+          <div key={line.id} className="p-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-medium text-sm truncate">
+                {line.ingredients?.name ?? `#${line.ingredient_id}`}
+              </span>
+              {savedLines.has(line.id) && (
+                <span className="inline-flex items-center gap-1 text-xs text-success shrink-0">
+                  <Check className="size-3" />
+                  Đã lưu
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {line.ingredients?.unit ?? "—"}
+            </p>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={0}
+                step="any"
+                defaultValue={
+                  line.counted_quantity != null
+                    ? String(line.counted_quantity)
+                    : ""
+                }
+                placeholder="SL thực đếm"
+                className="h-8 flex-1 tabular-nums"
+                onBlur={(e) => onLineBlur(line.id, e.target.value)}
+                disabled={isPending}
+              />
+              <Input
+                type="text"
+                defaultValue={line.variance_reason ?? ""}
+                placeholder="Lý do"
+                className="h-8 flex-1 text-sm"
+                onBlur={(e) => onReasonBlur(line.id, e.target.value.trim())}
+                disabled={isPending}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-lg border shadow-sm">
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/20 hover:bg-muted/20">
+            <TableHead className="text-xs font-semibold uppercase tracking-wider">
+              Nguyên liệu
+            </TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wider">
+              Đơn vị
+            </TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wider">
+              SL thực đếm
+            </TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wider">
+              Lý do chênh lệch
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {lines.length === 0 && (
+            <TableRow>
+              <TableCell
+                colSpan={4}
+                className="py-12 text-center text-muted-foreground"
+              >
+                Không có nguyên liệu nào trong kho để kiểm kê.
+              </TableCell>
+            </TableRow>
+          )}
+          {lines.map((line) => (
+            <TableRow key={line.id}>
+              <TableCell className="text-sm font-medium">
+                <div className="flex items-center gap-2">
+                  {line.ingredients?.name ?? `#${line.ingredient_id}`}
+                  {savedLines.has(line.id) && (
+                    <span className="inline-flex items-center gap-0.5 text-xs text-success">
+                      <Check className="size-3" />
+                      Đã lưu
+                    </span>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {line.ingredients?.unit ?? "—"}
+              </TableCell>
+              <TableCell>
+                <Input
+                  type="number"
+                  min={0}
+                  step="any"
+                  defaultValue={
+                    line.counted_quantity != null
+                      ? String(line.counted_quantity)
+                      : ""
+                  }
+                  placeholder="0"
+                  className="h-8 w-24 tabular-nums"
+                  onBlur={(e) => onLineBlur(line.id, e.target.value)}
+                  disabled={isPending}
+                />
+              </TableCell>
+              <TableCell>
+                <Input
+                  type="text"
+                  defaultValue={line.variance_reason ?? ""}
+                  placeholder="Lý do (tùy chọn)"
+                  className="h-8 w-48 text-sm"
+                  onBlur={(e) => onReasonBlur(line.id, e.target.value.trim())}
+                  disabled={isPending}
+                />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+/* ─── ResultsPhase ─── */
+
+function getVarianceColor(line: StocktakeLine): string {
+  if (line.variance == null || line.system_quantity === 0) return "";
+  const ratio = Math.abs(line.variance) / line.system_quantity;
+  if (ratio < 0.01) return "text-success";
+  if (ratio < 0.05) return "text-warning";
+  return "text-destructive";
+}
+
+function getVarianceBg(line: StocktakeLine): string {
+  if (line.variance == null || line.system_quantity === 0) return "";
+  const ratio = Math.abs(line.variance) / line.system_quantity;
+  if (ratio < 0.01) return "bg-success/5";
+  if (ratio < 0.05) return "bg-warning/5";
+  return "bg-destructive/5";
+}
+
+function ResultsPhase({
+  lines,
+  isMobile,
+}: {
+  lines: StocktakeLine[];
+  isMobile: boolean;
+}) {
+  return (
+    <div className="space-y-3">
+      {/* Variance legend */}
+      <div className="flex flex-wrap items-center gap-4 text-xs">
+        <span className="text-muted-foreground font-medium">Chênh lệch:</span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="size-2.5 rounded-full bg-success" />
+          {"<"}1% (tốt)
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="size-2.5 rounded-full bg-warning" />
+          1–5% (cần xem lại)
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="size-2.5 rounded-full bg-destructive" />
+          {">"}5% (nghiêm trọng)
+        </span>
+      </div>
+
+      {isMobile ? (
+        <div className="rounded-lg border divide-y">
+          {lines.length === 0 && (
+            <div className="py-12 text-center text-muted-foreground text-sm">
+              Không có dữ liệu kiểm kê.
+            </div>
+          )}
+          {lines.map((line) => {
+            const varianceColor = getVarianceColor(line);
+            const variance = line.variance ?? 0;
+            return (
+              <div
+                key={line.id}
+                className={cn("p-3 space-y-1", getVarianceBg(line))}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-sm truncate">
+                    {line.ingredients?.name ?? `#${line.ingredient_id}`}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-sm font-medium font-mono tabular-nums shrink-0",
+                      varianceColor,
+                    )}
+                  >
+                    {variance > 0 && "+"}
+                    {variance}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>
+                    HT: {line.system_quantity} · Đếm: {line.counted_quantity ?? "—"}
+                  </span>
+                  <span>{line.variance_reason ?? ""}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
         <div className="overflow-hidden rounded-lg border shadow-sm">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/20 hover:bg-muted/20">
                 <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  Nguy\u00ean li\u1ec7u
+                  Nguyên liệu
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  \u0110\u01a1n v\u1ecb
+                  Đơn vị
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  SL h\u1ec7 th\u1ed1ng
+                  SL hệ thống
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  SL th\u1ef1c \u0111\u1ebfm
+                  SL thực đếm
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  Ch\u00eanh l\u1ec7ch
+                  Chênh lệch
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  L\u00fd do
+                  Lý do
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -443,7 +651,7 @@ export function StocktakeDetailClient({
                     colSpan={6}
                     className="py-12 text-center text-muted-foreground"
                   >
-                    Kh\u00f4ng c\u00f3 d\u1eef li\u1ec7u ki\u1ec3m k\u00ea.
+                    Không có dữ liệu kiểm kê.
                   </TableCell>
                 </TableRow>
               )}
@@ -452,18 +660,18 @@ export function StocktakeDetailClient({
                 const variance = line.variance ?? 0;
 
                 return (
-                  <TableRow key={line.id}>
+                  <TableRow key={line.id} className={getVarianceBg(line)}>
                     <TableCell className="text-sm font-medium">
                       {line.ingredients?.name ?? `#${line.ingredient_id}`}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {line.ingredients?.unit ?? "\u2014"}
+                      {line.ingredients?.unit ?? "—"}
                     </TableCell>
                     <TableCell className="text-sm tabular-nums">
                       {line.system_quantity}
                     </TableCell>
                     <TableCell className="text-sm tabular-nums">
-                      {line.counted_quantity ?? "\u2014"}
+                      {line.counted_quantity ?? "—"}
                     </TableCell>
                     <TableCell
                       className={cn(
@@ -475,7 +683,7 @@ export function StocktakeDetailClient({
                       {variance}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {line.variance_reason ?? "\u2014"}
+                      {line.variance_reason ?? "—"}
                     </TableCell>
                   </TableRow>
                 );
@@ -484,62 +692,6 @@ export function StocktakeDetailClient({
           </Table>
         </div>
       )}
-
-      {/* Complete confirm dialog */}
-      <AlertDialog
-        open={completeDialogOpen}
-        onOpenChange={setCompleteDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Ho\u00e0n t\u1ea5t ki\u1ec3m k\u00ea?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              H\u00e0nh \u0111\u1ed9ng n\u00e0y s\u1ebd t\u00ednh ch\u00eanh
-              l\u1ec7ch v\u00e0 c\u1eadp nh\u1eadt t\u1ed3n kho. B\u1ea1n
-              kh\u00f4ng th\u1ec3 ho\u00e0n t\u00e1c sau khi ho\u00e0n t\u1ea5t.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>H\u1ee7y</AlertDialogCancel>
-            <AlertDialogAction onClick={handleComplete} disabled={isPending}>
-              {isPending
-                ? "\u0110ang x\u1eed l\u00fd..."
-                : "Ho\u00e0n t\u1ea5t"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Cancel confirm dialog */}
-      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              H\u1ee7y phi\u00ean ki\u1ec3m k\u00ea?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              T\u1ea5t c\u1ea3 d\u1eef li\u1ec7u \u0111\u00e3 \u0111\u1ebfm
-              s\u1ebd b\u1ecb h\u1ee7y. B\u1ea1n c\u00f3 ch\u1eafc kh\u00f4ng?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>
-              Quay l\u1ea1i
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancel}
-              disabled={isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isPending
-                ? "\u0110ang x\u1eed l\u00fd..."
-                : "X\u00e1c nh\u1eadn h\u1ee7y"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+    </div>
   );
 }
