@@ -22,6 +22,11 @@ dist/
 
 # misc
 .DS_Store
+
+# Playwright
+apps/web/.playwright/
+apps/web/playwright-report/
+apps/web/test-results/
 *.pem
 *.tsbuildinfo
 

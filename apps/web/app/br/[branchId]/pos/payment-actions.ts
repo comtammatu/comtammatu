@@ -247,12 +247,15 @@ export async function createPayment(
 
   // For cash payments (status=completed immediately), deduct ingredients from stock.
   // VietQR/Momo deduct after confirm/webhook completes.
+  // All stock errors are non-fatal for pilot: stock_levels may not be initialized yet,
+  // and insufficient_stock_ingredient errors are expected until stock data is seeded.
   if (result.status === "completed") {
     const { error: stockErr } = await supabase.rpc("consume_stock_for_order", {
       p_order_id: parsedPayment.data.orderId,
     });
-    if (stockErr && !stockErr.message?.includes("already_consumed")) {
-      // Non-fatal: payment succeeded, stock reconciliation can be done manually
+    if (stockErr) {
+      // Non-fatal: payment succeeded, stock reconciliation can be done manually.
+      // See tasks/todo.md for payment-order desync recovery query.
       console.error(
         "[createPayment] consume_stock_for_order failed:",
         stockErr.message,
@@ -345,12 +348,16 @@ export async function confirmPayment(
     );
   }
 
-  // Deduct ingredients consumed by this order from stock
+  // Deduct ingredients consumed by this order from stock.
+  // All stock errors are non-fatal for pilot: stock_levels may not be initialized yet.
+  // TODO(M4-VietQR): when wiring real VietQR polling, validate confirmed amount
+  // matches payment.amount before calling confirmPayment to prevent underpayment.
   const { error: stockErr } = await supabase.rpc("consume_stock_for_order", {
     p_order_id: payment.order_id,
   });
-  if (stockErr && !stockErr.message?.includes("already_consumed")) {
-    // Non-fatal: payment succeeded, stock reconciliation can be done manually
+  if (stockErr) {
+    // Non-fatal: payment succeeded, stock reconciliation can be done manually.
+    // See tasks/todo.md for payment-order desync recovery query.
     console.error(
       "[confirmPayment] consume_stock_for_order failed:",
       stockErr.message,

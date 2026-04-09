@@ -32,6 +32,13 @@ M0-M3, M5 SHIPPED. M4/M6/M7 PARTIAL (stubs — blocked on credentials or incompl
 - [ ] Fix: Invoice empty `items[]` — populate line items from order_items (finance/actions.ts:131)
 - [ ] Uptime monitor on `/api/health` (UptimeRobot — ops task, not code)
 - [ ] Momo webhook: atomic `complete_payment_and_consume_stock` RPC (migration needed when M4 wired)
+- [ ] Ops reconciliation: before Momo go-live, add admin query to find payment-order desync:
+  ```sql
+  SELECT p.id, p.order_id, p.amount, p.paid_at, o.payment_status
+  FROM payments p JOIN orders o ON o.id = p.order_id
+  WHERE p.status = 'completed' AND o.payment_status != 'paid';
+  ```
+  Surface this in /admin/finance or as a supabase query operators can run.
 
 ## Pilot-Critical Backlog (blocked on external credentials)
 
