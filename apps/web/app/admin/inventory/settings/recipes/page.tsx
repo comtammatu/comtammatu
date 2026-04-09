@@ -3,7 +3,11 @@ import {
   fetchMenuItemsForRecipes,
   fetchRecipes,
 } from "../../procurement-actions";
-import { RecipesClient } from "../../recipes/recipes-client";
+import {
+  RecipesClient,
+  type RecipeRow,
+  type MenuItemOpt,
+} from "../../recipes/recipes-client";
 import { PageHeader } from "@/components/foundation/ui-patterns";
 import type { IngredientRow } from "../../page";
 
@@ -13,8 +17,12 @@ export default async function RecipesSettingsPage() {
     fetchMenuItemsForRecipes(),
     fetchIngredients(),
   ]);
-  const initial = recRes.success ? (recRes.data ?? []) : [];
-  const menuItems = menuRes.success ? (menuRes.data ?? []) : [];
+  const initial: RecipeRow[] = recRes.success
+    ? ((recRes.data ?? []) as RecipeRow[])
+    : [];
+  const menuItems: MenuItemOpt[] = menuRes.success
+    ? ((menuRes.data ?? []) as MenuItemOpt[])
+    : [];
   const ingredients: IngredientRow[] = ingRes.success
     ? ((ingRes.data ?? []) as IngredientRow[])
     : [];
@@ -26,8 +34,8 @@ export default async function RecipesSettingsPage() {
         description="Quản lý định mức nguyên liệu cho từng món"
       />
       <RecipesClient
-        initial={initial as never}
-        menuItems={menuItems as never}
+        initial={initial}
+        menuItems={menuItems}
         ingredients={ingredients}
       />
     </div>

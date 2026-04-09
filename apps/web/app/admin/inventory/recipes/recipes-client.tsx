@@ -24,13 +24,13 @@ import { fetchRecipes, upsertRecipe } from "../procurement-actions";
 import type { IngredientRow } from "../page";
 import { TableEmptyStateRow } from "../../components/table-empty-state-row";
 
-interface MenuItemOpt {
+export interface MenuItemOpt {
   id: number;
   name: string;
   is_active: boolean | null;
 }
 
-interface RecipeRow {
+export interface RecipeRow {
   id: number;
   menu_item_id: number;
   ingredient_id: number;
