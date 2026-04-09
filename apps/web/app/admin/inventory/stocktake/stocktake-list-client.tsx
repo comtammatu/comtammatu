@@ -116,9 +116,7 @@ export function StocktakeListClient({
 
   function handleCreate() {
     // Always show dialog to select branch (unified flow)
-    setSelectedBranchId(
-      userBranchId != null ? String(userBranchId) : "",
-    );
+    setSelectedBranchId(userBranchId != null ? String(userBranchId) : "");
     setDialogOpen(true);
   }
 
@@ -179,7 +177,9 @@ export function StocktakeListClient({
               <Badge
                 className={cn(
                   "text-xs cursor-pointer",
-                  isActive ? meta.className : "bg-muted/60 text-muted-foreground",
+                  isActive
+                    ? meta.className
+                    : "bg-muted/60 text-muted-foreground",
                 )}
               >
                 {meta.label} {count}

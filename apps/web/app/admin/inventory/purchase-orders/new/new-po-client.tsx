@@ -466,7 +466,9 @@ function SuggestionsPanel({
                     <div
                       key={s.ingredient_id}
                       className={`rounded-md border px-3 py-2 transition-colors ${
-                        alreadyAdded ? "opacity-60 bg-muted/30" : "hover:bg-info/5"
+                        alreadyAdded
+                          ? "opacity-60 bg-muted/30"
+                          : "hover:bg-info/5"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
@@ -476,14 +478,19 @@ function SuggestionsPanel({
                               {s.ingredient_name}
                             </span>
                             {s.below_reorder && (
-                              <Badge variant="destructive" className="text-xs shrink-0">
+                              <Badge
+                                variant="destructive"
+                                className="text-xs shrink-0"
+                              >
                                 Thấp
                               </Badge>
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5">
                             Tồn: {s.hq_current_qty.toLocaleString("vi-VN")} ·
-                            TB: ~{s.avg_daily_consumption.toLocaleString("vi-VN")}/ngày
+                            TB: ~
+                            {s.avg_daily_consumption.toLocaleString("vi-VN")}
+                            /ngày
                           </p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
@@ -500,7 +507,11 @@ function SuggestionsPanel({
                             disabled={alreadyAdded || s.suggested_qty <= 0}
                             onClick={() => onAddSuggestion(s)}
                           >
-                            {alreadyAdded ? "Đã thêm" : <Plus className="size-3.5" />}
+                            {alreadyAdded ? (
+                              "Đã thêm"
+                            ) : (
+                              <Plus className="size-3.5" />
+                            )}
                           </Button>
                         </div>
                       </div>
@@ -694,9 +705,14 @@ function LineItemsSection({
             {lines.map((l, idx) => {
               const dev = lineDeviations.get(l.ingredientId);
               return (
-                <div key={idx} className="px-4 py-2.5 flex items-center justify-between gap-2">
+                <div
+                  key={idx}
+                  className="px-4 py-2.5 flex items-center justify-between gap-2"
+                >
                   <div className="min-w-0">
-                    <span className="text-sm font-medium">{l.ingredientName}</span>
+                    <span className="text-sm font-medium">
+                      {l.ingredientName}
+                    </span>
                     <p className="text-xs text-muted-foreground">
                       {l.quantity.toLocaleString("vi-VN")} {l.unit}
                       {l.unitPriceEst != null && (
@@ -710,7 +726,8 @@ function LineItemsSection({
                   <div className="flex items-center gap-2 shrink-0">
                     {l.unitPriceEst != null && (
                       <span className="font-mono text-sm">
-                        {(l.quantity * l.unitPriceEst).toLocaleString("vi-VN")} ₫
+                        {(l.quantity * l.unitPriceEst).toLocaleString("vi-VN")}{" "}
+                        ₫
                       </span>
                     )}
                     <button
@@ -729,7 +746,10 @@ function LineItemsSection({
         )}
 
         {/* Mobile add-row form */}
-        <form onSubmit={handleAddLine} className="border-t bg-muted/5 p-3 space-y-2">
+        <form
+          onSubmit={handleAddLine}
+          className="border-t bg-muted/5 p-3 space-y-2"
+        >
           <Select value={ingredientId} onValueChange={handleIngredientChange}>
             <SelectTrigger className="h-8 text-sm border-dashed">
               <SelectValue placeholder="+ Chọn nguyên liệu" />
@@ -743,8 +763,24 @@ function LineItemsSection({
             </SelectContent>
           </Select>
           <div className="grid grid-cols-3 gap-2">
-            <Input ref={qtyRef} name="qty" type="number" step="any" min="0.001" required placeholder="SL" className="h-8 text-sm" />
-            <Input name="unit" placeholder="ĐV" value={unit} onChange={(e) => setUnit(e.target.value)} required className="h-8 text-sm" />
+            <Input
+              ref={qtyRef}
+              name="qty"
+              type="number"
+              step="any"
+              min="0.001"
+              required
+              placeholder="SL"
+              className="h-8 text-sm"
+            />
+            <Input
+              name="unit"
+              placeholder="ĐV"
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              required
+              className="h-8 text-sm"
+            />
             <Input
               ref={priceRef}
               name="unitPriceEst"
@@ -756,12 +792,20 @@ function LineItemsSection({
               onBlur={checkAddRowDeviation}
             />
           </div>
-          <Button type="submit" size="sm" disabled={!ingredientId} className="w-full">
+          <Button
+            type="submit"
+            size="sm"
+            disabled={!ingredientId}
+            className="w-full"
+          >
             <Plus className="mr-1 size-3.5" />
             Thêm dòng
           </Button>
           {addRowDeviation && Math.abs(addRowDeviation.deviation_pct) > 5 && (
-            <InlineDeviationHint deviation={addRowDeviation} unit={unit || "ĐV"} />
+            <InlineDeviationHint
+              deviation={addRowDeviation}
+              unit={unit || "ĐV"}
+            />
           )}
         </form>
       </div>

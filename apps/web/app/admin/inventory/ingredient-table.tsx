@@ -125,7 +125,9 @@ export function IngredientTable({
                     {ing.sku && <>{ing.sku} · </>}
                     {ing.unit}
                     {ing.category && <> · {ing.category}</>}
-                    {ing.unit_cost != null && <> · {formatVND(ing.unit_cost)}</>}
+                    {ing.unit_cost != null && (
+                      <> · {formatVND(ing.unit_cost)}</>
+                    )}
                     {" · "}
                     {STORAGE_LABELS[ing.storage_type] ?? ing.storage_type}
                   </p>

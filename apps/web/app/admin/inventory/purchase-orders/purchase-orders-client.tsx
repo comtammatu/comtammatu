@@ -61,7 +61,13 @@ const STATUS_META: Record<string, { label: string; className: string }> = {
   },
 };
 
-const STATUS_KEYS = ["draft", "sent", "partially_received", "received", "cancelled"] as const;
+const STATUS_KEYS = [
+  "draft",
+  "sent",
+  "partially_received",
+  "received",
+  "cancelled",
+] as const;
 
 export function PurchaseOrdersClient({
   initial,
@@ -128,9 +134,7 @@ export function PurchaseOrdersClient({
                     key={key}
                     type="button"
                     onClick={() =>
-                      setStatusFilter((prev) =>
-                        prev === key ? "_all" : key,
-                      )
+                      setStatusFilter((prev) => (prev === key ? "_all" : key))
                     }
                     className={cn(
                       "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium transition-colors",
