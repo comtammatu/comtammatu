@@ -1,18 +1,19 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   BarChart3,
   Briefcase,
+  ChefHat,
   ChevronRight,
   Heart,
   Home,
   LayoutDashboard,
   LogOut,
   Menu,
+  Monitor,
   Package,
   PanelLeft,
   PanelLeftClose,
@@ -22,11 +23,13 @@ import {
   UtensilsCrossed,
   Wallet,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import {
   MODULE_ACL,
   canAccess,
   ADMIN_NAV_GROUPS,
+  ROLE_LABEL_VI,
 } from "@comtammatu/shared/auth";
 import type { ModuleKey } from "@comtammatu/shared/auth";
 import { cn } from "@comtammatu/ui";
@@ -150,7 +153,7 @@ function buildBreadcrumb(
   if (!matchedItem) {
     return {
       title: "Admin",
-      items: [{ label: "Admin", href: "/admin" }],
+      items: [{ label: "Admin", href: "/admin/dashboard" }],
     };
   }
 
@@ -169,7 +172,7 @@ function buildBreadcrumb(
   });
 
   const items: BreadcrumbItem[] = [
-    { label: "Admin", href: "/admin" },
+    { label: "Admin", href: "/admin/dashboard" },
     {
       label: matchedItem.label,
       href: pathTail.length > 0 ? matchedItem.href : undefined,
@@ -181,6 +184,122 @@ function buildBreadcrumb(
     title: tailItems.at(-1)?.label ?? matchedItem.label,
     items,
   };
+}
+
+/* ─── Forbidden toast (Suspense boundary required for useSearchParams) ─── */
+
+function ForbiddenToastInner() {
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const shown = useRef(false);
+
+  useEffect(() => {
+    if (!shown.current && searchParams.get("forbidden") === "1") {
+      shown.current = true;
+      toast.error("Bạn không có quyền truy cập trang đó");
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("forbidden");
+      const qs = params.toString();
+      router.replace(pathname + (qs ? `?${qs}` : ""), { scroll: false });
+    }
+  }, []); // intentional: check forbidden param only on mount
+
+  return null;
+}
+
+/* ─── Branch operational shortcuts (POS + KDS) for branch_manager ─── */
+
+function BranchOperationsNav({
+  branchId,
+  pathname,
+  collapsed = false,
+  onNavigate,
+}: {
+  branchId: number;
+  pathname: string;
+  collapsed?: boolean;
+  onNavigate?: () => void;
+}) {
+  const items = [
+    { href: `/br/${branchId}/pos`, label: "POS", icon: Monitor },
+    { href: `/br/${branchId}/kds`, label: "Bếp (KDS)", icon: ChefHat },
+  ];
+
+  return (
+    <div className={cn("mt-2 border-t border-sidebar-border", collapsed ? "pt-3" : "pt-4")}>
+      {!collapsed && (
+        <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+          Vận hành ca
+        </p>
+      )}
+      <div className="space-y-0.5">
+        {items.map((item) => {
+          const isActive = pathname.startsWith(item.href);
+          const Icon = item.icon;
+
+          if (collapsed) {
+            return (
+              <Tooltip key={item.href}>
+                <TooltipTrigger asChild>
+                  <Link
+                    href={item.href}
+                    onClick={onNavigate}
+                    className={cn(
+                      "touch-target group relative flex items-center justify-center rounded-lg py-2.5 transition-all",
+                      isActive
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                        : "text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
+                    )}
+                  >
+                    {isActive && (
+                      <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-sidebar-primary" />
+                    )}
+                    <Icon
+                      className={cn(
+                        "size-4.5 shrink-0 transition-colors",
+                        isActive
+                          ? "text-sidebar-primary"
+                          : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/70",
+                      )}
+                    />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">{item.label}</TooltipContent>
+              </Tooltip>
+            );
+          }
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onNavigate}
+              className={cn(
+                "touch-target group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                  : "text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
+              )}
+            >
+              {isActive && (
+                <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-sidebar-primary" />
+              )}
+              <Icon
+                className={cn(
+                  "size-4.5 shrink-0 transition-colors",
+                  isActive
+                    ? "text-sidebar-primary"
+                    : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/70",
+                )}
+              />
+              {item.label}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 /* ─── Sidebar Navigation (shared between desktop & mobile sheet) ─── */
@@ -284,9 +403,11 @@ function SidebarUserFooter({
   collapsed = false,
 }: {
   user: { name: string };
-  role: string;
+  role: StaffRole;
   collapsed?: boolean;
 }) {
+  const roleLabel = ROLE_LABEL_VI[role];
+
   if (collapsed) {
     return (
       <>
@@ -302,7 +423,7 @@ function SidebarUserFooter({
             </TooltipTrigger>
             <TooltipContent side="right">
               <p className="font-medium">{user.name}</p>
-              <p className="text-xs text-muted-foreground">{role}</p>
+              <p className="text-xs text-muted-foreground">{roleLabel}</p>
             </TooltipContent>
           </Tooltip>
           <Tooltip>
@@ -340,7 +461,7 @@ function SidebarUserFooter({
             {user.name}
           </p>
           <p className="truncate text-xs font-medium text-sidebar-foreground/45">
-            {role}
+            {roleLabel}
           </p>
         </div>
         <Tooltip>
@@ -367,12 +488,13 @@ function SidebarUserFooter({
 /* ─── Admin Shell ─── */
 
 interface AdminShellProps {
-  children: ReactNode;
+  children: React.ReactNode;
   user: { name: string };
   role: StaffRole;
+  branchId?: number | null;
 }
 
-export function AdminShell({ children, user, role }: AdminShellProps) {
+export function AdminShell({ children, user, role, branchId }: AdminShellProps) {
   const pathname = usePathname();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -387,6 +509,8 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
     () => buildBreadcrumb(pathname, navItems),
     [pathname, navItems],
   );
+
+  const showBranchOps = role === "branch_manager" && branchId != null;
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -429,6 +553,13 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
               pathname={pathname}
               collapsed={sidebarCollapsed}
             />
+            {showBranchOps && (
+              <BranchOperationsNav
+                branchId={branchId}
+                pathname={pathname}
+                collapsed={sidebarCollapsed}
+              />
+            )}
           </ScrollArea>
 
           {/* Collapse toggle */}
@@ -556,7 +687,9 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
                 <DropdownMenuContent align="end">
                   <div className="px-2 py-1.5">
                     <p className="text-sm font-medium">{user.name}</p>
-                    <p className="text-xs text-muted-foreground">{role}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {ROLE_LABEL_VI[role]}
+                    </p>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -603,6 +736,13 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
                 pathname={pathname}
                 onNavigate={() => setSheetOpen(false)}
               />
+              {showBranchOps && (
+                <BranchOperationsNav
+                  branchId={branchId}
+                  pathname={pathname}
+                  onNavigate={() => setSheetOpen(false)}
+                />
+              )}
             </ScrollArea>
             <SidebarUserFooter user={user} role={role} />
           </SheetContent>
@@ -616,6 +756,11 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
         method="post"
         className="hidden"
       />
+
+      {/* Forbidden access notification — Suspense required for useSearchParams */}
+      <Suspense fallback={null}>
+        <ForbiddenToastInner />
+      </Suspense>
     </TooltipProvider>
   );
 }

@@ -34,13 +34,13 @@ export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
     title: "Quản lý",
     items: [
       { moduleKey: "staff", icon: "Users" },
+      { moduleKey: "hr", icon: "Briefcase" },
       { moduleKey: "crm", icon: "Heart" },
     ],
   },
   {
     title: "Tài chính",
     items: [
-      { moduleKey: "hr", icon: "Briefcase" },
       { moduleKey: "finance", icon: "Wallet" },
       { moduleKey: "reports", icon: "BarChart3" },
     ],

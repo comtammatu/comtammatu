@@ -6,6 +6,7 @@ export {
   HQ_EXCLUDED_OPERATIONAL_ROLES,
   BRANCH_FLOOR_SETTINGS_ROLES,
   canManageBranchFloorSettings,
+  ROLE_LABEL_VI,
 } from "./types";
 export type { ModuleKey } from "./module-acl";
 export { MODULE_ACL, canAccess, getAccessibleModules } from "./module-acl";

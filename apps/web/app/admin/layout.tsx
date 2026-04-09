@@ -30,6 +30,7 @@ export default async function AdminLayout({
           "",
       }}
       role={claims.user_role}
+      branchId={claims.branch_id}
     >
       {children}
     </AdminShell>

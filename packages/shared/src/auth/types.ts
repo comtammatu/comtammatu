@@ -56,6 +56,18 @@ export function canManageBranchFloorSettings(role: StaffRole): boolean {
   return BRANCH_FLOOR_SETTINGS_ROLES.some((r) => r === role);
 }
 
+/** Vietnamese display labels for each role */
+export const ROLE_LABEL_VI: Record<StaffRole, string> = {
+  owner: "Chủ sở hữu",
+  super_manager: "Trưởng phòng",
+  area_manager: "Quản lý khu vực",
+  branch_manager: "Quản lý chi nhánh",
+  cashier: "Thu ngân",
+  waiter: "Phục vụ",
+  chef: "Đầu bếp",
+  office: "Văn phòng",
+};
+
 /** JWT custom claims injected by Supabase auth hook */
 export interface JwtClaims {
   tenant_id: number;
