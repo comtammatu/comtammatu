@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useTransition, useCallback, useMemo } from "react";
+import {
+  useState,
+  useTransition,
+  useCallback,
+  useMemo,
+  useEffect,
+} from "react";
 import { formatVND } from "@comtammatu/shared/format";
 import { AlertTriangle, RefreshCw, Sliders } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -142,6 +148,10 @@ export function StockLevelsTable({
     });
   }, []);
 
+  useEffect(() => {
+    if (defaultBranchId !== null) loadStock(defaultBranchId);
+  }, [defaultBranchId, loadStock]);
+
   function handleBranchChange(value: string) {
     const id = Number(value);
     setSelectedBranchId(id);
@@ -200,23 +210,7 @@ export function StockLevelsTable({
             </SelectContent>
           </Select>
 
-          {!loaded && selectedBranchId && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => loadStock(selectedBranchId)}
-              disabled={isPending}
-            >
-              {isPending ? (
-                <RefreshCw className="mr-2 size-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 size-4" />
-              )}
-              Tải tồn kho
-            </Button>
-          )}
-
-          {loaded && (
+          {(loaded || isPending) && (
             <Button
               variant="outline"
               size="icon"
@@ -244,13 +238,6 @@ export function StockLevelsTable({
           className="py-16"
           title="Chọn chi nhánh để xem tồn kho"
           icon={<Sliders className="size-8 text-muted-foreground" />}
-        />
-      )}
-
-      {selectedBranchId && !loaded && !isPending && (
-        <EmptyStatePanel
-          className="py-16"
-          title='Nhấn "Tải tồn kho" để xem dữ liệu'
         />
       )}
 
