@@ -36,12 +36,11 @@ export interface Area {
 }
 
 interface AreasManagerProps {
-  initialAreas: Area[];
+  areas: Area[];
   branches: { id: number; name: string }[];
 }
 
-export function AreasManager({ initialAreas, branches }: AreasManagerProps) {
-  const [areas] = useState<Area[]>(initialAreas);
+export function AreasManager({ areas, branches }: AreasManagerProps) {
   const [newAreaName, setNewAreaName] = useState("");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();

@@ -39,7 +39,7 @@ export default async function AreasPage() {
       </div>
 
       <AreasManager
-        initialAreas={(areasResult.success ? areasResult.data : []) as Area[]}
+        areas={(areasResult.success ? areasResult.data : []) as Area[]}
         branches={(branches ?? []) as { id: number; name: string }[]}
       />
     </div>
