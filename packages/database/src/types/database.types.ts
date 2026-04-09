@@ -169,6 +169,53 @@ export type Database = {
           },
         ];
       };
+      audit_logs: {
+        Row: {
+          action: string;
+          created_at: string;
+          entity_id: number | null;
+          entity_type: string;
+          id: number;
+          ip_address: string | null;
+          new_data: Json | null;
+          old_data: Json | null;
+          tenant_id: number;
+          user_id: string | null;
+        };
+        Insert: {
+          action: string;
+          created_at?: string;
+          entity_id?: number | null;
+          entity_type: string;
+          id?: never;
+          ip_address?: string | null;
+          new_data?: Json | null;
+          old_data?: Json | null;
+          tenant_id: number;
+          user_id?: string | null;
+        };
+        Update: {
+          action?: string;
+          created_at?: string;
+          entity_id?: number | null;
+          entity_type?: string;
+          id?: never;
+          ip_address?: string | null;
+          new_data?: Json | null;
+          old_data?: Json | null;
+          tenant_id?: number;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       branch_zones: {
         Row: {
           branch_id: number;
@@ -258,6 +305,60 @@ export type Database = {
           },
         ];
       };
+      chart_of_accounts: {
+        Row: {
+          account_code: string;
+          account_name: string;
+          account_type: string;
+          created_at: string;
+          id: number;
+          is_active: boolean;
+          level: number;
+          parent_id: number | null;
+          tenant_id: number;
+          updated_at: string;
+        };
+        Insert: {
+          account_code: string;
+          account_name: string;
+          account_type: string;
+          created_at?: string;
+          id?: never;
+          is_active?: boolean;
+          level?: number;
+          parent_id?: number | null;
+          tenant_id: number;
+          updated_at?: string;
+        };
+        Update: {
+          account_code?: string;
+          account_name?: string;
+          account_type?: string;
+          created_at?: string;
+          id?: never;
+          is_active?: boolean;
+          level?: number;
+          parent_id?: number | null;
+          tenant_id?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "chart_of_accounts_parent_id_fkey";
+            columns: ["parent_id"];
+            isOneToOne: false;
+            referencedRelation: "chart_of_accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "chart_of_accounts_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       employees: {
         Row: {
           bank_account: string | null;
@@ -269,6 +370,7 @@ export type Database = {
           employee_code: string | null;
           id: number;
           id_number: string | null;
+          insurance_base_salary: number;
           is_active: boolean;
           profile_id: string;
           start_date: string | null;
@@ -285,6 +387,7 @@ export type Database = {
           employee_code?: string | null;
           id?: never;
           id_number?: string | null;
+          insurance_base_salary?: number;
           is_active?: boolean;
           profile_id: string;
           start_date?: string | null;
@@ -301,6 +404,7 @@ export type Database = {
           employee_code?: string | null;
           id?: never;
           id_number?: string | null;
+          insurance_base_salary?: number;
           is_active?: boolean;
           profile_id?: string;
           start_date?: string | null;
@@ -317,6 +421,93 @@ export type Database = {
           },
           {
             foreignKeyName: "employees_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      employment_contracts: {
+        Row: {
+          contract_number: string;
+          contract_sequence: number;
+          contract_type: string;
+          created_at: string;
+          document_url: string | null;
+          employee_id: number;
+          end_date: string | null;
+          gross_salary: number;
+          id: number;
+          insurance_base_salary: number;
+          position: string;
+          probation_end_date: string | null;
+          signed_date: string;
+          start_date: string;
+          status: string;
+          tenant_id: number;
+          terminated_at: string | null;
+          termination_notice_date: string | null;
+          termination_reason: string | null;
+          updated_at: string;
+          work_location: string | null;
+        };
+        Insert: {
+          contract_number: string;
+          contract_sequence?: number;
+          contract_type: string;
+          created_at?: string;
+          document_url?: string | null;
+          employee_id: number;
+          end_date?: string | null;
+          gross_salary: number;
+          id?: never;
+          insurance_base_salary: number;
+          position: string;
+          probation_end_date?: string | null;
+          signed_date: string;
+          start_date: string;
+          status?: string;
+          tenant_id: number;
+          terminated_at?: string | null;
+          termination_notice_date?: string | null;
+          termination_reason?: string | null;
+          updated_at?: string;
+          work_location?: string | null;
+        };
+        Update: {
+          contract_number?: string;
+          contract_sequence?: number;
+          contract_type?: string;
+          created_at?: string;
+          document_url?: string | null;
+          employee_id?: number;
+          end_date?: string | null;
+          gross_salary?: number;
+          id?: never;
+          insurance_base_salary?: number;
+          position?: string;
+          probation_end_date?: string | null;
+          signed_date?: string;
+          start_date?: string;
+          status?: string;
+          tenant_id?: number;
+          terminated_at?: string | null;
+          termination_notice_date?: string | null;
+          termination_reason?: string | null;
+          updated_at?: string;
+          work_location?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "employment_contracts_employee_id_fkey";
+            columns: ["employee_id"];
+            isOneToOne: false;
+            referencedRelation: "employees";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "employment_contracts_tenant_id_fkey";
             columns: ["tenant_id"];
             isOneToOne: false;
             referencedRelation: "tenants";
@@ -546,6 +737,130 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "ingredients_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      journal_entries: {
+        Row: {
+          branch_id: number | null;
+          created_at: string;
+          created_by: string | null;
+          description: string;
+          entry_date: string;
+          entry_number: string;
+          id: number;
+          posted_at: string | null;
+          posted_by: string | null;
+          reference_id: number | null;
+          reference_type: string;
+          status: string;
+          tenant_id: number;
+          updated_at: string;
+          voided_reason: string | null;
+        };
+        Insert: {
+          branch_id?: number | null;
+          created_at?: string;
+          created_by?: string | null;
+          description: string;
+          entry_date: string;
+          entry_number: string;
+          id?: never;
+          posted_at?: string | null;
+          posted_by?: string | null;
+          reference_id?: number | null;
+          reference_type?: string;
+          status?: string;
+          tenant_id: number;
+          updated_at?: string;
+          voided_reason?: string | null;
+        };
+        Update: {
+          branch_id?: number | null;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string;
+          entry_date?: string;
+          entry_number?: string;
+          id?: never;
+          posted_at?: string | null;
+          posted_by?: string | null;
+          reference_id?: number | null;
+          reference_type?: string;
+          status?: string;
+          tenant_id?: number;
+          updated_at?: string;
+          voided_reason?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "journal_entries_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "journal_entries_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      journal_entry_lines: {
+        Row: {
+          account_id: number;
+          created_at: string;
+          credit_amount: number;
+          debit_amount: number;
+          description: string | null;
+          id: number;
+          journal_entry_id: number;
+          tenant_id: number;
+        };
+        Insert: {
+          account_id: number;
+          created_at?: string;
+          credit_amount?: number;
+          debit_amount?: number;
+          description?: string | null;
+          id?: never;
+          journal_entry_id: number;
+          tenant_id: number;
+        };
+        Update: {
+          account_id?: number;
+          created_at?: string;
+          credit_amount?: number;
+          debit_amount?: number;
+          description?: string | null;
+          id?: never;
+          journal_entry_id?: number;
+          tenant_id?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "journal_entry_lines_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "chart_of_accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "journal_entry_lines_journal_entry_id_fkey";
+            columns: ["journal_entry_id"];
+            isOneToOne: false;
+            referencedRelation: "journal_entries";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "journal_entry_lines_tenant_id_fkey";
             columns: ["tenant_id"];
             isOneToOne: false;
             referencedRelation: "tenants";
@@ -1346,6 +1661,186 @@ export type Database = {
           },
         ];
       };
+      payroll_entries: {
+        Row: {
+          advance_deduction: number;
+          allowances: number;
+          base_salary: number;
+          bhtn_employee: number;
+          bhtn_employer: number;
+          bhxh_employee: number;
+          bhxh_employer: number;
+          bhyt_employee: number;
+          bhyt_employer: number;
+          bonus: number;
+          charity_deduction: number;
+          created_at: string;
+          dependent_count: number;
+          dependent_deduction: number;
+          employee_id: number;
+          gross_total: number;
+          id: number;
+          insurance_base: number;
+          net_salary: number;
+          notes: string | null;
+          other_deductions: number;
+          overtime_hours: number;
+          overtime_pay: number;
+          payroll_period_id: number;
+          personal_deduction: number;
+          pit_tax: number;
+          standard_days: number;
+          tax_exempt_allowances: number;
+          taxable_income: number;
+          tenant_id: number;
+          total_insurance_employee: number;
+          total_insurance_employer: number;
+          updated_at: string;
+          working_days: number;
+        };
+        Insert: {
+          advance_deduction?: number;
+          allowances?: number;
+          base_salary: number;
+          bhtn_employee: number;
+          bhtn_employer: number;
+          bhxh_employee: number;
+          bhxh_employer: number;
+          bhyt_employee: number;
+          bhyt_employer: number;
+          bonus?: number;
+          charity_deduction?: number;
+          created_at?: string;
+          dependent_count?: number;
+          dependent_deduction?: number;
+          employee_id: number;
+          gross_total: number;
+          id?: never;
+          insurance_base: number;
+          net_salary: number;
+          notes?: string | null;
+          other_deductions?: number;
+          overtime_hours?: number;
+          overtime_pay?: number;
+          payroll_period_id: number;
+          personal_deduction?: number;
+          pit_tax: number;
+          standard_days: number;
+          tax_exempt_allowances?: number;
+          taxable_income: number;
+          tenant_id: number;
+          total_insurance_employee: number;
+          total_insurance_employer: number;
+          updated_at?: string;
+          working_days: number;
+        };
+        Update: {
+          advance_deduction?: number;
+          allowances?: number;
+          base_salary?: number;
+          bhtn_employee?: number;
+          bhtn_employer?: number;
+          bhxh_employee?: number;
+          bhxh_employer?: number;
+          bhyt_employee?: number;
+          bhyt_employer?: number;
+          bonus?: number;
+          charity_deduction?: number;
+          created_at?: string;
+          dependent_count?: number;
+          dependent_deduction?: number;
+          employee_id?: number;
+          gross_total?: number;
+          id?: never;
+          insurance_base?: number;
+          net_salary?: number;
+          notes?: string | null;
+          other_deductions?: number;
+          overtime_hours?: number;
+          overtime_pay?: number;
+          payroll_period_id?: number;
+          personal_deduction?: number;
+          pit_tax?: number;
+          standard_days?: number;
+          tax_exempt_allowances?: number;
+          taxable_income?: number;
+          tenant_id?: number;
+          total_insurance_employee?: number;
+          total_insurance_employer?: number;
+          updated_at?: string;
+          working_days?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payroll_entries_employee_id_fkey";
+            columns: ["employee_id"];
+            isOneToOne: false;
+            referencedRelation: "employees";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payroll_entries_payroll_period_id_fkey";
+            columns: ["payroll_period_id"];
+            isOneToOne: false;
+            referencedRelation: "payroll_periods";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payroll_entries_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      payroll_periods: {
+        Row: {
+          approved_at: string | null;
+          approved_by: string | null;
+          created_at: string;
+          id: number;
+          paid_at: string | null;
+          period_month: number;
+          period_year: number;
+          status: string;
+          tenant_id: number;
+          updated_at: string;
+        };
+        Insert: {
+          approved_at?: string | null;
+          approved_by?: string | null;
+          created_at?: string;
+          id?: never;
+          paid_at?: string | null;
+          period_month: number;
+          period_year: number;
+          status?: string;
+          tenant_id: number;
+          updated_at?: string;
+        };
+        Update: {
+          approved_at?: string | null;
+          approved_by?: string | null;
+          created_at?: string;
+          id?: never;
+          paid_at?: string | null;
+          period_month?: number;
+          period_year?: number;
+          status?: string;
+          tenant_id?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payroll_periods_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       pos_sessions: {
         Row: {
           branch_id: number;
@@ -1750,6 +2245,7 @@ export type Database = {
           quantity: number;
           tenant_id: number;
           unit: string;
+          yield_factor: number;
         };
         Insert: {
           created_at?: string;
@@ -1760,6 +2256,7 @@ export type Database = {
           quantity: number;
           tenant_id: number;
           unit: string;
+          yield_factor?: number;
         };
         Update: {
           created_at?: string;
@@ -1770,6 +2267,7 @@ export type Database = {
           quantity?: number;
           tenant_id?: number;
           unit?: string;
+          yield_factor?: number;
         };
         Relationships: [
           {
@@ -2306,12 +2804,16 @@ export type Database = {
         Row: {
           created_at: string;
           created_by: string;
+          due_date: string | null;
           grn_id: number | null;
           id: number;
           invoice_date: string;
           invoice_number: string;
           matching_notes: string | null;
           matching_status: string;
+          paid_amount: number;
+          paid_at: string | null;
+          payment_status: string;
           po_id: number | null;
           subtotal: number;
           supplier_id: number;
@@ -2324,12 +2826,16 @@ export type Database = {
         Insert: {
           created_at?: string;
           created_by: string;
+          due_date?: string | null;
           grn_id?: number | null;
           id?: never;
           invoice_date: string;
           invoice_number: string;
           matching_notes?: string | null;
           matching_status?: string;
+          paid_amount?: number;
+          paid_at?: string | null;
+          payment_status?: string;
           po_id?: number | null;
           subtotal: number;
           supplier_id: number;
@@ -2342,12 +2848,16 @@ export type Database = {
         Update: {
           created_at?: string;
           created_by?: string;
+          due_date?: string | null;
           grn_id?: number | null;
           id?: never;
           invoice_date?: string;
           invoice_number?: string;
           matching_notes?: string | null;
           matching_status?: string;
+          paid_amount?: number;
+          paid_at?: string | null;
+          payment_status?: string;
           po_id?: number | null;
           subtotal?: number;
           supplier_id?: number;
@@ -2403,6 +2913,8 @@ export type Database = {
           is_active: boolean;
           name: string;
           notes: string | null;
+          payment_terms_days: number | null;
+          payment_terms_note: string | null;
           phone: string | null;
           tax_code: string | null;
           tenant_id: number;
@@ -2415,6 +2927,8 @@ export type Database = {
           is_active?: boolean;
           name: string;
           notes?: string | null;
+          payment_terms_days?: number | null;
+          payment_terms_note?: string | null;
           phone?: string | null;
           tax_code?: string | null;
           tenant_id: number;
@@ -2427,6 +2941,8 @@ export type Database = {
           is_active?: boolean;
           name?: string;
           notes?: string | null;
+          payment_terms_days?: number | null;
+          payment_terms_note?: string | null;
           phone?: string | null;
           tax_code?: string | null;
           tenant_id?: number;
@@ -2719,6 +3235,43 @@ export type Database = {
           },
         ];
       };
+      mv_food_cost: {
+        Row: {
+          branch_id: number | null;
+          food_cost_pct: number | null;
+          ingredient_cost: number | null;
+          item_name: string | null;
+          menu_item_id: number | null;
+          period_end: string | null;
+          period_start: string | null;
+          quantity_sold: number | null;
+          revenue: number | null;
+          tenant_id: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_items_menu_item_id_fkey";
+            columns: ["menu_item_id"];
+            isOneToOne: false;
+            referencedRelation: "menu_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orders_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orders_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       mv_top_items: {
         Row: {
           branch_id: number | null;
@@ -2834,6 +3387,7 @@ export type Database = {
         Args: { p_invoice_id: number };
         Returns: Json;
       };
+      refresh_finance_views: { Args: never; Returns: undefined };
       release_table: { Args: { p_table_id: number }; Returns: undefined };
       route_order_to_kds: { Args: { p_order_id: number }; Returns: undefined };
       save_item_modifiers: {
@@ -2850,6 +3404,10 @@ export type Database = {
       };
       save_station_categories: {
         Args: { p_category_ids: number[]; p_station_id: number };
+        Returns: undefined;
+      };
+      seed_chart_of_accounts: {
+        Args: { p_tenant_id: number };
         Returns: undefined;
       };
       set_headquarters: { Args: { p_branch_id: number }; Returns: undefined };
@@ -2877,6 +3435,10 @@ export type Database = {
       stock_transfer_receive: {
         Args: { p_items?: Json; p_transfer_id: number };
         Returns: Json;
+      };
+      sync_insurance_base: {
+        Args: { p_employee_id: number };
+        Returns: undefined;
       };
       toggle_category_active: { Args: { p_id: number }; Returns: boolean };
       toggle_item_active: { Args: { p_id: number }; Returns: boolean };
@@ -2912,6 +3474,10 @@ export type Database = {
       update_pos_order_status: {
         Args: { p_new_status: string; p_order_id: number };
         Returns: Json;
+      };
+      validate_journal_balance: {
+        Args: { p_entry_id: number };
+        Returns: boolean;
       };
       void_order_item: {
         Args: { p_order_item_id: number; p_reason: string };

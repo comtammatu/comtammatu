@@ -36,6 +36,7 @@ interface RecipeRow {
   ingredient_id: number;
   quantity: number;
   unit: string;
+  yield_factor: number;
   note: string | null;
   menu_items: { id: number; name: string } | null;
   ingredients: { id: number; name: string; unit: string } | null;
@@ -76,6 +77,7 @@ export function RecipesClient({
         ingredientId: iid,
         quantity: qty,
         unit,
+        yieldFactor: Number(fd.get("yieldFactor")) || 1,
         note: String(fd.get("note") ?? "") || undefined,
       });
       if (!res.success) {
@@ -157,6 +159,23 @@ export function RecipesClient({
             <Input id="unit" name="unit" required placeholder="g, ml…" />
           </div>
           <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="yieldFactor">Hệ số hao hụt (%)</Label>
+            <Input
+              id="yieldFactor"
+              name="yieldFactor"
+              type="number"
+              step="0.001"
+              min="0"
+              max="1"
+              defaultValue={1}
+              placeholder="1.000"
+            />
+            <p className="text-xs text-muted-foreground">
+              VD: 15% = bỏ 15% khi sơ chế (nhập 0.85). Hệ thống tự tính lượng
+              gross.
+            </p>
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="note">Ghi chú</Label>
             <Input id="note" name="note" />
           </div>
@@ -186,6 +205,9 @@ export function RecipesClient({
               <TableHead className="text-xs uppercase tracking-wider font-semibold">
                 Đơn vị
               </TableHead>
+              <TableHead className="text-right text-xs uppercase tracking-wider font-semibold">
+                Hao hụt
+              </TableHead>
               <TableHead className="hidden sm:table-cell text-xs uppercase tracking-wider font-semibold">
                 Ghi chú
               </TableHead>
@@ -194,7 +216,7 @@ export function RecipesClient({
           <TableBody className="divide-y divide-border/60">
             {rows.length === 0 && (
               <TableEmptyStateRow
-                colSpan={5}
+                colSpan={6}
                 paddingClassName="py-16"
                 title="Chưa có công thức nào"
                 description="Thêm dòng công thức qua biểu mẫu phía trên"
@@ -215,6 +237,11 @@ export function RecipesClient({
                   {r.quantity.toLocaleString("vi-VN")}
                 </TableCell>
                 <TableCell>{r.unit}</TableCell>
+                <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
+                  {r.yield_factor != null && r.yield_factor < 1
+                    ? `${((1 - r.yield_factor) * 100).toFixed(1)}%`
+                    : "0%"}
+                </TableCell>
                 <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
                   {r.note ?? "—"}
                 </TableCell>

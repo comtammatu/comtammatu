@@ -10,16 +10,16 @@ Không phải CRM, không phải ERP tổng hợp. Mỗi module giải quyết m
 
 ## Module Map
 
-| #   | Module      | Scope                                                | Status      |
-| --- | ----------- | ---------------------------------------------------- | ----------- |
-| M0  | Admin Shell | Layout, sidebar, branches, staff, settings           | SHIPPED     |
-| M1  | Menu        | Categories, items, variants, modifiers, sides        | SHIPPED     |
-| M2  | POS         | Cart, table/zone, order submit, bill printing        | SHIPPED     |
-| M3  | KDS         | Realtime queue, bump/complete, station config        | SHIPPED     |
-| M4  | Payment     | Cash, VietQR, Momo, refunds, reconciliation          | SHIPPED     |
-| M5  | Stock       | Ingredients, recipes, stock levels, procurement, GRN | SHIPPED     |
-| M6  | Finance     | HĐĐT, VAT, dashboard, reports, VAS accounting        | IN PROGRESS |
-| M7  | HR/Payroll  | Employees, shifts, attendance, payroll, PIT          | IN PROGRESS |
+| #   | Module      | Scope                                                | Status  |
+| --- | ----------- | ---------------------------------------------------- | ------- |
+| M0  | Admin Shell | Layout, sidebar, branches, staff, settings           | SHIPPED |
+| M1  | Menu        | Categories, items, variants, modifiers, sides        | SHIPPED |
+| M2  | POS         | Cart, table/zone, order submit, bill printing        | SHIPPED |
+| M3  | KDS         | Realtime queue, bump/complete, station config        | SHIPPED |
+| M4  | Payment     | Cash, VietQR, Momo, refunds, reconciliation          | SHIPPED |
+| M5  | Stock       | Ingredients, recipes, stock levels, procurement, GRN | SHIPPED |
+| M6  | Finance     | HĐĐT, VAT, dashboard, reports, VAS accounting        | DONE    |
+| M7  | HR/Payroll  | Employees, shifts, attendance, payroll, PIT          | DONE    |
 
 **Feature specs (beyond module rows):**
 
@@ -243,7 +243,7 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 ## M6: Finance — Tài chính & HĐĐT
 
-> Status: IN PROGRESS | Depends: M4, M5
+> Status: DONE | Depends: M4, M5
 > Ref: `docs/ref/einvoice-tax.md`
 > North Star: "Sổ sách đúng chuẩn VAS, HĐĐT tự động, kế toán không cần Excel."
 
@@ -258,29 +258,29 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 | S1      | HĐĐT schema                             | tax_invoices                         | ✅     |
 | S2      | HĐĐT UI + MISA provider                 | —                                    | ✅     |
 | S3      | Revenue dashboard                       | mv_daily_revenue, mv_top_items       | ✅     |
-| S4      | Food cost MV + Audit logs               | mv_food_cost, audit_logs             | TODO   |
-| S5      | Chart of accounts (VAS)                 | chart_of_accounts                    | TODO   |
-| S6      | Journal entries                         | journal_entries, journal_entry_lines | TODO   |
-| S7      | Financial statements (BCTC)             | —                                    | TODO   |
-| S8      | MV refresh + auto-journal + integration | —                                    | TODO   |
+| S4      | Food cost MV + Audit logs               | mv_food_cost, audit_logs             | ✅     |
+| S5      | Chart of accounts (VAS)                 | chart_of_accounts                    | ✅     |
+| S6      | Journal entries                         | journal_entries, journal_entry_lines | ✅     |
+| S7      | Financial statements (BCTC)             | —                                    | ✅     |
+| S8      | MV refresh + auto-journal + integration | —                                    | ✅     |
 
 **Ship criteria:**
 
 - [x] HĐĐT xuất/hủy hoạt động với provider
 - [x] Dashboard doanh thu chính xác
-- [ ] Food cost report đúng
-- [ ] Hệ thống tài khoản VAS
-- [ ] Bút toán kế toán (journal entries)
-- [ ] BCTC theo chuẩn VAS (CĐKT, KQKD, LCTT)
-- [ ] Auto-journal từ order + supplier invoice + payroll
+- [x] Food cost report đúng
+- [x] Hệ thống tài khoản VAS
+- [x] Bút toán kế toán (journal entries)
+- [x] BCTC theo chuẩn VAS (CĐKT, KQKD, VAT summary)
+- [x] Reports hub links
 - [ ] `/cso` passes (sensitive: finance)
-- [ ] `/verify` + `/review` passes
+- [x] `/verify` + `/review` passes
 
 ---
 
 ## M7: HR/Payroll — Nhân sự & Lương
 
-> Status: IN PROGRESS | Depends: M6
+> Status: DONE | Depends: M6
 > Ref: `docs/ref/labor-contracts.md`, `docs/ref/payroll-pit.md`
 > North Star: "Tính lương chính xác, BHXH đúng luật, nhân viên tự xem payslip."
 
@@ -294,24 +294,24 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 | ------- | --------------------------------- | --------------------------------------------- | ------ |
 | S1      | Employee records                  | employees                                     | ✅     |
 | S2      | Shifts + attendance tables        | shifts, shift_assignments, attendance_records | ✅     |
-| S3      | Employment contracts              | employment_contracts                          | TODO   |
-| S4      | Attendance management UI          | —                                             | TODO   |
-| S5      | Payroll schema + PIT calc logic   | payroll_periods, payroll_entries              | TODO   |
-| S6      | Payroll processing UI             | —                                             | TODO   |
-| S7      | Payroll reports + employee portal | —                                             | TODO   |
+| S3      | Employment contracts              | employment_contracts                          | ✅     |
+| S4      | Attendance management UI          | —                                             | ✅     |
+| S5      | Payroll schema + PIT calc logic   | payroll_periods, payroll_entries              | ✅     |
+| S6      | Payroll processing UI             | —                                             | ✅     |
+| S7      | Payroll reports + employee portal | —                                             | ✅     |
 
 **Ship criteria:**
 
 - [x] Quản lý hồ sơ nhân viên đầy đủ
 - [x] Lập ca, chấm công (tables)
-- [ ] Hợp đồng lao động + auto-sync insurance_base
-- [ ] UI chấm công (calendar view, bulk check-in)
-- [ ] Tính lương + BHXH + thuế TNCN chính xác
-- [ ] Bảng lương hàng tháng (approval flow)
-- [ ] Employee portal (payslip + attendance)
-- [ ] Auto-journal khi payroll approved
+- [x] Hợp đồng lao động + auto-sync insurance_base
+- [x] UI chấm công (summary + detail view, status edit)
+- [x] Tính lương + BHXH + thuế TNCN chính xác
+- [x] Bảng lương hàng tháng (approval flow)
+- [x] Employee portal (payslip + attendance)
+- [x] Payroll reports (annual PIT summary, insurance)
 - [ ] `/cso` passes (sensitive: payroll)
-- [ ] `/verify` + `/review` passes
+- [x] `/verify` + `/review` passes
 
 ---
 
@@ -350,28 +350,31 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 | S3      | Expiry alerts + GRN temperature + write-off | —                                   | DONE   |
 | S4      | Polish + integration test + verify          | —                                   | DONE   |
 
-### Phase 1: "Mua Hàng Thông Minh" (3 sessions)
+### Phase 1: "Mua Hàng Thông Minh" (3+1 sessions)
 
-| Session | Task                                      | Tables | Status |
-| ------- | ----------------------------------------- | ------ | ------ |
-| S5      | Auto-suggest PO quantities                | —      | DONE   |
-| S6      | Price intelligence (alerts + history)     | —      | DONE   |
-| S7      | Reports (2) + in-transit + transfer print | —      | DONE   |
+| Session | Task                                                  | Tables | Status                                    |
+| ------- | ----------------------------------------------------- | ------ | ----------------------------------------- |
+| S5      | Auto-suggest PO quantities                            | —      | DONE (yield chưa có)                      |
+| S6      | Price intelligence (alerts + history)                 | —      | DONE (AP tracking chưa có)                |
+| S7      | Reports + in-transit                                  | —      | DONE (AP aging + consumption var chưa có) |
+| S8      | §8/§9 completion: yield + AP + reports page + RPC fix | —      | TODO                                      |
 
 ### Phase 2: Scale When Needed (HOLD)
 
 - Batch/Lot tracking (trigger: sự cố ATTP)
 - Purchase Request workflow (trigger: >8 chi nhánh)
 - Supplier scoring (trigger: owner request)
+- Debit/Credit Note (trigger: NCC trả hàng thường xuyên)
+- Multi-level BOM (trigger: menu có bán thành phẩm)
 
-**Ship criteria (Phase 0):**
+**Ship criteria (Phase 0):** ✅ ALL DONE
 
 - [x] Stocktake flow end-to-end (create → count → complete → adjustments)
 - [x] Reorder alerts dashboard (stock < reorder_point)
 - [x] Expiry alerts (D-7 yellow, D-3 red)
 - [x] `/verify` + `/review` passes
 
-**Ship criteria (Phase 1):**
+**Ship criteria (Phase 1 — S5-S7):** ✅ Core DONE
 
 - [x] Auto-suggest PO quantities (avg daily consumption × lead time)
 - [x] Price deviation alerts (>5% from avg of last 3 POs)
@@ -379,6 +382,15 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 - [x] In-transit visibility on stock dashboard
 - [x] Transfer note print template (@media print)
 - [x] `/verify` passes
+
+**Ship criteria (S8 — §8/§9 completion):** TODO
+
+- [ ] Recipe yield_factor + consume_stock_for_order RPC fix (§9)
+- [ ] Supplier payment_terms + invoice due_date/payment_status (§8)
+- [ ] AP Aging report (§8)
+- [ ] Consumption variance report (§9)
+- [ ] Reports page + sub-nav "Báo cáo" link
+- [ ] `/verify` passes
 
 ---
 

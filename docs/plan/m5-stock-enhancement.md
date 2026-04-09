@@ -29,15 +29,19 @@ Quy trình SOP chi tiết yêu cầu enterprise WMS. Nhưng Cơm Tấm Má Tư l
 
 ## What's Already Good (ALIGNED)
 
-| Feature                | Codebase                                 | SOP Doc                          |
-| ---------------------- | ---------------------------------------- | -------------------------------- |
-| HQ-only procurement    | PO/GRN chỉ tại `is_headquarters=true`    | Kho Trụ sở là điểm nhập duy nhất |
-| WAC costing            | `confirm_goods_receipt_note` RPC         | Giá bình quân gia quyền          |
-| Transfer state machine | draft→confirmed_ship→in_transit→received | 5 trạng thái                     |
-| Transfer directions    | TS↔CN, CN↔CN, block TS↔TS                | Đúng quy định                    |
-| 3-Way matching         | PO↔GRN↔Invoice, matching_status          | ±5% SL, ±2% giá                  |
-| Auto consumption       | Recipe × order → stock deduction         | Xuất theo recipe khi completed   |
-| Append-only movements  | No UPDATE/DELETE on stock_movements      | Audit trail                      |
+| Feature                | Codebase                                               | SOP Doc                          |
+| ---------------------- | ------------------------------------------------------ | -------------------------------- |
+| HQ-only procurement    | PO/GRN chỉ tại `is_headquarters=true`                  | Kho Trụ sở là điểm nhập duy nhất |
+| WAC costing            | `confirm_goods_receipt_note` RPC                       | Giá bình quân gia quyền          |
+| Transfer state machine | draft→confirmed_ship→in_transit→received               | 5 trạng thái                     |
+| Transfer directions    | TS↔CN, CN↔CN, block TS↔TS                              | Đúng quy định                    |
+| 3-Way matching         | PO↔GRN↔Invoice, matching_status                        | ±5% SL, ±2% giá                  |
+| Auto consumption       | Recipe × order → stock deduction                       | Xuất theo recipe khi completed   |
+| Append-only movements  | No UPDATE/DELETE on stock_movements                    | Audit trail                      |
+| Supplier invoices      | `supplier_invoices` + UNIQUE(inv_no, supplier, tenant) | Nhận HĐ, đối chiếu               |
+| Duplicate prevention   | UNIQUE constraint blocks same invoice_number per NCC   | §8.2.3                           |
+| Recipe/BOM level 1     | `recipes` (menu_item → ingredient × qty)               | §9.2 single-level BOM            |
+| COGS per dish          | `mv_food_cost` materialized view (M6)                  | §9.5 Food cost % tự động         |
 
 ---
 
@@ -54,6 +58,38 @@ Quy trình SOP chi tiết yêu cầu enterprise WMS. Nhưng Cơm Tấm Má Tư l
 | Blanket PO / Emergency PO types     | 3-5 NCC. Gọi điện.                                                               |
 | Label printing / barcode            | 50 SKU. Biết thịt bò trông như thế nào.                                          |
 | Offline mode                        | Đây là architecture decision (Local-First), không phải inventory feature.        |
+| Payment Run (batch payment)         | 3-5 NCC, thanh toán thủ công qua banking app. Batch payment = overkill.          |
+| Phê duyệt thanh toán theo ngưỡng    | 1 người quyết định (owner). Multi-level approval khi >8 chi nhánh.               |
+| Multi-level BOM (bán thành phẩm)    | Cơm tấm không có sub-recipe. Nếu cần → add parent_recipe_id sau.                 |
+| ABC Analysis auto-compute           | 30-50 SKU — owner biết item nào quan trọng. Auto-classify khi >100 SKU.          |
+
+---
+
+## Gap Analysis — SOP §8 (HĐ NCC & AP) + §9 (Nguyên liệu & Báo cáo)
+
+### §8 Gaps — Accounts Payable
+
+| SOP yêu cầu                              | Codebase hiện tại                                   | Quyết định                                   |
+| ---------------------------------------- | --------------------------------------------------- | -------------------------------------------- |
+| Payment terms trên supplier (NET7/14/30) | **Thiếu** — `suppliers` không có `payment_terms`    | **Phase 1 S6** — ALTER thêm cột              |
+| Due date = invoice_date + payment_terms  | **Thiếu** — `supplier_invoices` không có `due_date` | **Phase 1 S6** — ALTER thêm cột              |
+| Payment status (Paid/Unpaid/Partial)     | **Thiếu** — không track thanh toán                  | **Phase 1 S6** — ALTER thêm `payment_status` |
+| AP aging report (tuổi nợ theo NCC)       | **Thiếu** — cần query                               | **Phase 1 S7** — query-only, no new table    |
+| Debit Note / Credit Note                 | **Thiếu**                                           | **Phase 2 HOLD** — khi scale                 |
+| Duplicate invoice prevention             | UNIQUE(invoice_number, supplier_id, tenant_id) ✅   | Đã có                                        |
+| Hạch toán kế toán                        | M6 `journal_entries` ✅                             | **M6 scope**, không phải M5                  |
+
+### §9 Gaps — Nguyên liệu & Báo cáo
+
+| SOP yêu cầu                          | Codebase hiện tại                                | Quyết định                            |
+| ------------------------------------ | ------------------------------------------------ | ------------------------------------- |
+| Yield factor (hệ số hao hụt sơ chế)  | **Thiếu** — `recipes` không có `yield_factor`    | **Phase 1 S5** — ALTER thêm cột       |
+| Gross quantity = net / (1 - yield%)  | **Thiếu** — consumption dùng net quantity        | **Phase 1 S5** — app logic tính gross |
+| Theoretical vs Actual variance       | stock_movements (consumption) + recipes ✅       | **Phase 1 S7** — report query         |
+| Consumption variance alerts (>±7%)   | **Thiếu** dashboard                              | **Phase 1 S7** — alert card           |
+| Waste log (distinct from adjustment) | `adjustment` type tồn tại, không phân biệt waste | **Phase 0 S3** — thêm reason `waste`  |
+| Food cost % report                   | `mv_food_cost` (M6) ✅                           | Đã có — link từ inventory dashboard   |
+| Supplier performance metrics         | **Thiếu**                                        | **Phase 2 HOLD**                      |
 
 ---
 
@@ -151,6 +187,7 @@ CREATE TABLE stocktake_lines (
   - Badge: "3 items hết hạn trong 3 ngày" (red), "5 items hết hạn trong 7 ngày" (yellow)
   - Tappable → filtered list
 - Write-off action: create `adjustment` movement with reason `expired` — uses existing `adjustStock` action with new reason option
+- Waste log: extend `adjustStock` to accept reason `waste` (§9.4) — distinct from `expired` and generic `adjustment`
 - Separate route: `/admin/inventory/expiry` for full filterable list
 
 ```sql
@@ -184,27 +221,58 @@ Photo upload → defer to Phase 1. Temperature field = 10 min work, real value f
 > **North Star:** Auto-suggest PO — thủ kho thấy "cần đặt 50kg sườn, 30kg trứng" dựa trên tiêu thụ 7 ngày qua.
 > **Estimate:** 3 sessions | **Priority:** DO SECOND
 
-#### S5: Auto-Suggest PO Quantities
+#### S5: Auto-Suggest PO + Recipe Yield (§9.2)
 
 - Calculate: avg daily consumption (from `stock_movements` type=`consumption`, last 7/14/30 days) × lead time = suggested order qty
 - Factor in current stock: `suggested = max_stock - current_quantity`
 - Show on PO creation page: "Gợi ý đặt hàng" panel
 - One-click add suggested items to PO draft
+- **§9.2 Yield factor (hao hụt sơ chế):**
 
-#### S6: Price Intelligence
+```sql
+ALTER TABLE recipes ADD COLUMN yield_factor NUMERIC(5,3) DEFAULT 1.0
+  CHECK (yield_factor > 0 AND yield_factor <= 1);
+-- yield_factor = 0.85 means 15% hao hụt → gross = net / 0.85
+-- Default 1.0 = no waste (backward-compatible)
+```
+
+- App logic: `gross_quantity = recipe.quantity / recipe.yield_factor`
+- Auto-suggest PO uses gross quantity (not net) for accurate ordering
+- UI: show yield % on recipe form, tooltip giải thích
+
+#### S6: Price Intelligence + AP Tracking (§8)
 
 - PO price alert: flag when `unit_price_est` deviates >5% from average of last 3 POs for same ingredient+supplier
 - Supplier price history: simple line chart — price per unit over time per ingredient per supplier
 - Give owner data for negotiation
+- **§8 Supplier payment terms + Invoice tracking:**
 
-#### S7: Reports + In-Transit
+```sql
+ALTER TABLE suppliers ADD COLUMN payment_terms TEXT DEFAULT 'COD'
+  CHECK (payment_terms IN ('COD', 'NET7', 'NET14', 'NET30'));
 
-- **2 reports only (CEO review — kill the other 4):**
+ALTER TABLE supplier_invoices ADD COLUMN due_date DATE;
+ALTER TABLE supplier_invoices ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'unpaid'
+  CHECK (payment_status IN ('unpaid', 'partial', 'paid'));
+ALTER TABLE supplier_invoices ADD COLUMN paid_at TIMESTAMPTZ;
+ALTER TABLE supplier_invoices ADD COLUMN paid_amount NUMERIC(15,2) DEFAULT 0;
+```
+
+- Auto-compute due_date = invoice_date + payment_terms days (app logic on create)
+- Invoice list: show payment_status column + overdue highlight (due_date < today & unpaid)
+- Mark paid action: update payment_status + paid_at + paid_amount
+
+#### S7: Reports + In-Transit + Variance (§8 + §9)
+
+- **4 reports (expanded from 2, incorporating §8 AP + §9 consumption):**
   1. Biến động tồn kho (period-based: opening + receipts + transfers - consumption - adjustments = closing)
   2. Stock movement summary by branch
+  3. **§8 AP Aging** — công nợ NCC theo tuổi nợ (current / 1-30d / 31-60d / 61-90d / >90d). Query `supplier_invoices` WHERE payment_status != 'paid', grouped by supplier
+  4. **§9 Consumption variance** — lý thuyết (orders × recipes × yield) vs thực tế (stock_movements type=consumption). Alert khi |variance| > 7%
 - In-transit visibility: show transfers at `in_transit` status on stock dashboard
 - Transfer note print template (simple PDF)
 - Reports on desktop-first (Design review: charts don't work on phone)
+- Link to M6 `mv_food_cost` for food cost % per branch (§9.5 — already exists)
 
 ---
 
@@ -212,13 +280,17 @@ Photo upload → defer to Phase 1. Temperature field = 10 min work, real value f
 
 > Only start when specific trigger fires. Not on roadmap timeline.
 
-| Feature                           | Trigger to start                                 | Sessions |
-| --------------------------------- | ------------------------------------------------ | -------- |
-| Batch/Lot tracking                | Regulatory requirement OR food safety incident   | 4-6      |
-| Purchase Request workflow         | >8 branches with distributed procurement         | 3-4      |
-| Supplier performance scoring      | Owner asks for NCC evaluation data               | 1-2      |
-| GRN photo upload                  | Staff requests or audit requirement              | 1        |
-| Stock states (Reserved/Available) | Concurrent warehouse operations become a problem | 2-3      |
+| Feature                           | Trigger to start                                       | Sessions |
+| --------------------------------- | ------------------------------------------------------ | -------- |
+| Batch/Lot tracking                | Regulatory requirement OR food safety incident         | 4-6      |
+| Purchase Request workflow         | >8 branches with distributed procurement               | 3-4      |
+| Supplier performance scoring      | Owner asks for NCC evaluation data                     | 1-2      |
+| GRN photo upload                  | Staff requests or audit requirement                    | 1        |
+| Stock states (Reserved/Available) | Concurrent warehouse operations become a problem       | 2-3      |
+| Debit Note / Credit Note (§8.6)   | NCC trả hàng thường xuyên hoặc cần đối soát chính thức | 2        |
+| Multi-level BOM (§9.2)            | Menu có bán thành phẩm (sub-recipe) cần track          | 2        |
+| Waste dashboard chi tiết (§9.4)   | Owner muốn phân tích waste theo loại + trend           | 1        |
+| ABC Analysis auto (§9.7)          | >100 SKU cần phân loại tự động                         | 1        |
 
 ---
 
@@ -226,12 +298,18 @@ Photo upload → defer to Phase 1. Temperature field = 10 min work, real value f
 
 ### Migration Safety
 
-| Change                                      | Type            | Safe? | Notes                                                        |
-| ------------------------------------------- | --------------- | ----- | ------------------------------------------------------------ |
-| `CREATE TABLE stocktake_sessions`           | New table       | Yes   | + GRANT + RLS + partial unique index                         |
-| `CREATE TABLE stocktake_lines`              | New table       | Yes   | + GRANT + RLS + UNIQUE(session_id, ingredient_id, tenant_id) |
-| `ALTER grn_items ADD receiving_temperature` | Nullable column | Yes   | Non-blocking                                                 |
-| `CREATE INDEX idx_grn_items_expiry`         | Partial index   | Yes   | Non-blocking                                                 |
+| Change                                            | Type                      | Safe? | Notes                                                        |
+| ------------------------------------------------- | ------------------------- | ----- | ------------------------------------------------------------ |
+| `CREATE TABLE stocktake_sessions`                 | New table                 | Yes   | + GRANT + RLS + partial unique index                         |
+| `CREATE TABLE stocktake_lines`                    | New table                 | Yes   | + GRANT + RLS + UNIQUE(session_id, ingredient_id, tenant_id) |
+| `ALTER grn_items ADD receiving_temperature`       | Nullable column           | Yes   | Non-blocking                                                 |
+| `CREATE INDEX idx_grn_items_expiry`               | Partial index             | Yes   | Non-blocking                                                 |
+| `ALTER recipes ADD yield_factor` (§9)             | Nullable + DEFAULT 1.0    | Yes   | Non-blocking, backward-compatible                            |
+| `ALTER suppliers ADD payment_terms` (§8)          | Nullable + DEFAULT 'COD'  | Yes   | Non-blocking                                                 |
+| `ALTER supplier_invoices ADD due_date` (§8)       | Nullable column           | Yes   | Non-blocking                                                 |
+| `ALTER supplier_invoices ADD payment_status` (§8) | NOT NULL DEFAULT 'unpaid' | Yes   | Existing rows get 'unpaid'                                   |
+| `ALTER supplier_invoices ADD paid_at` (§8)        | Nullable column           | Yes   | Non-blocking                                                 |
+| `ALTER supplier_invoices ADD paid_amount` (§8)    | DEFAULT 0                 | Yes   | Non-blocking                                                 |
 
 ### Edge Cases Resolved
 
@@ -261,6 +339,10 @@ Photo upload → defer to Phase 1. Temperature field = 10 min work, real value f
 | View stocktake history    | super_manager (all), branch_manager (own) | INVENTORY_OPS_ROLES |
 | PO auto-suggest           | super_manager                             | PROCUREMENT_ROLES   |
 | Price alerts              | super_manager                             | PROCUREMENT_ROLES   |
+| Edit yield_factor (§9)    | super_manager                             | PROCUREMENT_ROLES   |
+| Mark invoice paid (§8)    | super_manager                             | PROCUREMENT_ROLES   |
+| View AP aging (§8)        | super_manager, owner                      | PROCUREMENT_ROLES   |
+| View consumption var (§9) | branch_manager+ (own branch)              | INVENTORY_OPS_ROLES |
 | Reports                   | branch_manager+ (own branch)              | INVENTORY_OPS_ROLES |
 
 ---
@@ -298,36 +380,115 @@ Photo upload → defer to Phase 1. Temperature field = 10 min work, real value f
 
 ## Success Metrics
 
-| Phase | Metric                                          | Target                       |
-| ----- | ----------------------------------------------- | ---------------------------- |
-| 0     | Stocktake variance (monthly)                    | <2% by value                 |
-| 0     | Reorder alerts → PO created before stockout     | >90%                         |
-| 0     | Expiring items caught before serving            | >95%                         |
-| 1     | PO quantity accuracy (suggested vs actual need) | >80%                         |
-| 1     | Food cost trend visibility                      | Owner can see in <10 seconds |
+| Phase | Metric                                          | Target                            |
+| ----- | ----------------------------------------------- | --------------------------------- | --- | ---- |
+| 0     | Stocktake variance (monthly)                    | <2% by value                      |
+| 0     | Reorder alerts → PO created before stockout     | >90%                              |
+| 0     | Expiring items caught before serving            | >95%                              |
+| 1     | PO quantity accuracy (suggested vs actual need) | >80%                              |
+| 1     | Food cost trend visibility                      | Owner can see in <10 seconds      |
+| 1     | Invoices overdue visibility (§8)                | 100% — no invoice misses due date |
+| 1     | Consumption variance detected (§9)              | Alert when                        | var | > 7% |
 
 ---
 
 ## Session Summary
 
-| Session | Scope                                             | Est.         |
-| ------- | ------------------------------------------------- | ------------ |
-| **S1**  | Stocktake migration + RPC                         | 1 session    |
-| **S2**  | Stocktake UI + Reorder alerts dashboard           | 1 session    |
-| **S3**  | Expiry alerts + GRN temperature + write-off       | 1 session    |
-| **S4**  | Polish + integration test + verify                | 1 session    |
-| **S5**  | Auto-suggest PO quantities                        | 1 session ✅ |
-| **S6**  | Price intelligence (alerts + history)             | 1 session ✅ |
-| **S7**  | Reports (2 reports) + in-transit + transfer print | 1 session ✅ |
-
-**Total: 7 sessions** (down from 16-20 in original plan)
+| Session | Scope                                                    | Status                                                       |
+| ------- | -------------------------------------------------------- | ------------------------------------------------------------ |
+| **S1**  | Stocktake migration + RPC                                | ✅                                                           |
+| **S2**  | Stocktake UI + Reorder alerts dashboard                  | ✅                                                           |
+| **S3**  | Expiry alerts + GRN temperature + write-off              | ✅                                                           |
+| **S4**  | Polish + integration test + verify                       | ✅                                                           |
+| **S5**  | Auto-suggest PO (actions + UI)                           | ✅ partial — yield_factor chưa có                            |
+| **S6**  | Price intelligence (actions + PO detail UI)              | ✅ partial — AP tracking chưa có                             |
+| **S7**  | Reports (movement + branch summary + in-transit actions) | ✅ partial — AP aging, consumption var, reports page chưa có |
+| **S8**  | §8/§9 completion: yield + AP + reports page + RPC fix    | TODO                                                         |
 
 ---
 
-## Open Questions for Founder
+## S8: §8/§9 Completion Session (NEW)
 
-1. **Bao nhiêu SKU thực tế quản lý?** Nếu 30-40 thì auto-suggest PO rất chính xác. Nếu 100+ cần category-based ordering.
-2. **Ai đặt hàng NCC hiện tại, bằng gì?** Điện thoại? Zalo? Nếu Zalo → "tạo PO" nên generate Zalo message.
-3. **Tần suất kiểm kê hiện tại?** Hàng ngày (hàng tươi)? Hàng tuần? Chưa bao giờ?
-4. **Food cost % hiện tại biết không?** Nếu không → feature #1 là connect consumption data với revenue.
-5. **Đã có sự cố ATTP cần trace NCC chưa?** Nếu chưa → batch tracking đợi được. Nếu có → promote lên Phase 1.
+> **Why:** S5-S7 đã ship core features nhưng §8 AP tracking + §9 yield factor + reports UI chưa xong.
+> **Estimate:** 1 session
+
+### S8 Scope — Migration
+
+```sql
+-- File: supabase/migrations/2026XXXX_m5ext_ap_yield.sql
+
+-- §9: Recipe yield factor
+ALTER TABLE recipes ADD COLUMN IF NOT EXISTS yield_factor NUMERIC(5,3) DEFAULT 1.0
+  CHECK (yield_factor > 0 AND yield_factor <= 1);
+COMMENT ON COLUMN recipes.yield_factor IS 'Yield factor (1.0 = no waste, 0.85 = 15% waste). Gross = quantity / yield_factor.';
+
+-- §8: Supplier payment terms
+ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS payment_terms TEXT DEFAULT 'COD'
+  CHECK (payment_terms IN ('COD', 'NET7', 'NET14', 'NET30'));
+
+-- §8: Invoice payment tracking
+ALTER TABLE supplier_invoices ADD COLUMN IF NOT EXISTS due_date DATE;
+ALTER TABLE supplier_invoices ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'unpaid'
+  CHECK (payment_status IN ('unpaid', 'partial', 'paid'));
+ALTER TABLE supplier_invoices ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
+ALTER TABLE supplier_invoices ADD COLUMN IF NOT EXISTS paid_amount NUMERIC(15,2) DEFAULT 0;
+
+-- §9 CRITICAL: Fix consume_stock_for_order to use yield_factor
+-- Must update the RPC to compute gross: quantity / COALESCE(yield_factor, 1.0)
+CREATE OR REPLACE FUNCTION public.consume_stock_for_order(p_order_id BIGINT)
+-- ... (replace existing RPC, change line:
+--   SUM(oi.quantity::numeric * r.quantity) AS need_qty
+-- to:
+--   SUM(oi.quantity::numeric * r.quantity / COALESCE(r.yield_factor, 1.0)) AS need_qty
+-- )
+```
+
+### S8 Scope — Server Actions
+
+**New in procurement-actions.ts:**
+
+- `markInvoicePaid(invoiceId, amount, paidAt?)` — update payment_status + paid_at + paid_amount
+- `fetchApAging(supplierId?)` — group unpaid invoices by age buckets (current/1-30d/31-60d/61-90d/>90d)
+
+**Update in procurement-actions.ts:**
+
+- `createSupplierInvoice` — auto-compute `due_date` from supplier.payment_terms + invoice_date
+- `upsertRecipe` — add yield_factor field (optional, default 1.0)
+
+**New in report-actions.ts:**
+
+- `fetchConsumptionVariance(branchId, periodDays)` — theoretical (orders × recipes × yield) vs actual (stock_movements consumption), variance %, alert threshold
+
+### S8 Scope — UI
+
+- `/admin/inventory/reports/` page — 4 reports dashboard (movement, branch summary, AP aging, consumption variance)
+- Add "Báo cáo" to sub-nav
+- Supplier invoice list: show payment_status + due_date + overdue highlight
+- Recipe form: add yield_factor % input
+
+### S8 Critical Fix
+
+**`consume_stock_for_order` RPC — MUST update when adding yield_factor.**
+Current: `SUM(oi.quantity * r.quantity)` — chỉ dùng net quantity.
+Need: `SUM(oi.quantity * r.quantity / COALESCE(r.yield_factor, 1.0))` — dùng gross quantity.
+
+Nếu không fix: mỗi order sẽ trừ kho THIẾU so với thực tế bếp dùng → tồn kho hệ thống > thực tế → variance tăng dần.
+
+### S8 Completion Criteria
+
+- [ ] Migration: yield_factor + AP columns + RPC fix
+- [ ] Actions: markInvoicePaid, fetchApAging, fetchConsumptionVariance, update createSupplierInvoice, update upsertRecipe
+- [ ] UI: Reports page + sub-nav + invoice payment status + recipe yield field
+- [ ] `pnpm typecheck && pnpm lint && pnpm build` passes
+
+---
+
+## Open Questions (Answered)
+
+| #   | Question              | Answer (2026-04-09)   |
+| --- | --------------------- | --------------------- |
+| 1   | Bao nhiêu SKU?        | 30-50                 |
+| 2   | Ai đặt hàng, bằng gì? | 1 người, Zalo         |
+| 3   | Tần suất kiểm kê?     | Chưa bao giờ          |
+| 4   | Biết food cost %?     | Sơ bộ, chưa chính xác |
+| 5   | Sự cố ATTP?           | Chưa bao giờ          |

@@ -661,15 +661,35 @@ pending → preparing → ready → served
 
 ### Additional M5-Ext columns
 
-| Table     | Column                | Type         | Notes                                          |
-| --------- | --------------------- | ------------ | ---------------------------------------------- |
-| grn_items | receiving_temperature | NUMERIC(5,1) | Nullable; receiving temp for cold/frozen items |
+| Table             | Column                | Type          | Notes                                                                                      |
+| ----------------- | --------------------- | ------------- | ------------------------------------------------------------------------------------------ |
+| grn_items         | receiving_temperature | NUMERIC(5,1)  | Nullable; receiving temp for cold/frozen items                                             |
+| recipes           | yield_factor          | NUMERIC(5,3)  | NOT NULL DEFAULT 1.000; CHECK > 0. Cooking yield multiplier (e.g. 0.85 = 15% loss)         |
+| suppliers         | payment_terms_days    | INT           | Nullable; standard payment terms in days (e.g. 30 = Net 30)                                |
+| suppliers         | payment_terms_note    | TEXT          | Nullable; free-text payment terms description                                              |
+| supplier_invoices | due_date              | DATE          | Nullable; payment due date (can auto-calc from invoice_date + supplier.payment_terms_days) |
+| supplier_invoices | payment_status        | TEXT          | NOT NULL DEFAULT 'unpaid'; CHECK IN (unpaid, partial, paid)                                |
+| supplier_invoices | paid_amount           | NUMERIC(15,2) | NOT NULL DEFAULT 0; CHECK >= 0. Total amount paid toward this invoice                      |
+| supplier_invoices | paid_at               | TIMESTAMPTZ   | Nullable; timestamp of last/final payment                                                  |
 
 ### Additional M5-Ext indexes
 
-| Index                | Columns                               | Purpose            |
-| -------------------- | ------------------------------------- | ------------------ |
-| idx_grn_items_expiry | grn_items(expiry_date) WHERE NOT NULL | Expiry alert query |
+| Index                          | Columns                                                              | Purpose            |
+| ------------------------------ | -------------------------------------------------------------------- | ------------------ |
+| idx_grn_items_expiry           | grn_items(expiry_date) WHERE NOT NULL                                | Expiry alert query |
+| idx_supplier_invoices_ap_aging | supplier_invoices(tenant_id, payment_status, due_date) WHERE != paid | AP aging queries   |
+
+### consume_stock_for_order — yield_factor fix (M5-Ext S8)
+
+The `consume_stock_for_order` RPC now uses `recipes.yield_factor` when calculating raw ingredient needs:
+
+```
+need_qty = SUM(order_item.quantity * recipe.quantity / recipe.yield_factor)
+```
+
+- `yield_factor = 1.0` (default): no change from previous behavior
+- `yield_factor = 0.85`: 15% cooking loss, so 1/0.85 = 1.176x raw ingredient needed
+- Existing recipes with default yield_factor behave identically to before
 
 ---
 

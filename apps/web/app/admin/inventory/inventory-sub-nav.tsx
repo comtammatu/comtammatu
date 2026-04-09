@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowLeftRight,
+  BarChart3,
   BookOpen,
   ClipboardCheck,
   ClipboardList,
@@ -37,6 +38,11 @@ const LINKS: NavItem[] = [
     href: "/admin/inventory/expiry",
     label: "Hạn sử dụng",
     icon: Timer,
+  },
+  {
+    href: "/admin/inventory/reports",
+    label: "Báo cáo",
+    icon: BarChart3,
   },
   {
     href: "/admin/inventory/transfers",

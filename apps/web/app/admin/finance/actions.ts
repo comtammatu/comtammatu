@@ -12,6 +12,7 @@ import {
 import { ensureInvoiceProviderRegistered } from "../../../lib/invoice-provider-init";
 import { getAuthContext } from "../_lib/auth";
 import { canAccessBranch } from "../_lib/branch-scope";
+import { logAudit } from "../_lib/audit";
 
 const FINANCE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 const INVOICE_CREATE_ROLES: readonly StaffRole[] = [
@@ -199,6 +200,15 @@ export async function createTaxInvoice(
     return { success: false, error: "Không thể tạo hóa đơn." };
   }
 
+  logAudit(supabase, {
+    tenantId: claims.tenant_id,
+    userId: user.id,
+    action: "create",
+    entityType: "tax_invoice",
+    entityId: invoice?.id ?? null,
+    newData: { invoice_number: invoice?.invoice_number, status: invoiceStatus },
+  });
+
   return { success: true, data: invoice };
 }
 
@@ -217,7 +227,7 @@ export async function cancelTaxInvoice(
   const ctx = await getAuthContext(FINANCE_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền hủy hóa đơn." };
 
-  const { supabase, claims } = ctx;
+  const { supabase, claims, user } = ctx;
 
   const { data: invoice, error: fetchErr } = await supabase
     .from("tax_invoices")
@@ -263,6 +273,16 @@ export async function cancelTaxInvoice(
   if (error) {
     return { success: false, error: "Không thể hủy hóa đơn." };
   }
+
+  logAudit(supabase, {
+    tenantId: claims.tenant_id,
+    userId: user.id,
+    action: "cancel",
+    entityType: "tax_invoice",
+    entityId: parsedId.data,
+    oldData: { status: "issued" },
+    newData: { status: "cancelled", reason: cancelReason },
+  });
 
   return { success: true };
 }

@@ -14,6 +14,8 @@ const supplierSchema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
   notes: z.string().optional(),
+  paymentTermsDays: z.coerce.number().int().min(0).optional().nullable(),
+  paymentTermsNote: z.string().optional(),
 });
 
 export async function fetchSuppliers(): Promise<ActionResult> {
@@ -42,11 +44,14 @@ export async function createSupplier(
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
+  const { paymentTermsDays, paymentTermsNote, ...rest } = parsed.data;
   const { data, error } = await supabase
     .from("suppliers")
     .insert({
       tenant_id: claims.tenant_id,
-      ...parsed.data,
+      ...rest,
+      payment_terms_days: paymentTermsDays ?? null,
+      payment_terms_note: paymentTermsNote ?? null,
     })
     .select("id")
     .single();
@@ -75,9 +80,18 @@ export async function updateSupplier(
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
+  const {
+    paymentTermsDays: ptd,
+    paymentTermsNote: ptn,
+    ...updateRest
+  } = parsed.data;
   const { error } = await supabase
     .from("suppliers")
-    .update(parsed.data)
+    .update({
+      ...updateRest,
+      payment_terms_days: ptd ?? null,
+      payment_terms_note: ptn ?? null,
+    })
     .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id);
   if (error) {
@@ -493,6 +507,7 @@ const invoiceSchema = z.object({
   vatAmount: z.coerce.number().min(0),
   totalAmount: z.coerce.number().min(0),
   matchingNotes: z.string().optional(),
+  dueDate: z.string().optional().nullable(),
 });
 
 export async function createSupplierInvoice(
@@ -508,6 +523,24 @@ export async function createSupplierInvoice(
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims, user } = ctx;
+
+  // Auto-compute due_date from supplier payment_terms_days if not provided
+  let dueDate: string | null = parsed.data.dueDate ?? null;
+  if (!dueDate) {
+    const { data: supplier } = await supabase
+      .from("suppliers")
+      .select("payment_terms_days")
+      .eq("id", parsed.data.supplierId)
+      .eq("tenant_id", claims.tenant_id)
+      .single();
+    const termsDays = supplier?.payment_terms_days ?? null;
+    if (termsDays && termsDays > 0) {
+      const invoiceDt = new Date(parsed.data.invoiceDate);
+      invoiceDt.setDate(invoiceDt.getDate() + termsDays);
+      dueDate = invoiceDt.toISOString().slice(0, 10);
+    }
+  }
+
   const { data, error } = await supabase
     .from("supplier_invoices")
     .insert({
@@ -523,6 +556,8 @@ export async function createSupplierInvoice(
       total_amount: parsed.data.totalAmount,
       matching_notes: parsed.data.matchingNotes ?? null,
       created_by: user.id,
+      due_date: dueDate,
+      payment_status: "unpaid",
     })
     .select("id")
     .single();
@@ -542,7 +577,7 @@ export async function fetchSupplierInvoices(): Promise<ActionResult> {
   const { data, error } = await supabase
     .from("supplier_invoices")
     .select(
-      "id, invoice_number, invoice_date, total_amount, matching_status, subtotal, supplier_id, grn_id, suppliers ( id, name ), goods_received_notes ( id, grn_number )",
+      "id, invoice_number, invoice_date, total_amount, matching_status, subtotal, supplier_id, grn_id, due_date, payment_status, paid_amount, paid_at, suppliers ( id, name ), goods_received_notes ( id, grn_number )",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("invoice_date", { ascending: false });
@@ -575,6 +610,7 @@ const recipeSchema = z.object({
   quantity: z.coerce.number().positive(),
   unit: z.string().min(1),
   note: z.string().optional(),
+  yieldFactor: z.coerce.number().positive().default(1.0),
 });
 
 export async function fetchRecipes(): Promise<ActionResult> {
@@ -585,7 +621,7 @@ export async function fetchRecipes(): Promise<ActionResult> {
     .from("recipes")
     .select(
       `
-      id, menu_item_id, ingredient_id, quantity, unit, note,
+      id, menu_item_id, ingredient_id, quantity, unit, note, yield_factor,
       menu_items ( id, name ),
       ingredients ( id, name, unit )
     `,
@@ -617,6 +653,7 @@ export async function upsertRecipe(
       quantity: parsed.data.quantity,
       unit: parsed.data.unit,
       note: parsed.data.note ?? null,
+      yield_factor: parsed.data.yieldFactor,
     },
     { onConflict: "menu_item_id,ingredient_id,tenant_id" },
   );
@@ -991,4 +1028,76 @@ export async function fetchMenuItemsForRecipes(): Promise<ActionResult> {
     .order("name");
   if (error) return { success: false, error: "Không thể tải món." };
   return { success: true, data: data ?? [] };
+}
+
+// ---------------------------------------------------------------------------
+// AP Payment — mark supplier invoice as partially/fully paid
+// ---------------------------------------------------------------------------
+
+const markPaidSchema = z.object({
+  invoiceId: z.coerce.number().int().positive(),
+  amount: z.coerce
+    .number()
+    .positive({ error: "Số tiền thanh toán phải lớn hơn 0" }),
+  paidAt: z.string().optional(),
+});
+
+export async function markInvoicePaid(
+  input: z.infer<typeof markPaidSchema>,
+): Promise<ActionResult> {
+  const parsed = markPaidSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+  const ctx = await getAuthContext(ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims } = ctx;
+
+  // 1. Fetch invoice totals
+  const { data: invoice, error: fetchErr } = await supabase
+    .from("supplier_invoices")
+    .select("id, total_amount, paid_amount")
+    .eq("id", parsed.data.invoiceId)
+    .eq("tenant_id", claims.tenant_id)
+    .single();
+
+  if (fetchErr || !invoice) {
+    return { success: false, error: "Không tìm thấy hóa đơn." };
+  }
+
+  const currentPaid = Number(invoice.paid_amount ?? 0);
+  const totalAmount = Number(invoice.total_amount);
+  const newPaid = currentPaid + parsed.data.amount;
+
+  if (newPaid > totalAmount) {
+    return {
+      success: false,
+      error: `Số tiền vượt quá tổng hóa đơn. Còn lại: ${(totalAmount - currentPaid).toLocaleString("vi-VN")} đ`,
+    };
+  }
+
+  const paymentStatus = newPaid >= totalAmount ? "paid" : "partial";
+  const paidAt = parsed.data.paidAt ?? new Date().toISOString();
+
+  // 2. Update invoice
+  const { data: updated, error: updateErr } = await supabase
+    .from("supplier_invoices")
+    .update({
+      paid_amount: newPaid,
+      payment_status: paymentStatus,
+      paid_at: paidAt,
+    })
+    .eq("id", parsed.data.invoiceId)
+    .eq("tenant_id", claims.tenant_id)
+    .select("id, payment_status, paid_amount, paid_at")
+    .single();
+
+  if (updateErr) {
+    return { success: false, error: "Không thể cập nhật thanh toán." };
+  }
+
+  return { success: true, data: updated };
 }

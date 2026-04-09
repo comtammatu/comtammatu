@@ -169,25 +169,46 @@ export default async function EmployeePage() {
         )}
       </div>
 
-      {/* Coming soon */}
+      {/* HR Portal */}
       <div>
         <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Sắp có
+          Nhân sự
         </p>
-        <div className="flex flex-col gap-2">
-          {[
-            { icon: DoorOpen, label: "Ca làm việc & chấm công" },
-            { icon: CreditCard, label: "Lương & thuế TNCN" },
-            { icon: Home, label: "Hồ sơ cá nhân" },
-          ].map(({ icon: Icon, label }) => (
-            <div
-              key={label}
-              className="flex h-12 items-center gap-3 rounded-lg border border-dashed border-border px-4 text-sm text-muted-foreground"
-            >
-              <Icon className="size-4 shrink-0" />
-              {label}
+        <div className="flex flex-col gap-3">
+          <Link
+            href="/employee/attendance"
+            className="touch-target-lg focus-ring-standard flex h-16 items-center gap-4 rounded-xl border border-border bg-card px-5 shadow-sm transition-colors hover:bg-muted/40"
+          >
+            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
+              <DoorOpen className="size-5 text-primary" />
             </div>
-          ))}
+            <div className="text-left">
+              <p className="text-sm font-semibold">Chấm công</p>
+              <p className="text-xs text-muted-foreground">
+                Xem lịch sử chấm công của bạn
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            href="/employee/payslip"
+            className="touch-target-lg focus-ring-standard flex h-16 items-center gap-4 rounded-xl border border-border bg-card px-5 shadow-sm transition-colors hover:bg-muted/40"
+          >
+            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
+              <CreditCard className="size-5 text-primary" />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-semibold">Phiếu lương</p>
+              <p className="text-xs text-muted-foreground">
+                Xem lương & thuế TNCN
+              </p>
+            </div>
+          </Link>
+
+          <div className="flex h-12 items-center gap-3 rounded-lg border border-dashed border-border px-4 text-sm text-muted-foreground">
+            <Home className="size-4 shrink-0" />
+            Hồ sơ cá nhân (sắp có)
+          </div>
         </div>
       </div>
     </PageContainer>

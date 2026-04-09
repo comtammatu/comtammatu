@@ -10,7 +10,8 @@
     "./settings": "./src/settings/index.ts",
     "./types": "./src/types/action-result.ts",
     "./menu": "./src/menu/category-labels.ts",
-    "./providers": "./src/providers/index.ts"
+    "./providers": "./src/providers/index.ts",
+    "./payroll": "./src/payroll/calculate.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

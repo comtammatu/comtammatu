@@ -327,3 +327,193 @@ export async function checkOut(attendanceId: number): Promise<ActionResult> {
 
   return { success: true };
 }
+
+/* ─── Attendance Summary ─── */
+
+export async function fetchAttendanceSummary(
+  branchId: number,
+  month: string,
+): Promise<ActionResult> {
+  const parsedBranch = z.coerce.number().int().positive().safeParse(branchId);
+  const parsedMonth = z
+    .string()
+    .regex(/^\d{4}-\d{2}$/)
+    .safeParse(month);
+  if (!parsedBranch.success || !parsedMonth.success) {
+    return { success: false, error: "Tham số không hợp lệ" };
+  }
+
+  const ctx = await getAuthContext(SHIFT_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  if (
+    claims.user_role === "branch_manager" &&
+    claims.branch_id !== parsedBranch.data
+  ) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const startDate = `${parsedMonth.data}-01`;
+  const [year, mon] = parsedMonth.data.split("-").map(Number);
+  const endDate = new Date(year!, mon!, 0).toISOString().split("T")[0];
+
+  // Get attendance grouped by employee + status
+  const { data, error } = await supabase
+    .from("attendance_records")
+    .select(
+      `
+      employee_id, status,
+      employees (
+        id, employee_code,
+        profiles ( full_name )
+      )
+    `,
+    )
+    .eq("branch_id", parsedBranch.data)
+    .eq("tenant_id", claims.tenant_id)
+    .gte("date", startDate)
+    .lte("date", endDate!);
+
+  if (error) {
+    return { success: false, error: "Không thể tải tổng hợp chấm công." };
+  }
+
+  // Aggregate per employee
+  const summaryMap = new Map<
+    number,
+    {
+      employee_id: number;
+      employee_code: string;
+      full_name: string;
+      present: number;
+      late: number;
+      absent: number;
+      half_day: number;
+      total: number;
+    }
+  >();
+
+  for (const record of data ?? []) {
+    const empId = record.employee_id;
+    if (!summaryMap.has(empId)) {
+      const emp = record.employees as {
+        id: number;
+        employee_code: string;
+        profiles: { full_name: string } | null;
+      } | null;
+      summaryMap.set(empId, {
+        employee_id: empId,
+        employee_code: emp?.employee_code ?? "",
+        full_name: emp?.profiles?.full_name ?? "",
+        present: 0,
+        late: 0,
+        absent: 0,
+        half_day: 0,
+        total: 0,
+      });
+    }
+    const s = summaryMap.get(empId)!;
+    s.total++;
+    if (record.status === "present") s.present++;
+    else if (record.status === "late") s.late++;
+    else if (record.status === "absent") s.absent++;
+    else if (record.status === "half_day") s.half_day++;
+  }
+
+  return { success: true, data: Array.from(summaryMap.values()) };
+}
+
+/* ─── Update Attendance Status ─── */
+
+const updateAttendanceSchema = z.object({
+  attendanceId: z.coerce.number().int().positive(),
+  status: z.enum(["present", "absent", "late", "half_day"]),
+  note: z.string().optional(),
+});
+
+export async function updateAttendanceStatus(
+  input: z.infer<typeof updateAttendanceSchema>,
+): Promise<ActionResult> {
+  const parsed = updateAttendanceSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContext(SHIFT_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  const { error } = await supabase
+    .from("attendance_records")
+    .update({
+      status: parsed.data.status,
+      note: parsed.data.note ?? null,
+    })
+    .eq("id", parsed.data.attendanceId)
+    .eq("tenant_id", claims.tenant_id);
+
+  if (error) {
+    return { success: false, error: "Không thể cập nhật trạng thái." };
+  }
+
+  return { success: true };
+}
+
+/* ─── Bulk Check-in ─── */
+
+const bulkCheckInSchema = z.object({
+  branchId: z.coerce.number().int().positive(),
+  employeeIds: z.array(z.coerce.number().int().positive()).min(1),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  shiftId: z.coerce.number().int().positive().optional(),
+});
+
+export async function bulkCheckIn(
+  input: z.infer<typeof bulkCheckInSchema>,
+): Promise<ActionResult> {
+  const parsed = bulkCheckInSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContext(SHIFT_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  if (
+    claims.user_role === "branch_manager" &&
+    claims.branch_id !== parsed.data.branchId
+  ) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const rows = parsed.data.employeeIds.map((employeeId) => ({
+    tenant_id: claims.tenant_id,
+    branch_id: parsed.data.branchId,
+    employee_id: employeeId,
+    shift_id: parsed.data.shiftId ?? null,
+    date: parsed.data.date,
+    check_in: new Date().toISOString(),
+    status: "present" as const,
+  }));
+
+  const { error } = await supabase
+    .from("attendance_records")
+    .upsert(rows, { onConflict: "employee_id,date,tenant_id" });
+
+  if (error) {
+    return { success: false, error: "Không thể chấm công hàng loạt." };
+  }
+
+  return { success: true, meta: { count: rows.length } };
+}

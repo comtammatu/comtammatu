@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { RefreshCw, Plus, Search } from "lucide-react";
+import { Banknote, RefreshCw, Plus, Search } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -35,6 +35,7 @@ import {
   fetchSupplierInvoices,
   recomputeInvoiceMatching,
 } from "../procurement-actions";
+import { markInvoicePaid } from "../procurement-actions";
 import type { SupplierRow } from "../suppliers/suppliers-client";
 import type { GrnListRow } from "../grn/grn-list-client";
 import { TableEmptyStateRow } from "../../components/table-empty-state-row";
@@ -48,6 +49,10 @@ export interface SupplierInvoiceRow {
   vat_amount?: number;
   vat_rate?: number;
   matching_status: string;
+  payment_status: string;
+  due_date: string | null;
+  paid_amount?: number;
+  paid_at?: string | null;
   supplier_id: number;
   grn_id: number | null;
   suppliers: { id: number; name: string } | null;
@@ -72,6 +77,26 @@ const MATCH_META: Record<string, { label: string; className: string }> = {
     className: "bg-success/10 text-success border-success/30",
   },
 };
+
+const PAYMENT_META: Record<string, { label: string; className: string }> = {
+  paid: {
+    label: "Đã TT",
+    className: "bg-success/10 text-success border-success/30",
+  },
+  partial: {
+    label: "TT một phần",
+    className: "bg-warning/10 text-warning border-warning/30",
+  },
+  unpaid: {
+    label: "Chưa TT",
+    className: "bg-destructive/10 text-destructive border-destructive/30",
+  },
+};
+
+function isOverdue(row: SupplierInvoiceRow): boolean {
+  if (!row.due_date || row.payment_status === "paid") return false;
+  return new Date(row.due_date) < new Date();
+}
 
 export function SupplierInvoicesClient({
   initial,
@@ -161,6 +186,22 @@ export function SupplierInvoicesClient({
     });
   }
 
+  function payInvoice(row: SupplierInvoiceRow) {
+    startTransition(async () => {
+      const res = await markInvoicePaid({
+        invoiceId: row.id,
+        amount: row.total_amount,
+      });
+      if (!res.success) {
+        toast.error(res.error ?? "Không thanh toán được");
+        return;
+      }
+      toast.success("Đã ghi nhận thanh toán");
+      const again = await fetchSupplierInvoices();
+      if (again.success) setRows((again.data ?? []) as SupplierInvoiceRow[]);
+    });
+  }
+
   const grnsForSupplier = grns.filter(
     (g) => !supplierId || String(g.supplier_id) === supplierId,
   );
@@ -227,13 +268,19 @@ export function SupplierInvoicesClient({
               <TableHead className="text-xs font-semibold uppercase tracking-wider">
                 Khớp
               </TableHead>
-              <TableHead className="w-10" />
+              <TableHead className="hidden md:table-cell text-xs font-semibold uppercase tracking-wider">
+                Hạn TT
+              </TableHead>
+              <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                Thanh toán
+              </TableHead>
+              <TableHead className="w-20" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 && (
               <TableEmptyStateRow
-                colSpan={9}
+                colSpan={11}
                 paddingClassName="py-16"
                 title={
                   search ? "Không tìm thấy hóa đơn nào" : "Chưa có hóa đơn"
@@ -294,19 +341,64 @@ export function SupplierInvoicesClient({
                       {meta.label}
                     </Badge>
                   </TableCell>
+                  <TableCell
+                    className={cn(
+                      "hidden md:table-cell text-sm tabular-nums",
+                      isOverdue(r)
+                        ? "text-destructive font-medium"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {r.due_date
+                      ? new Date(r.due_date).toLocaleDateString("vi-VN", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })
+                      : "—"}
+                  </TableCell>
                   <TableCell>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => recompute(r.id)}
-                      disabled={isPending}
-                      title="Tính lại khớp"
-                    >
-                      <RefreshCw className="size-3.5" />
-                      <span className="sr-only">Tính lại</span>
-                    </Button>
+                    {(() => {
+                      const pmeta = PAYMENT_META[r.payment_status] ?? {
+                        label: r.payment_status ?? "—",
+                        className: "bg-muted text-muted-foreground",
+                      };
+                      return (
+                        <Badge className={cn("text-xs", pmeta.className)}>
+                          {pmeta.label}
+                        </Badge>
+                      );
+                    })()}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {r.payment_status !== "paid" && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
+                          onClick={() => payInvoice(r)}
+                          disabled={isPending}
+                          title="Ghi nhận thanh toán"
+                        >
+                          <Banknote className="size-3.5" />
+                          <span className="sr-only">Thanh toán</span>
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        onClick={() => recompute(r.id)}
+                        disabled={isPending}
+                        title="Tính lại khớp"
+                      >
+                        <RefreshCw className="size-3.5" />
+                        <span className="sr-only">Tính lại</span>
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               );
