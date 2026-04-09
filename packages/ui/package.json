@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./components/*": "./src/components/*.tsx",
+    "./hooks/*": "./src/hooks/*.tsx",
     "./lib/*": "./src/lib/*.ts"
   },
   "scripts": {
@@ -40,6 +41,7 @@
     "react-hook-form": "^7.72.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
+    "vaul": "^1.1.2",
     "zod": "^4.3.6"
   },
   "peerDependencies": {

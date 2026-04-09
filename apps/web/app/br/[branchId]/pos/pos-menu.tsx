@@ -15,11 +15,18 @@ import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
+  Drawer,
+  DrawerContent,
+  DrawerTitle,
+} from "@comtammatu/ui/components/drawer";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import {
   Clock,
   DoorOpen,
   LogOut,
   Monitor,
   Package,
+  ShoppingCart,
   UtensilsCrossed,
   X,
 } from "lucide-react";
@@ -161,6 +168,8 @@ export function PosMenu({
   const [localTables, setLocalTables] = useState<BranchTable[]>(initialTables);
   const [sessionOrders, setSessionOrders] = useState<SessionOrder[]>([]);
   const [showOrders, setShowOrders] = useState(false);
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     setLocalTables(initialTables);
@@ -248,6 +257,11 @@ export function PosMenu({
   );
 
   const cartTotal = useMemo(() => calcCartTotal(cartItems), [cartItems]);
+
+  const cartQuantity = useMemo(
+    () => cartItems.reduce((sum, i) => sum + i.quantity, 0),
+    [cartItems],
+  );
 
   const canSubmit =
     cartItems.length > 0 &&
@@ -627,7 +641,7 @@ export function PosMenu({
                 <div className="border-b bg-background">
                   <ScrollArea className="w-full">
                     <div
-                      className="flex gap-1 px-3 py-2"
+                      className="flex gap-1 px-2 py-1.5 md:px-3 md:py-2"
                       role="tablist"
                       aria-label="Khu thực đơn"
                     >
@@ -638,7 +652,7 @@ export function PosMenu({
                           role="tab"
                           aria-selected={effectiveMenuZone === z}
                           className={cn(
-                            "touch-target flex h-11 shrink-0 cursor-pointer items-center rounded-md px-4 text-sm font-semibold transition-colors",
+                            "touch-target flex h-11 shrink-0 cursor-pointer items-center rounded-md px-3 text-sm font-semibold transition-colors md:px-4",
                             effectiveMenuZone === z
                               ? "bg-primary text-primary-foreground shadow-sm"
                               : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -707,12 +721,12 @@ export function PosMenu({
 
                 {/* Lưới món */}
                 <ScrollArea className="flex-1">
-                  <div className="grid grid-cols-2 gap-2.5 p-3 sm:grid-cols-3 lg:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-2 p-2.5 md:grid-cols-3 md:gap-2.5 md:p-3 lg:grid-cols-4">
                     {activeCategory?.menu_items.map((item) => (
                       <button
                         key={item.id}
                         type="button"
-                        className="touch-target-lg focus-ring-standard flex min-h-20 cursor-pointer flex-col rounded-xl border border-border bg-card p-3.5 text-left shadow-sm transition-all hover:border-primary/30 hover:shadow-md active:scale-[0.97]"
+                        className="touch-target-lg focus-ring-standard flex min-h-20 cursor-pointer flex-col rounded-xl border border-border bg-card p-3 text-left shadow-sm transition-all hover:border-primary/30 hover:shadow-md active:scale-[0.97] md:p-3.5"
                         onClick={() => handleItemTap(item)}
                       >
                         <span className="line-clamp-2 text-base font-semibold leading-snug">
@@ -739,8 +753,8 @@ export function PosMenu({
             )}
           </div>
 
-          {/* Right Panel — Cart / Orders */}
-          <div className="flex w-80 shrink-0 flex-col border-l bg-background lg:w-90">
+          {/* Right Panel — Cart / Orders (hidden on mobile, shown inline on md+) */}
+          <div className="hidden w-80 shrink-0 flex-col border-l bg-background md:flex lg:w-90">
             <div className="border-b px-2 py-2">
               <div
                 role="tablist"
@@ -762,7 +776,7 @@ export function PosMenu({
                   Giỏ hàng
                   {cartItems.length > 0 && (
                     <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
-                      {cartItems.reduce((sum, i) => sum + i.quantity, 0)}
+                      {cartQuantity}
                     </span>
                   )}
                 </button>
@@ -833,6 +847,134 @@ export function PosMenu({
               />
             )}
           </div>
+
+          {/* Mobile FAB — opens cart drawer (visible only <md) */}
+          {isMobile && (
+            <button
+              type="button"
+              className="touch-target-lg fixed bottom-6 right-4 z-40 flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-lg transition-transform active:scale-95 md:hidden"
+              onClick={() => setCartDrawerOpen(true)}
+              aria-label="Mở giỏ hàng"
+            >
+              <ShoppingCart className="size-5" />
+              {cartQuantity > 0 && (
+                <>
+                  <span className="tabular-nums">{cartQuantity}</span>
+                  <span aria-hidden>·</span>
+                  <span className="tabular-nums">{formatVND(cartTotal)}</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Mobile Cart Drawer (visible only <md) */}
+          {isMobile && (
+            <Drawer
+              open={cartDrawerOpen}
+              onOpenChange={setCartDrawerOpen}
+              shouldScaleBackground={false}
+            >
+              <DrawerContent className="max-h-drawer">
+                <DrawerTitle className="sr-only">Giỏ hàng</DrawerTitle>
+                <div className="max-h-drawer-inner flex flex-col overflow-hidden">
+                  <div className="border-b px-2 py-2">
+                    <div
+                      role="tablist"
+                      aria-label="POS sidebar"
+                      className="flex gap-1 rounded-lg bg-muted p-1"
+                    >
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={!showOrders}
+                        className={cn(
+                          "touch-target flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                          !showOrders
+                            ? "bg-background shadow-sm"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                        onClick={() => setShowOrders(false)}
+                      >
+                        Giỏ hàng
+                        {cartItems.length > 0 && (
+                          <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
+                            {cartQuantity}
+                          </span>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={showOrders}
+                        className={cn(
+                          "touch-target flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                          showOrders
+                            ? "bg-background shadow-sm"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                        onClick={() => {
+                          setShowOrders(true);
+                          void loadSessionOrders();
+                        }}
+                      >
+                        Đơn hàng
+                      </button>
+                    </div>
+                  </div>
+
+                  {showOrders ? (
+                    <div className="flex flex-1 flex-col overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">Đơn hàng</span>
+                          {sessionOrders.length > 0 && (
+                            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                              {sessionOrders.length}
+                            </span>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => void loadSessionOrders()}
+                        >
+                          <DoorOpen className="mr-1 size-3" />
+                          Tải lại
+                        </Button>
+                      </div>
+                      <OrderHistory
+                        orders={sessionOrders}
+                        onViewBill={(id) => setBillOrderId(id)}
+                        onViewDetail={(id) => setOrderDetailId(id)}
+                      />
+                    </div>
+                  ) : (
+                    <CartSidebar
+                      items={cartItems}
+                      total={cartTotal}
+                      orderType={orderType}
+                      selectedTableId={selectedTableId}
+                      tables={localTables}
+                      canSubmit={canSubmit}
+                      isSubmitting={isPending}
+                      onUpdateQuantity={updateQuantity}
+                      onRemoveItem={removeItem}
+                      onClearCart={clearCart}
+                      onOrderTypeChange={handleOrderTypeChange}
+                      onRequestChangeTable={handleRequestChangeTable}
+                      onSubmitOrder={() => {
+                        handleSubmitOrder();
+                        setCartDrawerOpen(false);
+                      }}
+                      orderNote={orderNote}
+                      onOrderNoteChange={setOrderNote}
+                    />
+                  )}
+                </div>
+              </DrawerContent>
+            </Drawer>
+          )}
         </>
       )}
 

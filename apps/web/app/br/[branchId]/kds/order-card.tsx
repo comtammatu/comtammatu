@@ -217,14 +217,14 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
       {/* ── Header ── */}
       <div
         className={cn(
-          "flex items-start justify-between gap-2 border-b border-border/40 px-4 py-3",
+          "flex items-start justify-between gap-2 border-b border-border/40 px-3 py-2.5 md:px-4 md:py-3",
           ageStyle.bg,
         )}
       >
         {/* Left: order number + type + table */}
         <div className="flex min-w-0 flex-col gap-1">
           {/* Order number — must be readable from 2-3m */}
-          <span className="text-2xl font-black leading-none tracking-tight tabular-nums">
+          <span className="text-xl font-black leading-none tracking-tight tabular-nums md:text-2xl">
             {order.orderNumber}
           </span>
           <div className="flex flex-wrap items-center gap-1.5">
@@ -287,7 +287,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
             <div
               key={item.id}
               className={cn(
-                "relative flex items-center gap-3 px-4 py-3",
+                "relative flex items-center gap-2 px-3 py-2.5 md:gap-3 md:px-4 md:py-3",
                 status === "ready" && "opacity-50",
                 isCancelled && "opacity-100",
               )}
@@ -298,10 +298,10 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-2">
                   {/* Quantity — gold accent, very prominent */}
-                  <span className="text-xl font-black leading-tight text-warning tabular-nums">
+                  <span className="text-lg font-black leading-tight text-warning tabular-nums md:text-xl">
                     {item.quantity}×
                   </span>
-                  <span className="text-xl font-bold leading-tight">
+                  <span className="text-lg font-bold leading-tight md:text-xl">
                     {item.item_name}
                   </span>
                 </div>
@@ -342,9 +342,9 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
               <div className="flex shrink-0 gap-1">
                 {ticket && canRecall && (
                   <ActionIconButton
-                    icon={<RotateCcw className="size-5" />}
+                    icon={<RotateCcw className="size-4 md:size-5" />}
                     label="Thu hồi món"
-                    className="size-14 min-h-14 min-w-14 rounded-xl border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="size-11 min-h-11 min-w-11 rounded-xl border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:size-14 md:min-h-14 md:min-w-14"
                     onClick={() => void onRecall(ticket.id)}
                   />
                 )}
@@ -352,14 +352,14 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                   <ActionIconButton
                     icon={
                       status === "preparing" ? (
-                        <Check className="size-6" />
+                        <Check className="size-5 md:size-6" />
                       ) : (
-                        <ChevronRight className="size-6" />
+                        <ChevronRight className="size-5 md:size-6" />
                       )
                     }
                     label="Chuyển trạng thái món"
                     className={cn(
-                      "size-14 min-h-14 min-w-14 rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                      "size-11 min-h-11 min-w-11 rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:size-14 md:min-h-14 md:min-w-14",
                       status === "preparing"
                         ? "border-success/30 bg-success/20 text-success hover:bg-success/30"
                         : "border-warning/30 bg-warning/20 text-warning hover:bg-warning/30",
@@ -385,7 +385,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
             return (
               <div
                 key={ticket.id}
-                className="flex items-center gap-3 px-4 py-3"
+                className="flex items-center gap-2 px-3 py-2.5 md:gap-3 md:px-4 md:py-3"
               >
                 <div className="min-w-0 flex-1">
                   <span className="text-base text-muted-foreground">
@@ -403,17 +403,17 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                 <div className="flex shrink-0 gap-1">
                   {canRecall && (
                     <ActionIconButton
-                      icon={<RotateCcw className="size-5" />}
+                      icon={<RotateCcw className="size-4 md:size-5" />}
                       label="Thu hồi món"
-                      className="size-14 min-h-14 min-w-14 rounded-xl border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      className="size-11 min-h-11 min-w-11 rounded-xl border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:size-14 md:min-h-14 md:min-w-14"
                       onClick={() => void onRecall(ticket.id)}
                     />
                   )}
                   {canBump && (
                     <ActionIconButton
-                      icon={<ChevronRight className="size-6" />}
+                      icon={<ChevronRight className="size-5 md:size-6" />}
                       label="Chuyển trạng thái món"
-                      className="size-14 min-h-14 min-w-14 rounded-xl border-warning/30 bg-warning/20 text-warning hover:bg-warning/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      className="size-11 min-h-11 min-w-11 rounded-xl border-warning/30 bg-warning/20 text-warning hover:bg-warning/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:size-14 md:min-h-14 md:min-w-14"
                       onClick={() => void onBump(ticket.id)}
                     />
                   )}
@@ -425,11 +425,11 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
 
       {/* ── Bump All footer ── */}
       {bumpableTickets.length > 0 && (
-        <div className="border-t border-border/50 p-3">
+        <div className="border-t border-border/50 p-2.5 md:p-3">
           <Button
             variant="default"
             className={cn(
-              "min-h-14 w-full rounded-xl text-base font-bold",
+              "min-h-12 w-full rounded-xl text-sm font-bold md:min-h-14 md:text-base",
               // Gold accent for "ready to serve" state (all preparing → ready)
               bumpableTickets.every((t) => t.status === "preparing")
                 ? "bg-success text-white hover:opacity-90"

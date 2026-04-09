@@ -430,7 +430,7 @@ export function KdsBoard({
       >
         {/* Back button */}
         <div className="flex shrink-0 items-center border-r border-border/40 px-1">
-          <EmployeePortalBackControl className="min-h-14 justify-center rounded-none" />
+          <EmployeePortalBackControl className="min-h-10 justify-center rounded-none md:min-h-14" />
         </div>
 
         {/* Station tabs — horizontally scrollable, 56px tall */}
@@ -440,7 +440,7 @@ export function KdsBoard({
             <button
               type="button"
               className={cn(
-                "flex min-h-14 shrink-0 cursor-pointer items-center gap-2 rounded-xl px-5 text-base font-bold transition-colors duration-150",
+                "flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-xl px-3 text-sm font-bold transition-colors duration-150 md:min-h-14 md:px-5 md:text-base",
                 activeStationId === null
                   ? "bg-accent text-accent-foreground shadow-sm"
                   : "bg-secondary text-secondary-foreground hover:bg-muted",
@@ -469,7 +469,7 @@ export function KdsBoard({
                   key={station.id}
                   type="button"
                   className={cn(
-                    "flex min-h-14 shrink-0 cursor-pointer items-center gap-2 rounded-xl px-5 text-base font-bold transition-colors duration-150",
+                    "flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-xl px-3 text-sm font-bold transition-colors duration-150 md:min-h-14 md:px-5 md:text-base",
                     isActive
                       ? "bg-accent text-accent-foreground shadow-sm"
                       : "bg-secondary text-secondary-foreground hover:bg-muted",
@@ -497,7 +497,7 @@ export function KdsBoard({
       </div>
 
       {/* ── Filter bar ── */}
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border/30 bg-secondary/70 px-3 py-2">
+      <div className="flex shrink-0 flex-nowrap items-center gap-2 overflow-x-auto border-b border-border/30 bg-secondary/70 px-2 py-1.5 md:flex-wrap md:px-3 md:py-2">
         <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
           <Filter className="size-4 shrink-0" aria-hidden />
           <span className="hidden text-sm font-medium sm:inline">Lọc</span>
@@ -510,7 +510,7 @@ export function KdsBoard({
           }}
         >
           <SelectTrigger
-            className="h-11 min-h-11 w-[min(100%,13rem)] min-w-40 text-sm"
+            className="h-10 min-h-10 w-auto min-w-32 shrink-0 text-sm md:h-11 md:min-h-11 md:min-w-40"
             aria-label="Lọc theo trạng thái món"
           >
             <SelectValue placeholder="Trạng thái" />
@@ -531,7 +531,7 @@ export function KdsBoard({
           }}
         >
           <SelectTrigger
-            className="h-11 min-h-11 w-[min(100%,11rem)] min-w-36 text-sm"
+            className="h-10 min-h-10 w-auto min-w-28 shrink-0 text-sm md:h-11 md:min-h-11 md:min-w-36"
             aria-label="Lọc theo loại đơn"
           >
             <SelectValue placeholder="Loại đơn" />
@@ -573,7 +573,7 @@ export function KdsBoard({
             />
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-2.5 p-2.5 md:grid-cols-2 md:gap-3 md:p-3 lg:grid-cols-3 xl:grid-cols-4">
             {displayOrders.map((order) => (
               <OrderCard
                 key={order.orderId}

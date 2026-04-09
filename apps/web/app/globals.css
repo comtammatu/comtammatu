@@ -253,4 +253,13 @@
   .h-sheet-customizer {
     height: 70dvh;
   }
+
+  /* POS cart drawer max height (mobile) */
+  .max-h-drawer {
+    max-height: 85dvh;
+  }
+
+  .max-h-drawer-inner {
+    max-height: calc(85dvh - 2rem);
+  }
 }
