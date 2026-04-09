@@ -74,18 +74,18 @@ export default async function ReceivingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <PageHeader
-          title="Nhập kho"
-          description="Quy trình mua hàng: Đặt hàng → Nhận hàng → Đối soát hóa đơn"
-        />
-        <Button asChild size="sm">
-          <Link href="/admin/inventory/purchase-orders/new">
-            <Plus className="mr-1.5 size-4" />
-            Tạo PO
-          </Link>
-        </Button>
-      </div>
+      <PageHeader
+        title="Nhập kho"
+        description="Quy trình mua hàng: Đặt hàng → Nhận hàng → Đối soát hóa đơn"
+        actions={
+          <Button asChild size="sm">
+            <Link href="/admin/inventory/purchase-orders/new">
+              <Plus className="mr-1.5 size-4" />
+              Tạo PO
+            </Link>
+          </Button>
+        }
+      />
 
       {/* Flow Stepper */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
