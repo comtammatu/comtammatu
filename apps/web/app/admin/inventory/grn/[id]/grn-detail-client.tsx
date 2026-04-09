@@ -308,9 +308,7 @@ function GRNHeaderCard({
           <div className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
             <div className="flex items-center gap-2 text-muted-foreground">
               <CalendarDays className="size-4 shrink-0" />
-              <span>
-                {new Date(grn.received_date).toLocaleString("vi-VN")}
-              </span>
+              <span>{new Date(grn.received_date).toLocaleString("vi-VN")}</span>
             </div>
             {grn.branches?.name && (
               <div className="flex items-center gap-2 text-muted-foreground">
@@ -431,8 +429,8 @@ function GRNLineItemsTable({
                       </span>
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
                         <span className="text-xs text-muted-foreground">
-                          {l.received_quantity.toLocaleString("vi-VN")} {l.unit} ×{" "}
-                          {l.unit_cost.toLocaleString("vi-VN")} ₫
+                          {l.received_quantity.toLocaleString("vi-VN")} {l.unit}{" "}
+                          × {l.unit_cost.toLocaleString("vi-VN")} ₫
                         </span>
                         <Badge
                           className={cn(
@@ -453,7 +451,9 @@ function GRNLineItemsTable({
                     </span>
                   </div>
                   {/* Batch, expiry, temperature on mobile */}
-                  {(l.batch_number || l.expiry_date || l.receiving_temperature != null) && (
+                  {(l.batch_number ||
+                    l.expiry_date ||
+                    l.receiving_temperature != null) && (
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                       {l.batch_number && <span>Lô: {l.batch_number}</span>}
                       {l.expiry_date && (
@@ -554,9 +554,7 @@ function GRNLineItemsTable({
               <TableCell className="text-right font-mono tabular-nums">
                 {l.received_quantity.toLocaleString("vi-VN")}
               </TableCell>
-              <TableCell className="text-muted-foreground">
-                {l.unit}
-              </TableCell>
+              <TableCell className="text-muted-foreground">{l.unit}</TableCell>
               <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
                 {l.unit_cost.toLocaleString("vi-VN")} ₫
               </TableCell>
@@ -833,11 +831,7 @@ function AddGRNLineForm({
         </div>
 
         <div className="mt-4 flex items-center gap-3">
-          <Button
-            type="submit"
-            size="sm"
-            disabled={isPending || !ingredientId}
-          >
+          <Button type="submit" size="sm" disabled={isPending || !ingredientId}>
             {isPending ? "Đang lưu…" : "Lưu dòng"}
           </Button>
           <p className="text-xs text-muted-foreground">

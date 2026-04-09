@@ -20,7 +20,7 @@ export default async function InventoryLayout({
     : false;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <InventorySubNav showProcurement={showProcurement} />
       <div>{children}</div>
     </div>

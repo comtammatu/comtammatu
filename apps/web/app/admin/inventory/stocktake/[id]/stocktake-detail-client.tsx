@@ -347,8 +347,8 @@ export function StocktakeDetailClient({
           <AlertDialogHeader>
             <AlertDialogTitle>Hoàn tất kiểm kê?</AlertDialogTitle>
             <AlertDialogDescription>
-              Hành động này sẽ tính chênh lệch và cập nhật tồn kho. Bạn
-              không thể hoàn tác sau khi hoàn tất.
+              Hành động này sẽ tính chênh lệch và cập nhật tồn kho. Bạn không
+              thể hoàn tác sau khi hoàn tất.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -611,7 +611,8 @@ function ResultsPhase({
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>
-                    HT: {line.system_quantity} · Đếm: {line.counted_quantity ?? "—"}
+                    HT: {line.system_quantity} · Đếm:{" "}
+                    {line.counted_quantity ?? "—"}
                   </span>
                   <span>{line.variance_reason ?? ""}</span>
                 </div>

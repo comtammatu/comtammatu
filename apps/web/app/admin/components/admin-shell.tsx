@@ -227,7 +227,12 @@ function BranchOperationsNav({
   ];
 
   return (
-    <div className={cn("mt-2 border-t border-sidebar-border", collapsed ? "pt-3" : "pt-4")}>
+    <div
+      className={cn(
+        "mt-2 border-t border-sidebar-border",
+        collapsed ? "pt-3" : "pt-4",
+      )}
+    >
       {!collapsed && (
         <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/40">
           Vận hành ca
@@ -494,7 +499,12 @@ interface AdminShellProps {
   branchId?: number | null;
 }
 
-export function AdminShell({ children, user, role, branchId }: AdminShellProps) {
+export function AdminShell({
+  children,
+  user,
+  role,
+  branchId,
+}: AdminShellProps) {
   const pathname = usePathname();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

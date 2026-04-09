@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Be_Vietnam_Pro, Geist_Mono } from "next/font/google";
 import { Toaster } from "@comtammatu/ui/components/sonner";
 import "./globals.css";
 
-const geist = Geist({
-  subsets: ["latin", "latin-ext"],
-  variable: "--font-geist",
+const beVietnamPro = Be_Vietnam_Pro({
+  subsets: ["latin", "latin-ext", "vietnamese"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-be-vietnam-pro",
   display: "swap",
 });
 
@@ -39,7 +40,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="vi"
-      className={`${geist.variable} ${geistMono.variable}`}
+      className={`${beVietnamPro.variable} ${geistMono.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-screen font-sans antialiased">

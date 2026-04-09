@@ -410,18 +410,18 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 ## Version History
 
-| Version | Date       | What                                                  |
-| ------- | ---------- | ----------------------------------------------------- |
-| v0.1.0  | 2026-04-01 | Foundation (auth, proxy, RLS, monorepo)               |
-| v0.1.1  | 2026-04-02 | Security hardening (RLS, DML lockdown)                |
-| M0+M1   | 2026-04-03 | Admin Shell + Menu shipped (ex Sprint 1)              |
-| M2      | 2026-04-06 | POS shipped — order, cart, bill, cash                 |
-| M3      | 2026-04-06 | KDS shipped — station config, realtime, bump/complete |
-| M4      | 2026-04-06 | Payment — cash, VietQR, Momo, refunds                 |
-| M5      | 2026-04-06 | Stock — ingredients, recipes, stock levels            |
-| M6      | 2026-04-06 | Finance — HĐĐT, revenue dashboard, VAS                |
-| M7      | 2026-04-06 | HR/Payroll — employees, shifts, attendance, payroll   |
-| v1.0.0  | 2026-04-07 | All modules shipped, QA verified, deployed to Vercel  |
-| UX-A    | 2026-04-09 | Inventory UX redesign Session A — PO + GRN + Invoice  |
+| Version | Date       | What                                                             |
+| ------- | ---------- | ---------------------------------------------------------------- |
+| v0.1.0  | 2026-04-01 | Foundation (auth, proxy, RLS, monorepo)                          |
+| v0.1.1  | 2026-04-02 | Security hardening (RLS, DML lockdown)                           |
+| M0+M1   | 2026-04-03 | Admin Shell + Menu shipped (ex Sprint 1)                         |
+| M2      | 2026-04-06 | POS shipped — order, cart, bill, cash                            |
+| M3      | 2026-04-06 | KDS shipped — station config, realtime, bump/complete            |
+| M4      | 2026-04-06 | Payment — cash, VietQR, Momo, refunds                            |
+| M5      | 2026-04-06 | Stock — ingredients, recipes, stock levels                       |
+| M6      | 2026-04-06 | Finance — HĐĐT, revenue dashboard, VAS                           |
+| M7      | 2026-04-06 | HR/Payroll — employees, shifts, attendance, payroll              |
+| v1.0.0  | 2026-04-07 | All modules shipped, QA verified, deployed to Vercel             |
+| UX-A    | 2026-04-09 | Inventory UX redesign Session A — PO + GRN + Invoice             |
 | UX-B    | 2026-04-09 | Inventory UX redesign Session B — Transfers + Stocktake + Issues |
-| UX-C    | 2026-04-10 | Inventory UX redesign Session C — Catalog + Support pages |
+| UX-C    | 2026-04-10 | Inventory UX redesign Session C — Catalog + Support pages        |

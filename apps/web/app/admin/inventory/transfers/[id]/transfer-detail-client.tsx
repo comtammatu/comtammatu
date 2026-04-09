@@ -108,8 +108,7 @@ export function TransferDetailClient({
 
   const fromName =
     branchNames[tr.from_branch_id] ?? `#${String(tr.from_branch_id)}`;
-  const toName =
-    branchNames[tr.to_branch_id] ?? `#${String(tr.to_branch_id)}`;
+  const toName = branchNames[tr.to_branch_id] ?? `#${String(tr.to_branch_id)}`;
 
   async function reload() {
     const res = await fetchStockTransferDetail(transferId);
@@ -453,8 +452,8 @@ export function TransferDetailClient({
             <AlertDialogTitle>Xác nhận xuất kho?</AlertDialogTitle>
             <AlertDialogDescription>
               Xuất <strong>{lines.length} nguyên liệu</strong> từ kho{" "}
-              <strong>{fromName}</strong> đến <strong>{toName}</strong>.
-              Sau khi xác nhận, tồn kho gửi sẽ bị trừ.
+              <strong>{fromName}</strong> đến <strong>{toName}</strong>. Sau khi
+              xác nhận, tồn kho gửi sẽ bị trừ.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

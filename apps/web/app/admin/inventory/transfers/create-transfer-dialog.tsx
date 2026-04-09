@@ -179,7 +179,8 @@ export function CreateTransferDialog({
         toast.error(res.error ?? "Không tạo được phiếu");
         return;
       }
-      const msg = slipKind === "inbound" ? "Đã tạo phiếu nhập" : "Đã tạo phiếu xuất";
+      const msg =
+        slipKind === "inbound" ? "Đã tạo phiếu nhập" : "Đã tạo phiếu xuất";
       toast.success(msg);
       onOpenChange(false);
       resetForm();
@@ -204,37 +205,85 @@ export function CreateTransferDialog({
 
     if (slipKind === "inbound") {
       if (isUserOperational && userBranchId != null) {
-        doCreate("hq_to_branch", { toBranchId: userBranchId }, linesPayload, notes, vehicleInfo);
+        doCreate(
+          "hq_to_branch",
+          { toBranchId: userBranchId },
+          linesPayload,
+          notes,
+          vehicleInfo,
+        );
         return;
       }
       if (isUserHq) {
         const f = Number(inboundFromBranchId);
-        if (!f) { toast.error("Chọn chi nhánh gửi"); return; }
-        doCreate("branch_to_hq", { fromBranchId: f }, linesPayload, notes, vehicleInfo);
+        if (!f) {
+          toast.error("Chọn chi nhánh gửi");
+          return;
+        }
+        doCreate(
+          "branch_to_hq",
+          { fromBranchId: f },
+          linesPayload,
+          notes,
+          vehicleInfo,
+        );
         return;
       }
       const t = Number(inboundToBranchId);
-      if (!t) { toast.error("Chọn chi nhánh nhận"); return; }
-      doCreate("hq_to_branch", { toBranchId: t }, linesPayload, notes, vehicleInfo);
+      if (!t) {
+        toast.error("Chọn chi nhánh nhận");
+        return;
+      }
+      doCreate(
+        "hq_to_branch",
+        { toBranchId: t },
+        linesPayload,
+        notes,
+        vehicleInfo,
+      );
       return;
     }
 
     /* outbound */
     if (isUserOperational && userBranchId != null) {
       if (outboundDest === "hq") {
-        doCreate("branch_to_hq", { fromBranchId: userBranchId }, linesPayload, notes, vehicleInfo);
+        doCreate(
+          "branch_to_hq",
+          { fromBranchId: userBranchId },
+          linesPayload,
+          notes,
+          vehicleInfo,
+        );
         return;
       }
       const other = Number(outboundOtherBranchId);
-      if (!other || other === userBranchId) { toast.error("Chọn chi nhánh nhận"); return; }
-      doCreate("branch_to_branch", { fromBranchId: userBranchId, toBranchId: other }, linesPayload, notes, vehicleInfo);
+      if (!other || other === userBranchId) {
+        toast.error("Chọn chi nhánh nhận");
+        return;
+      }
+      doCreate(
+        "branch_to_branch",
+        { fromBranchId: userBranchId, toBranchId: other },
+        linesPayload,
+        notes,
+        vehicleInfo,
+      );
       return;
     }
 
     /* HQ / tenant-wide */
     const to = Number(outboundToBranchId);
-    if (!to) { toast.error("Chọn chi nhánh nhận"); return; }
-    doCreate("hq_to_branch", { toBranchId: to }, linesPayload, notes, vehicleInfo);
+    if (!to) {
+      toast.error("Chọn chi nhánh nhận");
+      return;
+    }
+    doCreate(
+      "hq_to_branch",
+      { toBranchId: to },
+      linesPayload,
+      notes,
+      vehicleInfo,
+    );
   }
 
   const submitDisabled =
@@ -285,11 +334,18 @@ export function CreateTransferDialog({
               {!isUserOperational && !isUserHq && (
                 <div className="space-y-1.5">
                   <Label>Chi nhánh nhận *</Label>
-                  <Select value={inboundToBranchId} onValueChange={setInboundToBranchId}>
-                    <SelectTrigger><SelectValue placeholder="Chọn chi nhánh" /></SelectTrigger>
+                  <Select
+                    value={inboundToBranchId}
+                    onValueChange={setInboundToBranchId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn chi nhánh" />
+                    </SelectTrigger>
                     <SelectContent>
                       {operational.map((b) => (
-                        <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                        <SelectItem key={b.id} value={String(b.id)}>
+                          {b.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -298,11 +354,18 @@ export function CreateTransferDialog({
               {isUserHq && (
                 <div className="space-y-1.5">
                   <Label>Chi nhánh gửi *</Label>
-                  <Select value={inboundFromBranchId} onValueChange={setInboundFromBranchId}>
-                    <SelectTrigger><SelectValue placeholder="Chọn chi nhánh gửi" /></SelectTrigger>
+                  <Select
+                    value={inboundFromBranchId}
+                    onValueChange={setInboundFromBranchId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn chi nhánh gửi" />
+                    </SelectTrigger>
                     <SelectContent>
                       {operational.map((b) => (
-                        <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                        <SelectItem key={b.id} value={String(b.id)}>
+                          {b.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -319,12 +382,21 @@ export function CreateTransferDialog({
                 <>
                   <div className="space-y-1.5">
                     <Label>Kho nhận *</Label>
-                    <Select value={outboundDest} onValueChange={(v) => setOutboundDest(v as OutboundDest)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    <Select
+                      value={outboundDest}
+                      onValueChange={(v) => setOutboundDest(v as OutboundDest)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="hq">Trụ sở</SelectItem>
-                        <SelectItem value="other_branch" disabled={!canBranchToBranch}>
-                          Chi nhánh khác{!canBranchToBranch ? " (cần ≥ 2 CN)" : ""}
+                        <SelectItem
+                          value="other_branch"
+                          disabled={!canBranchToBranch}
+                        >
+                          Chi nhánh khác
+                          {!canBranchToBranch ? " (cần ≥ 2 CN)" : ""}
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -332,13 +404,20 @@ export function CreateTransferDialog({
                   {outboundDest === "other_branch" && (
                     <div className="space-y-1.5">
                       <Label>Chi nhánh nhận *</Label>
-                      <Select value={outboundOtherBranchId} onValueChange={setOutboundOtherBranchId}>
-                        <SelectTrigger><SelectValue placeholder="Chọn chi nhánh" /></SelectTrigger>
+                      <Select
+                        value={outboundOtherBranchId}
+                        onValueChange={setOutboundOtherBranchId}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn chi nhánh" />
+                        </SelectTrigger>
                         <SelectContent>
                           {operational
                             .filter((b) => b.id !== userBranchId)
                             .map((b) => (
-                              <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                              <SelectItem key={b.id} value={String(b.id)}>
+                                {b.name}
+                              </SelectItem>
                             ))}
                         </SelectContent>
                       </Select>
@@ -349,11 +428,18 @@ export function CreateTransferDialog({
               {!isUserOperational && (
                 <div className="space-y-1.5">
                   <Label>Chi nhánh nhận *</Label>
-                  <Select value={outboundToBranchId} onValueChange={setOutboundToBranchId}>
-                    <SelectTrigger><SelectValue placeholder="Chọn chi nhánh nhận" /></SelectTrigger>
+                  <Select
+                    value={outboundToBranchId}
+                    onValueChange={setOutboundToBranchId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn chi nhánh nhận" />
+                    </SelectTrigger>
                     <SelectContent>
                       {operational.map((b) => (
-                        <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                        <SelectItem key={b.id} value={String(b.id)}>
+                          {b.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -367,7 +453,10 @@ export function CreateTransferDialog({
             <Label>Nguyên liệu &amp; số lượng *</Label>
             <div className="flex items-end gap-2">
               <div className="min-w-0 flex-1">
-                <Select value={pickerIngredientId} onValueChange={setPickerIngredientId}>
+                <Select
+                  value={pickerIngredientId}
+                  onValueChange={setPickerIngredientId}
+                >
                   <SelectTrigger className="h-9">
                     <SelectValue placeholder="Chọn nguyên liệu…" />
                   </SelectTrigger>
@@ -414,13 +503,17 @@ export function CreateTransferDialog({
                       className="h-8 w-20"
                       placeholder="SL"
                       value={l.quantity}
-                      onChange={(e) => updateLine(l.key, { quantity: e.target.value })}
+                      onChange={(e) =>
+                        updateLine(l.key, { quantity: e.target.value })
+                      }
                       required
                     />
                     <Input
                       className="h-8 w-16"
                       value={l.unit}
-                      onChange={(e) => updateLine(l.key, { unit: e.target.value })}
+                      onChange={(e) =>
+                        updateLine(l.key, { unit: e.target.value })
+                      }
                       required
                     />
                     <Button
@@ -456,7 +549,11 @@ export function CreateTransferDialog({
           )}
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Hủy
             </Button>
             <Button type="submit" disabled={submitDisabled}>

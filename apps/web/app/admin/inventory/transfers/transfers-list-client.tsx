@@ -172,7 +172,9 @@ export function TransfersListClient({
               <Badge
                 className={cn(
                   "text-xs cursor-pointer",
-                  isActive ? meta.className : "bg-muted/60 text-muted-foreground",
+                  isActive
+                    ? meta.className
+                    : "bg-muted/60 text-muted-foreground",
                 )}
               >
                 {meta.label} {count}
@@ -330,7 +332,9 @@ export function TransfersListClient({
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5 text-sm">
-                        <span className="font-medium">{r.from_branch_name}</span>
+                        <span className="font-medium">
+                          {r.from_branch_name}
+                        </span>
                         <MoveRight className="size-3.5 shrink-0 text-muted-foreground" />
                         <span className="font-medium">{r.to_branch_name}</span>
                       </div>
