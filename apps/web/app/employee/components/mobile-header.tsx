@@ -3,14 +3,14 @@ import { extractClaims } from "@comtammatu/shared/auth";
 import { redirect } from "next/navigation";
 
 const ROLE_LABELS: Record<string, string> = {
-  owner: "Chu\u0309 he\u0323\u0302 tho\u0301\u0302ng",
-  super_manager: "Qua\u0309n ly\u0301 to\u0309\u0302ng",
-  area_manager: "Qua\u0309n ly\u0301 khu vu\u0323\u0302c",
-  branch_manager: "Qua\u0309n ly\u0301 chi nha\u0301nh",
-  cashier: "Thu nga\u0302n",
-  waiter: "Phu\u0323c vu\u0323",
-  chef: "Be\u0301\u0302p",
-  office: "Va\u0306n pho\u0300ng",
+  owner: "Chủ hệ thống",
+  super_manager: "Quản lý tổng",
+  area_manager: "Quản lý khu vực",
+  branch_manager: "Quản lý chi nhánh",
+  cashier: "Thu ngân",
+  waiter: "Phục vụ",
+  chef: "Bếp",
+  office: "Văn phòng",
 };
 
 export async function MobileHeader() {

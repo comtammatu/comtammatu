@@ -6,22 +6,22 @@ import { CalendarDays, Clock, Home, User } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 
 const NAV_ITEMS = [
-  { href: "/employee", label: "Trang chu\u0309", icon: Home, exact: true },
+  { href: "/employee", label: "Trang chủ", icon: Home, exact: true },
   {
     href: "/employee/schedule",
-    label: "Li\u0323ch ca",
+    label: "Lịch ca",
     icon: CalendarDays,
     exact: false,
   },
   {
     href: "/employee/clock",
-    label: "Cha\u0301\u0301m co\u0302ng",
+    label: "Chấm công",
     icon: Clock,
     exact: false,
   },
   {
     href: "/employee/profile",
-    label: "Ca\u0301 nha\u0302n",
+    label: "Cá nhân",
     icon: User,
     exact: false,
   },
@@ -44,7 +44,7 @@ export function BottomNav() {
       style={{
         paddingBottom: "max(0.5rem, env(safe-area-inset-bottom, 0.5rem))",
       }}
-      aria-label="Di chuy\u1ec3n chi\u0301nh"
+      aria-label="Điều hướng chính"
     >
       <div className="mx-auto flex max-w-lg items-stretch">
         {NAV_ITEMS.map((item) => {
@@ -57,7 +57,7 @@ export function BottomNav() {
               className={cn(
                 "touch-target flex flex-1 flex-col items-center justify-center gap-0.5 pt-2 text-xs transition-colors",
                 active
-                  ? "text-primary font-medium"
+                  ? "font-medium text-primary"
                   : "text-muted-foreground hover:text-foreground",
               )}
               aria-current={active ? "page" : undefined}
