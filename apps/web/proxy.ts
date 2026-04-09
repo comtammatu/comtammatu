@@ -7,9 +7,10 @@ import {
 } from "@comtammatu/shared/auth";
 import type { ModuleKey } from "@comtammatu/shared/auth";
 
-const PUBLIC_PATHS = ["/api/health", "/api/webhooks"];
+const PUBLIC_PATHS = ["/api/health", "/api/webhooks", "/sw.js"];
 
 function isPublic(pathname: string) {
+  if (pathname.startsWith("/swe-worker-")) return true;
   return PUBLIC_PATHS.some(
     (p) => pathname === p || pathname.startsWith(p + "/"),
   );

@@ -21,12 +21,17 @@ export const metadata: Metadata = {
   title: "Cơm Tấm Má Tư",
   description: "Hệ thống quản lý nhà hàng Cơm Tấm Má Tư",
   manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "CTMT",
+  },
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: light)", color: "#fafaf8" },
+    { media: "(prefers-color-scheme: dark)", color: "#fafaf8" },
   ],
 };
 

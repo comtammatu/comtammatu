@@ -8,21 +8,8 @@ import {
   LogOut,
   Monitor,
 } from "lucide-react";
-import { Button } from "@comtammatu/ui/components/button";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims, canAccess } from "@comtammatu/shared/auth";
-import { PageContainer, PageHeader } from "@/components/foundation/ui-patterns";
-
-const ROLE_LABELS: Record<string, string> = {
-  owner: "Chủ hệ thống",
-  super_manager: "Quản lý tổng",
-  area_manager: "Quản lý khu vực",
-  branch_manager: "Quản lý chi nhánh",
-  cashier: "Thu ngân",
-  waiter: "Phục vụ",
-  chef: "Bếp",
-  office: "Văn phòng",
-};
 
 export default async function EmployeePage() {
   const supabase = await createClient();
@@ -35,22 +22,18 @@ export default async function EmployeePage() {
   const claims = extractClaims(session.user.app_metadata);
   if (!claims) redirect("/login");
 
-  const roleLabel = ROLE_LABELS[claims.user_role] ?? claims.user_role;
-
   const canPos = canAccess(claims.user_role, "pos");
   const canKds = canAccess(claims.user_role, "kds");
   const branchId = claims.branch_id;
 
-  let branchName: string | null = null;
   let branchIsHq = false;
   if (branchId) {
     const { data } = await supabase
       .from("branches")
-      .select("name, is_headquarters")
+      .select("is_headquarters")
       .eq("id", branchId)
       .eq("tenant_id", claims.tenant_id)
       .maybeSingle();
-    branchName = data?.name ?? null;
     branchIsHq = data?.is_headquarters === true;
   }
 
@@ -60,40 +43,11 @@ export default async function EmployeePage() {
   const kdsDisabled = !canKds || !branchId || branchIsHq;
 
   return (
-    <PageContainer className="mx-auto flex max-w-md flex-col gap-6 px-4 py-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="w-full">
-          <PageHeader title="Xin chào!" description="Cổng nhân viên" />
-          <div className="mt-2 flex flex-col gap-1">
-            <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">{roleLabel}</span>
-            </p>
-            {branchId && (
-              <p className="text-sm text-muted-foreground">
-                {branchName ?? `Chi nhánh #${String(branchId)}`}
-                {branchIsHq ? (
-                  <span className="ml-1 text-xs text-muted-foreground">
-                    (Trụ sở)
-                  </span>
-                ) : null}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <form action="/api/auth/signout" method="post">
-          <Button variant="outline" size="sm" className="touch-target">
-            <LogOut className="mr-1.5 size-4" />
-            Đăng xuất
-          </Button>
-        </form>
-      </div>
-
+    <div className="flex flex-col gap-6">
       {/* Quick actions */}
       <div>
         <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Truy cập nhanh
+          Truy c\u1EADp nhanh
         </p>
         <div className="flex flex-col gap-3">
           {posDisabled ? (
@@ -105,9 +59,9 @@ export default async function EmployeePage() {
                 <Monitor className="size-5 text-primary" />
               </div>
               <div className="text-left">
-                <p className="text-sm font-semibold">Vào POS</p>
+                <p className="text-sm font-semibold">V\u00E0o POS</p>
                 <p className="text-xs text-muted-foreground">
-                  Màn hình bán hàng
+                  M\u00E0n h\u00ECnh b\u00E1n h\u00E0ng
                 </p>
               </div>
             </button>
@@ -120,9 +74,9 @@ export default async function EmployeePage() {
                 <Monitor className="size-5 text-primary" />
               </div>
               <div className="text-left">
-                <p className="text-sm font-semibold">Vào POS</p>
+                <p className="text-sm font-semibold">V\u00E0o POS</p>
                 <p className="text-xs text-muted-foreground">
-                  Màn hình bán hàng
+                  M\u00E0n h\u00ECnh b\u00E1n h\u00E0ng
                 </p>
               </div>
             </Link>
@@ -137,8 +91,10 @@ export default async function EmployeePage() {
                 <ChefHat className="size-5 text-primary" />
               </div>
               <div className="text-left">
-                <p className="text-sm font-semibold">Vào KDS</p>
-                <p className="text-xs text-muted-foreground">Màn hình bếp</p>
+                <p className="text-sm font-semibold">V\u00E0o KDS</p>
+                <p className="text-xs text-muted-foreground">
+                  M\u00E0n h\u00ECnh b\u1EBFp
+                </p>
               </div>
             </button>
           ) : (
@@ -150,8 +106,10 @@ export default async function EmployeePage() {
                 <ChefHat className="size-5 text-primary" />
               </div>
               <div className="text-left">
-                <p className="text-sm font-semibold">Vào KDS</p>
-                <p className="text-xs text-muted-foreground">Màn hình bếp</p>
+                <p className="text-sm font-semibold">V\u00E0o KDS</p>
+                <p className="text-xs text-muted-foreground">
+                  M\u00E0n h\u00ECnh b\u1EBFp
+                </p>
               </div>
             </Link>
           )}
@@ -159,12 +117,15 @@ export default async function EmployeePage() {
 
         {!branchId && (canPos || canKds) && (
           <p className="mt-3 text-xs text-muted-foreground">
-            Tài khoản chưa gắn chi nhánh — liên hệ quản lý để được phân công.
+            T\u00E0i kho\u1EA3n ch\u01B0a g\u1EAFn chi nh\u00E1nh \u2014
+            li\u00EAn h\u1EC7 qu\u1EA3n l\u00FD \u0111\u1EC3 \u0111\u01B0\u1EE3c
+            ph\u00E2n c\u00F4ng.
           </p>
         )}
         {branchId && branchIsHq && (canPos || canKds) && (
           <p className="mt-3 text-xs text-muted-foreground">
-            Trụ sở không có sàn POS/KDS. Vui lòng dùng trang quản trị.
+            Tr\u1EE5 s\u1EDF kh\u00F4ng c\u00F3 s\u00E0n POS/KDS. Vui l\u00F2ng
+            d\u00F9ng trang qu\u1EA3n tr\u1ECB.
           </p>
         )}
       </div>
@@ -172,7 +133,7 @@ export default async function EmployeePage() {
       {/* HR Portal */}
       <div>
         <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Nhân sự
+          Nh\u00E2n s\u1EF1
         </p>
         <div className="flex flex-col gap-3">
           <Link
@@ -183,9 +144,9 @@ export default async function EmployeePage() {
               <DoorOpen className="size-5 text-primary" />
             </div>
             <div className="text-left">
-              <p className="text-sm font-semibold">Chấm công</p>
+              <p className="text-sm font-semibold">Ch\u1EA5m c\u00F4ng</p>
               <p className="text-xs text-muted-foreground">
-                Xem lịch sử chấm công của bạn
+                Xem l\u1ECBch s\u1EED ch\u1EA5m c\u00F4ng c\u1EE7a b\u1EA1n
               </p>
             </div>
           </Link>
@@ -198,19 +159,32 @@ export default async function EmployeePage() {
               <CreditCard className="size-5 text-primary" />
             </div>
             <div className="text-left">
-              <p className="text-sm font-semibold">Phiếu lương</p>
+              <p className="text-sm font-semibold">
+                Phi\u1EBFu l\u01B0\u01A1ng
+              </p>
               <p className="text-xs text-muted-foreground">
-                Xem lương & thuế TNCN
+                Xem l\u01B0\u01A1ng & thu\u1EBF TNCN
               </p>
             </div>
           </Link>
 
           <div className="flex h-12 items-center gap-3 rounded-lg border border-dashed border-border px-4 text-sm text-muted-foreground">
             <Home className="size-4 shrink-0" />
-            Hồ sơ cá nhân (sắp có)
+            H\u1ED3 s\u01A1 c\u00E1 nh\u00E2n (s\u1EAFp c\u00F3)
           </div>
         </div>
       </div>
-    </PageContainer>
+
+      {/* Logout */}
+      <form action="/api/auth/signout" method="post" className="mt-2">
+        <button
+          type="submit"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <LogOut className="size-3.5" />
+          \u0110\u0103ng xu\u1EA5t
+        </button>
+      </form>
+    </div>
   );
 }
