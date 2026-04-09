@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 import { fetchIngredients } from "../../actions";
-import { fetchPurchaseOrderDetail } from "../../procurement-actions";
+import {
+  fetchGrnsForPo,
+  fetchPurchaseOrderDetail,
+} from "../../procurement-actions";
+import type { LinkedGrnRow } from "../../procurement-actions";
 import {
   PoDetailClient,
   type PoLineRow,
@@ -17,9 +21,10 @@ export default async function PurchaseOrderDetailPage({
   const num = Number(id);
   if (!Number.isFinite(num) || num <= 0) notFound();
 
-  const [detail, ingRes] = await Promise.all([
+  const [detail, ingRes, grnsRes] = await Promise.all([
     fetchPurchaseOrderDetail(num),
     fetchIngredients(),
+    fetchGrnsForPo(num),
   ]);
   if (!detail.success || !detail.data) notFound();
 
@@ -30,6 +35,9 @@ export default async function PurchaseOrderDetailPage({
   const ingredients: IngredientRow[] = ingRes.success
     ? ((ingRes.data ?? []) as IngredientRow[])
     : [];
+  const linkedGrns: LinkedGrnRow[] = grnsRes.success
+    ? ((grnsRes.data ?? []) as LinkedGrnRow[])
+    : [];
 
   return (
     <PoDetailClient
@@ -37,6 +45,7 @@ export default async function PurchaseOrderDetailPage({
       initialPo={po}
       initialLines={lines}
       ingredients={ingredients}
+      linkedGrns={linkedGrns}
     />
   );
 }

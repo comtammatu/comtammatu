@@ -3,7 +3,15 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { History, Trash2, TrendingDown, TrendingUp } from "lucide-react";
+import {
+  CheckCircle2,
+  ClipboardList,
+  History,
+  Plus,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
@@ -31,6 +39,7 @@ import {
 } from "@comtammatu/ui/components/tooltip";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
+  createGrnFromPo,
   deletePurchaseOrderLine,
   fetchPurchaseOrderDetail,
   fetchPriceDeviations,
@@ -39,6 +48,7 @@ import {
   updatePurchaseOrderStatus,
 } from "../../procurement-actions";
 import type {
+  LinkedGrnRow,
   PriceDeviationRow,
   PriceHistoryRow,
 } from "../../procurement-actions";
@@ -78,15 +88,18 @@ export function PoDetailClient({
   initialPo,
   initialLines,
   ingredients,
+  linkedGrns: initialLinkedGrns,
 }: {
   poId: number;
   initialPo: PurchaseOrderDetailRecord;
   initialLines: PoLineRow[];
   ingredients: IngredientRow[];
+  linkedGrns: LinkedGrnRow[];
 }) {
   const router = useRouter();
   const [po, setPo] = useState(initialPo);
   const [lines, setLines] = useState(initialLines);
+  const [linkedGrns, setLinkedGrns] = useState(initialLinkedGrns);
   const [ingredientId, setIngredientId] = useState("");
   const [unit, setUnit] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -145,7 +158,7 @@ export function PoDetailClient({
   async function reload() {
     const res = await fetchPurchaseOrderDetail(poId);
     if (!res.success || !res.data) {
-      toast.error("Không tải lại được");
+      toast.error("Không thể tải lại dữ liệu");
       return;
     }
     const d = res.data as {
@@ -190,7 +203,7 @@ export function PoDetailClient({
         unitPriceEst,
       });
       if (!res.success) {
-        toast.error(res.error ?? "Không lưu được dòng");
+        toast.error(res.error ?? "Không thể lưu dòng PO");
         return;
       }
       toast.success("Đã lưu dòng");
@@ -204,11 +217,32 @@ export function PoDetailClient({
     startTransition(async () => {
       const res = await deletePurchaseOrderLine({ poId, lineId });
       if (!res.success) {
-        toast.error(res.error ?? "Không xóa được");
+        toast.error(res.error ?? "Không thể xóa dòng PO");
         return;
       }
       toast.success("Đã xóa dòng");
       await reload();
+    });
+  }
+
+  function handleCreateGrn() {
+    startTransition(async () => {
+      const res = await createGrnFromPo(poId);
+      if (!res.success || !res.data) {
+        toast.error(res.error ?? "Không thể tạo phiếu nhập");
+        return;
+      }
+      const newId = (res.data as { id: number }).id;
+      setLinkedGrns((prev) => [
+        {
+          id: newId,
+          grn_number: `GRN-...`,
+          status: "draft",
+          received_date: new Date().toISOString(),
+        },
+        ...prev,
+      ]);
+      router.push(`/admin/inventory/grn/${newId}`);
     });
   }
 
@@ -235,25 +269,38 @@ export function PoDetailClient({
             <p className="mt-2 text-sm text-muted-foreground">{po.notes}</p>
           )}
         </div>
-        {isDraft && lines.length > 0 && (
-          <Button
-            type="button"
-            disabled={isPending}
-            onClick={() => {
-              startTransition(async () => {
-                const res = await updatePurchaseOrderStatus(poId, "sent");
-                if (!res.success) {
-                  toast.error(res.error ?? "Không gửi được PO");
-                  return;
-                }
-                toast.success("Đã gửi PO");
-                await reload();
-              });
-            }}
-          >
-            Gửi PO cho nhà cung cấp
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {isDraft && lines.length > 0 && (
+            <Button
+              type="button"
+              disabled={isPending}
+              onClick={() => {
+                startTransition(async () => {
+                  const res = await updatePurchaseOrderStatus(poId, "sent");
+                  if (!res.success) {
+                    toast.error(res.error ?? "Không thể gửi đơn đặt hàng");
+                    return;
+                  }
+                  toast.success("Đã gửi PO");
+                  await reload();
+                });
+              }}
+            >
+              Gửi PO cho nhà cung cấp
+            </Button>
+          )}
+          {(po.status === "sent" || po.status === "partially_received") && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isPending}
+              onClick={handleCreateGrn}
+            >
+              <Plus className="mr-2 size-4" />
+              Tạo GRN từ PO này
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="rounded-md border">
@@ -398,6 +445,96 @@ export function PoDetailClient({
                     <TableCell className="text-sm">{h.unit}</TableCell>
                     <TableCell className="text-right font-mono text-sm font-semibold">
                       {h.unit_cost.toLocaleString("vi-VN")} ₫
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+      )}
+
+      {/* Linked GRNs */}
+      {(linkedGrns.length > 0 ||
+        po.status === "sent" ||
+        po.status === "partially_received") && (
+        <div className="rounded-lg border overflow-hidden">
+          <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <ClipboardList className="size-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold">Phiếu nhập kho liên kết</h2>
+              {linkedGrns.length > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {linkedGrns.length}
+                </Badge>
+              )}
+            </div>
+          </div>
+          {linkedGrns.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+              Chưa có phiếu nhập — nhấn &quot;Tạo GRN từ PO này&quot; để bắt đầu
+              nhập hàng.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/10 hover:bg-muted/10">
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                    Số phiếu
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                    Trạng thái
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                    Ngày nhận
+                  </TableHead>
+                  <TableHead className="w-10" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {linkedGrns.map((g) => (
+                  <TableRow
+                    key={g.id}
+                    className="group hover:bg-muted/20 transition-colors"
+                  >
+                    <TableCell className="font-mono text-sm font-medium">
+                      {g.grn_number}
+                    </TableCell>
+                    <TableCell>
+                      {g.status === "confirmed" ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
+                          <CheckCircle2 className="size-3.5" />
+                          Đã nhập kho
+                        </span>
+                      ) : g.status === "cancelled" ? (
+                        <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-xs">
+                          Đã hủy
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-muted text-muted-foreground text-xs">
+                          Nháp
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground tabular-nums">
+                      {new Date(g.received_date).toLocaleDateString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                        asChild
+                      >
+                        <Link href={`/admin/inventory/grn/${g.id}`}>
+                          <History className="size-4" />
+                          <span className="sr-only">Xem GRN</span>
+                        </Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

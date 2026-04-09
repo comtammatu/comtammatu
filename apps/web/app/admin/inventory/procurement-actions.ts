@@ -205,7 +205,8 @@ export async function fetchPurchaseOrderDetail(
     .eq("po_id", id.data)
     .eq("tenant_id", claims.tenant_id)
     .order("id");
-  if (e2) return { success: false, error: "Không tải được dòng PO." };
+  if (e2)
+    return { success: false, error: "Không thể tải chi tiết đơn đặt hàng." };
   return { success: true, data: { po, lines: lines ?? [] } };
 }
 
@@ -359,7 +360,9 @@ export async function fetchGrnDetail(grnId: number): Promise<ActionResult> {
   const { supabase, claims } = ctx;
   const { data: grn, error: e1 } = await supabase
     .from("goods_received_notes")
-    .select("*, branches ( id, name, is_headquarters ), suppliers ( id, name )")
+    .select(
+      "*, branches ( id, name, is_headquarters ), suppliers ( id, name ), purchase_orders ( id, po_number )",
+    )
     .eq("id", id.data)
     .eq("tenant_id", claims.tenant_id)
     .single();
@@ -370,7 +373,8 @@ export async function fetchGrnDetail(grnId: number): Promise<ActionResult> {
     .select("*, ingredients ( id, name, unit )")
     .eq("grn_id", id.data)
     .eq("tenant_id", claims.tenant_id);
-  if (e2) return { success: false, error: "Không tải được dòng phiếu." };
+  if (e2)
+    return { success: false, error: "Không thể tải chi tiết phiếu nhập." };
   return { success: true, data: { grn, lines: lines ?? [] } };
 }
 
@@ -381,7 +385,7 @@ export async function fetchGrns(): Promise<ActionResult> {
   const { data, error } = await supabase
     .from("goods_received_notes")
     .select(
-      "id, grn_number, status, received_date, notes, supplier_id, branch_id, suppliers ( id, name )",
+      "id, grn_number, status, received_date, notes, supplier_id, branch_id, po_id, suppliers ( id, name ), purchase_orders ( po_number )",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("received_date", { ascending: false });
@@ -443,6 +447,8 @@ const grnLineSchema = z.object({
     .enum(["accepted", "rejected", "partial"])
     .default("accepted"),
   receivingTemperature: z.coerce.number().optional().nullable(),
+  batchNumber: z.string().trim().optional().nullable(),
+  expiryDate: z.string().date().optional().nullable(),
 });
 
 export async function upsertGrnLine(
@@ -471,6 +477,8 @@ export async function upsertGrnLine(
       total_cost: totalCost,
       quality_status: d.qualityStatus,
       receiving_temperature: d.receivingTemperature ?? null,
+      batch_number: d.batchNumber ?? null,
+      expiry_date: d.expiryDate ?? null,
     },
     { onConflict: "grn_id,ingredient_id,tenant_id" },
   );
@@ -485,7 +493,16 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
+
+  // Fetch po_id before confirming so we can update PO status afterward
+  const { data: grnMeta } = await supabase
+    .from("goods_received_notes")
+    .select("po_id")
+    .eq("id", id.data)
+    .eq("tenant_id", claims.tenant_id)
+    .single();
+
   const { data, error } = await supabase.rpc("confirm_goods_receipt_note", {
     p_grn_id: id.data,
   });
@@ -493,6 +510,27 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
     console.error("confirmGrn", error);
     return { success: false, error: "Không thể xác nhận phiếu nhập." };
   }
+
+  // Auto-update PO status when a linked GRN is confirmed
+  const poId = grnMeta?.po_id ?? null;
+  if (poId) {
+    const { data: siblings } = await supabase
+      .from("goods_received_notes")
+      .select("status")
+      .eq("po_id", poId)
+      .eq("tenant_id", claims.tenant_id)
+      .neq("status", "cancelled");
+    if (siblings && siblings.length > 0) {
+      const allConfirmed = siblings.every((g) => g.status === "confirmed");
+      await supabase
+        .from("purchase_orders")
+        .update({ status: allConfirmed ? "received" : "partially_received" })
+        .eq("id", poId)
+        .eq("tenant_id", claims.tenant_id)
+        .in("status", ["sent", "partially_received"]);
+    }
+  }
+
   return { success: true, data };
 }
 
@@ -834,7 +872,7 @@ export async function fetchPriceDeviations(
     .eq("po_id", po.id)
     .eq("tenant_id", claims.tenant_id)
     .not("unit_price_est", "is", null);
-  if (e2) return { success: false, error: "Không tải được dòng PO." };
+  if (e2) return { success: false, error: "Không thể tải dòng đơn đặt hàng." };
   if (!lines || lines.length === 0) return { success: true, data: [] };
 
   // 3. For each line, get last 3 confirmed GRN unit_costs for same ingredient + supplier
@@ -992,7 +1030,7 @@ export async function fetchIngredientPriceHistory(
   }
 
   const { data, error } = await query;
-  if (error) return { success: false, error: "Không tải được lịch sử giá." };
+  if (error) return { success: false, error: "Không thể tải lịch sử giá." };
 
   const rows: PriceHistoryRow[] = (data ?? []).map((item) => {
     const grn = item.goods_received_notes as unknown as {
@@ -1100,4 +1138,72 @@ export async function markInvoicePaid(
   }
 
   return { success: true, data: updated };
+}
+
+// ─── PO → GRN helpers ────────────────────────────────────────────────────────
+
+export interface LinkedGrnRow {
+  id: number;
+  grn_number: string;
+  status: string;
+  received_date: string;
+}
+
+export async function fetchGrnsForPo(poId: number): Promise<ActionResult> {
+  const id = z.coerce.number().int().positive().safeParse(poId);
+  if (!id.success) return { success: false, error: "ID không hợp lệ" };
+  const ctx = await getAuthContext(ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims } = ctx;
+  const { data, error } = await supabase
+    .from("goods_received_notes")
+    .select("id, grn_number, status, received_date")
+    .eq("po_id", id.data)
+    .eq("tenant_id", claims.tenant_id)
+    .order("received_date", { ascending: false });
+  if (error) return { success: false, error: "Không thể tải phiếu nhập." };
+  return { success: true, data: data ?? [] };
+}
+
+export async function createGrnFromPo(poId: number): Promise<ActionResult> {
+  const id = z.coerce.number().int().positive().safeParse(poId);
+  if (!id.success) return { success: false, error: "ID không hợp lệ" };
+  const ctx = await getAuthContext(ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims, user } = ctx;
+
+  const { data: po, error: poErr } = await supabase
+    .from("purchase_orders")
+    .select("id, supplier_id, status")
+    .eq("id", id.data)
+    .eq("tenant_id", claims.tenant_id)
+    .single();
+  if (poErr || !po) return { success: false, error: "Không tìm thấy PO." };
+  if (!["sent", "partially_received"].includes(po.status)) {
+    return {
+      success: false,
+      error: "Chỉ tạo GRN từ PO đã gửi hoặc nhận một phần.",
+    };
+  }
+
+  const hqId = await fetchHeadquartersBranchId(supabase, claims.tenant_id);
+  if (!hqId)
+    return { success: false, error: "Chưa cấu hình chi nhánh Trụ sở." };
+
+  const grnNumber = `GRN-${Date.now()}`;
+  const { data, error } = await supabase
+    .from("goods_received_notes")
+    .insert({
+      tenant_id: claims.tenant_id,
+      branch_id: hqId,
+      supplier_id: po.supplier_id,
+      po_id: po.id,
+      grn_number: grnNumber,
+      status: "draft",
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+  if (error) return { success: false, error: "Không thể tạo phiếu nhập." };
+  return { success: true, data };
 }

@@ -14,10 +14,17 @@ import {
   Thermometer,
   XCircle,
 } from "lucide-react";
+import { format, addDays } from "date-fns";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Calendar } from "@comtammatu/ui/components/calendar";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@comtammatu/ui/components/popover";
 import {
   Select,
   SelectContent,
@@ -50,8 +57,10 @@ interface GrnRecord {
   received_date: string;
   notes: string | null;
   branch_id?: number;
+  po_id?: number | null;
   branches?: { id: number; name: string; is_headquarters: boolean } | null;
   suppliers?: { id: number; name: string } | null;
+  purchase_orders?: { id: number; po_number: string } | null;
 }
 
 interface LineRow {
@@ -63,6 +72,8 @@ interface LineRow {
   total_cost: number;
   quality_status: string;
   receiving_temperature: number | null;
+  batch_number: string | null;
+  expiry_date: string | null;
   ingredients: { id: number; name: string; unit: string } | null;
 }
 
@@ -162,7 +173,25 @@ export function GrnDetailClient({
   const [lines, setLines] = useState(initialLines);
   const [ingredientId, setIngredientId] = useState("");
   const [temperature, setTemperature] = useState("");
+  const [batchNumber, setBatchNumber] = useState("");
+  // expiryMode: "date" = pick calendar date, "days" = enter number of days
+  const [expiryMode, setExpiryMode] = useState<"date" | "days">("date");
+  const [expiryDate, setExpiryDate] = useState<Date | undefined>(undefined);
+  const [expiryDays, setExpiryDays] = useState("");
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  // Derived: the ISO date string to submit
+  const resolvedExpiryDate: string | null = (() => {
+    if (expiryMode === "date") {
+      return expiryDate ? format(expiryDate, "yyyy-MM-dd") : null;
+    }
+    const days = Number(expiryDays);
+    if (Number.isFinite(days) && days > 0) {
+      return format(addDays(new Date(), days), "yyyy-MM-dd");
+    }
+    return null;
+  })();
 
   const isDraft = grn.status === "draft";
 
@@ -180,7 +209,7 @@ export function GrnDetailClient({
   async function reload() {
     const res = await fetchGrnDetail(grnId);
     if (!res.success || !res.data) {
-      toast.error("Không tải lại được");
+      toast.error("Không thể tải lại dữ liệu");
       return;
     }
     const d = res.data as { grn: GrnRecord; lines: LineRow[] };
@@ -221,14 +250,19 @@ export function GrnDetailClient({
         unitCost,
         qualityStatus: "accepted",
         receivingTemperature: tempVal,
+        batchNumber: batchNumber.trim() || null,
+        expiryDate: resolvedExpiryDate,
       });
       if (!res.success) {
-        toast.error(res.error ?? "Không lưu được dòng");
+        toast.error(res.error ?? "Không thể lưu dòng phiếu nhập");
         return;
       }
       toast.success("Đã lưu dòng");
       setIngredientId("");
       setTemperature("");
+      setBatchNumber("");
+      setExpiryDate(undefined);
+      setExpiryDays("");
       await reload();
     });
   }
@@ -237,7 +271,7 @@ export function GrnDetailClient({
     startTransition(async () => {
       const res = await confirmGrn(grnId);
       if (!res.success) {
-        toast.error(res.error ?? "Không xác nhận được");
+        toast.error(res.error ?? "Không thể xác nhận phiếu nhập");
         return;
       }
       toast.success("Đã nhập kho và cập nhật WAC");
@@ -306,6 +340,20 @@ export function GrnDetailClient({
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <PackageSearch className="size-4 shrink-0" />
                   <span>NCC: {grn.suppliers.name}</span>
+                </div>
+              )}
+              {grn.purchase_orders?.po_number && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <FileText className="size-4 shrink-0" />
+                  <span>
+                    PO:{" "}
+                    <Link
+                      href={`/admin/inventory/purchase-orders/${grn.purchase_orders.id}`}
+                      className="font-mono font-medium text-primary hover:underline"
+                    >
+                      {grn.purchase_orders.po_number}
+                    </Link>
+                  </span>
                 </div>
               )}
               {grn.notes && (
@@ -380,6 +428,12 @@ export function GrnDetailClient({
                 Thành tiền
               </TableHead>
               <TableHead className="hidden sm:table-cell text-xs font-semibold uppercase tracking-wider">
+                Lô hàng
+              </TableHead>
+              <TableHead className="hidden sm:table-cell text-xs font-semibold uppercase tracking-wider">
+                Hết hạn
+              </TableHead>
+              <TableHead className="hidden sm:table-cell text-xs font-semibold uppercase tracking-wider">
                 KT chất lượng
               </TableHead>
               {hasAnyTemperature && (
@@ -393,7 +447,7 @@ export function GrnDetailClient({
             {lines.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={hasAnyTemperature ? 7 : 6}
+                  colSpan={hasAnyTemperature ? 9 : 8}
                   className="py-12 text-center text-muted-foreground"
                 >
                   <PackageSearch className="mx-auto mb-2 size-8 opacity-30" />
@@ -424,6 +478,18 @@ export function GrnDetailClient({
                 </TableCell>
                 <TableCell className="text-right font-mono font-semibold tabular-nums">
                   {l.total_cost.toLocaleString("vi-VN")} ₫
+                </TableCell>
+                <TableCell className="hidden sm:table-cell font-mono text-sm text-muted-foreground">
+                  {l.batch_number ?? "—"}
+                </TableCell>
+                <TableCell className="hidden sm:table-cell text-sm tabular-nums text-muted-foreground">
+                  {l.expiry_date
+                    ? new Date(l.expiry_date).toLocaleDateString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })
+                    : "—"}
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   <Badge
@@ -458,6 +524,8 @@ export function GrnDetailClient({
                 <TableCell className="text-right font-mono text-base tabular-nums">
                   {grandTotal.toLocaleString("vi-VN")} ₫
                 </TableCell>
+                <TableCell className="hidden sm:table-cell" />
+                <TableCell className="hidden sm:table-cell" />
                 <TableCell className="hidden sm:table-cell" />
                 {hasAnyTemperature && (
                   <TableCell className="hidden sm:table-cell" />
@@ -541,6 +609,115 @@ export function GrnDetailClient({
                   placeholder="0"
                   required
                 />
+              </div>
+
+              {/* Batch number */}
+              <div className="space-y-1.5">
+                <Label htmlFor="batchNumber">Mã lô hàng</Label>
+                <Input
+                  id="batchNumber"
+                  placeholder="Ví dụ: LOT-240901"
+                  value={batchNumber}
+                  onChange={(e) => setBatchNumber(e.target.value)}
+                />
+              </div>
+
+              {/* Expiry date — dual mode */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label>Hạn sử dụng</Label>
+                  <div className="flex rounded-md border text-xs overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExpiryMode("date");
+                        setExpiryDays("");
+                      }}
+                      className={cn(
+                        "px-2.5 py-1 transition-colors",
+                        expiryMode === "date"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-background text-muted-foreground hover:bg-muted",
+                      )}
+                    >
+                      Lịch
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExpiryMode("days");
+                        setExpiryDate(undefined);
+                        setCalendarOpen(false);
+                      }}
+                      className={cn(
+                        "px-2.5 py-1 transition-colors border-l",
+                        expiryMode === "days"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-background text-muted-foreground hover:bg-muted",
+                      )}
+                    >
+                      Số ngày
+                    </button>
+                  </div>
+                </div>
+
+                {expiryMode === "date" ? (
+                  <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal h-9",
+                          !expiryDate && "text-muted-foreground",
+                        )}
+                      >
+                        <CalendarDays className="mr-2 size-4 shrink-0" />
+                        {expiryDate
+                          ? format(expiryDate, "dd/MM/yyyy")
+                          : "Chọn ngày hết hạn..."}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={expiryDate}
+                        onSelect={(d) => {
+                          setExpiryDate(d);
+                          setCalendarOpen(false);
+                        }}
+                        disabled={(d) => d < new Date()}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={1}
+                        step={1}
+                        placeholder="Ví dụ: 7"
+                        value={expiryDays}
+                        onChange={(e) => setExpiryDays(e.target.value)}
+                        className="h-9"
+                      />
+                      <span className="shrink-0 text-sm text-muted-foreground">
+                        ngày
+                      </span>
+                    </div>
+                    {resolvedExpiryDate && (
+                      <p className="text-xs text-muted-foreground">
+                        → Hết hạn:{" "}
+                        {new Date(resolvedExpiryDate).toLocaleDateString(
+                          "vi-VN",
+                          { day: "2-digit", month: "2-digit", year: "numeric" },
+                        )}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {isColdChain && (

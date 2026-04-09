@@ -20,9 +20,9 @@ export default async function InventoryLayout({
     : false;
 
   return (
-    <div>
+    <div className="flex gap-8 items-start">
       <InventorySubNav showProcurement={showProcurement} />
-      <div className="mt-6 space-y-6">{children}</div>
+      <div className="flex-1 min-w-0 space-y-6">{children}</div>
     </div>
   );
 }

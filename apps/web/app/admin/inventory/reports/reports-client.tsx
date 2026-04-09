@@ -107,7 +107,7 @@ export function ReportsClient({
             branchId: bId,
           });
           if (!res.success) {
-            toast.error(res.error ?? "Không tải được báo cáo");
+            toast.error(res.error ?? "Không thể tải báo cáo");
             return;
           }
           setMovementRows((res.data ?? []) as MovementReportRow[]);
@@ -117,14 +117,14 @@ export function ReportsClient({
             endDate,
           });
           if (!res.success) {
-            toast.error(res.error ?? "Không tải được báo cáo");
+            toast.error(res.error ?? "Không thể tải báo cáo");
             return;
           }
           setBranchSummary((res.data ?? []) as BranchMovementSummaryRow[]);
         } else if (tab === "ap-aging") {
           const res = await fetchApAging();
           if (!res.success) {
-            toast.error(res.error ?? "Không tải được báo cáo");
+            toast.error(res.error ?? "Không thể tải báo cáo");
             return;
           }
           setApAgingRows((res.data ?? []) as ApAgingRow[]);
@@ -136,7 +136,7 @@ export function ReportsClient({
             branchId: bId,
           });
           if (!res.success) {
-            toast.error(res.error ?? "Không tải được báo cáo");
+            toast.error(res.error ?? "Không thể tải báo cáo");
             return;
           }
           setVarianceRows((res.data ?? []) as ConsumptionVarianceRow[]);
@@ -208,6 +208,12 @@ export function ReportsClient({
                 "Xem báo cáo"
               )}
             </Button>
+            {activeTab === "ap-aging" && (
+              <p className="text-xs text-muted-foreground self-end pb-0.5">
+                Công nợ NCC không lọc theo ngày / chi nhánh — hiển thị tất cả
+                hoá đơn chưa thanh toán.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
