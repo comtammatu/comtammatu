@@ -8,6 +8,8 @@ import {
   fetchReorderAlerts,
   fetchExpiryAlerts,
 } from "./actions";
+import { fetchInTransitTransfers } from "./report-actions";
+import type { InTransitTransfer } from "./report-actions";
 import { InventoryClient } from "./inventory-client";
 import { PageHeader } from "@/components/foundation/ui-patterns";
 
@@ -27,7 +29,7 @@ export default async function InventoryPage() {
     : { system: false, area: false, branch: false };
 
   // Fetch ingredients, branches, and alerts in parallel
-  const [ingredientsResult, branchesRes, reorderRes, expiryRes] =
+  const [ingredientsResult, branchesRes, reorderRes, expiryRes, inTransitRes] =
     await Promise.all([
       fetchIngredients(),
       supabase
@@ -37,6 +39,7 @@ export default async function InventoryPage() {
         .order("name"),
       fetchReorderAlerts(),
       fetchExpiryAlerts(),
+      fetchInTransitTransfers(),
     ]);
 
   const ingredients = ingredientsResult.success
@@ -58,6 +61,9 @@ export default async function InventoryPage() {
   const expiryAlerts: ExpiryAlertRow[] = expiryRes.success
     ? ((expiryRes.data as ExpiryAlertRow[]) ?? [])
     : [];
+  const inTransitTransfers: InTransitTransfer[] = inTransitRes.success
+    ? ((inTransitRes.data as InTransitTransfer[]) ?? [])
+    : [];
 
   return (
     <div className="space-y-6">
@@ -74,6 +80,7 @@ export default async function InventoryPage() {
         canManageIngredientCatalog={canManageIngredientCatalog}
         reorderAlerts={reorderAlerts}
         expiryAlerts={expiryAlerts}
+        inTransitTransfers={inTransitTransfers}
       />
     </div>
   );

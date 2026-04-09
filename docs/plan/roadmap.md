@@ -1,7 +1,7 @@
 # Roadmap — Cơm Tấm Má Tư
 
 > Hệ thống Quản lý Vận hành Nhà hàng (Restaurant Operations Management System)
-> Updated: 2026-04-08 | Structure: Module-based
+> Updated: 2026-04-09 | Structure: Module-based
 
 ## Product Identity
 
@@ -10,16 +10,16 @@ Không phải CRM, không phải ERP tổng hợp. Mỗi module giải quyết m
 
 ## Module Map
 
-| #   | Module      | Scope                                                | Status  |
-| --- | ----------- | ---------------------------------------------------- | ------- |
-| M0  | Admin Shell | Layout, sidebar, branches, staff, settings           | SHIPPED |
-| M1  | Menu        | Categories, items, variants, modifiers, sides        | SHIPPED |
-| M2  | POS         | Cart, table/zone, order submit, bill printing        | SHIPPED |
-| M3  | KDS         | Realtime queue, bump/complete, station config        | SHIPPED |
-| M4  | Payment     | Cash, VietQR, Momo, refunds, reconciliation          | SHIPPED |
-| M5  | Stock       | Ingredients, recipes, stock levels, procurement, GRN | SHIPPED |
-| M6  | Finance     | HĐĐT, VAT, dashboard, reports, VAS accounting        | SHIPPED |
-| M7  | HR/Payroll  | Employees, shifts, attendance, payroll, PIT          | SHIPPED |
+| #   | Module      | Scope                                                | Status      |
+| --- | ----------- | ---------------------------------------------------- | ----------- |
+| M0  | Admin Shell | Layout, sidebar, branches, staff, settings           | SHIPPED     |
+| M1  | Menu        | Categories, items, variants, modifiers, sides        | SHIPPED     |
+| M2  | POS         | Cart, table/zone, order submit, bill printing        | SHIPPED     |
+| M3  | KDS         | Realtime queue, bump/complete, station config        | SHIPPED     |
+| M4  | Payment     | Cash, VietQR, Momo, refunds, reconciliation          | SHIPPED     |
+| M5  | Stock       | Ingredients, recipes, stock levels, procurement, GRN | SHIPPED     |
+| M6  | Finance     | HĐĐT, VAT, dashboard, reports, VAS accounting        | IN PROGRESS |
+| M7  | HR/Payroll  | Employees, shifts, attendance, payroll, PIT          | IN PROGRESS |
 
 **Feature specs (beyond module rows):**
 
@@ -243,63 +243,75 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 ## M6: Finance — Tài chính & HĐĐT
 
-> Status: SHIPPED | Depends: M4, M5 | Shipped: 2026-04-06
+> Status: IN PROGRESS | Depends: M4, M5
 > Ref: `docs/ref/einvoice-tax.md`
+> North Star: "Sổ sách đúng chuẩn VAS, HĐĐT tự động, kế toán không cần Excel."
 
 **Scope:** Hóa đơn điện tử (HĐĐT), VAT, dashboard doanh thu, báo cáo tài chính theo chuẩn VAS, hệ thống tài khoản kế toán.
 
 **Không bao gồm:** Phân tích nâng cao (Post-v1.0).
 
-**Tables owned:** tax_invoices, chart_of_accounts, journal_entries, mv_daily_revenue, mv_top_items, mv_food_cost
+**Tables owned:** tax_invoices, chart_of_accounts, journal_entries, journal_entry_lines, audit_logs, mv_daily_revenue, mv_top_items, mv_food_cost
 
-| Session | Task                        | Tables                             | Status |
-| ------- | --------------------------- | ---------------------------------- | ------ |
-| S1      | HĐĐT schema + Edge Function | tax_invoices                       | ✅     |
-| S2      | HĐĐT UI + provider config   | —                                  | ✅     |
-| S3      | Revenue dashboard           | mv_daily_revenue, mv_top_items     | ✅     |
-| S4      | Food cost analysis          | mv_food_cost                       | ✅     |
-| S5      | Chart of accounts (VAS)     | chart_of_accounts, journal_entries | ✅     |
-| S6      | Financial statements        | —                                  | ✅     |
-| S7      | MV refresh + audit logging  | audit_logs                         | ✅     |
+| Session | Task                                    | Tables                               | Status |
+| ------- | --------------------------------------- | ------------------------------------ | ------ |
+| S1      | HĐĐT schema                             | tax_invoices                         | ✅     |
+| S2      | HĐĐT UI + MISA provider                 | —                                    | ✅     |
+| S3      | Revenue dashboard                       | mv_daily_revenue, mv_top_items       | ✅     |
+| S4      | Food cost MV + Audit logs               | mv_food_cost, audit_logs             | TODO   |
+| S5      | Chart of accounts (VAS)                 | chart_of_accounts                    | TODO   |
+| S6      | Journal entries                         | journal_entries, journal_entry_lines | TODO   |
+| S7      | Financial statements (BCTC)             | —                                    | TODO   |
+| S8      | MV refresh + auto-journal + integration | —                                    | TODO   |
 
 **Ship criteria:**
 
 - [x] HĐĐT xuất/hủy hoạt động với provider
 - [x] Dashboard doanh thu chính xác
-- [x] Food cost report đúng
-- [x] BCTC theo chuẩn VAS
-- [x] `/cso` passes (sensitive: finance)
-- [x] `/verify` + `/review` passes
+- [ ] Food cost report đúng
+- [ ] Hệ thống tài khoản VAS
+- [ ] Bút toán kế toán (journal entries)
+- [ ] BCTC theo chuẩn VAS (CĐKT, KQKD, LCTT)
+- [ ] Auto-journal từ order + supplier invoice + payroll
+- [ ] `/cso` passes (sensitive: finance)
+- [ ] `/verify` + `/review` passes
 
 ---
 
 ## M7: HR/Payroll — Nhân sự & Lương
 
-> Status: SHIPPED | Depends: M6 | Shipped: 2026-04-06
+> Status: IN PROGRESS | Depends: M6
 > Ref: `docs/ref/labor-contracts.md`, `docs/ref/payroll-pit.md`
+> North Star: "Tính lương chính xác, BHXH đúng luật, nhân viên tự xem payslip."
 
-**Scope:** Hồ sơ nhân viên (mở rộng từ profiles), ca làm, chấm công, tính lương, thuế TNCN, BHXH.
+**Scope:** Hồ sơ nhân viên (mở rộng từ profiles), hợp đồng lao động, ca làm, chấm công, tính lương, thuế TNCN, BHXH.
 
 **Không bao gồm:** Tuyển dụng, đánh giá hiệu suất.
 
-**Tables owned:** employees, shifts, attendance_records, payroll_periods, payroll_entries
+**Tables owned:** employees, shifts, shift_assignments, attendance_records, employment_contracts, payroll_periods, payroll_entries
 
-| Session | Task                  | Tables                           | Status |
-| ------- | --------------------- | -------------------------------- | ------ |
-| S1      | Employee records      | employees                        | ✅     |
-| S2      | Shifts + attendance   | shifts, attendance_records       | ✅     |
-| S3      | Payroll calculation   | —                                | ✅     |
-| S4      | Payroll processing    | payroll_periods, payroll_entries | ✅     |
-| S5      | Payroll reports + PIT | —                                | ✅     |
+| Session | Task                              | Tables                                        | Status |
+| ------- | --------------------------------- | --------------------------------------------- | ------ |
+| S1      | Employee records                  | employees                                     | ✅     |
+| S2      | Shifts + attendance tables        | shifts, shift_assignments, attendance_records | ✅     |
+| S3      | Employment contracts              | employment_contracts                          | TODO   |
+| S4      | Attendance management UI          | —                                             | TODO   |
+| S5      | Payroll schema + PIT calc logic   | payroll_periods, payroll_entries              | TODO   |
+| S6      | Payroll processing UI             | —                                             | TODO   |
+| S7      | Payroll reports + employee portal | —                                             | TODO   |
 
 **Ship criteria:**
 
 - [x] Quản lý hồ sơ nhân viên đầy đủ
-- [x] Lập ca, chấm công
-- [x] Tính lương + BHXH + thuế TNCN chính xác
-- [x] Bảng lương hàng tháng
-- [x] `/cso` passes (sensitive: payroll)
-- [x] `/verify` + `/review` passes
+- [x] Lập ca, chấm công (tables)
+- [ ] Hợp đồng lao động + auto-sync insurance_base
+- [ ] UI chấm công (calendar view, bulk check-in)
+- [ ] Tính lương + BHXH + thuế TNCN chính xác
+- [ ] Bảng lương hàng tháng (approval flow)
+- [ ] Employee portal (payslip + attendance)
+- [ ] Auto-journal khi payroll approved
+- [ ] `/cso` passes (sensitive: payroll)
+- [ ] `/verify` + `/review` passes
 
 ---
 
@@ -311,11 +323,12 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 - [x] M0–M4 SHIPPED (vận hành cơ bản)
 - [x] M5 SHIPPED (quản lý kho)
-- [x] M6 SHIPPED (HĐĐT — bắt buộc pháp lý)
-- [x] `/qa` — full QA test
+- [ ] M6 COMPLETE (HĐĐT + VAS accounting — bắt buộc pháp lý)
+- [ ] M7 COMPLETE (HR/Payroll — BHXH + PIT)
+- [ ] `/qa` — full QA test
 - [ ] `/cso` — sprint-level security review
 - [ ] `/retro` — retrospective
-- [x] `/ship` — merge → push → PR → deploy
+- [ ] `/ship` — merge → push → PR → deploy
 - [ ] Live verification tại 1 chi nhánh
 
 ---
@@ -341,9 +354,9 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 | Session | Task                                      | Tables | Status |
 | ------- | ----------------------------------------- | ------ | ------ |
-| S5      | Auto-suggest PO quantities                | —      | TODO   |
-| S6      | Price intelligence (alerts + history)     | —      | TODO   |
-| S7      | Reports (2) + in-transit + transfer print | —      | TODO   |
+| S5      | Auto-suggest PO quantities                | —      | DONE   |
+| S6      | Price intelligence (alerts + history)     | —      | DONE   |
+| S7      | Reports (2) + in-transit + transfer print | —      | DONE   |
 
 ### Phase 2: Scale When Needed (HOLD)
 
@@ -357,6 +370,15 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 - [x] Reorder alerts dashboard (stock < reorder_point)
 - [x] Expiry alerts (D-7 yellow, D-3 red)
 - [x] `/verify` + `/review` passes
+
+**Ship criteria (Phase 1):**
+
+- [x] Auto-suggest PO quantities (avg daily consumption × lead time)
+- [x] Price deviation alerts (>5% from avg of last 3 POs)
+- [x] Stock movement report (period-based, by ingredient + by branch)
+- [x] In-transit visibility on stock dashboard
+- [x] Transfer note print template (@media print)
+- [x] `/verify` passes
 
 ---
 

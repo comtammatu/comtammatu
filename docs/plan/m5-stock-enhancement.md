@@ -310,15 +310,15 @@ Photo upload → defer to Phase 1. Temperature field = 10 min work, real value f
 
 ## Session Summary
 
-| Session | Scope                                             | Est.      |
-| ------- | ------------------------------------------------- | --------- |
-| **S1**  | Stocktake migration + RPC                         | 1 session |
-| **S2**  | Stocktake UI + Reorder alerts dashboard           | 1 session |
-| **S3**  | Expiry alerts + GRN temperature + write-off       | 1 session |
-| **S4**  | Polish + integration test + verify                | 1 session |
-| **S5**  | Auto-suggest PO quantities                        | 1 session |
-| **S6**  | Price intelligence (alerts + history)             | 1 session |
-| **S7**  | Reports (2 reports) + in-transit + transfer print | 1 session |
+| Session | Scope                                             | Est.         |
+| ------- | ------------------------------------------------- | ------------ |
+| **S1**  | Stocktake migration + RPC                         | 1 session    |
+| **S2**  | Stocktake UI + Reorder alerts dashboard           | 1 session    |
+| **S3**  | Expiry alerts + GRN temperature + write-off       | 1 session    |
+| **S4**  | Polish + integration test + verify                | 1 session    |
+| **S5**  | Auto-suggest PO quantities                        | 1 session ✅ |
+| **S6**  | Price intelligence (alerts + history)             | 1 session ✅ |
+| **S7**  | Reports (2 reports) + in-transit + transfer print | 1 session ✅ |
 
 **Total: 7 sessions** (down from 16-20 in original plan)
 

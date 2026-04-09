@@ -4,10 +4,10 @@ import type {
   PaymentResult,
   WebhookVerification,
 } from "../payment";
+import { createHmac, randomUUID } from "crypto";
 
 /**
  * MoMo Provider — create payment link, verify webhook.
- * TODO: Replace mock with real MoMo API (developers.momo.vn/v3)
  */
 export class MoMoProvider implements PaymentProvider {
   readonly method = "momo" as const;
@@ -15,54 +15,146 @@ export class MoMoProvider implements PaymentProvider {
   private partnerCode: string;
   private accessKey: string;
   private secretKey: string;
+  private endpointBaseUrl: string;
+  private redirectUrl: string;
+  private ipnUrl: string;
+  private storeName: string;
+  private storeId: string;
+  private lang: "vi" | "en";
 
   constructor(config: {
     partnerCode: string;
     accessKey: string;
     secretKey: string;
+    endpointBaseUrl?: string;
+    redirectUrl: string;
+    ipnUrl: string;
+    storeName?: string;
+    storeId?: string;
+    lang?: "vi" | "en";
   }) {
     this.partnerCode = config.partnerCode;
     this.accessKey = config.accessKey;
     this.secretKey = config.secretKey;
+    this.endpointBaseUrl = config.endpointBaseUrl ?? "https://payment.momo.vn";
+    this.redirectUrl = config.redirectUrl;
+    this.ipnUrl = config.ipnUrl;
+    this.storeName = config.storeName ?? "Com Tam Ma Tu";
+    this.storeId = config.storeId ?? "comtammatu";
+    this.lang = config.lang ?? "vi";
   }
 
   async createPayment(request: PaymentRequest): Promise<PaymentResult> {
-    // TODO: Call MoMo Create Payment API
-    // POST developers.momo.vn/v3/create
-    // Returns payUrl (QR/deeplink)
+    const endpoint = new URL("/v2/gateway/api/create", this.endpointBaseUrl);
+    const orderId = `ORD-${request.tenantId}-${request.orderId}-${randomUUID()}`;
+    const requestId = `${Date.now()}-${randomUUID()}`;
 
-    const providerRef = `MOMO-${request.tenantId}-${request.orderId}-${Date.now()}`;
+    const amount = Math.round(request.amount);
+    const orderInfo = request.orderNumber;
+    const extraData = "";
+    const requestType = "captureWallet";
 
-    // Mock: return redirect URL
+    const rawSig = [
+      `accessKey=${this.accessKey}`,
+      `amount=${amount}`,
+      `extraData=${extraData}`,
+      `ipnUrl=${this.ipnUrl}`,
+      `orderId=${orderId}`,
+      `orderInfo=${orderInfo}`,
+      `partnerCode=${this.partnerCode}`,
+      `redirectUrl=${this.redirectUrl}`,
+      `requestId=${requestId}`,
+      `requestType=${requestType}`,
+    ].join("&");
+
+    const signature = createHmac("sha256", this.secretKey)
+      .update(rawSig, "utf8")
+      .digest("hex");
+
+    const body = {
+      partnerCode: this.partnerCode,
+      storeName: this.storeName,
+      storeId: this.storeId,
+      requestId,
+      amount,
+      orderId,
+      orderInfo,
+      redirectUrl: this.redirectUrl,
+      ipnUrl: this.ipnUrl,
+      requestType,
+      extraData,
+      lang: this.lang,
+      signature,
+    };
+
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    const json = (await res.json().catch(() => null)) as Record<
+      string,
+      unknown
+    > | null;
+
+    if (!res.ok || !json) {
+      return {
+        status: "failed",
+        providerRef: orderId,
+        providerData: { httpStatus: res.status },
+      };
+    }
+
+    const resultCode = Number(json.resultCode ?? -1);
+    if (resultCode !== 0) {
+      return {
+        status: "failed",
+        providerRef: orderId,
+        providerData: json,
+      };
+    }
+
+    const payUrl = typeof json.payUrl === "string" ? json.payUrl : null;
+    const deeplink = typeof json.deeplink === "string" ? json.deeplink : null;
+    const redirectUrl = payUrl ?? deeplink ?? undefined;
+
     return {
       status: "pending",
-      providerRef,
-      redirectUrl: `https://test-payment.momo.vn/v2/gateway/pay?ref=${providerRef}`,
-      providerData: {
-        partnerCode: this.partnerCode,
-        accessKey: this.accessKey ? "[set]" : "[missing]",
-      },
+      providerRef: orderId,
+      redirectUrl,
+      providerData: json,
     };
   }
 
   verifyWebhook(payload: unknown, signature: string): WebhookVerification {
-    // Guard: mock provider must never be used in production
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("MoMo mock provider cannot be used in production");
-    }
-
-    // TODO: Real HMAC-SHA256 verification
-    // rawData = `amount=${amount}&message=${message}&orderId=${orderId}&...`
-    // expectedSig = HMAC-SHA256(secretKey, rawData)
-
-    void this.secretKey;
-
     const p = payload as Record<string, unknown>;
     if (!p || !signature) {
       return { valid: false };
     }
 
-    // Mock: always valid in dev
+    const rawSig = [
+      `accessKey=${this.accessKey}`,
+      `amount=${String(p.amount ?? "")}`,
+      `extraData=${String(p.extraData ?? "")}`,
+      `message=${String(p.message ?? "")}`,
+      `orderId=${String(p.orderId ?? "")}`,
+      `orderInfo=${String(p.orderInfo ?? "")}`,
+      `orderType=${String(p.orderType ?? "")}`,
+      `partnerCode=${String(p.partnerCode ?? "")}`,
+      `payType=${String(p.payType ?? "")}`,
+      `requestId=${String(p.requestId ?? "")}`,
+      `responseTime=${String(p.responseTime ?? "")}`,
+      `resultCode=${String(p.resultCode ?? "")}`,
+      `transId=${String(p.transId ?? "")}`,
+    ].join("&");
+
+    const expected = createHmac("sha256", this.secretKey)
+      .update(rawSig, "utf8")
+      .digest("hex");
+
+    if (expected !== signature) return { valid: false };
+
     return {
       valid: true,
       orderId: String(p.orderId ?? ""),

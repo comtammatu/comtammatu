@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { History, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
@@ -23,12 +23,24 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@comtammatu/ui/components/tooltip";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   deletePurchaseOrderLine,
   fetchPurchaseOrderDetail,
+  fetchPriceDeviations,
+  fetchIngredientPriceHistory,
   upsertPurchaseOrderLine,
   updatePurchaseOrderStatus,
+} from "../../procurement-actions";
+import type {
+  PriceDeviationRow,
+  PriceHistoryRow,
 } from "../../procurement-actions";
 import type { IngredientRow } from "../../page";
 
@@ -78,6 +90,49 @@ export function PoDetailClient({
   const [ingredientId, setIngredientId] = useState("");
   const [unit, setUnit] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  // Price intelligence state
+  const [deviations, setDeviations] = useState<Map<number, PriceDeviationRow>>(
+    new Map(),
+  );
+  const [priceHistory, setPriceHistory] = useState<PriceHistoryRow[] | null>(
+    null,
+  );
+  const [historyIngredientId, setHistoryIngredientId] = useState<number | null>(
+    null,
+  );
+
+  // Fetch deviations when lines have prices
+  useEffect(() => {
+    const hasAnyPrice = lines.some((l) => l.unit_price_est != null);
+    if (!hasAnyPrice) return;
+    fetchPriceDeviations({ poId }).then((res) => {
+      if (res.success && res.data) {
+        const map = new Map<number, PriceDeviationRow>();
+        for (const d of res.data as PriceDeviationRow[]) {
+          map.set(d.ingredient_id, d);
+        }
+        setDeviations(map);
+      }
+    });
+  }, [poId, lines]);
+
+  function togglePriceHistory(ingredientId: number) {
+    if (historyIngredientId === ingredientId) {
+      setPriceHistory(null);
+      setHistoryIngredientId(null);
+      return;
+    }
+    setHistoryIngredientId(ingredientId);
+    fetchIngredientPriceHistory({
+      ingredientId,
+      supplierId: po.supplier_id,
+    }).then((res) => {
+      if (res.success) {
+        setPriceHistory((res.data as PriceHistoryRow[]) ?? []);
+      }
+    });
+  }
 
   function handleIngredientChange(val: string) {
     setIngredientId(val);
@@ -230,45 +285,127 @@ export function PoDetailClient({
                 </TableCell>
               </TableRow>
             )}
-            {lines.map((l) => (
-              <TableRow key={l.id}>
-                <TableCell className="font-medium">
-                  {l.ingredients?.name ?? `#${l.ingredient_id}`}
-                </TableCell>
-                <TableCell className="text-right font-mono">
-                  {l.quantity.toLocaleString("vi-VN")}
-                </TableCell>
-                <TableCell>{l.unit}</TableCell>
-                <TableCell className="hidden sm:table-cell text-right font-mono text-muted-foreground">
-                  {l.unit_price_est != null
-                    ? `${l.unit_price_est.toLocaleString("vi-VN")} ₫`
-                    : "—"}
-                </TableCell>
-                <TableCell className="hidden md:table-cell text-right font-mono">
-                  {l.line_total != null
-                    ? `${l.line_total.toLocaleString("vi-VN")} ₫`
-                    : "—"}
-                </TableCell>
-                {isDraft && (
-                  <TableCell>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive"
-                      disabled={isPending}
-                      onClick={() => removeLine(l.id)}
-                      aria-label="Xóa dòng"
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
+            {lines.map((l) => {
+              const dev = deviations.get(l.ingredient_id);
+              return (
+                <TableRow key={l.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-1.5">
+                      {l.ingredients?.name ?? `#${l.ingredient_id}`}
+                      {l.unit_price_est != null && (
+                        <button
+                          type="button"
+                          onClick={() => togglePriceHistory(l.ingredient_id)}
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                          aria-label="Lịch sử giá"
+                        >
+                          <History className="size-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </TableCell>
-                )}
-              </TableRow>
-            ))}
+                  <TableCell className="text-right font-mono">
+                    {l.quantity.toLocaleString("vi-VN")}
+                  </TableCell>
+                  <TableCell>{l.unit}</TableCell>
+                  <TableCell className="hidden sm:table-cell text-right font-mono text-muted-foreground">
+                    <div className="flex items-center justify-end gap-1.5">
+                      {l.unit_price_est != null
+                        ? `${l.unit_price_est.toLocaleString("vi-VN")} ₫`
+                        : "—"}
+                      {dev && <PriceDeviationBadge deviation={dev} />}
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-right font-mono">
+                    {l.line_total != null
+                      ? `${l.line_total.toLocaleString("vi-VN")} ₫`
+                      : "—"}
+                  </TableCell>
+                  {isDraft && (
+                    <TableCell>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive"
+                        disabled={isPending}
+                        onClick={() => removeLine(l.id)}
+                        aria-label="Xóa dòng"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
+
+      {/* Price history panel */}
+      {priceHistory != null && historyIngredientId != null && (
+        <div className="rounded-lg border bg-muted/20 p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold">
+              Lịch sử giá —{" "}
+              {lines.find((l) => l.ingredient_id === historyIngredientId)
+                ?.ingredients?.name ?? `#${historyIngredientId}`}
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setPriceHistory(null);
+                setHistoryIngredientId(null);
+              }}
+            >
+              Đóng
+            </Button>
+          </div>
+          {priceHistory.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              Chưa có lịch sử nhập hàng cho nguyên liệu này.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Ngày nhận</TableHead>
+                  <TableHead>Phiếu GRN</TableHead>
+                  <TableHead className="text-right">Số lượng</TableHead>
+                  <TableHead>ĐV</TableHead>
+                  <TableHead className="text-right">Đơn giá</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {priceHistory.map((h) => (
+                  <TableRow key={h.grn_id}>
+                    <TableCell className="text-sm">
+                      {new Date(h.received_date).toLocaleDateString("vi-VN")}
+                    </TableCell>
+                    <TableCell className="text-sm font-mono">
+                      <Link
+                        href={`/admin/inventory/grn/${h.grn_id}`}
+                        className="text-primary hover:underline"
+                      >
+                        {h.grn_number}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-sm">
+                      {h.received_quantity.toLocaleString("vi-VN")}
+                    </TableCell>
+                    <TableCell className="text-sm">{h.unit}</TableCell>
+                    <TableCell className="text-right font-mono text-sm font-semibold">
+                      {h.unit_cost.toLocaleString("vi-VN")} ₫
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+      )}
 
       {isDraft && (
         <form
@@ -338,5 +475,56 @@ export function PoDetailClient({
         </form>
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Price deviation badge with tooltip
+// ---------------------------------------------------------------------------
+function PriceDeviationBadge({ deviation }: { deviation: PriceDeviationRow }) {
+  const isExpensive = deviation.deviation_pct > 0;
+  const Icon = isExpensive ? TrendingUp : TrendingDown;
+  const sign = isExpensive ? "+" : "";
+  const label = `${sign}${deviation.deviation_pct}%`;
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-semibold cursor-help ${
+              isExpensive
+                ? "bg-destructive/10 text-destructive"
+                : "bg-green-500/10 text-green-700 dark:text-green-400"
+            }`}
+          >
+            <Icon className="size-3" />
+            {label}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs">
+          <div className="space-y-1 text-xs">
+            <p className="font-semibold">
+              {isExpensive ? "Đắt hơn" : "Rẻ hơn"} trung bình{" "}
+              {Math.abs(deviation.deviation_pct)}%
+            </p>
+            <p>
+              TB {deviation.sample_count} lần gần nhất:{" "}
+              <span className="font-mono font-semibold">
+                {deviation.avg_price.toLocaleString("vi-VN")} ₫
+              </span>
+              /{deviation.unit}
+            </p>
+            <p>
+              Giá hiện tại:{" "}
+              <span className="font-mono font-semibold">
+                {deviation.current_price.toLocaleString("vi-VN")} ₫
+              </span>
+              /{deviation.unit}
+            </p>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

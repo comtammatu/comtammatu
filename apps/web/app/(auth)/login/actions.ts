@@ -42,8 +42,9 @@ export async function login(
     if (!allowed) {
       return { error: "Quá nhiều lần thử. Vui lòng đợi 15 phút." };
     }
-  } catch {
+  } catch (error) {
     // Fail open — Upstash unreachable, allow login to proceed
+    console.error("loginRateLimit.limit failed (fail-open)", { ip, error });
   }
 
   const supabase = await createClient();

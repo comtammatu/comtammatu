@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Printer } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
@@ -65,12 +66,14 @@ export function TransferDetailClient({
   initialLines,
   ingredients,
   hqBranchId,
+  branchNames,
 }: {
   transferId: number;
   initialTransfer: TransferRecord;
   initialLines: TLineRow[];
   ingredients: IngredientRow[];
   hqBranchId: number | null;
+  branchNames: Record<number, string>;
 }) {
   const router = useRouter();
   const [tr, setTr] = useState(initialTransfer);
@@ -199,186 +202,300 @@ export function TransferDetailClient({
   const isConfirmedReceive = tr.status === "confirmed_receive";
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
-            <Link href="/admin/inventory/transfers">← Danh sách</Link>
-          </Button>
-          <h1 className="text-2xl font-bold tracking-tight font-mono">
-            {tr.transfer_number}
-          </h1>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Badge>{STATUS_LABEL[tr.status] ?? tr.status}</Badge>
-            {tr.vehicle_info && (
-              <span className="text-sm text-muted-foreground">
-                Xe: {tr.vehicle_info}
-              </span>
+    <div>
+      <div className="space-y-6 print:hidden">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
+              <Link href="/admin/inventory/transfers">← Danh sách</Link>
+            </Button>
+            <h1 className="text-2xl font-bold tracking-tight font-mono">
+              {tr.transfer_number}
+            </h1>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Badge>{STATUS_LABEL[tr.status] ?? tr.status}</Badge>
+              {tr.vehicle_info && (
+                <span className="text-sm text-muted-foreground">
+                  Xe: {tr.vehicle_info}
+                </span>
+              )}
+            </div>
+            {tr.receive_started_at && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Bắt đầu kiểm nhận:{" "}
+                {new Date(tr.receive_started_at).toLocaleString("vi-VN")}
+              </p>
+            )}
+            {tr.notes && (
+              <p className="mt-2 text-sm text-muted-foreground">{tr.notes}</p>
             )}
           </div>
-          {tr.receive_started_at && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Bắt đầu kiểm nhận:{" "}
-              {new Date(tr.receive_started_at).toLocaleString("vi-VN")}
-            </p>
-          )}
-          {tr.notes && (
-            <p className="mt-2 text-sm text-muted-foreground">{tr.notes}</p>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {isDraft && (
-            <Button
-              type="button"
-              onClick={ship}
-              disabled={isPending || lines.length === 0}
-            >
-              {shipFromIsHq ? "Xác nhận xuất (TS)" : "Xác nhận xuất (CN gửi)"}
-            </Button>
-          )}
-          {isShipped && (
-            <Button type="button" onClick={transit} disabled={isPending}>
-              {isPending ? "…" : "Đang vận chuyển"}
-            </Button>
-          )}
-          {isTransit && (
-            <Button
-              type="button"
-              onClick={confirmReceiveStart}
-              disabled={isPending}
-            >
-              {isPending ? "…" : "Bắt đầu kiểm nhận"}
-            </Button>
-          )}
-          {isConfirmedReceive && (
-            <Button type="button" onClick={receiveFull} disabled={isPending}>
-              {isPending
-                ? "…"
-                : receiveToIsHq
-                  ? "Xác nhận nhập Trụ sở"
-                  : "Xác nhận nhập chi nhánh"}
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nguyên liệu</TableHead>
-              <TableHead className="text-right">SL gửi</TableHead>
-              <TableHead>Đơn vị</TableHead>
-              <TableHead className="hidden sm:table-cell text-right">
-                Giá xuất
-              </TableHead>
-              <TableHead className="hidden sm:table-cell text-right">
-                SL nhận
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {lines.length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="py-8 text-center text-muted-foreground"
-                >
-                  {isDraft
-                    ? "Thêm dòng chi tiết trước khi xác nhận xuất."
-                    : "Không có dòng."}
-                </TableCell>
-              </TableRow>
+          <div className="flex flex-wrap gap-2">
+            {isDraft && (
+              <Button
+                type="button"
+                onClick={ship}
+                disabled={isPending || lines.length === 0}
+              >
+                {shipFromIsHq ? "Xác nhận xuất (TS)" : "Xác nhận xuất (CN gửi)"}
+              </Button>
             )}
-            {lines.map((l) => (
-              <TableRow key={l.id}>
-                <TableCell className="font-medium">
-                  {l.ingredients?.name ?? `#${l.ingredient_id}`}
-                </TableCell>
-                <TableCell className="text-right font-mono">
-                  {l.quantity.toLocaleString("vi-VN")}
-                </TableCell>
-                <TableCell>{l.unit}</TableCell>
-                <TableCell className="hidden sm:table-cell text-right font-mono text-muted-foreground">
-                  {l.unit_cost_at_ship != null
-                    ? `${l.unit_cost_at_ship.toLocaleString("vi-VN")} ₫`
-                    : "—"}
-                </TableCell>
-                <TableCell className="hidden sm:table-cell text-right font-mono">
-                  {l.quantity_received != null
-                    ? l.quantity_received.toLocaleString("vi-VN")
-                    : "—"}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            {isShipped && (
+              <Button type="button" onClick={transit} disabled={isPending}>
+                {isPending ? "…" : "Đang vận chuyển"}
+              </Button>
+            )}
+            {isTransit && (
+              <Button
+                type="button"
+                onClick={confirmReceiveStart}
+                disabled={isPending}
+              >
+                {isPending ? "…" : "Bắt đầu kiểm nhận"}
+              </Button>
+            )}
+            {isConfirmedReceive && (
+              <Button type="button" onClick={receiveFull} disabled={isPending}>
+                {isPending
+                  ? "…"
+                  : receiveToIsHq
+                    ? "Xác nhận nhập Trụ sở"
+                    : "Xác nhận nhập chi nhánh"}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => window.print()}
+              disabled={lines.length === 0}
+            >
+              <Printer className="mr-1.5 size-4" />
+              In phiếu
+            </Button>
+          </div>
+        </div>
 
-      {isDraft && (
-        <form
-          onSubmit={addLine}
-          className="rounded-lg border bg-muted/30 p-4 space-y-3 max-w-xl"
-        >
-          <h2 className="font-semibold text-sm">Thêm dòng</h2>
-          <input type="hidden" name="ingredientId" value={ingredientId} />
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label>Nguyên liệu</Label>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPickerOpen(true)}
-                >
-                  {ingredientId
-                    ? (ingredients.find((x) => String(x.id) === ingredientId)
-                        ?.name ?? "Đã chọn")
-                    : "Chọn trong bảng nguyên liệu…"}
-                </Button>
-                {ingredientId && (
-                  <span className="text-xs text-muted-foreground">
-                    Có thể tìm theo tên, SKU, danh mục trong popup.
-                  </span>
-                )}
+        <div className="rounded-md border print:border-none">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nguyên liệu</TableHead>
+                <TableHead className="text-right">SL gửi</TableHead>
+                <TableHead>Đơn vị</TableHead>
+                <TableHead className="hidden sm:table-cell text-right">
+                  Giá xuất
+                </TableHead>
+                <TableHead className="hidden sm:table-cell text-right">
+                  SL nhận
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {lines.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="py-8 text-center text-muted-foreground"
+                  >
+                    {isDraft
+                      ? "Thêm dòng chi tiết trước khi xác nhận xuất."
+                      : "Không có dòng."}
+                  </TableCell>
+                </TableRow>
+              )}
+              {lines.map((l) => (
+                <TableRow key={l.id}>
+                  <TableCell className="font-medium">
+                    {l.ingredients?.name ?? `#${l.ingredient_id}`}
+                  </TableCell>
+                  <TableCell className="text-right font-mono">
+                    {l.quantity.toLocaleString("vi-VN")}
+                  </TableCell>
+                  <TableCell>{l.unit}</TableCell>
+                  <TableCell className="hidden sm:table-cell text-right font-mono text-muted-foreground">
+                    {l.unit_cost_at_ship != null
+                      ? `${l.unit_cost_at_ship.toLocaleString("vi-VN")} ₫`
+                      : "—"}
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell text-right font-mono">
+                    {l.quantity_received != null
+                      ? l.quantity_received.toLocaleString("vi-VN")
+                      : "—"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
+        {isDraft && (
+          <form
+            onSubmit={addLine}
+            className="rounded-lg border bg-muted/30 p-4 space-y-3 max-w-xl"
+          >
+            <h2 className="font-semibold text-sm">Thêm dòng</h2>
+            <input type="hidden" name="ingredientId" value={ingredientId} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>Nguyên liệu</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPickerOpen(true)}
+                  >
+                    {ingredientId
+                      ? (ingredients.find((x) => String(x.id) === ingredientId)
+                          ?.name ?? "Đã chọn")
+                      : "Chọn trong bảng nguyên liệu…"}
+                  </Button>
+                  {ingredientId && (
+                    <span className="text-xs text-muted-foreground">
+                      Có thể tìm theo tên, SKU, danh mục trong popup.
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="qty">Số lượng</Label>
+                <Input
+                  id="qty"
+                  name="qty"
+                  type="number"
+                  step="any"
+                  min="0"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="unit">Đơn vị</Label>
+                <Input
+                  key={ingredientId || "none"}
+                  id="unit"
+                  name="unit"
+                  required
+                  placeholder="kg"
+                  defaultValue={selectedIngredient?.unit ?? ""}
+                />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="qty">Số lượng</Label>
-              <Input
-                id="qty"
-                name="qty"
-                type="number"
-                step="any"
-                min="0"
-                required
-              />
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isPending || !ingredientId}
+            >
+              {isPending ? "Đang lưu…" : "Lưu dòng"}
+            </Button>
+          </form>
+        )}
+
+        <IngredientSearchDialog
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
+          ingredients={ingredients}
+          onPick={pickIngredient}
+        />
+      </div>
+
+      {/* Print-only template — hidden on screen, visible when printing */}
+      <div className="hidden print:block print:absolute print:inset-0 print:z-50 print:bg-white print:p-8 print:text-black [print&]:text-xs">
+        <div className="space-y-6">
+          <div className="text-center">
+            <h1 className="text-xl font-bold">PHIẾU LUÂN CHUYỂN KHO</h1>
+            <p className="mt-1 font-mono text-lg">{tr.transfer_number}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p>
+                <strong>Kho xuất:</strong>{" "}
+                {branchNames[tr.from_branch_id] ??
+                  `#${String(tr.from_branch_id)}`}
+              </p>
+              <p>
+                <strong>Kho nhận:</strong>{" "}
+                {branchNames[tr.to_branch_id] ?? `#${String(tr.to_branch_id)}`}
+              </p>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="unit">Đơn vị</Label>
-              <Input
-                key={ingredientId || "none"}
-                id="unit"
-                name="unit"
-                required
-                placeholder="kg"
-                defaultValue={selectedIngredient?.unit ?? ""}
-              />
+            <div className="text-right">
+              <p>
+                <strong>Trạng thái:</strong>{" "}
+                {STATUS_LABEL[tr.status] ?? tr.status}
+              </p>
+              <p>
+                <strong>Ngày xuất:</strong>{" "}
+                {tr.shipped_at
+                  ? new Date(tr.shipped_at).toLocaleDateString("vi-VN")
+                  : "—"}
+              </p>
+              {tr.vehicle_info && (
+                <p>
+                  <strong>Xe:</strong> {tr.vehicle_info}
+                </p>
+              )}
             </div>
           </div>
-          <Button type="submit" size="sm" disabled={isPending || !ingredientId}>
-            {isPending ? "Đang lưu…" : "Lưu dòng"}
-          </Button>
-        </form>
-      )}
 
-      <IngredientSearchDialog
-        open={pickerOpen}
-        onOpenChange={setPickerOpen}
-        ingredients={ingredients}
-        onPick={pickIngredient}
-      />
+          {tr.notes && (
+            <p className="text-sm">
+              <strong>Ghi chú:</strong> {tr.notes}
+            </p>
+          )}
+
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b-2 border-black">
+                <th className="py-1 text-left">STT</th>
+                <th className="py-1 text-left">Nguyên liệu</th>
+                <th className="py-1 text-right">Số lượng</th>
+                <th className="py-1 text-left pl-4">Đơn vị</th>
+                <th className="py-1 text-right">SL nhận</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lines.map((l, idx) => (
+                <tr key={l.id} className="border-b border-gray-300">
+                  <td className="py-1">{idx + 1}</td>
+                  <td className="py-1">
+                    {l.ingredients?.name ?? `#${String(l.ingredient_id)}`}
+                  </td>
+                  <td className="py-1 text-right font-mono">
+                    {l.quantity.toLocaleString("vi-VN")}
+                  </td>
+                  <td className="py-1 pl-4">{l.unit}</td>
+                  <td className="py-1 text-right font-mono">
+                    {l.quantity_received != null
+                      ? l.quantity_received.toLocaleString("vi-VN")
+                      : ""}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="mt-12 grid grid-cols-3 gap-8 text-center text-sm">
+            <div>
+              <p className="font-semibold">Người giao</p>
+              <p className="mt-12 border-t border-gray-400 pt-1">
+                (Ký, ghi rõ họ tên)
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold">Vận chuyển</p>
+              <p className="mt-12 border-t border-gray-400 pt-1">
+                (Ký, ghi rõ họ tên)
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold">Người nhận</p>
+              <p className="mt-12 border-t border-gray-400 pt-1">
+                (Ký, ghi rõ họ tên)
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

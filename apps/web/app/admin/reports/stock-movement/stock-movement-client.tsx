@@ -1,0 +1,332 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { Button } from "@comtammatu/ui/components/button";
+import { Input } from "@comtammatu/ui/components/input";
+import { Label } from "@comtammatu/ui/components/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@comtammatu/ui/components/table";
+import { EmptyStatePanel } from "../../components/empty-state-panel";
+import {
+  fetchStockMovementReport,
+  fetchBranchMovementSummary,
+} from "../../inventory/report-actions";
+import type {
+  MovementReportRow,
+  BranchMovementSummaryRow,
+} from "../../inventory/report-actions";
+
+interface StockMovementClientProps {
+  branches: { id: number; name: string }[];
+  userBranchId: number | null;
+}
+
+function defaultDateRange() {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - 7);
+  return {
+    startDate: start.toISOString().slice(0, 10),
+    endDate: end.toISOString().slice(0, 10),
+  };
+}
+
+function fmt(n: number) {
+  if (n === 0) return "—";
+  return n.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
+}
+
+export function StockMovementClient({
+  branches,
+  userBranchId,
+}: StockMovementClientProps) {
+  const defaults = defaultDateRange();
+  const [startDate, setStartDate] = useState(defaults.startDate);
+  const [endDate, setEndDate] = useState(defaults.endDate);
+  const [branchId, setBranchId] = useState<string>(
+    userBranchId ? String(userBranchId) : "all",
+  );
+  const [movementRows, setMovementRows] = useState<MovementReportRow[]>([]);
+  const [branchRows, setBranchRows] = useState<BranchMovementSummaryRow[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function load() {
+    setError(null);
+    startTransition(async () => {
+      const brId = branchId === "all" ? undefined : Number(branchId);
+      const [movRes, brRes] = await Promise.all([
+        fetchStockMovementReport({ startDate, endDate, branchId: brId }),
+        fetchBranchMovementSummary({ startDate, endDate }),
+      ]);
+
+      if (!movRes.success) {
+        setError(movRes.error ?? "Lỗi tải báo cáo");
+        return;
+      }
+      setMovementRows(movRes.data ?? []);
+      setBranchRows(brRes.success ? (brRes.data ?? []) : []);
+      setLoaded(true);
+    });
+  }
+
+  function setPreset(days: number) {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - days);
+    setStartDate(start.toISOString().slice(0, 10));
+    setEndDate(end.toISOString().slice(0, 10));
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Filters */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="startDate">Từ ngày</Label>
+          <Input
+            id="startDate"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="w-40"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="endDate">Đến ngày</Label>
+          <Input
+            id="endDate"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="w-40"
+          />
+        </div>
+        {!userBranchId && (
+          <div className="space-y-1.5">
+            <Label>Chi nhánh</Label>
+            <Select value={branchId} onValueChange={setBranchId}>
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="Tất cả" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả chi nhánh</SelectItem>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={String(b.id)}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        <div className="flex gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPreset(7)}
+            className="text-xs"
+          >
+            7 ngày
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPreset(14)}
+            className="text-xs"
+          >
+            14 ngày
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPreset(30)}
+            className="text-xs"
+          >
+            30 ngày
+          </Button>
+        </div>
+        <Button onClick={load} disabled={isPending}>
+          {isPending ? "Đang tải..." : "Xem báo cáo"}
+        </Button>
+      </div>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      {!loaded && !error && (
+        <EmptyStatePanel
+          className="py-12"
+          title="Chọn kỳ báo cáo"
+          description="Chọn khoảng thời gian và nhấn Xem báo cáo để hiển thị biến động tồn kho."
+        />
+      )}
+
+      {loaded && (
+        <Tabs defaultValue="detail">
+          <TabsList>
+            <TabsTrigger value="detail">
+              Chi tiết ({movementRows.length})
+            </TabsTrigger>
+            <TabsTrigger value="branch">
+              Theo chi nhánh ({branchRows.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="detail" className="mt-4">
+            {movementRows.length === 0 ? (
+              <EmptyStatePanel
+                className="py-12"
+                title="Không có dữ liệu"
+                description="Không có biến động tồn kho trong kỳ đã chọn."
+              />
+            ) : (
+              <div className="overflow-x-auto rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-44">Nguyên liệu</TableHead>
+                      <TableHead className="w-16">ĐV</TableHead>
+                      <TableHead className="w-24 text-right">
+                        Tồn đầu kỳ
+                      </TableHead>
+                      <TableHead className="w-24 text-right">
+                        Nhập (GRN)
+                      </TableHead>
+                      <TableHead className="w-24 text-right">
+                        Chuyển vào
+                      </TableHead>
+                      <TableHead className="w-24 text-right">
+                        Chuyển ra
+                      </TableHead>
+                      <TableHead className="w-24 text-right">
+                        Tiêu thụ
+                      </TableHead>
+                      <TableHead className="w-24 text-right">
+                        Điều chỉnh
+                      </TableHead>
+                      <TableHead className="w-24 text-right">
+                        Tồn cuối kỳ
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {movementRows.map((row) => (
+                      <TableRow key={row.ingredient_id}>
+                        <TableCell className="font-medium">
+                          {row.ingredient_name}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {row.unit}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {fmt(row.opening)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-emerald-600">
+                          {fmt(row.grn_receipt)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-emerald-600">
+                          {fmt(row.transfer_in)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-red-600">
+                          {fmt(row.transfer_out)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-red-600">
+                          {fmt(row.consumption)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {fmt(row.adjustment)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono font-semibold">
+                          {fmt(row.closing)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="branch" className="mt-4">
+            {branchRows.length === 0 ? (
+              <EmptyStatePanel
+                className="py-12"
+                title="Không có dữ liệu"
+                description="Không có biến động tồn kho theo chi nhánh trong kỳ đã chọn."
+              />
+            ) : (
+              <div className="overflow-x-auto rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-44">Chi nhánh</TableHead>
+                      <TableHead className="w-24 text-right">
+                        Nhập (GRN)
+                      </TableHead>
+                      <TableHead className="w-24 text-right">
+                        Chuyển vào
+                      </TableHead>
+                      <TableHead className="w-24 text-right">
+                        Chuyển ra
+                      </TableHead>
+                      <TableHead className="w-24 text-right">
+                        Tiêu thụ
+                      </TableHead>
+                      <TableHead className="w-24 text-right">
+                        Điều chỉnh
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {branchRows.map((row) => (
+                      <TableRow key={row.branch_id}>
+                        <TableCell className="font-medium">
+                          {row.branch_name}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-emerald-600">
+                          {fmt(row.grn_receipt)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-emerald-600">
+                          {fmt(row.transfer_in)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-red-600">
+                          {fmt(row.transfer_out)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-red-600">
+                          {fmt(row.consumption)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {fmt(row.adjustment)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      )}
+    </div>
+  );
+}

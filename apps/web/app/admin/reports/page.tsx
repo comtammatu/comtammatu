@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, Package } from "lucide-react";
+import { ArrowLeftRight, BarChart3, Package, TrendingUp } from "lucide-react";
 import { EmptyStatePanel } from "../components/empty-state-panel";
 
 export default function ReportsPage() {
@@ -24,6 +24,36 @@ export default function ReportsPage() {
             <p className="font-medium leading-tight">Giá trị tồn kho</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               Xem theo hệ thống, khu vực, chi nhánh
+            </p>
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/reports/stock-movement"
+          className="group flex items-center gap-4 rounded-lg border bg-card p-4 shadow-sm transition-colors hover:border-primary/40 hover:bg-muted/30"
+        >
+          <div className="rounded-lg bg-primary/10 p-2.5">
+            <TrendingUp className="size-5 text-primary" />
+          </div>
+          <div>
+            <p className="font-medium leading-tight">Biến động tồn kho</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Nhập, xuất, tiêu thụ, điều chỉnh theo kỳ
+            </p>
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/reports/stock-movement"
+          className="group flex items-center gap-4 rounded-lg border bg-card p-4 shadow-sm transition-colors hover:border-primary/40 hover:bg-muted/30"
+        >
+          <div className="rounded-lg bg-primary/10 p-2.5">
+            <ArrowLeftRight className="size-5 text-primary" />
+          </div>
+          <div>
+            <p className="font-medium leading-tight">Tổng hợp theo chi nhánh</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Biến động kho gom theo chi nhánh và loại
             </p>
           </div>
         </Link>

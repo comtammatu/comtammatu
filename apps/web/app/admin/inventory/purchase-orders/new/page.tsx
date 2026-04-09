@@ -1,13 +1,15 @@
 import { fetchIngredients } from "../../actions";
-import { fetchSuppliers } from "../../procurement-actions";
+import { fetchPoSuggestions, fetchSuppliers } from "../../procurement-actions";
 import { NewPoClient } from "./new-po-client";
 import type { SupplierRow } from "../../suppliers/suppliers-client";
 import type { IngredientRow } from "../../page";
+import type { PoSuggestionRow } from "../../procurement-actions";
 
 export default async function NewPurchaseOrderPage() {
-  const [suppliersRes, ingRes] = await Promise.all([
+  const [suppliersRes, ingRes, suggestionsRes] = await Promise.all([
     fetchSuppliers(),
     fetchIngredients(),
+    fetchPoSuggestions({ periodDays: 7 }),
   ]);
 
   const suppliers: SupplierRow[] = suppliersRes.success
@@ -18,5 +20,15 @@ export default async function NewPurchaseOrderPage() {
     ? ((ingRes.data ?? []) as IngredientRow[])
     : [];
 
-  return <NewPoClient suppliers={suppliers} ingredients={ingredients} />;
+  const suggestions: PoSuggestionRow[] = suggestionsRes.success
+    ? ((suggestionsRes.data ?? []) as PoSuggestionRow[])
+    : [];
+
+  return (
+    <NewPoClient
+      suppliers={suppliers}
+      ingredients={ingredients}
+      initialSuggestions={suggestions}
+    />
+  );
 }

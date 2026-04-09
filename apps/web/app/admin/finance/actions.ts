@@ -221,7 +221,7 @@ export async function cancelTaxInvoice(
 
   const { data: invoice, error: fetchErr } = await supabase
     .from("tax_invoices")
-    .select("id, status")
+    .select("id, status, provider_ref, provider")
     .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
     .single();
@@ -234,14 +234,29 @@ export async function cancelTaxInvoice(
     return { success: false, error: "Chỉ có thể hủy hóa đơn đã phát hành." };
   }
 
-  // TODO: Call MISA cancel API here
+  // Call provider cancel API if configured
+  const cancelReason = reason ?? "Hủy theo yêu cầu";
+  if (invoice.provider_ref && invoice.provider !== "mock") {
+    ensureInvoiceProviderRegistered();
+    const invoiceProvider = getInvoiceProvider();
+    if (invoiceProvider) {
+      try {
+        await invoiceProvider.cancelInvoice(invoice.provider_ref, cancelReason);
+      } catch {
+        return {
+          success: false,
+          error: "Không thể hủy hóa đơn phía nhà cung cấp. Vui lòng thử lại.",
+        };
+      }
+    }
+  }
 
   const { error } = await supabase
     .from("tax_invoices")
     .update({
       status: "cancelled",
       cancelled_at: new Date().toISOString(),
-      provider_data: { cancel_reason: reason ?? "Hủy theo yêu cầu" },
+      provider_data: { cancel_reason: cancelReason },
     })
     .eq("id", parsedId.data);
 
@@ -376,4 +391,102 @@ export async function fetchTopItems(
   }
 
   return { success: true, data: data ?? [] };
+}
+
+/* ─── Food Cost ─── */
+
+export async function fetchFoodCost(
+  branchId: number,
+  startDate: string,
+  endDate: string,
+): Promise<ActionResult> {
+  const parsedBranch = z.coerce.number().int().positive().safeParse(branchId);
+  if (!parsedBranch.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const parsedStart = z.string().date().safeParse(startDate);
+  const parsedEnd = z.string().date().safeParse(endDate);
+  if (!parsedStart.success || !parsedEnd.success) {
+    return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
+  }
+
+  const ctx = await getAuthContext(REPORT_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  const { data, error: fetchErr } = await supabase
+    .from("mv_food_cost")
+    .select("*")
+    .eq("branch_id", parsedBranch.data)
+    .eq("tenant_id", claims.tenant_id)
+    .gte("period_start", parsedStart.data)
+    .lte("period_start", parsedEnd.data)
+    .order("food_cost_pct", { ascending: false });
+
+  if (fetchErr) {
+    return {
+      success: false,
+      error: "Không thể tải dữ liệu chi phí nguyên liệu.",
+    };
+  }
+
+  return { success: true, data: data ?? [] };
+}
+
+/* ─── Refresh Materialized Views ─── */
+
+export async function refreshMaterializedViews(): Promise<ActionResult> {
+  const ctx = await getAuthContext(FINANCE_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase } = ctx;
+
+  const { error: rpcErr } = await supabase.rpc("refresh_finance_views");
+
+  if (rpcErr) {
+    return { success: false, error: "Không thể làm mới dữ liệu báo cáo." };
+  }
+
+  return { success: true };
+}
+
+/* ─── Audit Logs ─── */
+
+export async function fetchAuditLogs(
+  entityType?: string,
+  limitCount?: number,
+): Promise<ActionResult> {
+  const parsedLimit = z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(500)
+    .optional()
+    .safeParse(limitCount);
+
+  const ctx = await getAuthContext(FINANCE_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  let query = supabase
+    .from("audit_logs")
+    .select("*")
+    .eq("tenant_id", claims.tenant_id)
+    .order("created_at", { ascending: false })
+    .limit(parsedLimit.success && parsedLimit.data ? parsedLimit.data : 100);
+
+  if (entityType) {
+    query = query.eq("entity_type", entityType);
+  }
+
+  const { data: logs, error: logErr } = await query;
+
+  if (logErr) {
+    return { success: false, error: "Không thể tải nhật ký hoạt động." };
+  }
+
+  return { success: true, data: logs ?? [] };
 }
