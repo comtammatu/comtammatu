@@ -6,8 +6,8 @@ import "./globals.css";
 
 const beVietnamPro = Be_Vietnam_Pro({
   subsets: ["latin", "latin-ext", "vietnamese"],
-  variable: "--font-geist",
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-be-vietnam-pro",
   display: "swap",
 });
 

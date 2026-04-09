@@ -6,7 +6,6 @@ import {
 import { fetchIngredients } from "../actions";
 import { InventoryValuePanel } from "../inventory-value-panel";
 import { StockLevelsTable } from "../stock-levels-table";
-import { PageHeader } from "@/components/foundation/ui-patterns";
 import type { IngredientRow, BranchOption } from "../page";
 
 export default async function StockPage() {
@@ -44,11 +43,7 @@ export default async function StockPage() {
   const defaultBranchId = claims?.branch_id ?? branches[0]?.id ?? null;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Tồn kho"
-        description="Xem và điều chỉnh mức tồn kho theo chi nhánh"
-      />
+    <div className="space-y-4">
       <InventoryValuePanel visibility={inventoryValueVisibility} />
       <StockLevelsTable
         ingredients={ingredients}
