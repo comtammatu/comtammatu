@@ -260,7 +260,7 @@ export function StockLevelsTable({
         >
           {/* Mobile: card layout */}
           {isMobile ? (
-            <div className="divide-y">
+            <div className="divide-y overflow-y-auto max-h-[calc(100vh-18rem)]">
               {stockRows.length === 0 && !isPending && (
                 <div className="py-16 text-center">
                   <p className="text-sm font-medium text-muted-foreground">
@@ -323,142 +323,144 @@ export function StockLevelsTable({
             </div>
           ) : (
             /* Desktop: table layout */
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/20 hover:bg-muted/20">
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    Nguyên liệu
-                  </TableHead>
-                  <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
-                    Tồn hiện tại
-                  </TableHead>
-                  <TableHead className="hidden md:table-cell text-right text-xs font-semibold uppercase tracking-wider">
-                    Giá vốn TB
-                  </TableHead>
-                  {showLineValue && (
-                    <TableHead className="hidden lg:table-cell text-right text-xs font-semibold uppercase tracking-wider">
-                      Thành tiền
+            <div className="overflow-y-auto max-h-[calc(100vh-32rem)]">
+              <Table>
+                <TableHeader className="sticky top-0 z-10 bg-background">
+                  <TableRow className="bg-muted/20 hover:bg-muted/20">
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                      Nguyên liệu
                     </TableHead>
-                  )}
-                  <TableHead className="hidden sm:table-cell text-right text-xs font-semibold uppercase tracking-wider">
-                    Tối thiểu
-                  </TableHead>
-                  <TableHead className="hidden sm:table-cell text-xs font-semibold uppercase tracking-wider">
-                    Đơn vị
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    Cảnh báo
-                  </TableHead>
-                  <TableHead className="w-12" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stockRows.length === 0 && !isPending && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={showLineValue ? 8 : 7}
-                      className="py-12 text-center text-sm text-muted-foreground"
-                    >
-                      Không có dữ liệu tồn kho cho chi nhánh này
-                    </TableCell>
+                    <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
+                      Tồn hiện tại
+                    </TableHead>
+                    <TableHead className="hidden md:table-cell text-right text-xs font-semibold uppercase tracking-wider">
+                      Giá vốn TB
+                    </TableHead>
+                    {showLineValue && (
+                      <TableHead className="hidden lg:table-cell text-right text-xs font-semibold uppercase tracking-wider">
+                        Thành tiền
+                      </TableHead>
+                    )}
+                    <TableHead className="hidden sm:table-cell text-right text-xs font-semibold uppercase tracking-wider">
+                      Tối thiểu
+                    </TableHead>
+                    <TableHead className="hidden sm:table-cell text-xs font-semibold uppercase tracking-wider">
+                      Đơn vị
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                      Cảnh báo
+                    </TableHead>
+                    <TableHead className="w-12" />
                   </TableRow>
-                )}
-                {stockRows.map((row) => {
-                  const alertLevel = getAlertLevel(row);
-                  return (
-                    <TableRow
-                      key={row.id}
-                      className={`hover:bg-muted/30 transition-colors ${alertLevel === "low" ? "bg-destructive/5" : ""}`}
-                    >
-                      <TableCell className="font-medium">
-                        {row.ingredient_name}
-                      </TableCell>
+                </TableHeader>
+                <TableBody>
+                  {stockRows.length === 0 && !isPending && (
+                    <TableRow>
                       <TableCell
-                        className={`text-right font-mono ${
-                          alertLevel === "low"
-                            ? "text-destructive font-semibold"
-                            : ""
-                        }`}
+                        colSpan={showLineValue ? 8 : 7}
+                        className="py-12 text-center text-sm text-muted-foreground"
                       >
-                        {row.current_quantity.toLocaleString("vi-VN")}
+                        Không có dữ liệu tồn kho cho chi nhánh này
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-right font-mono text-muted-foreground text-xs">
-                        {row.avg_unit_cost != null
-                          ? `${row.avg_unit_cost.toLocaleString("vi-VN")} ₫`
-                          : "—"}
-                      </TableCell>
-                      {showLineValue && (
-                        <TableCell className="hidden lg:table-cell text-right font-mono text-sm tabular-nums">
-                          {formatVND(
-                            lineStockValue(
-                              row.current_quantity,
-                              row.avg_unit_cost,
-                              unitCostByIngredientId.get(row.ingredient_id) ??
-                                null,
-                            ),
+                    </TableRow>
+                  )}
+                  {stockRows.map((row) => {
+                    const alertLevel = getAlertLevel(row);
+                    return (
+                      <TableRow
+                        key={row.id}
+                        className={`hover:bg-muted/30 transition-colors ${alertLevel === "low" ? "bg-destructive/5" : ""}`}
+                      >
+                        <TableCell className="font-medium">
+                          {row.ingredient_name}
+                        </TableCell>
+                        <TableCell
+                          className={`text-right font-mono ${
+                            alertLevel === "low"
+                              ? "text-destructive font-semibold"
+                              : ""
+                          }`}
+                        >
+                          {row.current_quantity.toLocaleString("vi-VN")}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-right font-mono text-muted-foreground text-xs">
+                          {row.avg_unit_cost != null
+                            ? `${row.avg_unit_cost.toLocaleString("vi-VN")} ₫`
+                            : "—"}
+                        </TableCell>
+                        {showLineValue && (
+                          <TableCell className="hidden lg:table-cell text-right font-mono text-sm tabular-nums">
+                            {formatVND(
+                              lineStockValue(
+                                row.current_quantity,
+                                row.avg_unit_cost,
+                                unitCostByIngredientId.get(row.ingredient_id) ??
+                                  null,
+                              ),
+                            )}
+                          </TableCell>
+                        )}
+                        <TableCell className="hidden sm:table-cell text-right font-mono text-muted-foreground">
+                          {row.min_stock_level.toLocaleString("vi-VN")}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          {row.ingredient_unit}
+                        </TableCell>
+                        <TableCell>
+                          {alertLevel === "low" && (
+                            <Badge
+                              variant="destructive"
+                              className="gap-1 text-xs"
+                            >
+                              <AlertTriangle className="size-3" />
+                              Thiếu hàng
+                            </Badge>
+                          )}
+                          {alertLevel === "high" && (
+                            <Badge variant="secondary" className="text-xs">
+                              Tràn kho
+                            </Badge>
+                          )}
+                          {alertLevel === "ok" && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs text-green-600"
+                            >
+                              Đủ hàng
+                            </Badge>
                           )}
                         </TableCell>
-                      )}
-                      <TableCell className="hidden sm:table-cell text-right font-mono text-muted-foreground">
-                        {row.min_stock_level.toLocaleString("vi-VN")}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        {row.ingredient_unit}
-                      </TableCell>
-                      <TableCell>
-                        {alertLevel === "low" && (
-                          <Badge
-                            variant="destructive"
-                            className="gap-1 text-xs"
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-xs"
+                            onClick={() => setAdjustTarget(row)}
                           >
-                            <AlertTriangle className="size-3" />
-                            Thiếu hàng
-                          </Badge>
-                        )}
-                        {alertLevel === "high" && (
-                          <Badge variant="secondary" className="text-xs">
-                            Tràn kho
-                          </Badge>
-                        )}
-                        {alertLevel === "ok" && (
-                          <Badge
-                            variant="outline"
-                            className="text-xs text-green-600"
-                          >
-                            Đủ hàng
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 px-2 text-xs"
-                          onClick={() => setAdjustTarget(row)}
+                            Điều chỉnh
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+                {showLineValue &&
+                  branchStockTotal != null &&
+                  stockRows.length > 0 && (
+                    <TableFooter>
+                      <TableRow className="bg-muted/50">
+                        <TableCell
+                          colSpan={8}
+                          className="text-right font-medium font-mono tabular-nums"
                         >
-                          Điều chỉnh
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-              {showLineValue &&
-                branchStockTotal != null &&
-                stockRows.length > 0 && (
-                  <TableFooter>
-                    <TableRow className="bg-muted/50">
-                      <TableCell
-                        colSpan={8}
-                        className="text-right font-medium font-mono tabular-nums"
-                      >
-                        Tổng giá trị (chi nhánh đang xem):{" "}
-                        {formatVND(branchStockTotal)}
-                      </TableCell>
-                    </TableRow>
-                  </TableFooter>
-                )}
-            </Table>
+                          Tổng giá trị (chi nhánh đang xem):{" "}
+                          {formatVND(branchStockTotal)}
+                        </TableCell>
+                      </TableRow>
+                    </TableFooter>
+                  )}
+              </Table>
+            </div>
           )}
         </div>
       )}

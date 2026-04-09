@@ -115,7 +115,7 @@ export function InventorySubNav({
     <>
       {/* Desktop: horizontal tabs */}
       <nav aria-label="Kho hàng" className="hidden border-b md:block">
-        <div className="flex gap-0.5">
+        <div className="flex gap-0.5 overflow-x-auto">
           {visibleItems.map((item) => {
             const Icon = item.icon;
             const active = isItemActive(item, pathname);
