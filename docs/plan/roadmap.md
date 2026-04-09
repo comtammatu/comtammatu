@@ -16,14 +16,35 @@ Không phải CRM, không phải ERP tổng hợp. Mỗi module giải quyết m
 | M1  | Menu        | Categories, items, variants, modifiers, sides        | SHIPPED |
 | M2  | POS         | Cart, table/zone, order submit, bill printing        | SHIPPED |
 | M3  | KDS         | Realtime queue, bump/complete, station config        | SHIPPED |
-| M4  | Payment     | Cash, VietQR, Momo, refunds, reconciliation          | SHIPPED |
+| M4  | Payment     | Cash ✅, VietQR/Momo blocked on credentials          | PARTIAL |
 | M5  | Stock       | Ingredients, recipes, stock levels, procurement, GRN | SHIPPED |
-| M6  | Finance     | HĐĐT, VAT, dashboard, reports, VAS accounting        | DONE    |
-| M7  | HR/Payroll  | Employees, shifts, attendance, payroll, PIT          | DONE    |
+| M6  | Finance     | Dashboard ✅, HĐĐT blocked on credentials, VAS stubs | PARTIAL |
+| M7  | HR/Payroll  | Attendance ✅, payroll calc incomplete               | PARTIAL |
 
 **Feature specs (beyond module rows):**
 
 - [M2-Ext: POS Order Lifecycle](m2-order-lifecycle.md) — thêm món sau submit, đồng bộ trạng thái KDS → dòng món, void/cancel/chuyển bàn, đặt lại (PLANNED)
+
+## Pilot-Critical Backlog (blocked on external credentials)
+
+Những việc cần làm trước khi test pilot với chi nhánh thật. Không phải features mới — là wire stubs đã có.
+
+| #   | Task                                                          | Blocked on                       | Priority     |
+| --- | ------------------------------------------------------------- | -------------------------------- | ------------ |
+| P1  | Wire VietQR real bank API + polling UI trong POS              | Merchant credentials             | P0           |
+| P2  | Wire Momo real API + atomic complete_payment RPC              | Merchant credentials + migration | P0           |
+| P3  | Wire MISA HĐĐT real API call (M6)                             | MISA provider credentials        | P0 (pháp lý) |
+| P4  | VietQR: Supabase realtime listener trong payment panel        | Depends on P1                    | P1           |
+| P5  | Momo webhook: atomic `complete_payment_and_consume_stock` RPC | Migration + PR                   | P1           |
+
+Post-pilot (defer):
+
+| #   | Task                                    | Why defer                           |
+| --- | --------------------------------------- | ----------------------------------- |
+| D1  | M7 payroll BHXH/PIT calc wiring         | Use Excel for pilot (< 5 nhân viên) |
+| D2  | M6 VAS journal entries                  | Export CSV → MISA AMIS for pilot    |
+| D3  | Automated E2E tests (POS→payment→stock) | P2 before scaling to 3+ branches    |
+| D4  | Staging environment                     | P2 before external users            |
 
 Post-v1.0 (lên kế hoạch riêng):
 

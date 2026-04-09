@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { z } from "zod";
 import { PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
@@ -163,7 +164,7 @@ export async function createPurchaseOrder(
   if (!hqId) {
     return { success: false, error: "Chưa cấu hình chi nhánh Trụ sở." };
   }
-  const poNumber = `PO-${Date.now()}`;
+  const poNumber = `PO-${randomUUID().slice(0, 8)}`;
   const { data, error } = await supabase
     .from("purchase_orders")
     .insert({
@@ -416,7 +417,7 @@ export async function createGrnDraft(
   if (!hqId) {
     return { success: false, error: "Chưa cấu hình chi nhánh Trụ sở." };
   }
-  const grnNumber = `GRN-${Date.now()}`;
+  const grnNumber = `GRN-${randomUUID().slice(0, 8)}`;
   const { data, error } = await supabase
     .from("goods_received_notes")
     .insert({
@@ -1190,7 +1191,7 @@ export async function createGrnFromPo(poId: number): Promise<ActionResult> {
   if (!hqId)
     return { success: false, error: "Chưa cấu hình chi nhánh Trụ sở." };
 
-  const grnNumber = `GRN-${Date.now()}`;
+  const grnNumber = `GRN-${randomUUID().slice(0, 8)}`;
   const { data, error } = await supabase
     .from("goods_received_notes")
     .insert({

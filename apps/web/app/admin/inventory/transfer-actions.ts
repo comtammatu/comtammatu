@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { z } from "zod";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
@@ -226,7 +227,7 @@ export async function createStockTransfer(
     }
   }
 
-  const transferNumber = `TRF-${Date.now()}`;
+  const transferNumber = `TRF-${randomUUID().slice(0, 8)}`;
   const { data, error } = await supabase
     .from("stock_transfers")
     .insert({

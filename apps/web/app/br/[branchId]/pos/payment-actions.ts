@@ -245,6 +245,21 @@ export async function createPayment(
     return { success: false, error: "Không thể tạo thanh toán." };
   }
 
+  // For cash payments (status=completed immediately), deduct ingredients from stock.
+  // VietQR/Momo deduct after confirm/webhook completes.
+  if (result.status === "completed") {
+    const { error: stockErr } = await supabase.rpc("consume_stock_for_order", {
+      p_order_id: parsedPayment.data.orderId,
+    });
+    if (stockErr && !stockErr.message?.includes("already_consumed")) {
+      // Non-fatal: payment succeeded, stock reconciliation can be done manually
+      console.error(
+        "[createPayment] consume_stock_for_order failed:",
+        stockErr.message,
+      );
+    }
+  }
+
   return {
     success: true,
     data: {
@@ -316,11 +331,31 @@ export async function confirmPayment(
   }
 
   // Update order — scope by tenant for defense in depth
-  await supabase
+  const { error: orderErr } = await supabase
     .from("orders")
     .update({ payment_status: "paid" })
     .eq("id", payment.order_id)
     .eq("tenant_id", claims.tenant_id);
+
+  if (orderErr) {
+    // Payment completed but order status desync — log for manual reconciliation
+    console.error(
+      `[confirmPayment] order status desync: payment=${parsedId.data} order=${payment.order_id}`,
+      orderErr.message,
+    );
+  }
+
+  // Deduct ingredients consumed by this order from stock
+  const { error: stockErr } = await supabase.rpc("consume_stock_for_order", {
+    p_order_id: payment.order_id,
+  });
+  if (stockErr && !stockErr.message?.includes("already_consumed")) {
+    // Non-fatal: payment succeeded, stock reconciliation can be done manually
+    console.error(
+      "[confirmPayment] consume_stock_for_order failed:",
+      stockErr.message,
+    );
+  }
 
   return { success: true };
 }

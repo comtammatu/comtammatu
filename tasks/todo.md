@@ -3,45 +3,52 @@
 > Active work items for the current session/phase.
 > Update during work, clear completed items regularly.
 
-## All Modules SHIPPED (M0-M7) ✅
+## Module Status (updated 2026-04-10 CEO review)
 
-All 8 modules shipped and QA verified on 2026-04-07.
+M0-M3, M5 SHIPPED. M4/M6/M7 PARTIAL (stubs — blocked on credentials or incomplete calc).
 
-### Completed
+### Shipped & Working
 
 - [x] M0: Admin Shell — layout, sidebar, branches, staff, settings
 - [x] M1: Menu — categories, items, variants, modifiers, sides
 - [x] M2: POS — cart, table/zone, order submit, bill printing
 - [x] M3: KDS — realtime queue, bump/complete, station config
-- [x] M4: Payment — cash, VietQR, Momo, refunds, reconciliation
-- [x] M5: Stock — ingredients, recipes, stock levels, procurement
-- [x] M6: Finance — HĐĐT, VAT, dashboard, VAS accounting
-- [x] M7: HR/Payroll — employees, shifts, attendance, payroll
+- [x] M4: Cash payment ✅ — VietQR/Momo blocked on merchant credentials
+- [x] M5: Stock — ingredients, recipes, stock levels, procurement, GRN
+- [x] M6: Revenue dashboard ✅ — HĐĐT blocked on MISA credentials, VAS stubs
+- [x] M7: Attendance GPS/QR ✅ — payroll calc incomplete
 
-## Known Issues (from 2026-04-08 security review)
+## Known Issues
 
 - [x] P2: 16x `(supabase.rpc as CallableFunction)` type safety bypass — fixed `48ed4ac`
-- [ ] P3: Draft invoice number collision — `DRAFT-${branch_id}-${Date.now()}` không unique nếu concurrent
+- [x] P3: Draft invoice number collision — fixed with `crypto.randomUUID()` (finance/actions.ts)
+- [x] P3: PO/GRN/TRF/PXK `Date.now()` collision — fixed with `randomUUID().slice(0,8)` (2026-04-10)
+- [x] `consume_stock_for_order` never called — wired after cash + VietQR confirm (2026-04-10)
 - [ ] P3: Login rate limit fail-open khi Upstash unreachable — documented design decision, cần observability
 - [x] Migration applied: `20260413000000_fix_void_cancel_branch_scope.sql` — applied + types regenerated
 
-## Pre-deploy Fixes (from 2026-04-09 CEO review)
+## Pre-deploy Fixes (pending)
 
-- [ ] Fix P3: Draft invoice collision — replace `DRAFT-${Date.now()}` with `crypto.randomUUID()`
 - [ ] Fix: Invoice empty `items[]` — populate line items from order_items (finance/actions.ts:131)
-- [ ] Uptime monitor on `/api/health` (UptimeRobot or similar)
+- [ ] Uptime monitor on `/api/health` (UptimeRobot — ops task, not code)
+- [ ] Momo webhook: atomic `complete_payment_and_consume_stock` RPC (migration needed when M4 wired)
 
-## Deferred (from 2026-04-09 CEO review)
+## Pilot-Critical Backlog (blocked on external credentials)
 
-- [ ] Automated tests for critical POS→KDS→Payment flow (P2, before scaling)
-- [ ] Staging environment — Vercel Preview or branch deploy (P2)
-- [ ] Correct roadmap — M4/M6/M7 status should be PARTIAL not SHIPPED (P3)
-- [ ] area_manager branch scope (H3) — not needed for single-tenant test server
-- [ ] Wire real MISA HĐĐT integration (blocked on credentials)
-- [ ] Wire VietQR + MoMo payments (blocked on merchant credentials)
+- [ ] P0: Wire VietQR real bank API (blocked on merchant credentials)
+- [ ] P0: Wire Momo real API (blocked on merchant credentials)
+- [ ] P0: Wire MISA HĐĐT real API call (blocked on MISA provider credentials) — pháp lý NĐ70/2025
+- [ ] P1: VietQR payment status — Supabase realtime listener trong POS payment panel
+- [ ] P1: Momo webhook atomic RPC `complete_payment_and_consume_stock` (service-role safe)
+
+## Deferred to Post-Pilot
+
+- [ ] Automated E2E tests — POS→payment→stock critical path (P2, before scaling to 3+ branches)
+- [ ] Staging environment — Vercel Preview or branch deploy (P2, before external users)
+- [ ] area_manager branch scope (H3) — not needed for single-tenant pilot
+- [ ] M7 payroll BHXH/PIT calc wiring (use Excel for pilot)
+- [ ] M6 VAS journal entries (export CSV → MISA AMIS for pilot)
 - [ ] Refunds table + flow
-- [ ] Payroll calculation (payroll_periods, payroll_entries tables)
-- [ ] VAS accounting (chart_of_accounts, journal_entries tables)
 
 ## Post-v1.0 (Tier 2)
 

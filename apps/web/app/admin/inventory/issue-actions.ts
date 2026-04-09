@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { z } from "zod";
 import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
@@ -95,7 +96,7 @@ export async function createStockIssueDraft(
     };
   }
 
-  const issueNumber = `PXK-${Date.now()}`;
+  const issueNumber = `PXK-${randomUUID().slice(0, 8)}`;
 
   const { data, error } = await supabase
     .from("stock_issues")

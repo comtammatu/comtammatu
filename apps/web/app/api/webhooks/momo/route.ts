@@ -101,11 +101,25 @@ export async function POST(request: Request) {
   }
 
   // Update order payment status
-  await supabase
+  // TODO(M4): replace these two writes with a single atomic RPC
+  // complete_payment_and_consume_stock(p_payment_id) when M4 is wired for real.
+  const { error: orderErr } = await supabase
     .from("orders")
     .update({ payment_status: "paid" })
     .eq("id", payment.order_id)
     .eq("tenant_id", payment.tenant_id);
+
+  if (orderErr) {
+    // Payment completed but order status desync — log for manual reconciliation
+    console.error(
+      `[momo-webhook] order status desync: payment=${payment.id} order=${payment.order_id}`,
+      orderErr.message,
+    );
+  }
+
+  // Note: consume_stock_for_order requires auth.uid() and cannot be called via
+  // service role. Stock deduction for Momo payments is deferred until M4 wiring
+  // — implement via complete_payment_and_consume_stock RPC (service-role safe).
 
   return NextResponse.json({ received: true });
 }
