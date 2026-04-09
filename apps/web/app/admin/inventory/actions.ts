@@ -299,10 +299,8 @@ export async function createStocktakeSession(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: session, error: sessionError } = await (
-    supabase.from("stocktake_sessions" as any) as any
-  )
+  const { data: session, error: sessionError } = await supabase
+    .from("stocktake_sessions")
     .insert({
       tenant_id: claims.tenant_id,
       branch_id: parsedBranch.data,
@@ -336,22 +334,21 @@ export async function createStocktakeSession(
   if (stockLevels && stockLevels.length > 0) {
     const lines = stockLevels.map((sl) => ({
       tenant_id: claims.tenant_id,
-      session_id: (session as { id: number }).id,
+      session_id: session.id,
       ingredient_id: sl.ingredient_id,
       system_quantity: sl.current_quantity,
     }));
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: linesError } = await (
-      supabase.from("stocktake_lines" as any) as any
-    ).insert(lines);
+    const { error: linesError } = await supabase
+      .from("stocktake_lines")
+      .insert(lines);
 
     if (linesError) {
       return { success: false, error: "Không thể tạo phiên kiểm kê." };
     }
   }
 
-  return { success: true, data: { id: (session as { id: number }).id } };
+  return { success: true, data: { id: session.id } };
 }
 
 /* ─── fetchStocktakeSessions ─── */
@@ -364,15 +361,15 @@ export async function fetchStocktakeSessions(
 
   const { supabase, claims } = ctx;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase.from("stocktake_sessions" as any) as any)
+  let query = supabase
+    .from("stocktake_sessions")
     .select(
       "id, branch_id, started_at, completed_at, status, notes, created_at, created_by, branches(id, name)",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("created_at", { ascending: false });
 
-  if (claims.user_role === "branch_manager") {
+  if (claims.user_role === "branch_manager" && claims.branch_id != null) {
     query = query.eq("branch_id", claims.branch_id);
   } else if (branchId) {
     query = query.eq("branch_id", branchId);
@@ -402,10 +399,8 @@ export async function fetchStocktakeDetail(
 
   const { supabase, claims } = ctx;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: session, error: sessionError } = await (
-    supabase.from("stocktake_sessions" as any) as any
-  )
+  const { data: session, error: sessionError } = await supabase
+    .from("stocktake_sessions")
     .select("*")
     .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
@@ -417,15 +412,13 @@ export async function fetchStocktakeDetail(
 
   if (
     claims.user_role === "branch_manager" &&
-    claims.branch_id !== (session as { branch_id: number }).branch_id
+    claims.branch_id !== session.branch_id
   ) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: lines, error: linesError } = await (
-    supabase.from("stocktake_lines" as any) as any
-  )
+  const { data: lines, error: linesError } = await supabase
+    .from("stocktake_lines")
     .select("*, ingredients(id, name, unit, category)")
     .eq("session_id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
@@ -457,10 +450,8 @@ export async function updateStocktakeLine(
   const { supabase, claims } = ctx;
 
   // Fetch the line to get session_id
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: line, error: lineError } = await (
-    supabase.from("stocktake_lines" as any) as any
-  )
+  const { data: line, error: lineError } = await supabase
+    .from("stocktake_lines")
     .select("session_id")
     .eq("id", parsed.data.lineId)
     .eq("tenant_id", claims.tenant_id)
@@ -471,12 +462,10 @@ export async function updateStocktakeLine(
   }
 
   // Fetch session to verify status
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: session, error: sessionError } = await (
-    supabase.from("stocktake_sessions" as any) as any
-  )
+  const { data: session, error: sessionError } = await supabase
+    .from("stocktake_sessions")
     .select("status, branch_id")
-    .eq("id", (line as { session_id: number }).session_id)
+    .eq("id", line.session_id)
     .eq("tenant_id", claims.tenant_id)
     .single();
 
@@ -484,7 +473,7 @@ export async function updateStocktakeLine(
     return { success: false, error: "Không thể cập nhật dòng kiểm kê." };
   }
 
-  if ((session as { status: string }).status !== "in_progress") {
+  if (session.status !== "in_progress") {
     return {
       success: false,
       error: "Phiên kiểm kê đã hoàn tất hoặc đã hủy.",
@@ -493,15 +482,13 @@ export async function updateStocktakeLine(
 
   if (
     claims.user_role === "branch_manager" &&
-    claims.branch_id !== (session as { branch_id: number }).branch_id
+    claims.branch_id !== session.branch_id
   ) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateError } = await (
-    supabase.from("stocktake_lines" as any) as any
-  )
+  const { error: updateError } = await supabase
+    .from("stocktake_lines")
     .update({
       counted_quantity: parsed.data.countedQuantity,
       variance_reason: parsed.data.varianceReason ?? null,
@@ -531,13 +518,12 @@ export async function completeStocktake(
 
   const { supabase } = ctx;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.rpc as any)("complete_stocktake", {
+  const { data, error } = await supabase.rpc("complete_stocktake", {
     p_session_id: parsedId.data,
   });
 
   if (error) {
-    const msg = error.message as string;
+    const msg = error.message;
     if (msg.includes("uncounted_lines_exist")) {
       return { success: false, error: "Còn nguyên liệu chưa được đếm." };
     }
@@ -572,10 +558,8 @@ export async function cancelStocktake(
   const { supabase, claims } = ctx;
 
   // Fetch session to verify status
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: session, error: sessionError } = await (
-    supabase.from("stocktake_sessions" as any) as any
-  )
+  const { data: session, error: sessionError } = await supabase
+    .from("stocktake_sessions")
     .select("status, branch_id")
     .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
@@ -585,7 +569,7 @@ export async function cancelStocktake(
     return { success: false, error: "Không thể hủy phiên kiểm kê." };
   }
 
-  if ((session as { status: string }).status !== "in_progress") {
+  if (session.status !== "in_progress") {
     return {
       success: false,
       error: "Chỉ có thể hủy phiên kiểm kê đang thực hiện.",
@@ -594,15 +578,13 @@ export async function cancelStocktake(
 
   if (
     claims.user_role === "branch_manager" &&
-    claims.branch_id !== (session as { branch_id: number }).branch_id
+    claims.branch_id !== session.branch_id
   ) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateError } = await (
-    supabase.from("stocktake_sessions" as any) as any
-  )
+  const { error: updateError } = await supabase
+    .from("stocktake_sessions")
     .update({ status: "cancelled" })
     .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id);

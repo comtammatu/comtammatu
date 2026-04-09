@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.4";
   };
-  graphql_public: {
-    Tables: {
-      [_ in never]: never;
-    };
-    Views: {
-      [_ in never]: never;
-    };
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json;
-          operationName?: string;
-          query?: string;
-          variables?: Json;
-        };
-        Returns: Json;
-      };
-    };
-    Enums: {
-      [_ in never]: never;
-    };
-    CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
   public: {
     Tables: {
       area_branches: {
@@ -187,52 +162,6 @@ export type Database = {
           },
           {
             foreignKeyName: "attendance_records_tenant_id_fkey";
-            columns: ["tenant_id"];
-            isOneToOne: false;
-            referencedRelation: "tenants";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      branch_ingredients: {
-        Row: {
-          branch_id: number;
-          created_at: string;
-          id: number;
-          ingredient_id: number;
-          tenant_id: number;
-        };
-        Insert: {
-          branch_id: number;
-          created_at?: string;
-          id?: never;
-          ingredient_id: number;
-          tenant_id: number;
-        };
-        Update: {
-          branch_id?: number;
-          created_at?: string;
-          id?: never;
-          ingredient_id?: number;
-          tenant_id?: number;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "branch_ingredients_branch_id_fkey";
-            columns: ["branch_id"];
-            isOneToOne: false;
-            referencedRelation: "branches";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "branch_ingredients_ingredient_id_fkey";
-            columns: ["ingredient_id"];
-            isOneToOne: false;
-            referencedRelation: "ingredients";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "branch_ingredients_tenant_id_fkey";
             columns: ["tenant_id"];
             isOneToOne: false;
             referencedRelation: "tenants";
@@ -496,6 +425,7 @@ export type Database = {
           po_quantity: number | null;
           quality_status: string;
           received_quantity: number;
+          receiving_temperature: number | null;
           rejected_quantity: number;
           rejection_reason: string | null;
           tenant_id: number;
@@ -512,6 +442,7 @@ export type Database = {
           po_quantity?: number | null;
           quality_status?: string;
           received_quantity: number;
+          receiving_temperature?: number | null;
           rejected_quantity?: number;
           rejection_reason?: string | null;
           tenant_id: number;
@@ -528,6 +459,7 @@ export type Database = {
           po_quantity?: number | null;
           quality_status?: string;
           received_quantity?: number;
+          receiving_temperature?: number | null;
           rejected_quantity?: number;
           rejection_reason?: string | null;
           tenant_id?: number;
@@ -2261,6 +2193,115 @@ export type Database = {
           },
         ];
       };
+      stocktake_lines: {
+        Row: {
+          counted_quantity: number | null;
+          created_at: string;
+          id: number;
+          ingredient_id: number;
+          session_id: number;
+          system_quantity: number;
+          tenant_id: number;
+          variance: number | null;
+          variance_reason: string | null;
+        };
+        Insert: {
+          counted_quantity?: number | null;
+          created_at?: string;
+          id?: never;
+          ingredient_id: number;
+          session_id: number;
+          system_quantity: number;
+          tenant_id: number;
+          variance?: number | null;
+          variance_reason?: string | null;
+        };
+        Update: {
+          counted_quantity?: number | null;
+          created_at?: string;
+          id?: never;
+          ingredient_id?: number;
+          session_id?: number;
+          system_quantity?: number;
+          tenant_id?: number;
+          variance?: number | null;
+          variance_reason?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "stocktake_lines_ingredient_id_fkey";
+            columns: ["ingredient_id"];
+            isOneToOne: false;
+            referencedRelation: "ingredients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stocktake_lines_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "stocktake_sessions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stocktake_lines_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      stocktake_sessions: {
+        Row: {
+          branch_id: number;
+          completed_at: string | null;
+          created_at: string;
+          created_by: string | null;
+          id: number;
+          notes: string | null;
+          started_at: string;
+          status: string;
+          tenant_id: number;
+        };
+        Insert: {
+          branch_id: number;
+          completed_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          id?: never;
+          notes?: string | null;
+          started_at?: string;
+          status?: string;
+          tenant_id: number;
+        };
+        Update: {
+          branch_id?: number;
+          completed_at?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          id?: never;
+          notes?: string | null;
+          started_at?: string;
+          status?: string;
+          tenant_id?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "stocktake_sessions_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stocktake_sessions_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       supplier_invoices: {
         Row: {
           created_at: string;
@@ -2746,6 +2787,7 @@ export type Database = {
       auth_role: { Args: never; Returns: string };
       auth_tenant_id: { Args: never; Returns: number };
       bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string };
+      can_access_branch: { Args: { p_branch_id: number }; Returns: boolean };
       cancel_order: {
         Args: { p_order_id: number; p_reason: string };
         Returns: Json;
@@ -2755,6 +2797,7 @@ export type Database = {
         Args: { p_closing_cash: number; p_note?: string; p_session_id: number };
         Returns: Json;
       };
+      complete_stocktake: { Args: { p_session_id: number }; Returns: Json };
       confirm_goods_receipt_note: { Args: { p_grn_id: number }; Returns: Json };
       consume_stock_for_order: { Args: { p_order_id: number }; Returns: Json };
       create_order: {
@@ -3013,9 +3056,6 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       staff_role: [
