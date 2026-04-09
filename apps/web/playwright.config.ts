@@ -1,5 +1,4 @@
 import { defineConfig, devices } from "@playwright/test";
-import path from "node:path";
 
 /**
  * E2E test configuration.
@@ -14,10 +13,11 @@ import path from "node:path";
  * Run: pnpm test:e2e
  */
 
-export const E2E_AUTH_STORAGE = path.join(
-  __dirname,
+// import.meta.dirname is available in Node 21.2+ (project uses Node 24)
+export const E2E_AUTH_STORAGE = new URL(
   ".playwright/.auth/cashier.json",
-);
+  import.meta.url,
+).pathname;
 
 export default defineConfig({
   testDir: "./e2e",

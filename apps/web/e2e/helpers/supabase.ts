@@ -40,12 +40,23 @@ export async function createTestOrder(): Promise<TestOrder> {
   const tenantId = Number(process.env.E2E_TEST_TENANT_ID);
   const branchId = Number(process.env.E2E_TEST_BRANCH_ID);
   const menuItemId = Number(process.env.E2E_TEST_MENU_ITEM_ID);
+  const cashierEmail = process.env.E2E_CASHIER_EMAIL;
 
-  if (!tenantId || !branchId || !menuItemId) {
+  if (!tenantId || !branchId || !menuItemId || !cashierEmail) {
     throw new Error(
-      "E2E_TEST_TENANT_ID, E2E_TEST_BRANCH_ID, E2E_TEST_MENU_ITEM_ID must be set",
+      "E2E_TEST_TENANT_ID, E2E_TEST_BRANCH_ID, E2E_TEST_MENU_ITEM_ID, E2E_CASHIER_EMAIL must be set",
     );
   }
+
+  // Look up the test cashier's user ID (needed for created_by FK)
+  const {
+    data: { users },
+    error: userErr,
+  } = await supabase.auth.admin.listUsers();
+  if (userErr) throw new Error(`Failed to list users: ${userErr.message}`);
+  const cashier = users.find((u) => u.email === cashierEmail);
+  if (!cashier) throw new Error(`Test cashier not found: ${cashierEmail}`);
+  const createdBy = cashier.id;
 
   // Create order
   const { data: order, error: orderErr } = await supabase
@@ -53,7 +64,7 @@ export async function createTestOrder(): Promise<TestOrder> {
     .insert({
       tenant_id: tenantId,
       branch_id: branchId,
-      created_by: "00000000-0000-0000-0000-000000000000", // system placeholder for tests
+      created_by: createdBy,
       order_number: `E2E-${Date.now()}`,
       status: "confirmed",
       payment_status: "unpaid",

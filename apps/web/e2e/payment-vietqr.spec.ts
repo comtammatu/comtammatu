@@ -43,6 +43,14 @@ test.describe("VietQR confirmPayment flow", () => {
     const testOrder = await createTestOrder();
     const supabase = createServiceClient();
 
+    // Look up the test cashier's user ID for created_by FK
+    const cashierEmail = process.env.E2E_CASHIER_EMAIL ?? "";
+    const {
+      data: { users },
+    } = await supabase.auth.admin.listUsers();
+    const cashier = users.find((u) => u.email === cashierEmail);
+    if (!cashier) throw new Error(`Test cashier not found: ${cashierEmail}`);
+
     try {
       // Create a pending payment for the test order (simulates VietQR payment initiation)
       const { data: payment, error: payErr } = await supabase
@@ -51,10 +59,10 @@ test.describe("VietQR confirmPayment flow", () => {
           tenant_id: tenantId(),
           branch_id: branchId(),
           order_id: testOrder.orderId,
-          created_by: "00000000-0000-0000-0000-000000000000",
+          created_by: cashier.id,
           method: "vietqr",
           status: "pending",
-          amount: 0, // test amount — no real money
+          amount: 1, // minimal valid amount (check constraint: amount > 0)
           provider_ref: null,
         })
         .select("id")
