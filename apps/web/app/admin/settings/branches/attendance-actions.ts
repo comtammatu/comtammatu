@@ -23,8 +23,6 @@ const updateCoordsSchema = z.object({
 /* ─── Pre-migration type helper ─── */
 // branch_attendance_config + branches.latitude/longitude pending migration
 // 20260417000000_attendance_pwa.sql — remove after pnpm db:types
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const svc = () => createServiceClient() as any;
 
 /* ─── Helpers ─── */
 
@@ -98,7 +96,7 @@ export async function generateAttendanceSecret(
   const secret = randomBytes(32).toString("hex");
 
   // Upsert: if config exists, update secret; otherwise insert
-  const { data: existing } = await svc()
+  const { data: existing } = await createServiceClient()
     .from("branch_attendance_config")
     .select("id")
     .eq("branch_id", parsed.data)
@@ -106,7 +104,7 @@ export async function generateAttendanceSecret(
     .maybeSingle();
 
   if (existing) {
-    const { error } = await svc()
+    const { error } = await createServiceClient()
       .from("branch_attendance_config")
       .update({ attendance_secret: secret })
       .eq("id", existing.id);
@@ -115,11 +113,13 @@ export async function generateAttendanceSecret(
       return { success: false, error: "Không thể cập nhật. Vui lòng thử lại." };
     }
   } else {
-    const { error } = await svc().from("branch_attendance_config").insert({
-      tenant_id: claims.tenant_id,
-      branch_id: parsed.data,
-      attendance_secret: secret,
-    });
+    const { error } = await createServiceClient()
+      .from("branch_attendance_config")
+      .insert({
+        tenant_id: claims.tenant_id,
+        branch_id: parsed.data,
+        attendance_secret: secret,
+      });
 
     if (error) {
       return {
@@ -148,7 +148,7 @@ export async function getTodayCode(
 
   const { claims } = ctx;
 
-  const { data: config } = await svc()
+  const { data: config } = await createServiceClient()
     .from("branch_attendance_config")
     .select("attendance_secret")
     .eq("branch_id", parsed.data)
@@ -163,7 +163,7 @@ export async function getTodayCode(
   }
 
   const today = getTodayVN();
-  const code = computeDailyCode(config.attendance_secret as string, today);
+  const code = computeDailyCode(config.attendance_secret, today);
 
   return { success: true, data: { code, date: today } };
 }

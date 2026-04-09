@@ -45,23 +45,14 @@ export default async function ClockPage() {
     .maybeSingle();
 
   // Get active branches with GPS for branch selection
-  // branches.latitude/longitude pending migration — cast until db:types
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: branches } = await (supabase as any)
+  const { data: branches } = await supabase
     .from("branches")
     .select("id, name, latitude, longitude")
     .eq("tenant_id", claims.tenant_id)
     .eq("is_active", true)
     .order("name");
 
-  const activeBranches = (
-    (branches ?? []) as Array<{
-      id: number;
-      name: string;
-      latitude: number | null;
-      longitude: number | null;
-    }>
-  )
+  const activeBranches = (branches ?? [])
     .filter((b) => b.latitude != null && b.longitude != null)
     .map((b) => ({
       id: b.id,

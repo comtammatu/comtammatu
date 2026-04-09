@@ -100,10 +100,14 @@ export type Database = {
           branch_id: number;
           check_in: string | null;
           check_out: string | null;
+          code_verified: boolean | null;
           created_at: string;
           date: string;
           employee_id: number;
           id: number;
+          lat: number | null;
+          lng: number | null;
+          method: string | null;
           note: string | null;
           shift_id: number | null;
           status: string;
@@ -114,10 +118,14 @@ export type Database = {
           branch_id: number;
           check_in?: string | null;
           check_out?: string | null;
+          code_verified?: boolean | null;
           created_at?: string;
           date: string;
           employee_id: number;
           id?: never;
+          lat?: number | null;
+          lng?: number | null;
+          method?: string | null;
           note?: string | null;
           shift_id?: number | null;
           status?: string;
@@ -128,10 +136,14 @@ export type Database = {
           branch_id?: number;
           check_in?: string | null;
           check_out?: string | null;
+          code_verified?: boolean | null;
           created_at?: string;
           date?: string;
           employee_id?: number;
           id?: never;
+          lat?: number | null;
+          lng?: number | null;
+          method?: string | null;
           note?: string | null;
           shift_id?: number | null;
           status?: string;
@@ -216,6 +228,48 @@ export type Database = {
           },
         ];
       };
+      branch_attendance_config: {
+        Row: {
+          attendance_secret: string;
+          branch_id: number;
+          created_at: string;
+          id: number;
+          tenant_id: number;
+          updated_at: string;
+        };
+        Insert: {
+          attendance_secret: string;
+          branch_id: number;
+          created_at?: string;
+          id?: never;
+          tenant_id: number;
+          updated_at?: string;
+        };
+        Update: {
+          attendance_secret?: string;
+          branch_id?: number;
+          created_at?: string;
+          id?: never;
+          tenant_id?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "branch_attendance_config_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "branch_attendance_config_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       branch_zones: {
         Row: {
           branch_id: number;
@@ -268,6 +322,8 @@ export type Database = {
           id: number;
           is_active: boolean | null;
           is_headquarters: boolean | null;
+          latitude: number | null;
+          longitude: number | null;
           name: string;
           phone: string | null;
           tenant_id: number;
@@ -279,6 +335,8 @@ export type Database = {
           id?: never;
           is_active?: boolean | null;
           is_headquarters?: boolean | null;
+          latitude?: number | null;
+          longitude?: number | null;
           name: string;
           phone?: string | null;
           tenant_id: number;
@@ -290,6 +348,8 @@ export type Database = {
           id?: never;
           is_active?: boolean | null;
           is_headquarters?: boolean | null;
+          latitude?: number | null;
+          longitude?: number | null;
           name?: string;
           phone?: string | null;
           tenant_id?: number;
@@ -2403,61 +2463,6 @@ export type Database = {
           },
         ];
       };
-      stock_levels: {
-        Row: {
-          avg_unit_cost: number | null;
-          branch_id: number;
-          current_quantity: number;
-          id: number;
-          ingredient_id: number;
-          last_counted_at: string | null;
-          tenant_id: number;
-          updated_at: string;
-        };
-        Insert: {
-          avg_unit_cost?: number | null;
-          branch_id: number;
-          current_quantity?: number;
-          id?: never;
-          ingredient_id: number;
-          last_counted_at?: string | null;
-          tenant_id: number;
-          updated_at?: string;
-        };
-        Update: {
-          avg_unit_cost?: number | null;
-          branch_id?: number;
-          current_quantity?: number;
-          id?: never;
-          ingredient_id?: number;
-          last_counted_at?: string | null;
-          tenant_id?: number;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "stock_levels_branch_id_fkey";
-            columns: ["branch_id"];
-            isOneToOne: false;
-            referencedRelation: "branches";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "stock_levels_ingredient_id_fkey";
-            columns: ["ingredient_id"];
-            isOneToOne: false;
-            referencedRelation: "ingredients";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "stock_levels_tenant_id_fkey";
-            columns: ["tenant_id"];
-            isOneToOne: false;
-            referencedRelation: "tenants";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       stock_issue_items: {
         Row: {
           id: number;
@@ -2466,7 +2471,7 @@ export type Database = {
           quantity: number;
           reason: string | null;
           tenant_id: number;
-          total_cost: number;
+          total_cost: number | null;
           unit: string;
           unit_cost: number;
         };
@@ -2477,7 +2482,7 @@ export type Database = {
           quantity: number;
           reason?: string | null;
           tenant_id: number;
-          total_cost?: never;
+          total_cost?: number | null;
           unit: string;
           unit_cost?: number;
         };
@@ -2488,7 +2493,7 @@ export type Database = {
           quantity?: number;
           reason?: string | null;
           tenant_id?: number;
-          total_cost?: never;
+          total_cost?: number | null;
           unit?: string;
           unit_cost?: number;
         };
@@ -2573,6 +2578,61 @@ export type Database = {
           },
         ];
       };
+      stock_levels: {
+        Row: {
+          avg_unit_cost: number | null;
+          branch_id: number;
+          current_quantity: number;
+          id: number;
+          ingredient_id: number;
+          last_counted_at: string | null;
+          tenant_id: number;
+          updated_at: string;
+        };
+        Insert: {
+          avg_unit_cost?: number | null;
+          branch_id: number;
+          current_quantity?: number;
+          id?: never;
+          ingredient_id: number;
+          last_counted_at?: string | null;
+          tenant_id: number;
+          updated_at?: string;
+        };
+        Update: {
+          avg_unit_cost?: number | null;
+          branch_id?: number;
+          current_quantity?: number;
+          id?: never;
+          ingredient_id?: number;
+          last_counted_at?: string | null;
+          tenant_id?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "stock_levels_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stock_levels_ingredient_id_fkey";
+            columns: ["ingredient_id"];
+            isOneToOne: false;
+            referencedRelation: "ingredients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stock_levels_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       stock_movements: {
         Row: {
           branch_id: number;
@@ -2649,6 +2709,13 @@ export type Database = {
             columns: ["ingredient_id"];
             isOneToOne: false;
             referencedRelation: "ingredients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stock_movements_issue_id_fkey";
+            columns: ["issue_id"];
+            isOneToOne: false;
+            referencedRelation: "stock_issues";
             referencedColumns: ["id"];
           },
           {

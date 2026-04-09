@@ -4,7 +4,7 @@ import { createHmac } from "node:crypto";
 import { z } from "zod";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { extractClaims, STAFF_ROLES } from "@comtammatu/shared/auth";
+import { extractClaims } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "../../admin/_lib/auth";
@@ -14,17 +14,8 @@ import { getAuthContext } from "../../admin/_lib/auth";
 /** Max GPS distance allowed (meters) */
 const MAX_DISTANCE_METERS = 200;
 
-/** All roles — any staff can clock in */
-const _ALL_ROLES: readonly StaffRole[] = STAFF_ROLES;
-
 /** Roles that can manage attendance config / generate codes */
 const CONFIG_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
-
-/* ─── Pre-migration type helper ─── */
-// branch_attendance_config + branches.latitude/longitude pending migration
-// 20260417000000_attendance_pwa.sql — remove after pnpm db:types
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const svc = () => createServiceClient() as any;
 
 /* ─── Helpers ─── */
 
@@ -142,9 +133,8 @@ export async function clockIn(input: {
     };
   }
 
-  // 3. Validate GPS — get branch coordinates (latitude/longitude pending migration)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: branch } = await (supabase as any)
+  // 3. Validate GPS — get branch coordinates
+  const { data: branch } = await supabase
     .from("branches")
     .select("id, latitude, longitude")
     .eq("id", branchId)
@@ -176,7 +166,7 @@ export async function clockIn(input: {
   }
 
   // 4. Validate code — use service client to read secret (bypasses RLS)
-  const { data: config } = await svc()
+  const { data: config } = await createServiceClient()
     .from("branch_attendance_config")
     .select("attendance_secret")
     .eq("branch_id", branchId)
@@ -190,17 +180,14 @@ export async function clockIn(input: {
     };
   }
 
-  const expectedCode = computeDailyCode(
-    config.attendance_secret as string,
-    today,
-  );
+  const expectedCode = computeDailyCode(config.attendance_secret, today);
   if (code.toLowerCase() !== expectedCode.toLowerCase()) {
     return { success: false, error: "Mã chấm công không đúng" };
   }
 
   // 5. INSERT attendance record (lat/lng/method/code_verified pending migration)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: insertError } = await (supabase as any)
+  const { error: insertError } = await supabase
     .from("attendance_records")
     .insert({
       tenant_id: claims.tenant_id,
@@ -365,7 +352,7 @@ export async function generateDailyCode(
 
   const { claims } = ctx;
 
-  const { data: config } = await svc()
+  const { data: config } = await createServiceClient()
     .from("branch_attendance_config")
     .select("attendance_secret")
     .eq("branch_id", parsed.data)
@@ -380,7 +367,7 @@ export async function generateDailyCode(
   }
 
   const today = getTodayVN();
-  const code = computeDailyCode(config.attendance_secret as string, today);
+  const code = computeDailyCode(config.attendance_secret, today);
 
   return {
     success: true,
