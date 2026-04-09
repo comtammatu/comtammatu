@@ -19,6 +19,7 @@ import { EmployeeTable } from "./employee-table";
 import { EmployeeFormDialog } from "./employee-form-dialog";
 import { ShiftsTable } from "./shifts-table";
 import { AttendanceTable } from "./attendance-table";
+import { ShiftAssignmentsTable } from "./shift-assignments-table";
 import type { BranchOption, EmployeeRow, ShiftRow } from "./page";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Button } from "@comtammatu/ui/components/button";
@@ -64,6 +65,7 @@ export function HrClient({ employees, branches }: HrClientProps) {
       <TabsList>
         <TabsTrigger value="employees">Nhân viên</TabsTrigger>
         <TabsTrigger value="shifts">Ca làm</TabsTrigger>
+        <TabsTrigger value="assignments">Phân ca</TabsTrigger>
         <TabsTrigger value="attendance">Chấm công</TabsTrigger>
       </TabsList>
 
@@ -106,6 +108,10 @@ export function HrClient({ employees, branches }: HrClientProps) {
           isPending={isPending}
           onShiftCreated={(shift) => setShifts((prev) => [...prev, shift])}
         />
+      </TabsContent>
+
+      <TabsContent value="assignments" className="mt-4">
+        <ShiftAssignmentsTable branches={branches} />
       </TabsContent>
 
       <TabsContent value="attendance" className="mt-4">
