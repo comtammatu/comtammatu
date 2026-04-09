@@ -1,6 +1,10 @@
 import { fetchIngredients } from "../actions";
 import { fetchMenuItemsForRecipes, fetchRecipes } from "../procurement-actions";
-import { RecipesClient } from "./recipes-client";
+import {
+  RecipesClient,
+  type RecipeRow,
+  type MenuItemOpt,
+} from "./recipes-client";
 import type { IngredientRow } from "../page";
 
 export default async function RecipesPage() {
@@ -9,16 +13,20 @@ export default async function RecipesPage() {
     fetchMenuItemsForRecipes(),
     fetchIngredients(),
   ]);
-  const initial = recRes.success ? (recRes.data ?? []) : [];
-  const menuItems = menuRes.success ? (menuRes.data ?? []) : [];
+  const initial: RecipeRow[] = recRes.success
+    ? ((recRes.data ?? []) as RecipeRow[])
+    : [];
+  const menuItems: MenuItemOpt[] = menuRes.success
+    ? ((menuRes.data ?? []) as MenuItemOpt[])
+    : [];
   const ingredients: IngredientRow[] = ingRes.success
     ? ((ingRes.data ?? []) as IngredientRow[])
     : [];
 
   return (
     <RecipesClient
-      initial={initial as never}
-      menuItems={menuItems as never}
+      initial={initial}
+      menuItems={menuItems}
       ingredients={ingredients}
     />
   );

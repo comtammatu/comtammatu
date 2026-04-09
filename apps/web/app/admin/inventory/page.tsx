@@ -1,17 +1,14 @@
 import { createClient } from "@comtammatu/database/supabase/server";
+import { extractClaims, canAccess } from "@comtammatu/shared/auth";
 import {
-  extractClaims,
-  getInventoryValueVisibility,
-} from "@comtammatu/shared/auth";
-import {
-  fetchIngredients,
   fetchReorderAlerts,
   fetchExpiryAlerts,
+  fetchStocktakeSessions,
 } from "./actions";
 import { fetchInTransitTransfers } from "./report-actions";
-import type { InTransitTransfer } from "./report-actions";
-import { InventoryClient } from "./inventory-client";
+import { InventoryDashboard } from "./inventory-client";
 import { PageHeader } from "@/components/foundation/ui-patterns";
+import type { InTransitTransfer } from "./report-actions";
 
 export default async function InventoryPage() {
   const supabase = await createClient();
@@ -24,36 +21,19 @@ export default async function InventoryPage() {
     ? extractClaims(session.user.app_metadata)
     : null;
 
-  const inventoryValueVisibility = claims
-    ? getInventoryValueVisibility(claims.user_role)
-    : { system: false, area: false, branch: false };
+  const showProcurement = claims
+    ? canAccess(claims.user_role, "inventory_procurement")
+    : false;
 
-  // Fetch ingredients, branches, and alerts in parallel
-  const [ingredientsResult, branchesRes, reorderRes, expiryRes, inTransitRes] =
-    await Promise.all([
-      fetchIngredients(),
-      supabase
-        .from("branches")
-        .select("id, name, is_active")
-        .order("is_headquarters", { ascending: false })
-        .order("name"),
+  // Fetch alert + task data in parallel
+  const [reorderRes, expiryRes, inTransitRes, stocktakeRes] = await Promise.all(
+    [
       fetchReorderAlerts(),
       fetchExpiryAlerts(),
       fetchInTransitTransfers(),
-    ]);
-
-  const ingredients = ingredientsResult.success
-    ? (ingredientsResult.data as IngredientRow[])
-    : [];
-
-  const branches: BranchOption[] = (branchesRes.data ?? [])
-    .filter((b) => b.is_active === true)
-    .map((b) => ({ id: b.id, name: b.name, is_active: true }));
-
-  // For branch_manager, default to their own branch
-  const defaultBranchId = claims?.branch_id ?? branches[0]?.id ?? null;
-
-  const canManageIngredientCatalog = claims?.user_role === "super_manager";
+      fetchStocktakeSessions(),
+    ],
+  );
 
   const reorderAlerts: ReorderAlertRow[] = reorderRes.success
     ? ((reorderRes.data as ReorderAlertRow[]) ?? [])
@@ -65,28 +45,40 @@ export default async function InventoryPage() {
     ? ((inTransitRes.data as InTransitTransfer[]) ?? [])
     : [];
 
+  // Count in-progress stocktake sessions for task list
+  const allStocktakeSessions = stocktakeRes.success
+    ? ((stocktakeRes.data ?? []) as Array<{
+        id: number;
+        status: string;
+        branches?: { name: string } | null;
+      }>)
+    : [];
+  const activeStocktakes = allStocktakeSessions.filter(
+    (s) => s.status === "in_progress",
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Tổng quan kho"
-        description="Quản lý nguyên liệu và mức tồn kho theo chi nhánh"
+        description="Cảnh báo và việc cần làm hôm nay"
       />
 
-      <InventoryClient
-        ingredients={ingredients}
-        branches={branches}
-        defaultBranchId={defaultBranchId}
-        inventoryValueVisibility={inventoryValueVisibility}
-        canManageIngredientCatalog={canManageIngredientCatalog}
+      <InventoryDashboard
         reorderAlerts={reorderAlerts}
         expiryAlerts={expiryAlerts}
         inTransitTransfers={inTransitTransfers}
+        activeStocktakes={activeStocktakes.map((s) => ({
+          id: s.id,
+          branchName: s.branches?.name ?? "—",
+        }))}
+        showProcurement={showProcurement}
       />
     </div>
   );
 }
 
-// Re-export type for sibling client components
+// Re-export types for sibling client components
 export interface IngredientRow {
   id: number;
   name: string;
