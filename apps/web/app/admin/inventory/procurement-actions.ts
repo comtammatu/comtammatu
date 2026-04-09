@@ -59,6 +59,59 @@ export async function createSupplier(
   return { success: true, data };
 }
 
+export async function updateSupplier(
+  id: number,
+  input: z.infer<typeof supplierSchema>,
+): Promise<ActionResult> {
+  const parsedId = z.coerce.number().int().positive().safeParse(id);
+  if (!parsedId.success) return { success: false, error: "ID không hợp lệ" };
+  const parsed = supplierSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+  const ctx = await getAuthContext(ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims } = ctx;
+  const { error } = await supabase
+    .from("suppliers")
+    .update(parsed.data)
+    .eq("id", parsedId.data)
+    .eq("tenant_id", claims.tenant_id);
+  if (error) {
+    if (error.code === "23505") {
+      return { success: false, error: "Tên NCC đã tồn tại." };
+    }
+    return { success: false, error: "Không thể cập nhật nhà cung cấp." };
+  }
+  return { success: true };
+}
+
+export async function deleteSupplier(id: number): Promise<ActionResult> {
+  const parsedId = z.coerce.number().int().positive().safeParse(id);
+  if (!parsedId.success) return { success: false, error: "ID không hợp lệ" };
+  const ctx = await getAuthContext(ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims } = ctx;
+  const { error } = await supabase
+    .from("suppliers")
+    .delete()
+    .eq("id", parsedId.data)
+    .eq("tenant_id", claims.tenant_id);
+  if (error) {
+    if (error.code === "23503") {
+      return {
+        success: false,
+        error: "Không thể xóa — NCC đang được dùng trong đơn hàng.",
+      };
+    }
+    return { success: false, error: "Không thể xóa nhà cung cấp." };
+  }
+  return { success: true };
+}
+
 export async function fetchPurchaseOrders(): Promise<ActionResult> {
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -253,7 +306,7 @@ export async function fetchGrnDetail(grnId: number): Promise<ActionResult> {
   const { supabase, claims } = ctx;
   const { data: grn, error: e1 } = await supabase
     .from("goods_received_notes")
-    .select("*")
+    .select("*, branches ( id, name, is_headquarters )")
     .eq("id", id.data)
     .eq("tenant_id", claims.tenant_id)
     .single();

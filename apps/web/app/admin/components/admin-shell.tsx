@@ -114,8 +114,19 @@ function resolveNavGroups(role: StaffRole): ResolvedNavGroup[] {
   })).filter((group) => group.items.length > 0);
 }
 
+const SEGMENT_LABEL_VI: Record<string, string> = {
+  "purchase-orders": "Đặt hàng (PO)",
+  grn: "Nhập kho (GRN)",
+  transfers: "Luân chuyển",
+  suppliers: "Nhà cung cấp",
+  "supplier-invoices": "HĐ NCC",
+  recipes: "Công thức",
+  "branch-ingredients": "Mở NL theo CN",
+};
+
 function toBreadcrumbLabel(segment: string): string {
   if (/^\d+$/.test(segment)) return `#${segment}`;
+  if (SEGMENT_LABEL_VI[segment]) return SEGMENT_LABEL_VI[segment];
   return segment
     .replaceAll("-", " ")
     .replaceAll("_", " ")
