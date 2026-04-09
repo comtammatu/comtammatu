@@ -102,9 +102,7 @@ export function RefundsClient({
         </Button>
       </div>
 
-      {errorMsg && (
-        <p className="text-sm text-destructive">{errorMsg}</p>
-      )}
+      {errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}
 
       <div className="rounded-md border">
         <Table>
@@ -117,7 +115,9 @@ export function RefundsClient({
               <TableHead className="hidden lg:table-cell">Người tạo</TableHead>
               <TableHead className="hidden lg:table-cell">Thời gian</TableHead>
               <TableHead>Trạng thái</TableHead>
-              {canApprove && <TableHead className="text-right">Hành động</TableHead>}
+              {canApprove && (
+                <TableHead className="text-right">Hành động</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>

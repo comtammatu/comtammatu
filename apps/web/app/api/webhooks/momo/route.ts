@@ -41,10 +41,7 @@ export async function POST(request: Request) {
 
   // Verify HMAC signature using provider
   if (!MOMO_SECRET_KEY || !MOMO_ACCESS_KEY) {
-    return NextResponse.json(
-      { error: "MoMo not configured" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "MoMo not configured" }, { status: 500 });
   }
 
   const provider = new MoMoProvider({

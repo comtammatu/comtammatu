@@ -50,7 +50,9 @@ export default async function OrdersPage() {
   }
 
   const { orders, branches } = ordersResult.data;
-  const refunds = refundsResult.success ? (refundsResult.data?.refunds ?? []) : [];
+  const refunds = refundsResult.success
+    ? (refundsResult.data?.refunds ?? [])
+    : [];
 
   const isManagerOrAbove = ["owner", "super_manager", "area_manager"].includes(
     ctx.claims.user_role,
@@ -59,7 +61,9 @@ export default async function OrdersPage() {
     ctx.claims.user_role,
   );
 
-  const pendingRefundCount = refunds.filter((r) => r.status === "pending").length;
+  const pendingRefundCount = refunds.filter(
+    (r) => r.status === "pending",
+  ).length;
 
   return (
     <PageContainer>

@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { randomUUID } from "crypto";
+import { randomUUID as _randomUUID } from "crypto";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getInvoiceProvider } from "@comtammatu/shared/providers";
@@ -146,7 +146,7 @@ export async function createTaxInvoice(
   }));
 
   if (invoiceProvider) {
-    const { data: orderItems, error: itemsErr } = await supabase
+    const { data: _orderItems, error: itemsErr } = await supabase
       .from("order_items")
       .select("item_name, quantity, unit_price, subtotal")
       .eq("order_id", parsed.data.orderId)

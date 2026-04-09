@@ -61,12 +61,12 @@ export async function createAccount(
     .from("chart_of_accounts")
     .insert({
       tenant_id: claims.tenant_id,
-      code: parsed.data.code,
-      name: parsed.data.name,
+      account_code: parsed.data.code,
+      account_name: parsed.data.name,
       account_type: parsed.data.accountType,
       parent_id: parsed.data.parentId ?? null,
     })
-    .select("id, code, name")
+    .select("id, account_code, account_name")
     .single();
 
   if (error) {
@@ -211,7 +211,9 @@ export async function createJournalEntry(
     description: l.description ?? null,
   }));
 
-  const { data, error } = await supabase.rpc("create_journal_entry", {
+  // RPC create_journal_entry pending migration — cast until db:types
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any).rpc("create_journal_entry", {
     p_tenant_id: claims.tenant_id,
     p_branch_id: claims.branch_id ?? 0,
     p_entry_date: parsed.data.entryDate,
@@ -252,7 +254,9 @@ export async function fetchFoodCost(
 
   let query = supabase
     .from("mv_food_cost")
-    .select("date, branch_id, menu_item_id, item_name, qty_sold, revenue, food_cost")
+    .select(
+      "date, branch_id, menu_item_id, item_name, qty_sold, revenue, food_cost",
+    )
     .eq("tenant_id", claims.tenant_id)
     .order("date", { ascending: false })
     .order("revenue", { ascending: false });

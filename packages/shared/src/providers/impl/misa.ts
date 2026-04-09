@@ -55,7 +55,7 @@ export class MisaProvider implements InvoiceProvider {
     this.taxCode = config.taxCode;
     this.appId = config.appId ?? "";
     this.baseUrl =
-      config.sandbox ?? process.env.MISA_SANDBOX === "true"
+      (config.sandbox ?? process.env.MISA_SANDBOX === "true")
         ? SANDBOX_BASE
         : PRODUCTION_BASE;
   }
@@ -185,14 +185,11 @@ export class MisaProvider implements InvoiceProvider {
 
   async getStatus(providerRef: string): Promise<InvoiceStatus> {
     try {
-      const res = await fetch(
-        `${this.baseUrl}/invoices/${providerRef}`,
-        {
-          method: "GET",
-          headers: this.headers,
-          signal: AbortSignal.timeout(15_000),
-        },
-      );
+      const res = await fetch(`${this.baseUrl}/invoices/${providerRef}`, {
+        method: "GET",
+        headers: this.headers,
+        signal: AbortSignal.timeout(15_000),
+      });
 
       const data = (await res.json()) as MisaInvoiceResponse;
       const status = data.Data?.Status;
@@ -217,15 +214,12 @@ export class MisaProvider implements InvoiceProvider {
   }
 
   async cancelInvoice(providerRef: string, reason: string): Promise<void> {
-    const res = await fetch(
-      `${this.baseUrl}/invoices/${providerRef}/cancel`,
-      {
-        method: "POST",
-        headers: this.headers,
-        body: JSON.stringify({ CancelReason: reason }),
-        signal: AbortSignal.timeout(15_000),
-      },
-    );
+    const res = await fetch(`${this.baseUrl}/invoices/${providerRef}/cancel`, {
+      method: "POST",
+      headers: this.headers,
+      body: JSON.stringify({ CancelReason: reason }),
+      signal: AbortSignal.timeout(15_000),
+    });
 
     if (!res.ok) {
       const data = (await res.json()) as MisaInvoiceResponse;

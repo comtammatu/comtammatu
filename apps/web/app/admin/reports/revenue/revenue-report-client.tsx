@@ -67,7 +67,9 @@ export function RevenueReportClient({
             type="date"
             className="w-40"
             value={startDate}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setStartDate(e.target.value)
+            }
           />
         </div>
         <div className="grid gap-1.5">
@@ -76,7 +78,9 @@ export function RevenueReportClient({
             type="date"
             className="w-40"
             value={endDate}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setEndDate(e.target.value)
+            }
           />
         </div>
         <Button onClick={handleFilter} disabled={isPending} size="sm">

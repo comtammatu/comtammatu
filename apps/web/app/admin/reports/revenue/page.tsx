@@ -23,9 +23,7 @@ export default async function RevenueReportPage() {
       ? await fetchDailyRevenue(branchId, startDate, endDate)
       : { success: true as const, data: [] };
 
-  const rows = result.success
-    ? ((result.data ?? []) as DailyRevenueRow[])
-    : [];
+  const rows = result.success ? ((result.data ?? []) as DailyRevenueRow[]) : [];
 
   return (
     <div className="space-y-6">

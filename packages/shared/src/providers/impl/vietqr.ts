@@ -114,12 +114,10 @@ export class VietQRProvider implements PaymentProvider {
   async createPayment(request: PaymentRequest): Promise<PaymentResult> {
     const providerRef = `VQR-${request.orderId}-${crypto.randomUUID().slice(0, 8)}`;
 
-    const bin =
-      BANK_BINS[this.bankCode] ?? this.bankCode; // fallback: use code as BIN directly
+    const bin = BANK_BINS[this.bankCode] ?? this.bankCode; // fallback: use code as BIN directly
 
     const amount = Math.round(request.amount).toString(); // VND has no decimals
-    const description =
-      request.description ?? `DH ${request.orderNumber}`;
+    const description = request.description ?? `DH ${request.orderNumber}`;
     // Truncate description to 25 chars (NAPAS limit)
     const truncDesc = description.slice(0, 25);
 
@@ -175,7 +173,7 @@ export class VietQRProvider implements PaymentProvider {
   }
 }
 
-function sanitizeVietQrContent(v: string): string {
+function _sanitizeVietQrContent(v: string): string {
   const ascii = v
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")

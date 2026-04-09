@@ -8,19 +8,23 @@ export default async function FoodCostPage() {
   const endDate = now.toISOString().slice(0, 10);
 
   const result = await fetchFoodCost({ startDate, endDate });
-  const rows = result.success
-    ? ((result.data ?? []) as FoodCostRow[])
-    : [];
+  const rows = result.success ? ((result.data ?? []) as FoodCostRow[]) : [];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Chi phí nguyên liệu</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Chi phí nguyên liệu
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Food cost theo món — doanh thu, chi phí, biên lợi nhuận
         </p>
       </div>
-      <FoodCostClient initialRows={rows} initialStart={startDate} initialEnd={endDate} />
+      <FoodCostClient
+        initialRows={rows}
+        initialStart={startDate}
+        initialEnd={endDate}
+      />
     </div>
   );
 }

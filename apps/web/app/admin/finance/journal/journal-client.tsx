@@ -119,7 +119,12 @@ export function JournalClient({ entries: initial, accounts }: Props) {
       };
       setEntries((prev) => [newEntry, ...prev]);
       setOpen(false);
-      setForm({ entryDate: new Date().toISOString().slice(0, 10), description: "", refType: "", refId: "" });
+      setForm({
+        entryDate: new Date().toISOString().slice(0, 10),
+        description: "",
+        refType: "",
+        refId: "",
+      });
       setLines([emptyLine(), emptyLine()]);
     });
   }
@@ -154,7 +159,10 @@ export function JournalClient({ entries: initial, accounts }: Props) {
           <TableBody>
             {entries.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={5}
+                  className="py-10 text-center text-muted-foreground"
+                >
                   Chưa có bút toán nào.
                 </TableCell>
               </TableRow>
@@ -166,7 +174,9 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                 );
                 return (
                   <TableRow key={e.id}>
-                    <TableCell className="tabular-nums">{e.entry_date}</TableCell>
+                    <TableCell className="tabular-nums">
+                      {e.entry_date}
+                    </TableCell>
                     <TableCell>{e.description}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {e.ref_type ? `${e.ref_type}#${e.ref_id}` : "—"}
@@ -259,7 +269,9 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                         <TableCell className="py-1.5">
                           <Select
                             value={line.accountId}
-                            onValueChange={(v: string) => updateLine(i, "accountId", v)}
+                            onValueChange={(v: string) =>
+                              updateLine(i, "accountId", v)
+                            }
                           >
                             <SelectTrigger className="h-8">
                               <SelectValue placeholder="Chọn tài khoản" />
@@ -281,7 +293,9 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                             type="number"
                             min={0}
                             value={line.debit}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateLine(i, "debit", e.target.value)}
+                            onChange={(
+                              e: React.ChangeEvent<HTMLInputElement>,
+                            ) => updateLine(i, "debit", e.target.value)}
                           />
                         </TableCell>
                         <TableCell className="py-1.5">
@@ -290,7 +304,9 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                             type="number"
                             min={0}
                             value={line.credit}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateLine(i, "credit", e.target.value)}
+                            onChange={(
+                              e: React.ChangeEvent<HTMLInputElement>,
+                            ) => updateLine(i, "credit", e.target.value)}
                           />
                         </TableCell>
                         <TableCell className="py-1.5">

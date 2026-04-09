@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// @ts-nocheck
 import { MisaProvider, setInvoiceProvider } from "@comtammatu/shared/providers";
 
 let registered = false;

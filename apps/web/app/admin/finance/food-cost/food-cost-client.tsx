@@ -21,7 +21,11 @@ interface Props {
   initialEnd: string;
 }
 
-export function FoodCostClient({ initialRows, initialStart, initialEnd }: Props) {
+export function FoodCostClient({
+  initialRows,
+  initialStart,
+  initialEnd,
+}: Props) {
   const [rows, setRows] = useState(initialRows);
   const [startDate, setStartDate] = useState(initialStart);
   const [endDate, setEndDate] = useState(initialEnd);
@@ -74,7 +78,9 @@ export function FoodCostClient({ initialRows, initialStart, initialEnd }: Props)
             type="date"
             className="w-40"
             value={startDate}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setStartDate(e.target.value)
+            }
           />
         </div>
         <div className="grid gap-1.5">
@@ -83,7 +89,9 @@ export function FoodCostClient({ initialRows, initialStart, initialEnd }: Props)
             type="date"
             className="w-40"
             value={endDate}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setEndDate(e.target.value)
+            }
           />
         </div>
         <Button onClick={handleFilter} disabled={isPending} size="sm">
@@ -127,7 +135,10 @@ export function FoodCostClient({ initialRows, initialStart, initialEnd }: Props)
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={5}
+                  className="py-10 text-center text-muted-foreground"
+                >
                   Không có dữ liệu trong khoảng thời gian này.
                 </TableCell>
               </TableRow>
@@ -144,7 +155,9 @@ export function FoodCostClient({ initialRows, initialStart, initialEnd }: Props)
                   <TableCell className="text-right tabular-nums">
                     {(r.food_cost ?? 0).toLocaleString("vi-VN")}
                   </TableCell>
-                  <TableCell className={`text-right font-medium ${marginColor(r)}`}>
+                  <TableCell
+                    className={`text-right font-medium ${marginColor(r)}`}
+                  >
                     {margin(r)}
                   </TableCell>
                 </TableRow>
