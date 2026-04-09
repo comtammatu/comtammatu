@@ -44,7 +44,9 @@ export interface GrnListRow {
   notes: string | null;
   supplier_id: number;
   branch_id: number;
+  po_id: number | null;
   suppliers: { id: number; name: string } | null;
+  purchase_orders: { po_number: string } | null;
 }
 
 const STATUS_META: Record<string, { label: string; className: string }> = {
@@ -192,7 +194,7 @@ export function GrnListClient({
           <TableBody>
             {filtered.length === 0 && (
               <TableEmptyStateRow
-                colSpan={5}
+                colSpan={6}
                 paddingClassName="py-16"
                 title={
                   search ? "Không tìm thấy phiếu nào" : "Chưa có phiếu nhập kho"
@@ -219,6 +221,18 @@ export function GrnListClient({
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {r.suppliers?.name ?? "—"}
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell font-mono text-xs text-muted-foreground">
+                    {r.purchase_orders?.po_number ? (
+                      <Link
+                        href={`/admin/inventory/purchase-orders/${r.po_id}`}
+                        className="hover:text-foreground hover:underline"
+                      >
+                        {r.purchase_orders.po_number}
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge className={cn("text-xs", meta.className)}>
