@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Banknote, RefreshCw, Plus, Search } from "lucide-react";
+import { AlertTriangle, Banknote, RefreshCw, Plus, Search } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -30,6 +30,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   createSupplierInvoice,
   fetchSupplierInvoices,
@@ -112,18 +113,39 @@ export function SupplierInvoicesClient({
   const [supplierId, setSupplierId] = useState("");
   const [grnId, setGrnId] = useState("");
   const [search, setSearch] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("_all");
+  const [matchFilter, setMatchFilter] = useState("_all");
+  const [overdueOnly, setOverdueOnly] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const isMobile = useIsMobile();
+
+  const overdueCount = useMemo(
+    () => rows.filter(isOverdue).length,
+    [rows],
+  );
 
   const filtered = useMemo(() => {
+    let result = rows;
+    if (paymentFilter !== "_all") {
+      result = result.filter((r) => r.payment_status === paymentFilter);
+    }
+    if (matchFilter !== "_all") {
+      result = result.filter((r) => r.matching_status === matchFilter);
+    }
+    if (overdueOnly) {
+      result = result.filter(isOverdue);
+    }
     const q = search.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
-      (r) =>
-        r.invoice_number.toLowerCase().includes(q) ||
-        (r.suppliers?.name ?? "").toLowerCase().includes(q) ||
-        (r.goods_received_notes?.grn_number ?? "").toLowerCase().includes(q),
-    );
-  }, [rows, search]);
+    if (q) {
+      result = result.filter(
+        (r) =>
+          r.invoice_number.toLowerCase().includes(q) ||
+          (r.suppliers?.name ?? "").toLowerCase().includes(q) ||
+          (r.goods_received_notes?.grn_number ?? "").toLowerCase().includes(q),
+      );
+    }
+    return result;
+  }, [rows, search, paymentFilter, matchFilter, overdueOnly]);
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -206,6 +228,9 @@ export function SupplierInvoicesClient({
     (g) => !supplierId || String(g.supplier_id) === supplierId,
   );
 
+  const hasActiveFilters =
+    paymentFilter !== "_all" || matchFilter !== "_all" || overdueOnly;
+
   return (
     <>
       {/* Header */}
@@ -227,184 +252,295 @@ export function SupplierInvoicesClient({
 
       {/* Table card */}
       <div className="rounded-lg border shadow-sm overflow-hidden">
-        {/* Search bar */}
-        <div className="flex items-center gap-3 border-b bg-muted/20 px-4 py-3">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
-          <Input
-            placeholder="Tìm số HĐ, NCC hoặc GRN…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-8 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
-          />
-          <span className="shrink-0 text-xs text-muted-foreground">
-            {filtered.length} / {rows.length}
-          </span>
+        {/* Search + filters bar */}
+        <div className="flex flex-wrap items-center gap-3 border-b bg-muted/20 px-4 py-3">
+          <div className="flex flex-1 items-center gap-3 min-w-0">
+            <Search className="size-4 shrink-0 text-muted-foreground" />
+            <Input
+              placeholder="Tìm số HĐ, NCC hoặc GRN…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+              <SelectTrigger className="h-8 w-28 text-xs">
+                <SelectValue placeholder="Thanh toán" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_all">Tất cả TT</SelectItem>
+                <SelectItem value="unpaid">Chưa TT</SelectItem>
+                <SelectItem value="partial">TT một phần</SelectItem>
+                <SelectItem value="paid">Đã TT</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={matchFilter} onValueChange={setMatchFilter}>
+              <SelectTrigger className="h-8 w-28 text-xs">
+                <SelectValue placeholder="Khớp" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_all">Tất cả</SelectItem>
+                <SelectItem value="pending">Chờ khớp</SelectItem>
+                <SelectItem value="matched">Khớp</SelectItem>
+                <SelectItem value="discrepancy">Lệch</SelectItem>
+                <SelectItem value="approved">Đã duyệt</SelectItem>
+              </SelectContent>
+            </Select>
+            {overdueCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setOverdueOnly(!overdueOnly)}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium transition-colors",
+                  overdueOnly
+                    ? "bg-destructive/10 text-destructive border-destructive/30"
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted",
+                )}
+              >
+                <AlertTriangle className="size-3" />
+                {overdueCount} quá hạn
+              </button>
+            )}
+            <span className="shrink-0 text-xs text-muted-foreground">
+              {filtered.length} / {rows.length}
+            </span>
+          </div>
         </div>
 
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/20 hover:bg-muted/20">
-              <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                Số HĐ
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                Nhà cung cấp
-              </TableHead>
-              <TableHead className="hidden sm:table-cell text-xs font-semibold uppercase tracking-wider">
-                GRN
-              </TableHead>
-              <TableHead className="hidden md:table-cell text-xs font-semibold uppercase tracking-wider">
-                Ngày HĐ
-              </TableHead>
-              <TableHead className="hidden lg:table-cell text-right text-xs font-semibold uppercase tracking-wider">
-                Tiền hàng
-              </TableHead>
-              <TableHead className="hidden lg:table-cell text-right text-xs font-semibold uppercase tracking-wider">
-                VAT
-              </TableHead>
-              <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
-                Tổng TT
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                Khớp
-              </TableHead>
-              <TableHead className="hidden md:table-cell text-xs font-semibold uppercase tracking-wider">
-                Hạn TT
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                Thanh toán
-              </TableHead>
-              <TableHead className="w-20" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        {/* Mobile: card layout */}
+        {isMobile ? (
+          <div className="divide-y">
             {filtered.length === 0 && (
-              <TableEmptyStateRow
-                colSpan={11}
-                paddingClassName="py-16"
-                title={
-                  search ? "Không tìm thấy hóa đơn nào" : "Chưa có hóa đơn"
-                }
-                description={
-                  search
-                    ? "Thử từ khóa khác"
-                    : 'Nhấn "Thêm hóa đơn" để thêm hóa đơn nhà cung cấp'
-                }
-              />
+              <div className="py-16 text-center">
+                <p className="text-sm font-medium text-muted-foreground">
+                  {search || hasActiveFilters
+                    ? "Không tìm thấy hóa đơn nào"
+                    : "Chưa có hóa đơn"}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground/70">
+                  {search || hasActiveFilters
+                    ? "Thử bộ lọc khác"
+                    : 'Nhấn "Thêm hóa đơn" để thêm hóa đơn nhà cung cấp'}
+                </p>
+              </div>
             )}
             {filtered.map((r) => {
               const meta = MATCH_META[r.matching_status] ?? {
                 label: r.matching_status,
                 className: "bg-muted text-muted-foreground",
               };
+              const pmeta = PAYMENT_META[r.payment_status] ?? {
+                label: r.payment_status ?? "—",
+                className: "bg-muted text-muted-foreground",
+              };
+              const overdue = isOverdue(r);
               return (
-                <TableRow
-                  key={r.id}
-                  className="group hover:bg-muted/30 transition-colors"
-                >
-                  <TableCell className="font-mono text-sm font-medium">
-                    {r.invoice_number || "—"}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {r.suppliers?.name ?? "—"}
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell font-mono text-xs text-muted-foreground">
-                    {r.goods_received_notes?.grn_number ?? (
-                      <span className="text-muted-foreground/50">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-sm text-muted-foreground tabular-nums">
-                    {new Date(r.invoice_date).toLocaleDateString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })}
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell text-right font-mono text-sm tabular-nums text-muted-foreground">
-                    {r.subtotal.toLocaleString("vi-VN")} ₫
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell text-right font-mono text-sm tabular-nums text-muted-foreground">
-                    {r.vat_amount != null
-                      ? `${r.vat_amount.toLocaleString("vi-VN")} ₫`
-                      : "—"}
-                    {r.vat_rate != null && (
-                      <span className="ml-1 text-xs text-muted-foreground/60">
-                        ({r.vat_rate}%)
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-sm font-semibold tabular-nums">
-                    {r.total_amount.toLocaleString("vi-VN")} ₫
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={cn("text-xs", meta.className)}>
-                      {meta.label}
-                    </Badge>
-                  </TableCell>
-                  <TableCell
-                    className={cn(
-                      "hidden md:table-cell text-sm tabular-nums",
-                      isOverdue(r)
-                        ? "text-destructive font-medium"
-                        : "text-muted-foreground",
-                    )}
-                  >
-                    {r.due_date
-                      ? new Date(r.due_date).toLocaleDateString("vi-VN", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        })
-                      : "—"}
-                  </TableCell>
-                  <TableCell>
-                    {(() => {
-                      const pmeta = PAYMENT_META[r.payment_status] ?? {
-                        label: r.payment_status ?? "—",
-                        className: "bg-muted text-muted-foreground",
-                      };
-                      return (
+                <div key={r.id} className="px-4 py-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-sm font-medium">
+                          {r.invoice_number || "—"}
+                        </span>
+                        <Badge className={cn("text-xs", meta.className)}>
+                          {meta.label}
+                        </Badge>
                         <Badge className={cn("text-xs", pmeta.className)}>
                           {pmeta.label}
                         </Badge>
-                      );
-                    })()}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {r.payment_status !== "paid" && (
+                        {overdue && (
+                          <Badge className="text-xs bg-destructive/10 text-destructive border-destructive/30">
+                            <AlertTriangle className="mr-0.5 size-3" />
+                            Quá hạn
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        {r.suppliers?.name ?? "—"} ·{" "}
+                        {new Date(r.invoice_date).toLocaleDateString("vi-VN", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </div>
+                    <span className="font-mono text-sm font-semibold tabular-nums shrink-0">
+                      {r.total_amount.toLocaleString("vi-VN")} ₫
+                    </span>
+                  </div>
+                  {/* Action buttons always visible */}
+                  <div className="flex items-center gap-2">
+                    {r.payment_status !== "paid" && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => payInvoice(r)}
+                        disabled={isPending}
+                      >
+                        <Banknote className="mr-1 size-3" />
+                        Thanh toán
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => recompute(r.id)}
+                      disabled={isPending}
+                    >
+                      <RefreshCw className="mr-1 size-3" />
+                      Tính lại
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* Desktop: table — reduced to essential columns */
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/20 hover:bg-muted/20">
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  Số HĐ
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  Nhà cung cấp
+                </TableHead>
+                <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
+                  Tổng TT
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  Khớp
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  Thanh toán
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  Hạn TT
+                </TableHead>
+                <TableHead className="w-24" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 && (
+                <TableEmptyStateRow
+                  colSpan={7}
+                  paddingClassName="py-16"
+                  title={
+                    search || hasActiveFilters
+                      ? "Không tìm thấy hóa đơn nào"
+                      : "Chưa có hóa đơn"
+                  }
+                  description={
+                    search || hasActiveFilters
+                      ? "Thử bộ lọc khác"
+                      : 'Nhấn "Thêm hóa đơn" để thêm hóa đơn nhà cung cấp'
+                  }
+                />
+              )}
+              {filtered.map((r) => {
+                const meta = MATCH_META[r.matching_status] ?? {
+                  label: r.matching_status,
+                  className: "bg-muted text-muted-foreground",
+                };
+                const overdue = isOverdue(r);
+                return (
+                  <TableRow
+                    key={r.id}
+                    className="group hover:bg-muted/30 transition-colors"
+                  >
+                    <TableCell className="font-mono text-sm font-medium">
+                      {r.invoice_number || "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {r.suppliers?.name ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-sm font-semibold tabular-nums">
+                      {r.total_amount.toLocaleString("vi-VN")} ₫
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={cn("text-xs", meta.className)}>
+                        {meta.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const pmeta = PAYMENT_META[r.payment_status] ?? {
+                          label: r.payment_status ?? "—",
+                          className: "bg-muted text-muted-foreground",
+                        };
+                        return (
+                          <Badge className={cn("text-xs", pmeta.className)}>
+                            {pmeta.label}
+                          </Badge>
+                        );
+                      })()}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={cn(
+                            "text-sm tabular-nums",
+                            overdue
+                              ? "text-destructive font-medium"
+                              : "text-muted-foreground",
+                          )}
+                        >
+                          {r.due_date
+                            ? new Date(r.due_date).toLocaleDateString("vi-VN", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              })
+                            : "—"}
+                        </span>
+                        {overdue && (
+                          <Badge className="text-xs bg-destructive/10 text-destructive border-destructive/30">
+                            <AlertTriangle className="mr-0.5 size-3" />
+                            Quá hạn
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        {r.payment_status !== "paid" && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            onClick={() => payInvoice(r)}
+                            disabled={isPending}
+                            aria-label="Ghi nhận thanh toán"
+                          >
+                            <Banknote className="size-3.5" />
+                          </Button>
+                        )}
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
                           className="size-8"
-                          onClick={() => payInvoice(r)}
+                          onClick={() => recompute(r.id)}
                           disabled={isPending}
-                          title="Ghi nhận thanh toán"
+                          aria-label="Tính lại khớp"
                         >
-                          <Banknote className="size-3.5" />
-                          <span className="sr-only">Thanh toán</span>
+                          <RefreshCw className="size-3.5" />
                         </Button>
-                      )}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8"
-                        onClick={() => recompute(r.id)}
-                        disabled={isPending}
-                        title="Tính lại khớp"
-                      >
-                        <RefreshCw className="size-3.5" />
-                        <span className="sr-only">Tính lại</span>
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
       {/* Create dialog */}
