@@ -14,7 +14,7 @@ const beVietnamPro = Be_Vietnam_Pro({
 const geistMono = Geist_Mono({
   subsets: ["latin", "latin-ext"],
   variable: "--font-geist-mono",
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
