@@ -14,6 +14,8 @@ import {
   LogOut,
   Menu,
   Package,
+  PanelLeft,
+  PanelLeftClose,
   Receipt,
   Settings,
   Users,
@@ -121,7 +123,6 @@ const SEGMENT_LABEL_VI: Record<string, string> = {
   suppliers: "Nhà cung cấp",
   "supplier-invoices": "HĐ NCC",
   recipes: "Công thức",
-  "branch-ingredients": "Mở NL theo CN",
 };
 
 function toBreadcrumbLabel(segment: string): string {
@@ -188,22 +189,59 @@ function SidebarNav({
   groups,
   pathname,
   onNavigate,
+  collapsed = false,
 }: {
   groups: ResolvedNavGroup[];
   pathname: string;
   onNavigate?: () => void;
+  collapsed?: boolean;
 }) {
   return (
-    <nav className="space-y-5">
+    <nav className={collapsed ? "space-y-1" : "space-y-5"}>
       {groups.map((group) => (
         <div key={group.title}>
-          <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/40">
-            {group.title}
-          </p>
+          {!collapsed && (
+            <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+              {group.title}
+            </p>
+          )}
           <div className="space-y-0.5">
             {group.items.map((item) => {
               const isActive = pathname.startsWith(item.href);
               const Icon = item.icon;
+
+              if (collapsed) {
+                return (
+                  <Tooltip key={item.href}>
+                    <TooltipTrigger asChild>
+                      <Link
+                        href={item.href}
+                        onClick={onNavigate}
+                        className={cn(
+                          "touch-target group relative flex items-center justify-center rounded-lg py-2.5 transition-all",
+                          isActive
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                            : "text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
+                        )}
+                      >
+                        {isActive && (
+                          <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-sidebar-primary" />
+                        )}
+                        <Icon
+                          className={cn(
+                            "size-4.5 shrink-0 transition-colors",
+                            isActive
+                              ? "text-sidebar-primary"
+                              : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/70",
+                          )}
+                        />
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">{item.label}</TooltipContent>
+                  </Tooltip>
+                );
+              }
+
               return (
                 <Link
                   key={item.href}
@@ -243,10 +281,51 @@ function SidebarNav({
 function SidebarUserFooter({
   user,
   role,
+  collapsed = false,
 }: {
   user: { name: string };
   role: string;
+  collapsed?: boolean;
 }) {
+  if (collapsed) {
+    return (
+      <>
+        <Separator className="bg-sidebar-border" />
+        <div className="flex flex-col items-center gap-2 p-3">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Avatar className="size-8 cursor-default ring-2 ring-sidebar-primary/20">
+                <AvatarFallback className="bg-sidebar-accent text-xs font-semibold text-sidebar-accent-foreground">
+                  {getInitials(user.name)}
+                </AvatarFallback>
+              </Avatar>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p className="font-medium">{user.name}</p>
+              <p className="text-xs text-muted-foreground">{role}</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <form action="/api/auth/signout" method="post">
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  size="icon"
+                  className="touch-target size-8 text-sidebar-foreground/50 hover:text-sidebar-foreground"
+                  aria-label="Đăng xuất"
+                >
+                  <LogOut className="size-4" />
+                </Button>
+              </form>
+            </TooltipTrigger>
+            <TooltipContent side="right">Đăng xuất</TooltipContent>
+          </Tooltip>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <Separator className="bg-sidebar-border" />
@@ -296,6 +375,7 @@ interface AdminShellProps {
 export function AdminShell({ children, user, role }: AdminShellProps) {
   const pathname = usePathname();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const mobileSignOutFormRef = useRef<HTMLFormElement>(null);
 
   const filteredGroups = resolveNavGroups(role);
@@ -310,31 +390,84 @@ export function AdminShell({ children, user, role }: AdminShellProps) {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex min-h-screen">
+      <div className="flex h-screen overflow-hidden">
         {/* ── Desktop Sidebar (hidden on mobile) ── */}
-        <aside className="hidden w-64 flex-col border-r bg-sidebar md:flex">
+        <aside
+          className={cn(
+            "hidden flex-col border-r bg-sidebar transition-all duration-200 md:flex",
+            sidebarCollapsed ? "w-16" : "w-64",
+          )}
+        >
           {/* Brand */}
-          <div className="flex h-14 items-center gap-3 border-b border-sidebar-border px-4">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary shadow-sm">
+          <div
+            className={cn(
+              "flex h-14 items-center border-b border-sidebar-border",
+              sidebarCollapsed ? "justify-center px-2" : "gap-3 px-4",
+            )}
+          >
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary shadow-sm">
               <UtensilsCrossed className="size-5 text-sidebar-primary-foreground" />
             </div>
-            <div>
-              <span className="text-base font-bold tracking-tight text-sidebar-foreground">
-                Cơm Tấm Má Tư
-              </span>
-              <p className="text-xs font-medium uppercase tracking-widest text-sidebar-foreground/40">
-                Quản lý
-              </p>
-            </div>
+            {!sidebarCollapsed && (
+              <div className="min-w-0 flex-1">
+                <span className="text-base font-bold tracking-tight text-sidebar-foreground">
+                  Cơm Tấm Má Tư
+                </span>
+                <p className="text-xs font-medium uppercase tracking-widest text-sidebar-foreground/40">
+                  Quản lý
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Nav */}
-          <ScrollArea className="flex-1 px-3 py-4">
-            <SidebarNav groups={filteredGroups} pathname={pathname} />
+          <ScrollArea
+            className={cn("flex-1 py-4", sidebarCollapsed ? "px-2" : "px-3")}
+          >
+            <SidebarNav
+              groups={filteredGroups}
+              pathname={pathname}
+              collapsed={sidebarCollapsed}
+            />
           </ScrollArea>
 
+          {/* Collapse toggle */}
+          <div
+            className={cn(
+              "flex border-t border-sidebar-border p-2",
+              sidebarCollapsed ? "justify-center" : "justify-end",
+            )}
+          >
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSidebarCollapsed((v) => !v)}
+                  className="size-8 text-sidebar-foreground/50 hover:text-sidebar-foreground"
+                  aria-label={
+                    sidebarCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"
+                  }
+                >
+                  {sidebarCollapsed ? (
+                    <PanelLeft className="size-4" />
+                  ) : (
+                    <PanelLeftClose className="size-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side={sidebarCollapsed ? "right" : "top"}>
+                {sidebarCollapsed ? "Mở rộng" : "Thu gọn"}
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
           {/* User footer — ONLY on desktop sidebar */}
-          <SidebarUserFooter user={user} role={role} />
+          <SidebarUserFooter
+            user={user}
+            role={role}
+            collapsed={sidebarCollapsed}
+          />
         </aside>
 
         {/* ── Main Area ── */}

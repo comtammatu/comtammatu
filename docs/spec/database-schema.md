@@ -63,16 +63,16 @@ owner, super_manager, area_manager, branch_manager, cashier, waiter, chef, offic
 
 ### Role Scoping Notes
 
-| Role           | Branch required | Scope                   | Notes                                             |
-| -------------- | --------------- | ----------------------- | ------------------------------------------------- |
-| owner          | No              | Tenant-wide             | Unrestricted                                      |
-| super_manager  | No              | Tenant-wide             | Cannot modify owner                               |
-| area_manager   | No              | Tenant-wide (temporary) | No area mapping table yet; see Future Work        |
-| branch_manager | Yes             | Own branch              | Can manage cashier/waiter/chef in own branch only |
-| cashier        | Yes             | Own branch              | Route: `/br/[branchId]/pos`                       |
-| waiter         | Yes             | Own branch              | Route: `/br/[branchId]/pos`                       |
-| chef           | Yes             | Own branch              | Route: `/br/[branchId]/kds`                       |
-| office         | No              | HQ-wide                 | Route: `/employee`                                |
+| Role           | Branch required | Scope       | Notes                                             |
+| -------------- | --------------- | ----------- | ------------------------------------------------- |
+| owner          | No              | Tenant-wide | Unrestricted                                      |
+| super_manager  | No              | Tenant-wide | Cannot modify owner                               |
+| area_manager   | No              | Area-scoped | Scoped via `areas` + `area_branches` mapping      |
+| branch_manager | Yes             | Own branch  | Can manage cashier/waiter/chef in own branch only |
+| cashier        | Yes             | Own branch  | Route: `/br/[branchId]/pos`                       |
+| waiter         | Yes             | Own branch  | Route: `/br/[branchId]/pos`                       |
+| chef           | Yes             | Own branch  | Route: `/br/[branchId]/kds`                       |
+| office         | No              | HQ-wide     | Route: `/employee`                                |
 
 ### system_settings (Sprint 1 S2)
 
@@ -619,15 +619,69 @@ pending → preparing → ready → served
 
 > Note: `create_order` RPC was updated in M3 to call `route_order_to_kds` automatically after order creation, and now includes server-side price verification (re-fetches prices from menu tables).
 
+## Stocktake (M5-Ext Phase 0)
+
+### stocktake_sessions
+
+| Column       | Type                | Notes                                        |
+| ------------ | ------------------- | -------------------------------------------- |
+| id           | BIGINT PK           | GENERATED ALWAYS AS IDENTITY                 |
+| tenant_id    | BIGINT FK(tenants)  | NOT NULL                                     |
+| branch_id    | BIGINT FK(branches) | NOT NULL                                     |
+| started_at   | TIMESTAMPTZ         | default now()                                |
+| completed_at | TIMESTAMPTZ         | set on completion                            |
+| status       | TEXT NOT NULL       | CHECK IN (in_progress, completed, cancelled) |
+| notes        | TEXT                |                                              |
+| created_by   | UUID FK(auth.users) |                                              |
+| created_at   | TIMESTAMPTZ         | default now()                                |
+
+**Partial unique:** `UNIQUE(branch_id, tenant_id) WHERE status = 'in_progress'` — only one active stocktake per branch.
+
+### stocktake_lines
+
+| Column           | Type                          | Notes                                         |
+| ---------------- | ----------------------------- | --------------------------------------------- |
+| id               | BIGINT PK                     | GENERATED ALWAYS AS IDENTITY                  |
+| tenant_id        | BIGINT FK(tenants)            | NOT NULL                                      |
+| session_id       | BIGINT FK(stocktake_sessions) | ON DELETE CASCADE                             |
+| ingredient_id    | BIGINT FK(ingredients)        | NOT NULL                                      |
+| system_quantity  | NUMERIC(15,3) NOT NULL        | Snapshot at session creation                  |
+| counted_quantity | NUMERIC(15,3)                 | Filled during counting                        |
+| variance         | NUMERIC(15,3) GENERATED       | `counted_quantity - system_quantity` (stored) |
+| variance_reason  | TEXT                          | Required when variance > 5%                   |
+| created_at       | TIMESTAMPTZ                   | default now()                                 |
+
+**Unique:** `UNIQUE(session_id, ingredient_id, tenant_id)`
+
+### Stocktake RPC
+
+| Function                                  | Returns | Purpose                                                                              |
+| ----------------------------------------- | ------- | ------------------------------------------------------------------------------------ |
+| `complete_stocktake(p_session_id BIGINT)` | void    | Re-snapshots current stock, computes adjustments, inserts count_adjustment movements |
+
+### Additional M5-Ext columns
+
+| Table     | Column                | Type         | Notes                                          |
+| --------- | --------------------- | ------------ | ---------------------------------------------- |
+| grn_items | receiving_temperature | NUMERIC(5,1) | Nullable; receiving temp for cold/frozen items |
+
+### Additional M5-Ext indexes
+
+| Index                | Columns                               | Purpose            |
+| -------------------- | ------------------------------------- | ------------------ |
+| idx_grn_items_expiry | grn_items(expiry_date) WHERE NOT NULL | Expiry alert query |
+
+---
+
 ## Future Tables (by phase)
 
 ### M4 — Payment
 
 - payments, payment_webhooks, refunds
 
-### M5 — Stock
+### M5 — Stock (SHIPPED)
 
-- ingredients, recipes, stock_levels, stock_movements, suppliers, purchase_orders, purchase_order_items, goods_received_notes, grn_items, supplier_invoices
+- ingredients, recipes, stock_levels, stock_movements, suppliers, purchase_orders, purchase_order_items, goods_received_notes, grn_items, supplier_invoices, stock_transfers, stock_transfer_items, stocktake_sessions, stocktake_lines
 
 ### M6 — Finance
 

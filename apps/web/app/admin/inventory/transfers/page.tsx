@@ -1,6 +1,6 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
-import { fetchIngredientsForBranch } from "../actions";
+import { fetchIngredients } from "../actions";
 import {
   fetchStockTransfers,
   fetchBranchesForTransfer,
@@ -22,15 +22,12 @@ export default async function TransfersPage() {
     ? extractClaims(session.user.app_metadata)
     : null;
 
-  const [trRes, brRes, hqBranchId] = await Promise.all([
+  const [trRes, brRes, hqBranchId, ingRes] = await Promise.all([
     fetchStockTransfers(),
     fetchBranchesForTransfer(),
     resolveHeadquartersBranchId(),
+    fetchIngredients(),
   ]);
-  const ingRes =
-    hqBranchId != null
-      ? await fetchIngredientsForBranch(hqBranchId)
-      : { success: true as const, data: [] };
   const rows: TransferListRow[] = trRes.success
     ? ((trRes.data ?? []) as TransferListRow[])
     : [];

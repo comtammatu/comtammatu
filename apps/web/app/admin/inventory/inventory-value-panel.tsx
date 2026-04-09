@@ -5,13 +5,7 @@ import { RefreshCw } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import type { InventoryValueVisibility } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Table,
   TableBody,
@@ -116,201 +110,138 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
     visibility.branch,
   ].filter(Boolean).length;
 
-  const inner = (
-    <>
+  return (
+    <Tabs defaultValue={defaultTab}>
+      {/* Header: title + tabs (inline) + refresh */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">Giá trị tồn kho</h2>
+        <div className="flex items-center gap-2">
+          {tabCount > 1 && (
+            <TabsList>
+              {visibility.system && (
+                <TabsTrigger value="system">Toàn hệ thống</TabsTrigger>
+              )}
+              {visibility.area && (
+                <TabsTrigger value="area">Theo khu vực</TabsTrigger>
+              )}
+              {visibility.branch && (
+                <TabsTrigger value="branch">Theo chi nhánh</TabsTrigger>
+              )}
+            </TabsList>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={refreshAll}
+            disabled={isPending}
+            className="gap-1.5 text-muted-foreground"
+          >
+            <RefreshCw
+              className={`size-4 ${isPending ? "animate-spin" : ""}`}
+            />
+            Làm mới
+          </Button>
+        </div>
+      </div>
+
+      {/* System */}
       {visibility.system && (
-        <TabsContent value="system" className="mt-0">
+        <TabsContent value="system" className="mt-3">
           <Card>
-            <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-2">
-              <div>
-                <CardTitle className="text-base">Toàn hệ thống</CardTitle>
-                <CardDescription>
-                  Tổng giá trị tồn kho tất cả chi nhánh (theo WAC / giá tham
-                  chiếu)
-                </CardDescription>
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                className="shrink-0"
-                onClick={loadSystem}
-                disabled={isPending}
-                title="Làm mới"
-              >
-                <RefreshCw
-                  className={`size-4 ${isPending ? "animate-spin" : ""}`}
-                />
-              </Button>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <p className="text-3xl font-semibold tracking-tight tabular-nums">
                 {systemTotal == null ? "—" : formatVND(systemTotal)}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Tổng giá trị tồn kho tất cả chi nhánh (theo WAC / giá tham
+                chiếu)
               </p>
             </CardContent>
           </Card>
         </TabsContent>
       )}
 
+      {/* Area */}
       {visibility.area && (
-        <TabsContent value="area" className="mt-0">
-          <Card>
-            <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-2">
-              <div>
-                <CardTitle className="text-base">Theo khu vực</CardTitle>
-                <CardDescription>
-                  Giá trị tồn kho gom theo khu vực đã gán
-                </CardDescription>
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                className="shrink-0"
-                onClick={loadArea}
-                disabled={isPending}
-                title="Làm mới"
-              >
-                <RefreshCw
-                  className={`size-4 ${isPending ? "animate-spin" : ""}`}
-                />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {areaRows == null ? (
-                <p className="text-sm text-muted-foreground">Đang tải…</p>
-              ) : areaRows.length === 0 ? (
-                <EmptyStatePanel
-                  className="bg-transparent py-10"
-                  title="Không có dữ liệu khu vực"
-                />
-              ) : (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Khu vực</TableHead>
-                        <TableHead className="text-right">
-                          Giá trị tồn kho
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {areaRows.map((r) => (
-                        <TableRow key={r.areaId}>
-                          <TableCell className="font-medium">
-                            {r.areaName}
-                          </TableCell>
-                          <TableCell className="text-right font-mono tabular-nums">
-                            {formatVND(r.totalValue)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      )}
-
-      {visibility.branch && (
-        <TabsContent value="branch" className="mt-0">
-          <Card>
-            <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-2">
-              <div>
-                <CardTitle className="text-base">Theo chi nhánh</CardTitle>
-                <CardDescription>
-                  Giá trị tồn kho từng chi nhánh
-                </CardDescription>
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                className="shrink-0"
-                onClick={loadBranch}
-                disabled={isPending}
-                title="Làm mới"
-              >
-                <RefreshCw
-                  className={`size-4 ${isPending ? "animate-spin" : ""}`}
-                />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {branchRows == null ? (
-                <p className="text-sm text-muted-foreground">Đang tải…</p>
-              ) : branchRows.length === 0 ? (
-                <EmptyStatePanel
-                  className="bg-transparent py-10"
-                  title="Không có chi nhánh trong phạm vi"
-                />
-              ) : (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Chi nhánh</TableHead>
-                        <TableHead className="text-right">
-                          Giá trị tồn kho
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {branchRows.map((r) => (
-                        <TableRow key={r.branchId}>
-                          <TableCell className="font-medium">
-                            {r.branchName}
-                          </TableCell>
-                          <TableCell className="text-right font-mono tabular-nums">
-                            {formatVND(r.totalValue)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      )}
-    </>
-  );
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h2 className="text-lg font-semibold">Giá trị tồn kho</h2>
-        {tabCount > 1 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={refreshAll}
-            disabled={isPending}
-            className="text-muted-foreground"
-          >
-            <RefreshCw
-              className={`mr-2 size-4 ${isPending ? "animate-spin" : ""}`}
+        <TabsContent value="area" className="mt-3">
+          {areaRows == null ? (
+            <p className="text-sm text-muted-foreground">Đang tải…</p>
+          ) : areaRows.length === 0 ? (
+            <EmptyStatePanel
+              className="py-10"
+              title="Không có dữ liệu khu vực"
             />
-            Làm mới tất cả
-          </Button>
-        )}
-      </div>
+          ) : (
+            <div className="overflow-hidden rounded-lg border shadow-sm">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/20 hover:bg-muted/20">
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                      Khu vực
+                    </TableHead>
+                    <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
+                      Giá trị tồn kho
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {areaRows.map((r) => (
+                    <TableRow key={r.areaId}>
+                      <TableCell className="font-medium">
+                        {r.areaName}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums">
+                        {formatVND(r.totalValue)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </TabsContent>
+      )}
 
-      <Tabs defaultValue={defaultTab} className="w-full">
-        <TabsList className={tabCount <= 1 ? "hidden" : ""}>
-          {visibility.system && (
-            <TabsTrigger value="system">Toàn hệ thống</TabsTrigger>
+      {/* Branch */}
+      {visibility.branch && (
+        <TabsContent value="branch" className="mt-3">
+          {branchRows == null ? (
+            <p className="text-sm text-muted-foreground">Đang tải…</p>
+          ) : branchRows.length === 0 ? (
+            <EmptyStatePanel
+              className="py-10"
+              title="Không có chi nhánh trong phạm vi"
+            />
+          ) : (
+            <div className="overflow-hidden rounded-lg border shadow-sm">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/20 hover:bg-muted/20">
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                      Chi nhánh
+                    </TableHead>
+                    <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
+                      Giá trị tồn kho
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {branchRows.map((r) => (
+                    <TableRow key={r.branchId}>
+                      <TableCell className="font-medium">
+                        {r.branchName}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums">
+                        {formatVND(r.totalValue)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
-          {visibility.area && (
-            <TabsTrigger value="area">Theo khu vực</TabsTrigger>
-          )}
-          {visibility.branch && (
-            <TabsTrigger value="branch">Theo chi nhánh</TabsTrigger>
-          )}
-        </TabsList>
-        {inner}
-      </Tabs>
-    </div>
+        </TabsContent>
+      )}
+    </Tabs>
   );
 }

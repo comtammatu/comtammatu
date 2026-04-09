@@ -28,6 +28,7 @@ import {
   deletePurchaseOrderLine,
   fetchPurchaseOrderDetail,
   upsertPurchaseOrderLine,
+  updatePurchaseOrderStatus,
 } from "../../procurement-actions";
 import type { IngredientRow } from "../../page";
 
@@ -75,7 +76,14 @@ export function PoDetailClient({
   const [po, setPo] = useState(initialPo);
   const [lines, setLines] = useState(initialLines);
   const [ingredientId, setIngredientId] = useState("");
+  const [unit, setUnit] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  function handleIngredientChange(val: string) {
+    setIngredientId(val);
+    const ing = ingredients.find((x) => String(x.id) === val);
+    if (ing) setUnit(ing.unit);
+  }
 
   const isDraft = po.status === "draft";
 
@@ -132,6 +140,7 @@ export function PoDetailClient({
       }
       toast.success("Đã lưu dòng");
       setIngredientId("");
+      setUnit("");
       await reload();
     });
   }
@@ -171,6 +180,25 @@ export function PoDetailClient({
             <p className="mt-2 text-sm text-muted-foreground">{po.notes}</p>
           )}
         </div>
+        {isDraft && lines.length > 0 && (
+          <Button
+            type="button"
+            disabled={isPending}
+            onClick={() => {
+              startTransition(async () => {
+                const res = await updatePurchaseOrderStatus(poId, "sent");
+                if (!res.success) {
+                  toast.error(res.error ?? "Không gửi được PO");
+                  return;
+                }
+                toast.success("Đã gửi PO");
+                await reload();
+              });
+            }}
+          >
+            Gửi PO cho nhà cung cấp
+          </Button>
+        )}
       </div>
 
       <div className="rounded-md border">
@@ -253,7 +281,7 @@ export function PoDetailClient({
               <Label>Nguyên liệu</Label>
               <Select
                 value={ingredientId}
-                onValueChange={setIngredientId}
+                onValueChange={handleIngredientChange}
                 required
               >
                 <SelectTrigger>
@@ -281,7 +309,14 @@ export function PoDetailClient({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="unit">Đơn vị</Label>
-              <Input id="unit" name="unit" required placeholder="kg" />
+              <Input
+                id="unit"
+                name="unit"
+                required
+                placeholder="kg"
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
+              />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="unitPriceEst">

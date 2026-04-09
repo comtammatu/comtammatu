@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims, canAccess } from "@comtammatu/shared/auth";
 import { InventorySubNav } from "./inventory-sub-nav";
-import { PageHeader } from "@/components/foundation/ui-patterns";
 
 export default async function InventoryLayout({
   children,
@@ -19,19 +18,11 @@ export default async function InventoryLayout({
   const showProcurement = claims
     ? canAccess(claims.user_role, "inventory_procurement")
     : false;
-  const showBranchIngredientSettings = claims?.user_role === "super_manager";
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Kho và mua hàng"
-        description="Quản lý tồn kho, công thức, nhập hàng, chuyển kho và nhà cung cấp theo chuẩn vận hành đa chi nhánh."
-      />
-      <InventorySubNav
-        showProcurement={showProcurement}
-        showBranchIngredientSettings={showBranchIngredientSettings}
-      />
-      {children}
+    <div>
+      <InventorySubNav showProcurement={showProcurement} />
+      <div className="mt-6 space-y-6">{children}</div>
     </div>
   );
 }

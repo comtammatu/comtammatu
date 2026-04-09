@@ -333,9 +333,9 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 | Session | Task                                        | Tables                              | Status |
 | ------- | ------------------------------------------- | ----------------------------------- | ------ |
 | S1      | Stocktake migration + RPC + Server Actions  | stocktake_sessions, stocktake_lines | DONE   |
-| S2      | Stocktake UI + Reorder alerts               | —                                   | TODO   |
-| S3      | Expiry alerts + GRN temperature + write-off | —                                   | TODO   |
-| S4      | Polish + integration test + verify          | —                                   | TODO   |
+| S2      | Stocktake UI + Reorder alerts               | —                                   | DONE   |
+| S3      | Expiry alerts + GRN temperature + write-off | —                                   | DONE   |
+| S4      | Polish + integration test + verify          | —                                   | DONE   |
 
 ### Phase 1: "Mua Hàng Thông Minh" (3 sessions)
 
@@ -353,10 +353,10 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 **Ship criteria (Phase 0):**
 
-- [ ] Stocktake flow end-to-end (create → count → complete → adjustments)
-- [ ] Reorder alerts dashboard (stock < reorder_point)
-- [ ] Expiry alerts (D-7 yellow, D-3 red)
-- [ ] `/verify` + `/review` passes
+- [x] Stocktake flow end-to-end (create → count → complete → adjustments)
+- [x] Reorder alerts dashboard (stock < reorder_point)
+- [x] Expiry alerts (D-7 yellow, D-3 red)
+- [x] `/verify` + `/review` passes
 
 ---
 

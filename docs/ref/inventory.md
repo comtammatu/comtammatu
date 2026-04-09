@@ -176,15 +176,68 @@ WAC_new = (Q_old × WAC_old + Q_recv × đơn_giá_nhập) / Q_new   (khi Q_new 
 
 ---
 
-## 8. Kiểm kê kho
+## 8. Kiểm kê kho (Stocktake)
 
-Quy trình: in phiếu → đếm thực tế → nhập chênh lệch → `count_adjustment` → cập nhật `last_counted_at`. Có thể làm riêng cho **Trụ sở** và **từng chi nhánh**.
+> Route: `/admin/inventory/stocktake` (list), `/admin/inventory/stocktake/[id]` (chi tiết đếm/kết quả)
+
+### 8.1 Quy trình
+
+1. **Tạo phiên kiểm kê** (`createStocktakeSession`): chọn chi nhánh → tạo `stocktake_sessions` + tự động tạo `stocktake_lines` từ `stock_levels` hiện có (snapshot `system_quantity`).
+2. **Đếm thực tế** (`updateStocktakeLine`): nhập `counted_quantity` cho từng dòng. Chỉ cho phép khi phiên ở trạng thái `in_progress`.
+3. **Hoàn tất** (`completeStocktake` → RPC `complete_stocktake`): kiểm tra tất cả dòng đã đếm → re-snapshot `stock_levels.current_quantity` mới nhất (tránh race condition) → tính chênh lệch → INSERT `stock_movements` (type=`count_adjustment`) → cập nhật `stock_levels` + `last_counted_at` qua trigger.
+4. **Hủy phiên** (`cancelStocktake`): chỉ khi `in_progress`, chuyển sang `cancelled`.
+
+### 8.2 Bảng
+
+- `stocktake_sessions`: `id, tenant_id, branch_id, started_at, completed_at, status, notes, created_by`
+  - Status: `in_progress` | `completed` | `cancelled`
+  - Partial unique: chỉ 1 phiên `in_progress` mỗi chi nhánh
+- `stocktake_lines`: `id, tenant_id, session_id, ingredient_id, system_quantity, counted_quantity, variance (generated), variance_reason`
+  - `variance = counted_quantity - system_quantity` (generated column)
+
+### 8.3 UI
+
+- **Danh sách phiên**: mã phiên (KK-{id}), chi nhánh, ngày, trạng thái. Tìm kiếm theo mã/tên CN.
+- **Chi tiết đếm** (in_progress): bảng nguyên liệu + input số lượng đếm + lý do chênh lệch. Auto-save khi blur.
+- **Kết quả** (completed): bảng SL hệ thống vs SL thực đếm + chênh lệch + color coding (xanh <1%, vàng 1-5%, đỏ >5%).
+- **Tiến độ**: hiển thị `{đã đếm}/{tổng}` khi đang thực hiện.
+
+### 8.4 ACL
+
+- `branch_manager`: tạo + đếm + hoàn tất kiểm kê cho chi nhánh của mình.
+- `super_manager`/`owner`: tạo kiểm kê cho bất kỳ chi nhánh nào, xem toàn bộ lịch sử.
 
 ---
 
 ## 9. Cảnh báo tồn kho
 
-So sánh `stock_levels.current_quantity` với `ingredients.min_stock_level` / `max_stock_level` (theo từng chi nhánh). Cột trong báo cáo dùng `current_quantity` (không dùng tên `quantity` của bản draft SQL cũ).
+### 9.1 Cảnh báo đặt hàng (Reorder Alerts)
+
+> Hiển thị: card trên dashboard Tổng Quan (`/admin/inventory`)
+
+So sánh `stock_levels.current_quantity` với `ingredients.reorder_point` (theo từng chi nhánh, chỉ `is_active = true`).
+
+- Card vàng khi có nguyên liệu dưới mức đặt hàng, xanh khi đủ tồn.
+- Hiển thị top 5 nguyên liệu cần đặt + current/reorder ratio + đơn vị.
+- Tính `suggested_order_qty = max_stock_level - current_quantity`.
+- Branch scoping: `branch_manager` chỉ thấy chi nhánh mình.
+
+### 9.2 Cảnh báo hạn sử dụng (Expiry Alerts)
+
+> Route: `/admin/inventory/expiry` (danh sách đầy đủ) + card trên dashboard Tổng Quan
+
+Truy vấn `grn_items.expiry_date` (join `goods_received_notes` status=`confirmed`) trong cửa sổ 7 ngày.
+
+- **Urgency**: `expired` (≤0 ngày), `critical` (≤3 ngày), `warning` (≤7 ngày).
+- **Dashboard card**: đỏ nếu có hàng hết hạn, vàng nếu sắp hết, xanh nếu an toàn. Link đến `/admin/inventory/expiry`.
+- **Trang chi tiết**: bảng đầy đủ với tabs (Tất cả / Đã hết hạn / Sắp hết hạn) + tìm kiếm + lọc chi nhánh.
+- **Xóa sổ (Write-off)**: nút "Xóa sổ" trên mỗi dòng → nhập số lượng → tạo `stock_movements` (type=`adjustment`, `quantityChange` âm, reason "Hết hạn sử dụng").
+
+> **Lưu ý:** Không block xuất kho hàng hết hạn (yêu cầu batch tracking — ngoài scope Phase 0). Chỉ cảnh báo + hỗ trợ xóa sổ thủ công.
+
+### 9.3 GRN — Nhiệt độ nhận hàng
+
+Cột `grn_items.receiving_temperature` (`NUMERIC(5,1)`, nullable) — chỉ hiển thị cho nguyên liệu lạnh/đông. UI ẩn cột nhiệt độ nếu không có dòng nào có giá trị.
 
 ---
 

@@ -618,7 +618,7 @@ export async function fetchExpiryAlerts(
         status,
         branches ( name )
       ),
-      ingredients ( name )
+      ingredients ( id, name )
     `,
     )
     .eq("goods_received_notes.status", "confirmed")
@@ -645,39 +645,51 @@ export async function fetchExpiryAlerts(
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const alerts = (data ?? []).map((item) => {
-    const expiryDate = new Date(item.expiry_date as string);
-    expiryDate.setHours(0, 0, 0, 0);
-    const daysRemaining = Math.ceil(
-      (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-    );
+  const alerts = (data ?? [])
+    .filter((item) => {
+      // Skip items where ingredient join failed — write-off requires valid ingredient_id
+      const ing = item.ingredients as unknown as { id: number } | null;
+      return ing != null && ing.id > 0;
+    })
+    .map((item) => {
+      const expiryDate = new Date(item.expiry_date as string);
+      expiryDate.setHours(0, 0, 0, 0);
+      const daysRemaining = Math.ceil(
+        (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+      );
 
-    const grn = item.goods_received_notes as unknown as {
-      grn_number: string;
-      branch_id: number;
-      branches: { name: string } | null;
-    };
+      const grn = item.goods_received_notes as unknown as {
+        grn_number: string;
+        branch_id: number;
+        branches: { name: string } | null;
+      };
 
-    let urgency: "expired" | "critical" | "warning";
-    if (daysRemaining <= 0) {
-      urgency = "expired";
-    } else if (daysRemaining <= 3) {
-      urgency = "critical";
-    } else {
-      urgency = "warning";
-    }
+      let urgency: "expired" | "critical" | "warning";
+      if (daysRemaining <= 0) {
+        urgency = "expired";
+      } else if (daysRemaining <= 3) {
+        urgency = "critical";
+      } else {
+        urgency = "warning";
+      }
 
-    return {
-      ingredient_name:
-        (item.ingredients as unknown as { name: string } | null)?.name ?? "",
-      batch_number: item.batch_number,
-      expiry_date: item.expiry_date,
-      grn_number: grn.grn_number,
-      branch_name: grn.branches?.name ?? "",
-      days_remaining: daysRemaining,
-      urgency,
-    };
-  });
+      const ingredient = item.ingredients as unknown as {
+        id: number;
+        name: string;
+      };
+
+      return {
+        ingredient_id: ingredient.id,
+        ingredient_name: ingredient.name,
+        batch_number: item.batch_number,
+        expiry_date: item.expiry_date,
+        grn_number: grn.grn_number,
+        branch_id: grn.branch_id,
+        branch_name: grn.branches?.name ?? "",
+        days_remaining: daysRemaining,
+        urgency,
+      };
+    });
 
   return { success: true, data: alerts };
 }

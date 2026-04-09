@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "../_lib/auth";
+import { canAccessBranch } from "../_lib/branch-scope";
 
 const HR_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 const SHIFT_ROLES: readonly StaffRole[] = [
@@ -160,11 +161,7 @@ export async function createShift(
 
   const { supabase, claims } = ctx;
 
-  // TODO(H3): validate area_manager can only access branches in their assigned area
-  if (
-    claims.user_role === "branch_manager" &&
-    claims.branch_id !== parsed.data.branchId
-  ) {
+  if (!(await canAccessBranch(supabase, claims, parsed.data.branchId))) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 

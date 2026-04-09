@@ -13,6 +13,7 @@
 
 @theme inline {
   --font-sans: var(--font-geist), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
   /* Neutral Minimal — zinc scale */
   --color-background: oklch(1 0 0);
@@ -179,6 +180,11 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+  }
+
+  /* Geist Mono renders visually lighter than Geist Sans at 400 — nudge to 500 */
+  .font-mono {
+    font-weight: 500;
   }
 
   /* Reduced motion */

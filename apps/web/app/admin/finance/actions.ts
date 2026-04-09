@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { randomUUID } from "crypto";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getInvoiceProvider } from "@comtammatu/shared/providers";
@@ -8,7 +9,9 @@ import {
   SYSTEM_SETTING_KEYS,
   SYSTEM_SETTING_DEFAULTS,
 } from "@comtammatu/shared/settings";
+import { ensureInvoiceProviderRegistered } from "../../../lib/invoice-provider-init";
 import { getAuthContext } from "../_lib/auth";
+import { canAccessBranch } from "../_lib/branch-scope";
 
 const FINANCE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 const INVOICE_CREATE_ROLES: readonly StaffRole[] = [
@@ -75,9 +78,8 @@ export async function createTaxInvoice(
     };
   }
 
-  // Branch scope check
-  // TODO(H3): validate area_manager can only access branches in their assigned area
-  if (claims.branch_id !== null && claims.branch_id !== order.branch_id) {
+  // Branch scope check (area_manager must be in area_branches mapping)
+  if (!(await canAccessBranch(supabase, claims, order.branch_id))) {
     return {
       success: false,
       error: "Không có quyền xuất hóa đơn cho chi nhánh này.",
@@ -111,6 +113,7 @@ export async function createTaxInvoice(
   const vatAmount = Number(order.total_amount) - subtotal;
 
   // Use provider interface — swap MISA/ViettelSinvoice without changing this code
+  ensureInvoiceProviderRegistered();
   const invoiceProvider = getInvoiceProvider();
 
   let invoiceNumber: string | null;
@@ -119,6 +122,20 @@ export async function createTaxInvoice(
   let providerData: Record<string, unknown> | undefined;
 
   if (invoiceProvider) {
+    const { data: orderItems, error: itemsErr } = await supabase
+      .from("order_items")
+      .select("item_name, quantity, unit_price, subtotal")
+      .eq("order_id", parsed.data.orderId)
+      .eq("tenant_id", claims.tenant_id)
+      .neq("status", "cancelled");
+
+    if (itemsErr) {
+      return {
+        success: false,
+        error: "Không thể tải danh sách món trong đơn.",
+      };
+    }
+
     const result = await invoiceProvider.createInvoice({
       orderId: parsed.data.orderId,
       orderNumber: `ORD-${parsed.data.orderId}`,
@@ -128,7 +145,13 @@ export async function createTaxInvoice(
       buyerName: parsed.data.buyerName,
       buyerTaxCode: parsed.data.buyerTaxCode,
       buyerAddress: parsed.data.buyerAddress,
-      items: [], // TODO: populate from order_items
+      items: (orderItems ?? []).map((i) => ({
+        name: i.item_name,
+        unit: "phần",
+        quantity: Number(i.quantity),
+        unitPrice: Number(i.unit_price),
+        amount: Number(i.subtotal),
+      })),
       subtotal: Math.round(subtotal * 100) / 100,
       vatRate,
       vatAmount: Math.round(vatAmount * 100) / 100,
@@ -140,7 +163,7 @@ export async function createTaxInvoice(
     providerData = result.providerData;
   } else {
     // No provider configured — create as draft (NOT issued, since no CQT submission)
-    invoiceNumber = `DRAFT-${order.branch_id}-${Date.now()}`;
+    invoiceNumber = `DRAFT-${order.branch_id}-${randomUUID()}`;
     providerRef = invoiceNumber;
     invoiceStatus = "draft";
     providerData = undefined;

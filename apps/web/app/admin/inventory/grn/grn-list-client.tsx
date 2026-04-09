@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { ArrowRight, Plus, Search } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { cn } from "@comtammatu/ui";
 import { createGrnDraft, fetchGrns } from "../procurement-actions";
 import type { SupplierRow } from "../suppliers/suppliers-client";
 import type { PurchaseOrderRow } from "../purchase-orders/purchase-orders-client";
@@ -46,10 +47,19 @@ export interface GrnListRow {
   suppliers: { id: number; name: string } | null;
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Nháp",
-  confirmed: "Đã nhập kho",
-  cancelled: "Đã hủy",
+const STATUS_META: Record<string, { label: string; className: string }> = {
+  draft: {
+    label: "Nháp",
+    className: "bg-muted text-muted-foreground",
+  },
+  confirmed: {
+    label: "Đã nhập kho",
+    className: "bg-success/10 text-success border-success/30",
+  },
+  cancelled: {
+    label: "Đã hủy",
+    className: "bg-destructive/10 text-destructive border-destructive/30",
+  },
 };
 
 export function GrnListClient({
@@ -65,7 +75,18 @@ export function GrnListClient({
   const [open, setOpen] = useState(false);
   const [supplierId, setSupplierId] = useState("");
   const [poId, setPoId] = useState<string>("");
+  const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(
+      (r) =>
+        r.grn_number.toLowerCase().includes(q) ||
+        (r.suppliers?.name ?? "").toLowerCase().includes(q),
+    );
+  }, [rows, search]);
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -101,14 +122,15 @@ export function GrnListClient({
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight">
             Phiếu nhập kho (GRN)
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Nhập hàng từ NCC chỉ ghi nhận tại Trụ sở. Xác nhận phiếu sẽ cập nhật
-            tồn và giá vốn bình quân (WAC).
+            Nhập hàng từ NCC chỉ ghi nhận tại Trụ sở. Xác nhận phiếu cập nhật
+            tồn kho và giá vốn bình quân (WAC).
           </p>
         </div>
         <Button
@@ -122,85 +144,121 @@ export function GrnListClient({
       </div>
 
       {suppliers.length === 0 && (
-        <p className="text-warning text-sm">
-          Cần có NCC —{" "}
-          <Link href="/admin/inventory/suppliers" className="underline">
-            thêm nhà cung cấp
+        <div className="rounded-lg border border-warning/40 bg-warning/5 px-4 py-3 text-sm text-warning">
+          Cần có nhà cung cấp trước.{" "}
+          <Link
+            href="/admin/inventory/suppliers"
+            className="font-medium underline hover:opacity-80"
+          >
+            Thêm NCC →
           </Link>
-          .
-        </p>
+        </div>
       )}
 
-      <div className="rounded-md border shadow-sm">
+      {/* Table card */}
+      <div className="rounded-lg border shadow-sm overflow-hidden">
+        {/* Search bar */}
+        <div className="flex items-center gap-3 border-b bg-muted/20 px-4 py-3">
+          <Search className="size-4 shrink-0 text-muted-foreground" />
+          <Input
+            placeholder="Tìm số phiếu hoặc nhà cung cấp…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+          />
+          <span className="shrink-0 text-xs text-muted-foreground">
+            {filtered.length} / {rows.length}
+          </span>
+        </div>
+
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">
+            <TableRow className="bg-muted/20 hover:bg-muted/20">
+              <TableHead className="text-xs font-semibold uppercase tracking-wider">
                 Số phiếu
               </TableHead>
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">
-                NCC
+              <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                Nhà cung cấp
               </TableHead>
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">
+              <TableHead className="text-xs font-semibold uppercase tracking-wider">
                 Trạng thái
               </TableHead>
-              <TableHead className="hidden sm:table-cell text-xs uppercase tracking-wider font-semibold">
-                Ngày
+              <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                Ngày nhận
               </TableHead>
-              <TableHead className="w-24" />
+              <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
-          <TableBody className="divide-y divide-border/60">
-            {rows.length === 0 && (
+          <TableBody>
+            {filtered.length === 0 && (
               <TableEmptyStateRow
                 colSpan={5}
                 paddingClassName="py-16"
-                title="Chưa có phiếu nhập kho"
-                description='Nhấn "Tạo GRN" để ghi nhận hàng nhập'
+                title={
+                  search ? "Không tìm thấy phiếu nào" : "Chưa có phiếu nhập kho"
+                }
+                description={
+                  search
+                    ? "Thử từ khóa khác"
+                    : 'Nhấn "Tạo GRN" để ghi nhận hàng nhập'
+                }
               />
             )}
-            {rows.map((r) => (
-              <TableRow
-                key={r.id}
-                className="hover:bg-muted/40 transition-colors"
-              >
-                <TableCell className="font-mono text-sm">
-                  {r.grn_number}
-                </TableCell>
-                <TableCell>{r.suppliers?.name ?? "—"}</TableCell>
-                <TableCell>
-                  <Badge
-                    className={
-                      r.status === "confirmed"
-                        ? "bg-success/10 text-success border-success/20"
-                        : r.status === "cancelled"
-                          ? "bg-destructive/10 text-destructive border-destructive/20"
-                          : "bg-muted text-muted-foreground"
-                    }
-                  >
-                    {STATUS_LABEL[r.status] ?? r.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
-                  {new Date(r.received_date).toLocaleString("vi-VN")}
-                </TableCell>
-                <TableCell>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href={`/admin/inventory/grn/${r.id}`}>Chi tiết</Link>
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {filtered.map((r) => {
+              const meta = STATUS_META[r.status] ?? {
+                label: r.status,
+                className: "bg-muted text-muted-foreground",
+              };
+              return (
+                <TableRow
+                  key={r.id}
+                  className="group hover:bg-muted/30 transition-colors"
+                >
+                  <TableCell className="font-mono text-sm font-medium">
+                    {r.grn_number}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {r.suppliers?.name ?? "—"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={cn("text-xs", meta.className)}>
+                      {meta.label}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground tabular-nums">
+                    {new Date(r.received_date).toLocaleDateString("vi-VN", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                      asChild
+                    >
+                      <Link href={`/admin/inventory/grn/${r.id}`}>
+                        <ArrowRight className="size-4" />
+                        <span className="sr-only">Chi tiết</span>
+                      </Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
 
+      {/* Create dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Tạo phiếu nhập (nháp)</DialogTitle>
           </DialogHeader>
-          <form onSubmit={submit} className="space-y-3">
+          <form onSubmit={submit} className="space-y-4">
             <div className="space-y-1.5">
               <Label>Nhà cung cấp *</Label>
               <Select
@@ -241,7 +299,7 @@ export function GrnListClient({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="notes">Ghi chú</Label>
-              <Input id="notes" name="notes" />
+              <Input id="notes" name="notes" placeholder="Lô hàng tháng 4…" />
             </div>
             <DialogFooter>
               <Button

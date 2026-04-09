@@ -298,6 +298,45 @@ export async function deletePurchaseOrderLine(
   return { success: true };
 }
 
+const poStatusSchema = z.object({
+  poId: z.coerce.number().int().positive(),
+  status: z.enum(["sent", "cancelled"]),
+});
+
+export async function updatePurchaseOrderStatus(
+  poId: number,
+  status: string,
+): Promise<ActionResult> {
+  const parsed = poStatusSchema.safeParse({ poId, status });
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+  const ctx = await getAuthContext(ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims } = ctx;
+  const { data: po, error: pe } = await supabase
+    .from("purchase_orders")
+    .select("id, status")
+    .eq("id", parsed.data.poId)
+    .eq("tenant_id", claims.tenant_id)
+    .single();
+  if (pe || !po) return { success: false, error: "Không tìm thấy PO." };
+  if (po.status !== "draft") {
+    return { success: false, error: "Chỉ gửi/hủy PO đang ở trạng thái nháp." };
+  }
+  const { error } = await supabase
+    .from("purchase_orders")
+    .update({ status: parsed.data.status })
+    .eq("id", parsed.data.poId)
+    .eq("tenant_id", claims.tenant_id);
+  if (error)
+    return { success: false, error: "Không thể cập nhật trạng thái PO." };
+  return { success: true };
+}
+
 export async function fetchGrnDetail(grnId: number): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(grnId);
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
@@ -306,7 +345,7 @@ export async function fetchGrnDetail(grnId: number): Promise<ActionResult> {
   const { supabase, claims } = ctx;
   const { data: grn, error: e1 } = await supabase
     .from("goods_received_notes")
-    .select("*, branches ( id, name, is_headquarters )")
+    .select("*, branches ( id, name, is_headquarters ), suppliers ( id, name )")
     .eq("id", id.data)
     .eq("tenant_id", claims.tenant_id)
     .single();
@@ -389,6 +428,7 @@ const grnLineSchema = z.object({
   qualityStatus: z
     .enum(["accepted", "rejected", "partial"])
     .default("accepted"),
+  receivingTemperature: z.coerce.number().optional().nullable(),
 });
 
 export async function upsertGrnLine(
@@ -416,6 +456,7 @@ export async function upsertGrnLine(
       unit_cost: d.unitCost,
       total_cost: totalCost,
       quality_status: d.qualityStatus,
+      receiving_temperature: d.receivingTemperature ?? null,
     },
     { onConflict: "grn_id,ingredient_id,tenant_id" },
   );

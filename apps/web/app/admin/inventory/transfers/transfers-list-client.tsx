@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
+import { ArrowRight, MoveRight, Plus, Search, Trash2 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -38,7 +38,7 @@ import {
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { fetchIngredientsForBranch } from "../actions";
+import { cn } from "@comtammatu/ui";
 import { createStockTransfer, fetchStockTransfers } from "../transfer-actions";
 import { IngredientSearchDialog } from "./transfer-ingredient-dialog";
 import type { IngredientRow } from "../page";
@@ -68,7 +68,6 @@ export interface BranchForTransfer {
 }
 
 type SlipKind = "inbound" | "outbound";
-
 type OutboundDest = "hq" | "other_branch";
 
 type DraftLine = {
@@ -79,13 +78,31 @@ type DraftLine = {
   unit: string;
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Nháp",
-  confirmed_ship: "Đã xuất kho",
-  in_transit: "Đang VC",
-  confirmed_receive: "Đang kiểm nhận",
-  received: "Đã nhận",
-  cancelled: "Đã hủy",
+const STATUS_META: Record<string, { label: string; className: string }> = {
+  draft: {
+    label: "Nháp",
+    className: "bg-muted text-muted-foreground",
+  },
+  confirmed_ship: {
+    label: "Đã xuất kho",
+    className: "bg-info/10 text-info border-info/30",
+  },
+  in_transit: {
+    label: "Đang vận chuyển",
+    className: "bg-info/10 text-info border-info/30",
+  },
+  confirmed_receive: {
+    label: "Đang kiểm nhận",
+    className: "bg-warning/10 text-warning border-warning/30",
+  },
+  received: {
+    label: "Đã nhận",
+    className: "bg-success/10 text-success border-success/30",
+  },
+  cancelled: {
+    label: "Đã hủy",
+    className: "bg-destructive/10 text-destructive border-destructive/30",
+  },
 };
 
 export function TransfersListClient({
@@ -114,9 +131,9 @@ export function TransfersListClient({
   const [outboundToBranchId, setOutboundToBranchId] = useState("");
   const [draftLines, setDraftLines] = useState<DraftLine[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
-  const [pickerIngredients, setPickerIngredients] =
-    useState<IngredientRow[]>(ingredients);
+  const pickerIngredients = ingredients;
 
   const hq = branches.find((b) => b.is_headquarters);
   const operational = branches.filter((b) => !b.is_headquarters);
@@ -128,60 +145,23 @@ export function TransfersListClient({
     hqBranchId != null && userBranchId != null && userBranchId !== hqBranchId;
   const isBranchManager = userRole === "branch_manager";
 
-  const stockFromBranchId = useMemo((): number | null => {
-    if (hqBranchId == null) return null;
-    if (slipKind === "inbound") {
-      if (isUserOperational && userBranchId != null) {
-        return hqBranchId;
-      }
-      if (isUserHq) {
-        const f = Number(inboundFromBranchId);
-        return f > 0 ? f : null;
-      }
-      if (Number(inboundToBranchId) > 0) {
-        return hqBranchId;
-      }
-      return null;
-    }
-    if (isUserOperational && userBranchId != null) {
-      return userBranchId;
-    }
-    if (Number(outboundToBranchId) > 0) {
-      return hqBranchId;
-    }
-    return null;
-  }, [
-    slipKind,
-    hqBranchId,
-    isUserOperational,
-    isUserHq,
-    userBranchId,
-    inboundFromBranchId,
-    inboundToBranchId,
-    outboundToBranchId,
-  ]);
-
-  useEffect(() => {
-    if (stockFromBranchId == null) {
-      setPickerIngredients([]);
-      return;
-    }
-    let cancelled = false;
-    void fetchIngredientsForBranch(stockFromBranchId).then((res) => {
-      if (cancelled || !res.success) return;
-      setPickerIngredients((res.data ?? []) as IngredientRow[]);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [stockFromBranchId]);
-
   const myBranchName = useMemo(() => {
     if (userBranchId == null) return null;
     return branches.find((b) => b.id === userBranchId)?.name ?? null;
   }, [branches, userBranchId]);
 
   const canCreate = Boolean(hq && operational.length >= 1);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(
+      (r) =>
+        r.transfer_number.toLowerCase().includes(q) ||
+        r.from_branch_name.toLowerCase().includes(q) ||
+        r.to_branch_name.toLowerCase().includes(q),
+    );
+  }, [rows, search]);
 
   function resetForm() {
     setSlipKind("outbound");
@@ -242,9 +222,7 @@ export function TransfersListClient({
     const vehicleInfo = String(fd.get("vehicleInfo") ?? "") || undefined;
 
     const linesPayload = buildLinesPayload(draftLines);
-    if (linesPayload === undefined) {
-      return;
-    }
+    if (linesPayload === undefined) return;
 
     if (slipKind === "inbound") {
       if (hqBranchId == null) {
@@ -436,9 +414,10 @@ export function TransfersListClient({
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight">
             Luân chuyển nội bộ
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -457,82 +436,147 @@ export function TransfersListClient({
       </div>
 
       {!canCreate && (
-        <p className="text-warning text-sm">
+        <p className="text-sm text-warning">
           Cần cấu hình Trụ sở và ít nhất một chi nhánh vận hành hoạt động.
         </p>
       )}
 
-      <div className="rounded-md border shadow-sm">
+      {/* Table card */}
+      <div className="rounded-lg border shadow-sm overflow-hidden">
+        {/* Search bar */}
+        <div className="flex items-center gap-3 border-b bg-muted/20 px-4 py-3">
+          <Search className="size-4 shrink-0 text-muted-foreground" />
+          <Input
+            placeholder="Tìm số phiếu hoặc tên chi nhánh…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+          />
+          <span className="shrink-0 text-xs text-muted-foreground">
+            {filtered.length} / {rows.length}
+          </span>
+        </div>
+
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">
+            <TableRow className="bg-muted/20 hover:bg-muted/20">
+              <TableHead className="text-xs font-semibold uppercase tracking-wider">
                 Số phiếu
               </TableHead>
-              <TableHead className="hidden md:table-cell text-xs uppercase tracking-wider font-semibold">
-                Từ
+              <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                Lộ trình
               </TableHead>
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">
-                Đến
-              </TableHead>
-              <TableHead className="text-xs uppercase tracking-wider font-semibold">
+              <TableHead className="text-xs font-semibold uppercase tracking-wider">
                 Trạng thái
               </TableHead>
-              <TableHead className="w-24" />
+              <TableHead className="hidden md:table-cell text-xs font-semibold uppercase tracking-wider">
+                Ngày tạo
+              </TableHead>
+              <TableHead className="hidden lg:table-cell text-xs font-semibold uppercase tracking-wider">
+                Ngày xuất / nhận
+              </TableHead>
+              <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
-          <TableBody className="divide-y divide-border/60">
-            {rows.length === 0 && (
+          <TableBody>
+            {filtered.length === 0 && (
               <TableEmptyStateRow
-                colSpan={5}
+                colSpan={6}
                 paddingClassName="py-16"
-                title="Chưa có phiếu luân chuyển"
-                description='Nhấn "Tạo phiếu" để tạo phiếu luân chuyển đầu tiên'
+                title={
+                  search
+                    ? "Không tìm thấy phiếu nào"
+                    : "Chưa có phiếu luân chuyển"
+                }
+                description={
+                  search
+                    ? "Thử từ khóa khác"
+                    : 'Nhấn "Tạo phiếu" để tạo phiếu luân chuyển đầu tiên'
+                }
               />
             )}
-            {rows.map((r) => (
-              <TableRow
-                key={r.id}
-                className="hover:bg-muted/40 transition-colors"
-              >
-                <TableCell className="font-mono text-sm">
-                  {r.transfer_number}
-                </TableCell>
-                <TableCell className="hidden md:table-cell text-muted-foreground">
-                  {r.from_branch_name}
-                </TableCell>
-                <TableCell>{r.to_branch_name}</TableCell>
-                <TableCell>
-                  <Badge
-                    className={
-                      r.status === "received"
-                        ? "bg-success/10 text-success border-success/20"
-                        : r.status === "in_transit" ||
-                            r.status === "confirmed_ship"
-                          ? "bg-info/10 text-info border-info/20"
-                          : r.status === "confirmed_receive"
-                            ? "bg-warning/10 text-warning border-warning/20"
-                            : r.status === "cancelled"
-                              ? "bg-destructive/10 text-destructive border-destructive/20"
-                              : "bg-muted text-muted-foreground"
-                    }
-                  >
-                    {STATUS_LABEL[r.status] ?? r.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href={`/admin/inventory/transfers/${r.id}`}>
-                      Chi tiết
-                    </Link>
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {filtered.map((r) => {
+              const meta = STATUS_META[r.status] ?? {
+                label: r.status,
+                className: "bg-muted text-muted-foreground",
+              };
+              const dateDisplay = r.shipped_at
+                ? new Date(r.shipped_at).toLocaleDateString("vi-VN", {
+                    day: "2-digit",
+                    month: "2-digit",
+                  })
+                : r.received_at
+                  ? new Date(r.received_at).toLocaleDateString("vi-VN", {
+                      day: "2-digit",
+                      month: "2-digit",
+                    })
+                  : "—";
+              const dateLabel = r.shipped_at
+                ? "Xuất"
+                : r.received_at
+                  ? "Nhận"
+                  : null;
+
+              return (
+                <TableRow
+                  key={r.id}
+                  className="group hover:bg-muted/30 transition-colors"
+                >
+                  <TableCell className="font-mono text-sm font-medium">
+                    {r.transfer_number}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <span className="font-medium">{r.from_branch_name}</span>
+                      <MoveRight className="size-3.5 shrink-0 text-muted-foreground" />
+                      <span className="font-medium">{r.to_branch_name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={cn("text-xs", meta.className)}>
+                      {meta.label}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-sm text-muted-foreground tabular-nums">
+                    {new Date(r.created_at).toLocaleDateString("vi-VN", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    {dateLabel ? (
+                      <span className="text-sm text-muted-foreground tabular-nums">
+                        <span className="mr-1 text-xs text-muted-foreground/70">
+                          {dateLabel}:
+                        </span>
+                        {dateDisplay}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                      asChild
+                    >
+                      <Link href={`/admin/inventory/transfers/${r.id}`}>
+                        <ArrowRight className="size-4" />
+                        <span className="sr-only">Chi tiết</span>
+                      </Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
 
+      {/* Create dialog — logic unchanged */}
       <Dialog
         open={open}
         onOpenChange={(o) => {
@@ -680,6 +724,7 @@ export function TransfersListClient({
               </TabsContent>
             </Tabs>
 
+            {/* Ingredient lines */}
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <Label>Nguyên liệu &amp; số lượng *</Label>
@@ -693,9 +738,8 @@ export function TransfersListClient({
                 </Button>
               </div>
               {draftLines.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Thêm ít nhất một dòng từ bảng nguyên liệu (popup tìm kiếm đầy
-                  đủ).
+                <p className="rounded-md border border-dashed px-4 py-3 text-center text-sm text-muted-foreground">
+                  Thêm ít nhất một dòng từ bảng nguyên liệu.
                 </p>
               ) : (
                 <div className="rounded-md border">
@@ -704,7 +748,7 @@ export function TransfersListClient({
                       <TableRow>
                         <TableHead>Nguyên liệu</TableHead>
                         <TableHead className="w-28">SL</TableHead>
-                        <TableHead className="w-24">Đơn vị</TableHead>
+                        <TableHead className="w-24">ĐVT</TableHead>
                         <TableHead className="w-10" />
                       </TableRow>
                     </TableHeader>
@@ -722,9 +766,7 @@ export function TransfersListClient({
                               className="h-8"
                               value={l.quantity}
                               onChange={(e) =>
-                                updateLine(l.key, {
-                                  quantity: e.target.value,
-                                })
+                                updateLine(l.key, { quantity: e.target.value })
                               }
                               required
                             />
@@ -771,7 +813,7 @@ export function TransfersListClient({
             {isBranchManager && (
               <p className="text-xs text-muted-foreground">
                 Tài khoản chi nhánh: phiếu nhập chỉ nhận về kho của bạn; phiếu
-                xuất chỉ gửi từ kho của bạn (trừ Trụ sở: xuất đi chi nhánh).
+                xuất chỉ gửi từ kho của bạn.
               </p>
             )}
 
