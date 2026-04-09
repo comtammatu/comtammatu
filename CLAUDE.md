@@ -108,3 +108,69 @@ Money: `NUMERIC(15,2)` | Time: `TIMESTAMPTZ` | PK: `BIGINT GENERATED ALWAYS AS I
 - Regression rules: `tasks/regressions.md`
 - Lessons learned: `tasks/lessons.md`
 - Current tasks: `tasks/todo.md`
+
+## Team Workflow — 4-Agent Debate Protocol
+
+Every task MUST go through all 4 agents before implementation. No exceptions.
+
+### Team Roles
+
+| Role | Agent Type | Responsibility |
+|------|-----------|----------------|
+| **PM** | `oh-my-claudecode:planner` | Scope, priority, acceptance criteria, timeline. Asks "should we build this?" and "what's the MVP?" |
+| **BA** | `oh-my-claudecode:analyst` | Requirements analysis, business logic validation, edge cases, data flow. Asks "what are the rules?" and "what can go wrong?" |
+| **Senior Dev** | `oh-my-claudecode:architect` | Architecture, code design, implementation plan, tech debt assessment. Asks "how should we build this?" and "does it fit the system?" |
+| **QA/QC** | `oh-my-claudecode:critic` | Test strategy, acceptance verification, regression check, quality gates. Asks "how do we know it works?" and "what could break?" |
+
+### Mandatory Workflow
+
+For EVERY task (feature, bug fix, refactor):
+
+#### Phase 1: Debate (parallel agents)
+
+Spawn all 4 agents in parallel with the task description. Each agent reviews from their perspective and returns:
+- **PM**: Scope decision (in/out), acceptance criteria, priority assessment
+- **BA**: Business rules, edge cases, data flow analysis, requirement gaps
+- **Senior Dev**: Architecture fit, implementation approach, risk assessment, affected files
+- **QA/QC**: Test plan, regression risks, quality gates, verification steps
+
+#### Phase 2: Synthesis
+
+After all 4 agents respond, synthesize their findings:
+1. List all agreements (all 4 agree)
+2. List all conflicts (agents disagree) — resolve each explicitly
+3. Produce a unified task contract with:
+   - Scope (from PM)
+   - Business rules (from BA)
+   - Implementation plan (from Senior Dev)
+   - Test plan (from QA/QC)
+
+#### Phase 3: Implementation
+
+Execute the unified plan. Senior Dev implements, following the agreed architecture.
+
+#### Phase 4: Verification
+
+Before marking complete:
+1. `pnpm typecheck && pnpm lint && pnpm build` MUST pass
+2. QA/QC agent reviews the diff for correctness
+3. BA agent verifies business rules are met
+4. PM agent confirms acceptance criteria satisfied
+
+### Agent Prompt Templates
+
+When spawning agents, include this context:
+- Current task description
+- Relevant files (from codebase)
+- `CLAUDE.md` constraints
+- `tasks/regressions.md` rules
+- Any related docs from `docs/`
+
+### Skip Conditions
+
+The ONLY time you may skip the 4-agent debate:
+- Typo fixes (< 3 lines changed)
+- Documentation-only changes
+- Dependency version bumps
+
+Everything else goes through all 4 agents.
