@@ -119,10 +119,7 @@ export function SupplierInvoicesClient({
   const [isPending, startTransition] = useTransition();
   const isMobile = useIsMobile();
 
-  const overdueCount = useMemo(
-    () => rows.filter(isOverdue).length,
-    [rows],
-  );
+  const overdueCount = useMemo(() => rows.filter(isOverdue).length, [rows]);
 
   const filtered = useMemo(() => {
     let result = rows;

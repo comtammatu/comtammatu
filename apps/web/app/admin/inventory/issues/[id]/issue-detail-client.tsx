@@ -213,8 +213,13 @@ export function IssueDetailClient({
                   <div className="rounded-md border bg-muted/30 p-3 space-y-1 text-sm">
                     {lines.map((l) => (
                       <p key={l.id}>
-                        Trừ <strong>{l.quantity.toLocaleString("vi-VN")} {l.unit}</strong>{" "}
-                        <strong>{l.ingredients?.name ?? `#${l.ingredient_id}`}</strong>{" "}
+                        Trừ{" "}
+                        <strong>
+                          {l.quantity.toLocaleString("vi-VN")} {l.unit}
+                        </strong>{" "}
+                        <strong>
+                          {l.ingredients?.name ?? `#${l.ingredient_id}`}
+                        </strong>{" "}
                         từ kho <strong>{issue.branches?.name ?? "—"}</strong>
                       </p>
                     ))}
@@ -367,9 +372,7 @@ function IssueHeaderCard({
           <StatusStepper status={issue.status} />
           {lines.length > 0 && (
             <div className="text-right">
-              <p className="text-xs text-muted-foreground">
-                Tổng giá trị xuất
-              </p>
+              <p className="text-xs text-muted-foreground">Tổng giá trị xuất</p>
               <p className="font-mono text-xl font-bold tabular-nums">
                 {grandTotal.toLocaleString("vi-VN")}
                 <span className="ml-1 text-sm font-normal text-muted-foreground">
@@ -628,9 +631,7 @@ function IssueLineItemsTable({
               <TableCell className="text-right font-mono tabular-nums">
                 {l.quantity.toLocaleString("vi-VN")}
               </TableCell>
-              <TableCell className="text-muted-foreground">
-                {l.unit}
-              </TableCell>
+              <TableCell className="text-muted-foreground">{l.unit}</TableCell>
               <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
                 {l.unit_cost.toLocaleString("vi-VN")} ₫
               </TableCell>
@@ -844,9 +845,7 @@ function AddIssueLineForm({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="reason">
-              Lý do xuất *
-            </Label>
+            <Label htmlFor="reason">Lý do xuất *</Label>
             <Input
               id="reason"
               placeholder="vd: Chế biến cơm tấm…"
@@ -858,11 +857,7 @@ function AddIssueLineForm({
         </div>
 
         <div className="mt-4 flex items-center gap-3">
-          <Button
-            type="submit"
-            size="sm"
-            disabled={isPending || !ingredientId}
-          >
+          <Button type="submit" size="sm" disabled={isPending || !ingredientId}>
             {isPending ? "Đang lưu…" : "Lưu dòng"}
           </Button>
           <p className="text-xs text-muted-foreground">

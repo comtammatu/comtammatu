@@ -361,6 +361,19 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 ### Phase 2: Scale When Needed (HOLD)
 
+**Price Management (Tier 1 — cần để COGS đúng):**
+
+- `vendor_price_list` với `valid_from/to` — lịch sử giá hợp đồng theo NCC/SKU, hỗ trợ ngoại tệ (trigger: owner bắt đầu đàm phán giá định kỳ với NCC)
+- Price Variance detection tại PO — so sánh giá PO vs giá HĐ, tolerance theo nhóm hàng, approval workflow (trigger: cùng lúc với `vendor_price_list`)
+- 3-Way Matching giá tại Invoice — Invoice Price vs PO Price, exception flow khi vượt tolerance (trigger: kế toán phát hiện NCC bill sai giá)
+
+**Price Management (Tier 2 — cho báo cáo):**
+
+- Recipe COGS auto-recalculate khi WA thay đổi + Recipe Cost History (trigger: GĐ muốn theo dõi FC% theo thời gian)
+- FC% Impact Alert khi giá nguyên liệu làm FC% thay đổi > 2% (trigger: cùng với recipe recalc)
+
+**Các tính năng khác:**
+
 - Batch/Lot tracking (trigger: sự cố ATTP)
 - Purchase Request workflow (trigger: >8 chi nhánh)
 - Supplier scoring (trigger: owner request)
@@ -410,18 +423,18 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 ## Version History
 
-| Version | Date       | What                                                  |
-| ------- | ---------- | ----------------------------------------------------- |
-| v0.1.0  | 2026-04-01 | Foundation (auth, proxy, RLS, monorepo)               |
-| v0.1.1  | 2026-04-02 | Security hardening (RLS, DML lockdown)                |
-| M0+M1   | 2026-04-03 | Admin Shell + Menu shipped (ex Sprint 1)              |
-| M2      | 2026-04-06 | POS shipped — order, cart, bill, cash                 |
-| M3      | 2026-04-06 | KDS shipped — station config, realtime, bump/complete |
-| M4      | 2026-04-06 | Payment — cash, VietQR, Momo, refunds                 |
-| M5      | 2026-04-06 | Stock — ingredients, recipes, stock levels            |
-| M6      | 2026-04-06 | Finance — HĐĐT, revenue dashboard, VAS                |
-| M7      | 2026-04-06 | HR/Payroll — employees, shifts, attendance, payroll   |
-| v1.0.0  | 2026-04-07 | All modules shipped, QA verified, deployed to Vercel  |
-| UX-A    | 2026-04-09 | Inventory UX redesign Session A — PO + GRN + Invoice  |
+| Version | Date       | What                                                             |
+| ------- | ---------- | ---------------------------------------------------------------- |
+| v0.1.0  | 2026-04-01 | Foundation (auth, proxy, RLS, monorepo)                          |
+| v0.1.1  | 2026-04-02 | Security hardening (RLS, DML lockdown)                           |
+| M0+M1   | 2026-04-03 | Admin Shell + Menu shipped (ex Sprint 1)                         |
+| M2      | 2026-04-06 | POS shipped — order, cart, bill, cash                            |
+| M3      | 2026-04-06 | KDS shipped — station config, realtime, bump/complete            |
+| M4      | 2026-04-06 | Payment — cash, VietQR, Momo, refunds                            |
+| M5      | 2026-04-06 | Stock — ingredients, recipes, stock levels                       |
+| M6      | 2026-04-06 | Finance — HĐĐT, revenue dashboard, VAS                           |
+| M7      | 2026-04-06 | HR/Payroll — employees, shifts, attendance, payroll              |
+| v1.0.0  | 2026-04-07 | All modules shipped, QA verified, deployed to Vercel             |
+| UX-A    | 2026-04-09 | Inventory UX redesign Session A — PO + GRN + Invoice             |
 | UX-B    | 2026-04-09 | Inventory UX redesign Session B — Transfers + Stocktake + Issues |
-| UX-C    | 2026-04-10 | Inventory UX redesign Session C — Catalog + Support pages |
+| UX-C    | 2026-04-10 | Inventory UX redesign Session C — Catalog + Support pages        |

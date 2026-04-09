@@ -187,7 +187,9 @@ export function IssuesListClient({
               <Badge
                 className={cn(
                   "text-xs cursor-pointer",
-                  isActive ? meta.className : "bg-muted/60 text-muted-foreground",
+                  isActive
+                    ? meta.className
+                    : "bg-muted/60 text-muted-foreground",
                 )}
               >
                 {meta.label} {count}
@@ -270,13 +272,16 @@ export function IssuesListClient({
                     <span className="font-mono text-sm font-medium">
                       {r.issue_number}
                     </span>
-                    <Badge className={cn("text-xs shrink-0", statusMeta.className)}>
+                    <Badge
+                      className={cn("text-xs shrink-0", statusMeta.className)}
+                    >
                       {statusMeta.label}
                     </Badge>
                   </div>
                   <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
                     <span>
-                      {r.branches?.name ?? "—"} · {TYPE_LABEL[r.issue_type] ?? r.issue_type}
+                      {r.branches?.name ?? "—"} ·{" "}
+                      {TYPE_LABEL[r.issue_type] ?? r.issue_type}
                     </span>
                     <span className="tabular-nums">
                       {new Date(r.issued_at).toLocaleDateString("vi-VN", {

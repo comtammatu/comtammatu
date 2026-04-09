@@ -246,8 +246,8 @@ export function ExpiryListClient({
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">
-                      Lô: {alert.batch_number ?? "—"} · GRN:{" "}
-                      {alert.grn_number} · {alert.branch_name}
+                      Lô: {alert.batch_number ?? "—"} · GRN: {alert.grn_number}{" "}
+                      · {alert.branch_name}
                     </p>
                   </div>
                   <Button
@@ -399,7 +399,9 @@ export function ExpiryListClient({
         <button
           type="button"
           onClick={() =>
-            setUrgencyFilter((prev) => (prev === "critical" ? null : "critical"))
+            setUrgencyFilter((prev) =>
+              prev === "critical" ? null : "critical",
+            )
           }
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",

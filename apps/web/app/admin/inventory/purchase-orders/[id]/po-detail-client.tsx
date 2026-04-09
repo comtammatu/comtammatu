@@ -190,10 +190,7 @@ export function PoDetailClient({
     });
   }
 
-  const totalValue = lines.reduce(
-    (sum, l) => sum + (l.line_total ?? 0),
-    0,
-  );
+  const totalValue = lines.reduce((sum, l) => sum + (l.line_total ?? 0), 0);
 
   return (
     <div className="space-y-6">
@@ -236,9 +233,7 @@ export function PoDetailClient({
                     {totalValue > 0 && (
                       <>
                         , tổng dự kiến{" "}
-                        <strong>
-                          {totalValue.toLocaleString("vi-VN")} ₫
-                        </strong>
+                        <strong>{totalValue.toLocaleString("vi-VN")} ₫</strong>
                       </>
                     )}
                     . Sau khi gửi không thể chỉnh sửa dòng.
@@ -845,9 +840,7 @@ function AddLineForm({
           />
         </div>
         <div className="space-y-1.5 sm:col-span-2">
-          <Label htmlFor="unitPriceEst">
-            Đơn giá dự kiến (₫, tùy chọn)
-          </Label>
+          <Label htmlFor="unitPriceEst">Đơn giá dự kiến (₫, tùy chọn)</Label>
           <Input
             id="unitPriceEst"
             name="unitPriceEst"

@@ -680,7 +680,9 @@ export function ReportsClient({
                       <span className="text-sm font-medium truncate">
                         {r.ingredient_name}
                       </span>
-                      <Badge className={cn("text-xs shrink-0", flagMeta.className)}>
+                      <Badge
+                        className={cn("text-xs shrink-0", flagMeta.className)}
+                      >
                         {flagMeta.label}
                       </Badge>
                     </div>
@@ -699,8 +701,7 @@ export function ReportsClient({
                         )}
                       >
                         {r.variance > 0 ? "+" : ""}
-                        {fmtNum(r.variance)} (
-                        {r.variance_pct > 0 ? "+" : ""}
+                        {fmtNum(r.variance)} ({r.variance_pct > 0 ? "+" : ""}
                         {fmtNum(r.variance_pct)}%)
                       </span>
                     </div>
