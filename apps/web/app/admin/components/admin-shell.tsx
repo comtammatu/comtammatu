@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   BarChart3,
   Briefcase,
+  Check,
   ChefHat,
   ChevronRight,
   Heart,
@@ -507,8 +508,47 @@ export function AdminShell({
 }: AdminShellProps) {
   const pathname = usePathname();
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarMode, setSidebarMode] = useState<
+    "expanded" | "collapsed" | "hover"
+  >("expanded");
+  const [isHoverOpen, setIsHoverOpen] = useState(false);
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const mobileSignOutFormRef = useRef<HTMLFormElement>(null);
+
+  // Restore sidebar mode from cookie
+  useEffect(() => {
+    const match = document.cookie.match(
+      /sidebar_mode=(expanded|collapsed|hover)/,
+    );
+    const saved = match?.[1];
+    if (saved === "expanded" || saved === "collapsed" || saved === "hover") {
+      setSidebarMode(saved);
+    }
+  }, []);
+
+  // Persist mode to cookie + reset hover state when mode changes
+  useEffect(() => {
+    document.cookie = `sidebar_mode=${sidebarMode};path=/;max-age=${60 * 60 * 24 * 365}`;
+    if (sidebarMode !== "hover") setIsHoverOpen(false);
+  }, [sidebarMode]);
+
+  useEffect(() => () => clearTimeout(hoverTimerRef.current), []);
+
+  const isCollapsed =
+    sidebarMode === "collapsed" || (sidebarMode === "hover" && !isHoverOpen);
+
+  const handleSidebarMouseEnter = () => {
+    if (sidebarMode !== "hover") return;
+    clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => setIsHoverOpen(true), 100);
+  };
+
+  const handleSidebarMouseLeave = () => {
+    if (sidebarMode !== "hover" || modeMenuOpen) return;
+    clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => setIsHoverOpen(false), 300);
+  };
 
   const filteredGroups = resolveNavGroups(role);
   const navItems = useMemo(
@@ -525,24 +565,38 @@ export function AdminShell({
   return (
     <TooltipProvider delayDuration={300}>
       <div className="flex h-screen overflow-hidden">
+        {/* ── Desktop Sidebar spacer (hover mode: keeps layout stable) ── */}
+        {sidebarMode === "hover" && (
+          <div className="hidden w-16 shrink-0 md:block" />
+        )}
+
         {/* ── Desktop Sidebar (hidden on mobile) ── */}
         <aside
           className={cn(
             "hidden flex-col border-r bg-sidebar transition-all duration-200 md:flex",
-            sidebarCollapsed ? "w-16" : "w-64",
+            sidebarMode === "hover"
+              ? cn(
+                  "fixed inset-y-0 left-0 z-40",
+                  isHoverOpen ? "w-64 shadow-xl" : "w-16",
+                )
+              : isCollapsed
+                ? "w-16"
+                : "w-64",
           )}
+          onMouseEnter={handleSidebarMouseEnter}
+          onMouseLeave={handleSidebarMouseLeave}
         >
           {/* Brand */}
           <div
             className={cn(
               "flex h-14 items-center border-b border-sidebar-border",
-              sidebarCollapsed ? "justify-center px-2" : "gap-3 px-4",
+              isCollapsed ? "justify-center px-2" : "gap-3 px-4",
             )}
           >
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary shadow-sm">
               <UtensilsCrossed className="size-5 text-sidebar-primary-foreground" />
             </div>
-            {!sidebarCollapsed && (
+            {!isCollapsed && (
               <div className="min-w-0 flex-1">
                 <span className="text-base font-bold tracking-tight text-sidebar-foreground">
                   Cơm Tấm Má Tư
@@ -556,59 +610,87 @@ export function AdminShell({
 
           {/* Nav */}
           <ScrollArea
-            className={cn("flex-1 py-4", sidebarCollapsed ? "px-2" : "px-3")}
+            className={cn("flex-1 py-4", isCollapsed ? "px-2" : "px-3")}
           >
             <SidebarNav
               groups={filteredGroups}
               pathname={pathname}
-              collapsed={sidebarCollapsed}
+              collapsed={isCollapsed}
             />
             {showBranchOps && (
               <BranchOperationsNav
                 branchId={branchId}
                 pathname={pathname}
-                collapsed={sidebarCollapsed}
+                collapsed={isCollapsed}
               />
             )}
           </ScrollArea>
 
-          {/* Collapse toggle */}
+          {/* Sidebar mode control */}
           <div
             className={cn(
               "flex border-t border-sidebar-border p-2",
-              sidebarCollapsed ? "justify-center" : "justify-end",
+              isCollapsed ? "justify-center" : "justify-end",
             )}
           >
-            <Tooltip>
-              <TooltipTrigger asChild>
+            <DropdownMenu
+              open={modeMenuOpen}
+              onOpenChange={(open) => {
+                setModeMenuOpen(open);
+                if (!open && sidebarMode === "hover") {
+                  clearTimeout(hoverTimerRef.current);
+                  hoverTimerRef.current = setTimeout(
+                    () => setIsHoverOpen(false),
+                    400,
+                  );
+                }
+              }}
+            >
+              <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setSidebarCollapsed((v) => !v)}
                   className="size-8 text-sidebar-foreground/50 hover:text-sidebar-foreground"
-                  aria-label={
-                    sidebarCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"
-                  }
+                  aria-label="Chế độ sidebar"
                 >
-                  {sidebarCollapsed ? (
+                  {isCollapsed ? (
                     <PanelLeft className="size-4" />
                   ) : (
                     <PanelLeftClose className="size-4" />
                   )}
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent side={sidebarCollapsed ? "right" : "top"}>
-                {sidebarCollapsed ? "Mở rộng" : "Thu gọn"}
-              </TooltipContent>
-            </Tooltip>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side={isCollapsed ? "right" : "top"}
+                align="end"
+              >
+                <DropdownMenuItem onClick={() => setSidebarMode("expanded")}>
+                  <PanelLeft className="size-4" />
+                  Mở rộng
+                  {sidebarMode === "expanded" && (
+                    <Check className="ml-auto size-4" />
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSidebarMode("collapsed")}>
+                  <PanelLeftClose className="size-4" />
+                  Thu gọn
+                  {sidebarMode === "collapsed" && (
+                    <Check className="ml-auto size-4" />
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSidebarMode("hover")}>
+                  <PanelLeft className="size-4" />
+                  Mở khi rê chuột
+                  {sidebarMode === "hover" && (
+                    <Check className="ml-auto size-4" />
+                  )}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* User footer — ONLY on desktop sidebar */}
-          <SidebarUserFooter
-            user={user}
-            role={role}
-            collapsed={sidebarCollapsed}
-          />
+          <SidebarUserFooter user={user} role={role} collapsed={isCollapsed} />
         </aside>
 
         {/* ── Main Area ── */}
