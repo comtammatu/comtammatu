@@ -19,9 +19,26 @@ export default async function BranchesPage() {
 
   const { data: branches } = await supabase
     .from("branches")
-    .select("id, name, address, phone, is_active, is_headquarters")
+    .select(
+      "id, name, address, phone, is_active, is_headquarters, latitude, longitude",
+    )
     .order("is_headquarters", { ascending: false })
     .order("name");
+
+  // Check which branches have attendance secrets configured
+  const { data: configs } = await supabase
+    .from("branch_attendance_config")
+    .select("branch_id")
+    .eq("tenant_id", claims.tenant_id);
+
+  const configuredBranchIds = new Set((configs ?? []).map((c) => c.branch_id));
+
+  const branchesWithConfig = (branches ?? []).map((b) => ({
+    ...b,
+    latitude: b.latitude as number | null,
+    longitude: b.longitude as number | null,
+    hasAttendanceSecret: configuredBranchIds.has(b.id),
+  }));
 
   return (
     <div className="space-y-6">
@@ -34,7 +51,7 @@ export default async function BranchesPage() {
         </div>
         <AddBranchButton />
       </div>
-      <BranchTable branches={branches ?? []} />
+      <BranchTable branches={branchesWithConfig} />
     </div>
   );
 }
