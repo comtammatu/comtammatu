@@ -84,7 +84,7 @@ export function IssuesListClient({
   defaultBranchId: number | null;
 }) {
   const router = useRouter();
-  const [rows, setRows] = useState(initial);
+  const [rows, _setRows] = useState(initial);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [branchId, setBranchId] = useState(

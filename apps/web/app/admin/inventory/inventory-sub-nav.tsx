@@ -97,9 +97,9 @@ export function InventorySubNav({
 }) {
   const pathname = usePathname();
 
-  const visibleGroups = NAV_GROUPS.filter(
+  const visibleItems = NAV_GROUPS.filter(
     (g) => !g.procurementOnly || showProcurement,
-  );
+  ).flatMap((g) => g.items);
 
   function isActive(href: string) {
     return href === "/admin/inventory"
@@ -108,47 +108,29 @@ export function InventorySubNav({
   }
 
   return (
-    <aside className="w-48 shrink-0 self-start">
-      <nav aria-label="Kho hàng" className="space-y-5">
-        {visibleGroups.map((group, gi) => (
-          <div key={gi}>
-            {group.label && (
-              <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
-                {group.label}
-              </p>
-            )}
-            <ul className="space-y-0.5">
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const active = isActive(item.href);
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
-                        active
-                          ? "bg-primary/10 text-primary"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                      )}
-                    >
-                      <Icon
-                        className={cn(
-                          "size-4 shrink-0",
-                          active ? "text-primary" : "text-muted-foreground",
-                        )}
-                        aria-hidden="true"
-                      />
-                      <span>{item.label}</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+    <div className="overflow-x-auto border-b scrollbar-none">
+      <nav aria-label="Kho hàng" className="flex">
+        {visibleItems.map((item) => {
+          const Icon = item.icon;
+          const active = isActive(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "-mb-px flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
+                active
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground",
+              )}
+            >
+              <Icon className="size-4 shrink-0" aria-hidden="true" />
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
-    </aside>
+    </div>
   );
 }
