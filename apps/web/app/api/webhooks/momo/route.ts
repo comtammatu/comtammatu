@@ -1,35 +1,26 @@
 import { NextResponse } from "next/server";
-import crypto from "node:crypto";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { rateLimit } from "@comtammatu/security";
+import { MoMoProvider } from "@comtammatu/shared/providers";
 
+const MOMO_PARTNER_CODE = process.env.MOMO_PARTNER_CODE ?? "";
+const MOMO_ACCESS_KEY = process.env.MOMO_ACCESS_KEY ?? "";
 const MOMO_SECRET_KEY = process.env.MOMO_SECRET_KEY ?? "";
 
-interface MomoWebhookPayload {
+interface MomoIPN {
+  partnerCode: string;
   orderId: string;
   requestId: string;
   amount: number;
+  orderInfo: string;
+  orderType: string;
+  transId: string;
   resultCode: number;
   message: string;
-  transId: string;
+  payType: string;
+  responseTime: number;
+  extraData: string;
   signature: string;
-}
-
-function verifySignature(payload: MomoWebhookPayload): boolean {
-  if (!MOMO_SECRET_KEY) return false;
-
-  // MoMo HMAC-SHA256 signature verification
-  const rawData = `amount=${payload.amount}&message=${payload.message}&orderId=${payload.orderId}&requestId=${payload.requestId}&resultCode=${payload.resultCode}&transId=${payload.transId}`;
-
-  const expectedSignature = crypto
-    .createHmac("sha256", MOMO_SECRET_KEY)
-    .update(rawData)
-    .digest("hex");
-
-  const sigBuf = Buffer.from(payload.signature, "hex");
-  const expectedBuf = Buffer.from(expectedSignature, "hex");
-  if (sigBuf.length !== expectedBuf.length) return false;
-  return crypto.timingSafeEqual(sigBuf, expectedBuf);
 }
 
 export async function POST(request: Request) {
@@ -41,23 +32,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
-  let payload: MomoWebhookPayload;
+  let payload: MomoIPN;
   try {
-    payload = (await request.json()) as MomoWebhookPayload;
+    payload = (await request.json()) as MomoIPN;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  // Verify HMAC signature
-  if (!verifySignature(payload)) {
+  // Verify HMAC signature using provider
+  if (!MOMO_SECRET_KEY || !MOMO_ACCESS_KEY) {
+    return NextResponse.json(
+      { error: "MoMo not configured" },
+      { status: 500 },
+    );
+  }
+
+  const provider = new MoMoProvider({
+    partnerCode: MOMO_PARTNER_CODE,
+    accessKey: MOMO_ACCESS_KEY,
+    secretKey: MOMO_SECRET_KEY,
+  });
+
+  const verification = provider.verifyWebhook(payload, payload.signature);
+  if (!verification.valid) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
+  const supabase = createServiceClient();
+
   // resultCode 0 = success
   if (payload.resultCode !== 0) {
-    // Payment failed — update status
-    const supabase = createServiceClient();
-    // Scope by provider_ref which includes tenant context
     await supabase
       .from("payments")
       .update({
@@ -71,11 +75,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true });
   }
 
-  // Payment succeeded
-  const supabase = createServiceClient();
-
-  // Atomic: find pending payment AND update to completed in one query
-  // This prevents race conditions from MoMo retrying webhooks
+  // Payment succeeded — atomic update (idempotent via status=pending guard)
   const { data: payment } = await supabase
     .from("payments")
     .update({
@@ -85,18 +85,17 @@ export async function POST(request: Request) {
     })
     .eq("provider_ref", payload.orderId)
     .eq("method", "momo")
-    .eq("status", "pending") // Only updates if still pending (idempotent)
+    .eq("status", "pending")
     .select("id, order_id, amount, tenant_id")
     .maybeSingle();
 
   if (!payment) {
-    // Already processed or not found — idempotent response
+    // Already processed or not found — idempotent
     return NextResponse.json({ received: true });
   }
 
-  // Validate amount matches stored payment (prevent underpayment attack)
+  // Validate amount matches (prevent underpayment attack)
   if (Number(payment.amount) !== payload.amount) {
-    // Amount mismatch — revert payment to failed
     await supabase
       .from("payments")
       .update({ status: "failed" })
@@ -104,7 +103,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Amount mismatch" }, { status: 400 });
   }
 
-  // Update order payment status — scope by tenant_id for defense in depth
+  // Update order payment status
   await supabase
     .from("orders")
     .update({ payment_status: "paid" })

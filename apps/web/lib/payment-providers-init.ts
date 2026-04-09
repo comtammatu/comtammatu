@@ -17,19 +17,15 @@ export function ensurePaymentProvidersRegistered(): void {
 
   registerPaymentProvider(new CashProvider());
 
-  const vKey = process.env.VIETQR_API_KEY;
-  const vName = process.env.VIETQR_ACCOUNT_NAME;
   const vAccount = process.env.VIETQR_ACCOUNT_NO;
   const vBank = process.env.VIETQR_BANK_ID;
-  if (vKey && vName && vAccount && vBank) {
+  if (vAccount && vBank) {
     registerPaymentProvider(
       new VietQRProvider({
-        bearerToken: vKey,
+        apiKey: process.env.VIETQR_API_KEY ?? "",
         bankAccount: vAccount,
         bankCode: vBank,
-        bankAccountName: vName,
-        endpointBaseUrl:
-          process.env.VIETQR_ENDPOINT_BASE_URL ?? "https://api.vietqr.org",
+        accountName: process.env.VIETQR_ACCOUNT_NAME,
       }),
     );
   }
@@ -46,15 +42,7 @@ export function ensurePaymentProvidersRegistered(): void {
         partnerCode: mPartner,
         accessKey: mAccess,
         secretKey: mSecret,
-        endpointBaseUrl:
-          process.env.MOMO_ENDPOINT_BASE_URL ??
-          (process.env.NODE_ENV === "production"
-            ? "https://payment.momo.vn"
-            : "https://test-payment.momo.vn"),
-        redirectUrl: mRedirectUrl,
-        ipnUrl: mIpnUrl,
-        storeName: process.env.MOMO_STORE_NAME,
-        storeId: process.env.MOMO_STORE_ID,
+        sandbox: process.env.MOMO_SANDBOX === "true",
       }),
     );
   }

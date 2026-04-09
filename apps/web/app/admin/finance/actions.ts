@@ -60,10 +60,12 @@ export async function createTaxInvoice(
 
   const { supabase, claims, user } = ctx;
 
-  // Fetch order — must be paid
+  // Fetch order with line items — must be paid
   const { data: order, error: orderErr } = await supabase
     .from("orders")
-    .select("id, branch_id, subtotal, tax_amount, total_amount, payment_status")
+    .select(
+      "id, branch_id, subtotal, tax_amount, total_amount, payment_status, order_items(id, item_name, variant_name, quantity, unit_price, subtotal)",
+    )
     .eq("id", parsed.data.orderId)
     .eq("tenant_id", claims.tenant_id)
     .single();
@@ -122,6 +124,27 @@ export async function createTaxInvoice(
   let invoiceStatus: "draft" | "signing" | "submitted" | "issued";
   let providerData: Record<string, unknown> | undefined;
 
+  // Build invoice line items from order_items
+  const orderItems = (order as Record<string, unknown>).order_items as
+    | Array<{
+        id: number;
+        item_name: string;
+        variant_name: string | null;
+        quantity: number;
+        unit_price: number;
+        subtotal: number;
+      }>
+    | undefined;
+  const invoiceItems = (orderItems ?? []).map((item) => ({
+    name: item.variant_name
+      ? `${item.item_name} - ${item.variant_name}`
+      : item.item_name,
+    unit: "Phần",
+    quantity: item.quantity,
+    unitPrice: Number(item.unit_price),
+    amount: Number(item.subtotal),
+  }));
+
   if (invoiceProvider) {
     const { data: orderItems, error: itemsErr } = await supabase
       .from("order_items")
@@ -146,13 +169,7 @@ export async function createTaxInvoice(
       buyerName: parsed.data.buyerName,
       buyerTaxCode: parsed.data.buyerTaxCode,
       buyerAddress: parsed.data.buyerAddress,
-      items: (orderItems ?? []).map((i) => ({
-        name: i.item_name,
-        unit: "phần",
-        quantity: Number(i.quantity),
-        unitPrice: Number(i.unit_price),
-        amount: Number(i.subtotal),
-      })),
+      items: invoiceItems,
       subtotal: Math.round(subtotal * 100) / 100,
       vatRate,
       vatAmount: Math.round(vatAmount * 100) / 100,
@@ -163,8 +180,8 @@ export async function createTaxInvoice(
     invoiceStatus = result.status === "failed" ? "draft" : result.status;
     providerData = result.providerData;
   } else {
-    // No provider configured — create as draft (NOT issued, since no CQT submission)
-    invoiceNumber = `DRAFT-${order.branch_id}-${randomUUID()}`;
+    // No provider configured — create as draft with unique ID
+    invoiceNumber = `DRAFT-${order.branch_id}-${crypto.randomUUID().slice(0, 8)}`;
     providerRef = invoiceNumber;
     invoiceStatus = "draft";
     providerData = undefined;
