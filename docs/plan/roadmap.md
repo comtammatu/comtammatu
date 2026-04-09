@@ -309,14 +309,54 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 **Pilot checklist:**
 
-- [ ] M0–M4 SHIPPED (vận hành cơ bản)
-- [ ] M5 SHIPPED (quản lý kho)
-- [ ] M6 SHIPPED (HĐĐT — bắt buộc pháp lý)
-- [ ] `/qa` — full QA test
+- [x] M0–M4 SHIPPED (vận hành cơ bản)
+- [x] M5 SHIPPED (quản lý kho)
+- [x] M6 SHIPPED (HĐĐT — bắt buộc pháp lý)
+- [x] `/qa` — full QA test
 - [ ] `/cso` — sprint-level security review
 - [ ] `/retro` — retrospective
-- [ ] `/ship` — merge → push → PR → deploy
+- [x] `/ship` — merge → push → PR → deploy
 - [ ] Live verification tại 1 chi nhánh
+
+---
+
+## M5-Ext: Stock Enhancement — Kho Hàng Nâng Cao
+
+> Status: APPROVED | Depends: M5 (SHIPPED)
+> Plan: `docs/plan/m5-stock-enhancement.md`
+> North Star: "Không bao giờ hết sườn, không bao giờ mua đắt."
+
+**Context:** 30-50 SKU, 1 người đặt hàng qua Zalo, chưa bao giờ kiểm kê, food cost ước tính sơ bộ.
+
+### Phase 0: "Tin Được Con Số" (4 sessions)
+
+| Session | Task                                        | Tables                              | Status |
+| ------- | ------------------------------------------- | ----------------------------------- | ------ |
+| S1      | Stocktake migration + RPC + Server Actions  | stocktake_sessions, stocktake_lines | DONE   |
+| S2      | Stocktake UI + Reorder alerts               | —                                   | TODO   |
+| S3      | Expiry alerts + GRN temperature + write-off | —                                   | TODO   |
+| S4      | Polish + integration test + verify          | —                                   | TODO   |
+
+### Phase 1: "Mua Hàng Thông Minh" (3 sessions)
+
+| Session | Task                                      | Tables | Status |
+| ------- | ----------------------------------------- | ------ | ------ |
+| S5      | Auto-suggest PO quantities                | —      | TODO   |
+| S6      | Price intelligence (alerts + history)     | —      | TODO   |
+| S7      | Reports (2) + in-transit + transfer print | —      | TODO   |
+
+### Phase 2: Scale When Needed (HOLD)
+
+- Batch/Lot tracking (trigger: sự cố ATTP)
+- Purchase Request workflow (trigger: >8 chi nhánh)
+- Supplier scoring (trigger: owner request)
+
+**Ship criteria (Phase 0):**
+
+- [ ] Stocktake flow end-to-end (create → count → complete → adjustments)
+- [ ] Reorder alerts dashboard (stock < reorder_point)
+- [ ] Expiry alerts (D-7 yellow, D-3 red)
+- [ ] `/verify` + `/review` passes
 
 ---
 
