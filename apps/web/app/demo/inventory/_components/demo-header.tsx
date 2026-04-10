@@ -87,7 +87,7 @@ export function DemoHeader() {
         {/* Branch selector */}
         <button
           type="button"
-          className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold"
+          className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold"
           style={{
             backgroundColor: "var(--md-surface-low)",
             color: "var(--md-on-surface-variant)",
@@ -105,14 +105,14 @@ export function DemoHeader() {
         <div className="flex gap-2">
           <Link
             href="/demo/inventory/grn"
-            className="rounded-lg px-4 py-1.5 text-sm font-medium transition-colors"
+            className="rounded-lg px-4 py-2.5 text-sm font-medium transition-colors"
             style={{ color: "var(--md-primary)" }}
           >
             GRN
           </Link>
           <Link
             href="/demo/inventory/purchase-orders/new"
-            className="rounded-lg px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition-colors"
+            className="rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors"
             style={{
               background: `linear-gradient(135deg, var(--md-primary), var(--md-primary-container))`,
             }}
@@ -124,7 +124,7 @@ export function DemoHeader() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="flex size-9 items-center justify-center rounded-full transition-colors"
+            className="flex size-11 items-center justify-center rounded-full transition-colors"
             style={{ color: "var(--md-on-surface-variant)" }}
             aria-label="Notifications"
           >
@@ -132,7 +132,7 @@ export function DemoHeader() {
           </button>
           <button
             type="button"
-            className="flex size-9 items-center justify-center rounded-full transition-colors"
+            className="flex size-11 items-center justify-center rounded-full transition-colors"
             style={{ color: "var(--md-on-surface-variant)" }}
             aria-label="Help"
           >
