@@ -50,7 +50,7 @@ export default function NewPOPage() {
   const subtotal = 4_850_000;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Back + Header */}
       <div className="flex items-end justify-between">
         <div>

@@ -78,7 +78,7 @@ const priceHistory = [
 
 export default function PODetailPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <Link
         href="/demo/inventory/purchase-orders"
         className="inline-flex items-center gap-1 text-sm hover:underline"

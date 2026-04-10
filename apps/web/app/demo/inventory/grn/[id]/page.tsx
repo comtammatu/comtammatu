@@ -72,7 +72,7 @@ export default function GRNDetailPage() {
   const qcWarning = grn.items.filter((i) => i.status === "warning").length;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <Link
         href="/demo/inventory/grn"
         className="inline-flex items-center gap-1 text-sm hover:underline"

@@ -45,7 +45,7 @@ export default function ExpiryPage() {
   ).length;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Page Header */}
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>

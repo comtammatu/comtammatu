@@ -23,7 +23,7 @@ import {
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Dashboard Header */}
       <div className="flex items-end justify-between">
         <div>
@@ -257,7 +257,7 @@ export default function DashboardPage() {
               Luân chuyển đang vận chuyển
             </h3>
             <div
-              className="relative space-y-8 pl-6"
+              className="relative space-y-6 pl-6"
               style={{ borderLeft: `2px solid var(--md-secondary-container)` }}
             >
               {transfers

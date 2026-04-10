@@ -18,7 +18,7 @@ export default function SupplierInvoicesPage() {
   const totalAP = supplierInvoices.reduce((s, i) => s + i.amount, 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         title="Hóa đơn Nhà cung cấp"
         description="Quản lý và đối soát chứng từ nhập hàng trong hệ thống."

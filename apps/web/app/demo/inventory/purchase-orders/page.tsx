@@ -38,7 +38,7 @@ export default function PurchaseOrdersPage() {
   const totalValue = purchaseOrders.reduce((s, p) => s + p.total, 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-end justify-between">
         <div>

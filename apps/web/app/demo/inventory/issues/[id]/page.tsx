@@ -54,7 +54,7 @@ const issueDetail = {
 
 export default function IssueDetailPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <Link
         href="/demo/inventory/issues"
         className="inline-flex items-center gap-1 text-sm hover:underline"
