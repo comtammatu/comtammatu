@@ -171,12 +171,11 @@ export function DemoSidebar() {
       {/* Mobile overlay */}
       {mobileOpen && (
         <>
-          <div
+          <button
+            type="button"
             className="fixed inset-0 z-40 bg-black/60 md:hidden"
             onClick={() => setMobileOpen(false)}
             onKeyDown={(e) => e.key === "Escape" && setMobileOpen(false)}
-            role="button"
-            tabIndex={0}
             aria-label="Đóng menu"
           />
           <aside
