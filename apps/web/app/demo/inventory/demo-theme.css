@@ -293,3 +293,10 @@
 .demo-inventory-theme main > div > *:nth-child(5) {
   animation-delay: 0.2s;
 }
+
+/* --- Respect reduced motion preference --- */
+@media (prefers-reduced-motion: reduce) {
+  .demo-inventory-theme main > div > * {
+    animation: none;
+  }
+}
