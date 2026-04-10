@@ -17,32 +17,32 @@ function isPublic(pathname: string) {
   );
 }
 
-/** Sub-routes under /admin/inventory restricted to owner + super_manager */
+/** Sub-routes under /inventory restricted to super_manager only */
 const INVENTORY_PROCUREMENT_PREFIXES = [
-  "/admin/inventory/suppliers",
-  "/admin/inventory/purchase-orders",
-  "/admin/inventory/grn",
-  "/admin/inventory/supplier-invoices",
-  "/admin/inventory/recipes",
+  "/inventory/suppliers",
+  "/inventory/purchase-orders",
+  "/inventory/grn",
+  "/inventory/supplier-invoices",
+  "/inventory/recipes",
 ] as const;
 
 /** Map pathname to ModuleKey for ACL check */
 function resolveModule(pathname: string): ModuleKey | null {
   if (pathname.startsWith("/admin/dashboard")) return "dashboard";
   if (pathname.startsWith("/admin/menu")) return "menu";
+  if (pathname.startsWith("/admin/orders")) return "orders";
+  if (pathname.startsWith("/admin/staff")) return "staff";
+  if (pathname.startsWith("/admin/crm")) return "crm";
+  if (pathname.startsWith("/admin/finance")) return "finance";
+  if (pathname.startsWith("/admin/reports")) return "reports";
+  if (pathname.startsWith("/admin/settings")) return "settings";
   for (const prefix of INVENTORY_PROCUREMENT_PREFIXES) {
     if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
       return "inventory_procurement";
     }
   }
-  if (pathname.startsWith("/admin/inventory")) return "inventory";
-  if (pathname.startsWith("/admin/orders")) return "orders";
-  if (pathname.startsWith("/admin/staff")) return "staff";
-  if (pathname.startsWith("/admin/hr")) return "hr";
-  if (pathname.startsWith("/admin/crm")) return "crm";
-  if (pathname.startsWith("/admin/finance")) return "finance";
-  if (pathname.startsWith("/admin/reports")) return "reports";
-  if (pathname.startsWith("/admin/settings")) return "settings";
+  if (pathname.startsWith("/inventory")) return "inventory";
+  if (pathname.startsWith("/hr")) return "hr";
   if (pathname.match(/^\/br\/\d+\/pos/)) return "pos";
   if (pathname.match(/^\/br\/\d+\/kds/)) return "kds";
   if (pathname.startsWith("/employee")) return "employee";

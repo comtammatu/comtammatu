@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Building2,
-  CheckCircle,
-  MoreVertical,
-  Pause,
-  Plus,
-  Users,
-} from "lucide-react";
+import { CheckCircle, MoreVertical, Pause, Plus, Users } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -56,11 +49,11 @@ export default function SuppliersPage() {
         </div>
         <button
           type="button"
-          className="flex items-center gap-2 rounded-xl px-6 py-2.5 font-bold text-white shadow-xl transition-transform hover:scale-[1.02]"
+          className="flex items-center gap-2 rounded-full px-6 py-2.5 font-bold text-white shadow-xl transition-transform hover:scale-[1.02]"
           style={{
             background:
               "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-            boxShadow: "0 4px 14px rgba(158,61,0,0.15)",
+            boxShadow: "0 4px 14px rgba(211,84,0,0.15)",
           }}
         >
           <Plus className="size-4" />
@@ -114,7 +107,7 @@ export default function SuppliersPage() {
                 {card.icon}
               </div>
               <span
-                className="text-[10px] font-semibold uppercase tracking-widest"
+                className="text-label font-semibold uppercase tracking-widest"
                 style={{ color: "var(--md-outline-variant)" }}
               >
                 Hệ thống
@@ -187,7 +180,7 @@ export default function SuppliersPage() {
                   <TableCell className="px-6 py-5">
                     <div className="flex items-center gap-3">
                       <div
-                        className="flex size-9 items-center justify-center rounded-lg text-xs font-bold"
+                        className="flex size-9 items-center justify-center rounded-full text-xs font-bold"
                         style={{
                           backgroundColor: color.bg,
                           color: color.fg,
@@ -202,7 +195,7 @@ export default function SuppliersPage() {
                       <div>
                         <p className="text-sm font-semibold">{s.name}</p>
                         <p
-                          className="text-[10px]"
+                          className="text-label"
                           style={{ color: "var(--md-outline)" }}
                         >
                           {s.code}
@@ -270,7 +263,7 @@ export default function SuppliersPage() {
           </span>
           <div className="flex items-center gap-2">
             <span
-              className="flex size-8 items-center justify-center rounded-lg text-xs font-bold text-white"
+              className="flex size-8 items-center justify-center rounded-full text-xs font-bold text-white"
               style={{ backgroundColor: "var(--md-primary)" }}
             >
               1

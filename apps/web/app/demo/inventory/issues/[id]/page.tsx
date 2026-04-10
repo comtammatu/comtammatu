@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle, PlusCircle, Trash2, X } from "lucide-react";
 import {
@@ -10,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { StatusBadge } from "../../_components/shared";
+import { StatusBadge, SearchableSelect } from "../../_components/shared";
 import { formatVND } from "../../_components/mock-data";
 
 const issueDetail = {
@@ -52,7 +53,18 @@ const issueDetail = {
   ],
 };
 
+const reasonOptions = [
+  { value: "Nấu cơm hàng ngày", label: "Nấu cơm hàng ngày" },
+  { value: "Sơ chế món nướng", label: "Sơ chế món nướng" },
+  { value: "Tẩm ướp gia vị", label: "Tẩm ướp gia vị" },
+  { value: "Bù hao hụt", label: "Bù hao hụt" },
+  { value: "Hủy hàng lỗi", label: "Hủy hàng lỗi" },
+];
+
 export default function IssueDetailPage() {
+  const [notes, setNotes] = useState<Record<string, string>>(
+    Object.fromEntries(issueDetail.items.map((item) => [item.name, item.note])),
+  );
   return (
     <div className="space-y-6">
       <Link
@@ -78,7 +90,7 @@ export default function IssueDetailPage() {
           <div className="space-y-4">
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Mã phiếu
@@ -89,7 +101,7 @@ export default function IssueDetailPage() {
             </div>
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Loại phiếu
@@ -110,7 +122,7 @@ export default function IssueDetailPage() {
           >
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Chi nhánh
@@ -119,7 +131,7 @@ export default function IssueDetailPage() {
             </div>
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Ngày tạo
@@ -138,14 +150,14 @@ export default function IssueDetailPage() {
           >
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Người lập phiếu
               </p>
               <div className="mt-1 flex items-center gap-2">
                 <span
-                  className="flex size-6 items-center justify-center rounded-full text-[10px] font-bold"
+                  className="flex size-6 items-center justify-center rounded-full text-label font-bold"
                   style={{
                     backgroundColor: "var(--md-primary-fixed)",
                     color: "var(--md-primary)",
@@ -158,7 +170,7 @@ export default function IssueDetailPage() {
             </div>
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Tổng giá trị
@@ -195,7 +207,7 @@ export default function IssueDetailPage() {
           <h4 className="text-lg font-bold">Danh sách nguyên liệu</h4>
           <button
             type="button"
-            className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-all"
+            className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-all"
             style={{
               backgroundColor: "var(--md-secondary-container)",
               color: "var(--md-on-secondary-container)",
@@ -225,7 +237,7 @@ export default function IssueDetailPage() {
               ].map((h) => (
                 <TableHead
                   key={h.label || "del"}
-                  className={`px-6 py-4 text-[10px] font-bold uppercase tracking-widest ${h.align}`}
+                  className={`px-6 py-4 text-label font-bold uppercase tracking-widest ${h.align}`}
                   style={{ color: "var(--md-outline)" }}
                 >
                   {h.label}
@@ -247,7 +259,7 @@ export default function IssueDetailPage() {
                   <div className="flex flex-col">
                     <span className="font-bold">{item.name}</span>
                     <span
-                      className="text-[10px]"
+                      className="text-label"
                       style={{ color: "var(--md-outline)" }}
                     >
                       SKU: {item.sku}
@@ -283,18 +295,22 @@ export default function IssueDetailPage() {
                   {formatVND(item.total)}
                 </TableCell>
                 <TableCell className="px-6 py-4">
-                  <select
-                    className="w-full border-0 border-b bg-transparent p-0 pb-1 text-sm focus:ring-0"
+                  <SearchableSelect
+                    options={reasonOptions}
+                    value={notes[item.name] ?? item.note}
+                    onValueChange={(v) =>
+                      setNotes((prev) => ({ ...prev, [item.name]: v }))
+                    }
+                    placeholder="Chọn lý do..."
+                    searchPlaceholder="Tìm lý do..."
+                    variant="ghost"
                     style={{
-                      borderColor:
-                        "color-mix(in srgb, var(--md-outline-variant) 50%, transparent)",
+                      color: "var(--md-on-surface)",
+                      borderBottom:
+                        "1px solid color-mix(in srgb, var(--md-outline-variant) 50%, transparent)",
+                      paddingBottom: 4,
                     }}
-                    defaultValue={item.note}
-                  >
-                    <option>{item.note}</option>
-                    <option>Bù hao hụt</option>
-                    <option>Hủy hàng lỗi</option>
-                  </select>
+                  />
                 </TableCell>
                 <TableCell className="px-6 py-4 text-center">
                   <button
@@ -347,7 +363,7 @@ export default function IssueDetailPage() {
                   {formatVND(issueDetail.total)}
                 </span>
                 <span
-                  className="text-[10px] font-semibold"
+                  className="text-label font-semibold"
                   style={{ color: "var(--md-outline)" }}
                 >
                   VNĐ (Bao gồm thuế)
@@ -368,7 +384,7 @@ export default function IssueDetailPage() {
       >
         <button
           type="button"
-          className="flex items-center gap-2 rounded-xl px-6 py-3 font-bold transition-all"
+          className="flex items-center gap-2 rounded-full px-6 py-3 font-bold transition-all"
           style={{ color: "var(--md-error)" }}
         >
           <X className="size-5" />
@@ -377,7 +393,7 @@ export default function IssueDetailPage() {
         <div className="flex items-center gap-4">
           <button
             type="button"
-            className="rounded-xl px-8 py-3 font-bold transition-all"
+            className="rounded-full px-8 py-3 font-bold transition-all"
             style={{
               backgroundColor: "var(--md-surface-high)",
               color: "var(--md-on-surface-variant)",
@@ -387,11 +403,11 @@ export default function IssueDetailPage() {
           </button>
           <button
             type="button"
-            className="flex items-center gap-2 rounded-xl px-10 py-3 font-bold text-white shadow-lg transition-all hover:scale-[0.98]"
+            className="flex items-center gap-2 rounded-full px-10 py-3 font-bold text-white shadow-lg transition-all hover:scale-[0.98]"
             style={{
               background:
                 "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-              boxShadow: "0 4px 14px rgba(158,61,0,0.2)",
+              boxShadow: "0 4px 14px rgba(211,84,0,0.2)",
             }}
           >
             <CheckCircle className="size-5" />

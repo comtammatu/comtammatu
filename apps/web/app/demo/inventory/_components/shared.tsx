@@ -1,7 +1,21 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { useState } from "react";
+import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@comtammatu/ui";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@comtammatu/ui/components/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@comtammatu/ui/components/command";
 import type { DocumentStatus } from "./mock-data";
 
 // ----------------------------------------------------------------
@@ -43,6 +57,135 @@ export function StatCard({ label, value, trend }: StatCardProps) {
         </div>
       )}
     </div>
+  );
+}
+
+// ----------------------------------------------------------------
+// SearchableSelect — Popover + Command with search & scroll
+// ----------------------------------------------------------------
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+interface SearchableSelectProps {
+  options: SelectOption[];
+  value: string;
+  onValueChange: (value: string) => void;
+  placeholder?: string;
+  searchPlaceholder?: string;
+  emptyText?: string;
+  className?: string;
+  style?: React.CSSProperties;
+  /** Visual variant */
+  variant?: "default" | "ghost" | "pill";
+}
+
+export function SearchableSelect({
+  options,
+  value,
+  onValueChange,
+  placeholder = "Chọn...",
+  searchPlaceholder = "Tìm kiếm...",
+  emptyText = "Không tìm thấy.",
+  className,
+  style,
+  variant = "default",
+}: SearchableSelectProps) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.value === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          role="combobox"
+          aria-expanded={open}
+          className={cn(
+            "inline-flex items-center gap-1.5 text-sm font-semibold transition-colors",
+            variant === "default" &&
+              "rounded-xl border-none px-4 py-3 font-medium focus:outline-none focus:ring-0",
+            variant === "ghost" &&
+              "cursor-pointer border-none bg-transparent p-0 pr-1 focus:ring-0",
+            variant === "pill" &&
+              "rounded-lg border-none px-4 py-2 focus:outline-none focus:ring-0",
+            className,
+          )}
+          style={style}
+        >
+          <span className={cn(!selected && "opacity-60")}>
+            {selected?.label ?? placeholder}
+          </span>
+          <ChevronDown
+            className={cn(
+              "size-3.5 shrink-0 opacity-50 transition-transform",
+              open && "rotate-180",
+            )}
+          />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="p-0"
+        align="start"
+        style={{
+          width: "var(--radix-popover-trigger-width)",
+          minWidth: 220,
+          backgroundColor: "var(--md-surface-lowest)",
+          border:
+            "1px solid color-mix(in srgb, var(--md-outline-variant) 20%, transparent)",
+          borderRadius: "0.75rem",
+        }}
+      >
+        <Command
+          className="bg-transparent"
+          filter={(value, search) => {
+            const opt = options.find((o) => o.value === value);
+            if (!opt) return 0;
+            return opt.label.toLowerCase().includes(search.toLowerCase())
+              ? 1
+              : 0;
+          }}
+        >
+          <CommandInput
+            placeholder={searchPlaceholder}
+            className="h-10 bg-transparent text-sm focus:ring-0"
+          />
+          <CommandList style={{ maxHeight: 240 }}>
+            <CommandEmpty
+              className="py-4 text-center text-sm"
+              style={{ color: "var(--md-outline)" }}
+            >
+              {emptyText}
+            </CommandEmpty>
+            <CommandGroup className="p-1">
+              {options.map((option) => (
+                <CommandItem
+                  key={option.value}
+                  value={option.value}
+                  onSelect={(v) => {
+                    onValueChange(v);
+                    setOpen(false);
+                  }}
+                  className="cursor-pointer rounded-lg px-3 py-2 text-sm"
+                  style={{
+                    color: "var(--md-on-surface)",
+                  }}
+                >
+                  <span className="flex-1">{option.label}</span>
+                  {value === option.value && (
+                    <Check
+                      className="size-4 shrink-0"
+                      style={{ color: "var(--md-primary)" }}
+                    />
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -265,7 +408,7 @@ export function TimelineStepper({ steps }: { steps: TimelineStep[] }) {
                     ? {
                         backgroundColor: "var(--md-primary)",
                         color: "white",
-                        boxShadow: "0 4px 12px rgba(158,61,0,0.3)",
+                        boxShadow: "0 4px 12px rgba(211,84,0,0.3)",
                       }
                     : {
                         backgroundColor: "var(--md-surface-high)",

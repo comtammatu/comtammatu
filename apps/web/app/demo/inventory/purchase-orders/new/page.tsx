@@ -76,7 +76,7 @@ export default function NewPOPage() {
         </div>
         <button
           type="button"
-          className="flex items-center gap-2 rounded-lg px-6 py-2.5 font-semibold transition-colors"
+          className="flex items-center gap-2 rounded-full px-6 py-2.5 font-semibold transition-colors"
           style={{
             backgroundColor: "var(--md-surface-low)",
             color: "var(--md-on-surface-variant)",
@@ -189,7 +189,7 @@ export default function NewPOPage() {
                 Tóm tắt PO
               </span>
               <span
-                className="rounded-full px-2 py-1 text-[10px] font-bold"
+                className="rounded-full px-2 py-1 text-label font-bold"
                 style={{
                   backgroundColor: "var(--md-primary-fixed)",
                   color: "var(--md-primary)",
@@ -267,7 +267,7 @@ export default function NewPOPage() {
           </h3>
           <button
             type="button"
-            className="flex items-center gap-1 rounded-lg border px-4 py-1.5 text-sm font-bold transition-colors"
+            className="flex items-center gap-1 rounded-full border px-4 py-1.5 text-sm font-bold transition-colors"
             style={{
               borderColor:
                 "color-mix(in srgb, var(--md-primary) 20%, transparent)",
@@ -292,7 +292,7 @@ export default function NewPOPage() {
               ].map((h) => (
                 <TableHead
                   key={h.label || "del"}
-                  className={`px-6 py-4 text-[11px] font-bold uppercase tracking-widest ${h.align}`}
+                  className={`px-6 py-4 text-caption font-bold uppercase tracking-widest ${h.align}`}
                   style={{
                     color: "var(--md-on-surface-variant)",
                     opacity: 0.6,
@@ -321,7 +321,7 @@ export default function NewPOPage() {
                     readOnly
                   />
                   <p
-                    className="text-[10px] font-medium"
+                    className="text-label font-medium"
                     style={{
                       color: "var(--md-on-surface-variant)",
                       opacity: 0.6,
@@ -373,7 +373,7 @@ export default function NewPOPage() {
                         />
                       )}
                       <span
-                        className="text-[10px] italic"
+                        className="text-label italic"
                         style={{ color: "var(--md-on-surface-variant)" }}
                       >
                         Giá TB lịch sử: {formatVND(item.historyPrice)}
@@ -436,7 +436,7 @@ export default function NewPOPage() {
       <div className="flex justify-end gap-4">
         <button
           type="button"
-          className="rounded-xl px-8 py-3 font-bold transition-all"
+          className="rounded-full px-8 py-3 font-bold transition-all"
           style={{
             backgroundColor: "var(--md-surface-high)",
             color: "var(--md-on-surface-variant)",
@@ -446,11 +446,11 @@ export default function NewPOPage() {
         </button>
         <button
           type="button"
-          className="rounded-xl px-10 py-3 font-bold text-white shadow-lg transition-all hover:scale-[0.98]"
+          className="rounded-full px-10 py-3 font-bold text-white shadow-lg transition-all hover:scale-[0.98]"
           style={{
             background:
               "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-            boxShadow: "0 4px 14px rgba(158,61,0,0.2)",
+            boxShadow: "0 4px 14px rgba(211,84,0,0.2)",
           }}
         >
           Gửi PO Ngay

@@ -227,7 +227,7 @@ export default function DashboardPage() {
                   </div>
                   <button
                     type="button"
-                    className="rounded-lg border px-3 py-1.5 text-xs font-bold shadow-sm"
+                    className="rounded-full border px-3 py-1.5 text-xs font-bold shadow-sm"
                     style={{
                       backgroundColor: "white",
                       borderColor:

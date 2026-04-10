@@ -20,8 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { StatusBadge } from "../_components/shared";
-import { stockIssues, formatVND } from "../_components/mock-data";
+import { StatusBadge, SearchableSelect } from "../_components/shared";
+import { stockIssues } from "../_components/mock-data";
 
 export default function IssuesPage() {
   const [activeStatus, setActiveStatus] = useState("all");
@@ -31,9 +31,6 @@ export default function IssuesPage() {
     .filter((i) => activeStatus === "all" || i.status === activeStatus)
     .filter((i) => activeType === "all" || i.type === activeType);
 
-  const confirmedCount = stockIssues.filter(
-    (i) => i.status === "confirmed",
-  ).length;
   const draftCount = stockIssues.filter((i) => i.status === "draft").length;
 
   return (
@@ -58,7 +55,7 @@ export default function IssuesPage() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            className="flex items-center gap-2 rounded-xl border px-5 py-2.5 font-semibold shadow-sm transition-all"
+            className="flex items-center gap-2 rounded-full border px-5 py-2.5 font-semibold shadow-sm transition-all"
             style={{
               backgroundColor: "var(--md-surface-lowest)",
               borderColor:
@@ -71,11 +68,11 @@ export default function IssuesPage() {
           </button>
           <button
             type="button"
-            className="flex items-center gap-2 rounded-xl px-6 py-2.5 font-bold text-white shadow-xl transition-transform active:scale-[0.98]"
+            className="flex items-center gap-2 rounded-full px-6 py-2.5 font-bold text-white shadow-xl transition-transform active:scale-[0.98]"
             style={{
               background:
                 "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-              boxShadow: "0 4px 14px rgba(158,61,0,0.15)",
+              boxShadow: "0 4px 14px rgba(211,84,0,0.15)",
             }}
           >
             <Plus className="size-4" />
@@ -109,7 +106,7 @@ export default function IssuesPage() {
               />
             </div>
             <span
-              className="text-[10px] font-semibold uppercase tracking-widest"
+              className="text-label font-semibold uppercase tracking-widest"
               style={{ color: "var(--md-outline-variant)" }}
             >
               Tháng này
@@ -146,7 +143,7 @@ export default function IssuesPage() {
               />
             </div>
             <span
-              className="text-[10px] font-semibold uppercase tracking-widest"
+              className="text-label font-semibold uppercase tracking-widest"
               style={{ color: "var(--md-outline-variant)" }}
             >
               Sử dụng bếp
@@ -186,7 +183,7 @@ export default function IssuesPage() {
               />
             </div>
             <span
-              className="text-[10px] font-semibold uppercase tracking-widest"
+              className="text-label font-semibold uppercase tracking-widest"
               style={{ color: "var(--md-outline-variant)" }}
             >
               Hư hỏng
@@ -226,7 +223,7 @@ export default function IssuesPage() {
               />
             </div>
             <span
-              className="text-[10px] font-semibold uppercase tracking-widest"
+              className="text-label font-semibold uppercase tracking-widest"
               style={{ color: "var(--md-outline-variant)" }}
             >
               Chờ duyệt
@@ -256,22 +253,25 @@ export default function IssuesPage() {
         <div className="flex items-center gap-6">
           <div className="flex flex-col gap-1">
             <label
-              className="text-[10px] font-semibold uppercase tracking-widest"
+              className="text-label font-semibold uppercase tracking-widest"
               style={{ color: "var(--md-outline)" }}
             >
               Trạng thái
             </label>
-            <select
+            <SearchableSelect
+              options={[
+                { value: "all", label: "Tất cả trạng thái" },
+                { value: "draft", label: "Draft" },
+                { value: "confirmed", label: "Confirmed" },
+                { value: "cancelled", label: "Cancelled" },
+              ]}
               value={activeStatus}
-              onChange={(e) => setActiveStatus(e.target.value)}
-              className="cursor-pointer border-none bg-transparent p-0 pr-8 text-sm font-semibold focus:ring-0"
+              onValueChange={setActiveStatus}
+              placeholder="Tất cả trạng thái"
+              searchPlaceholder="Tìm trạng thái..."
+              variant="ghost"
               style={{ color: "var(--md-on-surface)" }}
-            >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="draft">Draft</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
+            />
           </div>
           <div
             className="h-8 w-px"
@@ -282,22 +282,25 @@ export default function IssuesPage() {
           />
           <div className="flex flex-col gap-1">
             <label
-              className="text-[10px] font-semibold uppercase tracking-widest"
+              className="text-label font-semibold uppercase tracking-widest"
               style={{ color: "var(--md-outline)" }}
             >
               Loại xuất
             </label>
-            <select
+            <SearchableSelect
+              options={[
+                { value: "all", label: "Tất cả loại xuất" },
+                { value: "consumption", label: "Consumption" },
+                { value: "write_off", label: "Write-off" },
+                { value: "kitchen_use", label: "Kitchen Use" },
+              ]}
               value={activeType}
-              onChange={(e) => setActiveType(e.target.value)}
-              className="cursor-pointer border-none bg-transparent p-0 pr-8 text-sm font-semibold focus:ring-0"
+              onValueChange={setActiveType}
+              placeholder="Tất cả loại xuất"
+              searchPlaceholder="Tìm loại xuất..."
+              variant="ghost"
               style={{ color: "var(--md-on-surface)" }}
-            >
-              <option value="all">Tất cả loại xuất</option>
-              <option value="consumption">Consumption</option>
-              <option value="write_off">Write-off</option>
-              <option value="kitchen_use">Kitchen Use</option>
-            </select>
+            />
           </div>
         </div>
         <button
@@ -332,43 +335,43 @@ export default function IssuesPage() {
               }}
             >
               <TableHead
-                className="px-6 py-5 text-[10px] font-bold uppercase tracking-widest"
+                className="px-6 py-5 text-label font-bold uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Mã phiếu
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-[10px] font-bold uppercase tracking-widest"
+                className="px-6 py-5 text-label font-bold uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Loại xuất
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-[10px] font-bold uppercase tracking-widest"
+                className="px-6 py-5 text-label font-bold uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Chi nhánh
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-[10px] font-bold uppercase tracking-widest"
+                className="px-6 py-5 text-label font-bold uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Ngày tạo
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-[10px] font-bold uppercase tracking-widest"
+                className="px-6 py-5 text-label font-bold uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Người tạo
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-[10px] font-bold uppercase tracking-widest"
+                className="px-6 py-5 text-label font-bold uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Trạng thái
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-right text-[10px] font-bold uppercase tracking-widest"
+                className="px-6 py-5 text-right text-label font-bold uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Thao tác
@@ -412,7 +415,7 @@ export default function IssuesPage() {
                 <TableCell className="px-6 py-5">
                   <div className="flex items-center gap-2">
                     <div
-                      className="flex size-6 items-center justify-center rounded-full text-[10px] font-bold"
+                      className="flex size-6 items-center justify-center rounded-full text-label font-bold"
                       style={{
                         backgroundColor: "var(--md-surface-highest)",
                       }}
@@ -465,7 +468,7 @@ export default function IssuesPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="rounded-lg border px-3 py-1.5 text-xs font-medium"
+              className="rounded-full border px-3 py-1.5 text-xs font-medium"
               style={{
                 borderColor: "var(--md-outline-variant)",
                 color: "var(--md-outline)",
@@ -474,14 +477,14 @@ export default function IssuesPage() {
               ← Trước
             </button>
             <span
-              className="flex size-8 items-center justify-center rounded-lg text-xs font-bold text-white"
+              className="flex size-8 items-center justify-center rounded-full text-xs font-bold text-white"
               style={{ backgroundColor: "var(--md-primary)" }}
             >
               1
             </span>
             <button
               type="button"
-              className="rounded-lg border px-3 py-1.5 text-xs font-medium"
+              className="rounded-full border px-3 py-1.5 text-xs font-medium"
               style={{
                 borderColor: "var(--md-outline-variant)",
                 color: "var(--md-outline)",

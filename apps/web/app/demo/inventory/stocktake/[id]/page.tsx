@@ -101,7 +101,7 @@ export default function StocktakeDetailPage() {
           <div className="space-y-4">
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Mã phiếu
@@ -112,7 +112,7 @@ export default function StocktakeDetailPage() {
             </div>
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Chi nhánh
@@ -131,7 +131,7 @@ export default function StocktakeDetailPage() {
           >
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Thời gian
@@ -140,7 +140,7 @@ export default function StocktakeDetailPage() {
             </div>
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Tiến độ
@@ -164,7 +164,7 @@ export default function StocktakeDetailPage() {
           >
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Đã kiểm / Tổng
@@ -175,7 +175,7 @@ export default function StocktakeDetailPage() {
             </div>
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Chênh lệch ước tính
@@ -241,7 +241,7 @@ export default function StocktakeDetailPage() {
         <div className="flex gap-2">
           <button
             type="button"
-            className="rounded-lg px-4 py-2 text-sm font-medium transition-all"
+            className="rounded-full px-4 py-2 text-sm font-medium transition-all"
             style={{
               backgroundColor: "var(--md-surface-high)",
               color: "var(--md-on-surface-variant)",
@@ -251,7 +251,7 @@ export default function StocktakeDetailPage() {
           </button>
           <button
             type="button"
-            className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium transition-all"
+            className="flex items-center gap-1 rounded-full px-4 py-2 text-sm font-medium transition-all"
             style={{
               backgroundColor: "var(--md-surface-high)",
               color: "var(--md-on-surface-variant)",
@@ -290,7 +290,7 @@ export default function StocktakeDetailPage() {
               ].map((h) => (
                 <TableHead
                   key={h.label}
-                  className={`px-6 py-4 text-[10px] font-bold uppercase tracking-widest ${h.align}`}
+                  className={`px-6 py-4 text-label font-bold uppercase tracking-widest ${h.align}`}
                   style={{ color: "var(--md-outline)" }}
                 >
                   {h.label}
@@ -312,7 +312,7 @@ export default function StocktakeDetailPage() {
                   <div className="flex flex-col">
                     <span className="font-bold">{item.name}</span>
                     <span
-                      className="text-[10px]"
+                      className="text-label"
                       style={{ color: "var(--md-outline)" }}
                     >
                       {item.sku}
@@ -435,7 +435,7 @@ export default function StocktakeDetailPage() {
       >
         <button
           type="button"
-          className="flex items-center gap-2 rounded-xl px-6 py-3 font-bold transition-all"
+          className="flex items-center gap-2 rounded-full px-6 py-3 font-bold transition-all"
           style={{ color: "var(--md-error)" }}
         >
           <X className="size-5" />
@@ -443,11 +443,11 @@ export default function StocktakeDetailPage() {
         </button>
         <button
           type="button"
-          className="flex items-center gap-2 rounded-xl px-10 py-3 font-bold text-white shadow-lg transition-all hover:scale-[0.98]"
+          className="flex items-center gap-2 rounded-full px-10 py-3 font-bold text-white shadow-lg transition-all hover:scale-[0.98]"
           style={{
             background:
               "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-            boxShadow: "0 4px 14px rgba(158,61,0,0.2)",
+            boxShadow: "0 4px 14px rgba(211,84,0,0.2)",
           }}
         >
           <CheckCircle className="size-5" />

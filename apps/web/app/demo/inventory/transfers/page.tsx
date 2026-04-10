@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   CheckCircle,
@@ -20,10 +21,12 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { StatusBadge } from "../_components/shared";
+import { StatusBadge, SearchableSelect } from "../_components/shared";
 import { transfers } from "../_components/mock-data";
 
 export default function TransfersPage() {
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [branchFilter, setBranchFilter] = useState("all");
   const inTransit = transfers.filter((t) => t.status === "in_transit").length;
   const awaiting = transfers.filter((t) => t.status === "confirmed").length;
   const completedToday = transfers.filter(
@@ -50,7 +53,7 @@ export default function TransfersPage() {
         </div>
         <button
           type="button"
-          className="flex items-center gap-2 rounded-lg px-6 py-2.5 font-bold text-white shadow-md transition-shadow hover:shadow-lg"
+          className="flex items-center gap-2 rounded-full px-6 py-2.5 font-bold text-white shadow-md transition-shadow hover:shadow-lg"
           style={{
             background:
               "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
@@ -115,7 +118,7 @@ export default function TransfersPage() {
         className="flex flex-wrap items-center gap-4 rounded-xl p-4"
         style={{ backgroundColor: "var(--md-surface-low)" }}
       >
-        <div className="relative min-w-[240px] flex-1">
+        <div className="relative min-w-col-lg flex-1">
           <Search
             className="absolute left-3 top-2.5 size-4"
             style={{ color: "var(--md-outline)" }}
@@ -134,27 +137,39 @@ export default function TransfersPage() {
           />
         </div>
         <div className="flex items-center gap-3">
-          <select
-            className="min-w-[160px] rounded-lg border-none px-4 py-2 text-sm"
+          <SearchableSelect
+            options={[
+              { value: "all", label: "Trạng thái" },
+              { value: "in_transit", label: "Đang vận chuyển" },
+              { value: "confirmed", label: "Chờ nhận" },
+              { value: "received", label: "Hoàn thành" },
+            ]}
+            value={statusFilter}
+            onValueChange={setStatusFilter}
+            placeholder="Trạng thái"
+            searchPlaceholder="Tìm trạng thái..."
+            variant="pill"
+            className="min-w-col-sm"
             style={{ backgroundColor: "var(--md-surface-lowest)" }}
-          >
-            <option>Trạng thái</option>
-            <option>Đang vận chuyển</option>
-            <option>Chờ nhận</option>
-            <option>Hoàn thành</option>
-          </select>
-          <select
-            className="min-w-[160px] rounded-lg border-none px-4 py-2 text-sm"
+          />
+          <SearchableSelect
+            options={[
+              { value: "all", label: "Chi nhánh đến" },
+              { value: "q1", label: "CN Quận 1" },
+              { value: "q3", label: "CN Quận 3" },
+              { value: "bt", label: "CN Bình Thạnh" },
+            ]}
+            value={branchFilter}
+            onValueChange={setBranchFilter}
+            placeholder="Chi nhánh đến"
+            searchPlaceholder="Tìm chi nhánh..."
+            variant="pill"
+            className="min-w-col-sm"
             style={{ backgroundColor: "var(--md-surface-lowest)" }}
-          >
-            <option>Chi nhánh đến</option>
-            <option>CN Quận 1</option>
-            <option>CN Quận 3</option>
-            <option>CN Bình Thạnh</option>
-          </select>
+          />
           <button
             type="button"
-            className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+            className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors"
             style={{
               backgroundColor: "var(--md-surface-highest)",
               color: "var(--md-on-surface-variant)",

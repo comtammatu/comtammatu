@@ -81,7 +81,7 @@ export default function TransferDetailPage() {
           <div className="space-y-4">
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Mã phiếu
@@ -92,7 +92,7 @@ export default function TransferDetailPage() {
             </div>
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Cập nhật cuối
@@ -111,7 +111,7 @@ export default function TransferDetailPage() {
           >
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Người tạo
@@ -120,7 +120,7 @@ export default function TransferDetailPage() {
             </div>
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Ngày gửi
@@ -139,7 +139,7 @@ export default function TransferDetailPage() {
           >
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Tổng giá trị
@@ -154,7 +154,7 @@ export default function TransferDetailPage() {
             </div>
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Tổng mặt hàng
@@ -222,7 +222,7 @@ export default function TransferDetailPage() {
             }}
           >
             <p
-              className="text-[10px] uppercase tracking-widest"
+              className="text-label uppercase tracking-widest"
               style={{ color: "var(--md-outline)" }}
             >
               {info.label}
@@ -246,7 +246,7 @@ export default function TransferDetailPage() {
           }}
         >
           <p
-            className="text-[10px] font-medium uppercase tracking-widest"
+            className="text-label font-medium uppercase tracking-widest"
             style={{ color: "var(--md-outline)" }}
           >
             Ghi chú vận chuyển
@@ -276,7 +276,7 @@ export default function TransferDetailPage() {
               <h4 className="text-lg font-bold">Danh sách nguyên liệu</h4>
               <button
                 type="button"
-                className="rounded-lg px-4 py-2 text-sm font-bold transition-all"
+                className="rounded-full px-4 py-2 text-sm font-bold transition-all"
                 style={{
                   backgroundColor: "var(--md-secondary-container)",
                   color: "var(--md-on-secondary-container)",
@@ -304,7 +304,7 @@ export default function TransferDetailPage() {
                   ].map((h) => (
                     <TableHead
                       key={h.label}
-                      className={`px-6 py-4 text-[10px] font-bold uppercase tracking-widest ${h.align}`}
+                      className={`px-6 py-4 text-label font-bold uppercase tracking-widest ${h.align}`}
                       style={{ color: "var(--md-outline)" }}
                     >
                       {h.label}
@@ -326,7 +326,7 @@ export default function TransferDetailPage() {
                       <div className="flex flex-col">
                         <span className="font-bold">{item.name}</span>
                         <span
-                          className="text-[10px]"
+                          className="text-label"
                           style={{ color: "var(--md-outline)" }}
                         >
                           {item.sku}
@@ -434,7 +434,7 @@ export default function TransferDetailPage() {
           }}
         >
           <p
-            className="text-[10px] uppercase tracking-widest"
+            className="text-label uppercase tracking-widest"
             style={{ color: "var(--md-outline)" }}
           >
             Tổng giá trị luân chuyển
@@ -454,7 +454,7 @@ export default function TransferDetailPage() {
             }}
           >
             <p
-              className="text-[10px] uppercase tracking-widest"
+              className="text-label uppercase tracking-widest"
               style={{ color: "var(--md-outline)" }}
             >
               Tổng mặt hàng
@@ -476,7 +476,7 @@ export default function TransferDetailPage() {
       >
         <button
           type="button"
-          className="flex items-center gap-2 rounded-xl px-6 py-3 font-bold transition-all"
+          className="flex items-center gap-2 rounded-full px-6 py-3 font-bold transition-all"
           style={{
             backgroundColor: "var(--md-surface-high)",
             color: "var(--md-on-surface-variant)",
@@ -487,11 +487,11 @@ export default function TransferDetailPage() {
         </button>
         <button
           type="button"
-          className="flex items-center gap-2 rounded-xl px-10 py-3 font-bold text-white shadow-lg transition-all hover:scale-[0.98]"
+          className="flex items-center gap-2 rounded-full px-10 py-3 font-bold text-white shadow-lg transition-all hover:scale-[0.98]"
           style={{
             background:
               "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-            boxShadow: "0 4px 14px rgba(158,61,0,0.2)",
+            boxShadow: "0 4px 14px rgba(211,84,0,0.2)",
           }}
         >
           <CheckCircle className="size-5" />

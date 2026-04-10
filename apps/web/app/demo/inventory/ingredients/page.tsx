@@ -1,8 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import { Search, Filter } from "lucide-react";
-import { PageHeader } from "../_components/shared";
+import { PageHeader, SearchableSelect } from "../_components/shared";
 import { ingredients, formatVND } from "../_components/mock-data";
+
+const categoryOptions = [
+  { value: "all", label: "Tất cả loại" },
+  { value: "Thịt", label: "Thịt" },
+  { value: "Rau củ", label: "Rau củ" },
+  { value: "Gia vị", label: "Gia vị" },
+  { value: "Gạo", label: "Gạo" },
+];
+
+const preservationOptions = [
+  { value: "all", label: "Mọi bảo quản" },
+  { value: "Mát", label: "Mát" },
+  { value: "Đông", label: "Đông" },
+  { value: "Khô", label: "Khô" },
+];
 
 // Left border color based on category
 const categoryBorderColor: Record<string, string> = {
@@ -38,6 +54,8 @@ const categoryIconFg: Record<string, string> = {
 };
 
 export default function IngredientsPage() {
+  const [category, setCategory] = useState("all");
+  const [preservation, setPreservation] = useState("all");
   return (
     <div className="space-y-6">
       <style>{`
@@ -50,7 +68,7 @@ export default function IngredientsPage() {
         actions={
           <button
             type="button"
-            className="flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:opacity-90"
+            className="flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:opacity-90"
             style={{
               background:
                 "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
@@ -84,36 +102,35 @@ export default function IngredientsPage() {
           />
         </div>
         <div className="flex items-center gap-3">
-          <select
-            className="rounded-xl border-none px-4 py-3 text-sm font-medium focus:outline-none focus:ring-0"
+          <SearchableSelect
+            options={categoryOptions}
+            value={category}
+            onValueChange={setCategory}
+            placeholder="Tất cả loại"
+            searchPlaceholder="Tìm loại..."
+            variant="default"
+            className="min-w-col-sm"
             style={{
-              minWidth: 140,
               backgroundColor: "var(--md-surface-highest)",
               color: "var(--md-on-surface-variant)",
             }}
-          >
-            <option>Tất cả loại</option>
-            <option>Thịt</option>
-            <option>Rau củ</option>
-            <option>Gia vị</option>
-            <option>Gạo</option>
-          </select>
-          <select
-            className="rounded-xl border-none px-4 py-3 text-sm font-medium focus:outline-none focus:ring-0"
+          />
+          <SearchableSelect
+            options={preservationOptions}
+            value={preservation}
+            onValueChange={setPreservation}
+            placeholder="Mọi bảo quản"
+            searchPlaceholder="Tìm bảo quản..."
+            variant="default"
+            className="min-w-col-sm"
             style={{
-              minWidth: 140,
               backgroundColor: "var(--md-surface-highest)",
               color: "var(--md-on-surface-variant)",
             }}
-          >
-            <option>Mọi bảo quản</option>
-            <option>Mát</option>
-            <option>Đông</option>
-            <option>Khô</option>
-          </select>
+          />
           <button
             type="button"
-            className="rounded-xl p-3 transition-colors hover:opacity-80"
+            className="rounded-full p-3 transition-colors hover:opacity-80"
             style={{ backgroundColor: "var(--md-surface-highest)" }}
           >
             <Filter

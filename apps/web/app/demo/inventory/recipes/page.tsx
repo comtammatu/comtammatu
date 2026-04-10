@@ -36,7 +36,7 @@ export default function RecipesPage() {
         actions={
           <button
             type="button"
-            className="flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:opacity-90"
+            className="flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:opacity-90"
             style={{
               background:
                 "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
@@ -115,7 +115,7 @@ export default function RecipesPage() {
                 </button>
                 <button
                   type="button"
-                  className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-colors hover:opacity-80"
+                  className="flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition-colors hover:opacity-80"
                   style={{
                     backgroundColor:
                       "color-mix(in srgb, var(--md-primary) 10%, transparent)",

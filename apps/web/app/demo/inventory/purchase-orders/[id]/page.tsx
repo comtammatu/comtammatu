@@ -101,7 +101,7 @@ export default function PODetailPage() {
           <div className="space-y-4">
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Mã PO
@@ -110,7 +110,7 @@ export default function PODetailPage() {
             </div>
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Nhà cung cấp
@@ -129,7 +129,7 @@ export default function PODetailPage() {
           >
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Ngày tạo
@@ -138,7 +138,7 @@ export default function PODetailPage() {
             </div>
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Ngày gửi
@@ -157,7 +157,7 @@ export default function PODetailPage() {
           >
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Tổng tiền hàng
@@ -166,7 +166,7 @@ export default function PODetailPage() {
             </div>
             <div>
               <p
-                className="mb-1 text-[10px] uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-widest"
                 style={{ color: "var(--md-outline)" }}
               >
                 Tổng cộng (incl. VAT)
@@ -246,7 +246,7 @@ export default function PODetailPage() {
                   ].map((h) => (
                     <TableHead
                       key={h.label}
-                      className={`px-6 py-4 text-[10px] font-bold uppercase tracking-widest ${h.align}`}
+                      className={`px-6 py-4 text-label font-bold uppercase tracking-widest ${h.align}`}
                       style={{ color: "var(--md-outline)" }}
                     >
                       {h.label}
@@ -268,7 +268,7 @@ export default function PODetailPage() {
                       <div className="flex flex-col">
                         <span className="font-bold">{item.name}</span>
                         <span
-                          className="text-[10px]"
+                          className="text-label"
                           style={{ color: "var(--md-outline)" }}
                         >
                           {item.sku}
@@ -472,7 +472,7 @@ export default function PODetailPage() {
             <div className="space-y-3 p-6 text-sm">
               <div>
                 <p
-                  className="text-[10px] uppercase tracking-widest"
+                  className="text-label uppercase tracking-widest"
                   style={{ color: "var(--md-outline)" }}
                 >
                   Địa chỉ xuất hóa đơn
@@ -481,7 +481,7 @@ export default function PODetailPage() {
               </div>
               <div>
                 <p
-                  className="text-[10px] uppercase tracking-widest"
+                  className="text-label uppercase tracking-widest"
                   style={{ color: "var(--md-outline)" }}
                 >
                   Người liên hệ
@@ -490,7 +490,7 @@ export default function PODetailPage() {
               </div>
               <div>
                 <p
-                  className="text-[10px] uppercase tracking-widest"
+                  className="text-label uppercase tracking-widest"
                   style={{ color: "var(--md-outline)" }}
                 >
                   Hạn thanh toán
@@ -512,7 +512,7 @@ export default function PODetailPage() {
       >
         <button
           type="button"
-          className="flex items-center gap-2 rounded-xl px-6 py-3 font-bold transition-all"
+          className="flex items-center gap-2 rounded-full px-6 py-3 font-bold transition-all"
           style={{ color: "var(--md-error)" }}
         >
           <XCircle className="size-5" />
@@ -520,11 +520,11 @@ export default function PODetailPage() {
         </button>
         <button
           type="button"
-          className="flex items-center gap-2 rounded-xl px-10 py-3 font-bold text-white shadow-lg transition-all hover:scale-[0.98]"
+          className="flex items-center gap-2 rounded-full px-10 py-3 font-bold text-white shadow-lg transition-all hover:scale-[0.98]"
           style={{
             background:
               "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-            boxShadow: "0 4px 14px rgba(158,61,0,0.2)",
+            boxShadow: "0 4px 14px rgba(211,84,0,0.2)",
           }}
         >
           <CheckCircle className="size-5" />

@@ -65,7 +65,7 @@ export default function ExpiryPage() {
         </div>
         <button
           type="button"
-          className="flex items-center gap-2 rounded-xl px-5 py-2.5 font-bold text-white"
+          className="flex items-center gap-2 rounded-full px-5 py-2.5 font-bold text-white"
           style={{ backgroundColor: "var(--md-error)" }}
         >
           <Trash2 className="size-4" />
@@ -95,7 +95,7 @@ export default function ExpiryPage() {
               />
             </div>
             <span
-              className="text-[10px] font-semibold uppercase tracking-widest"
+              className="text-label font-semibold uppercase tracking-widest"
               style={{ color: "var(--md-outline-variant)" }}
             >
               Quá hạn
@@ -135,7 +135,7 @@ export default function ExpiryPage() {
               />
             </div>
             <span
-              className="text-[10px] font-semibold uppercase tracking-widest"
+              className="text-label font-semibold uppercase tracking-widest"
               style={{ color: "var(--md-outline-variant)" }}
             >
               3 ngày tới
@@ -178,7 +178,7 @@ export default function ExpiryPage() {
               />
             </div>
             <span
-              className="text-[10px] font-semibold uppercase tracking-widest"
+              className="text-label font-semibold uppercase tracking-widest"
               style={{ color: "var(--md-outline-variant)" }}
             >
               7 ngày tới
@@ -211,7 +211,7 @@ export default function ExpiryPage() {
               key={tab}
               type="button"
               onClick={() => setActiveTab(tab)}
-              className="flex-1 rounded-xl py-2 text-sm font-medium transition-colors"
+              className="flex-1 rounded-full py-2 text-sm font-medium transition-colors"
               style={
                 isActive
                   ? {

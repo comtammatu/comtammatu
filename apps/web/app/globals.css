@@ -7,7 +7,8 @@
 /* ============================================================
    Cơm Tấm Má Tư — Design Tokens
    Tailwind CSS v4 — CSS-first configuration
-   Style: Pure Minimal — White / Black / Red
+   Style: MD3 Warm — based on Material Design 3 tonal palette
+   Primary: Burnt orange #d35400 | Surface: Warm white #f9f9f6
    Ref: docs/spec/design-system.md
    ============================================================ */
 
@@ -15,64 +16,78 @@
   --font-sans: var(--font-be-vietnam-pro), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-  /* Data-dense font size: 13px — optimized for tables, lists, numbers */
-  --text-data: 0.8125rem;
+  /* Data-dense font sizes */
+  --text-data: 0.8125rem; /* 13px — tables, lists, numbers */
   --text-data--line-height: 1.25rem;
+  --text-label: 0.625rem; /* 10px — tiny labels, badges, chips */
+  --text-label--line-height: 1rem;
+  --text-caption: 0.6875rem; /* 11px — captions, secondary metadata */
+  --text-caption--line-height: 1rem;
 
-  /* Pure Minimal — zinc scale, no warm tint */
-  --color-background: oklch(1 0 0);
-  --color-foreground: oklch(0.145 0 0);
+  /* Table column min-widths */
+  --min-w-col-sm: 8.75rem; /* 140px */
+  --min-w-col-md: 10rem; /* 160px */
+  --min-w-col-lg: 15rem; /* 240px */
 
-  /* Primary: Red-600 (#DC2626) — CTA, active states, brand accent */
-  --color-primary: oklch(0.577 0.245 27.325);
-  --color-primary-foreground: oklch(1 0 0);
+  /* MD3 Warm palette */
+  --color-background: #f9f9f6;
+  --color-foreground: #1a1c1a;
 
-  --color-secondary: oklch(0.961 0 0);
-  --color-secondary-foreground: oklch(0.205 0 0);
+  /* Primary: Burnt orange — brand accent, CTA, active states */
+  --color-primary: #d35400;
+  --color-primary-foreground: #ffffff;
 
-  /* Accent: same as secondary for pure minimal */
-  --color-accent: oklch(0.961 0 0);
-  --color-accent-foreground: oklch(0.205 0 0);
+  /* Secondary: warm surface-low */
+  --color-secondary: #f3f4f1;
+  --color-secondary-foreground: #1a1c1a;
 
-  --color-muted: oklch(0.961 0 0);
-  --color-muted-foreground: oklch(0.556 0 0);
+  /* Accent: same as secondary for minimal look */
+  --color-accent: #f3f4f1;
+  --color-accent-foreground: #1a1c1a;
 
-  --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.145 0 0);
+  /* Muted: surface-container tone */
+  --color-muted: #eeeeeb;
+  --color-muted-foreground: #594238;
 
-  --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.145 0 0);
+  /* Card: pure white elevated surface */
+  --color-card: #ffffff;
+  --color-card-foreground: #1a1c1a;
 
-  --color-border: oklch(0.918 0 0);
-  --color-input: oklch(0.918 0 0);
-  --color-ring: oklch(0.577 0.245 27.325);
-  --color-ring-offset: oklch(1 0 0);
+  --color-popover: #ffffff;
+  --color-popover-foreground: #1a1c1a;
 
-  --color-destructive: oklch(0.577 0.245 27.325);
-  --color-destructive-foreground: oklch(1 0 0);
+  /* Border: warm subtle — md-on-surface at ~8% */
+  --color-border: color-mix(in srgb, #1a1c1a 8%, transparent);
+  --color-input: color-mix(in srgb, #1a1c1a 8%, transparent);
+  --color-ring: #d35400;
+  --color-ring-offset: #f9f9f6;
 
-  /* Status colors */
-  --color-success: oklch(0.6 0.18 155);
-  --color-warning: oklch(0.75 0.15 85);
-  --color-info: oklch(0.6 0.15 240);
+  /* Destructive: md-error */
+  --color-destructive: #ba1a1a;
+  --color-destructive-foreground: #ffffff;
 
-  /* Sidebar: Pure black */
-  --color-sidebar: oklch(0.09 0 0);
-  --color-sidebar-foreground: oklch(0.96 0 0);
-  --color-sidebar-primary: oklch(0.577 0.245 27.325);
-  --color-sidebar-primary-foreground: oklch(1 0 0);
-  --color-sidebar-accent: oklch(0.16 0 0);
-  --color-sidebar-accent-foreground: oklch(0.96 0 0);
-  --color-sidebar-border: oklch(0.2 0 0);
-  --color-sidebar-ring: oklch(0.577 0.245 27.325);
+  /* Status colors — MD3 semantic */
+  --color-success: #2c694e;
+  --color-warning: #d97706;
+  --color-info: #006193;
+
+  /* Sidebar: light frosted glass — md-surface-low */
+  --color-sidebar: #f3f4f1;
+  --color-sidebar-foreground: #1a1c1a;
+  --color-sidebar-primary: #d35400;
+  --color-sidebar-primary-foreground: #ffffff;
+  --color-sidebar-accent: rgba(255, 255, 255, 0.6);
+  --color-sidebar-accent-foreground: #d35400;
+  --color-sidebar-border: color-mix(in srgb, #1a1c1a 5%, transparent);
+  --color-sidebar-ring: #d35400;
 
   /* Surface semantics */
-  --color-surface-raised: oklch(1 0 0);
-  --color-surface-sunken: oklch(0.97 0 0);
-  --color-state-pending: oklch(0.75 0.15 85);
-  --color-state-processing: oklch(0.66 0.14 85);
-  --color-state-ready: oklch(0.65 0.17 155);
-  --color-state-cancelled: oklch(0.556 0 0);
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #eeeeeb;
+  --color-state-pending: #d97706;
+  --color-state-processing: #e67e22;
+  --color-state-ready: #2c694e;
+  --color-state-cancelled: #594238;
 
   /* Spacing and layout scales */
   --space-1: 0.25rem;
@@ -83,10 +98,10 @@
   --space-8: 2rem;
   --space-12: 3rem;
 
-  /* Elevation — neutral shadows */
-  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.06);
-  --elevation-2: 0 8px 20px rgb(0 0 0 / 0.08);
-  --elevation-3: 0 18px 40px rgb(0 0 0 / 0.12);
+  /* Elevation — warm-tinted shadows */
+  --elevation-1: 0 1px 2px color-mix(in srgb, #d35400 6%, transparent);
+  --elevation-2: 0 8px 20px color-mix(in srgb, #d35400 8%, transparent);
+  --elevation-3: 0 18px 40px color-mix(in srgb, #d35400 10%, transparent);
   --z-overlay-1: 10;
   --z-overlay-2: 20;
   --z-overlay-3: 30;
@@ -200,7 +215,7 @@
   }
 
   *:hover::-webkit-scrollbar-thumb {
-    background: rgb(0 0 0 / 0.15);
+    background: color-mix(in srgb, #1a1c1a 15%, transparent);
   }
 
   body {

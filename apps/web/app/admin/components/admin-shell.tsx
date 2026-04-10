@@ -9,6 +9,7 @@ import {
   Check,
   ChefHat,
   ChevronRight,
+  ExternalLink,
   Heart,
   Home,
   LayoutDashboard,
@@ -63,10 +64,8 @@ const ICON_MAP: Record<string, React.ElementType> = {
   LayoutDashboard,
   UtensilsCrossed,
   Receipt,
-  Package,
   Users,
   Heart,
-  Briefcase,
   Wallet,
   BarChart3,
   Settings,
@@ -207,6 +206,87 @@ function ForbiddenToastInner() {
   }, []); // intentional: check forbidden param only on mount
 
   return null;
+}
+
+/* ─── Portal launchers (Inventory + HR) ─── */
+
+function PortalLaunchersNav({
+  role,
+  collapsed = false,
+}: {
+  role: StaffRole;
+  collapsed?: boolean;
+}) {
+  const portals = [
+    {
+      href: "/inventory",
+      label: "Kho hàng",
+      icon: Package,
+      roles: [
+        "owner",
+        "super_manager",
+        "area_manager",
+        "branch_manager",
+      ] as StaffRole[],
+    },
+    {
+      href: "/hr",
+      label: "Nhân sự & Lương",
+      icon: Briefcase,
+      roles: ["owner", "super_manager"] as StaffRole[],
+    },
+  ].filter((p) => p.roles.includes(role));
+
+  if (portals.length === 0) return null;
+
+  return (
+    <div
+      className={cn(
+        "mt-2 border-t border-sidebar-border",
+        collapsed ? "pt-3" : "pt-4",
+      )}
+    >
+      {!collapsed && (
+        <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+          Portals
+        </p>
+      )}
+      <div className="space-y-0.5">
+        {portals.map((portal) => {
+          const Icon = portal.icon;
+          if (collapsed) {
+            return (
+              <Tooltip key={portal.href}>
+                <TooltipTrigger asChild>
+                  <Link
+                    href={portal.href}
+                    className="touch-target group flex items-center justify-center rounded-lg py-2.5 text-sidebar-foreground/65 transition-all hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                  >
+                    <Icon className="size-4.5 shrink-0 text-sidebar-foreground/50 group-hover:text-sidebar-foreground/70 transition-colors" />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  {portal.label}
+                  <ExternalLink className="ml-1.5 inline size-3 opacity-60" />
+                </TooltipContent>
+              </Tooltip>
+            );
+          }
+          return (
+            <Link
+              key={portal.href}
+              href={portal.href}
+              className="touch-target group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/65 transition-all hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+            >
+              <Icon className="size-4.5 shrink-0 text-sidebar-foreground/50 group-hover:text-sidebar-foreground/70 transition-colors" />
+              {portal.label}
+              <ExternalLink className="ml-auto size-3 opacity-40 group-hover:opacity-70 transition-opacity" />
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 /* ─── Branch operational shortcuts (POS + KDS) for branch_manager ─── */
@@ -617,6 +697,7 @@ export function AdminShell({
               pathname={pathname}
               collapsed={isCollapsed}
             />
+            <PortalLaunchersNav role={role} collapsed={isCollapsed} />
             {showBranchOps && (
               <BranchOperationsNav
                 branchId={branchId}
@@ -828,6 +909,7 @@ export function AdminShell({
                 pathname={pathname}
                 onNavigate={() => setSheetOpen(false)}
               />
+              <PortalLaunchersNav role={role} />
               {showBranchOps && (
                 <BranchOperationsNav
                   branchId={branchId}

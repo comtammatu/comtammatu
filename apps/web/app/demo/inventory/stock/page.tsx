@@ -75,7 +75,7 @@ export default function StockPage() {
           <button
             type="button"
             onClick={() => setViewMode("stats")}
-            className="rounded-lg px-4 py-2 text-xs font-semibold transition-colors"
+            className="rounded-full px-4 py-2 text-xs font-semibold transition-colors"
             style={
               viewMode === "stats"
                 ? {
@@ -91,7 +91,7 @@ export default function StockPage() {
           <button
             type="button"
             onClick={() => setViewMode("detail")}
-            className="rounded-lg px-4 py-2 text-xs font-semibold transition-colors"
+            className="rounded-full px-4 py-2 text-xs font-semibold transition-colors"
             style={
               viewMode === "detail"
                 ? {
@@ -135,13 +135,13 @@ export default function StockPage() {
           </div>
           <div className="mt-8 flex gap-3">
             <div className="flex-1 rounded-2xl bg-white/10 p-3 backdrop-blur-md">
-              <div className="text-[10px] font-semibold uppercase opacity-60">
+              <div className="text-label font-semibold uppercase opacity-60">
                 Tháng này
               </div>
               <div className="text-lg font-bold">+12%</div>
             </div>
             <div className="flex-1 rounded-2xl bg-white/10 p-3 backdrop-blur-md">
-              <div className="text-[10px] font-semibold uppercase opacity-60">
+              <div className="text-label font-semibold uppercase opacity-60">
                 Lượt nhập
               </div>
               <div className="text-lg font-bold">24</div>
@@ -434,7 +434,7 @@ export default function StockPage() {
                   <TableCell className="px-4 py-5 text-center">
                     <div className="flex items-center justify-center gap-1.5">
                       <span
-                        className="rounded px-1.5 py-0.5 text-[10px] font-bold"
+                        className="rounded px-1.5 py-0.5 text-label font-bold"
                         style={{
                           backgroundColor:
                             "color-mix(in srgb, var(--md-error) 10%, transparent)",
@@ -450,7 +450,7 @@ export default function StockPage() {
                         /
                       </span>
                       <span
-                        className="rounded px-1.5 py-0.5 text-[10px] font-bold"
+                        className="rounded px-1.5 py-0.5 text-label font-bold"
                         style={{
                           backgroundColor:
                             "color-mix(in srgb, var(--md-secondary) 10%, transparent)",
@@ -515,7 +515,7 @@ export default function StockPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="rounded-lg border px-3 py-1.5 text-xs font-medium"
+              className="rounded-full border px-3 py-1.5 text-xs font-medium"
               style={{
                 borderColor: "var(--md-outline-variant)",
                 color: "var(--md-outline)",
@@ -524,21 +524,21 @@ export default function StockPage() {
               ← Trước
             </button>
             <span
-              className="flex size-8 items-center justify-center rounded-lg text-xs font-bold text-white"
+              className="flex size-8 items-center justify-center rounded-full text-xs font-bold text-white"
               style={{ backgroundColor: "var(--md-primary)" }}
             >
               1
             </span>
             <button
               type="button"
-              className="flex size-8 items-center justify-center rounded-lg text-xs font-medium transition-colors"
+              className="flex size-8 items-center justify-center rounded-full text-xs font-medium transition-colors"
               style={{ color: "var(--md-outline)" }}
             >
               2
             </button>
             <button
               type="button"
-              className="rounded-lg border px-3 py-1.5 text-xs font-medium"
+              className="rounded-full border px-3 py-1.5 text-xs font-medium"
               style={{
                 borderColor: "var(--md-outline-variant)",
                 color: "var(--md-outline)",

@@ -52,7 +52,7 @@ export default function PurchaseOrdersPage() {
         <div className="flex gap-3">
           <Link
             href="/demo/inventory/grn"
-            className="flex items-center gap-2 rounded-xl px-6 py-3 font-bold transition-opacity hover:opacity-90"
+            className="flex items-center gap-2 rounded-full px-6 py-3 font-bold transition-opacity hover:opacity-90"
             style={{
               backgroundColor: "var(--md-secondary-container)",
               color: "var(--md-on-secondary-container)",
@@ -63,11 +63,11 @@ export default function PurchaseOrdersPage() {
           </Link>
           <Link
             href="/demo/inventory/purchase-orders/new"
-            className="flex items-center gap-2 rounded-xl px-8 py-3 font-bold text-white shadow-lg transition-transform hover:scale-[1.02]"
+            className="flex items-center gap-2 rounded-full px-8 py-3 font-bold text-white shadow-lg transition-transform hover:scale-[1.02]"
             style={{
               background:
                 "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-              boxShadow: "0 4px 14px rgba(158,61,0,0.2)",
+              boxShadow: "0 4px 14px rgba(211,84,0,0.2)",
             }}
           >
             <PlusCircle className="size-4" />
@@ -94,7 +94,7 @@ export default function PurchaseOrdersPage() {
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className="flex-1 rounded-xl py-2 text-sm font-medium transition-colors"
+                className="flex-1 rounded-full py-2 text-sm font-medium transition-colors"
                 style={
                   isActive
                     ? {
@@ -252,7 +252,7 @@ export default function PurchaseOrdersPage() {
                 <TableCell className="px-6 py-5">
                   <div className="flex items-center gap-2">
                     <div
-                      className="flex size-6 items-center justify-center rounded-full text-[10px] font-bold"
+                      className="flex size-6 items-center justify-center rounded-full text-label font-bold"
                       style={{ backgroundColor: "var(--md-surface-highest)" }}
                     >
                       {po.createdBy
@@ -299,7 +299,7 @@ export default function PurchaseOrdersPage() {
           </span>
           <div className="flex items-center gap-2">
             <span
-              className="flex size-8 items-center justify-center rounded-lg text-xs font-bold text-white"
+              className="flex size-8 items-center justify-center rounded-full text-xs font-bold text-white"
               style={{ backgroundColor: "var(--md-primary)" }}
             >
               1

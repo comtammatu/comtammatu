@@ -148,7 +148,7 @@ export default function ReceivingPage() {
               {/* CTA button */}
               <Link
                 href={item.href}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border-b-2 py-3 font-bold transition-all"
+                className="flex w-full items-center justify-center gap-2 rounded-full border-b-2 py-3 font-bold transition-all"
                 style={{
                   backgroundColor: "var(--md-surface-low)",
                   color: item.color,
@@ -265,7 +265,7 @@ export default function ReceivingPage() {
             <div className="space-y-2">
               <Link
                 href="/demo/inventory/purchase-orders/new"
-                className="flex w-full items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors"
+                className="flex w-full items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors"
                 style={{
                   borderColor:
                     "color-mix(in srgb, var(--md-outline-variant) 30%, transparent)",
@@ -279,7 +279,7 @@ export default function ReceivingPage() {
               </Link>
               <button
                 type="button"
-                className="flex w-full items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors"
+                className="flex w-full items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors"
                 style={{
                   borderColor:
                     "color-mix(in srgb, var(--md-outline-variant) 30%, transparent)",

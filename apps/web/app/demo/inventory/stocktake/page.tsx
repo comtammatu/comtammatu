@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CheckCircle, Clock, Filter } from "lucide-react";
 import {
@@ -10,17 +11,15 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { StatusBadge } from "../_components/shared";
+import { StatusBadge, SearchableSelect } from "../_components/shared";
 import { stocktakeSessions } from "../_components/mock-data";
 
 export default function StocktakePage() {
+  const [status, setStatus] = useState("all");
+  const [branch, setBranch] = useState("all");
   const active = stocktakeSessions.filter(
     (s) => s.status === "in_progress",
   ).length;
-  const completed = stocktakeSessions.filter(
-    (s) => s.status === "completed",
-  ).length;
-
   return (
     <div className="space-y-6">
       {/* Page Header with inline stat badges */}
@@ -59,7 +58,7 @@ export default function StocktakePage() {
             </div>
             <div>
               <p
-                className="text-[10px] font-semibold uppercase tracking-wider"
+                className="text-label font-semibold uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Đang thực hiện
@@ -87,7 +86,7 @@ export default function StocktakePage() {
             </div>
             <div>
               <p
-                className="text-[10px] font-semibold uppercase tracking-wider"
+                className="text-label font-semibold uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Đã hoàn thành
@@ -118,11 +117,18 @@ export default function StocktakePage() {
             >
               Trạng thái
             </span>
-            <select className="border-none bg-transparent p-0 pr-8 text-sm font-semibold focus:ring-0">
-              <option>Tất cả</option>
-              <option>In Progress</option>
-              <option>Completed</option>
-            </select>
+            <SearchableSelect
+              options={[
+                { value: "all", label: "Tất cả" },
+                { value: "in_progress", label: "In Progress" },
+                { value: "completed", label: "Completed" },
+              ]}
+              value={status}
+              onValueChange={setStatus}
+              placeholder="Tất cả"
+              searchPlaceholder="Tìm trạng thái..."
+              variant="ghost"
+            />
           </div>
           <div
             className="flex items-center gap-2 rounded-lg border-b-2 px-3 py-1.5"
@@ -138,17 +144,24 @@ export default function StocktakePage() {
             >
               Chi nhánh
             </span>
-            <select className="border-none bg-transparent p-0 pr-8 text-sm font-semibold focus:ring-0">
-              <option>Tất cả chi nhánh</option>
-              <option>CN Quận 1</option>
-              <option>CN Quận 3</option>
-              <option>CN Bình Thạnh</option>
-            </select>
+            <SearchableSelect
+              options={[
+                { value: "all", label: "Tất cả chi nhánh" },
+                { value: "q1", label: "CN Quận 1" },
+                { value: "q3", label: "CN Quận 3" },
+                { value: "bt", label: "CN Bình Thạnh" },
+              ]}
+              value={branch}
+              onValueChange={setBranch}
+              placeholder="Tất cả chi nhánh"
+              searchPlaceholder="Tìm chi nhánh..."
+              variant="ghost"
+            />
           </div>
         </div>
         <button
           type="button"
-          className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-colors"
+          className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-colors"
           style={{ color: "var(--md-primary)" }}
         >
           <Filter className="size-4" />
@@ -213,7 +226,7 @@ export default function StocktakePage() {
                       {s.branchName}
                     </span>
                     <span
-                      className="text-[10px]"
+                      className="text-label"
                       style={{ color: "var(--md-outline)" }}
                     >
                       Quản lý: {s.manager}
@@ -238,10 +251,10 @@ export default function StocktakePage() {
                     </span>
                   )}
                 </TableCell>
-                <TableCell className="min-w-[140px] px-6 py-5">
+                <TableCell className="min-w-col-sm px-6 py-5">
                   <div className="flex flex-col gap-1">
                     <div
-                      className="flex justify-between text-[10px] font-semibold"
+                      className="flex justify-between text-label font-semibold"
                       style={{ color: "var(--md-outline)" }}
                     >
                       <span>{s.progress}%</span>

@@ -25,11 +25,11 @@ export default function SupplierInvoicesPage() {
         actions={
           <button
             type="button"
-            className="flex items-center gap-2 rounded-xl px-6 py-2.5 font-bold text-white shadow-xl transition-transform active:scale-[0.98]"
+            className="flex items-center gap-2 rounded-full px-6 py-2.5 font-bold text-white shadow-xl transition-transform active:scale-[0.98]"
             style={{
               background:
                 "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-              boxShadow: "0 4px 14px rgba(158,61,0,0.15)",
+              boxShadow: "0 4px 14px rgba(211,84,0,0.15)",
             }}
           >
             <Plus className="size-4" />
@@ -74,7 +74,7 @@ export default function SupplierInvoicesPage() {
                   ].map((h) => (
                     <TableHead
                       key={h.label}
-                      className={`px-6 py-4 text-[10px] font-bold uppercase tracking-widest ${h.align}`}
+                      className={`px-6 py-4 text-label font-bold uppercase tracking-widest ${h.align}`}
                       style={{ color: "var(--md-outline)" }}
                     >
                       {h.label}
@@ -244,7 +244,7 @@ export default function SupplierInvoicesPage() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  className="flex-1 rounded-lg px-4 py-2 text-sm font-bold transition-all"
+                  className="flex-1 rounded-full px-4 py-2 text-sm font-bold transition-all"
                   style={{
                     backgroundColor: "var(--md-surface-high)",
                     color: "var(--md-on-surface-variant)",
@@ -257,7 +257,7 @@ export default function SupplierInvoicesPage() {
                 </button>
                 <button
                   type="button"
-                  className="flex-1 rounded-lg px-4 py-2 text-sm font-bold text-white transition-all"
+                  className="flex-1 rounded-full px-4 py-2 text-sm font-bold text-white transition-all"
                   style={{
                     background:
                       "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",

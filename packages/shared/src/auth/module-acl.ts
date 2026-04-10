@@ -39,13 +39,13 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     label: "Thực đơn",
   },
   inventory: {
-    path: "/admin/inventory",
+    path: "/inventory",
     allowedRoles: ["super_manager", "area_manager", "branch_manager"],
     label: "Kho hàng",
   },
   /** NCC, PO, GRN, HĐ NCC, công thức — chỉ super_manager (Trụ sở) */
   inventory_procurement: {
-    path: "/admin/inventory/suppliers",
+    path: "/inventory/suppliers",
     allowedRoles: ["super_manager"],
     label: "Kho — NCC & công thức",
   },
@@ -60,7 +60,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     label: "Nhân viên",
   },
   hr: {
-    path: "/admin/hr",
+    path: "/hr",
     allowedRoles: ["owner", "super_manager"],
     label: "Nhân sự & Lương",
   },

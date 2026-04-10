@@ -17,26 +17,26 @@ import {
 import { useState } from "react";
 
 const NAV_ITEMS = [
-  { href: "/demo/inventory", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/demo/inventory/stock", label: "Stock", icon: Package },
+  { href: "/demo/inventory", label: "Tổng quan", icon: LayoutDashboard },
+  { href: "/demo/inventory/stock", label: "Tồn kho", icon: Package },
   {
     href: "/demo/inventory/receiving",
-    label: "Receiving Hub",
+    label: "Nhập kho",
     icon: ArrowDownToLine,
   },
   {
     href: "/demo/inventory/transfers",
-    label: "Transfers",
+    label: "Điều chuyển",
     icon: ArrowLeftRight,
   },
   {
     href: "/demo/inventory/stocktake",
-    label: "Stocktake",
+    label: "Kiểm kê",
     icon: ClipboardList,
   },
-  { href: "/demo/inventory/issues", label: "Issues", icon: PackageOpen },
-  { href: "/demo/inventory/reports", label: "Reports", icon: BarChart3 },
-  { href: "/demo/inventory/settings", label: "Settings", icon: Leaf },
+  { href: "/demo/inventory/issues", label: "Xuất kho", icon: PackageOpen },
+  { href: "/demo/inventory/reports", label: "Báo cáo", icon: BarChart3 },
+  { href: "/demo/inventory/settings", label: "Cài đặt", icon: Leaf },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {
@@ -126,12 +126,12 @@ function NavContent({
       <div className="mt-auto p-6">
         <button
           type="button"
-          className="w-full py-3 rounded-xl font-semibold text-white shadow-sm active:scale-95 transition-transform"
+          className="w-full py-3 rounded-full font-semibold text-white shadow-sm active:scale-95 transition-transform"
           style={{
             background: `linear-gradient(135deg, var(--md-primary), var(--md-primary-container))`,
           }}
         >
-          Quick Action
+          Thao tác nhanh
         </button>
       </div>
     </div>

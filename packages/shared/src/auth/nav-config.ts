@@ -27,14 +27,12 @@ export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
     items: [
       { moduleKey: "menu", icon: "UtensilsCrossed" },
       { moduleKey: "orders", icon: "Receipt" },
-      { moduleKey: "inventory", icon: "Package" },
     ],
   },
   {
     title: "Quản lý",
     items: [
       { moduleKey: "staff", icon: "Users" },
-      { moduleKey: "hr", icon: "Briefcase" },
       { moduleKey: "crm", icon: "Heart" },
     ],
   },

@@ -6,12 +6,12 @@
 
 /* --- MD3 Token Variables --- */
 :is(.demo-inventory-theme) {
-  --md-primary: #9e3d00;
-  --md-primary-container: #c64f00;
+  --md-primary: #d35400;
+  --md-primary-container: #e67e22;
   --md-on-primary: #fff;
   --md-on-primary-container: #fffbff;
-  --md-primary-fixed: #ffdbcd;
-  --md-primary-fixed-dim: #ffb595;
+  --md-primary-fixed: #fdebd0;
+  --md-primary-fixed-dim: #f5b041;
 
   --md-secondary: #2c694e;
   --md-secondary-container: #aeeecb;
@@ -47,7 +47,7 @@
 
 /* --- Ambient Shadow --- */
 .demo-inventory-theme .ambient-shadow {
-  box-shadow: 0 12px 40px -12px rgba(89, 66, 56, 0.08);
+  box-shadow: 0 12px 40px -12px rgba(211, 84, 0, 0.06);
 }
 
 /* --- Background overrides --- */

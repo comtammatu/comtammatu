@@ -1,0 +1,599 @@
+"use client";
+
+import { useMemo, useState, useTransition } from "react";
+import { CheckCircle2, Search, Trash2 } from "lucide-react";
+import type { StaffRole } from "@comtammatu/shared/auth";
+import { Button } from "@comtammatu/ui/components/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@comtammatu/ui/components/alert-dialog";
+import { Input } from "@comtammatu/ui/components/input";
+import { Label } from "@comtammatu/ui/components/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@comtammatu/ui/components/table";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
+import { toast } from "@comtammatu/ui/components/sonner";
+import { cn } from "@comtammatu/ui";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { adjustStock, fetchExpiryAlerts } from "../actions";
+import { TableEmptyStateRow } from "../../admin/components/table-empty-state-row";
+import { StatusBadge } from "../_components/shared";
+import type { BranchOption, ExpiryAlertRow } from "../page";
+
+interface WriteOffTarget {
+  alert: ExpiryAlertRow;
+  quantity: string;
+}
+
+export function ExpiryListClient({
+  initial,
+  branches,
+  userRole,
+  userBranchId,
+}: {
+  initial: ExpiryAlertRow[];
+  branches: BranchOption[];
+  userRole: StaffRole;
+  userBranchId: number | null;
+}) {
+  const [alerts, setAlerts] = useState(initial);
+  const [search, setSearch] = useState("");
+  const [branchFilter, setBranchFilter] = useState<string>(
+    userRole === "branch_manager" && userBranchId != null
+      ? String(userBranchId)
+      : "all",
+  );
+  const [urgencyFilter, setUrgencyFilter] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [writeOff, setWriteOff] = useState<WriteOffTarget | null>(null);
+  const isMobile = useIsMobile();
+
+  const isBranchLocked = userRole === "branch_manager" && userBranchId != null;
+
+  const filtered = useMemo(() => {
+    let items = alerts;
+
+    if (branchFilter !== "all") {
+      const bid = Number(branchFilter);
+      items = items.filter((a) => a.branch_id === bid);
+    }
+
+    const q = search.trim().toLowerCase();
+    if (q) {
+      items = items.filter(
+        (a) =>
+          a.ingredient_name.toLowerCase().includes(q) ||
+          (a.batch_number ?? "").toLowerCase().includes(q) ||
+          a.grn_number.toLowerCase().includes(q) ||
+          a.branch_name.toLowerCase().includes(q),
+      );
+    }
+
+    return items;
+  }, [alerts, branchFilter, search]);
+
+  const urgencyCounts = useMemo(() => {
+    const counts = { expired: 0, critical: 0, warning: 0 };
+    for (const a of filtered) {
+      if (a.urgency === "expired") counts.expired++;
+      else if (a.urgency === "critical") counts.critical++;
+      else if (a.urgency === "warning") counts.warning++;
+    }
+    return counts;
+  }, [filtered]);
+
+  const displayItems = useMemo(() => {
+    if (!urgencyFilter) return filtered;
+    return filtered.filter((a) => a.urgency === urgencyFilter);
+  }, [filtered, urgencyFilter]);
+
+  const expired = useMemo(
+    () => filtered.filter((a) => a.urgency === "expired"),
+    [filtered],
+  );
+  const nearExpiry = useMemo(
+    () =>
+      filtered.filter(
+        (a) => a.urgency === "critical" || a.urgency === "warning",
+      ),
+    [filtered],
+  );
+
+  function openWriteOff(alert: ExpiryAlertRow) {
+    setWriteOff({ alert, quantity: "" });
+  }
+
+  function handleConfirmWriteOff() {
+    if (!writeOff) return;
+    const qty = Number(writeOff.quantity);
+    if (!qty || qty <= 0) {
+      toast.error("Nhập số lượng hợp lệ");
+      return;
+    }
+
+    const { alert } = writeOff;
+    startTransition(async () => {
+      const res = await adjustStock({
+        branchId: alert.branch_id,
+        ingredientId: alert.ingredient_id,
+        quantityChange: -qty,
+        type: "adjustment",
+        reason: `Hết hạn sử dụng — ${alert.ingredient_name}`,
+      });
+
+      if (!res.success) {
+        toast.error(res.error ?? "Không thể xóa sổ.");
+        return;
+      }
+
+      toast.success(`Đã xóa sổ ${qty} ${alert.ingredient_name}`);
+      setWriteOff(null);
+
+      const again = await fetchExpiryAlerts(
+        branchFilter !== "all" ? Number(branchFilter) : undefined,
+      );
+      if (again.success) {
+        setAlerts((again.data ?? []) as ExpiryAlertRow[]);
+      }
+    });
+  }
+
+  function renderTable(items: ExpiryAlertRow[]) {
+    return (
+      <div
+        className="overflow-hidden rounded-3xl ambient-shadow"
+        style={{
+          backgroundColor: "var(--md-surface-lowest)",
+          border:
+            "1px solid color-mix(in srgb, var(--md-outline-variant) 5%, transparent)",
+        }}
+      >
+        {/* Search + branch filter bar */}
+        <div
+          className="flex flex-wrap items-center gap-3 border-b px-4 py-3"
+          style={{
+            borderColor:
+              "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
+          }}
+        >
+          <Search className="size-4 shrink-0 text-muted-foreground" />
+          <Input
+            placeholder="Tìm nguyên liệu, lô hàng, phiếu nhập..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8 min-w-0 flex-1 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+          />
+          {!isBranchLocked && (
+            <Select value={branchFilter} onValueChange={setBranchFilter}>
+              <SelectTrigger className="h-8 w-auto min-w-36 text-sm">
+                <SelectValue placeholder="Chi nhánh" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả chi nhánh</SelectItem>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={String(b.id)}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <span className="shrink-0 text-xs text-muted-foreground">
+            {items.length} mục
+          </span>
+        </div>
+
+        {/* Mobile: card layout */}
+        {isMobile ? (
+          <div className="divide-y">
+            {items.length === 0 && (
+              <div className="py-16 text-center">
+                <CheckCircle2 className="mx-auto size-10 text-success/40" />
+                <p className="mt-2 text-sm font-medium text-muted-foreground">
+                  Không có hàng sắp hết hạn
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground/70">
+                  Tất cả nguyên liệu còn trong hạn sử dụng
+                </p>
+              </div>
+            )}
+            {items.map((alert, idx) => (
+              <div
+                key={`${alert.ingredient_id}-${alert.grn_number}-${alert.batch_number ?? ""}-${String(idx)}`}
+                className="flex items-center justify-between gap-3 px-4 py-3"
+              >
+                <div className="min-w-0 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium truncate">
+                      {alert.ingredient_name}
+                    </span>
+                    <StatusBadge
+                      status={alert.urgency}
+                      label={
+                        alert.urgency === "expired"
+                          ? "Đã hết hạn"
+                          : `${alert.days_remaining} ngày`
+                      }
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">
+                    Lô: {alert.batch_number ?? "—"} · GRN: {alert.grn_number} ·{" "}
+                    {alert.branch_name}
+                  </p>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="h-7 gap-1.5 text-xs shrink-0"
+                  onClick={() => openWriteOff(alert)}
+                  disabled={isPending}
+                >
+                  <Trash2 className="size-3.5" />
+                  Xóa sổ
+                </Button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* Desktop: table layout */
+          <Table>
+            <TableHeader>
+              <TableRow className="border-0 hover:bg-transparent">
+                <TableHead
+                  className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
+                  style={{ color: "var(--md-outline)" }}
+                >
+                  Nguyên liệu
+                </TableHead>
+                <TableHead
+                  className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
+                  style={{ color: "var(--md-outline)" }}
+                >
+                  Lô hàng
+                </TableHead>
+                <TableHead
+                  className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
+                  style={{ color: "var(--md-outline)" }}
+                >
+                  Ngày hết hạn
+                </TableHead>
+                <TableHead
+                  className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
+                  style={{ color: "var(--md-outline)" }}
+                >
+                  Còn lại
+                </TableHead>
+                <TableHead
+                  className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
+                  style={{ color: "var(--md-outline)" }}
+                >
+                  Phiếu nhập
+                </TableHead>
+                <TableHead
+                  className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
+                  style={{ color: "var(--md-outline)" }}
+                >
+                  Chi nhánh
+                </TableHead>
+                <TableHead
+                  className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
+                  style={{ color: "var(--md-outline)" }}
+                >
+                  Hành động
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.length === 0 && (
+                <TableEmptyStateRow
+                  colSpan={7}
+                  paddingClassName="py-16"
+                  icon={
+                    <CheckCircle2 className="mx-auto size-10 text-success/40" />
+                  }
+                  title="Không có hàng sắp hết hạn"
+                  description="Tất cả nguyên liệu còn trong hạn sử dụng"
+                />
+              )}
+              {items.map((alert, idx) => (
+                <TableRow
+                  key={`${alert.ingredient_id}-${alert.grn_number}-${alert.batch_number ?? ""}-${String(idx)}`}
+                  className="group transition-colors"
+                  style={{
+                    borderColor:
+                      "color-mix(in srgb, var(--md-outline-variant) 5%, transparent)",
+                  }}
+                >
+                  <TableCell
+                    className="px-6 py-5 text-sm font-medium"
+                    style={{ color: "var(--md-primary)" }}
+                  >
+                    {alert.ingredient_name}
+                  </TableCell>
+                  <TableCell className="px-6 py-5 font-mono text-sm">
+                    {alert.batch_number ?? "\u2014"}
+                  </TableCell>
+                  <TableCell className="px-6 py-5 text-sm tabular-nums text-muted-foreground">
+                    {new Date(alert.expiry_date).toLocaleDateString("vi-VN", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
+                  </TableCell>
+                  <TableCell className="px-6 py-5">
+                    {alert.urgency === "expired" ? (
+                      <StatusBadge status="expired" label="Đã hết hạn" />
+                    ) : (
+                      <StatusBadge
+                        status={alert.urgency}
+                        label={`${alert.days_remaining} ngày`}
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell className="px-6 py-5 font-mono text-sm">
+                    {alert.grn_number}
+                  </TableCell>
+                  <TableCell className="px-6 py-5 text-sm">
+                    {alert.branch_name}
+                  </TableCell>
+                  <TableCell className="px-6 py-5">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="h-7 gap-1.5 text-xs opacity-0 transition-opacity group-hover:opacity-100"
+                      onClick={() => openWriteOff(alert)}
+                      disabled={isPending}
+                    >
+                      <Trash2 className="size-3.5" />
+                      Xóa sổ
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+
+        {/* Pagination footer */}
+        <div
+          className="flex items-center justify-between border-t px-6 py-4"
+          style={{
+            borderColor:
+              "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
+          }}
+        >
+          <span
+            className="text-xs"
+            style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
+          >
+            {items.length} kết quả
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1
+            className="text-2xl font-bold tracking-tight"
+            style={{ color: "var(--md-on-surface)" }}
+          >
+            Hạn sử dụng
+          </h1>
+          <p
+            className="mt-1 text-sm"
+            style={{ color: "var(--md-on-surface-variant)", opacity: 0.7 }}
+          >
+            Theo dõi nguyên liệu sắp hết hạn và xóa sổ hàng quá hạn.
+          </p>
+        </div>
+      </div>
+
+      {/* Urgency segmented control */}
+      <div
+        className="inline-flex items-center gap-1 rounded-full p-1"
+        style={{ backgroundColor: "var(--md-surface-low)" }}
+      >
+        <button
+          type="button"
+          onClick={() =>
+            setUrgencyFilter((prev) => (prev === "expired" ? null : "expired"))
+          }
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+            urgencyFilter === "expired"
+              ? "bg-white shadow-sm"
+              : "hover:bg-white/50",
+          )}
+          style={
+            urgencyFilter === "expired"
+              ? { color: "var(--md-primary)" }
+              : { color: "var(--md-on-surface-variant)" }
+          }
+        >
+          Đã hết hạn
+          <span className="font-mono tabular-nums">
+            {urgencyCounts.expired}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            setUrgencyFilter((prev) =>
+              prev === "critical" ? null : "critical",
+            )
+          }
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+            urgencyFilter === "critical"
+              ? "bg-white shadow-sm"
+              : "hover:bg-white/50",
+          )}
+          style={
+            urgencyFilter === "critical"
+              ? { color: "var(--md-primary)" }
+              : { color: "var(--md-on-surface-variant)" }
+          }
+        >
+          Nguy cấp
+          <span className="font-mono tabular-nums">
+            {urgencyCounts.critical}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            setUrgencyFilter((prev) => (prev === "warning" ? null : "warning"))
+          }
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+            urgencyFilter === "warning"
+              ? "bg-white shadow-sm"
+              : "hover:bg-white/50",
+          )}
+          style={
+            urgencyFilter === "warning"
+              ? { color: "var(--md-primary)" }
+              : { color: "var(--md-on-surface-variant)" }
+          }
+        >
+          Sắp hết hạn
+          <span className="font-mono tabular-nums">
+            {urgencyCounts.warning}
+          </span>
+        </button>
+        {urgencyFilter && (
+          <button
+            type="button"
+            onClick={() => setUrgencyFilter(null)}
+            className="ml-1 text-xs underline hover:no-underline"
+            style={{ color: "var(--md-on-surface-variant)" }}
+          >
+            Xóa lọc
+          </button>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="all">
+        <TabsList>
+          <TabsTrigger value="all">Tất cả ({displayItems.length})</TabsTrigger>
+          <TabsTrigger value="expired">
+            Đã hết hạn (
+            {urgencyFilter
+              ? displayItems.filter((a) => a.urgency === "expired").length
+              : expired.length}
+            )
+          </TabsTrigger>
+          <TabsTrigger value="near">
+            Sắp hết hạn (
+            {urgencyFilter
+              ? displayItems.filter(
+                  (a) => a.urgency === "critical" || a.urgency === "warning",
+                ).length
+              : nearExpiry.length}
+            )
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all" className="mt-4">
+          {renderTable(displayItems)}
+        </TabsContent>
+        <TabsContent value="expired" className="mt-4">
+          {renderTable(
+            urgencyFilter
+              ? displayItems.filter((a) => a.urgency === "expired")
+              : expired,
+          )}
+        </TabsContent>
+        <TabsContent value="near" className="mt-4">
+          {renderTable(
+            urgencyFilter
+              ? displayItems.filter(
+                  (a) => a.urgency === "critical" || a.urgency === "warning",
+                )
+              : nearExpiry,
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Write-off AlertDialog */}
+      <AlertDialog
+        open={writeOff != null}
+        onOpenChange={(open) => {
+          if (!open) setWriteOff(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xóa sổ</AlertDialogTitle>
+            <AlertDialogDescription>
+              {writeOff
+                ? `Xóa sổ ${writeOff.alert.ingredient_name} — lô ${writeOff.alert.batch_number ?? "không có mã lô"}. Hành động này sẽ trừ tồn kho.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 px-1">
+            <Label htmlFor="writeoff-qty">Số lượng xóa sổ</Label>
+            <Input
+              id="writeoff-qty"
+              type="number"
+              min={1}
+              step="any"
+              placeholder="Nhập số lượng..."
+              value={writeOff?.quantity ?? ""}
+              onChange={(e) =>
+                setWriteOff((prev) =>
+                  prev ? { ...prev, quantity: e.target.value } : null,
+                )
+              }
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmWriteOff}
+              disabled={
+                isPending ||
+                !writeOff?.quantity ||
+                Number(writeOff.quantity) <= 0
+              }
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isPending ? "Đang xử lý..." : "Xóa sổ"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}

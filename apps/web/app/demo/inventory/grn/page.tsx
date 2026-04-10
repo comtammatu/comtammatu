@@ -47,7 +47,7 @@ export default function GRNListPage() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            className="flex items-center gap-2 rounded-xl px-5 py-2.5 font-semibold transition-colors"
+            className="flex items-center gap-2 rounded-full px-5 py-2.5 font-semibold transition-colors"
             style={{
               backgroundColor: "var(--md-surface-low)",
               color: "var(--md-on-surface)",
@@ -58,11 +58,11 @@ export default function GRNListPage() {
           </button>
           <button
             type="button"
-            className="flex items-center gap-2 rounded-xl px-6 py-2.5 font-bold text-white shadow-xl transition-transform hover:scale-[1.02]"
+            className="flex items-center gap-2 rounded-full px-6 py-2.5 font-bold text-white shadow-xl transition-transform hover:scale-[1.02]"
             style={{
               background:
                 "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-              boxShadow: "0 4px 14px rgba(158,61,0,0.1)",
+              boxShadow: "0 4px 14px rgba(211,84,0,0.1)",
             }}
           >
             <Plus className="size-4" />
@@ -217,43 +217,43 @@ export default function GRNListPage() {
               }}
             >
               <TableHead
-                className="px-8 py-5 text-[11px] font-bold uppercase tracking-widest"
+                className="px-8 py-5 text-caption font-bold uppercase tracking-widest"
                 style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
               >
                 Mã GRN
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-[11px] font-bold uppercase tracking-widest"
+                className="px-6 py-5 text-caption font-bold uppercase tracking-widest"
                 style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
               >
                 Nhà cung cấp
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-[11px] font-bold uppercase tracking-widest"
+                className="px-6 py-5 text-caption font-bold uppercase tracking-widest"
                 style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
               >
                 PO liên kết
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-[11px] font-bold uppercase tracking-widest"
+                className="px-6 py-5 text-caption font-bold uppercase tracking-widest"
                 style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
               >
                 Ngày nhận
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-[11px] font-bold uppercase tracking-widest"
+                className="px-6 py-5 text-caption font-bold uppercase tracking-widest"
                 style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
               >
                 Tổng tiền
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-[11px] font-bold uppercase tracking-widest"
+                className="px-6 py-5 text-caption font-bold uppercase tracking-widest"
                 style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
               >
                 Trạng thái
               </TableHead>
               <TableHead
-                className="px-8 py-5 text-right text-[11px] font-bold uppercase tracking-widest"
+                className="px-8 py-5 text-right text-caption font-bold uppercase tracking-widest"
                 style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
               >
                 Thao tác
@@ -300,7 +300,7 @@ export default function GRNListPage() {
                 </TableCell>
                 <TableCell className="px-6 py-6 text-sm font-bold">
                   {formatVND(g.total)}{" "}
-                  <span className="text-[10px] opacity-40">₫</span>
+                  <span className="text-label opacity-40">₫</span>
                 </TableCell>
                 <TableCell className="px-6 py-6">
                   <StatusBadge status={g.status} />
