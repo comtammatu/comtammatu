@@ -37,6 +37,12 @@
   --md-outline-variant: #e0c0b2;
 
   --md-inverse-surface: #2f312f;
+
+  /* Semantic status tokens (avoid hardcoded hex in components) */
+  --md-info-container: #dbeafe;
+  --md-on-info-container: var(--md-tertiary);
+  --md-warning-container: #fef3c7;
+  --md-on-warning-container: #92400e;
 }
 
 /* --- Ambient Shadow --- */

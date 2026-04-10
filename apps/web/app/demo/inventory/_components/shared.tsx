@@ -61,7 +61,11 @@ const statusConfig: Record<string, { label: string; bg: string; fg: string }> =
       bg: "var(--md-secondary-container)",
       fg: "var(--md-on-secondary-container)",
     },
-    sent: { label: "Đã gửi", bg: "#dbeafe", fg: "var(--md-tertiary)" },
+    sent: {
+      label: "Đã gửi",
+      bg: "var(--md-info-container)",
+      fg: "var(--md-on-info-container)",
+    },
     in_transit: {
       label: "IN-TRANSIT",
       bg: "var(--md-secondary-container)",
@@ -89,8 +93,8 @@ const statusConfig: Record<string, { label: string; bg: string; fg: string }> =
     },
     in_progress: {
       label: "In Progress",
-      bg: "#dbeafe",
-      fg: "var(--md-tertiary)",
+      bg: "var(--md-info-container)",
+      fg: "var(--md-on-info-container)",
     },
     matched: {
       label: "Matched",
@@ -122,11 +126,15 @@ const statusConfig: Record<string, { label: string; bg: string; fg: string }> =
       bg: "var(--md-primary-fixed)",
       fg: "var(--md-primary)",
     },
-    warning: { label: "Theo dõi", bg: "#fef3c7", fg: "#92400e" },
+    warning: {
+      label: "Theo dõi",
+      bg: "var(--md-warning-container)",
+      fg: "var(--md-on-warning-container)",
+    },
     kitchen_use: {
       label: "Kitchen Use",
-      bg: "#dbeafe",
-      fg: "var(--md-tertiary)",
+      bg: "var(--md-info-container)",
+      fg: "var(--md-on-info-container)",
     },
     write_off: {
       label: "Write-off",
@@ -153,7 +161,11 @@ const statusConfig: Record<string, { label: string; bg: string; fg: string }> =
       bg: "var(--md-error-container)",
       fg: "var(--md-error)",
     },
-    over: { label: "SẮP HẾT", bg: "#fef3c7", fg: "#92400e" },
+    over: {
+      label: "SẮP HẾT",
+      bg: "var(--md-warning-container)",
+      fg: "var(--md-on-warning-container)",
+    },
     active: {
       label: "Hoạt động",
       bg: "var(--md-secondary-container)",

@@ -202,7 +202,7 @@ export default function ReportsPage() {
                   : idx === 1
                     ? "var(--md-primary)"
                     : idx === 2
-                      ? "#f59e0b"
+                      ? "var(--md-on-warning-container)"
                       : "var(--md-error)";
               return (
                 <div
