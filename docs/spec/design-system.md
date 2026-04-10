@@ -1,8 +1,8 @@
 # Design System — Cơm Tấm Má Tư
 
-> Version: 3.0.0 | Updated: 2026-04-09
+> Version: 4.0.0 | Updated: 2026-04-10
 > Stack: Next.js 16.2 · React 19.2 · Tailwind CSS 4.2 · shadcn/ui · TypeScript 6.0
-> Research: UI/UX Pro Max skill (product, color, typography, style, UX domains)
+> Base: shadcn/ui default + zinc neutral + Red accent
 
 ## Design Philosophy
 
@@ -11,15 +11,16 @@ Restaurant management app = **operational tool used 8+ hours/day** by staff in a
 **Key constraints:**
 
 - Touch-first for POS/KDS (large targets, high contrast)
-- Data-dense for Admin (tables, forms, stats)
-- Warm & appetizing (food business identity)
+- Data-dense for Admin/Inventory/Finance (tables, forms, stats — optimize readability)
 - Vietnamese-first (typography must render diacritics beautifully)
+- Font-size optimized per screen type
 
-**Style direction:** Warm Minimalism + Data-Dense Dashboard
+**Style direction:** Pure Minimal — White / Black / Red
 
-- NOT cold tech/SaaS blue
-- NOT playful/vibrant neon
-- Professional warmth — like a well-designed restaurant interior
+- Default shadcn/ui aesthetic, no custom warm tinting
+- Three-color palette: White background, Black text, Red accent
+- Clean zinc-scale neutrals
+- Maximum data density without sacrificing readability
 
 ## Governance
 
@@ -54,65 +55,82 @@ Rules:
 
 ## Color Palette
 
-Based on UI Pro Max "Restaurant/Food Service" recommendation: warm red + gold.
+Pure minimal: White / Black / Red. Zinc-scale neutrals, no warm tint.
 
 ### Light Mode
 
-| Token                | OKLch                 | Hex Approx | Purpose                          |
-| -------------------- | --------------------- | ---------- | -------------------------------- |
-| `primary`            | oklch(0.52 0.2 25)    | #DC2626    | Brand red — CTAs, active states  |
-| `primary-foreground` | oklch(0.98 0.005 80)  | #FEF2F2    | Text on primary                  |
-| `secondary`          | oklch(0.95 0.008 75)  | #F5F0EB    | Warm light gray                  |
-| `accent`             | oklch(0.72 0.16 85)   | #CA8A04    | Warm gold — highlights, badges   |
-| `background`         | oklch(0.985 0.003 75) | #FAFAF8    | Page background — warm off-white |
-| `card`               | oklch(1 0 0)          | #FFFFFF    | Card surfaces                    |
-| `foreground`         | oklch(0.18 0.03 30)   | #1C1208    | Primary text — warm near-black   |
-| `muted-foreground`   | oklch(0.5 0.02 55)    | #7A6A50    | Secondary text                   |
-| `border`             | oklch(0.9 0.008 75)   | #E8E0D5    | Borders — warm tint              |
-| `destructive`        | oklch(0.55 0.22 27)   | #DC2626    | Error/delete                     |
-| `success`            | oklch(0.6 0.18 155)   | #16A34A    | Success states                   |
-| `warning`            | oklch(0.75 0.15 85)   | #D97706    | Warnings                         |
-| `info`               | oklch(0.6 0.15 240)   | #2563EB    | Info                             |
+| Token                | OKLch                   | Hex Approx | Purpose                   |
+| -------------------- | ----------------------- | ---------- | ------------------------- |
+| `background`         | oklch(1 0 0)            | #FFFFFF    | Page background — pure    |
+| `foreground`         | oklch(0.145 0 0)        | #171717    | Primary text — near-black |
+| `primary`            | oklch(0.577 0.245 27.3) | #DC2626    | Brand red — CTAs, active  |
+| `primary-foreground` | oklch(1 0 0)            | #FFFFFF    | Text on primary           |
+| `secondary`          | oklch(0.961 0 0)        | #F5F5F5    | Neutral light gray        |
+| `accent`             | oklch(0.961 0 0)        | #F5F5F5    | Same as secondary         |
+| `muted`              | oklch(0.961 0 0)        | #F5F5F5    | Muted elements            |
+| `muted-foreground`   | oklch(0.556 0 0)        | #8B8B8B    | Secondary text            |
+| `card`               | oklch(1 0 0)            | #FFFFFF    | Card surfaces             |
+| `border`             | oklch(0.918 0 0)        | #E5E5E5    | Borders — pure neutral    |
+| `destructive`        | oklch(0.577 0.245 27.3) | #DC2626    | Error/delete (= primary)  |
+| `success`            | oklch(0.6 0.18 155)     | #16A34A    | Success states            |
+| `warning`            | oklch(0.75 0.15 85)     | #D97706    | Warnings                  |
+| `info`               | oklch(0.6 0.15 240)     | #2563EB    | Info                      |
 
-### Sidebar (Dark Warm)
+### Sidebar (Pure Dark)
 
-| Token                | Value                | Purpose                      |
-| -------------------- | -------------------- | ---------------------------- |
-| `sidebar`            | oklch(0.22 0.035 30) | Dark brown-red background    |
-| `sidebar-foreground` | oklch(0.88 0.01 75)  | Light text                   |
-| `sidebar-primary`    | oklch(0.72 0.16 85)  | Gold accent for active items |
-| `sidebar-accent`     | oklch(0.28 0.04 30)  | Hover/focus background       |
+| Token                | Value                   | Purpose               |
+| -------------------- | ----------------------- | --------------------- |
+| `sidebar`            | oklch(0.09 0 0)         | Near-black background |
+| `sidebar-foreground` | oklch(0.96 0 0)         | Light text            |
+| `sidebar-primary`    | oklch(0.577 0.245 27.3) | Red accent for active |
+| `sidebar-accent`     | oklch(0.16 0 0)         | Dark gray hover       |
+| `sidebar-border`     | oklch(0.2 0 0)          | Dark border           |
 
 ### Dark Mode (KDS)
 
-Same hue family (30), inverted luminance. KDS gets `.dark` class automatically.
+Inverted luminance with same neutral hue. KDS gets `.dark` class automatically.
 
 ## Typography
 
-### Font: Be Vietnam Pro
+### Font: Geist + Geist Mono
 
-**Why this font?**
+- **Geist**: Primary sans-serif. Clean, modern, excellent Latin/Vietnamese rendering.
+- **Geist Mono**: Monospace for numbers, codes, financial data. Weight nudged to 500.
+- Loaded via `next/font/google` with `display: swap`.
 
-- Excellent Vietnamese diacritic rendering
-- Google Fonts, free, fast CDN
-- Multiple weights (300-700)
-- Clean, modern, professional
-- Already in brand identity
+### Font-Size Strategy by Screen Type
 
-**Hierarchy:**
+All screens are data-heavy (tables, numbers, lists). Optimize for information density + readability.
+
+**Custom token:** `text-data` = 13px/20px — the sweet spot between `text-xs` (12px) and `text-sm` (14px) for dense tables.
+
+| Screen Type         | Base Body   | Table Data  | Headers     | Numbers                  |
+| ------------------- | ----------- | ----------- | ----------- | ------------------------ |
+| Admin/Inventory     | `text-sm`   | `text-data` | `text-base` | `tabular-nums`           |
+| Finance/Reports     | `text-sm`   | `text-data` | `text-base` | `font-mono tabular-nums` |
+| POS (touch-first)   | `text-base` | `text-sm`   | `text-lg`   | `tabular-nums`           |
+| KDS (distance read) | `text-lg`   | `text-base` | `text-xl`   | `font-bold`              |
+| Employee (mobile)   | `text-sm`   | `text-xs`   | `text-base` | `tabular-nums`           |
+
+### Typography Hierarchy
 
 | Context          | Weight | Size | Class                     |
 | ---------------- | ------ | ---- | ------------------------- |
-| Page titles      | 700    | 30px | `text-3xl font-bold`      |
-| Section headers  | 600    | 20px | `text-xl font-semibold`   |
-| Card titles      | 600    | 16px | `text-base font-semibold` |
+| Page titles      | 700    | 24px | `text-2xl font-bold`      |
+| Section headers  | 600    | 18px | `text-lg font-semibold`   |
+| Card titles      | 600    | 14px | `text-sm font-semibold`   |
 | Body text        | 400    | 14px | `text-sm`                 |
+| Data cells       | 400    | 13px | `text-data`               |
 | Labels/captions  | 500    | 12px | `text-xs font-medium`     |
 | Sidebar nav      | 500    | 14px | `text-sm font-medium`     |
-| POS menu items   | 600    | 18px | `text-lg font-semibold`   |
+| POS menu items   | 600    | 16px | `text-base font-semibold` |
 | KDS ticket items | 700    | 20px | `text-xl font-bold`       |
 
-**Rule:** Max 2 font sizes per section. No text smaller than 12px.
+**Rules:**
+
+- Max 2 font sizes per section. No text smaller than 12px.
+- Financial numbers: always `font-mono tabular-nums` for alignment.
+- Table headers: `text-xs uppercase tracking-wider font-semibold`.
 
 ## Spacing, Elevation, and Radius
 
@@ -199,22 +217,23 @@ One size per dialog type:
 ### Stat Cards (Dashboard)
 
 - Icon in colored circle (`primary/10` bg)
-- Large number: `text-3xl font-bold tabular-nums`
+- Large number: `text-2xl font-bold tabular-nums`
 - Change pill: `rounded-full px-2 py-0.5` with success/destructive/10 bg
-- Decorative circle in top-right: `primary/5`, offset
 
 ### Tables
 
 - Header: `muted` bg, `text-xs uppercase tracking-wider font-semibold`
+- Data cells: `text-data` for dense data, `text-sm` for standard
+- Numbers: `font-mono tabular-nums` for column alignment
 - Rows: `hover:bg-muted/40` transition-colors
 - Dividers: `divide-border/60`
 
 ### Sidebar (Admin)
 
-- Dark warm background (`sidebar` token)
-- Active: gold left indicator bar (3px rounded), `sidebar-accent` bg
-- Groups: 11px uppercase `tracking-widest`, 40% opacity
-- Icons: 18px, gold on active, dim on inactive
+- Pure dark background (`sidebar` token — near-black)
+- Active: red left indicator bar (3px rounded), `sidebar-accent` bg
+- Groups: `text-xs uppercase tracking-widest`, 40% opacity
+- Icons: 18px, red on active, dim on inactive
 
 ### POS
 
@@ -237,7 +256,7 @@ One size per dialog type:
 ```
 +------------------+-------------------+
 | Sidebar (256px)  | Header (56px)     |
-| Dark warm bg     | Blur bg, sticky   |
+| Dark bg          | Blur bg, sticky   |
 |                  |-------------------|
 | Brand + nav      | Content           |
 | groups + user    | max-w-7xl padded  |

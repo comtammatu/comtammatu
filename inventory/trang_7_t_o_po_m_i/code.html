@@ -1,0 +1,629 @@
+<!doctype html>
+
+<html class="light" lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+        display: inline-block;
+        line-height: 1;
+        text-transform: none;
+        letter-spacing: normal;
+        word-wrap: normal;
+        white-space: nowrap;
+        direction: ltr;
+      }
+      .tonal-transition {
+        background: linear-gradient(to right, #f3f4f1, #f9f9f6);
+      }
+      .glass-panel {
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+      }
+    </style>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-tint": "#a23f00",
+              "on-primary-container": "#fffbff",
+              "on-secondary-fixed-variant": "#0e5138",
+              surface: "#f9f9f6",
+              "on-background": "#1a1c1a",
+              "surface-dim": "#dadad7",
+              error: "#ba1a1a",
+              "on-surface": "#1a1c1a",
+              background: "#f9f9f6",
+              "on-primary": "#ffffff",
+              "surface-variant": "#e2e3e0",
+              "on-secondary": "#ffffff",
+              "secondary-container": "#aeeecb",
+              secondary: "#2c694e",
+              "on-tertiary-fixed": "#001e31",
+              "surface-container-highest": "#e2e3e0",
+              "surface-bright": "#f9f9f6",
+              "primary-fixed": "#ffdbcd",
+              "on-error-container": "#93000a",
+              "tertiary-fixed-dim": "#92ccff",
+              "secondary-fixed-dim": "#95d4b3",
+              "on-primary-fixed-variant": "#7c2e00",
+              "on-tertiary": "#ffffff",
+              "tertiary-container": "#207ab3",
+              "secondary-fixed": "#b1f0ce",
+              "surface-container-high": "#e8e8e5",
+              "surface-container-low": "#f3f4f1",
+              "inverse-on-surface": "#f1f1ee",
+              "primary-fixed-dim": "#ffb595",
+              "surface-container-lowest": "#ffffff",
+              "on-secondary-fixed": "#002114",
+              "tertiary-fixed": "#cce5ff",
+              "inverse-surface": "#2f312f",
+              "on-error": "#ffffff",
+              "error-container": "#ffdad6",
+              primary: "#9e3d00",
+              "primary-container": "#c64f00",
+              "on-tertiary-fixed-variant": "#004b73",
+              "outline-variant": "#e0c0b2",
+              outline: "#8c7166",
+              "on-tertiary-container": "#fdfcff",
+              "on-secondary-container": "#316e52",
+              "on-surface-variant": "#594238",
+              "inverse-primary": "#ffb595",
+              "on-primary-fixed": "#351000",
+              "surface-container": "#eeeeeb",
+              tertiary: "#006193",
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+            fontFamily: {
+              headline: ["Inter"],
+              body: ["Inter"],
+              label: ["Inter"],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="bg-surface font-body text-on-surface antialiased">
+    <!-- SideNavBar -->
+    <aside
+      class="fixed left-0 top-0 h-full z-40 w-64 bg-[#f3f4f1]/80 backdrop-blur-xl border-r border-[#1a1c1a]/5 font-inter text-sm font-medium tracking-tight"
+    >
+      <div class="p-6">
+        <div class="flex items-center gap-3 mb-8">
+          <div
+            class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-lg overflow-hidden"
+          >
+            <img
+              alt="Cơm Tấm Má Tư Logo"
+              class="w-full h-full object-cover"
+              data-alt="Cơm Tấm Má Tư traditional restaurant logo with warm orange brand colors and a minimalist bowl icon"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuCEgjI2nx7secIw2i9WWw5pnExsuy7dOaWjeDL-9ZcKMzjdIkAs3J8VfWOC0YXPsEWqO2HvC4vqTprDnq6Seb9-V87zKfi7sp0FPgIl2HCta5DYBcY49kKger_6FFrvTt70sH3ZVDYF7SWTi-uZs3m_nPWH8ivSpvheFQ4_24yRcBC6DjY9zzxcBObw7Dl3bgLC3KdvhABzMnGBLNCW0ZbLY94TpjffBNwzKs55HaXuJ4sW_WS01acD-mXU2UVm1s97b7Fr1wM6suGq"
+            />
+          </div>
+          <div>
+            <h1 class="text-lg font-bold text-[#1a1c1a] tracking-tighter">
+              The Culinary Ledger
+            </h1>
+            <p class="text-[10px] uppercase tracking-widest text-primary/70">
+              Cơm Tấm Má Tư
+            </p>
+          </div>
+        </div>
+        <nav class="space-y-1">
+          <a
+            class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#1a1c1a]/60 hover:text-[#9e3d00] hover:bg-white/40 transition-colors duration-200"
+            href="#"
+          >
+            <span class="material-symbols-outlined">dashboard</span>
+            <span>Dashboard</span>
+          </a>
+          <a
+            class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#9e3d00] font-bold border-r-4 border-[#9e3d00] bg-[#ffffff]/50"
+            href="#"
+          >
+            <span class="material-symbols-outlined">inventory_2</span>
+            <span>Stock</span>
+          </a>
+          <a
+            class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#1a1c1a]/60 hover:text-[#9e3d00] hover:bg-white/40 transition-colors duration-200"
+            href="#"
+          >
+            <span class="material-symbols-outlined">input</span>
+            <span>Receiving Hub</span>
+          </a>
+          <a
+            class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#1a1c1a]/60 hover:text-[#9e3d00] hover:bg-white/40 transition-colors duration-200"
+            href="#"
+          >
+            <span class="material-symbols-outlined">swap_horiz</span>
+            <span>Transfers</span>
+          </a>
+          <a
+            class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#1a1c1a]/60 hover:text-[#9e3d00] hover:bg-white/40 transition-colors duration-200"
+            href="#"
+          >
+            <span class="material-symbols-outlined">checklist</span>
+            <span>Stocktake</span>
+          </a>
+          <a
+            class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#1a1c1a]/60 hover:text-[#9e3d00] hover:bg-white/40 transition-colors duration-200"
+            href="#"
+          >
+            <span class="material-symbols-outlined">report_problem</span>
+            <span>Issues</span>
+          </a>
+          <a
+            class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#1a1c1a]/60 hover:text-[#9e3d00] hover:bg-white/40 transition-colors duration-200"
+            href="#"
+          >
+            <span class="material-symbols-outlined">bar_chart</span>
+            <span>Reports</span>
+          </a>
+          <div class="pt-4 mt-4 border-t border-black/5">
+            <a
+              class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#1a1c1a]/60 hover:text-[#9e3d00] hover:bg-white/40 transition-colors duration-200"
+              href="#"
+            >
+              <span class="material-symbols-outlined">settings</span>
+              <span>Settings</span>
+            </a>
+          </div>
+        </nav>
+      </div>
+    </aside>
+    <!-- Main Content Area -->
+    <main class="ml-64 min-h-screen flex flex-col">
+      <!-- TopNavBar -->
+      <header
+        class="flex justify-between items-center w-full px-8 py-4 sticky top-0 z-30 bg-[#f9f9f6]/90 backdrop-blur-md border-b border-[#1a1c1a]/10 shadow-sm font-inter text-sm"
+      >
+        <div class="flex items-center gap-4">
+          <nav class="flex items-center gap-2 text-on-surface-variant/60">
+            <span class="material-symbols-outlined text-sm">home</span>
+            <span class="material-symbols-outlined text-xs">chevron_right</span>
+            <a class="hover:text-primary" href="#">Inventory</a>
+            <span class="material-symbols-outlined text-xs">chevron_right</span>
+            <a class="hover:text-primary" href="#">PO</a>
+            <span class="material-symbols-outlined text-xs">chevron_right</span>
+            <span class="text-primary font-semibold">Tạo PO mới</span>
+          </nav>
+        </div>
+        <div class="flex items-center gap-4">
+          <button
+            class="p-2 rounded-full hover:bg-surface-container transition-colors relative"
+          >
+            <span class="material-symbols-outlined">notifications</span>
+            <span
+              class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full"
+            ></span>
+          </button>
+          <button
+            class="p-2 rounded-full hover:bg-surface-container transition-colors"
+          >
+            <span class="material-symbols-outlined">help_outline</span>
+          </button>
+          <div class="h-8 w-[1px] bg-outline-variant/30 mx-2"></div>
+          <div class="flex items-center gap-3 pl-2">
+            <div class="text-right">
+              <p class="text-xs font-bold leading-none">Quản lý Kho</p>
+              <p
+                class="text-[10px] text-on-surface-variant uppercase tracking-tighter"
+              >
+                HQ - Chi nhánh 01
+              </p>
+            </div>
+            <img
+              alt="User Profile"
+              class="w-8 h-8 rounded-full border border-outline-variant shadow-sm"
+              data-alt="Professional profile headshot of a restaurant inventory manager in business attire"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuAq5nMqlKLFkflDO0xhvIlG5YD--iyi0qMlDBuY5gX8ukXq4SPQAlmyamk7uqSPdl_lWHUF_tDubu_7GSRCAOa4lfuAo1meopWYw4VLQvXhqt-mvF9wmlwzPKJIYicH-Wb6xjcRCHo-8AVzEpLZUQzKVTJGGYIulDz3BLPy_GYPzdqE9M5NbHbaJQ0zYnWW-gTYTo4O0twbZP52YsXDlUETU51JQLUEM9w8E6750nTJcdk0Hn6xOkgnAMakpZMfvNAQgHy_UcAjEjwM"
+            />
+          </div>
+        </div>
+      </header>
+      <!-- Form Content -->
+      <div class="flex-1 p-8 max-w-6xl mx-auto w-full">
+        <div class="flex justify-between items-end mb-8">
+          <div>
+            <h2 class="text-3xl font-extrabold tracking-tight text-on-surface">
+              Tạo Đơn đặt hàng mới
+            </h2>
+            <p class="text-on-surface-variant text-sm mt-1 italic">
+              Nhập chi tiết các nguyên liệu cần nhập kho từ nhà cung cấp.
+            </p>
+          </div>
+          <div class="flex gap-3">
+            <button
+              class="px-6 py-2.5 rounded-lg bg-surface-container-low text-on-surface-variant font-semibold hover:bg-surface-container-high transition-colors flex items-center gap-2"
+            >
+              <span class="material-symbols-outlined text-lg">history</span>
+              Xem PO gần đây
+            </button>
+          </div>
+        </div>
+        <!-- Bento Form Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <!-- Supplier Info -->
+          <div
+            class="lg:col-span-2 bg-surface-container-lowest rounded-xl p-6 shadow-sm border border-outline-variant/10"
+          >
+            <div class="flex items-center gap-2 mb-6">
+              <span class="material-symbols-outlined text-primary">store</span>
+              <h3 class="font-bold text-lg">Thông tin Nhà cung cấp</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-2">
+                <label
+                  class="text-xs font-bold uppercase tracking-wider text-on-surface-variant/70"
+                  >Nhà cung cấp</label
+                >
+                <div class="relative">
+                  <span
+                    class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant/50"
+                    >search</span
+                  >
+                  <input
+                    class="w-full pl-10 pr-4 py-2.5 bg-surface-container-low border-none rounded-lg focus:ring-0 border-b-2 border-transparent focus:border-primary transition-all text-sm"
+                    placeholder="Tìm tên hoặc mã NCC..."
+                    type="text"
+                  />
+                </div>
+              </div>
+              <div class="space-y-2">
+                <label
+                  class="text-xs font-bold uppercase tracking-wider text-on-surface-variant/70"
+                  >Ngày đặt hàng</label
+                >
+                <div class="relative">
+                  <span
+                    class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant/50"
+                    >calendar_today</span
+                  >
+                  <input
+                    class="w-full pl-10 pr-4 py-2.5 bg-surface-container-low border-none rounded-lg focus:ring-0 border-b-2 border-transparent focus:border-primary transition-all text-sm"
+                    type="date"
+                    value="2023-10-27"
+                  />
+                </div>
+              </div>
+              <div class="md:col-span-2 space-y-2">
+                <label
+                  class="text-xs font-bold uppercase tracking-wider text-on-surface-variant/70"
+                  >Ghi chú đơn hàng</label
+                >
+                <textarea
+                  class="w-full px-4 py-2.5 bg-surface-container-low border-none rounded-lg focus:ring-0 border-b-2 border-transparent focus:border-primary transition-all text-sm resize-none"
+                  placeholder="Ví dụ: Giao trước 8h sáng, thịt tươi trong ngày..."
+                  rows="2"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+          <!-- PO Summary Card -->
+          <div
+            class="bg-primary/5 rounded-xl p-6 border border-primary/10 flex flex-col justify-between"
+          >
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <span
+                  class="text-xs font-bold uppercase tracking-wider text-primary"
+                  >Tóm tắt PO</span
+                >
+                <span
+                  class="px-2 py-1 bg-primary-fixed text-primary text-[10px] font-bold rounded-full"
+                  >DỰ THẢO</span
+                >
+              </div>
+              <div class="space-y-3">
+                <div class="flex justify-between text-sm">
+                  <span class="text-on-surface-variant">Số lượng dòng:</span>
+                  <span class="font-bold">03 dòng</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                  <span class="text-on-surface-variant">Tổng số lượng SP:</span>
+                  <span class="font-bold">45.0 kg</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                  <span class="text-on-surface-variant">Dự kiến giao:</span>
+                  <span class="font-bold">Sáng mai</span>
+                </div>
+              </div>
+            </div>
+            <div class="pt-6 mt-6 border-t border-primary/10">
+              <p class="text-xs text-primary/60 font-medium">
+                Tổng tiền tạm tính
+              </p>
+              <p class="text-3xl font-extrabold text-primary tracking-tighter">
+                4,850,000 <span class="text-sm">VND</span>
+              </p>
+            </div>
+          </div>
+        </div>
+        <!-- Line Items Table -->
+        <div
+          class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/10 overflow-hidden"
+        >
+          <div
+            class="px-6 py-4 bg-surface-container-low/50 flex justify-between items-center border-b border-outline-variant/10"
+          >
+            <h3 class="font-bold text-lg flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary"
+                >format_list_bulleted</span
+              >
+              Danh sách Nguyên liệu
+            </h3>
+            <button
+              class="px-4 py-1.5 bg-white text-primary text-sm font-bold border border-primary/20 rounded-lg hover:bg-primary/5 transition-colors flex items-center gap-1"
+            >
+              <span class="material-symbols-outlined text-sm">add</span>
+              Thêm dòng mới
+            </button>
+          </div>
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr
+                class="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant/60"
+              >
+                <th class="px-6 py-4">Nguyên liệu</th>
+                <th class="px-4 py-4 w-32 text-center">SL đặt</th>
+                <th class="px-4 py-4 w-24">Đơn vị</th>
+                <th class="px-4 py-4 w-48">Giá ước tính (VND)</th>
+                <th class="px-4 py-4 w-40 text-right">Thành tiền</th>
+                <th class="px-6 py-4 w-16"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-outline-variant/5">
+              <!-- Item 1 -->
+              <tr
+                class="group hover:bg-surface-container-low/30 transition-colors"
+              >
+                <td class="px-6 py-4">
+                  <div class="relative">
+                    <input
+                      class="w-full bg-transparent border-none focus:ring-0 p-0 text-sm font-semibold"
+                      type="text"
+                      value="Gạo Tấm Đặc Biệt"
+                    />
+                    <p
+                      class="text-[10px] text-on-surface-variant/60 font-medium"
+                    >
+                      Mã: NL-0012
+                    </p>
+                  </div>
+                </td>
+                <td class="px-4 py-4">
+                  <input
+                    class="w-full text-center bg-surface-container-low/40 border-none rounded-md py-1.5 text-sm focus:ring-1 focus:ring-primary"
+                    type="number"
+                    value="25"
+                  />
+                </td>
+                <td class="px-4 py-4">
+                  <span class="text-sm text-on-surface-variant font-medium"
+                    >kg</span
+                  >
+                </td>
+                <td class="px-4 py-4">
+                  <div class="space-y-1">
+                    <input
+                      class="w-full bg-surface-container-low/40 border-none rounded-md py-1.5 px-3 text-sm focus:ring-1 focus:ring-primary font-mono"
+                      type="text"
+                      value="22,000"
+                    />
+                    <div class="flex items-center gap-1 px-1">
+                      <span
+                        class="material-symbols-outlined text-[10px] text-secondary"
+                        >trending_down</span
+                      >
+                      <span class="text-[10px] text-on-surface-variant italic"
+                        >Giá TB lịch sử: 23,500</span
+                      >
+                    </div>
+                  </div>
+                </td>
+                <td class="px-4 py-4 text-right">
+                  <span class="text-sm font-bold font-mono">550,000</span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <button
+                    class="text-on-surface-variant/40 hover:text-error transition-colors"
+                  >
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                </td>
+              </tr>
+              <!-- Item 2 -->
+              <tr
+                class="group hover:bg-surface-container-low/30 transition-colors"
+              >
+                <td class="px-6 py-4">
+                  <div class="relative">
+                    <input
+                      class="w-full bg-transparent border-none focus:ring-0 p-0 text-sm font-semibold"
+                      type="text"
+                      value="Sườn Cốt Lết Tươi"
+                    />
+                    <p
+                      class="text-[10px] text-on-surface-variant/60 font-medium"
+                    >
+                      Mã: NL-0450
+                    </p>
+                  </div>
+                </td>
+                <td class="px-4 py-4">
+                  <input
+                    class="w-full text-center bg-surface-container-low/40 border-none rounded-md py-1.5 text-sm focus:ring-1 focus:ring-primary"
+                    type="number"
+                    value="15"
+                  />
+                </td>
+                <td class="px-4 py-4">
+                  <span class="text-sm text-on-surface-variant font-medium"
+                    >kg</span
+                  >
+                </td>
+                <td class="px-4 py-4">
+                  <div class="space-y-1">
+                    <input
+                      class="w-full bg-surface-container-low/40 border-none rounded-md py-1.5 px-3 text-sm focus:ring-1 focus:ring-primary font-mono"
+                      type="text"
+                      value="180,000"
+                    />
+                    <div class="flex items-center gap-1 px-1">
+                      <span
+                        class="material-symbols-outlined text-[10px] text-primary"
+                        >trending_up</span
+                      >
+                      <span class="text-[10px] text-on-surface-variant italic"
+                        >Giá TB lịch sử: 175,000</span
+                      >
+                    </div>
+                  </div>
+                </td>
+                <td class="px-4 py-4 text-right">
+                  <span class="text-sm font-bold font-mono">2,700,000</span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <button
+                    class="text-on-surface-variant/40 hover:text-error transition-colors"
+                  >
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                </td>
+              </tr>
+              <!-- Item 3 (New/Empty state focus) -->
+              <tr class="group bg-primary/5">
+                <td class="px-6 py-4">
+                  <div class="relative">
+                    <input
+                      class="w-full bg-white border-none rounded-md py-1.5 px-3 text-sm focus:ring-1 focus:ring-primary font-semibold shadow-inner"
+                      placeholder="Tìm nguyên liệu..."
+                      type="text"
+                    />
+                    <span
+                      class="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-xs text-primary"
+                      >search</span
+                    >
+                  </div>
+                </td>
+                <td class="px-4 py-4">
+                  <input
+                    class="w-full text-center bg-white border-none rounded-md py-1.5 text-sm focus:ring-1 focus:ring-primary"
+                    placeholder="0"
+                    type="number"
+                  />
+                </td>
+                <td class="px-4 py-4 text-on-surface-variant/40">
+                  <span class="text-xs">--</span>
+                </td>
+                <td class="px-4 py-4">
+                  <input
+                    class="w-full bg-white border-none rounded-md py-1.5 px-3 text-sm focus:ring-1 focus:ring-primary font-mono shadow-inner"
+                    placeholder="Nhập giá..."
+                    type="text"
+                  />
+                </td>
+                <td class="px-4 py-4 text-right">
+                  <span
+                    class="text-sm font-bold text-on-surface-variant/30 font-mono"
+                    >0</span
+                  >
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <button
+                    class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shadow-sm"
+                  >
+                    <span class="material-symbols-outlined text-sm">add</span>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="p-6 bg-surface-container-low/20">
+            <div
+              class="flex items-center gap-4 text-xs font-bold text-on-surface-variant"
+            >
+              <div class="flex items-center gap-1">
+                <div class="w-3 h-3 bg-secondary rounded-full"></div>
+                <span>Thấp hơn giá trung bình</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <div class="w-3 h-3 bg-primary rounded-full"></div>
+                <span>Cao hơn giá trung bình</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Sticky Footer Action Bar -->
+      <footer
+        class="sticky bottom-0 w-full bg-white/80 backdrop-blur-xl border-t border-outline-variant/20 p-6 flex items-center justify-between z-40"
+      >
+        <div class="flex items-center gap-8">
+          <div class="flex flex-col">
+            <span
+              class="text-[10px] uppercase font-bold tracking-widest text-on-surface-variant/70"
+              >Tổng thành tiền (VAT 0%)</span
+            >
+            <span class="text-2xl font-black text-on-surface tracking-tighter"
+              >4,850,000 <span class="text-xs">VND</span></span
+            >
+          </div>
+          <div class="h-10 w-[1px] bg-outline-variant/30"></div>
+          <div
+            class="flex items-center gap-2 px-4 py-2 bg-secondary-container/30 rounded-lg"
+          >
+            <span
+              class="material-symbols-outlined text-secondary"
+              style="font-variation-settings: &quot;FILL&quot; 1"
+              >verified_user</span
+            >
+            <p class="text-xs text-on-secondary-container font-medium">
+              Dữ liệu hợp lệ. Sẵn sàng gửi PO.
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <button
+            class="px-8 py-3 rounded-xl bg-surface-container-high text-on-surface font-bold hover:bg-surface-dim transition-all cubic-bezier(0.4, 0, 0.2, 1)"
+          >
+            Lưu Nháp
+          </button>
+          <button
+            class="px-10 py-3 rounded-xl bg-gradient-to-br from-primary to-primary-container text-white font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all cubic-bezier(0.4, 0, 0.2, 1) flex items-center gap-2"
+          >
+            <span class="material-symbols-outlined">send</span>
+            Gửi PO Ngay
+          </button>
+        </div>
+      </footer>
+    </main>
+  </body>
+</html>

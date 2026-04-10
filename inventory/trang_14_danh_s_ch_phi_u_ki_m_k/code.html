@@ -1,0 +1,755 @@
+<!doctype html>
+
+<html class="light" lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#9e3d00",
+              "surface-bright": "#f9f9f6",
+              tertiary: "#006193",
+              "secondary-container": "#aeeecb",
+              "surface-dim": "#dadad7",
+              "on-error": "#ffffff",
+              error: "#ba1a1a",
+              "on-tertiary-container": "#fdfcff",
+              "on-secondary": "#ffffff",
+              "on-background": "#1a1c1a",
+              "inverse-on-surface": "#f1f1ee",
+              "primary-container": "#c64f00",
+              "secondary-fixed": "#b1f0ce",
+              "surface-container": "#eeeeeb",
+              "surface-container-low": "#f3f4f1",
+              background: "#f9f9f6",
+              "on-tertiary": "#ffffff",
+              "error-container": "#ffdad6",
+              "on-primary-fixed": "#351000",
+              secondary: "#2c694e",
+              "outline-variant": "#e0c0b2",
+              "tertiary-container": "#207ab3",
+              "on-secondary-fixed-variant": "#0e5138",
+              surface: "#f9f9f6",
+              "on-primary-container": "#fffbff",
+              "on-error-container": "#93000a",
+              "on-secondary-fixed": "#002114",
+              "primary-fixed": "#ffdbcd",
+              "inverse-surface": "#2f312f",
+              "tertiary-fixed": "#cce5ff",
+              "on-secondary-container": "#316e52",
+              "surface-variant": "#e2e3e0",
+              "on-surface": "#1a1c1a",
+              "surface-tint": "#a23f00",
+              "on-tertiary-fixed": "#001e31",
+              "secondary-fixed-dim": "#95d4b3",
+              "on-surface-variant": "#594238",
+              "inverse-primary": "#ffb595",
+              "surface-container-high": "#e8e8e5",
+              "on-primary-fixed-variant": "#7c2e00",
+              "on-tertiary-fixed-variant": "#004b73",
+              "surface-container-lowest": "#ffffff",
+              "surface-container-highest": "#e2e3e0",
+              "primary-fixed-dim": "#ffb595",
+              "tertiary-fixed-dim": "#92ccff",
+              outline: "#8c7166",
+              "on-primary": "#ffffff",
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+            fontFamily: {
+              headline: ["Inter"],
+              body: ["Inter"],
+              label: ["Inter"],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+      .tonal-transition {
+        background: linear-gradient(
+          180deg,
+          transparent 0%,
+          rgba(243, 244, 241, 0.4) 100%
+        );
+      }
+      .no-border {
+        border: none !important;
+      }
+      .glass-nav {
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+      }
+    </style>
+  </head>
+  <body class="bg-background text-on-background font-body antialiased">
+    <!-- SideNavBar (Shared Component) -->
+    <aside
+      class="h-screen w-64 fixed left-0 top-0 z-40 bg-[#f3f4f1] dark:bg-stone-900/90 backdrop-blur-xl flex flex-col p-4 space-y-2 tonal-transition no-border"
+    >
+      <div class="px-2 py-6">
+        <h1
+          class="text-lg font-black text-[#1a1c1a] dark:text-stone-100 tracking-tighter"
+        >
+          Má Tư Ledger
+        </h1>
+        <p class="text-xs text-on-surface-variant font-medium opacity-70">
+          District 1 Branch
+        </p>
+      </div>
+      <nav class="flex-1 space-y-1">
+        <a
+          class="flex items-center gap-3 px-4 py-3 text-stone-600 dark:text-stone-400 hover:text-[#9e3d00] hover:bg-white/50 dark:hover:bg-stone-800/50 transition-all duration-300"
+          href="#"
+        >
+          <span class="material-symbols-outlined" data-icon="dashboard"
+            >dashboard</span
+          >
+          <span class="font-medium">Dashboard</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-4 py-3 text-stone-600 dark:text-stone-400 hover:text-[#9e3d00] hover:bg-white/50 dark:hover:bg-stone-800/50 transition-all duration-300"
+          href="#"
+        >
+          <span class="material-symbols-outlined" data-icon="inventory_2"
+            >inventory_2</span
+          >
+          <span class="font-medium">Inventory</span>
+        </a>
+        <!-- Active Navigation -->
+        <a
+          class="flex items-center gap-3 px-4 py-3 bg-white dark:bg-stone-800 text-[#9e3d00] dark:text-[#d35400] font-bold rounded-lg shadow-sm transition-all duration-300"
+          href="#"
+        >
+          <span class="material-symbols-outlined" data-icon="checklist"
+            >checklist</span
+          >
+          <span class="font-medium">Stocktake</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-4 py-3 text-stone-600 dark:text-stone-400 hover:text-[#9e3d00] hover:bg-white/50 dark:hover:bg-stone-800/50 transition-all duration-300"
+          href="#"
+        >
+          <span class="material-symbols-outlined" data-icon="local_shipping"
+            >local_shipping</span
+          >
+          <span class="font-medium">Suppliers</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-4 py-3 text-stone-600 dark:text-stone-400 hover:text-[#9e3d00] hover:bg-white/50 dark:hover:bg-stone-800/50 transition-all duration-300"
+          href="#"
+        >
+          <span class="material-symbols-outlined" data-icon="analytics"
+            >analytics</span
+          >
+          <span class="font-medium">Reports</span>
+        </a>
+      </nav>
+      <div class="mt-auto pt-4 space-y-1">
+        <button
+          class="w-full mb-4 py-3 px-4 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-lg font-bold flex items-center justify-center gap-2 shadow-sm hover:opacity-90 transition-opacity"
+        >
+          <span class="material-symbols-outlined text-sm" data-icon="add"
+            >add</span
+          >
+          New Count
+        </button>
+        <a
+          class="flex items-center gap-3 px-4 py-2 text-stone-600 dark:text-stone-400 hover:text-[#9e3d00] transition-all"
+          href="#"
+        >
+          <span class="material-symbols-outlined" data-icon="help">help</span>
+          <span>Help Center</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-4 py-2 text-stone-600 dark:text-stone-400 hover:text-[#9e3d00] transition-all"
+          href="#"
+        >
+          <span class="material-symbols-outlined" data-icon="logout"
+            >logout</span
+          >
+          <span>Logout</span>
+        </a>
+      </div>
+    </aside>
+    <!-- Main Content Area -->
+    <main class="ml-64 min-h-screen relative">
+      <!-- TopNavBar (Shared Component) -->
+      <header
+        class="flex justify-between items-center px-8 h-16 w-full docked full-width top-0 sticky z-50 bg-[#f9f9f6] dark:bg-stone-950/80 backdrop-blur-md shadow-sm dark:shadow-none no-border tonal-shift bg-stone-100/50 dark:bg-stone-900/50"
+      >
+        <div class="flex items-center gap-4 flex-1">
+          <div class="relative w-full max-w-md group">
+            <span
+              class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline opacity-50"
+              data-icon="search"
+              >search</span
+            >
+            <input
+              class="w-full pl-10 pr-4 py-2 bg-surface-container-highest/50 border-none rounded-full text-sm focus:ring-0 focus:border-primary transition-all"
+              placeholder="Tìm mã phiếu hoặc chi nhánh..."
+              type="text"
+            />
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <button
+            class="p-2 text-stone-500 dark:text-stone-400 hover:bg-stone-200/50 dark:hover:bg-stone-800/50 rounded-full transition-colors"
+          >
+            <span class="material-symbols-outlined" data-icon="notifications"
+              >notifications</span
+            >
+          </button>
+          <button
+            class="p-2 text-stone-500 dark:text-stone-400 hover:bg-stone-200/50 dark:hover:bg-stone-800/50 rounded-full transition-colors"
+          >
+            <span class="material-symbols-outlined" data-icon="settings"
+              >settings</span
+            >
+          </button>
+          <div
+            class="h-8 w-8 rounded-full overflow-hidden bg-surface-container"
+          >
+            <img
+              alt="Manager Profile"
+              class="h-full w-full object-cover"
+              data-alt="professional portrait of a restaurant manager in a clean kitchen environment"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBVC6D5owXkXwrexzoKeVrzRExw_K_Ap8HLt78jvz8Fu5tTx1TIQQpoknDxJUfWIgPMMURK2zUvG-QFn8nvexpBQ3HAVbqN59nKm-q5rxg0Y2fUjcIcHZ1z2TgajWxWWmV4INST3bPaSwVsKQSWKdFU9UCGBN6fuUzUoQmIcx8h2kN3lxo6bhtekTXuqu57RYVA6WcjiF_Smyi0yCAeYYe0lYXltwKe-o-eUHfTHcrPJGWejjhe6l4kiiV02BjxVwExZnAzRc37vQdW"
+            />
+          </div>
+        </div>
+      </header>
+      <section class="p-8 max-w-7xl mx-auto space-y-8">
+        <!-- Page Header & Stats -->
+        <div
+          class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4"
+        >
+          <div>
+            <h2 class="text-3xl font-black tracking-tight text-on-surface">
+              Phiếu Kiểm kê
+            </h2>
+            <p class="text-on-surface-variant mt-1 opacity-80">
+              Quản lý và theo dõi các đợt kiểm kê hàng hóa định kỳ.
+            </p>
+          </div>
+          <div class="flex gap-3">
+            <div
+              class="px-4 py-2 bg-surface-container-low rounded-xl flex items-center gap-3"
+            >
+              <div
+                class="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center"
+              >
+                <span
+                  class="material-symbols-outlined text-tertiary"
+                  data-icon="pending_actions"
+                  >pending_actions</span
+                >
+              </div>
+              <div>
+                <p
+                  class="text-[10px] font-bold uppercase tracking-wider text-outline"
+                >
+                  Đang thực hiện
+                </p>
+                <p class="text-lg font-bold leading-none">04</p>
+              </div>
+            </div>
+            <div
+              class="px-4 py-2 bg-surface-container-low rounded-xl flex items-center gap-3"
+            >
+              <div
+                class="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center"
+              >
+                <span
+                  class="material-symbols-outlined text-secondary"
+                  data-icon="task_alt"
+                  >task_alt</span
+                >
+              </div>
+              <div>
+                <p
+                  class="text-[10px] font-bold uppercase tracking-wider text-outline"
+                >
+                  Đã hoàn thành
+                </p>
+                <p class="text-lg font-bold leading-none">128</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Filters Bar -->
+        <div
+          class="flex flex-wrap items-center justify-between gap-4 p-4 bg-surface-container-lowest rounded-2xl shadow-sm"
+        >
+          <div class="flex items-center gap-4">
+            <div
+              class="flex items-center gap-2 px-3 py-1.5 bg-surface-container-low rounded-lg border-b-2 border-primary/20"
+            >
+              <span
+                class="text-xs font-bold text-outline uppercase tracking-tight"
+                >Trạng thái</span
+              >
+              <select
+                class="bg-transparent border-none text-sm font-semibold p-0 pr-8 focus:ring-0"
+              >
+                <option>Tất cả</option>
+                <option>In Progress</option>
+                <option>Completed</option>
+              </select>
+            </div>
+            <div
+              class="flex items-center gap-2 px-3 py-1.5 bg-surface-container-low rounded-lg border-b-2 border-primary/20"
+            >
+              <span
+                class="text-xs font-bold text-outline uppercase tracking-tight"
+                >Chi nhánh</span
+              >
+              <select
+                class="bg-transparent border-none text-sm font-semibold p-0 pr-8 focus:ring-0"
+              >
+                <option>Tất cả chi nhánh</option>
+                <option>District 1 Branch</option>
+                <option>District 3 Branch</option>
+                <option>District 7 Branch</option>
+              </select>
+            </div>
+          </div>
+          <button
+            class="flex items-center gap-2 text-sm font-bold text-primary hover:bg-primary/5 px-4 py-2 rounded-lg transition-colors"
+          >
+            <span
+              class="material-symbols-outlined text-lg"
+              data-icon="filter_list"
+              >filter_list</span
+            >
+            Lọc nâng cao
+          </button>
+        </div>
+        <!-- Stocktake List Table (Asymmetric Bento-like logic) -->
+        <div
+          class="bg-surface-container-lowest rounded-3xl shadow-[0_12px_40px_-12px_rgba(89,66,56,0.08)] overflow-hidden"
+        >
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-surface-container-low/50">
+                  <th
+                    class="px-6 py-4 text-xs font-black uppercase tracking-widest text-outline"
+                  >
+                    Mã phiên
+                  </th>
+                  <th
+                    class="px-6 py-4 text-xs font-black uppercase tracking-widest text-outline"
+                  >
+                    Chi nhánh
+                  </th>
+                  <th
+                    class="px-6 py-4 text-xs font-black uppercase tracking-widest text-outline text-center"
+                  >
+                    Trạng thái
+                  </th>
+                  <th
+                    class="px-6 py-4 text-xs font-black uppercase tracking-widest text-outline"
+                  >
+                    Bắt đầu
+                  </th>
+                  <th
+                    class="px-6 py-4 text-xs font-black uppercase tracking-widest text-outline"
+                  >
+                    Hoàn thành
+                  </th>
+                  <th
+                    class="px-6 py-4 text-xs font-black uppercase tracking-widest text-outline"
+                  >
+                    Tiến độ
+                  </th>
+                  <th
+                    class="px-6 py-4 text-xs font-black uppercase tracking-widest text-outline"
+                  ></th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-outline-variant/15">
+                <!-- Row 1: In Progress -->
+                <tr
+                  class="hover:bg-surface-container-low/30 transition-colors group"
+                >
+                  <td class="px-6 py-5">
+                    <span class="font-mono text-sm font-bold text-primary"
+                      >KK-20231024-001</span
+                    >
+                  </td>
+                  <td class="px-6 py-5">
+                    <div class="flex flex-col">
+                      <span class="text-sm font-bold">District 1 Branch</span>
+                      <span class="text-[10px] text-outline"
+                        >Quản lý: Minh Trần</span
+                      >
+                    </div>
+                  </td>
+                  <td class="px-6 py-5 text-center">
+                    <span
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-tertiary-fixed text-on-tertiary-fixed-variant"
+                    >
+                      In Progress
+                    </span>
+                  </td>
+                  <td class="px-6 py-5">
+                    <span class="text-sm tabular-nums">24/10/2023 08:30</span>
+                  </td>
+                  <td class="px-6 py-5">
+                    <span class="text-sm text-outline italic"
+                      >Dự kiến: 18:00</span
+                    >
+                  </td>
+                  <td class="px-6 py-5 min-w-[140px]">
+                    <div class="flex flex-col gap-1">
+                      <div
+                        class="flex justify-between text-[10px] font-bold text-outline"
+                      >
+                        <span>65%</span>
+                        <span>45/70 items</span>
+                      </div>
+                      <div
+                        class="w-full bg-surface-container-high rounded-full h-1.5 overflow-hidden"
+                      >
+                        <div
+                          class="bg-tertiary h-full rounded-full"
+                          style="width: 65%"
+                        ></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-5 text-right">
+                    <button
+                      class="opacity-0 group-hover:opacity-100 p-2 hover:bg-primary/10 text-primary rounded-lg transition-all"
+                    >
+                      <span
+                        class="material-symbols-outlined"
+                        data-icon="arrow_forward"
+                        >arrow_forward</span
+                      >
+                    </button>
+                  </td>
+                </tr>
+                <!-- Row 2: Completed -->
+                <tr
+                  class="hover:bg-surface-container-low/30 transition-colors group"
+                >
+                  <td class="px-6 py-5">
+                    <span class="font-mono text-sm font-bold text-primary"
+                      >KK-20231020-042</span
+                    >
+                  </td>
+                  <td class="px-6 py-5">
+                    <div class="flex flex-col">
+                      <span class="text-sm font-bold">District 3 Branch</span>
+                      <span class="text-[10px] text-outline"
+                        >Quản lý: Vy Nguyễn</span
+                      >
+                    </div>
+                  </td>
+                  <td class="px-6 py-5 text-center">
+                    <span
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-secondary-container text-on-secondary-container"
+                    >
+                      Completed
+                    </span>
+                  </td>
+                  <td class="px-6 py-5">
+                    <span class="text-sm tabular-nums">20/10/2023 14:00</span>
+                  </td>
+                  <td class="px-6 py-5">
+                    <span class="text-sm tabular-nums">20/10/2023 16:45</span>
+                  </td>
+                  <td class="px-6 py-5 min-w-[140px]">
+                    <div class="flex flex-col gap-1">
+                      <div
+                        class="flex justify-between text-[10px] font-bold text-secondary"
+                      >
+                        <span>100%</span>
+                        <span>112/112 items</span>
+                      </div>
+                      <div
+                        class="w-full bg-surface-container-high rounded-full h-1.5 overflow-hidden"
+                      >
+                        <div
+                          class="bg-secondary h-full rounded-full"
+                          style="width: 100%"
+                        ></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-5 text-right">
+                    <button
+                      class="opacity-0 group-hover:opacity-100 p-2 hover:bg-primary/10 text-primary rounded-lg transition-all"
+                    >
+                      <span
+                        class="material-symbols-outlined"
+                        data-icon="arrow_forward"
+                        >arrow_forward</span
+                      >
+                    </button>
+                  </td>
+                </tr>
+                <!-- Row 3: Completed -->
+                <tr
+                  class="hover:bg-surface-container-low/30 transition-colors group"
+                >
+                  <td class="px-6 py-5">
+                    <span class="font-mono text-sm font-bold text-primary"
+                      >KK-20231018-091</span
+                    >
+                  </td>
+                  <td class="px-6 py-5">
+                    <div class="flex flex-col">
+                      <span class="text-sm font-bold">District 1 Branch</span>
+                      <span class="text-[10px] text-outline"
+                        >Quản lý: Minh Trần</span
+                      >
+                    </div>
+                  </td>
+                  <td class="px-6 py-5 text-center">
+                    <span
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-secondary-container text-on-secondary-container"
+                    >
+                      Completed
+                    </span>
+                  </td>
+                  <td class="px-6 py-5">
+                    <span class="text-sm tabular-nums">18/10/2023 09:15</span>
+                  </td>
+                  <td class="px-6 py-5">
+                    <span class="text-sm tabular-nums">18/10/2023 11:30</span>
+                  </td>
+                  <td class="px-6 py-5 min-w-[140px]">
+                    <div class="flex flex-col gap-1">
+                      <div
+                        class="flex justify-between text-[10px] font-bold text-secondary"
+                      >
+                        <span>100%</span>
+                        <span>94/94 items</span>
+                      </div>
+                      <div
+                        class="w-full bg-surface-container-high rounded-full h-1.5 overflow-hidden"
+                      >
+                        <div
+                          class="bg-secondary h-full rounded-full"
+                          style="width: 100%"
+                        ></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-5 text-right">
+                    <button
+                      class="opacity-0 group-hover:opacity-100 p-2 hover:bg-primary/10 text-primary rounded-lg transition-all"
+                    >
+                      <span
+                        class="material-symbols-outlined"
+                        data-icon="arrow_forward"
+                        >arrow_forward</span
+                      >
+                    </button>
+                  </td>
+                </tr>
+                <!-- Row 4: In Progress -->
+                <tr
+                  class="hover:bg-surface-container-low/30 transition-colors group"
+                >
+                  <td class="px-6 py-5">
+                    <span class="font-mono text-sm font-bold text-primary"
+                      >KK-20231024-002</span
+                    >
+                  </td>
+                  <td class="px-6 py-5">
+                    <div class="flex flex-col">
+                      <span class="text-sm font-bold">District 7 Branch</span>
+                      <span class="text-[10px] text-outline"
+                        >Quản lý: Huy Lê</span
+                      >
+                    </div>
+                  </td>
+                  <td class="px-6 py-5 text-center">
+                    <span
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-tertiary-fixed text-on-tertiary-fixed-variant"
+                    >
+                      In Progress
+                    </span>
+                  </td>
+                  <td class="px-6 py-5">
+                    <span class="text-sm tabular-nums">24/10/2023 10:15</span>
+                  </td>
+                  <td class="px-6 py-5">
+                    <span class="text-sm text-outline italic"
+                      >Dự kiến: 15:30</span
+                    >
+                  </td>
+                  <td class="px-6 py-5 min-w-[140px]">
+                    <div class="flex flex-col gap-1">
+                      <div
+                        class="flex justify-between text-[10px] font-bold text-outline"
+                      >
+                        <span>12%</span>
+                        <span>15/125 items</span>
+                      </div>
+                      <div
+                        class="w-full bg-surface-container-high rounded-full h-1.5 overflow-hidden"
+                      >
+                        <div
+                          class="bg-tertiary h-full rounded-full"
+                          style="width: 12%"
+                        ></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-5 text-right">
+                    <button
+                      class="opacity-0 group-hover:opacity-100 p-2 hover:bg-primary/10 text-primary rounded-lg transition-all"
+                    >
+                      <span
+                        class="material-symbols-outlined"
+                        data-icon="arrow_forward"
+                        >arrow_forward</span
+                      >
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- Pagination -->
+          <div
+            class="px-6 py-4 flex items-center justify-between bg-surface-container-low/20"
+          >
+            <p class="text-xs text-outline font-medium">
+              Hiển thị 1-10 trên 132 phiếu kiểm kê
+            </p>
+            <div class="flex gap-2">
+              <button
+                class="p-2 hover:bg-surface-container-high rounded-lg text-outline disabled:opacity-30"
+                disabled=""
+              >
+                <span
+                  class="material-symbols-outlined text-lg"
+                  data-icon="chevron_left"
+                  >chevron_left</span
+                >
+              </button>
+              <div class="flex gap-1">
+                <button
+                  class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-on-primary text-xs font-bold"
+                >
+                  1
+                </button>
+                <button
+                  class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-high text-xs font-bold"
+                >
+                  2
+                </button>
+                <button
+                  class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-high text-xs font-bold"
+                >
+                  3
+                </button>
+              </div>
+              <button
+                class="p-2 hover:bg-surface-container-high rounded-lg text-outline"
+              >
+                <span
+                  class="material-symbols-outlined text-lg"
+                  data-icon="chevron_right"
+                  >chevron_right</span
+                >
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Contextual Insight Cards (Bento) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div
+            class="md:col-span-2 p-6 bg-primary-container/10 rounded-3xl flex items-center gap-6 relative overflow-hidden group"
+          >
+            <div class="z-10">
+              <h4 class="text-lg font-bold text-primary mb-2">
+                Tối ưu hóa quy trình kiểm kho
+              </h4>
+              <p class="text-sm text-on-surface-variant max-w-md">
+                Các đợt kiểm kê gần đây cho thấy sai số 2.4% ở nhóm hàng khô. Đề
+                xuất kiểm tra chéo tại chi nhánh Quận 1.
+              </p>
+              <button
+                class="mt-4 px-4 py-2 bg-primary text-on-primary text-xs font-bold rounded-lg shadow-sm"
+              >
+                Xem báo cáo sai lệch
+              </button>
+            </div>
+            <div
+              class="hidden lg:block absolute right-0 top-0 h-full w-1/3 opacity-20 group-hover:opacity-30 transition-opacity"
+            >
+              <img
+                class="h-full w-full object-cover grayscale"
+                data-alt="modern organized warehouse shelves with digital tracking interface elements overlay"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBS3w9YDB0vzWouXb_PnaN4mWkdEUtE6tSs2Mni2E9bZW6Z7gX9SfJHtYhgQsOvZ6AHvBGBOkF25numfLSyXIdmmiTp0MUq-eZCk3tJb2JC_PrRIu709lEwWda_F2X0N0KuKNqmxYBnkyK1YNKmL_IfnX5X5geJpXEjH1e1L1S_2DRdFm6USnR9U-GTqUDyNTsq7c4Zb8RMXDIiKUYDyfDn_v2LgOKvZuom2iCOILJhi54H97Fwttzf1z4ZtKzOW2KeHPsgd74c5qOB"
+              />
+            </div>
+          </div>
+          <div
+            class="p-6 bg-surface-container-lowest rounded-3xl border-b-4 border-secondary-container shadow-sm"
+          >
+            <div
+              class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center mb-4"
+            >
+              <span
+                class="material-symbols-outlined text-secondary"
+                data-icon="auto_awesome"
+                >auto_awesome</span
+              >
+            </div>
+            <h4 class="font-bold mb-1">Kiểm kê thông minh</h4>
+            <p class="text-xs text-on-surface-variant mb-4">
+              Sử dụng QR Code để tăng tốc độ kiểm kê lên đến 40%.
+            </p>
+            <a
+              class="text-xs font-black text-secondary uppercase tracking-widest border-b border-secondary/20 hover:border-secondary transition-all"
+              href="#"
+              >Tìm hiểu thêm</a
+            >
+          </div>
+        </div>
+      </section>
+      <!-- Floating Action Button (Optional contextual replacement) -->
+      <button
+        class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-on-primary rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform md:hidden"
+      >
+        <span class="material-symbols-outlined" data-icon="add">add</span>
+      </button>
+    </main>
+  </body>
+</html>

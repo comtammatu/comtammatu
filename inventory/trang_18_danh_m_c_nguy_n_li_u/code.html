@@ -1,0 +1,691 @@
+<!doctype html>
+
+<html class="light" lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              tertiary: "#006193",
+              secondary: "#2c694e",
+              "on-primary-container": "#fffbff",
+              background: "#f9f9f6",
+              "surface-container": "#eeeeeb",
+              "surface-container-low": "#f3f4f1",
+              "inverse-primary": "#ffb595",
+              "primary-fixed-dim": "#ffb595",
+              "outline-variant": "#e0c0b2",
+              "surface-container-high": "#e8e8e5",
+              surface: "#f9f9f6",
+              "on-tertiary-fixed-variant": "#004b73",
+              "on-secondary": "#ffffff",
+              "on-surface-variant": "#594238",
+              primary: "#9e3d00",
+              "on-primary-fixed-variant": "#7c2e00",
+              error: "#ba1a1a",
+              "on-primary": "#ffffff",
+              "secondary-fixed-dim": "#95d4b3",
+              "secondary-container": "#aeeecb",
+              "surface-dim": "#dadad7",
+              "tertiary-fixed-dim": "#92ccff",
+              "surface-tint": "#a23f00",
+              "on-tertiary": "#ffffff",
+              "tertiary-fixed": "#cce5ff",
+              "on-tertiary-fixed": "#001e31",
+              "inverse-surface": "#2f312f",
+              "tertiary-container": "#207ab3",
+              "on-tertiary-container": "#fdfcff",
+              "error-container": "#ffdad6",
+              outline: "#8c7166",
+              "on-secondary-fixed-variant": "#0e5138",
+              "on-error-container": "#93000a",
+              "surface-container-highest": "#e2e3e0",
+              "on-surface": "#1a1c1a",
+              "primary-fixed": "#ffdbcd",
+              "secondary-fixed": "#b1f0ce",
+              "primary-container": "#c64f00",
+              "on-background": "#1a1c1a",
+              "inverse-on-surface": "#f1f1ee",
+              "surface-variant": "#e2e3e0",
+              "on-error": "#ffffff",
+              "surface-bright": "#f9f9f6",
+              "on-primary-fixed": "#351000",
+              "on-secondary-fixed": "#002114",
+              "surface-container-lowest": "#ffffff",
+              "on-secondary-container": "#316e52",
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+            fontFamily: {
+              headline: ["Inter"],
+              body: ["Inter"],
+              label: ["Inter"],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+      .primary-gradient {
+        background: linear-gradient(135deg, #9e3d00 0%, #c64f00 100%);
+      }
+      .glass-nav {
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background font-body text-on-surface selection:bg-primary-fixed selection:text-on-primary-fixed"
+  >
+    <!-- Top Navigation Shell -->
+    <nav
+      class="fixed top-0 w-full z-50 bg-stone-50/80 dark:bg-stone-950/80 backdrop-blur-md shadow-sm shadow-stone-900/5 flex items-center justify-between px-6 h-16"
+    >
+      <div class="flex items-center gap-8">
+        <span
+          class="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-50"
+          >RiceOps</span
+        >
+        <div class="hidden md:flex items-center gap-6">
+          <a
+            class="text-stone-600 dark:text-stone-400 hover:bg-stone-200/50 dark:hover:bg-stone-800/50 transition-colors px-3 py-1 rounded-md text-sm font-medium"
+            href="#"
+            >Tổng quan</a
+          >
+          <a
+            class="text-orange-800 dark:text-orange-500 font-semibold px-3 py-1 rounded-md text-sm"
+            href="#"
+            >Quản trị</a
+          >
+          <a
+            class="text-stone-600 dark:text-stone-400 hover:bg-stone-200/50 dark:hover:bg-stone-800/50 transition-colors px-3 py-1 rounded-md text-sm font-medium"
+            href="#"
+            >Báo cáo</a
+          >
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <button
+          class="p-2 text-stone-600 hover:bg-stone-200/50 rounded-full transition-colors"
+        >
+          <span class="material-symbols-outlined" data-icon="notifications"
+            >notifications</span
+          >
+        </button>
+        <button
+          class="p-2 text-stone-600 hover:bg-stone-200/50 rounded-full transition-colors"
+        >
+          <span class="material-symbols-outlined" data-icon="settings"
+            >settings</span
+          >
+        </button>
+        <div
+          class="h-8 w-8 rounded-full overflow-hidden border border-outline-variant"
+        >
+          <img
+            alt="Chef's Profile"
+            class="h-full w-full object-cover"
+            data-alt="Close up of a professional chef in white uniform with blurred kitchen background"
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCWHV134B8W4oqjfC3qBqbZIWQMM3ewsmUDBRJUIUOlJTsxjFq2diKDJ071nsFUNEXlsXpdkWZBQ1TfRJ3kzpHXFgrLtyab92MLuqTNmiMGhkqJVzYOpVOgMjL9VkjlXOQAgOcyLjMmqXYvCBZhQO4Uvc_ypqxCmcOw3XIL_j0iQkjLoL06caL_UCFBacaJUjtZoj5kwsMmhs0e15i0yfecatk9OKvj2T8Np7OJSqqA_PSVUxOf0Y3fK03ftsoN37V_AN_CexSnzzxB"
+          />
+        </div>
+      </div>
+    </nav>
+    <!-- Side Navigation Shell -->
+    <aside
+      class="h-screen w-64 fixed left-0 top-0 z-40 bg-stone-100/90 dark:bg-stone-900/90 backdrop-blur-lg shadow-xl shadow-stone-950/10 flex flex-col h-full pt-20 pb-6 px-4"
+    >
+      <div class="mb-8 px-4">
+        <h2
+          class="text-lg font-black text-stone-800 dark:text-stone-200 tracking-tight"
+        >
+          The Culinary Ledger
+        </h2>
+        <p
+          class="text-[10px] uppercase tracking-[0.2em] text-outline font-bold"
+        >
+          Master Data Management
+        </p>
+      </div>
+      <nav class="flex-1 space-y-1">
+        <a
+          class="flex items-center gap-3 px-4 py-3 text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:translate-x-1 transition-all"
+          href="#"
+        >
+          <span class="material-symbols-outlined" data-icon="dashboard"
+            >dashboard</span
+          >
+          <span class="text-sm font-medium Inter tracking-wide">Dashboard</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-4 py-3 bg-stone-200/50 dark:bg-stone-800/50 text-orange-800 dark:text-orange-400 rounded-lg font-bold"
+          href="#"
+        >
+          <span class="material-symbols-outlined" data-icon="egg_alt"
+            >egg_alt</span
+          >
+          <span class="text-sm font-medium Inter tracking-wide"
+            >Ingredients</span
+          >
+        </a>
+        <a
+          class="flex items-center gap-3 px-4 py-3 text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:translate-x-1 transition-all"
+          href="#"
+        >
+          <span class="material-symbols-outlined" data-icon="menu_book"
+            >menu_book</span
+          >
+          <span class="text-sm font-medium Inter tracking-wide">Recipes</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-4 py-3 text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:translate-x-1 transition-all"
+          href="#"
+        >
+          <span class="material-symbols-outlined" data-icon="inventory_2"
+            >inventory_2</span
+          >
+          <span class="text-sm font-medium Inter tracking-wide">Inventory</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-4 py-3 text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:translate-x-1 transition-all"
+          href="#"
+        >
+          <span class="material-symbols-outlined" data-icon="local_shipping"
+            >local_shipping</span
+          >
+          <span class="text-sm font-medium Inter tracking-wide">Suppliers</span>
+        </a>
+      </nav>
+      <div class="pt-6 mt-6 border-t border-stone-200/30 space-y-1">
+        <a
+          class="flex items-center gap-3 px-4 py-3 text-stone-600 dark:text-stone-400 hover:text-stone-900 transition-all"
+          href="#"
+        >
+          <span class="material-symbols-outlined" data-icon="help">help</span>
+          <span class="text-sm font-medium Inter tracking-wide">Support</span>
+        </a>
+        <a
+          class="flex items-center gap-3 px-4 py-3 text-stone-600 dark:text-stone-400 hover:text-stone-900 transition-all"
+          href="#"
+        >
+          <span class="material-symbols-outlined" data-icon="logout"
+            >logout</span
+          >
+          <span class="text-sm font-medium Inter tracking-wide">Sign Out</span>
+        </a>
+      </div>
+    </aside>
+    <!-- Main Content -->
+    <main class="ml-64 pt-24 px-8 pb-12">
+      <header
+        class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10"
+      >
+        <div>
+          <nav
+            class="flex items-center gap-2 text-outline text-xs mb-3 font-medium uppercase tracking-widest"
+          >
+            <span>Admin</span>
+            <span class="material-symbols-outlined text-[14px]"
+              >chevron_right</span
+            >
+            <span>Inventory</span>
+            <span class="material-symbols-outlined text-[14px]"
+              >chevron_right</span
+            >
+            <span class="text-on-surface">Settings</span>
+          </nav>
+          <h1
+            class="text-4xl font-extrabold tracking-tighter text-on-surface mb-2"
+          >
+            Danh mục Nguyên liệu
+          </h1>
+          <p class="text-on-surface-variant max-w-2xl">
+            Quản lý định nghĩa cơ sở cho toàn bộ hệ thống kho và sản xuất của
+            Cơm Tấm Má Tư.
+          </p>
+        </div>
+        <button
+          class="primary-gradient text-on-primary px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+        >
+          <span class="material-symbols-outlined">add_circle</span>
+          Tạo nguyên liệu
+        </button>
+      </header>
+      <!-- Search & Filter Bar -->
+      <section
+        class="bg-surface-container-low rounded-2xl p-4 mb-8 flex flex-wrap items-center gap-4"
+      >
+        <div class="flex-1 min-w-[300px] relative">
+          <span
+            class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline"
+            >search</span
+          >
+          <input
+            class="w-full pl-12 pr-4 py-3 bg-surface-container-highest border-none rounded-xl focus:ring-0 focus:border-b-2 focus:border-primary transition-all text-sm placeholder:text-outline"
+            placeholder="Tìm kiếm theo tên hoặc SKU..."
+            type="text"
+          />
+        </div>
+        <div class="flex items-center gap-3">
+          <select
+            class="bg-surface-container-highest border-none rounded-xl px-4 py-3 text-sm font-medium focus:ring-0 text-on-surface-variant min-w-[140px]"
+          >
+            <option>Tất cả loại</option>
+            <option>Thịt</option>
+            <option>Rau củ</option>
+            <option>Gia vị</option>
+            <option>Gạo</option>
+          </select>
+          <select
+            class="bg-surface-container-highest border-none rounded-xl px-4 py-3 text-sm font-medium focus:ring-0 text-on-surface-variant min-w-[140px]"
+          >
+            <option>Mọi bảo quản</option>
+            <option>Mát</option>
+            <option>Đông</option>
+            <option>Khô</option>
+          </select>
+          <button
+            class="bg-surface-container-highest p-3 rounded-xl hover:bg-surface-container-high transition-colors"
+          >
+            <span class="material-symbols-outlined text-on-surface-variant"
+              >filter_list</span
+            >
+          </button>
+        </div>
+      </section>
+      <!-- Inventory Table (High-End Asymmetric Design) -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-separate border-spacing-y-3">
+          <thead>
+            <tr
+              class="text-outline uppercase text-[10px] font-bold tracking-[0.15em] px-4"
+            >
+              <th class="pb-4 pl-6">Thông tin nguyên liệu</th>
+              <th class="pb-4">SKU / Phân loại</th>
+              <th class="pb-4">Đơn vị</th>
+              <th class="pb-4">Bảo quản</th>
+              <th class="pb-4">Giá tham chiếu</th>
+              <th class="pb-4">Ngưỡng tồn (Min/Max/Re)</th>
+              <th class="pb-4 pr-6 text-right">Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody class="space-y-4">
+            <!-- Row 1 -->
+            <tr
+              class="group hover:scale-[1.005] transition-transform duration-200"
+            >
+              <td
+                class="bg-surface-container-lowest rounded-l-2xl py-5 pl-6 border-l-4 border-secondary"
+              >
+                <div class="flex items-center gap-4">
+                  <div
+                    class="h-12 w-12 bg-secondary-container/30 text-secondary rounded-xl flex items-center justify-center"
+                  >
+                    <span
+                      class="material-symbols-outlined"
+                      data-icon="restaurant"
+                      >restaurant</span
+                    >
+                  </div>
+                  <div>
+                    <p class="font-bold text-on-surface leading-tight">
+                      Sườn non heo
+                    </p>
+                    <p class="text-[11px] text-outline font-medium">
+                      Cập nhật 2 giờ trước
+                    </p>
+                  </div>
+                </div>
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <p class="text-xs font-mono font-bold text-primary">
+                  MEAT-SN-001
+                </p>
+                <span
+                  class="inline-block px-2 py-0.5 bg-stone-100 text-stone-600 rounded text-[10px] font-bold uppercase mt-1"
+                  >Thịt tươi</span
+                >
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <span class="text-sm font-semibold">Kilogram (kg)</span>
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <div class="flex items-center gap-2">
+                  <div class="w-2 h-2 rounded-full bg-tertiary"></div>
+                  <span class="text-sm font-medium text-tertiary"
+                    >Mát (0-4°C)</span
+                  >
+                </div>
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <p class="font-bold text-sm">185.000đ</p>
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="bg-error-container text-on-error-container px-2 py-0.5 rounded text-[10px] font-bold"
+                    >20</span
+                  >
+                  <span
+                    class="bg-surface-container text-on-surface-variant px-2 py-0.5 rounded text-[10px] font-bold"
+                    >100</span
+                  >
+                  <span
+                    class="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded text-[10px] font-bold"
+                    >35</span
+                  >
+                </div>
+              </td>
+              <td
+                class="bg-surface-container-lowest py-5 pr-6 rounded-r-2xl text-right"
+              >
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input checked="" class="sr-only peer" type="checkbox" />
+                  <div
+                    class="w-11 h-6 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary"
+                  ></div>
+                </label>
+              </td>
+            </tr>
+            <!-- Row 2 -->
+            <tr
+              class="group hover:scale-[1.005] transition-transform duration-200"
+            >
+              <td
+                class="bg-surface-container-lowest rounded-l-2xl py-5 pl-6 border-l-4 border-primary"
+              >
+                <div class="flex items-center gap-4">
+                  <div
+                    class="h-12 w-12 bg-primary-fixed/30 text-primary rounded-xl flex items-center justify-center"
+                  >
+                    <span class="material-symbols-outlined" data-icon="eco"
+                      >eco</span
+                    >
+                  </div>
+                  <div>
+                    <p class="font-bold text-on-surface leading-tight">
+                      Gạo ST25 (Lúa tôm)
+                    </p>
+                    <p class="text-[11px] text-outline font-medium">
+                      Cập nhật hôm qua
+                    </p>
+                  </div>
+                </div>
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <p class="text-xs font-mono font-bold text-primary">
+                  RICE-ST25-02
+                </p>
+                <span
+                  class="inline-block px-2 py-0.5 bg-stone-100 text-stone-600 rounded text-[10px] font-bold uppercase mt-1"
+                  >Gạo</span
+                >
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <span class="text-sm font-semibold">Túi (25kg)</span>
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <div class="flex items-center gap-2">
+                  <div class="w-2 h-2 rounded-full bg-stone-400"></div>
+                  <span class="text-sm font-medium text-stone-600"
+                    >Khô (Nhiệt độ phòng)</span
+                  >
+                </div>
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <p class="font-bold text-sm">850.000đ</p>
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="bg-surface-container text-on-surface-variant px-2 py-0.5 rounded text-[10px] font-bold"
+                    >10</span
+                  >
+                  <span
+                    class="bg-surface-container text-on-surface-variant px-2 py-0.5 rounded text-[10px] font-bold"
+                    >50</span
+                  >
+                  <span
+                    class="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded text-[10px] font-bold"
+                    >15</span
+                  >
+                </div>
+              </td>
+              <td
+                class="bg-surface-container-lowest py-5 pr-6 rounded-r-2xl text-right"
+              >
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input checked="" class="sr-only peer" type="checkbox" />
+                  <div
+                    class="w-11 h-6 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary"
+                  ></div>
+                </label>
+              </td>
+            </tr>
+            <!-- Row 3 -->
+            <tr
+              class="group hover:scale-[1.005] transition-transform duration-200"
+            >
+              <td
+                class="bg-surface-container-lowest rounded-l-2xl py-5 pl-6 border-l-4 border-orange-200"
+              >
+                <div class="flex items-center gap-4">
+                  <div
+                    class="h-12 w-12 bg-primary-fixed/30 text-primary rounded-xl flex items-center justify-center"
+                  >
+                    <span class="material-symbols-outlined" data-icon="egg"
+                      >egg</span
+                    >
+                  </div>
+                  <div>
+                    <p class="font-bold text-on-surface leading-tight">
+                      Mỡ heo miếng
+                    </p>
+                    <p class="text-[11px] text-outline font-medium">
+                      Cập nhật 3 ngày trước
+                    </p>
+                  </div>
+                </div>
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <p class="text-xs font-mono font-bold text-primary">
+                  FAT-PORK-01
+                </p>
+                <span
+                  class="inline-block px-2 py-0.5 bg-stone-100 text-stone-600 rounded text-[10px] font-bold uppercase mt-1"
+                  >Gia vị/Mỡ</span
+                >
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <span class="text-sm font-semibold">Kilogram (kg)</span>
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <div class="flex items-center gap-2">
+                  <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                  <span class="text-sm font-medium text-blue-600"
+                    >Đông (-18°C)</span
+                  >
+                </div>
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <p class="font-bold text-sm">45.000đ</p>
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="bg-surface-container text-on-surface-variant px-2 py-0.5 rounded text-[10px] font-bold"
+                    >5</span
+                  >
+                  <span
+                    class="bg-surface-container text-on-surface-variant px-2 py-0.5 rounded text-[10px] font-bold"
+                    >30</span
+                  >
+                  <span
+                    class="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded text-[10px] font-bold"
+                    >10</span
+                  >
+                </div>
+              </td>
+              <td
+                class="bg-surface-container-lowest py-5 pr-6 rounded-r-2xl text-right"
+              >
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input class="sr-only peer" type="checkbox" />
+                  <div
+                    class="w-11 h-6 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary"
+                  ></div>
+                </label>
+              </td>
+            </tr>
+            <!-- Row 4 -->
+            <tr
+              class="group hover:scale-[1.005] transition-transform duration-200"
+            >
+              <td
+                class="bg-surface-container-lowest rounded-l-2xl py-5 pl-6 border-l-4 border-secondary"
+              >
+                <div class="flex items-center gap-4">
+                  <div
+                    class="h-12 w-12 bg-secondary-container/30 text-secondary rounded-xl flex items-center justify-center"
+                  >
+                    <span
+                      class="material-symbols-outlined"
+                      data-icon="nutrition"
+                      >nutrition</span
+                    >
+                  </div>
+                  <div>
+                    <p class="font-bold text-on-surface leading-tight">
+                      Hành lá sạch
+                    </p>
+                    <p class="text-[11px] text-outline font-medium">
+                      Cập nhật 5 giờ trước
+                    </p>
+                  </div>
+                </div>
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <p class="text-xs font-mono font-bold text-primary">
+                  VEG-HANA-001
+                </p>
+                <span
+                  class="inline-block px-2 py-0.5 bg-stone-100 text-stone-600 rounded text-[10px] font-bold uppercase mt-1"
+                  >Rau củ</span
+                >
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <span class="text-sm font-semibold">Kilogram (kg)</span>
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <div class="flex items-center gap-2">
+                  <div class="w-2 h-2 rounded-full bg-tertiary"></div>
+                  <span class="text-sm font-medium text-tertiary"
+                    >Mát (0-4°C)</span
+                  >
+                </div>
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <p class="font-bold text-sm">32.000đ</p>
+              </td>
+              <td class="bg-surface-container-lowest py-5">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="bg-error-container text-on-error-container px-2 py-0.5 rounded text-[10px] font-bold"
+                    >2</span
+                  >
+                  <span
+                    class="bg-surface-container text-on-surface-variant px-2 py-0.5 rounded text-[10px] font-bold"
+                    >15</span
+                  >
+                  <span
+                    class="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded text-[10px] font-bold"
+                    >5</span
+                  >
+                </div>
+              </td>
+              <td
+                class="bg-surface-container-lowest py-5 pr-6 rounded-r-2xl text-right"
+              >
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input checked="" class="sr-only peer" type="checkbox" />
+                  <div
+                    class="w-11 h-6 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary"
+                  ></div>
+                </label>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Pagination/Footer Stats -->
+      <footer class="mt-8 flex items-center justify-between">
+        <p class="text-sm text-outline font-medium">
+          Hiển thị <span class="text-on-surface font-bold">1-4</span> trên
+          <span class="text-on-surface font-bold">128</span> nguyên liệu
+        </p>
+        <div class="flex items-center gap-2">
+          <button
+            class="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest transition-colors"
+          >
+            <span class="material-symbols-outlined">chevron_left</span>
+          </button>
+          <button
+            class="w-10 h-10 flex items-center justify-center rounded-xl bg-primary text-on-primary font-bold"
+          >
+            1
+          </button>
+          <button
+            class="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest transition-colors"
+          >
+            2
+          </button>
+          <button
+            class="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest transition-colors"
+          >
+            3
+          </button>
+          <button
+            class="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest transition-colors"
+          >
+            <span class="material-symbols-outlined">chevron_right</span>
+          </button>
+        </div>
+      </footer>
+    </main>
+    <!-- Contextual FAB (Hidden on inventory detail view but visible on list) -->
+    <button
+      class="fixed bottom-8 right-8 md:hidden h-14 w-14 rounded-full primary-gradient text-on-primary shadow-2xl flex items-center justify-center z-50"
+    >
+      <span class="material-symbols-outlined">add</span>
+    </button>
+  </body>
+</html>
