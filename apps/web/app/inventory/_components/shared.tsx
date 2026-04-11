@@ -1,7 +1,35 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { useState } from "react";
+import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@comtammatu/ui";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@comtammatu/ui/components/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@comtammatu/ui/components/command";
+export type DocumentStatus =
+  | "draft"
+  | "confirmed"
+  | "sent"
+  | "in_transit"
+  | "received"
+  | "completed"
+  | "cancelled"
+  | "pending"
+  | "in_progress"
+  | "matched"
+  | "discrepancy"
+  | "approved"
+  | "overdue";
 
 // ----------------------------------------------------------------
 // StatCard — MD3 style: micro label top → value → trend bottom
@@ -19,7 +47,7 @@ export function StatCard({ label, value, trend }: StatCardProps) {
       style={{ backgroundColor: "var(--md-surface-lowest)" }}
     >
       <p
-        className="mb-2 text-xs font-medium uppercase tracking-wider"
+        className="text-xs font-medium uppercase tracking-wider mb-2"
         style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
       >
         {label}
@@ -46,9 +74,138 @@ export function StatCard({ label, value, trend }: StatCardProps) {
 }
 
 // ----------------------------------------------------------------
+// SearchableSelect — Popover + Command with search & scroll
+// ----------------------------------------------------------------
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+interface SearchableSelectProps {
+  options: SelectOption[];
+  value: string;
+  onValueChange: (value: string) => void;
+  placeholder?: string;
+  searchPlaceholder?: string;
+  emptyText?: string;
+  className?: string;
+  style?: React.CSSProperties;
+  /** Visual variant */
+  variant?: "default" | "ghost" | "pill";
+}
+
+export function SearchableSelect({
+  options,
+  value,
+  onValueChange,
+  placeholder = "Chọn...",
+  searchPlaceholder = "Tìm kiếm...",
+  emptyText = "Không tìm thấy.",
+  className,
+  style,
+  variant = "default",
+}: SearchableSelectProps) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.value === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          role="combobox"
+          aria-expanded={open}
+          className={cn(
+            "inline-flex items-center gap-1.5 text-sm font-semibold transition-colors",
+            variant === "default" &&
+              "rounded-xl border-none px-4 py-3 font-medium focus:outline-none focus:ring-0",
+            variant === "ghost" &&
+              "cursor-pointer border-none bg-transparent p-0 pr-1 focus:ring-0",
+            variant === "pill" &&
+              "rounded-lg border-none px-4 py-2 focus:outline-none focus:ring-0",
+            className,
+          )}
+          style={style}
+        >
+          <span className={cn(!selected && "opacity-60")}>
+            {selected?.label ?? placeholder}
+          </span>
+          <ChevronDown
+            className={cn(
+              "size-3.5 shrink-0 opacity-50 transition-transform",
+              open && "rotate-180",
+            )}
+          />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="p-0"
+        align="start"
+        style={{
+          width: "var(--radix-popover-trigger-width)",
+          minWidth: 220,
+          backgroundColor: "var(--md-surface-lowest)",
+          border:
+            "1px solid color-mix(in srgb, var(--md-outline-variant) 20%, transparent)",
+          borderRadius: "0.75rem",
+        }}
+      >
+        <Command
+          className="bg-transparent"
+          filter={(value, search) => {
+            const opt = options.find((o) => o.value === value);
+            if (!opt) return 0;
+            return opt.label.toLowerCase().includes(search.toLowerCase())
+              ? 1
+              : 0;
+          }}
+        >
+          <CommandInput
+            placeholder={searchPlaceholder}
+            className="h-10 bg-transparent text-sm focus:ring-0"
+          />
+          <CommandList style={{ maxHeight: 240 }}>
+            <CommandEmpty
+              className="py-4 text-center text-sm"
+              style={{ color: "var(--md-outline)" }}
+            >
+              {emptyText}
+            </CommandEmpty>
+            <CommandGroup className="p-1">
+              {options.map((option) => (
+                <CommandItem
+                  key={option.value}
+                  value={option.value}
+                  onSelect={(v) => {
+                    onValueChange(v);
+                    setOpen(false);
+                  }}
+                  className="cursor-pointer rounded-lg px-3 py-2 text-sm"
+                  style={{
+                    color: "var(--md-on-surface)",
+                  }}
+                >
+                  <span className="flex-1">{option.label}</span>
+                  {value === option.value && (
+                    <Check
+                      className="size-4 shrink-0"
+                      style={{ color: "var(--md-primary)" }}
+                    />
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// ----------------------------------------------------------------
 // StatusBadge — MD3 container colors
 // ----------------------------------------------------------------
-const STATUS_CONFIG: Record<string, { label: string; bg: string; fg: string }> =
+const statusConfig: Record<string, { label: string; bg: string; fg: string }> =
   {
     draft: {
       label: "Nháp",
@@ -60,18 +217,13 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; fg: string }> =
       bg: "var(--md-secondary-container)",
       fg: "var(--md-on-secondary-container)",
     },
-    confirmed_ship: {
-      label: "Xác nhận giao",
-      bg: "var(--md-secondary-container)",
-      fg: "var(--md-on-secondary-container)",
-    },
     sent: {
       label: "Đã gửi",
       bg: "var(--md-info-container)",
       fg: "var(--md-on-info-container)",
     },
     in_transit: {
-      label: "Đang vận chuyển",
+      label: "IN-TRANSIT",
       bg: "var(--md-secondary-container)",
       fg: "var(--md-secondary)",
     },
@@ -79,11 +231,6 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; fg: string }> =
       label: "Đã nhận",
       bg: "var(--md-secondary-container)",
       fg: "var(--md-on-secondary-container)",
-    },
-    partially_received: {
-      label: "Nhận 1 phần",
-      bg: "var(--md-warning-container)",
-      fg: "var(--md-on-warning-container)",
     },
     completed: {
       label: "Hoàn thành",
@@ -101,17 +248,17 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; fg: string }> =
       fg: "var(--md-primary)",
     },
     in_progress: {
-      label: "Đang thực hiện",
+      label: "In Progress",
       bg: "var(--md-info-container)",
       fg: "var(--md-on-info-container)",
     },
     matched: {
-      label: "Khớp",
+      label: "Matched",
       bg: "var(--md-secondary-container)",
       fg: "var(--md-secondary)",
     },
     discrepancy: {
-      label: "Chênh lệch",
+      label: "Discrepancy",
       bg: "var(--md-error-container)",
       fg: "var(--md-on-error-container)",
     },
@@ -140,21 +287,6 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; fg: string }> =
       bg: "var(--md-warning-container)",
       fg: "var(--md-on-warning-container)",
     },
-    unpaid: {
-      label: "Chưa thanh toán",
-      bg: "var(--md-error-container)",
-      fg: "var(--md-on-error-container)",
-    },
-    paid: {
-      label: "Đã thanh toán",
-      bg: "var(--md-secondary-container)",
-      fg: "var(--md-on-secondary-container)",
-    },
-    partial: {
-      label: "Thanh toán 1 phần",
-      bg: "var(--md-warning-container)",
-      fg: "var(--md-on-warning-container)",
-    },
     kitchen_use: {
       label: "Kitchen Use",
       bg: "var(--md-info-container)",
@@ -176,9 +308,9 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; fg: string }> =
       fg: "var(--md-secondary)",
     },
     low: {
-      label: "Sắp hết",
-      bg: "var(--md-warning-container)",
-      fg: "var(--md-on-warning-container)",
+      label: "HẾT HÀNG",
+      bg: "var(--md-error-container)",
+      fg: "var(--md-error)",
     },
     out: {
       label: "Hết hàng",
@@ -186,9 +318,9 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; fg: string }> =
       fg: "var(--md-error)",
     },
     over: {
-      label: "Vượt mức",
-      bg: "var(--md-info-container)",
-      fg: "var(--md-on-info-container)",
+      label: "SẮP HẾT",
+      bg: "var(--md-warning-container)",
+      fg: "var(--md-on-warning-container)",
     },
     active: {
       label: "Hoạt động",
@@ -209,7 +341,7 @@ export function StatusBadge({
   status: string;
   label?: string;
 }) {
-  const config = STATUS_CONFIG[status] ?? {
+  const config = statusConfig[status] ?? {
     label: status,
     bg: "var(--md-surface-high)",
     fg: "var(--md-on-surface-variant)",
@@ -253,163 +385,9 @@ export function PageHeader({ title, description, actions }: PageHeaderProps) {
         )}
       </div>
       {actions && (
-        <div className="mt-3 flex items-center gap-2 sm:mt-0">{actions}</div>
+        <div className="flex items-center gap-2 mt-3 sm:mt-0">{actions}</div>
       )}
     </div>
-  );
-}
-
-// ----------------------------------------------------------------
-// Simple Bar Chart (CSS-only)
-// ----------------------------------------------------------------
-interface BarChartData {
-  label: string;
-  values: { value: number; color: string }[];
-}
-
-export function SimpleBarChart({
-  data,
-  height = 160,
-}: {
-  data: BarChartData[];
-  height?: number;
-}) {
-  const maxValue = Math.max(
-    ...data.flatMap((d) => d.values.map((v) => v.value)),
-  );
-  const isLast = (i: number) => i === data.length - 1;
-  return (
-    <div
-      className="flex items-end gap-3 border-b px-4 pb-4"
-      style={{
-        height,
-        borderColor:
-          "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-      }}
-    >
-      {data.map((item, di) => (
-        <div
-          key={item.label}
-          className="group flex flex-1 flex-col items-center gap-1"
-        >
-          <div
-            className="flex w-full flex-col items-center justify-end gap-1"
-            style={{ height: height - 32 }}
-          >
-            {item.values.map((v, vi) => {
-              const pct = maxValue > 0 ? (v.value / maxValue) * 100 : 0;
-              return (
-                <div
-                  key={vi}
-                  className="w-full cursor-pointer transition-all duration-200"
-                  style={{
-                    height: `${String(pct)}%`,
-                    backgroundColor: isLast(di)
-                      ? v.color
-                      : `color-mix(in srgb, ${v.color} 25%, transparent)`,
-                    borderRadius:
-                      vi === 0
-                        ? "0.5rem 0.5rem 0 0"
-                        : vi === item.values.length - 1
-                          ? "0 0 0.5rem 0.5rem"
-                          : "0",
-                    minHeight: v.value > 0 ? 4 : 0,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = v.color;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = isLast(di)
-                      ? v.color
-                      : `color-mix(in srgb, ${v.color} 25%, transparent)`;
-                  }}
-                />
-              );
-            })}
-          </div>
-          <span
-            className="mt-2 text-xs"
-            style={{
-              color: "var(--md-on-surface-variant)",
-              opacity: isLast(di) ? 1 : 0.5,
-              fontWeight: isLast(di) ? 700 : 400,
-            }}
-          >
-            {item.label}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ----------------------------------------------------------------
-// Trend Sparkline (SVG)
-// ----------------------------------------------------------------
-export function TrendSparkline({
-  data,
-  width = 200,
-  height = 60,
-  color = "var(--md-primary)",
-  target,
-}: {
-  data: number[];
-  width?: number;
-  height?: number;
-  color?: string;
-  target?: number;
-}) {
-  if (data.length < 2) return null;
-  const min = Math.min(...data) * 0.9;
-  const max = Math.max(...data) * 1.1;
-  const range = max - min || 1;
-  const points = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * width;
-    const y = height - ((v - min) / range) * height;
-    return `${String(x)},${String(y)}`;
-  });
-  const targetY = target ? height - ((target - min) / range) * height : null;
-
-  const fillPath = `M${points.join(" L")} L${String(width)},${String(height)} L0,${String(height)} Z`;
-  const gradientId = `sparkline-gradient-${Math.random().toString(36).slice(2, 8)}`;
-
-  return (
-    <svg width={width} height={height} className="overflow-visible">
-      <defs>
-        <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor={color} stopOpacity={0.15} />
-          <stop offset="100%" stopColor={color} stopOpacity={0} />
-        </linearGradient>
-      </defs>
-      <path d={fillPath} fill={`url(#${gradientId})`} />
-      {targetY !== null && (
-        <line
-          x1={0}
-          y1={targetY}
-          x2={width}
-          y2={targetY}
-          stroke="var(--md-error)"
-          strokeWidth={1}
-          strokeDasharray="4 3"
-          opacity={0.5}
-        />
-      )}
-      <polyline
-        fill="none"
-        stroke={color}
-        strokeWidth={3}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        points={points.join(" ")}
-      />
-      {points.length > 0 &&
-        points
-          .filter((_, i) => i % 3 === 0 || i === points.length - 1)
-          .map((pt) => {
-            const [cx, cy] = pt.split(",").map(Number);
-            return <circle key={pt} cx={cx} cy={cy} r={4} fill={color} />;
-          })}
-    </svg>
   );
 }
 
@@ -481,7 +459,7 @@ export function TimelineStepper({ steps }: { steps: TimelineStep[] }) {
           </div>
           {i < steps.length - 1 && (
             <div
-              className="mx-2 h-1 w-12 rounded-full sm:w-20"
+              className="mx-2 h-1 w-12 sm:w-20 rounded-full"
               style={{
                 backgroundColor: step.completed
                   ? "var(--md-secondary)"
@@ -492,5 +470,165 @@ export function TimelineStepper({ steps }: { steps: TimelineStep[] }) {
         </div>
       ))}
     </div>
+  );
+}
+
+// ----------------------------------------------------------------
+// Simple Bar Chart (CSS-only)
+// ----------------------------------------------------------------
+interface BarChartData {
+  label: string;
+  values: { value: number; color: string }[];
+}
+
+export function SimpleBarChart({
+  data,
+  height = 160,
+}: {
+  data: BarChartData[];
+  height?: number;
+}) {
+  const maxValue = Math.max(
+    ...data.flatMap((d) => d.values.map((v) => v.value)),
+  );
+  const isLast = (i: number) => i === data.length - 1;
+  return (
+    <div
+      className="flex items-end gap-3 border-b px-4 pb-4"
+      style={{
+        height,
+        borderColor:
+          "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
+      }}
+    >
+      {data.map((item, di) => (
+        <div
+          key={item.label}
+          className="group flex flex-1 flex-col items-center gap-1"
+        >
+          {/* Stacked vertical bars (like mockup) */}
+          <div
+            className="flex w-full flex-col items-center justify-end gap-1"
+            style={{ height: height - 32 }}
+          >
+            {item.values.map((v, vi) => {
+              const pct = maxValue > 0 ? (v.value / maxValue) * 100 : 0;
+              return (
+                <div
+                  key={vi}
+                  className="w-full cursor-pointer transition-all duration-200"
+                  style={{
+                    height: `${pct}%`,
+                    backgroundColor: isLast(di)
+                      ? v.color
+                      : `color-mix(in srgb, ${v.color} 25%, transparent)`,
+                    borderRadius:
+                      vi === 0
+                        ? "0.5rem 0.5rem 0 0"
+                        : vi === item.values.length - 1
+                          ? "0 0 0.5rem 0.5rem"
+                          : "0",
+                    minHeight: v.value > 0 ? 4 : 0,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = v.color;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = isLast(di)
+                      ? v.color
+                      : `color-mix(in srgb, ${v.color} 25%, transparent)`;
+                  }}
+                />
+              );
+            })}
+          </div>
+          <span
+            className="mt-2 text-xs"
+            style={{
+              color: "var(--md-on-surface-variant)",
+              opacity: isLast(di) ? 1 : 0.5,
+              fontWeight: isLast(di) ? 700 : 400,
+            }}
+          >
+            {item.label}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------
+// Trend Sparkline (SVG)
+// ----------------------------------------------------------------
+export function TrendSparkline({
+  data,
+  width = 200,
+  height = 60,
+  color = "var(--md-primary)",
+  target,
+}: {
+  data: number[];
+  width?: number;
+  height?: number;
+  color?: string;
+  target?: number;
+}) {
+  if (data.length < 2) return null;
+  const min = Math.min(...data) * 0.9;
+  const max = Math.max(...data) * 1.1;
+  const range = max - min || 1;
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - ((v - min) / range) * height;
+    return `${x},${y}`;
+  });
+  const targetY = target ? height - ((target - min) / range) * height : null;
+
+  // Build closed path for gradient fill area
+  const fillPath = `M${points.join(" L")} L${width},${height} L0,${height} Z`;
+  const gradientId = `sparkline-gradient-${Math.random().toString(36).slice(2, 8)}`;
+
+  return (
+    <svg width={width} height={height} className="overflow-visible">
+      <defs>
+        <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor={color} stopOpacity={0.15} />
+          <stop offset="100%" stopColor={color} stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      {/* Gradient fill area */}
+      <path d={fillPath} fill={`url(#${gradientId})`} />
+      {/* Target line */}
+      {targetY !== null && (
+        <line
+          x1={0}
+          y1={targetY}
+          x2={width}
+          y2={targetY}
+          stroke="var(--md-error)"
+          strokeWidth={1}
+          strokeDasharray="4 3"
+          opacity={0.5}
+        />
+      )}
+      {/* Main line */}
+      <polyline
+        fill="none"
+        stroke={color}
+        strokeWidth={3}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={points.join(" ")}
+      />
+      {/* Data points at key positions */}
+      {points.length > 0 &&
+        points
+          .filter((_, i) => i % 3 === 0 || i === points.length - 1)
+          .map((pt) => {
+            const [cx, cy] = pt.split(",").map(Number);
+            return <circle key={pt} cx={cx} cy={cy} r={4} fill={color} />;
+          })}
+    </svg>
   );
 }

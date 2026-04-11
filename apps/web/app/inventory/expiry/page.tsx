@@ -1,36 +1,44 @@
-import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
 import { fetchExpiryAlerts } from "../actions";
-import { ExpiryListClient } from "./expiry-list-client";
-import type { BranchOption, ExpiryAlertRow } from "../page";
+import { formatDate } from "../_lib/format";
+import { ExpiryClient } from "./expiry-client";
+import type { ExpiryAlertRow } from "./expiry-client";
 
 export default async function ExpiryPage() {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const claims = session?.user
-    ? extractClaims(session.user.app_metadata)
-    : null;
-
-  const [alertsRes, branchesRes] = await Promise.all([
-    fetchExpiryAlerts(),
-    supabase.from("branches").select("id, name, is_active").order("name"),
-  ]);
-
-  const alerts: ExpiryAlertRow[] = alertsRes.success
-    ? ((alertsRes.data ?? []) as ExpiryAlertRow[])
+  const res = await fetchExpiryAlerts();
+  const dbRows = res.success
+    ? (res.data as Array<Record<string, unknown>>)
     : [];
-  const branches: BranchOption[] = (branchesRes.data ?? []).filter(
-    (b) => b.is_active === true,
-  ) as BranchOption[];
 
-  return (
-    <ExpiryListClient
-      initial={alerts}
-      branches={branches}
-      userRole={claims?.user_role ?? "branch_manager"}
-      userBranchId={claims?.branch_id ?? null}
-    />
-  );
+  const alerts: ExpiryAlertRow[] = dbRows.map((row) => {
+    const expiryDate = row.expiry_date as string | null;
+    let daysLeft = 0;
+    let urgency = "warning";
+
+    if (expiryDate) {
+      const now = new Date();
+      const expiry = new Date(expiryDate);
+      daysLeft = Math.ceil(
+        (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+      );
+      if (daysLeft <= 0) urgency = "expired";
+      else if (daysLeft <= 3) urgency = "critical";
+      else urgency = "warning";
+    }
+
+    return {
+      id: row.id as number,
+      ingredientName:
+        ((row.ingredients as Record<string, unknown>)?.name as string) ?? "—",
+      lot: (row.lot_number as string) ?? "—",
+      expiryDate: expiryDate ? formatDate(expiryDate) : "—",
+      daysLeft,
+      urgency,
+      grnCode:
+        ((row.grns as Record<string, unknown>)?.grn_number as string) ?? "—",
+      branchName:
+        ((row.branches as Record<string, unknown>)?.name as string) ?? "—",
+    };
+  });
+
+  return <ExpiryClient alerts={alerts} />;
 }

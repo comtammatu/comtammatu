@@ -1,1136 +1,511 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Loader2 } from "lucide-react";
-import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
+  FileDown,
+  BarChart3,
+  TrendingUp,
+  ArrowLeftRight,
+  Package,
+  Calendar,
+  Store,
+  ChevronDown,
+} from "lucide-react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@comtammatu/ui/components/tabs";
-import { toast } from "@comtammatu/ui/components/sonner";
-import { cn } from "@comtammatu/ui";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import {
-  fetchStockMovementReport,
-  fetchBranchMovementSummary,
-  fetchApAging,
-  fetchConsumptionVariance,
-} from "../report-actions";
-import type {
-  MovementReportRow,
-  BranchMovementSummaryRow,
-  ApAgingRow,
-  ConsumptionVarianceRow,
-} from "../report-actions";
-import { TableEmptyStateRow } from "../../admin/components/table-empty-state-row";
-import { StatusBadge } from "../_components/shared";
+  SimpleBarChart,
+  TrendSparkline,
+  PageHeader,
+} from "../_components/shared";
+import { formatVND } from "../_lib/format";
 
-/* ─── Helpers ─── */
-
-function defaultDateRange() {
-  const today = new Date();
-  const end = today.toISOString().slice(0, 10);
-  const start = new Date(today);
-  start.setDate(start.getDate() - 30);
-  return { start: start.toISOString().slice(0, 10), end };
-}
-
-function fmtNum(n: number) {
-  return n.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
-}
-
-function fmtMoney(n: number) {
-  return `${n.toLocaleString("vi-VN")} \u20AB`;
-}
-
-/* ─── Component ─── */
-
-interface BranchOption {
-  id: number;
+export type ApAgingItem = { range: string; amount: number };
+export type VarianceItem = {
   name: string;
-}
+  actual: string;
+  trend: "up" | "down";
+};
 
-export function ReportsClient({
-  branches,
-  defaultBranchId,
-}: {
-  branches: BranchOption[];
-  defaultBranchId: number | null;
-}) {
-  const defaults = defaultDateRange();
-  const [startDate, setStartDate] = useState(defaults.start);
-  const [endDate, setEndDate] = useState(defaults.end);
-  const [branchId, setBranchId] = useState(
-    defaultBranchId ? String(defaultBranchId) : "_all",
-  );
-  const [isPending, startTransition] = useTransition();
-  const isMobile = useIsMobile();
+export type ReportsProps = {
+  apAging: ApAgingItem[];
+  consumptionVariance: VarianceItem[];
+};
 
-  // Data states
-  const [movementRows, setMovementRows] = useState<MovementReportRow[]>([]);
-  const [branchSummary, setBranchSummary] = useState<
-    BranchMovementSummaryRow[]
-  >([]);
-  const [apAgingRows, setApAgingRows] = useState<ApAgingRow[]>([]);
-  const [varianceRows, setVarianceRows] = useState<ConsumptionVarianceRow[]>(
-    [],
-  );
-  const [activeTab, setActiveTab] = useState("movement");
-  const [loaded, setLoaded] = useState<Record<string, boolean>>({});
+// Static demo data — chart time-series not yet backed by DB
+const movementSummary = [
+  { month: "Th01", inbound: 85, outbound: 62, transfer: 28 },
+  { month: "Th02", inbound: 92, outbound: 78, transfer: 34 },
+  { month: "Th03", inbound: 78, outbound: 71, transfer: 31 },
+  { month: "Th04", inbound: 45, outbound: 38, transfer: 18 },
+];
+const foodCostTrend = [65, 62, 68, 64, 61, 58, 63, 60, 57, 55, 59, 56];
+const foodCostTarget = 60;
 
-  function loadReport(tab: string) {
-    startTransition(async () => {
-      try {
-        if (tab === "movement") {
-          const bId = branchId !== "_all" ? Number(branchId) : undefined;
-          const res = await fetchStockMovementReport({
-            startDate,
-            endDate,
-            branchId: bId,
-          });
-          if (!res.success) {
-            toast.error(res.error ?? "Không thể tải báo cáo");
-            return;
-          }
-          setMovementRows((res.data ?? []) as MovementReportRow[]);
-        } else if (tab === "branch") {
-          const res = await fetchBranchMovementSummary({
-            startDate,
-            endDate,
-          });
-          if (!res.success) {
-            toast.error(res.error ?? "Không thể tải báo cáo");
-            return;
-          }
-          setBranchSummary((res.data ?? []) as BranchMovementSummaryRow[]);
-        } else if (tab === "ap-aging") {
-          const res = await fetchApAging();
-          if (!res.success) {
-            toast.error(res.error ?? "Không thể tải báo cáo");
-            return;
-          }
-          setApAgingRows((res.data ?? []) as ApAgingRow[]);
-        } else if (tab === "variance") {
-          const bId = branchId !== "_all" ? Number(branchId) : undefined;
-          const res = await fetchConsumptionVariance({
-            startDate,
-            endDate,
-            branchId: bId,
-          });
-          if (!res.success) {
-            toast.error(res.error ?? "Không thể tải báo cáo");
-            return;
-          }
-          setVarianceRows((res.data ?? []) as ConsumptionVarianceRow[]);
-        }
-        setLoaded((prev) => ({ ...prev, [tab]: true }));
-      } catch {
-        toast.error("Lỗi khi tải báo cáo");
-      }
-    });
-  }
+export function ReportsClient({ apAging, consumptionVariance }: ReportsProps) {
+  const barChartData = movementSummary.map((m) => ({
+    label: m.month,
+    values: [
+      { value: m.inbound, color: "var(--md-primary)" },
+      { value: m.outbound, color: "var(--md-secondary)" },
+      { value: m.transfer, color: "var(--md-tertiary)" },
+    ],
+  }));
 
-  function handleTabChange(tab: string) {
-    setActiveTab(tab);
-  }
+  const maxAP = Math.max(...apAging.map((a) => a.amount), 1);
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
-      <div
-        className="rounded-2xl p-6 ambient-shadow"
-        style={{
-          backgroundColor: "var(--md-surface-lowest)",
-          border:
-            "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-        }}
-      >
-        <div
-          className={cn(
-            "flex items-end gap-4",
-            isMobile ? "flex-col items-stretch" : "flex-wrap",
-          )}
-        >
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="startDate"
-              style={{ color: "var(--md-on-surface-variant)" }}
-            >
-              Từ ngày
-            </Label>
-            <Input
-              id="startDate"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className={isMobile ? "w-full" : "w-40"}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label
-              htmlFor="endDate"
-              style={{ color: "var(--md-on-surface-variant)" }}
-            >
-              Đến ngày
-            </Label>
-            <Input
-              id="endDate"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className={isMobile ? "w-full" : "w-40"}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label style={{ color: "var(--md-on-surface-variant)" }}>
-              Chi nhánh
-            </Label>
-            <Select value={branchId} onValueChange={setBranchId}>
-              <SelectTrigger className={isMobile ? "w-full" : "w-48"}>
-                <SelectValue placeholder="Tất cả" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_all">Tất cả chi nhánh</SelectItem>
-                {branches.map((b) => (
-                  <SelectItem key={b.id} value={String(b.id)}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button
-            type="button"
-            onClick={() => loadReport(activeTab)}
-            disabled={isPending || !startDate || !endDate}
-            className={isMobile ? "w-full" : ""}
+      <PageHeader
+        title="Hệ thống Báo cáo"
+        description="Phân tích biến động kho, tiêu hao và hiệu quả vận hành chuỗi Cơm Tấm Má Tư."
+      />
+
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div
+            className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ambient-shadow"
+            style={{
+              backgroundColor: "var(--md-surface-lowest)",
+              border:
+                "1px solid color-mix(in srgb, var(--md-outline-variant) 30%, transparent)",
+            }}
           >
-            {isPending ? (
-              <>
-                <Loader2 className="mr-2 size-4 animate-spin" />
-                Đang tải...
-              </>
-            ) : (
-              "Xem báo cáo"
-            )}
-          </Button>
-          {activeTab === "ap-aging" && (
+            <Calendar
+              className="size-4"
+              style={{ color: "var(--md-primary)" }}
+            />
+            <span style={{ color: "var(--md-on-surface)" }}>Tháng này</span>
+            <ChevronDown
+              className="size-3.5"
+              style={{ color: "var(--md-outline)" }}
+            />
+          </div>
+          <div
+            className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ambient-shadow"
+            style={{
+              backgroundColor: "var(--md-surface-lowest)",
+              border:
+                "1px solid color-mix(in srgb, var(--md-outline-variant) 30%, transparent)",
+            }}
+          >
+            <Store className="size-4" style={{ color: "var(--md-primary)" }} />
+            <span style={{ color: "var(--md-on-surface)" }}>
+              Tất cả chi nhánh
+            </span>
+            <ChevronDown
+              className="size-3.5"
+              style={{ color: "var(--md-outline)" }}
+            />
+          </div>
+        </div>
+        <button
+          type="button"
+          className="flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold transition-all hover:opacity-90"
+          style={{
+            border: "2px solid var(--md-primary)",
+            color: "var(--md-primary)",
+            backgroundColor: "transparent",
+          }}
+        >
+          <FileDown className="size-4" />
+          Xuất CSV/Excel
+        </button>
+      </div>
+
+      {/* Dashboard Grid — 12 col asymmetric */}
+      <div className="grid grid-cols-12 gap-6">
+        {/* Stock Movement Summary — col-span-8 */}
+        <div
+          className="col-span-12 lg:col-span-8 flex flex-col rounded-2xl p-6 ambient-shadow"
+          style={{
+            backgroundColor: "var(--md-surface-lowest)",
+            border:
+              "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
+          }}
+        >
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div
+                className="flex size-10 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor:
+                    "color-mix(in srgb, var(--md-primary) 10%, transparent)",
+                }}
+              >
+                <BarChart3
+                  className="size-5"
+                  style={{ color: "var(--md-primary)" }}
+                />
+              </div>
+              <h3
+                className="text-lg font-bold"
+                style={{ color: "var(--md-on-surface)" }}
+              >
+                Stock Movement Summary
+              </h3>
+            </div>
+            <div className="flex items-center gap-4 text-xs font-medium">
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="size-3 rounded-full"
+                  style={{ backgroundColor: "var(--md-primary)" }}
+                />
+                <span style={{ color: "var(--md-on-surface-variant)" }}>
+                  Nhập kho
+                </span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="size-3 rounded-full"
+                  style={{ backgroundColor: "var(--md-secondary)" }}
+                />
+                <span style={{ color: "var(--md-on-surface-variant)" }}>
+                  Xuất kho
+                </span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="size-3 rounded-full"
+                  style={{ backgroundColor: "var(--md-tertiary)" }}
+                />
+                <span style={{ color: "var(--md-on-surface-variant)" }}>
+                  Luân chuyển
+                </span>
+              </span>
+            </div>
+          </div>
+          <div className="flex-1">
+            <SimpleBarChart data={barChartData} height={220} />
+          </div>
+          <div className="mt-4 flex items-center justify-between">
             <p
-              className="self-end pb-0.5 text-xs"
-              style={{ color: "var(--md-on-surface-variant)", opacity: 0.7 }}
+              className="text-sm"
+              style={{ color: "var(--md-on-surface-variant)" }}
             >
-              Công nợ NCC không lọc theo ngày / chi nhánh — hiển thị tất cả hoá
-              đơn chưa thanh toán.
+              Tăng{" "}
+              <span
+                className="font-bold"
+                style={{ color: "var(--md-secondary)" }}
+              >
+                +12.5%
+              </span>{" "}
+              so với tháng trước
             </p>
-          )}
+            <button
+              type="button"
+              className="flex items-center gap-1 text-sm font-bold hover:underline"
+              style={{ color: "var(--md-primary)" }}
+            >
+              Chi tiết
+            </button>
+          </div>
+        </div>
+
+        {/* Supplier AP Aging — col-span-4 */}
+        <div
+          className="col-span-12 lg:col-span-4 rounded-2xl p-6 ambient-shadow"
+          style={{
+            backgroundColor: "var(--md-surface-lowest)",
+            border:
+              "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
+          }}
+        >
+          <h3
+            className="mb-4 text-lg font-bold"
+            style={{ color: "var(--md-on-surface)" }}
+          >
+            Supplier AP Aging
+          </h3>
+          <div className="space-y-4">
+            {apAging.map((item, idx) => {
+              const isOverdue = idx === apAging.length - 1;
+              const barColor =
+                idx === 0
+                  ? "var(--md-secondary)"
+                  : idx === 1
+                    ? "var(--md-primary)"
+                    : idx === 2
+                      ? "var(--md-on-warning-container)"
+                      : "var(--md-error)";
+              return (
+                <div
+                  key={item.range}
+                  className="rounded-xl p-3"
+                  style={{
+                    backgroundColor: isOverdue
+                      ? "var(--md-error-container)"
+                      : "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
+                    border: isOverdue
+                      ? "1px solid color-mix(in srgb, var(--md-error) 20%, transparent)"
+                      : "none",
+                  }}
+                >
+                  <div className="mb-1 flex justify-between text-xs">
+                    <span
+                      style={{
+                        color: isOverdue
+                          ? "var(--md-error)"
+                          : "var(--md-on-surface-variant)",
+                      }}
+                    >
+                      {item.range}
+                    </span>
+                    <span
+                      className="font-bold"
+                      style={{
+                        color: isOverdue
+                          ? "var(--md-on-error-container)"
+                          : "var(--md-on-surface)",
+                      }}
+                    >
+                      {formatVND(item.amount)}đ
+                    </span>
+                  </div>
+                  <div
+                    className="h-2 w-full overflow-hidden rounded-full"
+                    style={{
+                      backgroundColor: isOverdue
+                        ? "color-mix(in srgb, var(--md-error) 20%, transparent)"
+                        : "var(--md-surface-high)",
+                    }}
+                  >
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${(item.amount / maxAP) * 100}%`,
+                        backgroundColor: barColor,
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            className="mt-6 w-full rounded-full py-2 text-sm font-semibold transition-colors hover:opacity-80"
+            style={{
+              border: "1px solid var(--md-outline-variant)",
+              color: "var(--md-on-surface-variant)",
+              backgroundColor: "transparent",
+            }}
+          >
+            Xem danh sách NCC
+          </button>
+        </div>
+
+        {/* Consumption Variance — col-span-6 */}
+        <div
+          className="col-span-12 md:col-span-6 rounded-2xl p-6 ambient-shadow"
+          style={{
+            backgroundColor: "var(--md-surface-lowest)",
+            border:
+              "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
+          }}
+        >
+          <h3
+            className="mb-2 text-lg font-bold"
+            style={{ color: "var(--md-on-surface)" }}
+          >
+            Consumption Variance
+          </h3>
+          <p
+            className="mb-6 text-sm"
+            style={{ color: "var(--md-on-surface-variant)" }}
+          >
+            Thực tế vs Định mức Recipe
+          </p>
+          <div className="space-y-4">
+            {consumptionVariance.map((item) => {
+              const isUp = item.trend === "up";
+              return (
+                <div
+                  key={item.name}
+                  className="flex items-center justify-between rounded-2xl p-4"
+                  style={{
+                    backgroundColor:
+                      "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
+                    border:
+                      "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="flex size-10 items-center justify-center rounded-full"
+                      style={{ backgroundColor: "var(--md-surface-lowest)" }}
+                    >
+                      <Package
+                        className="size-5"
+                        style={{ color: "var(--md-on-surface-variant)" }}
+                      />
+                    </div>
+                    <div>
+                      <p
+                        className="text-sm font-bold"
+                        style={{ color: "var(--md-on-surface)" }}
+                      >
+                        {item.name}
+                      </p>
+                      <p
+                        className="text-xs"
+                        style={{ color: "var(--md-outline)" }}
+                      >
+                        Đơn vị: kg
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className="text-sm font-bold"
+                      style={{
+                        color: isUp ? "var(--md-error)" : "var(--md-secondary)",
+                      }}
+                    >
+                      {item.actual}
+                    </p>
+                    <span
+                      className="inline-flex rounded-full px-2 py-0.5 font-bold"
+                      style={{
+                        fontSize: 10,
+                        backgroundColor: isUp
+                          ? "var(--md-error-container)"
+                          : "var(--md-secondary-container)",
+                        color: isUp
+                          ? "var(--md-on-error-container)"
+                          : "var(--md-on-secondary-container)",
+                      }}
+                    >
+                      {isUp ? "Vượt định mức" : "Tiết kiệm"}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Food Cost by Period — col-span-6 */}
+        <div
+          className="col-span-12 md:col-span-6 rounded-2xl p-6 ambient-shadow"
+          style={{
+            backgroundColor: "var(--md-surface-lowest)",
+            border:
+              "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
+          }}
+        >
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h3
+                className="text-lg font-bold"
+                style={{ color: "var(--md-on-surface)" }}
+              >
+                Food Cost by Period
+              </h3>
+              <p
+                className="text-sm"
+                style={{ color: "var(--md-on-surface-variant)" }}
+              >
+                Trung bình: 32.4%
+              </p>
+            </div>
+            <div
+              className="flex rounded-full p-1 font-bold"
+              style={{ fontSize: 10, backgroundColor: "var(--md-surface-low)" }}
+            >
+              <button
+                type="button"
+                className="rounded-full px-3 py-1 ambient-shadow"
+                style={{
+                  backgroundColor: "var(--md-surface-lowest)",
+                  color: "var(--md-on-surface)",
+                }}
+              >
+                Tuần
+              </button>
+              <button
+                type="button"
+                className="rounded-full px-3 py-1"
+                style={{ color: "var(--md-on-surface-variant)" }}
+              >
+                Tháng
+              </button>
+            </div>
+          </div>
+          <TrendSparkline
+            data={foodCostTrend}
+            width={400}
+            height={120}
+            color="var(--md-primary)"
+            target={foodCostTarget}
+          />
+          <p
+            className="mt-2 text-xs"
+            style={{ color: "var(--md-on-surface-variant)" }}
+          >
+            <span style={{ color: "var(--md-error)" }}>— —</span> Mục tiêu 30%
+          </p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList>
-          <TabsTrigger value="movement">Biến động tồn kho</TabsTrigger>
-          <TabsTrigger value="branch">Theo chi nhánh</TabsTrigger>
-          <TabsTrigger value="ap-aging">Công nợ NCC</TabsTrigger>
-          <TabsTrigger value="variance">Chênh lệch tiêu hao</TabsTrigger>
-        </TabsList>
-
-        {/* Stock movement report */}
-        <TabsContent value="movement" className="mt-4">
-          {!loaded["movement"] ? (
-            <EmptyReportState />
-          ) : isMobile ? (
-            <div
-              className="overflow-hidden rounded-2xl ambient-shadow divide-y"
-              style={{
-                backgroundColor: "var(--md-surface-lowest)",
-                border:
-                  "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-              }}
-            >
-              {movementRows.length === 0 && (
-                <div className="py-16 text-center">
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: "var(--md-on-surface-variant)" }}
-                  >
-                    Không có dữ liệu
-                  </p>
-                  <p
-                    className="mt-1 text-xs"
-                    style={{
-                      color: "var(--md-on-surface-variant)",
-                      opacity: 0.7,
-                    }}
-                  >
-                    Chọn khoảng thời gian và nhấn Xem báo cáo
-                  </p>
-                </div>
-              )}
-              {movementRows.map((r) => (
-                <div
-                  key={r.ingredient_id}
-                  className="px-4 py-3 space-y-1.5"
-                  style={{
-                    borderColor:
-                      "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium truncate">
-                      {r.ingredient_name}
-                    </span>
-                    <span
-                      className="text-xs shrink-0"
-                      style={{ color: "var(--md-on-surface-variant)" }}
-                    >
-                      {r.unit}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs font-mono tabular-nums">
-                    <span>{fmtNum(r.opening)}</span>
-                    <span style={{ color: "var(--md-outline)" }}>→</span>
-                    <span className="font-semibold">{fmtNum(r.closing)}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                    {r.grn_receipt > 0 && (
-                      <span className="text-success">
-                        +{fmtNum(r.grn_receipt)} nhập
-                      </span>
-                    )}
-                    {r.consumption < 0 && (
-                      <span className="text-destructive">
-                        {fmtNum(r.consumption)} tiêu hao
-                      </span>
-                    )}
-                    {r.transfer_in > 0 && (
-                      <span className="text-success">
-                        +{fmtNum(r.transfer_in)} chuyển vào
-                      </span>
-                    )}
-                    {r.transfer_out < 0 && (
-                      <span className="text-destructive">
-                        {fmtNum(r.transfer_out)} chuyển ra
-                      </span>
-                    )}
-                    {r.adjustment !== 0 && (
-                      <span>
-                        {r.adjustment > 0 ? "+" : ""}
-                        {fmtNum(r.adjustment)} điều chỉnh
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div
-              className="overflow-hidden rounded-3xl ambient-shadow"
-              style={{
-                backgroundColor: "var(--md-surface-lowest)",
-                border:
-                  "1px solid color-mix(in srgb, var(--md-outline-variant) 5%, transparent)",
-              }}
-            >
-              <Table>
-                <TableHeader>
-                  <TableRow
-                    style={{
-                      backgroundColor:
-                        "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
-                    }}
-                  >
-                    <TableHead
-                      className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Nguyên liệu
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      ĐVT
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Đầu kỳ
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Nhập (GRN)
-                    </TableHead>
-                    <TableHead
-                      className="hidden md:table-cell px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Chuyển vào
-                    </TableHead>
-                    <TableHead
-                      className="hidden md:table-cell px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Chuyển ra
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Tiêu hao
-                    </TableHead>
-                    <TableHead
-                      className="hidden lg:table-cell px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Điều chỉnh
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Cuối kỳ
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {movementRows.length === 0 && (
-                    <TableEmptyStateRow
-                      colSpan={9}
-                      paddingClassName="py-16"
-                      title="Không có dữ liệu"
-                      description="Chọn khoảng thời gian và nhấn Xem báo cáo"
-                    />
-                  )}
-                  {movementRows.map((r) => (
-                    <TableRow
-                      key={r.ingredient_id}
-                      className="group transition-colors"
-                      style={{
-                        borderColor:
-                          "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-                      }}
-                    >
-                      <TableCell className="px-6 py-5 font-medium">
-                        {r.ingredient_name}
-                      </TableCell>
-                      <TableCell
-                        className="px-6 py-5"
-                        style={{ color: "var(--md-on-surface-variant)" }}
-                      >
-                        {r.unit}
-                      </TableCell>
-                      <TableCell className="px-6 py-5 text-right font-mono tabular-nums">
-                        {fmtNum(r.opening)}
-                      </TableCell>
-                      <TableCell className="px-6 py-5 text-right font-mono tabular-nums text-success">
-                        {r.grn_receipt > 0 ? `+${fmtNum(r.grn_receipt)}` : "—"}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell px-6 py-5 text-right font-mono tabular-nums text-success">
-                        {r.transfer_in > 0 ? `+${fmtNum(r.transfer_in)}` : "—"}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell px-6 py-5 text-right font-mono tabular-nums text-destructive">
-                        {r.transfer_out < 0 ? fmtNum(r.transfer_out) : "—"}
-                      </TableCell>
-                      <TableCell className="px-6 py-5 text-right font-mono tabular-nums text-destructive">
-                        {r.consumption < 0 ? fmtNum(r.consumption) : "—"}
-                      </TableCell>
-                      <TableCell
-                        className="hidden lg:table-cell px-6 py-5 text-right font-mono tabular-nums"
-                        style={{ color: "var(--md-on-surface-variant)" }}
-                      >
-                        {r.adjustment !== 0 ? fmtNum(r.adjustment) : "—"}
-                      </TableCell>
-                      <TableCell className="px-6 py-5 text-right font-mono tabular-nums font-semibold">
-                        {fmtNum(r.closing)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Branch summary */}
-        <TabsContent value="branch" className="mt-4">
-          {!loaded["branch"] ? (
-            <EmptyReportState />
-          ) : isMobile ? (
-            <div
-              className="overflow-hidden rounded-2xl ambient-shadow divide-y"
-              style={{
-                backgroundColor: "var(--md-surface-lowest)",
-                border:
-                  "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-              }}
-            >
-              {branchSummary.length === 0 && (
-                <div className="py-16 text-center">
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: "var(--md-on-surface-variant)" }}
-                  >
-                    Không có dữ liệu
-                  </p>
-                  <p
-                    className="mt-1 text-xs"
-                    style={{
-                      color: "var(--md-on-surface-variant)",
-                      opacity: 0.7,
-                    }}
-                  >
-                    Chọn khoảng thời gian và nhấn Xem báo cáo
-                  </p>
-                </div>
-              )}
-              {branchSummary.map((r) => (
-                <div
-                  key={r.branch_id}
-                  className="px-4 py-3 space-y-1.5"
-                  style={{
-                    borderColor:
-                      "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-                  }}
-                >
-                  <p className="text-sm font-medium">{r.branch_name}</p>
-                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs font-mono tabular-nums">
-                    {r.grn_receipt > 0 && (
-                      <span className="text-success">
-                        +{fmtNum(r.grn_receipt)} nhập
-                      </span>
-                    )}
-                    {r.transfer_in > 0 && (
-                      <span className="text-success">
-                        +{fmtNum(r.transfer_in)} chuyển vào
-                      </span>
-                    )}
-                    {r.transfer_out < 0 && (
-                      <span className="text-destructive">
-                        {fmtNum(r.transfer_out)} chuyển ra
-                      </span>
-                    )}
-                    {r.consumption < 0 && (
-                      <span className="text-destructive">
-                        {fmtNum(r.consumption)} tiêu hao
-                      </span>
-                    )}
-                    {r.adjustment !== 0 && (
-                      <span style={{ color: "var(--md-on-surface-variant)" }}>
-                        {r.adjustment > 0 ? "+" : ""}
-                        {fmtNum(r.adjustment)} điều chỉnh
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div
-              className="overflow-hidden rounded-3xl ambient-shadow"
-              style={{
-                backgroundColor: "var(--md-surface-lowest)",
-                border:
-                  "1px solid color-mix(in srgb, var(--md-outline-variant) 5%, transparent)",
-              }}
-            >
-              <Table>
-                <TableHeader>
-                  <TableRow
-                    style={{
-                      backgroundColor:
-                        "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
-                    }}
-                  >
-                    <TableHead
-                      className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Chi nhánh
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Nhập (GRN)
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Chuyển vào
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Chuyển ra
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Tiêu hao
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Điều chỉnh
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {branchSummary.length === 0 && (
-                    <TableEmptyStateRow
-                      colSpan={6}
-                      paddingClassName="py-16"
-                      title="Không có dữ liệu"
-                      description="Chọn khoảng thời gian và nhấn Xem báo cáo"
-                    />
-                  )}
-                  {branchSummary.map((r) => (
-                    <TableRow
-                      key={r.branch_id}
-                      className="group transition-colors"
-                      style={{
-                        borderColor:
-                          "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-                      }}
-                    >
-                      <TableCell className="px-6 py-5 font-medium">
-                        {r.branch_name}
-                      </TableCell>
-                      <TableCell className="px-6 py-5 text-right font-mono tabular-nums text-success">
-                        {r.grn_receipt > 0 ? `+${fmtNum(r.grn_receipt)}` : "—"}
-                      </TableCell>
-                      <TableCell className="px-6 py-5 text-right font-mono tabular-nums text-success">
-                        {r.transfer_in > 0 ? `+${fmtNum(r.transfer_in)}` : "—"}
-                      </TableCell>
-                      <TableCell className="px-6 py-5 text-right font-mono tabular-nums text-destructive">
-                        {r.transfer_out < 0 ? fmtNum(r.transfer_out) : "—"}
-                      </TableCell>
-                      <TableCell className="px-6 py-5 text-right font-mono tabular-nums text-destructive">
-                        {r.consumption < 0 ? fmtNum(r.consumption) : "—"}
-                      </TableCell>
-                      <TableCell
-                        className="px-6 py-5 text-right font-mono tabular-nums"
-                        style={{ color: "var(--md-on-surface-variant)" }}
-                      >
-                        {r.adjustment !== 0 ? fmtNum(r.adjustment) : "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </TabsContent>
-
-        {/* AP Aging */}
-        <TabsContent value="ap-aging" className="mt-4">
-          {!loaded["ap-aging"] ? (
-            <EmptyReportState />
-          ) : isMobile ? (
-            <div
-              className="overflow-hidden rounded-2xl ambient-shadow divide-y"
-              style={{
-                backgroundColor: "var(--md-surface-lowest)",
-                border:
-                  "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-              }}
-            >
-              {apAgingRows.length === 0 && (
-                <div className="py-16 text-center">
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: "var(--md-on-surface-variant)" }}
-                  >
-                    Không có công nợ
-                  </p>
-                  <p
-                    className="mt-1 text-xs"
-                    style={{
-                      color: "var(--md-on-surface-variant)",
-                      opacity: 0.7,
-                    }}
-                  >
-                    Tất cả hóa đơn đã thanh toán
-                  </p>
-                </div>
-              )}
-              {apAgingRows.map((r) => {
-                const hasOverdue =
-                  r.buckets.days_61_90.total > 0 ||
-                  r.buckets.days_over_90.total > 0;
-                return (
-                  <div
-                    key={r.supplier_id}
-                    className="px-4 py-3 space-y-1.5"
-                    style={{
-                      borderColor:
-                        "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-                    }}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium truncate">
-                        {r.supplier_name}
-                      </span>
-                      <span className="text-sm font-mono tabular-nums font-semibold shrink-0">
-                        {fmtMoney(r.total_outstanding)}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {r.buckets.days_1_30.total > 0 && (
-                        <StatusBadge
-                          status="warning"
-                          label={`1-30d: ${fmtMoney(r.buckets.days_1_30.total)}`}
-                        />
-                      )}
-                      {r.buckets.days_31_60.total > 0 && (
-                        <StatusBadge
-                          status="warning"
-                          label={`31-60d: ${fmtMoney(r.buckets.days_31_60.total)}`}
-                        />
-                      )}
-                      {r.buckets.days_61_90.total > 0 && (
-                        <StatusBadge
-                          status="overdue"
-                          label={`61-90d: ${fmtMoney(r.buckets.days_61_90.total)}`}
-                        />
-                      )}
-                      {r.buckets.days_over_90.total > 0 && (
-                        <StatusBadge
-                          status="overdue"
-                          label={`>90d: ${fmtMoney(r.buckets.days_over_90.total)}`}
-                        />
-                      )}
-                      {!hasOverdue &&
-                        r.buckets.days_1_30.total === 0 &&
-                        r.buckets.days_31_60.total === 0 && (
-                          <span
-                            className="text-xs"
-                            style={{ color: "var(--md-on-surface-variant)" }}
-                          >
-                            Chưa đến hạn
-                          </span>
-                        )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div
-              className="overflow-hidden rounded-3xl ambient-shadow"
-              style={{
-                backgroundColor: "var(--md-surface-lowest)",
-                border:
-                  "1px solid color-mix(in srgb, var(--md-outline-variant) 5%, transparent)",
-              }}
-            >
-              <Table>
-                <TableHeader>
-                  <TableRow
-                    style={{
-                      backgroundColor:
-                        "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
-                    }}
-                  >
-                    <TableHead
-                      className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Nhà cung cấp
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Chưa đến hạn
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      1-30 ngày
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      31-60 ngày
-                    </TableHead>
-                    <TableHead
-                      className="hidden md:table-cell px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      61-90 ngày
-                    </TableHead>
-                    <TableHead
-                      className="hidden md:table-cell px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      &gt;90 ngày
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Tổng
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {apAgingRows.length === 0 && (
-                    <TableEmptyStateRow
-                      colSpan={7}
-                      paddingClassName="py-16"
-                      title="Không có công nợ"
-                      description="Tất cả hóa đơn đã thanh toán"
-                    />
-                  )}
-                  {apAgingRows.map((r) => (
-                    <TableRow
-                      key={r.supplier_id}
-                      className="group transition-colors"
-                      style={{
-                        borderColor:
-                          "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-                      }}
-                    >
-                      <TableCell className="px-6 py-5 font-medium">
-                        {r.supplier_name}
-                      </TableCell>
-                      <TableCell className="px-6 py-5 text-right font-mono tabular-nums">
-                        {r.buckets.current.total > 0
-                          ? fmtMoney(r.buckets.current.total)
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="px-6 py-5 text-right font-mono tabular-nums text-warning">
-                        {r.buckets.days_1_30.total > 0
-                          ? fmtMoney(r.buckets.days_1_30.total)
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="px-6 py-5 text-right font-mono tabular-nums text-warning">
-                        {r.buckets.days_31_60.total > 0
-                          ? fmtMoney(r.buckets.days_31_60.total)
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell px-6 py-5 text-right font-mono tabular-nums text-destructive">
-                        {r.buckets.days_61_90.total > 0
-                          ? fmtMoney(r.buckets.days_61_90.total)
-                          : "—"}
-                      </TableCell>
-                      <TableCell
-                        className={cn(
-                          "hidden md:table-cell px-6 py-5 text-right font-mono tabular-nums",
-                          r.buckets.days_over_90.total > 0
-                            ? "text-destructive font-semibold"
-                            : "",
-                        )}
-                      >
-                        {r.buckets.days_over_90.total > 0
-                          ? fmtMoney(r.buckets.days_over_90.total)
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="px-6 py-5 text-right font-mono tabular-nums font-semibold">
-                        {fmtMoney(r.total_outstanding)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Consumption Variance */}
-        <TabsContent value="variance" className="mt-4">
-          {!loaded["variance"] ? (
-            <EmptyReportState />
-          ) : isMobile ? (
-            <div
-              className="overflow-hidden rounded-2xl ambient-shadow divide-y"
-              style={{
-                backgroundColor: "var(--md-surface-lowest)",
-                border:
-                  "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-              }}
-            >
-              {varianceRows.length === 0 && (
-                <div className="py-16 text-center">
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: "var(--md-on-surface-variant)" }}
-                  >
-                    Không có dữ liệu
-                  </p>
-                  <p
-                    className="mt-1 text-xs"
-                    style={{
-                      color: "var(--md-on-surface-variant)",
-                      opacity: 0.7,
-                    }}
-                  >
-                    Chọn chi nhánh và nhấn Xem báo cáo
-                  </p>
-                </div>
-              )}
-              {varianceRows.map((r) => {
-                const flagStatus =
-                  r.flag === "ok"
-                    ? "normal"
-                    : r.flag === "critical"
-                      ? "critical"
-                      : r.flag === "warning"
-                        ? "warning"
-                        : r.flag;
-                const flagLabel = FLAG_META[r.flag]?.label ?? r.flag;
-                return (
-                  <div
-                    key={r.ingredient_id}
-                    className={cn(
-                      "px-4 py-3 space-y-1.5",
-                      r.flag === "critical" && "bg-destructive/5",
-                      r.flag === "warning" && "bg-warning/5",
-                    )}
-                    style={{
-                      borderColor:
-                        "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-                    }}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium truncate">
-                        {r.ingredient_name}
-                      </span>
-                      <StatusBadge status={flagStatus} label={flagLabel} />
-                    </div>
-                    <div className="flex items-center gap-3 text-xs font-mono tabular-nums">
-                      <span>
-                        LT: {fmtNum(r.theoretical)} {r.unit}
-                      </span>
-                      <span>TT: {fmtNum(r.actual)}</span>
-                      <span
-                        className={cn(
-                          r.variance > 0
-                            ? "text-destructive"
-                            : r.variance < 0
-                              ? "text-success"
-                              : "",
-                        )}
-                      >
-                        {r.variance > 0 ? "+" : ""}
-                        {fmtNum(r.variance)} ({r.variance_pct > 0 ? "+" : ""}
-                        {fmtNum(r.variance_pct)}%)
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div
-              className="overflow-hidden rounded-3xl ambient-shadow"
-              style={{
-                backgroundColor: "var(--md-surface-lowest)",
-                border:
-                  "1px solid color-mix(in srgb, var(--md-outline-variant) 5%, transparent)",
-              }}
-            >
-              <Table>
-                <TableHeader>
-                  <TableRow
-                    style={{
-                      backgroundColor:
-                        "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
-                    }}
-                  >
-                    <TableHead
-                      className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Nguyên liệu
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      ĐVT
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Lý thuyết
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Thực tế
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Chênh lệch
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      %
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      Mức độ
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {varianceRows.length === 0 && (
-                    <TableEmptyStateRow
-                      colSpan={7}
-                      paddingClassName="py-16"
-                      title="Không có dữ liệu"
-                      description="Chọn chi nhánh và nhấn Xem báo cáo"
-                    />
-                  )}
-                  {varianceRows.map((r) => {
-                    const flagStatus =
-                      r.flag === "ok"
-                        ? "normal"
-                        : r.flag === "critical"
-                          ? "critical"
-                          : r.flag === "warning"
-                            ? "warning"
-                            : r.flag;
-                    const flagLabel = FLAG_META[r.flag]?.label ?? r.flag;
-                    return (
-                      <TableRow
-                        key={r.ingredient_id}
-                        className={cn(
-                          "group transition-colors",
-                          r.flag === "critical" && "bg-destructive/5",
-                          r.flag === "warning" && "bg-warning/5",
-                        )}
-                        style={{
-                          borderColor:
-                            "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-                        }}
-                      >
-                        <TableCell className="px-6 py-5 font-medium">
-                          {r.ingredient_name}
-                        </TableCell>
-                        <TableCell
-                          className="px-6 py-5"
-                          style={{ color: "var(--md-on-surface-variant)" }}
-                        >
-                          {r.unit}
-                        </TableCell>
-                        <TableCell className="px-6 py-5 text-right font-mono tabular-nums">
-                          {fmtNum(r.theoretical)}
-                        </TableCell>
-                        <TableCell className="px-6 py-5 text-right font-mono tabular-nums">
-                          {fmtNum(r.actual)}
-                        </TableCell>
-                        <TableCell
-                          className={cn(
-                            "px-6 py-5 text-right font-mono tabular-nums",
-                            r.variance > 0
-                              ? "text-destructive"
-                              : r.variance < 0
-                                ? "text-success"
-                                : "",
-                          )}
-                        >
-                          {r.variance > 0 ? "+" : ""}
-                          {fmtNum(r.variance)}
-                        </TableCell>
-                        <TableCell
-                          className={cn(
-                            "px-6 py-5 text-right font-mono tabular-nums",
-                            r.flag === "critical"
-                              ? "text-destructive font-semibold"
-                              : r.flag === "warning"
-                                ? "text-warning"
-                                : "",
-                          )}
-                        >
-                          {r.variance_pct > 0 ? "+" : ""}
-                          {fmtNum(r.variance_pct)}%
-                        </TableCell>
-                        <TableCell className="px-6 py-5">
-                          <StatusBadge status={flagStatus} label={flagLabel} />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-
-/* ─── Shared UI ─── */
-
-const FLAG_META: Record<string, { label: string }> = {
-  ok: { label: "Bình thường" },
-  warning: { label: "Cảnh báo" },
-  critical: { label: "Nghiêm trọng" },
-};
-
-function EmptyReportState() {
-  return (
-    <div
-      className="rounded-2xl py-16 text-center ambient-shadow"
-      style={{
-        backgroundColor: "var(--md-surface-lowest)",
-        border:
-          "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-      }}
-    >
+      {/* Report catalog */}
       <p
-        className="text-sm font-medium"
-        style={{ color: "var(--md-on-surface-variant)" }}
+        className="text-xl font-bold"
+        style={{ color: "var(--md-on-surface)" }}
       >
-        Nhấn &quot;Xem báo cáo&quot; để tải dữ liệu
+        Danh sách các báo cáo chi tiết
       </p>
-      <p
-        className="mt-1 text-xs"
-        style={{ color: "var(--md-on-surface-variant)", opacity: 0.7 }}
-      >
-        Chọn khoảng thời gian và chi nhánh, sau đó nhấn nút xem
-      </p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          {
+            icon: BarChart3,
+            title: "Biến động kho chi tiết",
+            desc: "Tra cứu lịch sử nhập/xuất từng mã hàng.",
+          },
+          {
+            icon: TrendingUp,
+            title: "Chênh lệch định mức",
+            desc: "Phân tích hao hụt nguyên liệu theo Recipe.",
+          },
+          {
+            icon: ArrowLeftRight,
+            title: "Luân chuyển đang vận chuyển",
+            desc: "Theo dõi hàng hóa đang trên đường nội bộ.",
+          },
+          {
+            icon: Package,
+            title: "Tồn kho cuối kỳ",
+            desc: "Báo cáo giá trị tồn kho tại thời điểm chốt.",
+          },
+        ].map((report) => (
+          <div
+            key={report.title}
+            className="group cursor-pointer rounded-xl p-5 transition-all hover:shadow-md ambient-shadow"
+            style={{
+              backgroundColor: "var(--md-surface-lowest)",
+              border:
+                "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
+            }}
+          >
+            <div
+              className="mb-4 flex size-12 items-center justify-center rounded-full transition-colors"
+              style={{ backgroundColor: "var(--md-surface-low)" }}
+            >
+              <report.icon
+                className="size-5"
+                style={{ color: "var(--md-on-surface-variant)" }}
+              />
+            </div>
+            <p className="font-bold" style={{ color: "var(--md-on-surface)" }}>
+              {report.title}
+            </p>
+            <p
+              className="mt-0.5 text-xs"
+              style={{ color: "var(--md-on-surface-variant)" }}
+            >
+              {report.desc}
+            </p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

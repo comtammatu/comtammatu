@@ -1,33 +1,36 @@
-import { fetchIngredients } from "../actions";
-import { fetchMenuItemsForRecipes, fetchRecipes } from "../procurement-actions";
-import {
-  RecipesClient,
-  type RecipeRow,
-  type MenuItemOpt,
-} from "./recipes-client";
-import type { IngredientRow } from "../page";
+import { fetchRecipes } from "../procurement-actions";
+import { formatDate } from "../_lib/format";
+import { RecipesClient } from "./recipes-client";
+import type { RecipeRow, RecipeItem } from "./recipes-client";
 
 export default async function RecipesPage() {
-  const [recRes, menuRes, ingRes] = await Promise.all([
-    fetchRecipes(),
-    fetchMenuItemsForRecipes(),
-    fetchIngredients(),
-  ]);
-  const initial: RecipeRow[] = recRes.success
-    ? ((recRes.data ?? []) as RecipeRow[])
-    : [];
-  const menuItems: MenuItemOpt[] = menuRes.success
-    ? ((menuRes.data ?? []) as MenuItemOpt[])
-    : [];
-  const ingredients: IngredientRow[] = ingRes.success
-    ? ((ingRes.data ?? []) as IngredientRow[])
+  const res = await fetchRecipes();
+  const dbRows = res.success
+    ? (res.data as Array<Record<string, unknown>>)
     : [];
 
-  return (
-    <RecipesClient
-      initial={initial}
-      menuItems={menuItems}
-      ingredients={ingredients}
-    />
-  );
+  const recipes: RecipeRow[] = dbRows.map((row) => {
+    const lineItems =
+      (row.recipe_items as Array<Record<string, unknown>>) ?? [];
+
+    const items: RecipeItem[] = lineItems.map((li) => ({
+      ingredientName:
+        ((li.ingredients as Record<string, unknown>)?.name as string) ?? "—",
+      qty: Number(li.quantity ?? 0),
+      unit: (li.unit as string) ?? "",
+      yieldFactor: Number(li.yield_factor ?? 100),
+      note: (li.note as string) ?? null,
+    }));
+
+    return {
+      id: row.id as number,
+      name: (row.name as string) ?? "",
+      category: (row.category as string) ?? "",
+      updatedAt: row.updated_at ? formatDate(row.updated_at as string) : "—",
+      estimatedCost: Number(row.estimated_cost ?? 0),
+      items,
+    };
+  });
+
+  return <RecipesClient recipes={recipes} />;
 }

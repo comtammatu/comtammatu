@@ -1,9 +1,17 @@
-import "../demo/inventory/demo-theme.css";
+import { Inter } from "next/font/google";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims, canAccess } from "@comtammatu/shared/auth";
-import { InventoryShell } from "./components/inventory-shell";
+import { DemoSidebar } from "./_components/demo-sidebar";
+import { DemoHeader } from "./_components/demo-header";
+import "./demo-theme.css";
+
+const inter = Inter({
+  subsets: ["latin", "latin-ext", "vietnamese"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-inter",
+});
 
 export default async function InventoryLayout({
   children,
@@ -23,16 +31,18 @@ export default async function InventoryLayout({
   }
 
   return (
-    <InventoryShell
-      user={{
-        name:
-          session.user.user_metadata?.["display_name"] ??
-          session.user.email ??
-          "",
+    <div
+      className={`demo-inventory-theme ${inter.variable} flex h-dvh overflow-hidden`}
+      style={{
+        fontFamily: "var(--font-inter), sans-serif",
+        backgroundColor: "var(--md-surface)",
       }}
-      role={claims.user_role}
     >
-      {children}
-    </InventoryShell>
+      <DemoSidebar />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <DemoHeader />
+        <main className="flex-1 overflow-y-auto p-8">{children}</main>
+      </div>
+    </div>
   );
 }

@@ -1,42 +1,24 @@
-import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
 import { fetchStockIssues } from "../issue-actions";
-import { IssuesListClient } from "./issues-list-client";
-import type { StockIssueRow } from "./issues-list-client";
+import { formatDate } from "../_lib/format";
+import { IssuesClient } from "./issues-client";
+import type { IssueRow } from "./issues-client";
 
 export default async function IssuesPage() {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  const claims = session?.user
-    ? extractClaims(session.user.app_metadata)
-    : null;
-
-  const [issuesRes, branchesRes] = await Promise.all([
-    fetchStockIssues(),
-    supabase
-      .from("branches")
-      .select("id, name")
-      .order("is_headquarters", { ascending: false })
-      .order("name"),
-  ]);
-
-  const rows: StockIssueRow[] = issuesRes.success
-    ? ((issuesRes.data ?? []) as StockIssueRow[])
+  const res = await fetchStockIssues();
+  const dbRows = res.success
+    ? (res.data as Array<Record<string, unknown>>)
     : [];
 
-  const branches: { id: number; name: string }[] = branchesRes.data ?? [];
+  const issues: IssueRow[] = dbRows.map((row) => ({
+    id: row.id as number,
+    code: (row.issue_number as string) ?? "",
+    type: (row.issue_type as string) ?? "consumption",
+    branchName:
+      ((row.branches as Record<string, unknown>)?.name as string) ?? "—",
+    date: row.issued_at ? formatDate(row.issued_at as string) : "—",
+    createdBy: "—",
+    status: (row.status as string) ?? "draft",
+  }));
 
-  // branch_manager can only create for their own branch
-  const defaultBranchId = claims?.branch_id ?? branches[0]?.id ?? null;
-
-  return (
-    <IssuesListClient
-      initial={rows}
-      branches={branches}
-      defaultBranchId={defaultBranchId}
-    />
-  );
+  return <IssuesClient issues={issues} />;
 }

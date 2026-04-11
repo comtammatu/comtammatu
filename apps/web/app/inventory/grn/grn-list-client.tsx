@@ -1,25 +1,15 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowRight, Plus, Search } from "lucide-react";
-import { Button } from "@comtammatu/ui/components/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
+  Clock,
+  Download,
+  Filter,
+  MoreVertical,
+  Plus,
+  Receipt,
+  TrendingUp,
+} from "lucide-react";
 import {
   Table,
   TableBody,
@@ -28,522 +18,317 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { toast } from "@comtammatu/ui/components/sonner";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { createGrnDraft, fetchGrns } from "../procurement-actions";
-import type { SupplierRow } from "../suppliers/suppliers-client";
-import type { PurchaseOrderRow } from "../purchase-orders/purchase-orders-client";
-import { TableEmptyStateRow } from "../../admin/components/table-empty-state-row";
 import { StatusBadge } from "../_components/shared";
+import { formatVND } from "../_lib/format";
 
-export interface GrnListRow {
+export type GrnRow = {
   id: number;
-  grn_number: string;
+  code: string;
+  supplierName: string;
+  poCode: string;
+  date: string;
+  total: number;
   status: string;
-  received_date: string;
-  notes: string | null;
-  supplier_id: number;
-  branch_id: number;
-  po_id: number | null;
-  suppliers: { id: number; name: string } | null;
-  purchase_orders: { po_number: string } | null;
-}
-
-const STATUS_META: Record<string, { label: string; className: string }> = {
-  draft: {
-    label: "Nháp",
-    className: "bg-muted text-muted-foreground",
-  },
-  confirmed: {
-    label: "Đã nhập kho",
-    className: "bg-success/10 text-success border-success/30",
-  },
-  cancelled: {
-    label: "Đã hủy",
-    className: "bg-destructive/10 text-destructive border-destructive/30",
-  },
 };
 
-const STATUS_KEYS = ["draft", "confirmed", "cancelled"] as const;
-
-export function GrnListClient({
-  initial,
-  suppliers,
-  purchaseOrders,
-}: {
-  initial: GrnListRow[];
-  suppliers: SupplierRow[];
-  purchaseOrders: PurchaseOrderRow[];
-}) {
-  const [rows, setRows] = useState(initial);
-  const [open, setOpen] = useState(false);
-  const [supplierId, setSupplierId] = useState("");
-  const [poId, setPoId] = useState<string>("");
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("_all");
-  const [supplierFilter, setSupplierFilter] = useState("_all");
-  const [isPending, startTransition] = useTransition();
-  const isMobile = useIsMobile();
-
-  // Status counts
-  const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const r of rows) {
-      counts[r.status] = (counts[r.status] ?? 0) + 1;
-    }
-    return counts;
-  }, [rows]);
-
-  const filtered = useMemo(() => {
-    let result = rows;
-    if (statusFilter !== "_all") {
-      result = result.filter((r) => r.status === statusFilter);
-    }
-    if (supplierFilter !== "_all") {
-      result = result.filter((r) => String(r.supplier_id) === supplierFilter);
-    }
-    const q = search.trim().toLowerCase();
-    if (q) {
-      result = result.filter(
-        (r) =>
-          r.grn_number.toLowerCase().includes(q) ||
-          (r.suppliers?.name ?? "").toLowerCase().includes(q),
-      );
-    }
-    return result;
-  }, [rows, search, statusFilter, supplierFilter]);
-
-  function submit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const sid = Number(supplierId || fd.get("supplierId"));
-    if (!sid) {
-      toast.error("Chọn nhà cung cấp");
-      return;
-    }
-    const po = poId && poId !== "_none" ? Number(poId) : null;
-    startTransition(async () => {
-      const res = await createGrnDraft({
-        supplierId: sid,
-        poId: po && !Number.isNaN(po) ? po : null,
-        notes: String(fd.get("notes") ?? "") || undefined,
-      });
-      if (!res.success || !res.data) {
-        toast.error(res.error ?? "Không tạo được phiếu nhập");
-        return;
-      }
-      toast.success("Đã tạo phiếu nhập");
-      setOpen(false);
-      setSupplierId("");
-      setPoId("");
-      const again = await fetchGrns();
-      if (again.success) setRows((again.data ?? []) as GrnListRow[]);
-    });
-  }
-
-  const posForSupplier = purchaseOrders.filter(
-    (p) => !supplierId || String(p.supplier_id) === supplierId,
-  );
-
-  const hasActiveFilters = statusFilter !== "_all" || supplierFilter !== "_all";
+export function GrnListClient({ grns }: { grns: GrnRow[] }) {
+  const totalValue = grns.reduce((s, g) => s + g.total, 0);
+  const pendingCount = grns.filter((g) => g.status === "pending").length;
 
   return (
-    <>
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1
+          <h2
             className="text-2xl font-bold tracking-tight"
             style={{ color: "var(--md-on-surface)" }}
           >
-            Phiếu nhập kho (GRN)
-          </h1>
+            Phiếu nhập kho
+          </h2>
           <p
-            className="mt-1 text-sm"
-            style={{ color: "var(--md-on-surface-variant)", opacity: 0.7 }}
+            className="mt-2 max-w-md text-sm"
+            style={{ color: "var(--md-on-surface-variant)" }}
           >
-            Nhập hàng từ NCC chỉ ghi nhận tại Trụ sở. Xác nhận phiếu cập nhật
-            tồn kho và giá vốn bình quân (WAC).
+            Quản lý và theo dõi quá trình nhập hàng từ nhà cung cấp vào hệ thống
+            kho trung tâm.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          disabled={suppliers.length === 0}
-          className="flex items-center gap-2 rounded-full px-8 py-3 font-bold text-white shadow-lg transition-transform hover:scale-[1.02]"
-          style={{
-            background:
-              "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-            boxShadow: "0 4px 14px rgba(211,84,0,0.2)",
-          }}
-        >
-          <Plus className="size-4" /> Tạo GRN
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="flex items-center gap-2 rounded-full px-5 py-2.5 font-semibold transition-colors"
+            style={{
+              backgroundColor: "var(--md-surface-low)",
+              color: "var(--md-on-surface)",
+            }}
+          >
+            <Filter className="size-4" />
+            Lọc dữ liệu
+          </button>
+          <button
+            type="button"
+            className="flex items-center gap-2 rounded-full px-6 py-2.5 font-bold text-white shadow-xl transition-transform hover:scale-[1.02]"
+            style={{
+              background:
+                "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
+              boxShadow: "0 4px 14px rgba(211,84,0,0.1)",
+            }}
+          >
+            <Plus className="size-4" />
+            Tạo GRN
+          </button>
+        </div>
       </div>
 
-      {/* Segmented status filter */}
-      {rows.length > 0 && (
+      {/* Asymmetric Dashboard Highlights */}
+      <div className="grid grid-cols-12 gap-6">
+        {/* Pending Count */}
         <div
-          className="flex gap-1 rounded-2xl p-1"
-          style={{ backgroundColor: "var(--md-surface-low)" }}
+          className="col-span-12 rounded-3xl p-6 ambient-shadow md:col-span-4"
+          style={{
+            backgroundColor: "var(--md-surface-lowest)",
+            border:
+              "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
+          }}
         >
-          {(["_all", ...STATUS_KEYS] as const).map((key) => {
-            const count =
-              key === "_all" ? rows.length : (statusCounts[key] ?? 0);
-            const isActive = statusFilter === key;
-            const label =
-              key === "_all" ? "Tất cả" : (STATUS_META[key]?.label ?? key);
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setStatusFilter(key === "_all" ? "_all" : key)}
-                className="flex-1 rounded-full py-2 text-sm font-medium transition-colors"
-                style={
-                  isActive
-                    ? {
-                        backgroundColor: "white",
-                        color: "var(--md-primary)",
-                        fontWeight: 700,
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                      }
-                    : { color: "var(--md-on-surface-variant)" }
-                }
-              >
-                {label}
-                {isActive && count > 0 ? ` (${count})` : ""}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {suppliers.length === 0 && (
-        <div className="rounded-lg border border-warning/40 bg-warning/5 px-4 py-3 text-sm text-warning">
-          Cần có nhà cung cấp trước.{" "}
-          <Link
-            href="/inventory/suppliers"
-            className="font-medium underline hover:opacity-80"
+          <div className="mb-4 flex items-center gap-4">
+            <div
+              className="flex size-12 items-center justify-center rounded-2xl"
+              style={{
+                backgroundColor:
+                  "color-mix(in srgb, var(--md-tertiary) 15%, transparent)",
+              }}
+            >
+              <Clock
+                className="size-5"
+                style={{ color: "var(--md-tertiary)" }}
+              />
+            </div>
+            <span
+              className="text-sm font-semibold"
+              style={{ color: "var(--md-on-surface-variant)" }}
+            >
+              Đang chờ xử lý
+            </span>
+          </div>
+          <div className="mb-1 text-4xl font-black tracking-tight">
+            {String(pendingCount).padStart(2, "0")}
+          </div>
+          <div
+            className="text-xs font-semibold"
+            style={{ color: "var(--md-tertiary)" }}
           >
-            Thêm NCC →
-          </Link>
+            +3 từ hôm qua
+          </div>
         </div>
-      )}
 
-      {/* Table card */}
+        {/* Total Value Hero */}
+        <div
+          className="relative col-span-12 flex items-center justify-between overflow-hidden rounded-3xl p-6 ambient-shadow md:col-span-8"
+          style={{
+            backgroundColor: "var(--md-surface-lowest)",
+            border:
+              "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
+          }}
+        >
+          <div className="z-10">
+            <div
+              className="mb-2 text-sm font-semibold"
+              style={{ color: "var(--md-on-surface-variant)" }}
+            >
+              Giá trị nhập kho tháng này
+            </div>
+            <div className="mb-2 text-4xl font-black tracking-tight">
+              {formatVND(totalValue)}
+              <span className="ml-1 text-xl font-medium opacity-50">₫</span>
+            </div>
+            <div
+              className="flex items-center gap-2 text-sm font-semibold"
+              style={{ color: "var(--md-secondary)" }}
+            >
+              <TrendingUp className="size-4" />
+              14.2% so với tháng trước
+            </div>
+          </div>
+          <div
+            className="absolute right-0 top-0 flex h-full w-1/3 items-center justify-center"
+            style={{
+              background:
+                "linear-gradient(to left, color-mix(in srgb, var(--md-secondary-container) 20%, transparent), transparent)",
+            }}
+          >
+            <Receipt
+              className="size-24 translate-x-1/4 opacity-10"
+              style={{ color: "var(--md-secondary)" }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Table Section */}
       <div
         className="overflow-hidden rounded-3xl ambient-shadow"
         style={{
           backgroundColor: "var(--md-surface-lowest)",
           border:
-            "1px solid color-mix(in srgb, var(--md-outline-variant) 5%, transparent)",
+            "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
         }}
       >
-        {/* Search + filter bar */}
+        {/* Table Toolbar */}
         <div
-          className="flex flex-wrap items-center gap-3 border-b px-4 py-3"
+          className="flex items-center justify-between border-b p-6"
           style={{
+            backgroundColor:
+              "color-mix(in srgb, var(--md-surface-low) 30%, transparent)",
             borderColor:
-              "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
+              "color-mix(in srgb, var(--md-outline-variant) 5%, transparent)",
           }}
         >
-          <div className="flex flex-1 items-center gap-3 min-w-0">
-            <Search className="size-4 shrink-0 text-muted-foreground" />
-            <Input
-              placeholder="Tìm số phiếu hoặc nhà cung cấp…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Select value={supplierFilter} onValueChange={setSupplierFilter}>
-              <SelectTrigger className="h-8 w-36 text-xs">
-                <SelectValue placeholder="NCC" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_all">Tất cả NCC</SelectItem>
-                {suppliers.map((s) => (
-                  <SelectItem key={s.id} value={String(s.id)}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {filtered.length} / {rows.length}
+          <div className="flex gap-4">
+            <span
+              className="rounded-full px-3 py-1 text-sm font-bold"
+              style={{
+                backgroundColor: "var(--md-surface-high)",
+                color: "var(--md-on-surface-variant)",
+              }}
+            >
+              Tất cả ({grns.length})
+            </span>
+            <span
+              className="cursor-pointer px-3 py-1 text-sm font-medium opacity-60 hover:opacity-100"
+              style={{ color: "var(--md-on-surface-variant)" }}
+            >
+              Mới nhất
+            </span>
+            <span
+              className="cursor-pointer px-3 py-1 text-sm font-medium opacity-60 hover:opacity-100"
+              style={{ color: "var(--md-on-surface-variant)" }}
+            >
+              Giá trị cao
             </span>
           </div>
+          <button
+            type="button"
+            className="flex items-center gap-1 text-sm font-bold hover:underline"
+            style={{ color: "var(--md-primary)" }}
+          >
+            Xuất báo cáo Excel
+            <Download className="size-4" />
+          </button>
         </div>
 
-        {/* Mobile: card layout */}
-        {isMobile ? (
-          <div className="divide-y">
-            {filtered.length === 0 && (
-              <div className="py-16 text-center">
-                <p className="text-sm font-medium text-muted-foreground">
-                  {search || hasActiveFilters
-                    ? "Không tìm thấy phiếu nào"
-                    : "Chưa có phiếu nhập kho"}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground/70">
-                  {search || hasActiveFilters
-                    ? "Thử bộ lọc khác"
-                    : 'Nhấn "Tạo GRN" để ghi nhận hàng nhập'}
-                </p>
-              </div>
-            )}
-            {filtered.map((r) => (
-              <Link
-                key={r.id}
-                href={`/inventory/grn/${r.id}`}
-                className="flex items-center justify-between gap-3 px-4 py-3 transition-colors"
+        <Table>
+          <TableHeader>
+            <TableRow
+              style={{
+                borderColor:
+                  "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
+              }}
+            >
+              <TableHead
+                className="px-8 py-5 text-caption font-bold uppercase tracking-widest"
+                style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
+              >
+                Mã GRN
+              </TableHead>
+              <TableHead
+                className="px-6 py-5 text-caption font-bold uppercase tracking-widest"
+                style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
+              >
+                Nhà cung cấp
+              </TableHead>
+              <TableHead
+                className="px-6 py-5 text-caption font-bold uppercase tracking-widest"
+                style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
+              >
+                PO liên kết
+              </TableHead>
+              <TableHead
+                className="px-6 py-5 text-caption font-bold uppercase tracking-widest"
+                style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
+              >
+                Ngày nhận
+              </TableHead>
+              <TableHead
+                className="px-6 py-5 text-caption font-bold uppercase tracking-widest"
+                style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
+              >
+                Tổng tiền
+              </TableHead>
+              <TableHead
+                className="px-6 py-5 text-caption font-bold uppercase tracking-widest"
+                style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
+              >
+                Trạng thái
+              </TableHead>
+              <TableHead
+                className="px-8 py-5 text-right text-caption font-bold uppercase tracking-widest"
+                style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
+              >
+                Thao tác
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {grns.map((g) => (
+              <TableRow
+                key={g.id}
+                className="group transition-colors"
                 style={{
                   borderColor:
-                    "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
+                    "color-mix(in srgb, var(--md-outline-variant) 5%, transparent)",
+                  opacity: g.status === "cancelled" ? 0.6 : 1,
                 }}
               >
-                <div className="min-w-0 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="font-mono text-sm font-medium"
-                      style={{ color: "var(--md-primary)" }}
-                    >
-                      {r.grn_number}
-                    </span>
-                    <StatusBadge status={r.status} />
-                  </div>
-                  <p
-                    className="truncate text-xs"
-                    style={{ color: "var(--md-on-surface-variant)" }}
+                <TableCell className="px-8 py-6">
+                  <Link
+                    href={`/inventory/grn/${g.code}`}
+                    className="font-bold hover:underline"
+                    style={{ color: "var(--md-on-surface)" }}
                   >
-                    {r.suppliers?.name ?? "—"}
-                    {r.purchase_orders?.po_number && (
-                      <> · PO: {r.purchase_orders.po_number}</>
-                    )}
-                    {" · "}
-                    {new Date(r.received_date).toLocaleDateString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })}
-                  </p>
-                </div>
-                <ArrowRight
-                  className="size-4 shrink-0"
+                    {g.code}
+                  </Link>
+                </TableCell>
+                <TableCell
+                  className="px-6 py-6 text-sm font-medium"
+                  style={{ color: "var(--md-on-surface)" }}
+                >
+                  {g.supplierName}
+                </TableCell>
+                <TableCell
+                  className="px-6 py-6 font-mono text-sm"
                   style={{ color: "var(--md-on-surface-variant)" }}
-                />
-              </Link>
-            ))}
-          </div>
-        ) : (
-          /* Desktop: table layout */
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead
-                  className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
-                  style={{ color: "var(--md-outline)" }}
                 >
-                  Số phiếu
-                </TableHead>
-                <TableHead
-                  className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
-                  style={{ color: "var(--md-outline)" }}
+                  {g.poCode}
+                </TableCell>
+                <TableCell
+                  className="px-6 py-6 text-sm"
+                  style={{ color: "var(--md-on-surface-variant)" }}
                 >
-                  Nhà cung cấp
-                </TableHead>
-                <TableHead
-                  className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
-                  style={{ color: "var(--md-outline)" }}
-                >
-                  PO liên kết
-                </TableHead>
-                <TableHead
-                  className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
-                  style={{ color: "var(--md-outline)" }}
-                >
-                  Trạng thái
-                </TableHead>
-                <TableHead
-                  className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
-                  style={{ color: "var(--md-outline)" }}
-                >
-                  Ngày nhận
-                </TableHead>
-                <TableHead className="w-10" />
+                  {g.date}
+                </TableCell>
+                <TableCell className="px-6 py-6 text-sm font-bold">
+                  {formatVND(g.total)}{" "}
+                  <span className="text-label opacity-40">₫</span>
+                </TableCell>
+                <TableCell className="px-6 py-6">
+                  <StatusBadge status={g.status} />
+                </TableCell>
+                <TableCell className="px-8 py-6 text-right">
+                  <button
+                    type="button"
+                    className="rounded-lg p-2 opacity-0 transition-all group-hover:opacity-100"
+                    style={{ color: "var(--md-on-surface-variant)" }}
+                  >
+                    <MoreVertical className="size-5" />
+                  </button>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 && (
-                <TableEmptyStateRow
-                  colSpan={6}
-                  paddingClassName="py-16"
-                  title={
-                    search || hasActiveFilters
-                      ? "Không tìm thấy phiếu nào"
-                      : "Chưa có phiếu nhập kho"
-                  }
-                  description={
-                    search || hasActiveFilters
-                      ? "Thử bộ lọc khác"
-                      : 'Nhấn "Tạo GRN" để ghi nhận hàng nhập'
-                  }
-                />
-              )}
-              {filtered.map((r) => (
-                <TableRow
-                  key={r.id}
-                  className="group transition-colors"
-                  style={{
-                    borderColor:
-                      "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-                  }}
-                >
-                  <TableCell className="px-6 py-5 font-mono text-sm font-medium">
-                    <Link
-                      href={`/inventory/grn/${r.id}`}
-                      className="hover:underline"
-                      style={{ color: "var(--md-primary)" }}
-                    >
-                      {r.grn_number}
-                    </Link>
-                  </TableCell>
-                  <TableCell
-                    className="px-6 py-5"
-                    style={{ color: "var(--md-on-surface-variant)" }}
-                  >
-                    {r.suppliers?.name ?? "—"}
-                  </TableCell>
-                  <TableCell
-                    className="px-6 py-5 font-mono text-xs"
-                    style={{ color: "var(--md-on-surface-variant)" }}
-                  >
-                    {r.purchase_orders?.po_number ? (
-                      <Link
-                        href={`/inventory/purchase-orders/${r.po_id}`}
-                        className="hover:underline"
-                        style={{ color: "var(--md-primary)" }}
-                      >
-                        {r.purchase_orders.po_number}
-                      </Link>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell className="px-6 py-5">
-                    <StatusBadge status={r.status} />
-                  </TableCell>
-                  <TableCell
-                    className="px-6 py-5 text-sm tabular-nums"
-                    style={{ color: "var(--md-on-surface-variant)" }}
-                  >
-                    {new Date(r.received_date).toLocaleDateString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })}
-                  </TableCell>
-                  <TableCell className="px-6 py-5">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 opacity-0 transition-opacity group-hover:opacity-100"
-                      asChild
-                      aria-label="Chi tiết"
-                    >
-                      <Link href={`/inventory/grn/${r.id}`}>
-                        <ArrowRight className="size-4" />
-                      </Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-
-        {/* Pagination footer */}
-        <div
-          className="flex items-center justify-between border-t px-6 py-4"
-          style={{
-            borderColor:
-              "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-          }}
-        >
-          <span
-            className="text-xs font-medium"
-            style={{ color: "var(--md-outline)" }}
-          >
-            Hiển thị {filtered.length} / {rows.length} phiếu
-          </span>
-        </div>
+            ))}
+          </TableBody>
+        </Table>
       </div>
-
-      {/* Create dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tạo phiếu nhập (nháp)</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={submit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Nhà cung cấp *</Label>
-              <Select
-                value={supplierId}
-                onValueChange={(v) => {
-                  setSupplierId(v);
-                  setPoId("");
-                }}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn NCC" />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers.map((s) => (
-                    <SelectItem key={s.id} value={String(s.id)}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Tham chiếu PO (tuỳ chọn)</Label>
-              <Select value={poId} onValueChange={setPoId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Không chọn" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_none">— Không —</SelectItem>
-                  {posForSupplier.map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>
-                      {p.po_number}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="notes">Ghi chú</Label>
-              <Input id="notes" name="notes" placeholder="Lô hàng tháng 4…" />
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-              >
-                Hủy
-              </Button>
-              <Button type="submit" disabled={isPending || !supplierId}>
-                {isPending ? "Đang tạo…" : "Tạo GRN"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </>
+    </div>
   );
 }

@@ -1,24 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { AlertTriangle, Banknote, RefreshCw, Plus, Search } from "lucide-react";
-import { Button } from "@comtammatu/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
+import { FileDown, Plus } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -27,650 +9,282 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { toast } from "@comtammatu/ui/components/sonner";
-import { cn } from "@comtammatu/ui";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import {
-  createSupplierInvoice,
-  fetchSupplierInvoices,
-  recomputeInvoiceMatching,
-} from "../procurement-actions";
-import { markInvoicePaid } from "../procurement-actions";
-import { StatusBadge } from "../_components/shared";
-import type { SupplierRow } from "../suppliers/suppliers-client";
-import type { GrnListRow } from "../grn/grn-list-client";
-import { TableEmptyStateRow } from "../../admin/components/table-empty-state-row";
+import { StatCard, StatusBadge, PageHeader } from "../_components/shared";
+import { formatVND } from "../_lib/format";
 
-export interface SupplierInvoiceRow {
+export type SupplierInvoiceRow = {
   id: number;
-  invoice_number: string;
-  invoice_date: string;
-  total_amount: number;
-  subtotal: number;
-  vat_amount?: number;
-  vat_rate?: number;
-  matching_status: string;
-  payment_status: string;
-  due_date: string | null;
-  paid_amount?: number;
-  paid_at?: string | null;
-  supplier_id: number;
-  grn_id: number | null;
-  suppliers: { id: number; name: string } | null;
-  goods_received_notes: { id: number; grn_number: string } | null;
-}
-
-function isOverdue(row: SupplierInvoiceRow): boolean {
-  if (!row.due_date || row.payment_status === "paid") return false;
-  return new Date(row.due_date) < new Date();
-}
+  code: string;
+  supplierName: string;
+  poCode: string;
+  grnCode: string | null;
+  matchStatus: string;
+  paymentStatus: string;
+  amount: number;
+  variance: number | null;
+};
 
 export function SupplierInvoicesClient({
-  initial,
-  suppliers,
-  grns,
+  invoices,
 }: {
-  initial: SupplierInvoiceRow[];
-  suppliers: SupplierRow[];
-  grns: GrnListRow[];
+  invoices: SupplierInvoiceRow[];
 }) {
-  const [rows, setRows] = useState(initial);
-  const [open, setOpen] = useState(false);
-  const [supplierId, setSupplierId] = useState("");
-  const [grnId, setGrnId] = useState("");
-  const [search, setSearch] = useState("");
-  const [paymentFilter, setPaymentFilter] = useState("_all");
-  const [matchFilter, setMatchFilter] = useState("_all");
-  const [overdueOnly, setOverdueOnly] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const isMobile = useIsMobile();
-
-  const overdueCount = useMemo(() => rows.filter(isOverdue).length, [rows]);
-
-  const filtered = useMemo(() => {
-    let result = rows;
-    if (paymentFilter !== "_all") {
-      result = result.filter((r) => r.payment_status === paymentFilter);
-    }
-    if (matchFilter !== "_all") {
-      result = result.filter((r) => r.matching_status === matchFilter);
-    }
-    if (overdueOnly) {
-      result = result.filter(isOverdue);
-    }
-    const q = search.trim().toLowerCase();
-    if (q) {
-      result = result.filter(
-        (r) =>
-          r.invoice_number.toLowerCase().includes(q) ||
-          (r.suppliers?.name ?? "").toLowerCase().includes(q) ||
-          (r.goods_received_notes?.grn_number ?? "").toLowerCase().includes(q),
-      );
-    }
-    return result;
-  }, [rows, search, paymentFilter, matchFilter, overdueOnly]);
-
-  function submit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const sid = Number(supplierId || fd.get("supplierId"));
-    if (!sid) {
-      toast.error("Chọn NCC");
-      return;
-    }
-    const g = grnId && grnId !== "_none" ? Number(grnId) : null;
-    const subtotal = Number(fd.get("subtotal"));
-    const vatRate = Number(fd.get("vatRate"));
-    const vatAmount = Number(fd.get("vatAmount"));
-    const totalAmount = Number(fd.get("totalAmount"));
-    const invDate = String(fd.get("invoiceDate"));
-    if (
-      !invDate ||
-      !Number.isFinite(subtotal) ||
-      !Number.isFinite(totalAmount)
-    ) {
-      toast.error("Kiểm tra ngày và số tiền");
-      return;
-    }
-    startTransition(async () => {
-      const res = await createSupplierInvoice({
-        supplierId: sid,
-        grnId: g && !Number.isNaN(g) ? g : null,
-        poId: null,
-        invoiceNumber: String(fd.get("invoiceNumber") ?? "").trim(),
-        invoiceDate: new Date(invDate).toISOString(),
-        subtotal,
-        vatRate: Number.isFinite(vatRate) ? vatRate : 8,
-        vatAmount: Number.isFinite(vatAmount) ? vatAmount : 0,
-        totalAmount,
-        matchingNotes: String(fd.get("matchingNotes") ?? "") || undefined,
-      });
-      if (!res.success) {
-        toast.error(res.error ?? "Không tạo được");
-        return;
-      }
-      toast.success("Đã tạo hóa đơn — tính khớp sau");
-      setOpen(false);
-      setSupplierId("");
-      setGrnId("");
-      const again = await fetchSupplierInvoices();
-      if (again.success) setRows((again.data ?? []) as SupplierInvoiceRow[]);
-    });
-  }
-
-  function recompute(id: number) {
-    startTransition(async () => {
-      const res = await recomputeInvoiceMatching(id);
-      if (!res.success) {
-        toast.error(res.error ?? "Không tính được");
-        return;
-      }
-      toast.success("Đã cập nhật trạng thái khớp");
-      const again = await fetchSupplierInvoices();
-      if (again.success) setRows((again.data ?? []) as SupplierInvoiceRow[]);
-    });
-  }
-
-  function payInvoice(row: SupplierInvoiceRow) {
-    startTransition(async () => {
-      const res = await markInvoicePaid({
-        invoiceId: row.id,
-        amount: row.total_amount,
-      });
-      if (!res.success) {
-        toast.error(res.error ?? "Không thanh toán được");
-        return;
-      }
-      toast.success("Đã ghi nhận thanh toán");
-      const again = await fetchSupplierInvoices();
-      if (again.success) setRows((again.data ?? []) as SupplierInvoiceRow[]);
-    });
-  }
-
-  const grnsForSupplier = grns.filter(
-    (g) => !supplierId || String(g.supplier_id) === supplierId,
-  );
-
-  const hasActiveFilters =
-    paymentFilter !== "_all" || matchFilter !== "_all" || overdueOnly;
+  const totalAP = invoices.reduce((s, i) => s + i.amount, 0);
+  const selectedInvoice = invoices[0];
 
   return (
-    <>
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1
-            className="text-2xl font-bold tracking-tight"
-            style={{ color: "var(--md-on-surface)" }}
+    <div className="space-y-6">
+      <PageHeader
+        title="Hóa đơn Nhà cung cấp"
+        description="Quản lý và đối soát chứng từ nhập hàng trong hệ thống."
+        actions={
+          <button
+            type="button"
+            className="flex items-center gap-2 rounded-full px-6 py-2.5 font-bold text-white shadow-xl transition-transform active:scale-[0.98]"
+            style={{
+              background:
+                "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
+              boxShadow: "0 4px 14px rgba(211,84,0,0.15)",
+            }}
           >
-            Hóa đơn nhà cung cấp
-          </h1>
-          <p
-            className="mt-1 text-sm"
-            style={{ color: "var(--md-on-surface-variant)", opacity: 0.7 }}
-          >
-            3-way matching với PO/GRN tại Trụ sở. Tiêu chuẩn HĐĐT và thuế GTGT
-            8%.
-          </p>
-        </div>
-        <Button type="button" onClick={() => setOpen(true)}>
-          <Plus className="mr-2 size-4" />
-          Thêm hóa đơn
-        </Button>
+            <Plus className="size-4" />
+            Tạo hóa đơn
+          </button>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard value="03" label="Chờ đối soát" />
+        <StatCard value="7.2%" label="Chênh lệch > 5%" />
+        <StatCard value="01" label="Đã khớp" />
+        <StatCard value={`${formatVND(totalAP)}đ`} label="Tổng tiền nợ NCC" />
       </div>
 
-      {/* Table card */}
-      <div
-        className="overflow-hidden rounded-3xl ambient-shadow"
-        style={{
-          backgroundColor: "var(--md-surface-lowest)",
-          border:
-            "1px solid color-mix(in srgb, var(--md-outline-variant) 5%, transparent)",
-        }}
-      >
-        {/* Search + filters bar */}
-        <div
-          className="flex flex-wrap items-center gap-3 border-b px-4 py-3"
-          style={{
-            borderColor:
-              "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-          }}
-        >
-          <div className="flex flex-1 items-center gap-3 min-w-0">
-            <Search className="size-4 shrink-0 text-muted-foreground" />
-            <Input
-              placeholder="Tìm số HĐ, NCC hoặc GRN…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-              <SelectTrigger className="h-8 w-28 text-xs">
-                <SelectValue placeholder="Thanh toán" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_all">Tất cả TT</SelectItem>
-                <SelectItem value="unpaid">Chưa TT</SelectItem>
-                <SelectItem value="partial">TT một phần</SelectItem>
-                <SelectItem value="paid">Đã TT</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={matchFilter} onValueChange={setMatchFilter}>
-              <SelectTrigger className="h-8 w-28 text-xs">
-                <SelectValue placeholder="Khớp" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_all">Tất cả</SelectItem>
-                <SelectItem value="pending">Chờ khớp</SelectItem>
-                <SelectItem value="matched">Khớp</SelectItem>
-                <SelectItem value="discrepancy">Lệch</SelectItem>
-                <SelectItem value="approved">Đã duyệt</SelectItem>
-              </SelectContent>
-            </Select>
-            {overdueCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setOverdueOnly(!overdueOnly)}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium transition-colors",
-                  overdueOnly
-                    ? "bg-destructive/10 text-destructive border-destructive/30"
-                    : "bg-muted/50 text-muted-foreground hover:bg-muted",
-                )}
-              >
-                <AlertTriangle className="size-3" />
-                {overdueCount} quá hạn
-              </button>
-            )}
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {filtered.length} / {rows.length}
-            </span>
-          </div>
-        </div>
-
-        {/* Mobile: card layout */}
-        {isMobile ? (
-          <div className="divide-y">
-            {filtered.length === 0 && (
-              <div className="py-16 text-center">
-                <p className="text-sm font-medium text-muted-foreground">
-                  {search || hasActiveFilters
-                    ? "Không tìm thấy hóa đơn nào"
-                    : "Chưa có hóa đơn"}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground/70">
-                  {search || hasActiveFilters
-                    ? "Thử bộ lọc khác"
-                    : 'Nhấn "Thêm hóa đơn" để thêm hóa đơn nhà cung cấp'}
-                </p>
-              </div>
-            )}
-            {filtered.map((r) => {
-              const overdue = isOverdue(r);
-              return (
-                <div key={r.id} className="px-4 py-3 space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-sm font-medium">
-                          {r.invoice_number || "—"}
-                        </span>
-                        <StatusBadge status={r.matching_status} />
-                        <StatusBadge status={r.payment_status} />
-                        {overdue && <StatusBadge status="overdue" />}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                        {r.suppliers?.name ?? "—"} ·{" "}
-                        {new Date(r.invoice_date).toLocaleDateString("vi-VN", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        })}
-                      </p>
-                    </div>
-                    <span className="font-mono text-sm font-semibold tabular-nums shrink-0">
-                      {r.total_amount.toLocaleString("vi-VN")} ₫
-                    </span>
-                  </div>
-                  {/* Action buttons always visible */}
-                  <div className="flex items-center gap-2">
-                    {r.payment_status !== "paid" && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs"
-                        onClick={() => payInvoice(r)}
-                        disabled={isPending}
-                      >
-                        <Banknote className="mr-1 size-3" />
-                        Thanh toán
-                      </Button>
-                    )}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => recompute(r.id)}
-                      disabled={isPending}
+      <div className="grid gap-6 lg:grid-cols-5">
+        {/* Table -- 3/5 */}
+        <div className="lg:col-span-3">
+          <section
+            className="overflow-hidden rounded-2xl ambient-shadow"
+            style={{
+              backgroundColor: "var(--md-surface-lowest)",
+              border:
+                "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
+            }}
+          >
+            <Table>
+              <TableHeader>
+                <TableRow
+                  style={{
+                    backgroundColor:
+                      "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
+                  }}
+                >
+                  {[
+                    { label: "Số hóa đơn", align: "" },
+                    { label: "NCC", align: "" },
+                    { label: "PO / GRN", align: "" },
+                    { label: "Đối soát 3-way", align: "" },
+                    { label: "Thanh toán", align: "" },
+                    { label: "Tổng tiền", align: "text-right" },
+                  ].map((h) => (
+                    <TableHead
+                      key={h.label}
+                      className={`px-6 py-4 text-label font-bold uppercase tracking-widest ${h.align}`}
+                      style={{ color: "var(--md-outline)" }}
                     >
-                      <RefreshCw className="mr-1 size-3" />
-                      Tính lại
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          /* Desktop: table — reduced to essential columns */
-          <Table>
-            <TableHeader>
-              <TableRow className="border-0 hover:bg-transparent">
-                <TableHead
-                  className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
-                  style={{ color: "var(--md-outline)" }}
-                >
-                  Số HĐ
-                </TableHead>
-                <TableHead
-                  className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
-                  style={{ color: "var(--md-outline)" }}
-                >
-                  Nhà cung cấp
-                </TableHead>
-                <TableHead
-                  className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
-                  style={{ color: "var(--md-outline)" }}
-                >
-                  Tổng TT
-                </TableHead>
-                <TableHead
-                  className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
-                  style={{ color: "var(--md-outline)" }}
-                >
-                  Khớp
-                </TableHead>
-                <TableHead
-                  className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
-                  style={{ color: "var(--md-outline)" }}
-                >
-                  Thanh toán
-                </TableHead>
-                <TableHead
-                  className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
-                  style={{ color: "var(--md-outline)" }}
-                >
-                  Hạn TT
-                </TableHead>
-                <TableHead
-                  className="w-24 px-6 py-5"
-                  style={{ color: "var(--md-outline)" }}
-                />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 && (
-                <TableEmptyStateRow
-                  colSpan={7}
-                  paddingClassName="py-16"
-                  title={
-                    search || hasActiveFilters
-                      ? "Không tìm thấy hóa đơn nào"
-                      : "Chưa có hóa đơn"
-                  }
-                  description={
-                    search || hasActiveFilters
-                      ? "Thử bộ lọc khác"
-                      : 'Nhấn "Thêm hóa đơn" để thêm hóa đơn nhà cung cấp'
-                  }
-                />
-              )}
-              {filtered.map((r) => {
-                const overdue = isOverdue(r);
-                return (
+                      {h.label}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invoices.map((inv) => (
                   <TableRow
-                    key={r.id}
-                    className="group transition-colors"
+                    key={inv.id}
+                    className="group cursor-pointer transition-colors"
                     style={{
                       borderColor:
                         "color-mix(in srgb, var(--md-outline-variant) 5%, transparent)",
                     }}
                   >
                     <TableCell
-                      className="px-6 py-5 font-mono text-sm font-medium"
+                      className="px-6 py-4 font-bold"
                       style={{ color: "var(--md-primary)" }}
                     >
-                      {r.invoice_number || "—"}
+                      {inv.code}
                     </TableCell>
-                    <TableCell className="px-6 py-5 text-muted-foreground">
-                      {r.suppliers?.name ?? "—"}
+                    <TableCell className="px-6 py-4">
+                      {inv.supplierName}
                     </TableCell>
-                    <TableCell className="px-6 py-5 text-right font-mono text-sm font-semibold tabular-nums">
-                      {r.total_amount.toLocaleString("vi-VN")} ₫
-                    </TableCell>
-                    <TableCell className="px-6 py-5">
-                      <StatusBadge status={r.matching_status} />
-                    </TableCell>
-                    <TableCell className="px-6 py-5">
-                      <StatusBadge status={r.payment_status} />
-                    </TableCell>
-                    <TableCell className="px-6 py-5">
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          className={cn(
-                            "text-sm tabular-nums",
-                            overdue
-                              ? "text-destructive font-medium"
-                              : "text-muted-foreground",
-                          )}
+                    <TableCell className="px-6 py-4">
+                      <p className="font-mono font-medium">{inv.poCode}</p>
+                      {inv.grnCode && (
+                        <p
+                          className="text-xs"
+                          style={{ color: "var(--md-outline)" }}
                         >
-                          {r.due_date
-                            ? new Date(r.due_date).toLocaleDateString("vi-VN", {
-                                day: "2-digit",
-                                month: "2-digit",
-                                year: "numeric",
-                              })
-                            : "—"}
-                        </span>
-                        {overdue && <StatusBadge status="overdue" />}
-                      </div>
+                          {inv.grnCode}
+                        </p>
+                      )}
                     </TableCell>
-                    <TableCell className="px-6 py-5">
-                      <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        {r.payment_status !== "paid" && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="size-8"
-                            onClick={() => payInvoice(r)}
-                            disabled={isPending}
-                            aria-label="Ghi nhận thanh toán"
-                          >
-                            <Banknote className="size-3.5" />
-                          </Button>
-                        )}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="size-8"
-                          onClick={() => recompute(r.id)}
-                          disabled={isPending}
-                          aria-label="Tính lại khớp"
-                        >
-                          <RefreshCw className="size-3.5" />
-                        </Button>
-                      </div>
+                    <TableCell className="px-6 py-4">
+                      <StatusBadge status={inv.matchStatus} />
+                    </TableCell>
+                    <TableCell className="px-6 py-4">
+                      <StatusBadge status={inv.paymentStatus} />
+                    </TableCell>
+                    <TableCell className="px-6 py-4 text-right font-mono tabular-nums font-semibold">
+                      {formatVND(inv.amount)}đ
                     </TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        )}
+                ))}
+              </TableBody>
+            </Table>
+          </section>
+        </div>
 
-        {/* Pagination footer */}
-        <div
-          className="flex items-center justify-between border-t px-6 py-4"
-          style={{
-            borderColor:
-              "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-          }}
-        >
-          <span
-            className="text-xs"
-            style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
+        {/* Analysis panel -- 2/5 */}
+        <div className="space-y-4 lg:col-span-2">
+          <div
+            className="rounded-2xl ambient-shadow"
+            style={{
+              backgroundColor: "var(--md-surface-lowest)",
+              border:
+                "1px solid color-mix(in srgb, var(--md-outline-variant) 20%, transparent)",
+            }}
           >
-            {filtered.length} / {rows.length} kết quả
-          </span>
+            <div
+              className="border-b p-6"
+              style={{
+                borderColor:
+                  "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
+              }}
+            >
+              <h4 className="text-sm font-bold">
+                Phân tích Đối soát: {selectedInvoice?.code}
+              </h4>
+            </div>
+            <div className="space-y-4 p-6">
+              <p
+                className="text-xs"
+                style={{ color: "var(--md-on-surface-variant)" }}
+              >
+                Chi tiết khớp giữa các giai đoạn cung ứng
+              </p>
+
+              {[
+                {
+                  step: 1,
+                  label: "Đặt hàng (PO)",
+                  code: selectedInvoice?.poCode,
+                  amount: 40_000_000,
+                },
+                {
+                  step: 2,
+                  label: "Thực nhận (GRN)",
+                  code: selectedInvoice?.grnCode,
+                  amount: 39_800_000,
+                },
+                {
+                  step: 3,
+                  label: "Hóa đơn (Invoice)",
+                  code: selectedInvoice?.code,
+                  amount: selectedInvoice?.amount ?? 0,
+                },
+              ].map((item) => (
+                <div
+                  key={item.step}
+                  className="flex items-center gap-3 rounded-lg p-3"
+                  style={{
+                    backgroundColor: "var(--md-surface-low)",
+                    border:
+                      "1px solid color-mix(in srgb, var(--md-outline-variant) 15%, transparent)",
+                  }}
+                >
+                  <div
+                    className="flex size-7 items-center justify-center rounded-full text-xs font-bold"
+                    style={{
+                      backgroundColor:
+                        "color-mix(in srgb, var(--md-primary) 15%, transparent)",
+                      color: "var(--md-primary)",
+                    }}
+                  >
+                    {item.step}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className="text-xs"
+                      style={{ color: "var(--md-on-surface-variant)" }}
+                    >
+                      {item.label}
+                    </p>
+                    <p className="text-sm font-medium font-mono">
+                      {item.code ?? "—"}
+                    </p>
+                  </div>
+                  <p className="text-sm font-mono tabular-nums font-semibold">
+                    {formatVND(item.amount)}đ
+                  </p>
+                </div>
+              ))}
+
+              {selectedInvoice &&
+                selectedInvoice.variance !== null &&
+                selectedInvoice.variance > 0 && (
+                  <div
+                    className="rounded-lg p-3"
+                    style={{
+                      backgroundColor:
+                        "color-mix(in srgb, var(--md-error) 5%, var(--md-surface-lowest))",
+                      border:
+                        "1px solid color-mix(in srgb, var(--md-error) 25%, transparent)",
+                    }}
+                  >
+                    <p
+                      className="text-xs font-bold"
+                      style={{ color: "var(--md-error)" }}
+                    >
+                      Cảnh báo chênh lệch cao ({selectedInvoice.variance}%)
+                    </p>
+                    <p
+                      className="mt-1 text-xs"
+                      style={{ color: "var(--md-on-surface-variant)" }}
+                    >
+                      Hóa đơn thực tế cao hơn giá trị thực nhận. Vui lòng kiểm
+                      tra đơn giá mặt hàng và liên hệ NCC.
+                    </p>
+                  </div>
+                )}
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="flex-1 rounded-full px-4 py-2 text-sm font-bold transition-all"
+                  style={{
+                    backgroundColor: "var(--md-surface-high)",
+                    color: "var(--md-on-surface-variant)",
+                  }}
+                >
+                  <span className="flex items-center justify-center gap-1">
+                    <FileDown className="size-3" />
+                    Xuất file đối soát
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 rounded-full px-4 py-2 text-sm font-bold text-white transition-all"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
+                  }}
+                >
+                  Liên hệ NCC
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Create dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg max-h-[min(90vh,700px)] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Thêm hóa đơn NCC</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={submit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Nhà cung cấp *</Label>
-              <Select
-                value={supplierId}
-                onValueChange={(v) => {
-                  setSupplierId(v);
-                  setGrnId("");
-                }}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn" />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers.map((s) => (
-                    <SelectItem key={s.id} value={String(s.id)}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Tham chiếu GRN (tuỳ chọn)</Label>
-              <Select value={grnId} onValueChange={setGrnId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Không chọn" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_none">— Không —</SelectItem>
-                  {grnsForSupplier.map((g) => (
-                    <SelectItem key={g.id} value={String(g.id)}>
-                      {g.grn_number}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="invoiceNumber">Số hóa đơn *</Label>
-                <Input id="invoiceNumber" name="invoiceNumber" required />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="invoiceDate">Ngày HĐ *</Label>
-                <Input
-                  id="invoiceDate"
-                  name="invoiceDate"
-                  type="date"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="rounded-md border bg-muted/20 p-3 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Giá trị hóa đơn
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="subtotal">Tiền hàng (trước VAT) *</Label>
-                  <Input
-                    id="subtotal"
-                    name="subtotal"
-                    type="number"
-                    step="any"
-                    min="0"
-                    placeholder="0"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="vatRate">Thuế suất VAT (%)</Label>
-                  <Input
-                    id="vatRate"
-                    name="vatRate"
-                    type="number"
-                    step="any"
-                    min="0"
-                    defaultValue={8}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="vatAmount">Tiền VAT</Label>
-                  <Input
-                    id="vatAmount"
-                    name="vatAmount"
-                    type="number"
-                    step="any"
-                    min="0"
-                    defaultValue={0}
-                    placeholder="0"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="totalAmount">Tổng thanh toán *</Label>
-                  <Input
-                    id="totalAmount"
-                    name="totalAmount"
-                    type="number"
-                    step="any"
-                    min="0"
-                    placeholder="0"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="matchingNotes">Ghi chú khớp</Label>
-              <Input id="matchingNotes" name="matchingNotes" />
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-              >
-                Hủy
-              </Button>
-              <Button type="submit" disabled={isPending || !supplierId}>
-                {isPending ? "Đang lưu…" : "Lưu hóa đơn"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </>
+    </div>
   );
 }

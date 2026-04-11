@@ -1,34 +1,26 @@
-import {
-  fetchGrns,
-  fetchPurchaseOrders,
-  fetchSuppliers,
-} from "../procurement-actions";
+import { fetchGrns } from "../procurement-actions";
+import { formatDate } from "../_lib/format";
 import { GrnListClient } from "./grn-list-client";
-import type { GrnListRow } from "./grn-list-client";
-import type { SupplierRow } from "../suppliers/suppliers-client";
-import type { PurchaseOrderRow } from "../purchase-orders/purchase-orders-client";
+import type { GrnRow } from "./grn-list-client";
 
-export default async function GrnListPage() {
-  const [grnRes, supRes, poRes] = await Promise.all([
-    fetchGrns(),
-    fetchSuppliers(),
-    fetchPurchaseOrders(),
-  ]);
-  const rows: GrnListRow[] = grnRes.success
-    ? ((grnRes.data ?? []) as GrnListRow[])
-    : [];
-  const suppliers: SupplierRow[] = supRes.success
-    ? ((supRes.data ?? []) as SupplierRow[])
-    : [];
-  const purchaseOrders: PurchaseOrderRow[] = poRes.success
-    ? ((poRes.data ?? []) as PurchaseOrderRow[])
+export default async function GRNListPage() {
+  const res = await fetchGrns();
+  const dbRows = res.success
+    ? (res.data as Array<Record<string, unknown>>)
     : [];
 
-  return (
-    <GrnListClient
-      initial={rows}
-      suppliers={suppliers}
-      purchaseOrders={purchaseOrders}
-    />
-  );
+  const grns: GrnRow[] = dbRows.map((row) => ({
+    id: row.id as number,
+    code: (row.grn_number as string) ?? "",
+    supplierName:
+      ((row.suppliers as Record<string, unknown>)?.name as string) ?? "—",
+    poCode:
+      ((row.purchase_orders as Record<string, unknown>)?.po_number as string) ??
+      "—",
+    date: row.received_at ? formatDate(row.received_at as string) : "—",
+    total: Number(row.total_amount ?? 0),
+    status: (row.status as string) ?? "pending",
+  }));
+
+  return <GrnListClient grns={grns} />;
 }

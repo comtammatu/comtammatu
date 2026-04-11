@@ -1,0 +1,308 @@
+/* ============================================================
+   RiceOps · Material Design 3 Inventory Demo Theme
+   Overrides Tailwind v4 @theme inline compiled utilities
+   Scoped to .demo-inventory-theme
+   ============================================================ */
+
+/* --- MD3 Token Variables --- */
+:is(.demo-inventory-theme) {
+  --md-primary: #d35400;
+  --md-primary-container: #e67e22;
+  --md-on-primary: #fff;
+  --md-on-primary-container: #fffbff;
+  --md-primary-fixed: #fdebd0;
+  --md-primary-fixed-dim: #f5b041;
+
+  --md-secondary: #2c694e;
+  --md-secondary-container: #aeeecb;
+  --md-on-secondary-container: #316e52;
+
+  --md-tertiary: #006193;
+  --md-tertiary-container: #207ab3;
+
+  --md-error: #ba1a1a;
+  --md-error-container: #ffdad6;
+  --md-on-error-container: #93000a;
+
+  --md-surface: #f9f9f6;
+  --md-surface-lowest: #fff;
+  --md-surface-low: #f3f4f1;
+  --md-surface-container: #eeeeeb;
+  --md-surface-high: #e8e8e5;
+  --md-surface-highest: #e2e3e0;
+  --md-on-surface: #1a1c1a;
+  --md-on-surface-variant: #594238;
+
+  --md-outline: #8c7166;
+  --md-outline-variant: #e0c0b2;
+
+  --md-inverse-surface: #2f312f;
+
+  /* Semantic status tokens (avoid hardcoded hex in components) */
+  --md-info-container: #dbeafe;
+  --md-on-info-container: var(--md-tertiary);
+  --md-warning-container: #fef3c7;
+  --md-on-warning-container: #92400e;
+}
+
+/* --- Ambient Shadow --- */
+.demo-inventory-theme .ambient-shadow {
+  box-shadow: 0 12px 40px -12px rgba(211, 84, 0, 0.06);
+}
+
+/* --- Background overrides --- */
+:is(.demo-inventory-theme) .bg-background {
+  background-color: var(--md-surface) !important;
+}
+:is(.demo-inventory-theme) .bg-card {
+  background-color: var(--md-surface-lowest) !important;
+}
+:is(.demo-inventory-theme) .bg-muted {
+  background-color: var(--md-surface-low) !important;
+}
+:is(.demo-inventory-theme) .bg-muted\/30 {
+  background-color: color-mix(
+    in srgb,
+    var(--md-surface-low) 30%,
+    transparent
+  ) !important;
+}
+:is(.demo-inventory-theme) .bg-muted\/40 {
+  background-color: color-mix(
+    in srgb,
+    var(--md-surface-low) 40%,
+    transparent
+  ) !important;
+}
+:is(.demo-inventory-theme) .bg-muted\/50 {
+  background-color: color-mix(
+    in srgb,
+    var(--md-surface-low) 50%,
+    transparent
+  ) !important;
+}
+:is(.demo-inventory-theme) .bg-muted\/80 {
+  background-color: color-mix(
+    in srgb,
+    var(--md-surface-low) 80%,
+    transparent
+  ) !important;
+}
+:is(.demo-inventory-theme) .bg-primary {
+  background-color: var(--md-primary) !important;
+}
+:is(.demo-inventory-theme) .bg-primary\/5 {
+  background-color: color-mix(
+    in srgb,
+    var(--md-primary) 5%,
+    transparent
+  ) !important;
+}
+:is(.demo-inventory-theme) .bg-primary\/10 {
+  background-color: color-mix(
+    in srgb,
+    var(--md-primary) 10%,
+    transparent
+  ) !important;
+}
+:is(.demo-inventory-theme) .bg-success {
+  background-color: var(--md-secondary) !important;
+}
+:is(.demo-inventory-theme) .bg-success\/10 {
+  background-color: color-mix(
+    in srgb,
+    var(--md-secondary) 10%,
+    transparent
+  ) !important;
+}
+:is(.demo-inventory-theme) .bg-success\/15 {
+  background-color: color-mix(
+    in srgb,
+    var(--md-secondary) 15%,
+    transparent
+  ) !important;
+}
+:is(.demo-inventory-theme) .bg-warning\/10 {
+  background-color: color-mix(in srgb, #d97706 10%, transparent) !important;
+}
+:is(.demo-inventory-theme) .bg-warning\/15 {
+  background-color: color-mix(in srgb, #d97706 15%, transparent) !important;
+}
+:is(.demo-inventory-theme) .bg-info {
+  background-color: var(--md-tertiary) !important;
+}
+:is(.demo-inventory-theme) .bg-info\/10 {
+  background-color: color-mix(
+    in srgb,
+    var(--md-tertiary) 10%,
+    transparent
+  ) !important;
+}
+:is(.demo-inventory-theme) .bg-info\/15 {
+  background-color: color-mix(
+    in srgb,
+    var(--md-tertiary) 15%,
+    transparent
+  ) !important;
+}
+:is(.demo-inventory-theme) .bg-destructive\/5 {
+  background-color: color-mix(
+    in srgb,
+    var(--md-error) 5%,
+    transparent
+  ) !important;
+}
+:is(.demo-inventory-theme) .bg-destructive\/10 {
+  background-color: color-mix(
+    in srgb,
+    var(--md-error) 10%,
+    transparent
+  ) !important;
+}
+:is(.demo-inventory-theme) .bg-destructive\/15 {
+  background-color: color-mix(
+    in srgb,
+    var(--md-error) 15%,
+    transparent
+  ) !important;
+}
+:is(.demo-inventory-theme) .bg-sidebar {
+  background-color: var(--md-surface-low) !important;
+}
+
+/* --- Text overrides --- */
+:is(.demo-inventory-theme) .text-foreground {
+  color: var(--md-on-surface) !important;
+}
+:is(.demo-inventory-theme) .text-primary {
+  color: var(--md-primary) !important;
+}
+:is(.demo-inventory-theme) .text-primary-foreground {
+  color: var(--md-on-primary) !important;
+}
+:is(.demo-inventory-theme) .text-muted-foreground {
+  color: var(--md-on-surface-variant) !important;
+}
+:is(.demo-inventory-theme) .text-success {
+  color: var(--md-secondary) !important;
+}
+:is(.demo-inventory-theme) .text-warning {
+  color: #d97706 !important;
+}
+:is(.demo-inventory-theme) .text-info {
+  color: var(--md-tertiary) !important;
+}
+:is(.demo-inventory-theme) .text-destructive {
+  color: var(--md-error) !important;
+}
+
+/* --- Border overrides --- */
+:is(.demo-inventory-theme) .border-border {
+  border-color: color-mix(
+    in srgb,
+    var(--md-on-surface) 8%,
+    transparent
+  ) !important;
+}
+:is(.demo-inventory-theme) .border-primary {
+  border-color: var(--md-primary) !important;
+}
+:is(.demo-inventory-theme) .border-primary\/20 {
+  border-color: color-mix(
+    in srgb,
+    var(--md-primary) 20%,
+    transparent
+  ) !important;
+}
+:is(.demo-inventory-theme) .border-primary\/30 {
+  border-color: color-mix(
+    in srgb,
+    var(--md-primary) 30%,
+    transparent
+  ) !important;
+}
+:is(.demo-inventory-theme) .border-destructive\/20 {
+  border-color: color-mix(in srgb, var(--md-error) 20%, transparent) !important;
+}
+:is(.demo-inventory-theme) .border-destructive\/30 {
+  border-color: color-mix(in srgb, var(--md-error) 30%, transparent) !important;
+}
+:is(.demo-inventory-theme) .border-success\/20 {
+  border-color: color-mix(
+    in srgb,
+    var(--md-secondary) 20%,
+    transparent
+  ) !important;
+}
+:is(.demo-inventory-theme) .border-warning\/15 {
+  border-color: color-mix(in srgb, #d97706 15%, transparent) !important;
+}
+:is(.demo-inventory-theme) .border-warning\/20 {
+  border-color: color-mix(in srgb, #d97706 20%, transparent) !important;
+}
+:is(.demo-inventory-theme) .border-info\/20 {
+  border-color: color-mix(
+    in srgb,
+    var(--md-tertiary) 20%,
+    transparent
+  ) !important;
+}
+:is(.demo-inventory-theme) .border-sidebar-border {
+  border-color: color-mix(
+    in srgb,
+    var(--md-on-surface) 5%,
+    transparent
+  ) !important;
+}
+
+/* --- Ring --- */
+:is(.demo-inventory-theme) .ring-primary\/20 {
+  --tw-ring-color: color-mix(
+    in srgb,
+    var(--md-primary) 20%,
+    transparent
+  ) !important;
+}
+
+/* --- Table headers warm bg --- */
+.demo-inventory-theme thead tr {
+  background-color: color-mix(
+    in srgb,
+    var(--md-surface-low) 50%,
+    transparent
+  ) !important;
+}
+
+/* --- Smooth fade-in --- */
+@keyframes demo-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.demo-inventory-theme main > div > * {
+  animation: demo-fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.demo-inventory-theme main > div > *:nth-child(2) {
+  animation-delay: 0.05s;
+}
+.demo-inventory-theme main > div > *:nth-child(3) {
+  animation-delay: 0.1s;
+}
+.demo-inventory-theme main > div > *:nth-child(4) {
+  animation-delay: 0.15s;
+}
+.demo-inventory-theme main > div > *:nth-child(5) {
+  animation-delay: 0.2s;
+}
+
+/* --- Respect reduced motion preference --- */
+@media (prefers-reduced-motion: reduce) {
+  .demo-inventory-theme main > div > * {
+    animation: none;
+  }
+}

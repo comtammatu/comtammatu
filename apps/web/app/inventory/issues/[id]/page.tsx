@@ -1,26 +1,19 @@
 import { notFound } from "next/navigation";
 import { fetchStockIssueDetail } from "../../issue-actions";
-import { fetchIngredients } from "../../actions";
+import { formatDate } from "../../_lib/format";
 import { IssueDetailClient } from "./issue-detail-client";
-import type { IngredientRow } from "../../page";
+import type { IssueDetail } from "./issue-detail-client";
 
-interface Props {
+export default async function IssueDetailPage({
+  params,
+}: {
   params: Promise<{ id: string }>;
-}
-
-export default async function IssueDetailPage({ params }: Props) {
+}) {
   const { id } = await params;
-  const issueId = Number(id);
-  if (!Number.isFinite(issueId) || issueId <= 0) notFound();
+  const res = await fetchStockIssueDetail(Number(id));
+  if (!res.success || !res.data) notFound();
 
-  const [detailRes, ingredientsRes] = await Promise.all([
-    fetchStockIssueDetail(issueId),
-    fetchIngredients(),
-  ]);
-
-  if (!detailRes.success || !detailRes.data) notFound();
-
-  const { issue, lines } = detailRes.data as {
+  const d = res.data as {
     issue: {
       id: number;
       issue_number: string;
@@ -31,7 +24,7 @@ export default async function IssueDetailPage({ params }: Props) {
       branch_id: number;
       branches: { id: number; name: string } | null;
     };
-    lines: {
+    lines: Array<{
       id: number;
       ingredient_id: number;
       quantity: number;
@@ -40,19 +33,40 @@ export default async function IssueDetailPage({ params }: Props) {
       total_cost: number;
       reason: string | null;
       ingredients: { id: number; name: string; unit: string } | null;
-    }[];
+    }>;
   };
 
-  const ingredients: IngredientRow[] = ingredientsRes.success
-    ? ((ingredientsRes.data ?? []) as IngredientRow[])
-    : [];
+  const branch = d.issue.branches as { id: number; name: string } | null;
 
-  return (
-    <IssueDetailClient
-      issueId={issueId}
-      initialIssue={issue}
-      initialLines={lines}
-      ingredients={ingredients}
-    />
-  );
+  const items: IssueDetail["items"] = (d.lines ?? []).map((l) => {
+    const ing = l.ingredients as {
+      id: number;
+      name: string;
+      unit: string;
+    } | null;
+    return {
+      name: ing?.name ?? "—",
+      sku: "",
+      qty: Number(l.quantity ?? 0),
+      unit: l.unit ?? ing?.unit ?? "",
+      cost: Number(l.unit_cost ?? 0),
+      total: Number(l.total_cost ?? 0),
+      note: l.reason ?? "",
+    };
+  });
+
+  const totalAmount = items.reduce((sum, i) => sum + i.total, 0);
+
+  const issueDetail: IssueDetail = {
+    code: d.issue.issue_number ?? "",
+    status: d.issue.status ?? "draft",
+    branch: branch?.name ?? `Chi nhánh #${d.issue.branch_id}`,
+    date: d.issue.issued_at ? formatDate(d.issue.issued_at) : "—",
+    type: d.issue.issue_type ?? "consumption",
+    createdBy: "—",
+    total: totalAmount,
+    items,
+  };
+
+  return <IssueDetailClient issueDetail={issueDetail} />;
 }
