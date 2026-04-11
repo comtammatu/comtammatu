@@ -117,7 +117,7 @@ export function IssuesClient({ issues }: { issues: IssueRow[] }) {
               />
             </div>
             <span
-              className="text-label font-semibold uppercase tracking-widest"
+              className="whitespace-nowrap text-label font-semibold uppercase tracking-wide"
               style={{ color: "var(--md-outline-variant)" }}
             >
               Tháng này
@@ -154,7 +154,7 @@ export function IssuesClient({ issues }: { issues: IssueRow[] }) {
               />
             </div>
             <span
-              className="text-label font-semibold uppercase tracking-widest"
+              className="whitespace-nowrap text-label font-semibold uppercase tracking-wide"
               style={{ color: "var(--md-outline-variant)" }}
             >
               Sử dụng bếp
@@ -196,7 +196,7 @@ export function IssuesClient({ issues }: { issues: IssueRow[] }) {
               />
             </div>
             <span
-              className="text-label font-semibold uppercase tracking-widest"
+              className="whitespace-nowrap text-label font-semibold uppercase tracking-wide"
               style={{ color: "var(--md-outline-variant)" }}
             >
               Hư hỏng
@@ -236,7 +236,7 @@ export function IssuesClient({ issues }: { issues: IssueRow[] }) {
               />
             </div>
             <span
-              className="text-label font-semibold uppercase tracking-widest"
+              className="whitespace-nowrap text-label font-semibold uppercase tracking-wide"
               style={{ color: "var(--md-outline-variant)" }}
             >
               Chờ duyệt
@@ -266,7 +266,7 @@ export function IssuesClient({ issues }: { issues: IssueRow[] }) {
         <div className="flex items-center gap-6">
           <div className="flex flex-col gap-1">
             <label
-              className="text-label font-semibold uppercase tracking-widest"
+              className="whitespace-nowrap text-label font-semibold uppercase tracking-wide"
               style={{ color: "var(--md-outline)" }}
             >
               Trạng thái
@@ -295,7 +295,7 @@ export function IssuesClient({ issues }: { issues: IssueRow[] }) {
           />
           <div className="flex flex-col gap-1">
             <label
-              className="text-label font-semibold uppercase tracking-widest"
+              className="whitespace-nowrap text-label font-semibold uppercase tracking-wide"
               style={{ color: "var(--md-outline)" }}
             >
               Loại xuất
@@ -348,43 +348,43 @@ export function IssuesClient({ issues }: { issues: IssueRow[] }) {
               }}
             >
               <TableHead
-                className="px-6 py-5 text-label font-bold uppercase tracking-widest"
+                className="px-6 py-5 whitespace-nowrap text-label font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Mã phiếu
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-label font-bold uppercase tracking-widest"
+                className="px-6 py-5 whitespace-nowrap text-label font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Loại xuất
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-label font-bold uppercase tracking-widest"
+                className="px-6 py-5 whitespace-nowrap text-label font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Chi nhánh
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-label font-bold uppercase tracking-widest"
+                className="px-6 py-5 whitespace-nowrap text-label font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Ngày tạo
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-label font-bold uppercase tracking-widest"
+                className="px-6 py-5 whitespace-nowrap text-label font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Người tạo
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-label font-bold uppercase tracking-widest"
+                className="px-6 py-5 whitespace-nowrap text-label font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Trạng thái
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-right text-label font-bold uppercase tracking-widest"
+                className="px-6 py-5 text-right whitespace-nowrap text-label font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Thao tác

@@ -72,7 +72,7 @@ export function StocktakeClient({
             </div>
             <div>
               <p
-                className="text-label font-semibold uppercase tracking-wider"
+                className="whitespace-nowrap text-label font-semibold uppercase tracking-wide"
                 style={{ color: "var(--md-outline)" }}
               >
                 Đang thực hiện
@@ -100,7 +100,7 @@ export function StocktakeClient({
             </div>
             <div>
               <p
-                className="text-label font-semibold uppercase tracking-wider"
+                className="whitespace-nowrap text-label font-semibold uppercase tracking-wide"
                 style={{ color: "var(--md-outline)" }}
               >
                 Đã hoàn thành
@@ -207,7 +207,7 @@ export function StocktakeClient({
               ].map((h) => (
                 <TableHead
                   key={h || "action"}
-                  className={`px-6 py-4 text-xs font-bold uppercase tracking-widest ${h === "Trạng thái" ? "text-center" : ""}`}
+                  className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${h === "Trạng thái" ? "text-center" : ""}`}
                   style={{ color: "var(--md-outline)" }}
                 >
                   {h}

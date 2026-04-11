@@ -92,10 +92,10 @@ export function PurchaseOrdersClient({
       </div>
 
       {/* Bento Tabs + Date Range */}
-      <div className="grid grid-cols-12 gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         {/* Status Tabs - segmented control */}
         <div
-          className="col-span-8 flex gap-1 rounded-2xl p-1"
+          className="flex flex-1 gap-1 rounded-2xl p-1"
           style={{ backgroundColor: "var(--md-surface-low)" }}
         >
           {statusTabs.map((tab) => {
@@ -109,7 +109,7 @@ export function PurchaseOrdersClient({
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className="flex-1 rounded-full py-2 text-sm font-medium transition-colors"
+                className="ui-tab-pill flex-1 px-3 py-2 text-sm font-medium transition-colors"
                 style={
                   isActive
                     ? {
@@ -130,7 +130,7 @@ export function PurchaseOrdersClient({
 
         {/* Date Range */}
         <div
-          className="col-span-4 flex items-center rounded-2xl px-4"
+          className="flex shrink-0 items-center rounded-2xl px-4 py-2"
           style={{ backgroundColor: "var(--md-surface-low)" }}
         >
           <Calendar
@@ -162,43 +162,43 @@ export function PurchaseOrdersClient({
               }}
             >
               <TableHead
-                className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
+                className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Mã PO
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
+                className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Nhà cung cấp
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
+                className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Trạng thái
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
+                className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Ngày đặt
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
+                className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Dự kiến giao
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-right text-xs font-bold uppercase tracking-widest"
+                className="px-6 py-5 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Tổng tiền
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-xs font-bold uppercase tracking-widest"
+                className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Người tạo

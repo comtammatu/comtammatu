@@ -47,7 +47,7 @@ export function StatCard({ label, value, trend }: StatCardProps) {
       style={{ backgroundColor: "var(--md-surface-lowest)" }}
     >
       <p
-        className="text-xs font-medium uppercase tracking-wider mb-2"
+        className="truncate text-xs font-medium uppercase tracking-wider mb-2"
         style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
       >
         {label}
@@ -348,10 +348,10 @@ export function StatusBadge({
   };
   return (
     <span
-      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold"
+      className="ui-chip px-2.5 py-0.5 text-xs font-bold"
       style={{ backgroundColor: config.bg, color: config.fg }}
     >
-      {label ?? config.label}
+      <span className="ui-label-short">{label ?? config.label}</span>
     </span>
   );
 }
@@ -368,7 +368,7 @@ interface PageHeaderProps {
 export function PageHeader({ title, description, actions }: PageHeaderProps) {
   return (
     <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-      <div>
+      <div className="min-w-0 flex-1">
         <h2
           className="text-2xl font-bold tracking-tight"
           style={{ color: "var(--md-on-surface)" }}
@@ -385,7 +385,9 @@ export function PageHeader({ title, description, actions }: PageHeaderProps) {
         )}
       </div>
       {actions && (
-        <div className="flex items-center gap-2 mt-3 sm:mt-0">{actions}</div>
+        <div className="flex shrink-0 items-center gap-2 mt-3 sm:mt-0">
+          {actions}
+        </div>
       )}
     </div>
   );
@@ -437,7 +439,7 @@ export function TimelineStepper({ steps }: { steps: TimelineStep[] }) {
             </div>
             <p
               className={cn(
-                "mt-1.5 text-xs font-medium",
+                "mt-1.5 max-w-20 text-center text-xs font-medium",
                 step.active || step.completed ? "font-bold" : "",
               )}
               style={{

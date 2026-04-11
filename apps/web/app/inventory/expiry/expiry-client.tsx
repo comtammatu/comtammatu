@@ -69,10 +69,10 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
         </div>
         <button
           type="button"
-          className="flex items-center gap-2 rounded-full px-5 py-2.5 font-bold text-white"
+          className="flex shrink-0 whitespace-nowrap items-center gap-2 rounded-full px-5 py-2.5 font-bold text-white"
           style={{ backgroundColor: "var(--md-error)" }}
         >
-          <Trash2 className="size-4" />
+          <Trash2 className="size-4 shrink-0" />
           Hủy tất cả hàng đã hết hạn
         </button>
       </div>
@@ -99,7 +99,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
               />
             </div>
             <span
-              className="text-label font-semibold uppercase tracking-widest"
+              className="whitespace-nowrap text-label font-semibold uppercase tracking-wide"
               style={{ color: "var(--md-outline-variant)" }}
             >
               Quá hạn
@@ -139,7 +139,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
               />
             </div>
             <span
-              className="text-label font-semibold uppercase tracking-widest"
+              className="whitespace-nowrap text-label font-semibold uppercase tracking-wide"
               style={{ color: "var(--md-outline-variant)" }}
             >
               3 ngày tới
@@ -182,7 +182,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
               />
             </div>
             <span
-              className="text-label font-semibold uppercase tracking-widest"
+              className="whitespace-nowrap text-label font-semibold uppercase tracking-wide"
               style={{ color: "var(--md-outline-variant)" }}
             >
               7 ngày tới
@@ -215,7 +215,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
               key={tab}
               type="button"
               onClick={() => setActiveTab(tab)}
-              className="flex-1 rounded-full py-2 text-sm font-medium transition-colors"
+              className="ui-tab-pill flex-1 px-3 py-2 text-sm font-medium transition-colors"
               style={
                 isActive
                   ? {
@@ -261,7 +261,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
               ].map((h) => (
                 <TableHead
                   key={h}
-                  className={`px-6 py-4 text-xs font-bold uppercase tracking-widest ${h === "Ngày còn lại" ? "text-center" : ""} ${h === "Thao tác" ? "text-right" : ""}`}
+                  className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${h === "Ngày còn lại" ? "text-center" : ""} ${h === "Thao tác" ? "text-right" : ""}`}
                   style={{ color: "var(--md-outline)" }}
                 >
                   {h}
@@ -293,7 +293,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
                 </TableCell>
                 <TableCell className="px-6 py-5 text-center">
                   <span
-                    className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold"
+                    className="inline-flex whitespace-nowrap items-center rounded-full px-2.5 py-1 text-xs font-bold"
                     style={
                       item.urgency === "expired"
                         ? {

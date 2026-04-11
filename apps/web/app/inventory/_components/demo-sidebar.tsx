@@ -70,7 +70,7 @@ function NavContent({
               Cơm Tấm Má Tư
             </h1>
             {/* <p
-              className="text-xs font-bold uppercase tracking-widest"
+              className="text-xs font-bold uppercase tracking-wider"
               style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
             >
               Cơm Tấm Má Tư

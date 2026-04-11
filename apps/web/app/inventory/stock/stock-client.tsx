@@ -176,7 +176,7 @@ export function StockClient({
           <div>
             <div className="mb-4 flex items-center gap-2">
               <Wallet className="size-5 opacity-70" />
-              <span className="text-xs font-semibold uppercase tracking-widest opacity-70">
+              <span className="text-xs font-semibold uppercase tracking-wider opacity-70">
                 Tổng giá trị tồn kho
               </span>
             </div>
@@ -382,55 +382,55 @@ export function StockClient({
                 }}
               >
                 <TableHead
-                  className="px-8 py-4 text-xs font-bold uppercase tracking-widest"
+                  className="px-8 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider"
                   style={{ color: "var(--md-outline)" }}
                 >
                   Nguyên liệu
                 </TableHead>
                 <TableHead
-                  className="px-4 py-4 text-xs font-bold uppercase tracking-widest"
+                  className="px-4 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider"
                   style={{ color: "var(--md-outline)" }}
                 >
                   SKU
                 </TableHead>
                 <TableHead
-                  className="px-4 py-4 text-center text-xs font-bold uppercase tracking-widest"
+                  className="px-4 py-4 text-center whitespace-nowrap text-xs font-bold uppercase tracking-wider"
                   style={{ color: "var(--md-outline)" }}
                 >
                   Đơn vị
                 </TableHead>
                 <TableHead
-                  className="px-4 py-4 text-right text-xs font-bold uppercase tracking-widest"
+                  className="px-4 py-4 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider"
                   style={{ color: "var(--md-outline)" }}
                 >
                   Tồn hiện tại
                 </TableHead>
                 <TableHead
-                  className="px-4 py-4 text-right text-xs font-bold uppercase tracking-widest"
+                  className="px-4 py-4 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider"
                   style={{ color: "var(--md-outline)" }}
                 >
                   Giá TB (WAC)
                 </TableHead>
                 <TableHead
-                  className="px-4 py-4 text-right text-xs font-bold uppercase tracking-widest"
+                  className="px-4 py-4 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider"
                   style={{ color: "var(--md-outline)" }}
                 >
                   Giá trị
                 </TableHead>
                 <TableHead
-                  className="px-4 py-4 text-center text-xs font-bold uppercase tracking-widest"
+                  className="px-4 py-4 text-center whitespace-nowrap text-xs font-bold uppercase tracking-wider"
                   style={{ color: "var(--md-outline)" }}
                 >
                   Min / Max
                 </TableHead>
                 <TableHead
-                  className="px-4 py-4 text-center text-xs font-bold uppercase tracking-widest"
+                  className="px-4 py-4 text-center whitespace-nowrap text-xs font-bold uppercase tracking-wider"
                   style={{ color: "var(--md-outline)" }}
                 >
                   Kiểm kê cuối
                 </TableHead>
                 <TableHead
-                  className="px-8 py-4 text-right text-xs font-bold uppercase tracking-widest"
+                  className="px-8 py-4 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider"
                   style={{ color: "var(--md-outline)" }}
                 >
                   Thao tác

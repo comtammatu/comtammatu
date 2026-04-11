@@ -303,3 +303,18 @@
     max-height: calc(85dvh - 2rem);
   }
 }
+
+/* Vietnamese-safe text utilities — prevents overflow with longer diacritical text */
+@layer components {
+  .ui-label-short {
+    @apply truncate whitespace-nowrap;
+  }
+
+  .ui-chip {
+    @apply inline-flex max-w-full items-center rounded-full whitespace-nowrap;
+  }
+
+  .ui-tab-pill {
+    @apply inline-flex items-center rounded-full whitespace-nowrap;
+  }
+}

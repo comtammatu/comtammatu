@@ -79,10 +79,10 @@ export function RecipesClient({ recipes }: { recipes: RecipeRow[] }) {
           >
             {/* Recipe header */}
             <div
-              className="flex items-center justify-between px-6 py-5"
+              className="flex flex-wrap items-center justify-between gap-4 px-6 py-5"
               style={{ backgroundColor: "var(--md-surface-high)" }}
             >
-              <div className="flex items-center gap-4">
+              <div className="min-w-0 flex items-center gap-4">
                 <div
                   className="flex size-12 items-center justify-center rounded-xl"
                   style={{
@@ -96,15 +96,15 @@ export function RecipesClient({ recipes }: { recipes: RecipeRow[] }) {
                   />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h3
-                      className="text-xl font-bold"
+                      className="text-lg font-bold sm:text-xl"
                       style={{ color: "var(--md-on-surface)" }}
                     >
                       {recipe.name}
                     </h3>
                     <span
-                      className="rounded-full px-2 py-0.5 font-bold uppercase tracking-wider"
+                      className="shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 font-bold uppercase tracking-wide"
                       style={{
                         fontSize: 10,
                         backgroundColor: "var(--md-secondary-container)",
@@ -155,31 +155,31 @@ export function RecipesClient({ recipes }: { recipes: RecipeRow[] }) {
                     }}
                   >
                     <th
-                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider"
+                      className="px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wide"
                       style={{ color: "var(--md-on-surface-variant)" }}
                     >
                       Nguyên liệu
                     </th>
                     <th
-                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider"
+                      className="px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wide"
                       style={{ color: "var(--md-on-surface-variant)" }}
                     >
                       Số lượng
                     </th>
                     <th
-                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider"
+                      className="px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wide"
                       style={{ color: "var(--md-on-surface-variant)" }}
                     >
                       Đơn vị
                     </th>
                     <th
-                      className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider"
+                      className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wide"
                       style={{ color: "var(--md-on-surface-variant)" }}
                     >
                       Yield Factor (%)
                     </th>
                     <th
-                      className="px-6 py-4 text-xs font-bold uppercase tracking-wider"
+                      className="px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wide"
                       style={{ color: "var(--md-on-surface-variant)" }}
                     >
                       Ghi chú

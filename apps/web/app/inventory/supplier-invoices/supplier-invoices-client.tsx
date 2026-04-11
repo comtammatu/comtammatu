@@ -89,7 +89,7 @@ export function SupplierInvoicesClient({
                   ].map((h) => (
                     <TableHead
                       key={h.label}
-                      className={`px-6 py-4 text-label font-bold uppercase tracking-widest ${h.align}`}
+                      className={`px-6 py-4 whitespace-nowrap text-label font-bold uppercase tracking-wider ${h.align}`}
                       style={{ color: "var(--md-outline)" }}
                     >
                       {h.label}
@@ -256,10 +256,10 @@ export function SupplierInvoicesClient({
                   </div>
                 )}
 
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <button
                   type="button"
-                  className="flex-1 rounded-full px-4 py-2 text-sm font-bold transition-all"
+                  className="flex-1 whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold transition-all"
                   style={{
                     backgroundColor: "var(--md-surface-high)",
                     color: "var(--md-on-surface-variant)",
@@ -272,7 +272,7 @@ export function SupplierInvoicesClient({
                 </button>
                 <button
                   type="button"
-                  className="flex-1 rounded-full px-4 py-2 text-sm font-bold text-white transition-all"
+                  className="flex-1 whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold text-white transition-all"
                   style={{
                     background:
                       "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",

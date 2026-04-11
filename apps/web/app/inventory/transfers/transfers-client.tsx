@@ -110,7 +110,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
             </div>
             <div>
               <p
-                className="text-sm font-semibold uppercase tracking-wider"
+                className="whitespace-nowrap text-sm font-semibold uppercase tracking-wide"
                 style={{ color: "var(--md-on-surface-variant)" }}
               >
                 {card.label}
@@ -212,7 +212,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
               ].map((h) => (
                 <TableHead
                   key={h}
-                  className="px-6 py-4 text-xs font-bold uppercase tracking-widest"
+                  className="px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider"
                   style={{ color: "var(--md-outline)" }}
                 >
                   {h}

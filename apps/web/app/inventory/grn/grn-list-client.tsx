@@ -227,43 +227,43 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
               }}
             >
               <TableHead
-                className="px-8 py-5 text-caption font-bold uppercase tracking-widest"
+                className="px-8 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
               >
                 Mã GRN
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-caption font-bold uppercase tracking-widest"
+                className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
               >
                 Nhà cung cấp
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-caption font-bold uppercase tracking-widest"
+                className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
               >
                 PO liên kết
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-caption font-bold uppercase tracking-widest"
+                className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
               >
                 Ngày nhận
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-caption font-bold uppercase tracking-widest"
+                className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
               >
                 Tổng tiền
               </TableHead>
               <TableHead
-                className="px-6 py-5 text-caption font-bold uppercase tracking-widest"
+                className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
               >
                 Trạng thái
               </TableHead>
               <TableHead
-                className="px-8 py-5 text-right text-caption font-bold uppercase tracking-widest"
+                className="px-8 py-5 text-right whitespace-nowrap text-caption font-bold uppercase tracking-wider"
                 style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
               >
                 Thao tác

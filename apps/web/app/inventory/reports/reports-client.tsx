@@ -363,7 +363,7 @@ export function ReportsClient({ apAging, consumptionVariance }: ReportsProps) {
                       {item.actual}
                     </p>
                     <span
-                      className="inline-flex rounded-full px-2 py-0.5 font-bold"
+                      className="inline-flex whitespace-nowrap rounded-full px-2 py-0.5 font-bold"
                       style={{
                         fontSize: 10,
                         backgroundColor: isUp

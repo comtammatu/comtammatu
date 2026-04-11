@@ -63,8 +63,8 @@ export function DashboardClient({
   return (
     <div className="space-y-6">
       {/* Dashboard Header */}
-      <div className="flex items-end justify-between">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <h2
             className="text-2xl font-bold tracking-tight mb-1"
             style={{ color: "var(--md-on-surface)" }}
@@ -72,17 +72,17 @@ export function DashboardClient({
             Xin chào, Quản trị viên
           </h2>
           <div
-            className="flex items-center gap-2 text-sm"
+            className="flex flex-wrap items-center gap-2 text-sm"
             style={{ color: "var(--md-on-surface-variant)", opacity: 0.7 }}
           >
-            <Calendar className="size-3.5" />
+            <Calendar className="size-3.5 shrink-0" />
             <span className="text-sm">Thứ Năm, 10 Tháng 04, 2026</span>
             <span className="mx-1">•</span>
-            <Clock className="size-3.5" />
+            <Clock className="size-3.5 shrink-0" />
             <span className="text-sm">09:42 SA</span>
           </div>
         </div>
-        <div className="flex flex-col items-end">
+        <div className="flex shrink-0 flex-col items-end">
           <span
             className="rounded px-2 py-0.5 text-xs font-medium uppercase tracking-wider"
             style={{
@@ -106,10 +106,9 @@ export function DashboardClient({
         <StatCard
           label="Tổng giá trị tồn kho"
           value={`${formatVND(totalStockValue)}đ`}
-          trend={{ value: "2.4% so với tháng trước", positive: true }}
         />
         <StatCard label="PO đang chờ" value={String(pendingPO)} />
-        <StatCard label="Phiếu luân chuyển" value={String(activeTransfers)} />
+        <StatCard label="Phiếu điều chuyển" value={String(activeTransfers)} />
         <StatCard label="Phiếu kiểm kê" value={String(activeStocktakes)} />
       </div>
 
@@ -149,15 +148,26 @@ export function DashboardClient({
               </span>
             </div>
             <div className="space-y-4 p-6">
+              {reorderAlerts.length === 0 && (
+                <p
+                  className="py-4 text-center text-sm"
+                  style={{
+                    color: "var(--md-on-surface-variant)",
+                    opacity: 0.5,
+                  }}
+                >
+                  Không có cảnh báo tái đặt hàng
+                </p>
+              )}
               {reorderAlerts.map((item) => (
                 <div
                   key={item.name}
                   className="flex items-center justify-between rounded-lg p-3"
                   style={{ backgroundColor: "var(--md-surface)" }}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="min-w-0 flex items-center gap-3">
                     <div
-                      className="flex size-10 items-center justify-center rounded text-sm font-semibold"
+                      className="flex size-10 shrink-0 items-center justify-center rounded text-sm font-semibold"
                       style={{
                         backgroundColor:
                           "color-mix(in srgb, var(--md-error-container) 20%, transparent)",
@@ -222,6 +232,17 @@ export function DashboardClient({
               </span>
             </div>
             <div className="p-6">
+              {expiryAlerts.length === 0 && (
+                <p
+                  className="py-4 text-center text-sm"
+                  style={{
+                    color: "var(--md-on-surface-variant)",
+                    opacity: 0.5,
+                  }}
+                >
+                  Không có hàng sắp hết hạn trong 7 ngày tới
+                </p>
+              )}
               {expiryAlerts.slice(0, 2).map((item) => (
                 <div
                   key={item.id}
@@ -283,12 +304,25 @@ export function DashboardClient({
                 className="size-4"
                 style={{ color: "var(--md-secondary)" }}
               />
-              Luân chuyển đang vận chuyển
+              Điều chuyển
             </h3>
             <div
               className="relative space-y-6 pl-6"
               style={{ borderLeft: `2px solid var(--md-secondary-container)` }}
             >
+              {transfers.filter(
+                (t) => t.status === "in_transit" || t.status === "confirmed",
+              ).length === 0 && (
+                <p
+                  className="py-4 text-center text-sm"
+                  style={{
+                    color: "var(--md-on-surface-variant)",
+                    opacity: 0.5,
+                  }}
+                >
+                  Không có phiếu điều chuyển đang vận chuyển
+                </p>
+              )}
               {transfers
                 .filter(
                   (t) => t.status === "in_transit" || t.status === "confirmed",
@@ -340,9 +374,21 @@ export function DashboardClient({
                 className="size-4"
                 style={{ color: "var(--md-tertiary)" }}
               />
-              Kiểm kê đang thực hiện
+              Kiểm kê
             </h3>
             <div className="space-y-4">
+              {stocktakeSessions.filter((s) => s.status === "in_progress")
+                .length === 0 && (
+                <p
+                  className="py-4 text-center text-sm"
+                  style={{
+                    color: "var(--md-on-surface-variant)",
+                    opacity: 0.5,
+                  }}
+                >
+                  Không có phiếu kiểm kê đang thực hiện
+                </p>
+              )}
               {stocktakeSessions
                 .filter((s) => s.status === "in_progress")
                 .map((s) => (
@@ -398,7 +444,7 @@ export function DashboardClient({
           },
           {
             icon: <Truck className="size-7" />,
-            label: "Luân chuyển",
+            label: "Điều chuyển",
             href: "/inventory/transfers",
             hoverBg: "var(--md-tertiary-container)",
           },

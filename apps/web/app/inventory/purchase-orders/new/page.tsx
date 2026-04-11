@@ -292,7 +292,7 @@ export default function NewPOPage() {
               ].map((h) => (
                 <TableHead
                   key={h.label || "del"}
-                  className={`px-6 py-4 text-caption font-bold uppercase tracking-widest ${h.align}`}
+                  className={`px-6 py-4 whitespace-nowrap text-caption font-bold uppercase tracking-wider ${h.align}`}
                   style={{
                     color: "var(--md-on-surface-variant)",
                     opacity: 0.6,

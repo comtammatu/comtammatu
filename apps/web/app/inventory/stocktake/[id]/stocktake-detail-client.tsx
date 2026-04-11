@@ -73,7 +73,7 @@ export function StocktakeDetailClient({
           <div className="space-y-4">
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Mã phiếu
@@ -84,7 +84,7 @@ export function StocktakeDetailClient({
             </div>
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Chi nhánh
@@ -103,7 +103,7 @@ export function StocktakeDetailClient({
           >
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Thời gian
@@ -112,7 +112,7 @@ export function StocktakeDetailClient({
             </div>
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Tiến độ
@@ -136,7 +136,7 @@ export function StocktakeDetailClient({
           >
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Đã kiểm / Tổng
@@ -147,7 +147,7 @@ export function StocktakeDetailClient({
             </div>
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Chênh lệch ước tính
@@ -262,7 +262,7 @@ export function StocktakeDetailClient({
               ].map((h) => (
                 <TableHead
                   key={h.label}
-                  className={`px-6 py-4 text-label font-bold uppercase tracking-widest ${h.align}`}
+                  className={`px-6 py-4 whitespace-nowrap text-label font-bold uppercase tracking-wider ${h.align}`}
                   style={{ color: "var(--md-outline)" }}
                 >
                   {h.label}

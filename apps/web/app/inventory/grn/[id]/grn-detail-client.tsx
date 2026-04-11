@@ -70,7 +70,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
           <div className="space-y-4">
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Mã phiếu nhập
@@ -79,7 +79,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
             </div>
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Mã PO
@@ -108,7 +108,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
           >
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Nhà cung cấp
@@ -117,7 +117,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
             </div>
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Ngày nhập
@@ -136,7 +136,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
           >
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Tổng giá trị nhập
@@ -151,7 +151,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
             </div>
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Thuế (VAT)
@@ -208,7 +208,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
                   ].map((h) => (
                     <TableHead
                       key={h.label}
-                      className={`px-6 py-4 text-label font-bold uppercase tracking-widest ${h.align}`}
+                      className={`px-6 py-4 whitespace-nowrap text-label font-bold uppercase tracking-wider ${h.align}`}
                       style={{ color: "var(--md-outline)" }}
                     >
                       {h.label}
@@ -358,7 +358,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
             }}
           >
             <p
-              className="text-label uppercase tracking-widest"
+              className="text-label uppercase tracking-wider"
               style={{ color: "var(--md-outline)" }}
             >
               Tổng giá trị nhập

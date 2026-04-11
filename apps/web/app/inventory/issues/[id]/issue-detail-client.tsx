@@ -74,7 +74,7 @@ export function IssueDetailClient({
           <div className="space-y-4">
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Mã phiếu
@@ -85,7 +85,7 @@ export function IssueDetailClient({
             </div>
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Loại phiếu
@@ -106,7 +106,7 @@ export function IssueDetailClient({
           >
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Chi nhánh
@@ -115,7 +115,7 @@ export function IssueDetailClient({
             </div>
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Ngày tạo
@@ -134,7 +134,7 @@ export function IssueDetailClient({
           >
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Người lập phiếu
@@ -159,7 +159,7 @@ export function IssueDetailClient({
             </div>
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Tổng giá trị
@@ -226,7 +226,7 @@ export function IssueDetailClient({
               ].map((h) => (
                 <TableHead
                   key={h.label || "del"}
-                  className={`px-6 py-4 text-label font-bold uppercase tracking-widest ${h.align}`}
+                  className={`px-6 py-4 whitespace-nowrap text-label font-bold uppercase tracking-wider ${h.align}`}
                   style={{ color: "var(--md-outline)" }}
                 >
                   {h.label}

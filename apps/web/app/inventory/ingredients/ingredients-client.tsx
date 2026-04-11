@@ -166,70 +166,70 @@ export function IngredientsClient({
           <thead>
             <tr>
               <th
-                className="pb-4 pl-6 font-bold uppercase"
+                className="pb-4 pl-6 whitespace-nowrap font-bold uppercase"
                 style={{
                   fontSize: 10,
-                  letterSpacing: "0.15em",
+                  letterSpacing: "0.05em",
                   color: "var(--md-outline)",
                 }}
               >
                 Thông tin nguyên liệu
               </th>
               <th
-                className="pb-4 font-bold uppercase"
+                className="pb-4 whitespace-nowrap font-bold uppercase"
                 style={{
                   fontSize: 10,
-                  letterSpacing: "0.15em",
+                  letterSpacing: "0.05em",
                   color: "var(--md-outline)",
                 }}
               >
                 SKU / Phân loại
               </th>
               <th
-                className="pb-4 font-bold uppercase"
+                className="pb-4 whitespace-nowrap font-bold uppercase"
                 style={{
                   fontSize: 10,
-                  letterSpacing: "0.15em",
+                  letterSpacing: "0.05em",
                   color: "var(--md-outline)",
                 }}
               >
                 Đơn vị
               </th>
               <th
-                className="pb-4 font-bold uppercase"
+                className="pb-4 whitespace-nowrap font-bold uppercase"
                 style={{
                   fontSize: 10,
-                  letterSpacing: "0.15em",
+                  letterSpacing: "0.05em",
                   color: "var(--md-outline)",
                 }}
               >
                 Bảo quản
               </th>
               <th
-                className="pb-4 font-bold uppercase"
+                className="pb-4 whitespace-nowrap font-bold uppercase"
                 style={{
                   fontSize: 10,
-                  letterSpacing: "0.15em",
+                  letterSpacing: "0.05em",
                   color: "var(--md-outline)",
                 }}
               >
                 Giá tham chiếu
               </th>
               <th
-                className="pb-4 font-bold uppercase"
+                className="pb-4 whitespace-nowrap font-bold uppercase"
                 style={{
                   fontSize: 10,
-                  letterSpacing: "0.15em",
+                  letterSpacing: "0.05em",
                   color: "var(--md-outline)",
                 }}
               >
                 Ngưỡng tồn (Min/Max/Re)
               </th>
               <th
-                className="pb-4 pr-6 text-right font-bold uppercase"
+                className="pb-4 pr-6 whitespace-nowrap text-right font-bold uppercase"
                 style={{
                   fontSize: 10,
-                  letterSpacing: "0.15em",
+                  letterSpacing: "0.05em",
                   color: "var(--md-outline)",
                 }}
               >

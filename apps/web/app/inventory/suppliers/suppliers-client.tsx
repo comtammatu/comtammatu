@@ -117,7 +117,7 @@ export function SuppliersClient({ suppliers }: { suppliers: SupplierItem[] }) {
                 {card.icon}
               </div>
               <span
-                className="text-label font-semibold uppercase tracking-widest"
+                className="whitespace-nowrap text-label font-semibold uppercase tracking-wide"
                 style={{ color: "var(--md-outline-variant)" }}
               >
                 Hệ thống
@@ -167,7 +167,7 @@ export function SuppliersClient({ suppliers }: { suppliers: SupplierItem[] }) {
               ].map((h) => (
                 <TableHead
                   key={h || "action"}
-                  className={`px-6 py-4 text-xs font-bold uppercase tracking-widest ${h === "Trạng thái" ? "text-center" : ""}`}
+                  className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${h === "Trạng thái" ? "text-center" : ""}`}
                   style={{ color: "var(--md-outline)" }}
                 >
                   {h}

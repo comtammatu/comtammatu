@@ -65,7 +65,7 @@ export function TransferDetailClient({
           <div className="space-y-4">
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Mã phiếu
@@ -76,7 +76,7 @@ export function TransferDetailClient({
             </div>
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Cập nhật cuối
@@ -95,7 +95,7 @@ export function TransferDetailClient({
           >
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Người tạo
@@ -104,7 +104,7 @@ export function TransferDetailClient({
             </div>
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Ngày gửi
@@ -123,7 +123,7 @@ export function TransferDetailClient({
           >
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Tổng giá trị
@@ -138,7 +138,7 @@ export function TransferDetailClient({
             </div>
             <div>
               <p
-                className="mb-1 text-label uppercase tracking-widest"
+                className="mb-1 text-label uppercase tracking-wider"
                 style={{ color: "var(--md-outline)" }}
               >
                 Tổng mặt hàng
@@ -215,7 +215,7 @@ export function TransferDetailClient({
             }}
           >
             <p
-              className="text-label uppercase tracking-widest"
+              className="text-label uppercase tracking-wider"
               style={{ color: "var(--md-outline)" }}
             >
               {info.label}
@@ -239,7 +239,7 @@ export function TransferDetailClient({
           }}
         >
           <p
-            className="text-label font-medium uppercase tracking-widest"
+            className="text-label font-medium uppercase tracking-wider"
             style={{ color: "var(--md-outline)" }}
           >
             Ghi chú vận chuyển
@@ -297,7 +297,7 @@ export function TransferDetailClient({
                   ].map((h) => (
                     <TableHead
                       key={h.label}
-                      className={`px-6 py-4 text-label font-bold uppercase tracking-widest ${h.align}`}
+                      className={`px-6 py-4 whitespace-nowrap text-label font-bold uppercase tracking-wider ${h.align}`}
                       style={{ color: "var(--md-outline)" }}
                     >
                       {h.label}
@@ -429,7 +429,7 @@ export function TransferDetailClient({
           }}
         >
           <p
-            className="text-label uppercase tracking-widest"
+            className="text-label uppercase tracking-wider"
             style={{ color: "var(--md-outline)" }}
           >
             Tổng giá trị luân chuyển
@@ -449,7 +449,7 @@ export function TransferDetailClient({
             }}
           >
             <p
-              className="text-label uppercase tracking-widest"
+              className="text-label uppercase tracking-wider"
               style={{ color: "var(--md-outline)" }}
             >
               Tổng mặt hàng
