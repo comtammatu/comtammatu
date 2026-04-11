@@ -2,14 +2,17 @@ import {
   fetchPurchaseOrders,
   fetchGrns,
   fetchSupplierInvoices,
+  fetchRecentActivity,
 } from "../procurement-actions";
+import type { RecentActivityItem } from "../procurement-actions";
 import { ReceivingClient } from "./receiving-client";
 
 export default async function ReceivingPage() {
-  const [poRes, grnRes, invoiceRes] = await Promise.all([
+  const [poRes, grnRes, invoiceRes, activityRes] = await Promise.all([
     fetchPurchaseOrders(),
     fetchGrns(),
     fetchSupplierInvoices(),
+    fetchRecentActivity(),
   ]);
 
   const poCount =
@@ -35,11 +38,15 @@ export default async function ReceivingPage() {
         ).length
       : 0;
 
+  const recentActivity: RecentActivityItem[] =
+    activityRes.success && activityRes.data ? activityRes.data : [];
+
   return (
     <ReceivingClient
       poCount={poCount}
       grnCount={grnCount}
       invoiceCount={invoiceCount}
+      recentActivity={recentActivity}
     />
   );
 }

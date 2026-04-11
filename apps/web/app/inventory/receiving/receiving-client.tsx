@@ -19,48 +19,44 @@ import {
 } from "@comtammatu/ui/components/table";
 import { StatusBadge } from "../_components/shared";
 import { formatVND } from "../_lib/format";
+import type { RecentActivityItem } from "../procurement-actions";
+
+function activityHref(item: RecentActivityItem): string {
+  if (item.type === "po") return `/inventory/purchase-orders/${item.id}`;
+  if (item.type === "grn") return `/inventory/grn/${item.id}`;
+  return `/inventory/supplier-invoices`;
+}
+
+function formatActivityDate(iso: string): string {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / 86_400_000);
+  const hhmm = date.toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  if (diffDays === 0) return `Hôm nay, ${hhmm}`;
+  if (diffDays === 1) return `Hôm qua, ${hhmm}`;
+  return (
+    date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" }) +
+    `, ${hhmm}`
+  );
+}
 
 export type ReceivingProps = {
   poCount: number;
   grnCount: number;
   invoiceCount: number;
+  recentActivity: RecentActivityItem[];
 };
-
-const recentActivity = [
-  {
-    code: "#PO-2604-005",
-    supplier: "C.P. Việt Nam",
-    date: "Hôm nay, 08:30",
-    status: "sent" as const,
-    total: 18_750_000,
-  },
-  {
-    code: "#GRN-2604-002",
-    supplier: "Rau Củ Đà Lạt Fresh",
-    date: "Hôm qua, 16:35",
-    status: "confirmed" as const,
-    total: 3_680_000,
-  },
-  {
-    code: "#INV-2604-091",
-    supplier: "Gia vị Cholimex",
-    date: "01/04, 10:00",
-    status: "discrepancy" as const,
-    total: 5_400_000,
-  },
-  {
-    code: "#PO-2604-006",
-    supplier: "Thịt Sạch FreshFood",
-    date: "08/04, 14:20",
-    status: "sent" as const,
-    total: 8_900_000,
-  },
-];
 
 export function ReceivingClient({
   poCount,
   grnCount,
   invoiceCount,
+  recentActivity,
 }: ReceivingProps) {
   const steps = [
     {
@@ -136,7 +132,9 @@ export function ReceivingClient({
                 >
                   {item.step}
                 </span>
-                <h3 className="text-xl font-bold">{item.label}</h3>
+                <h3 className="text-lg font-bold leading-tight sm:text-xl">
+                  {item.label}
+                </h3>
               </div>
 
               {/* Count */}
@@ -158,7 +156,7 @@ export function ReceivingClient({
               {/* CTA button */}
               <Link
                 href={item.href}
-                className="flex w-full items-center justify-center gap-2 rounded-full border-b-2 py-3 font-bold transition-all"
+                className="flex w-full whitespace-nowrap items-center justify-center gap-2 rounded-full border-b-2 py-3 text-sm font-bold transition-all"
                 style={{
                   backgroundColor: "var(--md-surface-low)",
                   color: item.color,
@@ -210,7 +208,7 @@ export function ReceivingClient({
                   ].map((h) => (
                     <TableHead
                       key={h}
-                      className={`px-6 py-4 text-xs font-bold uppercase tracking-wider ${h === "Tổng Tiền" ? "text-right" : ""}`}
+                      className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wide ${h === "Tổng Tiền" ? "text-right" : ""}`}
                       style={{
                         color: "var(--md-on-surface-variant)",
                         opacity: 0.6,
@@ -222,6 +220,17 @@ export function ReceivingClient({
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {recentActivity.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className="px-6 py-8 text-center text-sm"
+                      style={{ color: "var(--md-on-surface-variant)" }}
+                    >
+                      Chưa có hoạt động nào
+                    </TableCell>
+                  </TableRow>
+                )}
                 {recentActivity.map((item) => (
                   <TableRow
                     key={item.code}
@@ -232,7 +241,13 @@ export function ReceivingClient({
                     }}
                   >
                     <TableCell className="px-6 py-4 font-mono text-sm font-medium">
-                      {item.code}
+                      <Link
+                        href={activityHref(item)}
+                        className="hover:underline"
+                        style={{ color: "var(--md-primary)" }}
+                      >
+                        {item.code}
+                      </Link>
                     </TableCell>
                     <TableCell className="px-6 py-4 text-sm font-semibold">
                       {item.supplier}
@@ -241,7 +256,7 @@ export function ReceivingClient({
                       className="px-6 py-4 text-sm"
                       style={{ color: "var(--md-on-surface-variant)" }}
                     >
-                      {item.date}
+                      {formatActivityDate(item.date)}
                     </TableCell>
                     <TableCell className="px-6 py-4">
                       <StatusBadge status={item.status} />
@@ -250,7 +265,7 @@ export function ReceivingClient({
                       className="px-6 py-4 text-right text-sm font-bold"
                       style={{ color: "var(--md-primary)" }}
                     >
-                      {formatVND(item.total)}đ
+                      {item.total != null ? `${formatVND(item.total)}đ` : "—"}
                     </TableCell>
                   </TableRow>
                 ))}

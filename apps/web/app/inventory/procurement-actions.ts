@@ -127,6 +127,111 @@ export async function deleteSupplier(id: number): Promise<ActionResult> {
   return { success: true };
 }
 
+export type RecentActivityItem = {
+  id: number;
+  type: "po" | "grn" | "invoice";
+  code: string;
+  supplier: string;
+  date: string; // ISO datetime
+  status: string;
+  total: number | null;
+};
+
+export async function fetchRecentActivity(): Promise<
+  ActionResult<RecentActivityItem[]>
+> {
+  const ctx = await getAuthContext(ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims } = ctx;
+
+  const [poRes, grnRes, invRes] = await Promise.all([
+    supabase
+      .from("purchase_orders")
+      .select(
+        "id, po_number, status, ordered_at, suppliers ( name ), purchase_order_items ( line_total )",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .order("ordered_at", { ascending: false })
+      .limit(5),
+    supabase
+      .from("goods_received_notes")
+      .select(
+        "id, grn_number, status, received_date, suppliers ( name ), grn_items ( total_cost )",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .order("received_date", { ascending: false })
+      .limit(5),
+    supabase
+      .from("supplier_invoices")
+      .select(
+        "id, invoice_number, matching_status, invoice_date, total_amount, suppliers ( name )",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .order("invoice_date", { ascending: false })
+      .limit(5),
+  ]);
+
+  if (poRes.error || grnRes.error || invRes.error) {
+    return { success: false, error: "Không thể tải hoạt động gần đây." };
+  }
+
+  const items: RecentActivityItem[] = [
+    ...(poRes.data ?? []).map((po) => {
+      const lines =
+        (po.purchase_order_items as Array<{
+          line_total: number | null;
+        }> | null) ?? [];
+      const hasAllPrices =
+        lines.length > 0 && lines.every((l) => l.line_total != null);
+      const total = hasAllPrices
+        ? lines.reduce((s, l) => s + Number(l.line_total), 0)
+        : null;
+      return {
+        id: po.id,
+        type: "po" as const,
+        code: po.po_number,
+        supplier:
+          (po.suppliers as { name: string } | null)?.name ?? "Không rõ NCC",
+        date: po.ordered_at ?? "",
+        status: po.status,
+        total,
+      };
+    }),
+    ...(grnRes.data ?? []).map((grn) => {
+      const lines =
+        (grn.grn_items as Array<{ total_cost: number | null }> | null) ?? [];
+      const total =
+        lines.length > 0
+          ? lines.reduce((s, l) => s + Number(l.total_cost ?? 0), 0)
+          : null;
+      return {
+        id: grn.id,
+        type: "grn" as const,
+        code: grn.grn_number,
+        supplier:
+          (grn.suppliers as { name: string } | null)?.name ?? "Không rõ NCC",
+        date: grn.received_date ?? "",
+        status: grn.status,
+        total,
+      };
+    }),
+    ...(invRes.data ?? []).map((inv) => ({
+      id: inv.id,
+      type: "invoice" as const,
+      code: inv.invoice_number,
+      supplier:
+        (inv.suppliers as { name: string } | null)?.name ?? "Không rõ NCC",
+      date: inv.invoice_date ?? "",
+      status: inv.matching_status,
+      total: inv.total_amount ? Number(inv.total_amount) : null,
+    })),
+  ];
+
+  items.sort((a, b) => (b.date > a.date ? 1 : -1));
+
+  return { success: true, data: items.slice(0, 5) };
+}
+
 export async function fetchPurchaseOrders(): Promise<ActionResult> {
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
