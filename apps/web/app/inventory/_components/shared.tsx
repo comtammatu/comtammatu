@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
+import { tStatus } from "../_lib/dictionary";
 import { cn } from "@comtammatu/ui";
 import {
   Popover,
@@ -205,134 +206,81 @@ export function SearchableSelect({
 // ----------------------------------------------------------------
 // StatusBadge — MD3 container colors
 // ----------------------------------------------------------------
-const statusConfig: Record<string, { label: string; bg: string; fg: string }> =
-  {
-    draft: {
-      label: "Nháp",
-      bg: "var(--md-surface-high)",
-      fg: "var(--md-on-surface-variant)",
-    },
-    confirmed: {
-      label: "Đã xác nhận",
-      bg: "var(--md-secondary-container)",
-      fg: "var(--md-on-secondary-container)",
-    },
-    sent: {
-      label: "Đã gửi",
-      bg: "var(--md-info-container)",
-      fg: "var(--md-on-info-container)",
-    },
-    in_transit: {
-      label: "IN-TRANSIT",
-      bg: "var(--md-secondary-container)",
-      fg: "var(--md-secondary)",
-    },
-    received: {
-      label: "Đã nhận",
-      bg: "var(--md-secondary-container)",
-      fg: "var(--md-on-secondary-container)",
-    },
-    completed: {
-      label: "Hoàn thành",
-      bg: "var(--md-secondary-container)",
-      fg: "var(--md-on-secondary-container)",
-    },
-    cancelled: {
-      label: "Đã hủy",
-      bg: "var(--md-surface-high)",
-      fg: "var(--md-on-surface-variant)",
-    },
-    pending: {
-      label: "Chờ xử lý",
-      bg: "var(--md-primary-fixed)",
-      fg: "var(--md-primary)",
-    },
-    in_progress: {
-      label: "In Progress",
-      bg: "var(--md-info-container)",
-      fg: "var(--md-on-info-container)",
-    },
-    matched: {
-      label: "Matched",
-      bg: "var(--md-secondary-container)",
-      fg: "var(--md-secondary)",
-    },
-    discrepancy: {
-      label: "Discrepancy",
-      bg: "var(--md-error-container)",
-      fg: "var(--md-on-error-container)",
-    },
-    approved: {
-      label: "Đã duyệt",
-      bg: "var(--md-secondary-container)",
-      fg: "var(--md-on-secondary-container)",
-    },
-    overdue: {
-      label: "Quá hạn",
-      bg: "var(--md-error-container)",
-      fg: "var(--md-on-error-container)",
-    },
-    expired: {
-      label: "Đã hết hạn",
-      bg: "var(--md-error-container)",
-      fg: "var(--md-on-error-container)",
-    },
-    critical: {
-      label: "Sắp hết hạn",
-      bg: "var(--md-primary-fixed)",
-      fg: "var(--md-primary)",
-    },
-    warning: {
-      label: "Theo dõi",
-      bg: "var(--md-warning-container)",
-      fg: "var(--md-on-warning-container)",
-    },
-    kitchen_use: {
-      label: "Kitchen Use",
-      bg: "var(--md-info-container)",
-      fg: "var(--md-on-info-container)",
-    },
-    write_off: {
-      label: "Write-off",
-      bg: "var(--md-error-container)",
-      fg: "var(--md-on-error-container)",
-    },
-    consumption: {
-      label: "Consumption",
-      bg: "var(--md-secondary-container)",
-      fg: "var(--md-secondary)",
-    },
-    normal: {
-      label: "Bình thường",
-      bg: "var(--md-secondary-container)",
-      fg: "var(--md-secondary)",
-    },
-    low: {
-      label: "HẾT HÀNG",
-      bg: "var(--md-error-container)",
-      fg: "var(--md-error)",
-    },
-    out: {
-      label: "Hết hàng",
-      bg: "var(--md-error-container)",
-      fg: "var(--md-error)",
-    },
-    over: {
-      label: "SẮP HẾT",
-      bg: "var(--md-warning-container)",
-      fg: "var(--md-on-warning-container)",
-    },
-    active: {
-      label: "Hoạt động",
-      bg: "var(--md-secondary-container)",
-      fg: "var(--md-secondary)",
-    },
-    suspended: {
-      label: "Tạm ngưng",
-      bg: "var(--md-error-container)",
-      fg: "var(--md-on-error-container)",
-    },
-  };
+const statusColors: Record<string, { bg: string; fg: string }> = {
+  draft: { bg: "var(--md-surface-high)", fg: "var(--md-on-surface-variant)" },
+  confirmed: {
+    bg: "var(--md-secondary-container)",
+    fg: "var(--md-on-secondary-container)",
+  },
+  sent: { bg: "var(--md-info-container)", fg: "var(--md-on-info-container)" },
+  in_transit: {
+    bg: "var(--md-secondary-container)",
+    fg: "var(--md-secondary)",
+  },
+  received: {
+    bg: "var(--md-secondary-container)",
+    fg: "var(--md-on-secondary-container)",
+  },
+  completed: {
+    bg: "var(--md-secondary-container)",
+    fg: "var(--md-on-secondary-container)",
+  },
+  cancelled: {
+    bg: "var(--md-surface-high)",
+    fg: "var(--md-on-surface-variant)",
+  },
+  pending: { bg: "var(--md-primary-fixed)", fg: "var(--md-primary)" },
+  in_progress: {
+    bg: "var(--md-info-container)",
+    fg: "var(--md-on-info-container)",
+  },
+  matched: { bg: "var(--md-secondary-container)", fg: "var(--md-secondary)" },
+  discrepancy: {
+    bg: "var(--md-error-container)",
+    fg: "var(--md-on-error-container)",
+  },
+  approved: {
+    bg: "var(--md-secondary-container)",
+    fg: "var(--md-on-secondary-container)",
+  },
+  overdue: {
+    bg: "var(--md-error-container)",
+    fg: "var(--md-on-error-container)",
+  },
+  expired: {
+    bg: "var(--md-error-container)",
+    fg: "var(--md-on-error-container)",
+  },
+  critical: { bg: "var(--md-primary-fixed)", fg: "var(--md-primary)" },
+  warning: {
+    bg: "var(--md-warning-container)",
+    fg: "var(--md-on-warning-container)",
+  },
+  kitchen_use: {
+    bg: "var(--md-info-container)",
+    fg: "var(--md-on-info-container)",
+  },
+  write_off: {
+    bg: "var(--md-error-container)",
+    fg: "var(--md-on-error-container)",
+  },
+  consumption: {
+    bg: "var(--md-secondary-container)",
+    fg: "var(--md-secondary)",
+  },
+  normal: { bg: "var(--md-secondary-container)", fg: "var(--md-secondary)" },
+  low: { bg: "var(--md-error-container)", fg: "var(--md-error)" },
+  out: { bg: "var(--md-error-container)", fg: "var(--md-error)" },
+  over: {
+    bg: "var(--md-warning-container)",
+    fg: "var(--md-on-warning-container)",
+  },
+  active: { bg: "var(--md-secondary-container)", fg: "var(--md-secondary)" },
+  suspended: {
+    bg: "var(--md-error-container)",
+    fg: "var(--md-on-error-container)",
+  },
+};
 
 export function StatusBadge({
   status,
@@ -341,17 +289,18 @@ export function StatusBadge({
   status: string;
   label?: string;
 }) {
-  const config = statusConfig[status] ?? {
-    label: status,
+  const colors = statusColors[status] ?? {
     bg: "var(--md-surface-high)",
     fg: "var(--md-on-surface-variant)",
   };
   return (
     <span
       className="ui-chip px-2.5 py-0.5 text-xs font-bold"
-      style={{ backgroundColor: config.bg, color: config.fg }}
+      style={{ backgroundColor: colors.bg, color: colors.fg }}
     >
-      <span className="ui-label-short">{label ?? config.label}</span>
+      <span className="ui-label-short">
+        {label ?? tStatus(status, "badge")}
+      </span>
     </span>
   );
 }

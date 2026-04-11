@@ -13,6 +13,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { StatCard, StatusBadge } from "../_components/shared";
 import { formatVND } from "../_lib/format";
+import { tStatus } from "../_lib/dictionary";
 
 export type PurchaseOrderRow = {
   id: number;
@@ -32,13 +33,6 @@ const statusTabs = [
   "received",
   "cancelled",
 ] as const;
-const tabLabels: Record<string, string> = {
-  "Tất cả": "Tất cả",
-  draft: "Nháp",
-  sent: "Đã gửi",
-  received: "Đã nhận",
-  cancelled: "Đã hủy",
-};
 
 export function PurchaseOrdersClient({
   orders,
@@ -121,7 +115,7 @@ export function PurchaseOrdersClient({
                     : { color: "var(--md-on-surface-variant)" }
                 }
               >
-                {tabLabels[tab]}
+                {tab === "Tất cả" ? "Tất cả" : tStatus(tab, "tab")}
                 {isActive ? ` (${count})` : ""}
               </button>
             );

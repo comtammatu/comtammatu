@@ -10,6 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { tStatus } from "../_lib/dictionary";
 import {
   Table,
   TableBody,
@@ -31,12 +32,6 @@ export type ExpiryAlertRow = {
 };
 
 const tabs = ["Tất cả", "expired", "critical", "warning"] as const;
-const tabLabels: Record<string, string> = {
-  "Tất cả": "Tất cả",
-  expired: "Đã hết hạn",
-  critical: "Sắp hết hạn",
-  warning: "Theo dõi",
-};
 
 export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
   const [activeTab, setActiveTab] = useState<string>("Tất cả");
@@ -227,7 +222,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
                   : { color: "var(--md-on-surface-variant)" }
               }
             >
-              {tabLabels[tab]}
+              {tab === "Tất cả" ? "Tất cả" : tStatus(tab, "tab")}
             </button>
           );
         })}

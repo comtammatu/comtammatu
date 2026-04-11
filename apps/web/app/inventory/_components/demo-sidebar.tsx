@@ -15,29 +15,50 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { tNav } from "../_lib/dictionary";
 
 const NAV_ITEMS = [
-  { href: "/inventory", label: "Tổng quan", icon: LayoutDashboard },
-  { href: "/inventory/stock", label: "Tồn kho", icon: Package },
+  {
+    href: "/inventory",
+    label: tNav("home", "navigation"),
+    icon: LayoutDashboard,
+  },
+  {
+    href: "/inventory/stock",
+    label: tNav("stock", "navigation"),
+    icon: Package,
+  },
   {
     href: "/inventory/receiving",
-    label: "Nhập kho",
+    label: tNav("receiving", "navigation"),
     icon: ArrowDownToLine,
   },
   {
     href: "/inventory/transfers",
-    label: "Điều chuyển",
+    label: tNav("transfers", "navigation"),
     icon: ArrowLeftRight,
   },
   {
     href: "/inventory/stocktake",
-    label: "Kiểm kê",
+    label: tNav("stocktake", "navigation"),
     icon: ClipboardList,
   },
-  { href: "/inventory/issues", label: "Xuất kho", icon: PackageOpen },
-  { href: "/inventory/reports", label: "Báo cáo", icon: BarChart3 },
-  { href: "/inventory/settings", label: "Cài đặt", icon: Leaf },
-] as const;
+  {
+    href: "/inventory/issues",
+    label: tNav("issues", "navigation"),
+    icon: PackageOpen,
+  },
+  {
+    href: "/inventory/reports",
+    label: tNav("reports", "navigation"),
+    icon: BarChart3,
+  },
+  {
+    href: "/inventory/settings",
+    label: tNav("settings", "navigation"),
+    icon: Leaf,
+  },
+];
 
 function isActive(pathname: string, href: string): boolean {
   if (href === "/inventory") return pathname === href;
