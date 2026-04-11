@@ -283,7 +283,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
               >
                 <TableCell className="px-8 py-6">
                   <Link
-                    href={`/inventory/grn/${g.code}`}
+                    href={`/inventory/grn/${g.id}`}
                     className="font-bold hover:underline"
                     style={{ color: "var(--md-on-surface)" }}
                   >

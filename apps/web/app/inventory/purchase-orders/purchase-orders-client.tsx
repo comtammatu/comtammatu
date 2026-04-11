@@ -218,7 +218,7 @@ export function PurchaseOrdersClient({
               >
                 <TableCell className="px-6 py-5">
                   <Link
-                    href={`/inventory/purchase-orders/${po.code}`}
+                    href={`/inventory/purchase-orders/${po.id}`}
                     className="font-bold hover:underline"
                     style={{ color: "var(--md-primary)" }}
                   >

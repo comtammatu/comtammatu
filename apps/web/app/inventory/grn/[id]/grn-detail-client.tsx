@@ -22,6 +22,7 @@ import { formatVND } from "../../_lib/format";
 export type GRNDetail = {
   code: string;
   poCode: string;
+  poId?: number;
   supplier: string;
   date: string;
   total: number;
@@ -83,9 +84,9 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
               >
                 Mã PO
               </p>
-              {grn.poCode ? (
+              {grn.poCode && grn.poId ? (
                 <Link
-                  href={`/inventory/purchase-orders/${grn.poCode}`}
+                  href={`/inventory/purchase-orders/${grn.poId}`}
                   className="font-semibold hover:underline"
                   style={{ color: "var(--md-primary)" }}
                 >

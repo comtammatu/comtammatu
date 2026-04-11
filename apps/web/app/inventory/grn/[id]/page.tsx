@@ -73,6 +73,7 @@ export default async function GRNDetailPage({
   const grn: GRNDetail = {
     code: d.grn.grn_number ?? "",
     poCode: po?.po_number ?? "",
+    poId: po?.id,
     supplier: supplier?.name ?? "—",
     date: d.grn.received_date ? formatDate(d.grn.received_date) : "—",
     total: totalAmount,
