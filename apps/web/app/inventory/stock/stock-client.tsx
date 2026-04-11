@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertTriangle,
   Eye,
@@ -36,16 +36,7 @@ export type StockIngredient = {
   temp: string | null;
 };
 
-const categories = [
-  "Tất cả",
-  "Thịt",
-  "Gạo",
-  "Gia vị",
-  "Rau củ",
-  "Trứng",
-  "Chế biến",
-  "Dầu",
-];
+type StockFilter = "all" | "in_stock" | "low" | "out";
 
 // Category → icon bg color mapping
 const categoryColors: Record<string, string> = {
@@ -58,6 +49,13 @@ const categoryColors: Record<string, string> = {
   Dầu: "var(--md-surface-high)",
 };
 
+const stockFilterOptions: { value: StockFilter; label: string }[] = [
+  { value: "all", label: "Tất cả" },
+  { value: "in_stock", label: "Còn hàng" },
+  { value: "low", label: "Sắp hết" },
+  { value: "out", label: "Hết hàng" },
+];
+
 export function StockClient({
   ingredients,
 }: {
@@ -65,11 +63,48 @@ export function StockClient({
 }) {
   const [activeCategory, setActiveCategory] = useState("Tất cả");
   const [viewMode, setViewMode] = useState<"stats" | "detail">("stats");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [stockFilter, setStockFilter] = useState<StockFilter>("all");
 
-  const filtered =
-    activeCategory === "Tất cả"
-      ? ingredients
-      : ingredients.filter((i) => i.category === activeCategory);
+  // Derive categories from actual data
+  const categories = useMemo(() => {
+    const cats = [
+      ...new Set(ingredients.map((i) => i.category).filter(Boolean)),
+    ];
+    cats.sort();
+    return ["Tất cả", ...cats];
+  }, [ingredients]);
+
+  const filtered = useMemo(() => {
+    let result = ingredients;
+
+    // Category filter
+    if (activeCategory !== "Tất cả") {
+      result = result.filter((i) => i.category === activeCategory);
+    }
+
+    // Stock status filter
+    if (stockFilter === "in_stock") {
+      result = result.filter(
+        (i) => i.status === "normal" || i.status === "over",
+      );
+    } else if (stockFilter === "low") {
+      result = result.filter((i) => i.status === "low");
+    } else if (stockFilter === "out") {
+      result = result.filter((i) => i.status === "out");
+    }
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter(
+        (i) =>
+          i.name.toLowerCase().includes(q) || i.sku.toLowerCase().includes(q),
+      );
+    }
+
+    return result;
+  }, [ingredients, activeCategory, stockFilter, searchQuery]);
 
   const totalValue = ingredients.reduce((sum, i) => sum + i.qty * i.cost, 0);
   const lowCount = ingredients.filter(
@@ -286,21 +321,48 @@ export function StockClient({
           </div>
         </div>
 
-        {/* Search Bar */}
+        {/* Search + Stock Filter Bar */}
         <div
-          className="flex items-center gap-3 border-b px-8 py-3"
+          className="flex flex-wrap items-center gap-3 border-b px-8 py-3"
           style={{
             borderColor:
               "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
           }}
         >
-          <Search className="size-4" style={{ color: "var(--md-outline)" }} />
+          <Search
+            className="size-4 shrink-0"
+            style={{ color: "var(--md-outline)" }}
+          />
           <input
             type="text"
             placeholder="Tìm kiếm tên/SKU..."
-            className="flex-1 border-none bg-transparent text-sm outline-none placeholder:text-[var(--md-outline)]"
-            readOnly
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="min-w-0 flex-1 border-none bg-transparent text-sm outline-none placeholder:text-[var(--md-outline)]"
           />
+          <div className="flex items-center gap-1">
+            {stockFilterOptions.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setStockFilter(opt.value)}
+                className="rounded-full px-3 py-1 text-xs font-semibold transition-colors"
+                style={
+                  stockFilter === opt.value
+                    ? {
+                        backgroundColor: "var(--md-primary)",
+                        color: "var(--md-on-primary)",
+                      }
+                    : {
+                        backgroundColor: "var(--md-surface-low)",
+                        color: "var(--md-on-surface-variant)",
+                      }
+                }
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
           <span
             className="text-xs font-medium"
             style={{ color: "var(--md-outline)" }}
