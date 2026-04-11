@@ -72,7 +72,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: BarChart3,
   },
   {
-    href: "/admin/inventory/settings",
+    href: "/inventory/settings",
     label: "Cài đặt",
     icon: Settings,
   },

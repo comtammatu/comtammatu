@@ -1,9 +1,9 @@
-import { fetchSuppliers } from "../../procurement-actions";
+import { fetchSuppliers } from "@/admin/inventory/procurement-actions";
 import {
   SuppliersClient,
   type SupplierRow,
-} from "../../suppliers/suppliers-client";
-import { PageHeader } from "@/components/foundation/ui-patterns";
+} from "@/admin/inventory/suppliers/suppliers-client";
+import { PageHeader } from "../../_components/shared";
 
 export default async function SuppliersSettingsPage() {
   const res = await fetchSuppliers();

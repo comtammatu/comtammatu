@@ -1,15 +1,15 @@
-import { fetchIngredients } from "../../actions";
+import { fetchIngredients } from "@/admin/inventory/actions";
 import {
   fetchMenuItemsForRecipes,
   fetchRecipes,
-} from "../../procurement-actions";
+} from "@/admin/inventory/procurement-actions";
 import {
   RecipesClient,
   type RecipeRow,
   type MenuItemOpt,
-} from "../../recipes/recipes-client";
-import { PageHeader } from "@/components/foundation/ui-patterns";
-import type { IngredientRow } from "../../page";
+} from "@/admin/inventory/recipes/recipes-client";
+import { PageHeader } from "../../_components/shared";
+import type { IngredientRow } from "@/admin/inventory/page";
 
 export default async function RecipesSettingsPage() {
   const [recRes, menuRes, ingRes] = await Promise.all([

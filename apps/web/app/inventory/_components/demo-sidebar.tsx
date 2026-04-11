@@ -13,47 +13,107 @@ import {
   Leaf,
   Menu,
   X,
+  ShoppingCart,
+  FileText,
+  Users,
+  UtensilsCrossed,
+  Hourglass,
+  Receipt,
 } from "lucide-react";
 import { useState } from "react";
 import { tNav } from "../_lib/dictionary";
 
-const NAV_ITEMS = [
+type NavItem =
+  | { type: "link"; href: string; label: string; icon: typeof LayoutDashboard }
+  | { type: "divider"; label: string };
+
+const NAV_ITEMS: NavItem[] = [
   {
+    type: "link",
     href: "/inventory",
     label: tNav("home", "navigation"),
     icon: LayoutDashboard,
   },
   {
+    type: "link",
     href: "/inventory/stock",
     label: tNav("stock", "navigation"),
     icon: Package,
   },
+
+  { type: "divider", label: "Nhập & Xuất" },
   {
-    href: "/inventory/receiving",
-    label: tNav("receiving", "navigation"),
+    type: "link",
+    href: "/inventory/purchase-orders",
+    label: "Đơn đặt hàng",
+    icon: ShoppingCart,
+  },
+  {
+    type: "link",
+    href: "/inventory/grn",
+    label: "Phiếu nhập kho",
     icon: ArrowDownToLine,
   },
   {
+    type: "link",
+    href: "/inventory/supplier-invoices",
+    label: "Hóa đơn NCC",
+    icon: Receipt,
+  },
+  {
+    type: "link",
     href: "/inventory/transfers",
     label: tNav("transfers", "navigation"),
     icon: ArrowLeftRight,
   },
   {
+    type: "link",
+    href: "/inventory/issues",
+    label: tNav("issues", "navigation"),
+    icon: PackageOpen,
+  },
+
+  { type: "divider", label: "Kiểm soát" },
+  {
+    type: "link",
     href: "/inventory/stocktake",
     label: tNav("stocktake", "navigation"),
     icon: ClipboardList,
   },
   {
-    href: "/inventory/issues",
-    label: tNav("issues", "navigation"),
-    icon: PackageOpen,
+    type: "link",
+    href: "/inventory/expiry",
+    label: "Hạn sử dụng",
+    icon: Hourglass,
   },
   {
+    type: "link",
     href: "/inventory/reports",
     label: tNav("reports", "navigation"),
     icon: BarChart3,
   },
+
+  { type: "divider", label: "Danh mục" },
   {
+    type: "link",
+    href: "/inventory/ingredients",
+    label: "Nguyên liệu",
+    icon: FileText,
+  },
+  {
+    type: "link",
+    href: "/inventory/suppliers",
+    label: "Nhà cung cấp",
+    icon: Users,
+  },
+  {
+    type: "link",
+    href: "/inventory/recipes",
+    label: "Công thức",
+    icon: UtensilsCrossed,
+  },
+  {
+    type: "link",
     href: "/inventory/settings",
     label: tNav("settings", "navigation"),
     icon: Leaf,
@@ -100,21 +160,31 @@ function NavContent({
         </div>
 
         {/* Navigation */}
-        <nav className="space-y-1">
+        <nav className="space-y-0.5">
           {NAV_ITEMS.map((item) => {
+            if (item.type === "divider") {
+              return (
+                <div
+                  key={item.label}
+                  className="px-4 pb-1 pt-5 text-label font-bold uppercase tracking-widest"
+                  style={{ color: "rgba(26,28,26,0.35)" }}
+                >
+                  {item.label}
+                </div>
+              );
+            }
             const active = isActive(pathname, item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={onNavigate}
-                className="flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors duration-200"
+                className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors duration-200"
                 style={
                   active
                     ? {
                         color: "var(--md-primary)",
                         fontWeight: 700,
-                        borderRight: "4px solid var(--md-primary)",
                         backgroundColor: "rgba(255,255,255,0.5)",
                       }
                     : {
@@ -135,7 +205,7 @@ function NavContent({
                   }
                 }}
               >
-                <item.icon className="size-5" />
+                <item.icon className="size-4" />
                 <span>{item.label}</span>
               </Link>
             );

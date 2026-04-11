@@ -2,6 +2,7 @@ import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
 import { redirect } from "next/navigation";
 import { fetchIngredients } from "../actions";
+import { fetchHeadquartersBranchId } from "../_lib/headquarters";
 import { formatDate } from "../_lib/format";
 import { StockClient } from "./stock-client";
 import type { StockIngredient } from "./stock-client";
@@ -34,13 +35,20 @@ export default async function StockPage() {
   const claims = extractClaims(session.user.app_metadata);
   if (!claims) redirect("/login");
 
-  // Fetch ingredients + stock levels for HQ branch in parallel
+  // Resolve branch: use user's branch if set, otherwise HQ
+  const branchId =
+    claims.branch_id ??
+    (await fetchHeadquartersBranchId(supabase, claims.tenant_id));
+  if (!branchId) redirect("/inventory");
+
+  // Fetch ingredients + stock levels in parallel
   const [ingredientsRes, stockRes] = await Promise.all([
     fetchIngredients(),
     supabase
       .from("stock_levels")
       .select("ingredient_id, current_quantity, avg_unit_cost, last_counted_at")
       .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", branchId)
       .order("ingredient_id"),
   ]);
 
@@ -87,5 +95,5 @@ export default async function StockPage() {
     };
   });
 
-  return <StockClient ingredients={ingredients} />;
+  return <StockClient ingredients={ingredients} branchId={branchId} />;
 }

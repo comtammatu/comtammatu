@@ -1,9 +1,9 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
-import { fetchIngredients } from "../../actions";
+import { fetchIngredients } from "@/admin/inventory/actions";
 import { IngredientsSettingsClient } from "./ingredients-settings-client";
-import { PageHeader } from "@/components/foundation/ui-patterns";
-import type { IngredientRow } from "../../page";
+import { PageHeader } from "../../_components/shared";
+import type { IngredientRow } from "@/admin/inventory/page";
 
 export default async function IngredientsSettingsPage() {
   const supabase = await createClient();

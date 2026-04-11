@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
-  Eye,
   MoreHorizontal,
   Pencil,
   Search,
@@ -19,6 +19,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { StatusBadge } from "../_components/shared";
 import { formatVND, formatQty } from "../_lib/format";
+import { AdjustStockDialog } from "./adjust-stock-dialog";
 
 export type StockIngredient = {
   id: number;
@@ -58,13 +59,19 @@ const stockFilterOptions: { value: StockFilter; label: string }[] = [
 
 export function StockClient({
   ingredients,
+  branchId,
 }: {
   ingredients: StockIngredient[];
+  branchId: number;
 }) {
+  const router = useRouter();
   const [activeCategory, setActiveCategory] = useState("Tất cả");
   const [viewMode, setViewMode] = useState<"stats" | "detail">("stats");
   const [searchQuery, setSearchQuery] = useState("");
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
+  const [adjustTarget, setAdjustTarget] = useState<StockIngredient | null>(
+    null,
+  );
 
   // Derive categories from actual data
   const categories = useMemo(() => {
@@ -553,22 +560,19 @@ export function StockClient({
                     <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                       <button
                         type="button"
-                        className="rounded-full p-1.5 transition-colors"
+                        onClick={() => setAdjustTarget(item)}
+                        className="rounded-full p-1.5 transition-colors hover:opacity-80"
                         style={{ color: "var(--md-on-surface-variant)" }}
-                      >
-                        <Eye className="size-4" />
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-full p-1.5 transition-colors"
-                        style={{ color: "var(--md-on-surface-variant)" }}
+                        aria-label={`Điều chỉnh ${item.name}`}
                       >
                         <Pencil className="size-4" />
                       </button>
                       <button
                         type="button"
-                        className="rounded-full p-1.5 transition-colors"
+                        onClick={() => setAdjustTarget(item)}
+                        className="rounded-full p-1.5 transition-colors hover:opacity-80"
                         style={{ color: "var(--md-on-surface-variant)" }}
+                        aria-label={`Thêm thao tác ${item.name}`}
                       >
                         <MoreHorizontal className="size-4" />
                       </button>
@@ -631,6 +635,24 @@ export function StockClient({
           </div>
         </div>
       </div>
+
+      {/* Adjust Stock Dialog */}
+      {adjustTarget && (
+        <AdjustStockDialog
+          open={adjustTarget !== null}
+          onOpenChange={(o) => {
+            if (!o) setAdjustTarget(null);
+          }}
+          branchId={branchId}
+          ingredientId={adjustTarget.id}
+          ingredientName={adjustTarget.name}
+          unit={adjustTarget.unit}
+          onAdjusted={() => {
+            setAdjustTarget(null);
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -26,6 +26,11 @@ const ROUTE_LABELS: Record<string, string> = {
   "/inventory/ingredients": "Nguyên liệu",
   "/inventory/recipes": "Công thức",
   "/inventory/suppliers": "Suppliers",
+  "/inventory/settings": "Cài đặt",
+  "/inventory/settings/ingredients": "Nguyên liệu",
+  "/inventory/settings/recipes": "Công thức",
+  "/inventory/settings/suppliers": "Nhà cung cấp",
+  "/inventory/settings/expiry": "Hạn sử dụng",
 };
 
 function getBreadcrumbs(pathname: string) {

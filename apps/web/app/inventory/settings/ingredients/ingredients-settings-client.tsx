@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { IngredientTable } from "../../ingredient-table";
-import type { IngredientRow } from "../../page";
+import { IngredientTable } from "@/admin/inventory/ingredient-table";
+import type { IngredientRow } from "@/admin/inventory/page";
 
 interface IngredientsSettingsClientProps {
   ingredients: IngredientRow[];

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -14,6 +15,51 @@ import {
 } from "lucide-react";
 import { StatCard, StatusBadge } from "./_components/shared";
 import { formatVND } from "./_lib/format";
+
+function useCurrentTime() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
+const dayNames = [
+  "Chủ Nhật",
+  "Thứ Hai",
+  "Thứ Ba",
+  "Thứ Tư",
+  "Thứ Năm",
+  "Thứ Sáu",
+  "Thứ Bảy",
+];
+const monthNames = [
+  "01",
+  "02",
+  "03",
+  "04",
+  "05",
+  "06",
+  "07",
+  "08",
+  "09",
+  "10",
+  "11",
+  "12",
+];
+
+function formatDate(d: Date) {
+  return `${dayNames[d.getDay()]}, ${String(d.getDate()).padStart(2, "0")} Tháng ${monthNames[d.getMonth()]}, ${d.getFullYear()}`;
+}
+
+function formatTime(d: Date) {
+  const h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2, "0");
+  const period = h < 12 ? "SA" : "CH";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${String(h12).padStart(2, "0")}:${m} ${period}`;
+}
 
 export type DashboardProps = {
   totalStockValue: number;
@@ -60,44 +106,27 @@ export function DashboardClient({
   transfers,
   stocktakeSessions,
 }: DashboardProps) {
+  const now = useCurrentTime();
+
   return (
     <div className="space-y-6">
       {/* Dashboard Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h2
-            className="text-2xl font-bold tracking-tight mb-1"
-            style={{ color: "var(--md-on-surface)" }}
-          >
-            Xin chào, Quản trị viên
-          </h2>
-          <div
-            className="flex flex-wrap items-center gap-2 text-sm"
-            style={{ color: "var(--md-on-surface-variant)", opacity: 0.7 }}
-          >
-            <Calendar className="size-3.5 shrink-0" />
-            <span className="text-sm">Thứ Năm, 10 Tháng 04, 2026</span>
-            <span className="mx-1">•</span>
-            <Clock className="size-3.5 shrink-0" />
-            <span className="text-sm">09:42 SA</span>
-          </div>
-        </div>
-        <div className="flex shrink-0 flex-col items-end">
-          <span
-            className="rounded px-2 py-0.5 text-xs font-medium uppercase tracking-wider"
-            style={{
-              backgroundColor: "var(--md-secondary-container)",
-              color: "var(--md-on-secondary-container)",
-            }}
-          >
-            Trạng thái hệ thống
-          </span>
-          <span
-            className="text-xs font-medium"
-            style={{ color: "var(--md-secondary)" }}
-          >
-            Hoạt động ổn định
-          </span>
+      <div>
+        <h2
+          className="text-2xl font-bold tracking-tight mb-1"
+          style={{ color: "var(--md-on-surface)" }}
+        >
+          Xin chào, Quản trị viên
+        </h2>
+        <div
+          className="flex flex-wrap items-center gap-2 text-sm"
+          style={{ color: "var(--md-on-surface-variant)", opacity: 0.7 }}
+        >
+          <Calendar className="size-3.5 shrink-0" />
+          <span className="text-sm">{formatDate(now)}</span>
+          <span className="mx-1">•</span>
+          <Clock className="size-3.5 shrink-0" />
+          <span className="text-sm">{formatTime(now)}</span>
         </div>
       </div>
 

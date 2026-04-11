@@ -1,10 +1,19 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Pencil, UtensilsCrossed } from "lucide-react";
 import { PageHeader } from "../_components/shared";
 import { formatVND } from "../_lib/format";
+import { RecipeLineDialog } from "./recipe-line-dialog";
+import type {
+  MenuItemOption,
+  IngredientOption,
+  EditingLine,
+} from "./recipe-line-dialog";
 
 export type RecipeItem = {
+  ingredientId: number;
   ingredientName: string;
   qty: number;
   unit: string;
@@ -14,6 +23,7 @@ export type RecipeItem = {
 
 export type RecipeRow = {
   id: number;
+  menuItemId: number;
   name: string;
   category: string;
   updatedAt: string;
@@ -44,7 +54,45 @@ function YieldBadge({ value }: { value: number }) {
   );
 }
 
-export function RecipesClient({ recipes }: { recipes: RecipeRow[] }) {
+export function RecipesClient({
+  recipes,
+  menuItems,
+  ingredients,
+}: {
+  recipes: RecipeRow[];
+  menuItems: MenuItemOption[];
+  ingredients: IngredientOption[];
+}) {
+  const router = useRouter();
+  const [lineDialogOpen, setLineDialogOpen] = useState(false);
+  const [lineDialogMenuItemId, setLineDialogMenuItemId] = useState<
+    number | undefined
+  >();
+  const [editingLine, setEditingLine] = useState<EditingLine | null>(null);
+
+  function openAddLine(menuItemId?: number) {
+    setEditingLine(null);
+    setLineDialogMenuItemId(menuItemId);
+    setLineDialogOpen(true);
+  }
+
+  function openEditLine(menuItemId: number, item: RecipeItem) {
+    setEditingLine({
+      menuItemId,
+      ingredientId: item.ingredientId,
+      quantity: item.qty,
+      unit: item.unit,
+      yieldFactor: item.yieldFactor,
+      note: item.note,
+    });
+    setLineDialogMenuItemId(menuItemId);
+    setLineDialogOpen(true);
+  }
+
+  function handleSaved() {
+    router.refresh();
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -53,6 +101,7 @@ export function RecipesClient({ recipes }: { recipes: RecipeRow[] }) {
         actions={
           <button
             type="button"
+            onClick={() => openAddLine()}
             className="flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:opacity-90"
             style={{
               background:
@@ -65,6 +114,20 @@ export function RecipesClient({ recipes }: { recipes: RecipeRow[] }) {
           </button>
         }
       />
+
+      {recipes.length === 0 && (
+        <div
+          className="rounded-2xl py-16 text-center ambient-shadow"
+          style={{ backgroundColor: "var(--md-surface-lowest)" }}
+        >
+          <p
+            className="text-sm font-medium"
+            style={{ color: "var(--md-on-surface-variant)" }}
+          >
+            Chưa có công thức nào. Nhấn &quot;Tạo món mới&quot; để bắt đầu.
+          </p>
+        </div>
+      )}
 
       <div className="space-y-10">
         {recipes.map((recipe) => (
@@ -125,13 +188,16 @@ export function RecipesClient({ recipes }: { recipes: RecipeRow[] }) {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
+                  onClick={() => openAddLine(recipe.menuItemId)}
                   className="rounded-lg p-2 transition-colors hover:opacity-80"
                   style={{ color: "var(--md-outline)" }}
+                  aria-label={`Sửa ${recipe.name}`}
                 >
                   <Pencil className="size-4" />
                 </button>
                 <button
                   type="button"
+                  onClick={() => openAddLine(recipe.menuItemId)}
                   className="flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition-colors hover:opacity-80"
                   style={{
                     backgroundColor:
@@ -154,43 +220,29 @@ export function RecipesClient({ recipes }: { recipes: RecipeRow[] }) {
                         "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
                     }}
                   >
-                    <th
-                      className="px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wide"
-                      style={{ color: "var(--md-on-surface-variant)" }}
-                    >
-                      Nguyên liệu
-                    </th>
-                    <th
-                      className="px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wide"
-                      style={{ color: "var(--md-on-surface-variant)" }}
-                    >
-                      Số lượng
-                    </th>
-                    <th
-                      className="px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wide"
-                      style={{ color: "var(--md-on-surface-variant)" }}
-                    >
-                      Đơn vị
-                    </th>
-                    <th
-                      className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wide"
-                      style={{ color: "var(--md-on-surface-variant)" }}
-                    >
-                      Yield Factor (%)
-                    </th>
-                    <th
-                      className="px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wide"
-                      style={{ color: "var(--md-on-surface-variant)" }}
-                    >
-                      Ghi chú
-                    </th>
+                    {[
+                      "Nguyên liệu",
+                      "Số lượng",
+                      "Đơn vị",
+                      "Yield Factor (%)",
+                      "Ghi chú",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wide ${h === "Yield Factor (%)" ? "text-center" : ""}`}
+                        style={{ color: "var(--md-on-surface-variant)" }}
+                      >
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {recipe.items.map((item) => (
                     <tr
-                      key={item.ingredientName}
-                      className="transition-colors"
+                      key={item.ingredientId}
+                      className="cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--md-primary)_3%,transparent)]"
+                      onClick={() => openEditLine(recipe.menuItemId, item)}
                       style={{
                         borderBottom:
                           "1px solid color-mix(in srgb, var(--md-surface-low) 80%, transparent)",
@@ -236,6 +288,18 @@ export function RecipesClient({ recipes }: { recipes: RecipeRow[] }) {
                       </td>
                     </tr>
                   ))}
+                  {recipe.items.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-6 py-8 text-center text-sm"
+                        style={{ color: "var(--md-on-surface-variant)" }}
+                      >
+                        Chưa có nguyên liệu. Nhấn &quot;Thêm dòng công
+                        thức&quot; để bắt đầu.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -261,17 +325,21 @@ export function RecipesClient({ recipes }: { recipes: RecipeRow[] }) {
                 </span>{" "}
                 / phần
               </span>
-              <button
-                type="button"
-                className="flex items-center gap-1 text-xs font-bold hover:underline"
-                style={{ color: "var(--md-primary)" }}
-              >
-                Xem chi tiết biến động giá
-              </button>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Recipe Line Dialog */}
+      <RecipeLineDialog
+        open={lineDialogOpen}
+        onOpenChange={setLineDialogOpen}
+        menuItems={menuItems}
+        ingredients={ingredients}
+        defaultMenuItemId={lineDialogMenuItemId}
+        editingLine={editingLine}
+        onSaved={handleSaved}
+      />
     </div>
   );
 }

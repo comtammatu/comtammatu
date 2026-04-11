@@ -1,24 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Search, Filter } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Filter, Pencil, Search } from "lucide-react";
 import { PageHeader, SearchableSelect } from "../_components/shared";
 import { formatVND } from "../_lib/format";
+import { fetchIngredients } from "../actions";
+import { IngredientDialog } from "./ingredient-dialog";
+import type { IngredientRow } from "./ingredient-dialog";
 
-export type IngredientItem = {
-  id: number;
-  name: string;
-  sku: string;
-  unit: string;
-  category: string;
-  cost: number;
-  min: number;
-  max: number;
-  reorder: number;
-  status: "normal" | "low" | "out" | "over";
-  temp: string | null;
-  updatedAt: string;
-};
+export type { IngredientRow };
 
 const categoryOptions = [
   { value: "all", label: "Tất cả loại" },
@@ -30,9 +20,9 @@ const categoryOptions = [
 
 const preservationOptions = [
   { value: "all", label: "Mọi bảo quản" },
-  { value: "Mát", label: "Mát" },
-  { value: "Đông", label: "Đông" },
-  { value: "Khô", label: "Khô" },
+  { value: "refrigerated", label: "Mát" },
+  { value: "frozen", label: "Đông" },
+  { value: "ambient", label: "Khô" },
 ];
 
 // Left border color based on category
@@ -46,7 +36,6 @@ const categoryBorderColor: Record<string, string> = {
   Dầu: "var(--md-outline-variant)",
 };
 
-// Icon bg color based on category
 const categoryIconBg: Record<string, string> = {
   Thịt: "color-mix(in srgb, var(--md-error-container) 50%, transparent)",
   Gạo: "color-mix(in srgb, var(--md-primary-fixed) 50%, transparent)",
@@ -68,13 +57,57 @@ const categoryIconFg: Record<string, string> = {
   Dầu: "var(--md-on-surface-variant)",
 };
 
-export function IngredientsClient({
-  ingredients,
-}: {
-  ingredients: IngredientItem[];
-}) {
+function storageLabel(type: string | null): string {
+  if (type === "refrigerated") return "0-4°C";
+  if (type === "frozen") return "-18°C";
+  return "Nhiệt độ phòng";
+}
+
+export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
+  const [rows, setRows] = useState(initial);
+  const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [preservation, setPreservation] = useState("all");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingIngredient, setEditingIngredient] =
+    useState<IngredientRow | null>(null);
+
+  const filtered = useMemo(() => {
+    let result = rows;
+    if (category !== "all") {
+      result = result.filter((i) => i.category === category);
+    }
+    if (preservation !== "all") {
+      result = result.filter(
+        (i) => (i.storage_type ?? "ambient") === preservation,
+      );
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter(
+        (i) =>
+          i.name.toLowerCase().includes(q) ||
+          (i.sku ?? "").toLowerCase().includes(q),
+      );
+    }
+    return result;
+  }, [rows, category, preservation, searchQuery]);
+
+  async function reload() {
+    const res = await fetchIngredients();
+    if (res.success) setRows((res.data ?? []) as IngredientRow[]);
+  }
+
+  function openCreate() {
+    setEditingIngredient(null);
+    setDialogOpen(true);
+  }
+
+  function openEdit(row: IngredientRow) {
+    setEditingIngredient(row);
+    setDialogOpen(true);
+  }
+
   return (
     <div className="space-y-6">
       <style>{`
@@ -87,6 +120,7 @@ export function IngredientsClient({
         actions={
           <button
             type="button"
+            onClick={openCreate}
             className="flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:opacity-90"
             style={{
               background:
@@ -113,6 +147,8 @@ export function IngredientsClient({
           <input
             type="text"
             placeholder="Tìm kiếm theo tên hoặc SKU..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full rounded-xl border-none py-3 pl-12 pr-4 text-sm focus:outline-none focus:ring-0"
             style={{
               backgroundColor: "var(--md-surface-highest)",
@@ -165,88 +201,50 @@ export function IngredientsClient({
         <table className="w-full border-separate border-spacing-y-3 text-left">
           <thead>
             <tr>
-              <th
-                className="pb-4 pl-6 whitespace-nowrap font-bold uppercase"
-                style={{
-                  fontSize: 10,
-                  letterSpacing: "0.05em",
-                  color: "var(--md-outline)",
-                }}
-              >
-                Thông tin nguyên liệu
-              </th>
-              <th
-                className="pb-4 whitespace-nowrap font-bold uppercase"
-                style={{
-                  fontSize: 10,
-                  letterSpacing: "0.05em",
-                  color: "var(--md-outline)",
-                }}
-              >
-                SKU / Phân loại
-              </th>
-              <th
-                className="pb-4 whitespace-nowrap font-bold uppercase"
-                style={{
-                  fontSize: 10,
-                  letterSpacing: "0.05em",
-                  color: "var(--md-outline)",
-                }}
-              >
-                Đơn vị
-              </th>
-              <th
-                className="pb-4 whitespace-nowrap font-bold uppercase"
-                style={{
-                  fontSize: 10,
-                  letterSpacing: "0.05em",
-                  color: "var(--md-outline)",
-                }}
-              >
-                Bảo quản
-              </th>
-              <th
-                className="pb-4 whitespace-nowrap font-bold uppercase"
-                style={{
-                  fontSize: 10,
-                  letterSpacing: "0.05em",
-                  color: "var(--md-outline)",
-                }}
-              >
-                Giá tham chiếu
-              </th>
-              <th
-                className="pb-4 whitespace-nowrap font-bold uppercase"
-                style={{
-                  fontSize: 10,
-                  letterSpacing: "0.05em",
-                  color: "var(--md-outline)",
-                }}
-              >
-                Ngưỡng tồn (Min/Max/Re)
-              </th>
-              <th
-                className="pb-4 pr-6 whitespace-nowrap text-right font-bold uppercase"
-                style={{
-                  fontSize: 10,
-                  letterSpacing: "0.05em",
-                  color: "var(--md-outline)",
-                }}
-              >
-                Trạng thái
-              </th>
+              {[
+                "Thông tin nguyên liệu",
+                "SKU / Phân loại",
+                "Đơn vị",
+                "Bảo quản",
+                "Giá tham chiếu",
+                "Ngưỡng tồn (Min/Max/Re)",
+                "",
+              ].map((h) => (
+                <th
+                  key={h || "actions"}
+                  className={`pb-4 ${h === "Thông tin nguyên liệu" ? "pl-6" : ""} ${!h ? "pr-6 text-right" : ""} whitespace-nowrap font-bold uppercase`}
+                  style={{
+                    fontSize: 10,
+                    letterSpacing: "0.05em",
+                    color: "var(--md-outline)",
+                  }}
+                >
+                  {h || "Thao tác"}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {ingredients.map((item) => {
+            {filtered.length === 0 && (
+              <tr>
+                <td
+                  colSpan={7}
+                  className="py-16 text-center text-sm"
+                  style={{ color: "var(--md-on-surface-variant)" }}
+                >
+                  {searchQuery
+                    ? "Không tìm thấy nguyên liệu nào"
+                    : 'Chưa có nguyên liệu. Nhấn "Tạo nguyên liệu" để bắt đầu.'}
+                </td>
+              </tr>
+            )}
+            {filtered.map((item) => {
+              const cat = item.category ?? "";
               const borderColor =
-                categoryBorderColor[item.category] ??
-                "var(--md-outline-variant)";
-              const iconBg =
-                categoryIconBg[item.category] ?? "var(--md-surface-high)";
+                categoryBorderColor[cat] ?? "var(--md-outline-variant)";
+              const iconBg = categoryIconBg[cat] ?? "var(--md-surface-high)";
               const iconFg =
-                categoryIconFg[item.category] ?? "var(--md-on-surface-variant)";
-              const updatedAgo = item.updatedAt;
+                categoryIconFg[cat] ?? "var(--md-on-surface-variant)";
 
               return (
                 <tr
@@ -282,7 +280,9 @@ export function IngredientsClient({
                           className="font-medium"
                           style={{ fontSize: 11, color: "var(--md-outline)" }}
                         >
-                          Cập nhật {updatedAgo}
+                          {item.is_active
+                            ? "Đang hoạt động"
+                            : "Ngừng hoạt động"}
                         </p>
                       </div>
                     </div>
@@ -297,18 +297,20 @@ export function IngredientsClient({
                       className="text-xs font-mono font-bold"
                       style={{ color: "var(--md-primary)" }}
                     >
-                      {item.sku}
+                      {item.sku || "—"}
                     </p>
-                    <span
-                      className="mt-1 inline-block rounded px-2 py-0.5 font-bold uppercase"
-                      style={{
-                        fontSize: 10,
-                        backgroundColor: "var(--md-surface-high)",
-                        color: "var(--md-on-surface-variant)",
-                      }}
-                    >
-                      {item.category}
-                    </span>
+                    {cat && (
+                      <span
+                        className="mt-1 inline-block rounded px-2 py-0.5 font-bold uppercase"
+                        style={{
+                          fontSize: 10,
+                          backgroundColor: "var(--md-surface-high)",
+                          color: "var(--md-on-surface-variant)",
+                        }}
+                      >
+                        {cat}
+                      </span>
+                    )}
                   </td>
 
                   {/* Unit */}
@@ -327,33 +329,30 @@ export function IngredientsClient({
                     className="py-5"
                     style={{ backgroundColor: "var(--md-surface-lowest)" }}
                   >
-                    {item.temp ? (
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="size-2 rounded-full"
-                          style={{ backgroundColor: "var(--md-tertiary)" }}
-                        />
-                        <span
-                          className="text-sm font-medium"
-                          style={{ color: "var(--md-tertiary)" }}
-                        >
-                          {item.temp}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="size-2 rounded-full"
-                          style={{ backgroundColor: "var(--md-outline)" }}
-                        />
-                        <span
-                          className="text-sm font-medium"
-                          style={{ color: "var(--md-on-surface-variant)" }}
-                        >
-                          Nhiệt độ phòng
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="size-2 rounded-full"
+                        style={{
+                          backgroundColor:
+                            item.storage_type === "refrigerated" ||
+                            item.storage_type === "frozen"
+                              ? "var(--md-tertiary)"
+                              : "var(--md-outline)",
+                        }}
+                      />
+                      <span
+                        className="text-sm font-medium"
+                        style={{
+                          color:
+                            item.storage_type === "refrigerated" ||
+                            item.storage_type === "frozen"
+                              ? "var(--md-tertiary)"
+                              : "var(--md-on-surface-variant)",
+                        }}
+                      >
+                        {storageLabel(item.storage_type)}
+                      </span>
+                    </div>
                   </td>
 
                   {/* Reference price */}
@@ -364,7 +363,7 @@ export function IngredientsClient({
                       color: "var(--md-on-surface)",
                     }}
                   >
-                    {formatVND(item.cost)}đ
+                    {item.unit_cost ? `${formatVND(item.unit_cost)}đ` : "—"}
                   </td>
 
                   {/* Min / Max / Reorder badges */}
@@ -381,7 +380,7 @@ export function IngredientsClient({
                           color: "var(--md-on-error-container)",
                         }}
                       >
-                        {item.min}
+                        {item.min_stock_level ?? 0}
                       </span>
                       <span
                         className="rounded px-2 py-0.5 font-bold"
@@ -391,7 +390,7 @@ export function IngredientsClient({
                           color: "var(--md-on-surface-variant)",
                         }}
                       >
-                        {item.max}
+                        {item.max_stock_level ?? 0}
                       </span>
                       <span
                         className="rounded px-2 py-0.5 font-bold"
@@ -401,24 +400,25 @@ export function IngredientsClient({
                           color: "var(--md-on-secondary-container)",
                         }}
                       >
-                        {item.reorder}
+                        {item.reorder_point ?? 0}
                       </span>
                     </div>
                   </td>
 
-                  {/* Status toggle */}
+                  {/* Edit button */}
                   <td
                     className="rounded-r-2xl py-5 pr-6 text-right"
                     style={{ backgroundColor: "var(--md-surface-lowest)" }}
                   >
-                    <label className="relative inline-flex cursor-pointer items-center">
-                      <input
-                        type="checkbox"
-                        className="peer sr-only"
-                        defaultChecked={item.status !== "out"}
-                      />
-                      <div className="toggle-track h-6 w-11 rounded-full after:absolute after:inset-y-0.5 after:start-0.5 after:size-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white" />
-                    </label>
+                    <button
+                      type="button"
+                      onClick={() => openEdit(item)}
+                      className="rounded-full p-2 opacity-0 transition-opacity group-hover:opacity-100"
+                      style={{ color: "var(--md-on-surface-variant)" }}
+                      aria-label={`Sửa ${item.name}`}
+                    >
+                      <Pencil className="size-4" />
+                    </button>
                   </td>
                 </tr>
               );
@@ -434,14 +434,22 @@ export function IngredientsClient({
       >
         Hiển thị{" "}
         <span className="font-bold" style={{ color: "var(--md-on-surface)" }}>
-          1-{ingredients.length}
+          {filtered.length}
         </span>{" "}
         trên tổng{" "}
         <span className="font-bold" style={{ color: "var(--md-on-surface)" }}>
-          {ingredients.length}
+          {rows.length}
         </span>{" "}
         nguyên liệu
       </p>
+
+      {/* Create / Edit Dialog */}
+      <IngredientDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        ingredient={editingIngredient}
+        onSaved={reload}
+      />
     </div>
   );
 }

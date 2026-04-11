@@ -83,7 +83,7 @@ export function InventoryDashboard({
       label:
         expiredCount > 0 ? "mặt hàng hết/sắp hết hạn" : "mặt hàng sắp hết hạn",
       count: expiryAlerts.length,
-      href: "/admin/inventory/settings/expiry",
+      href: "/inventory/settings/expiry",
       color: expiredCount > 0 ? "text-destructive" : "text-warning",
     });
   }
@@ -171,7 +171,7 @@ export function InventoryDashboard({
         </Link>
 
         {/* Expiry Alerts Card */}
-        <Link href="/admin/inventory/settings/expiry">
+        <Link href="/inventory/settings/expiry">
           <Card
             className={cn(
               "transition-shadow hover:shadow-md",

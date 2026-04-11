@@ -1,9 +1,9 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
-import { fetchExpiryAlerts } from "../../actions";
-import { ExpiryListClient } from "../../expiry/expiry-list-client";
-import { PageHeader } from "@/components/foundation/ui-patterns";
-import type { BranchOption, ExpiryAlertRow } from "../../page";
+import { fetchExpiryAlerts } from "@/admin/inventory/actions";
+import { ExpiryListClient } from "@/admin/inventory/expiry/expiry-list-client";
+import { PageHeader } from "../../_components/shared";
+import type { BranchOption, ExpiryAlertRow } from "@/admin/inventory/page";
 
 export default async function ExpirySettingsPage() {
   const supabase = await createClient();
