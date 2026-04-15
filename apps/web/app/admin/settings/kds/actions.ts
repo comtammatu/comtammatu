@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   BRANCH_FLOOR_SETTINGS_ROLES,
@@ -8,6 +7,7 @@ import {
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "@/_lib/auth";
+import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, withFormAction, type ActionContext } from "@/_lib/with-action";
 
 /* ─── Helpers ─── */
@@ -177,7 +177,7 @@ export const createStation = withFormAction(
       };
     }
 
-    revalidatePath("/admin/settings/kds");
+    revalidateSurfacePath("/admin/settings/kds");
     return { success: true, data: { id: result[0]!.id } };
   },
 );
@@ -229,7 +229,7 @@ export const updateStation = withFormAction(
       };
     }
 
-    revalidatePath("/admin/settings/kds");
+    revalidateSurfacePath("/admin/settings/kds");
     return { success: true };
   },
 );
@@ -270,7 +270,7 @@ export const saveStationCategories = withAction(
       };
     }
 
-    revalidatePath("/admin/settings/kds");
+    revalidateSurfacePath("/admin/settings/kds");
     return { success: true };
   },
 );

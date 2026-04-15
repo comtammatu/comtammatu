@@ -1,5 +1,5 @@
 import { canAccess } from "./module-acl";
-import { resolveModuleFromPath } from "./route-resolution";
+import { isBetaPath, resolveModuleFromPath, stripBetaPrefix } from "./route-resolution";
 import type { JwtClaims, ScopeIds, StaffRole } from "./types";
 import { ADMIN_ROLES, BRANCH_ROLES } from "./types";
 
@@ -47,6 +47,36 @@ export function getDefaultRedirect(claims: JwtClaims): string {
   return "/employee";
 }
 
+export function toBetaPath(pathname: string): string {
+  const safePath = getSafeInternalReturnTo(pathname);
+
+  if (!safePath) {
+    return "/beta";
+  }
+
+  if (safePath === "/") {
+    return "/beta";
+  }
+
+  if (isBetaPath(safePath)) {
+    return safePath;
+  }
+
+  return `/beta${safePath}`;
+}
+
+export function getBetaDefaultRedirect(claims: JwtClaims): string {
+  if (ADMIN_ROLES.includes(claims.user_role)) {
+    return "/beta/admin/dashboard";
+  }
+
+  if (canAccess(claims.user_role, "inventory")) {
+    return "/beta/inventory";
+  }
+
+  return "/beta";
+}
+
 /** Validate and normalize an internal return path. */
 export function getSafeInternalReturnTo(
   returnTo: string | null | undefined,
@@ -84,6 +114,47 @@ export function resolvePostLoginRedirect(
 
   if (moduleKey === "pos" || moduleKey === "kds") {
     const branchMatch = url.pathname.match(/^\/br\/(\d+)\//);
+    const routeBranchId = branchMatch ? Number(branchMatch[1]) : null;
+
+    if (routeBranchId === null || claims.branch_id !== routeBranchId) {
+      return fallback;
+    }
+  }
+
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+export function resolveBetaPostLoginRedirect(
+  claims: JwtClaims,
+  returnTo: string | null | undefined,
+): string {
+  const fallback = getBetaDefaultRedirect(claims);
+  const safeReturnTo = getSafeInternalReturnTo(returnTo);
+
+  if (!safeReturnTo) {
+    return fallback;
+  }
+
+  const betaReturnTo = toBetaPath(safeReturnTo);
+  const url = new URL(betaReturnTo, "http://localhost");
+
+  if (url.pathname === "/beta/login") {
+    return fallback;
+  }
+
+  const moduleKey = resolveModuleFromPath(url.pathname);
+
+  if (!moduleKey) {
+    return `${url.pathname}${url.search}${url.hash}`;
+  }
+
+  if (!canAccess(claims.user_role, moduleKey)) {
+    return fallback;
+  }
+
+  if (moduleKey === "pos" || moduleKey === "kds") {
+    const routePath = stripBetaPrefix(url.pathname);
+    const branchMatch = routePath.match(/^\/br\/(\d+)\//);
     const routeBranchId = branchMatch ? Number(branchMatch[1]) : null;
 
     if (routeBranchId === null || claims.branch_id !== routeBranchId) {

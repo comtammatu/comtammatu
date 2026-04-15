@@ -1,11 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   BRANCH_FLOOR_SETTINGS_ROLES,
   type StaffRole,
 } from "@comtammatu/shared/auth";
+import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withFormAction, type ActionContext } from "@/_lib/with-action";
 
 const SETTINGS_ROLES: readonly StaffRole[] = BRANCH_FLOOR_SETTINGS_ROLES;
@@ -111,7 +111,7 @@ export const createTerminal = withFormAction(
       };
     }
 
-    revalidatePath("/admin/settings/pos");
+    revalidateSurfacePath("/admin/settings/pos");
     return { success: true, data: { id: result[0]!.id } };
   },
 );
@@ -167,7 +167,7 @@ export const updateTerminal = withFormAction(
       };
     }
 
-    revalidatePath("/admin/settings/pos");
+    revalidateSurfacePath("/admin/settings/pos");
     return { success: true };
   },
 );

@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { ADMIN_ROLES } from "@comtammatu/shared/auth";
+import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, withFormAction } from "@/_lib/with-action";
 
 /* ─── Helpers ─── */
@@ -113,7 +113,7 @@ export const createCategory = withFormAction(
       return { success: false, error: mapDbError(error.code) };
     }
 
-    revalidatePath("/admin/menu");
+    revalidateSurfacePath("/admin/menu");
     return { success: true };
   },
 );
@@ -144,7 +144,7 @@ export const updateCategory = withFormAction(
       return { success: false, error: mapDbError(error.code) };
     }
 
-    revalidatePath("/admin/menu");
+    revalidateSurfacePath("/admin/menu");
     return { success: true };
   },
 );
@@ -163,7 +163,7 @@ export const toggleCategoryActive = withAction(
       return { success: false, error: mapDbError(error.code) };
     }
 
-    revalidatePath("/admin/menu");
+    revalidateSurfacePath("/admin/menu");
     return { success: true };
   },
 );
@@ -194,7 +194,7 @@ export const createItem = withFormAction(
       return { success: false, error: mapDbError(error.code) };
     }
 
-    revalidatePath("/admin/menu");
+    revalidateSurfacePath("/admin/menu");
     return { success: true };
   },
 );
@@ -227,7 +227,7 @@ export const updateItem = withFormAction(
       return { success: false, error: mapDbError(error.code) };
     }
 
-    revalidatePath("/admin/menu");
+    revalidateSurfacePath("/admin/menu");
     return { success: true };
   },
 );
@@ -246,7 +246,7 @@ export const toggleItemActive = withAction(
       return { success: false, error: mapDbError(error.code) };
     }
 
-    revalidatePath("/admin/menu");
+    revalidateSurfacePath("/admin/menu");
     return { success: true };
   },
 );
@@ -272,7 +272,7 @@ export const saveVariants = withAction(
       return { success: false, error: mapDbError(error.code) };
     }
 
-    revalidatePath("/admin/menu");
+    revalidateSurfacePath("/admin/menu");
     return { success: true };
   },
 );
@@ -298,7 +298,7 @@ export const saveModifiers = withAction(
       return { success: false, error: mapDbError(error.code) };
     }
 
-    revalidatePath("/admin/menu");
+    revalidateSurfacePath("/admin/menu");
     return { success: true };
   },
 );
@@ -323,7 +323,7 @@ export const saveSides = withAction(
       return { success: false, error: mapDbError(error.code) };
     }
 
-    revalidatePath("/admin/menu");
+    revalidateSurfacePath("/admin/menu");
     return { success: true };
   },
 );

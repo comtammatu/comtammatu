@@ -1,11 +1,11 @@
 "use server";
 
 import { randomBytes, createHmac } from "node:crypto";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
+import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { getAuthContext } from "../../_lib/auth";
 
 const CONFIG_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
@@ -77,7 +77,7 @@ export async function updateBranchCoordinates(
     };
   }
 
-  revalidatePath("/admin/settings/branches");
+  revalidateSurfacePath("/admin/settings/branches");
   return { success: true };
 }
 
@@ -132,7 +132,7 @@ export async function generateAttendanceSecret(
   const today = getTodayVN();
   const code = computeDailyCode(secret, today);
 
-  revalidatePath("/admin/settings/branches");
+  revalidateSurfacePath("/admin/settings/branches");
   return { success: true, data: { code, date: today } };
 }
 

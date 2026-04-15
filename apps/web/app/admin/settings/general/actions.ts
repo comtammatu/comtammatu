@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
@@ -10,6 +9,7 @@ import {
   GENERAL_SYSTEM_SETTING_KEYS,
   SYSTEM_SETTING_KEYS,
 } from "@comtammatu/shared/settings";
+import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 
 const settingsSchema = z.object({
   [SYSTEM_SETTING_KEYS.VAT_RATE]: z
@@ -87,6 +87,6 @@ export async function updateSettings(
     }
   }
 
-  revalidatePath("/admin/settings/general");
+  revalidateSurfacePath("/admin/settings/general");
   return { success: true };
 }

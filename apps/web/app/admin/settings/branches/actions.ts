@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, withFormAction } from "@/_lib/with-action";
 import { hasBranchKindSchema } from "../../_lib/branch-kind-schema";
 
@@ -81,7 +81,7 @@ export const createBranch = withFormAction(
       };
     }
 
-    revalidatePath("/admin/settings/branches");
+    revalidateSurfacePath("/admin/settings/branches");
     return { success: true };
   },
 );
@@ -154,7 +154,7 @@ export const updateBranch = withFormAction(
       return { success: false, error: "Không thể cập nhật. Vui lòng thử lại." };
     }
 
-    revalidatePath("/admin/settings/branches");
+    revalidateSurfacePath("/admin/settings/branches");
     return { success: true };
   },
 );
@@ -183,7 +183,7 @@ export const toggleBranchActive = withAction(
       return { success: false, error: "Không thể cập nhật. Vui lòng thử lại." };
     }
 
-    revalidatePath("/admin/settings/branches");
+    revalidateSurfacePath("/admin/settings/branches");
     return { success: true };
   },
 );
@@ -199,7 +199,7 @@ export const setHeadquarters = withAction(
       return { success: false, error: "Không thể cập nhật. Vui lòng thử lại." };
     }
 
-    revalidatePath("/admin/settings/branches");
+    revalidateSurfacePath("/admin/settings/branches");
     return { success: true };
   },
 );

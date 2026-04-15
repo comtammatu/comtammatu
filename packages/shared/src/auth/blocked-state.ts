@@ -90,6 +90,10 @@ export function readBlockedStateFromSearchParams(
 
 export function buildLoginBlockedStatePath(
   reason: BlockedStateReasonCode = "missing-auth-context",
+  options?: {
+    surface?: "legacy" | "beta";
+  },
 ): string {
-  return `/login?forbidden=1&reason=${reason}`;
+  const pathname = options?.surface === "beta" ? "/beta/login" : "/login";
+  return `${pathname}?forbidden=1&reason=${reason}`;
 }

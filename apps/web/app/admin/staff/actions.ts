@@ -1,11 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { getAuthContext } from "../_lib/auth";
 
 /* ─── Schemas ─── */
@@ -190,7 +190,7 @@ export async function createStaff(
     };
   }
 
-  revalidatePath("/admin/staff");
+  revalidateSurfacePath("/admin/staff");
   return { success: true };
 }
 
@@ -246,7 +246,7 @@ export async function updateStaff(
     return { success: false, error: mapRpcError(error.message) };
   }
 
-  revalidatePath("/admin/staff");
+  revalidateSurfacePath("/admin/staff");
   return { success: true };
 }
 
@@ -271,6 +271,6 @@ export async function toggleStaffActive(
     return { success: false, error: mapRpcError(error.message) };
   }
 
-  revalidatePath("/admin/staff");
+  revalidateSurfacePath("/admin/staff");
   return { success: true };
 }

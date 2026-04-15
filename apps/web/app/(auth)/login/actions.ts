@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
   extractClaims,
+  resolveBetaPostLoginRedirect,
   resolvePostLoginRedirect,
 } from "@comtammatu/shared/auth";
 import { loginRateLimit } from "@comtammatu/security";
@@ -35,6 +36,8 @@ export async function login(
   const { email, password } = parsed.data;
   const rawReturnTo = formData.get("returnTo");
   const returnTo = typeof rawReturnTo === "string" ? rawReturnTo : null;
+  const rawSurface = formData.get("surface");
+  const surface = rawSurface === "beta" ? "beta" : "legacy";
 
   // Rate limiting — 10 attempts per 5 min, keyed by IP
   // Bypass in dev via DISABLE_LOGIN_RATE_LIMIT=true
@@ -80,5 +83,9 @@ export async function login(
     return { error: "Tài khoản chưa được phân quyền. Liên hệ quản lý." };
   }
 
-  redirect(resolvePostLoginRedirect(claims, returnTo));
+  redirect(
+    surface === "beta"
+      ? resolveBetaPostLoginRedirect(claims, returnTo)
+      : resolvePostLoginRedirect(claims, returnTo),
+  );
 }

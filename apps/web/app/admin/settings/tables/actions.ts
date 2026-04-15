@@ -1,11 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   BRANCH_FLOOR_SETTINGS_ROLES,
   type StaffRole,
 } from "@comtammatu/shared/auth";
+import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, withFormAction, type ActionContext } from "@/_lib/with-action";
 import { TABLE_STATUSES } from "./constants";
 
@@ -126,7 +126,7 @@ export const createZone = withFormAction(
       return { success: false, error: mapZoneDbError(error.code) };
     }
 
-    revalidatePath("/admin/settings/tables");
+    revalidateSurfacePath("/admin/settings/tables");
     return { success: true };
   },
 );
@@ -167,7 +167,7 @@ export const updateZone = withFormAction(
       return { success: false, error: mapZoneDbError(error.code) };
     }
 
-    revalidatePath("/admin/settings/tables");
+    revalidateSurfacePath("/admin/settings/tables");
     return { success: true };
   },
 );
@@ -195,7 +195,7 @@ export const deleteZone = withAction(
       return { success: false, error: "Không tìm thấy khu vực" };
     }
 
-    revalidatePath("/admin/settings/tables");
+    revalidateSurfacePath("/admin/settings/tables");
     return { success: true };
   },
 );
@@ -240,7 +240,7 @@ export const createTable = withFormAction(
       return { success: false, error: mapTableDbError(error.code) };
     }
 
-    revalidatePath("/admin/settings/tables");
+    revalidateSurfacePath("/admin/settings/tables");
     return { success: true };
   },
 );
@@ -290,7 +290,7 @@ export const updateTable = withFormAction(
       return { success: false, error: mapTableDbError(error.code) };
     }
 
-    revalidatePath("/admin/settings/tables");
+    revalidateSurfacePath("/admin/settings/tables");
     return { success: true };
   },
 );
@@ -318,7 +318,7 @@ export const deleteTable = withAction(
       return { success: false, error: "Không tìm thấy bàn" };
     }
 
-    revalidatePath("/admin/settings/tables");
+    revalidateSurfacePath("/admin/settings/tables");
     return { success: true };
   },
 );

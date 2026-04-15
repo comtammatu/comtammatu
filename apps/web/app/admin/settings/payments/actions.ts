@@ -1,12 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
+import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 
 const paymentSettingsSchema = z.object({
   [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR]: z.enum(["true", "false"]),
@@ -67,6 +67,6 @@ export async function updatePaymentSettings(
     }
   }
 
-  revalidatePath("/admin/settings/payments");
+  revalidateSurfacePath("/admin/settings/payments");
   return { success: true };
 }

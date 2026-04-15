@@ -14,12 +14,15 @@ export type { ModuleKey } from "./module-acl";
 export { MODULE_ACL, canAccess, getAccessibleModules } from "./module-acl";
 export {
   extractClaims,
+  getBetaDefaultRedirect,
   getScope,
   getDefaultRedirect,
   getSafeInternalReturnTo,
   isAdminRole,
   isBranchRole,
+  resolveBetaPostLoginRedirect,
   resolvePostLoginRedirect,
+  toBetaPath,
 } from "./scope";
 export {
   canViewInventoryValueSystem,
@@ -71,10 +74,13 @@ export {
   resolveWorkspaceDiscoveryGroup,
 } from "./app-discovery";
 export {
+  BETA_ROUTE_PREFIX,
   INVENTORY_PROCUREMENT_PREFIXES,
   PUBLIC_APP_PATHS,
+  isBetaPath,
   isPublicAppPath,
   resolveModuleFromPath,
+  stripBetaPrefix,
 } from "./route-resolution";
 export type {
   BlockedStateCopy,

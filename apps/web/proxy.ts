@@ -3,8 +3,11 @@ import { updateSession } from "@comtammatu/database/supabase/middleware";
 import {
   extractClaims,
   canAccess,
+  isBetaPath,
   isPublicAppPath,
+  resolveBetaPostLoginRedirect,
   resolvePostLoginRedirect,
+  stripBetaPrefix,
   type BlockedStateReasonCode,
   resolveModuleFromPath,
 } from "@comtammatu/shared/auth";
@@ -37,6 +40,7 @@ function redirectToBlockedDefault(
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const betaSurface = isBetaPath(pathname);
 
   // Public paths — skip auth
   if (isPublicAppPath(pathname)) {
@@ -47,14 +51,16 @@ export async function proxy(request: NextRequest) {
   const { user, response, supabase } = await updateSession(request);
 
   // Login page: special handling
-  if (pathname === "/login") {
+  if (pathname === "/login" || pathname === "/beta/login") {
     if (!user) return response; // unauthenticated → show login
     // authenticated → redirect away from login to role's default
     const claims = extractClaims(user.app_metadata);
     if (claims) {
       const returnTo = request.nextUrl.searchParams.get("returnTo");
       const url = new URL(
-        resolvePostLoginRedirect(claims, returnTo),
+        betaSurface
+          ? resolveBetaPostLoginRedirect(claims, returnTo)
+          : resolvePostLoginRedirect(claims, returnTo),
         request.nextUrl.origin,
       );
       return redirectWithCookies(url, response);
@@ -65,7 +71,7 @@ export async function proxy(request: NextRequest) {
   // Not authenticated → login
   if (!user) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = betaSurface ? "/beta/login" : "/login";
     url.search = "";
     url.searchParams.set(
       "returnTo",
@@ -85,17 +91,21 @@ export async function proxy(request: NextRequest) {
         area_id: null,
         user_role: "office" as const,
       };
+      const fallbackPath = betaSurface
+        ? resolveBetaPostLoginRedirect(fallbackClaims, null)
+        : resolvePostLoginRedirect(fallbackClaims, null);
       return redirectToBlockedDefault(
         request,
         response,
-        resolvePostLoginRedirect(fallbackClaims, null),
+        fallbackPath,
         claims ? "insufficient-permission" : "missing-auth-context",
       );
     }
 
     // POS/KDS are not available on headquarters (office-only branch)
     if ((moduleKey === "pos" || moduleKey === "kds") && claims) {
-      const pathMatch = pathname.match(/^\/br\/(\d+)\//);
+      const routePath = betaSurface ? stripBetaPrefix(pathname) : pathname;
+      const pathMatch = routePath.match(/^\/br\/(\d+)\//);
       if (pathMatch) {
         const routeBranchId = Number(pathMatch[1]);
         const { data: hqRow } = await supabase
