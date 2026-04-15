@@ -221,10 +221,19 @@ export const calculatePayroll = withAction(
     }
 
     // Update period status
-    await supabase
+    // TODO: migrate to atomic RPC (upsert entries + update status in one transaction)
+    const { error: statusErr } = await supabase
       .from("payroll_periods")
       .update({ status: "calculated" })
-      .eq("id", data.periodId);
+      .eq("id", data.periodId)
+      .eq("tenant_id", claims.tenant_id);
+
+    if (statusErr) {
+      return {
+        success: false,
+        error: "Đã lưu bảng lương nhưng không thể cập nhật trạng thái kỳ lương.",
+      };
+    }
 
     return { success: true, meta: { employeeCount: entries.length } };
   },
@@ -271,7 +280,7 @@ const approvePayrollSchema = z.object({
 export const approvePayroll = withAction(
   { roles: ["owner"] as const, schema: approvePayrollSchema },
   async (data, { supabase, claims, user }) => {
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("payroll_periods")
       .update({
         status: "approved",
@@ -280,9 +289,11 @@ export const approvePayroll = withAction(
       })
       .eq("id", data.periodId)
       .eq("tenant_id", claims.tenant_id)
-      .eq("status", "calculated");
+      .eq("status", "calculated")
+      .select("id")
+      .single();
 
-    if (error) {
+    if (error || !updated) {
       return { success: false, error: "Không thể duyệt bảng lương." };
     }
 
@@ -323,7 +334,7 @@ const markPayrollPaidSchema = z.object({
 export const markPayrollPaid = withAction(
   { roles: ["owner"] as const, schema: markPayrollPaidSchema },
   async (data, { supabase, claims, user }) => {
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("payroll_periods")
       .update({
         status: "paid",
@@ -331,9 +342,11 @@ export const markPayrollPaid = withAction(
       })
       .eq("id", data.periodId)
       .eq("tenant_id", claims.tenant_id)
-      .eq("status", "approved");
+      .eq("status", "approved")
+      .select("id")
+      .single();
 
-    if (error) {
+    if (error || !updated) {
       return { success: false, error: "Không thể đánh dấu đã thanh toán." };
     }
 

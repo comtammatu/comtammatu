@@ -6,7 +6,11 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
 
-const PRODUCTION_ROLES: readonly StaffRole[] = ["super_manager"];
+const PRODUCTION_ROLES: readonly StaffRole[] = [
+  "owner",
+  "super_manager",
+  "branch_manager",
+];
 
 const productionLineSchema = z.object({
   finishedGoodId: z.coerce.number().int().positive(),
