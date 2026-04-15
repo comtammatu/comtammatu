@@ -9,7 +9,7 @@ import {
   Search,
   Wallet,
 } from "lucide-react";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Table,
@@ -67,10 +67,7 @@ export function StockClient({
   branchId: number;
 }) {
   const router = useRouter();
-  const panelClassName = getSurfacePanelClassName(
-    "inventory",
-    "ambient-shadow",
-  );
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const [activeCategory, setActiveCategory] = useState("Tất cả");
   const [viewMode, setViewMode] = useState<"stats" | "detail">("stats");
   const [searchQuery, setSearchQuery] = useState("");
@@ -179,10 +176,9 @@ export function StockClient({
         <div
           className={cn(
             panelClassName,
-            "group relative col-span-12 flex flex-col justify-between overflow-hidden rounded-3xl border-primary/15 bg-gradient-to-br from-primary to-primary/70 p-6 text-primary-foreground shadow-xl lg:col-span-4",
+            "col-span-12 flex flex-col justify-between overflow-hidden rounded-lg bg-primary p-6 text-primary-foreground shadow-md lg:col-span-4",
           )}
         >
-          <div className="absolute -right-10 -top-10 size-40 rounded-full bg-white/10 blur-3xl transition-all duration-500 group-hover:bg-white/20" />
           <div>
             <div className="mb-4 flex items-center gap-2">
               <Wallet className="size-5 opacity-70" />
@@ -199,13 +195,13 @@ export function StockClient({
             </div>
           </div>
           <div className="mt-8 flex gap-3">
-            <div className="flex-1 rounded-2xl bg-white/10 p-3 backdrop-blur-md">
+            <div className="flex-1 rounded-lg bg-primary-foreground/10 p-3">
               <div className="text-label font-semibold uppercase opacity-60">
                 Mặt hàng
               </div>
               <div className="text-lg font-bold">{ingredients.length}</div>
             </div>
-            <div className="flex-1 rounded-2xl bg-white/10 p-3 backdrop-blur-md">
+            <div className="flex-1 rounded-lg bg-primary-foreground/10 p-3">
               <div className="text-label font-semibold uppercase opacity-60">
                 Còn hàng
               </div>
@@ -220,7 +216,7 @@ export function StockClient({
           <div
             className={cn(
               panelClassName,
-              "flex flex-col justify-center rounded-3xl bg-muted p-6",
+              "flex flex-col justify-center rounded-xl bg-muted p-6",
             )}
           >
             <div className="mb-4 text-xs font-semibold uppercase text-muted-foreground">
@@ -249,7 +245,7 @@ export function StockClient({
           <div
             className={cn(
               panelClassName,
-              "relative flex flex-col justify-center overflow-hidden rounded-3xl bg-muted p-6",
+              "relative flex flex-col justify-center overflow-hidden rounded-xl bg-muted p-6",
             )}
           >
             <div className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
@@ -272,10 +268,10 @@ export function StockClient({
 
       {/* Main Data Table */}
       <div
-        className={cn(panelClassName, "overflow-hidden rounded-3xl bg-card")}
+        className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}
       >
         {/* Table Header Bar */}
-        <div className="flex items-center justify-between border-b border-border/40 px-8 py-6">
+        <div className="flex items-center justify-between border-b border-border px-8 py-6">
           <h3 className="text-lg font-bold">Danh sách nguyên vật liệu</h3>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
@@ -290,7 +286,7 @@ export function StockClient({
         </div>
 
         {/* Search + Stock Filter Bar */}
-        <div className="flex flex-wrap items-center gap-3 border-b border-border/40 px-8 py-3">
+        <div className="flex flex-wrap items-center gap-3 border-b border-border px-8 py-3">
           <Search className="size-4 shrink-0 text-muted-foreground" />
           <input
             type="text"
@@ -375,7 +371,7 @@ export function StockClient({
               {filtered.map((item) => (
                 <TableRow
                   key={item.id}
-                  className="group border-border/40 transition-colors"
+                  className="group border-border transition-colors"
                 >
                   <TableCell className="px-8 py-5">
                     <div className="flex items-center gap-3">
@@ -468,7 +464,7 @@ export function StockClient({
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between border-t border-border/40 px-8 py-4">
+        <div className="flex items-center justify-between border-t border-border px-8 py-4">
           <span className="text-xs font-medium text-muted-foreground">
             Hiển thị {filtered.length} / {ingredients.length} nguyên liệu
           </span>

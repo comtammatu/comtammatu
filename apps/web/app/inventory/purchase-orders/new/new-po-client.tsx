@@ -339,7 +339,7 @@ function SupplierSection({
   onNotesChange: (v: string) => void;
 }) {
   return (
-    <SectionCard className="rounded-2xl" density="compact">
+    <SectionCard className="rounded-lg" density="compact">
       <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
         <div className="space-y-1.5">
           <Label>
@@ -402,7 +402,7 @@ function SuggestionsPanel({
 }) {
   return (
     <SectionCard
-      className="rounded-2xl border-info/20 bg-info/5"
+      className="rounded-lg border-info/20 bg-info/5"
       density="compact"
     >
       <Collapsible open={suggestionsOpen} onOpenChange={onOpenChange}>
@@ -702,7 +702,7 @@ function LineItemsSection({
 
   if (isMobile) {
     return (
-      <SectionCard className="overflow-hidden rounded-2xl" density="compact">
+      <SectionCard className="overflow-hidden rounded-lg" density="compact">
         <div className="-m-4 md:-m-5">
           <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2.5 md:px-5">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -836,7 +836,7 @@ function LineItemsSection({
 
   // Desktop layout
   return (
-    <SectionCard className="overflow-hidden rounded-2xl" density="compact">
+    <SectionCard className="overflow-hidden rounded-lg" density="compact">
       <div className="-m-4 md:-m-5">
         {/* Table header */}
         <div className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 border-b bg-muted/30 px-3 py-2 md:px-5">

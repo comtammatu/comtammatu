@@ -3,7 +3,7 @@
 import { FileDown, Plus } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { SectionCard } from "@/components/foundation/ui-patterns";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import {
   Table,
   TableBody,
@@ -35,7 +35,7 @@ export function SupplierInvoicesClient({
 }) {
   const totalAP = invoices.reduce((s, i) => s + i.amount, 0);
   const selectedInvoice = invoices[0];
-  const panelClassName = getSurfacePanelClassName("inventory", "ambient-shadow");
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
 
   return (
     <div className="space-y-6">
@@ -45,7 +45,7 @@ export function SupplierInvoicesClient({
         actions={
           <Button
             type="button"
-            className="shadow-xl shadow-primary/15 transition-transform active:scale-[0.98]"
+            className="shadow-lg transition-transform active:scale-[0.98]"
           >
             <Plus className="size-4" />
             Tạo hóa đơn NCC
@@ -64,7 +64,7 @@ export function SupplierInvoicesClient({
         {/* Table -- 3/5 */}
         <div className="lg:col-span-3">
           <SectionCard
-            className={cn(panelClassName, "overflow-hidden rounded-2xl bg-card")}
+            className={cn(panelClassName, "overflow-hidden rounded-lg bg-card")}
             density="compact"
           >
             <Table>
@@ -126,10 +126,10 @@ export function SupplierInvoicesClient({
         {/* Analysis panel -- 2/5 */}
         <div className="space-y-4 lg:col-span-2">
           <SectionCard
-            className={cn(panelClassName, "rounded-2xl bg-card")}
+            className={cn(panelClassName, "rounded-lg bg-card")}
             density="compact"
           >
-            <div className="-m-5 border-b border-border/50 px-5 py-5 md:-m-6 md:px-6 md:py-6">
+            <div className="-m-5 border-b border-border px-5 py-5 md:-m-6 md:px-6 md:py-6">
               <h4 className="text-sm font-bold">
                 Phân tích Đối soát: {selectedInvoice?.code}
               </h4>
@@ -161,7 +161,7 @@ export function SupplierInvoicesClient({
               ].map((item) => (
                 <div
                   key={item.step}
-                  className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted p-3"
+                  className="flex items-center gap-3 rounded-lg border border-border bg-muted p-3"
                 >
                   <div className="flex size-7 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary">
                     {item.step}
@@ -184,7 +184,7 @@ export function SupplierInvoicesClient({
                 selectedInvoice.variance !== null &&
                 selectedInvoice.variance > 0 && (
                   <div
-                    className="rounded-2xl border border-destructive/25 bg-destructive/5 p-3"
+                    className="rounded-lg border border-destructive/25 bg-destructive/5 p-3"
                   >
                     <p className="text-xs font-bold text-destructive">
                       Cảnh báo chênh lệch cao ({selectedInvoice.variance}%)

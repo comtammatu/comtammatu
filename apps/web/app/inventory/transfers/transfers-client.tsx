@@ -27,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import {
   FilterBar,
   PageHeader,
@@ -46,10 +46,7 @@ export type TransferRow = {
 };
 
 export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
-  const panelClassName = getSurfacePanelClassName(
-    "inventory",
-    "ambient-shadow",
-  );
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const [statusFilter, setStatusFilter] = useState("all");
   const [branchFilter, setBranchFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -84,7 +81,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
         actions={
           <Button
             type="button"
-            className="min-h-11 rounded-full px-6 font-bold shadow-xl shadow-primary/15 transition-shadow hover:shadow-lg"
+            className="min-h-11 rounded-full px-6 font-bold shadow-lg transition-shadow hover:shadow-lg"
           >
             <PlusCircle className="size-4" />
             Tạo phiếu mới
@@ -121,7 +118,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
             key={card.label}
             className={cn(
               panelClassName,
-              "flex items-center gap-5 rounded-2xl bg-card",
+              "flex items-center gap-5 rounded-lg bg-card",
             )}
             density="comfortable"
           >
@@ -202,7 +199,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
 
       {/* Data Table */}
       <SectionCard
-        className={cn(panelClassName, "overflow-hidden rounded-3xl bg-card")}
+        className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}
         density="compact"
       >
         <div className="-m-4 md:-m-5">
@@ -237,7 +234,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
               {filteredTransfers.map((t) => (
                 <TableRow
                   key={t.id}
-                  className="group border-border/40 transition-colors"
+                  className="group border-border transition-colors"
                 >
                   <TableCell className="px-6 py-5">
                     <Link
@@ -282,7 +279,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
 
       {/* Operational insight */}
       <SectionCard
-        className="rounded-2xl border-info/20 bg-info/8"
+        className="rounded-lg border-info/20 bg-info/8"
         density="compact"
       >
         <div className="flex items-start gap-3">

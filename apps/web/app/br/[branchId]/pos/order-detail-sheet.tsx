@@ -399,7 +399,7 @@ export function OrderDetailSheet({
           {data && !error && (
             <>
               <div className="border-b pb-3">
-                <div className="ui-flow-panel p-4">
+                <div className="rounded-lg border bg-card shadow-sm p-4">
                   <div className="relative space-y-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="space-y-2">
@@ -430,7 +430,7 @@ export function OrderDetailSheet({
                             ? "border-success/15 bg-success/10 text-success"
                             : data.status === "cancelled"
                               ? "border-destructive/15 bg-destructive/10 text-destructive"
-                              : "border-primary/15 bg-white/82 text-primary",
+                              : "border-primary/15 bg-card text-primary",
                         )}
                       >
                         {String(Math.round(orderProgressPercent))}%
@@ -438,9 +438,9 @@ export function OrderDetailSheet({
                     </div>
 
                     <div className="space-y-2">
-                      <div className="ui-flow-progress">
+                      <div className="h-2 w-full rounded-full bg-muted">
                         <div
-                          className="ui-flow-progress-bar"
+                          className="h-full rounded-full bg-primary transition-all"
                           style={{ width: `${orderProgressPercent}%` }}
                         />
                       </div>
@@ -451,10 +451,10 @@ export function OrderDetailSheet({
                         <div
                           key={step.label}
                           data-state={step.state}
-                          className="ui-flow-step"
+                          className="rounded-lg border bg-card shadow-sm p-3"
                         >
                           <div className="flex items-start gap-3">
-                            <div className="ui-flow-stage-index">
+                            <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">
                               {index + 1}
                             </div>
                             <div className="space-y-1">
@@ -475,7 +475,7 @@ export function OrderDetailSheet({
 
               <ScrollArea className="min-h-0 flex-1 pr-2">
                 <ul
-                  className="ui-content-auto flex flex-col gap-2 py-2"
+                  className="flex flex-col gap-2 py-2"
                   aria-label="Danh sách món"
                 >
                   {data.order_items.map((row) => {
@@ -486,10 +486,10 @@ export function OrderDetailSheet({
                       <li
                         key={row.id}
                         className={cn(
-                          "ui-surface-lift rounded-xl border p-3",
+                          "transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border p-3",
                           cancelled
                             ? "border-dashed bg-muted/40"
-                            : "border-border/70 bg-card/92 shadow-sm",
+                            : "border-border bg-card shadow-sm",
                         )}
                       >
                         <div className="flex items-start gap-2">
@@ -553,7 +553,7 @@ export function OrderDetailSheet({
               </ScrollArea>
 
               <div className="pb-2">
-                <div className="ui-flow-panel p-4">
+                <div className="rounded-lg border bg-card shadow-sm p-4">
                   <div className="relative space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Tạm tính</span>
@@ -574,7 +574,7 @@ export function OrderDetailSheet({
                   <Button
                     type="button"
                     size="lg"
-                    className="min-h-11 w-full rounded-2xl shadow-sm transition-transform hover:translate-y-[-1px]"
+                    className="min-h-11 w-full rounded-lg shadow-sm transition-transform hover:translate-y-[-1px]"
                     onClick={() => {
                       onStartAppend(data.id, data.order_number);
                     }}
@@ -590,7 +590,7 @@ export function OrderDetailSheet({
                     <Button
                       type="button"
                       variant="secondary"
-                      className="min-h-11 flex-1 rounded-2xl"
+                      className="min-h-11 flex-1 rounded-lg"
                       disabled={isPending}
                       onClick={() => void handleStatus("served")}
                     >
@@ -601,7 +601,7 @@ export function OrderDetailSheet({
                     <Button
                       type="button"
                       variant="secondary"
-                      className="min-h-11 flex-1 rounded-2xl"
+                      className="min-h-11 flex-1 rounded-lg"
                       disabled={isPending}
                       onClick={() => void handleStatus("completed")}
                     >
@@ -615,7 +615,7 @@ export function OrderDetailSheet({
                     <Button
                       type="button"
                       variant="outline"
-                      className="min-h-11 w-full rounded-2xl"
+                      className="min-h-11 w-full rounded-lg"
                     >
                       <MoreHorizontal className="mr-2 size-4" />
                       Khác…

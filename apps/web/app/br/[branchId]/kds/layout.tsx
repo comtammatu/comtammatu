@@ -6,7 +6,7 @@ import {
   canAccess,
   extractClaims,
 } from "@comtammatu/shared/auth";
-import { getSurfaceShellClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 
 export default async function KdsLayout({
   children,
@@ -41,8 +41,8 @@ export default async function KdsLayout({
   return (
     <main
       id="main-content"
-      className={getSurfaceShellClassName(
-        "kds",
+      className={cn(
+        "min-h-screen bg-zinc-950 text-white",
         "ui-safe-top flex h-dvh flex-col touch-manipulation overflow-hidden",
       )}
     >

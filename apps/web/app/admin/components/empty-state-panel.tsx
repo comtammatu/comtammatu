@@ -19,12 +19,12 @@ export function EmptyStatePanel({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center rounded-3xl border border-dashed border-border/70 bg-background/84 px-5 py-12 text-center shadow-sm",
+        "flex flex-col items-center justify-center rounded-xl border border-dashed border-border/70 bg-background/84 px-5 py-12 text-center shadow-sm",
         className,
       )}
     >
       {icon ? (
-        <div className="flex size-12 items-center justify-center rounded-2xl border border-border/70 bg-muted/40 text-muted-foreground shadow-sm">
+        <div className="flex size-12 items-center justify-center rounded-lg border border-border/70 bg-muted/40 text-muted-foreground shadow-sm">
           {icon}
         </div>
       ) : null}

@@ -14,7 +14,7 @@ import {
   MoreVertical,
   Plus,
 } from "lucide-react";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import {
   Dialog,
   DialogContent,
@@ -92,10 +92,7 @@ export function IssuesClient({
   const [issueType, setIssueType] = useState<IssueTypeValue>("consumption");
   const [notes, setNotes] = useState("");
   const [isPending, startTransition] = useTransition();
-  const panelClassName = getSurfacePanelClassName(
-    "inventory",
-    "ambient-shadow",
-  );
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
 
   const filtered = useMemo(
     () =>
@@ -154,7 +151,7 @@ export function IssuesClient({
           <div className="flex items-center gap-3">
             <button
               type="button"
-              className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full border border-border/40 bg-card px-5 py-2.5 font-semibold shadow-sm transition-all"
+              className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 font-semibold shadow-sm transition-all"
             >
               <FileDown className="size-4" />
               <span>Xuất báo cáo</span>
@@ -162,7 +159,7 @@ export function IssuesClient({
             <button
               type="button"
               onClick={() => setCreateOpen(true)}
-              className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-xl shadow-primary/15 transition-transform active:scale-[0.98]"
+              className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-lg transition-transform active:scale-[0.98]"
             >
               <Plus className="size-4" />
               <span>Tạo phiếu mới</span>
@@ -172,7 +169,7 @@ export function IssuesClient({
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
           <SectionCard
-            className={cn(panelClassName, "rounded-2xl bg-card")}
+            className={cn(panelClassName, "rounded-lg bg-card")}
             density="comfortable"
           >
             <div className="mb-4 flex items-start justify-between">
@@ -192,7 +189,7 @@ export function IssuesClient({
           </SectionCard>
 
           <SectionCard
-            className={cn(panelClassName, "rounded-2xl bg-card")}
+            className={cn(panelClassName, "rounded-lg bg-card")}
             density="comfortable"
           >
             <div className="mb-4 flex items-start justify-between">
@@ -214,7 +211,7 @@ export function IssuesClient({
           </SectionCard>
 
           <SectionCard
-            className={cn(panelClassName, "rounded-2xl bg-card")}
+            className={cn(panelClassName, "rounded-lg bg-card")}
             density="comfortable"
           >
             <div className="mb-4 flex items-start justify-between">
@@ -234,7 +231,7 @@ export function IssuesClient({
           </SectionCard>
 
           <SectionCard
-            className={cn(panelClassName, "rounded-2xl bg-card")}
+            className={cn(panelClassName, "rounded-lg bg-card")}
             density="comfortable"
           >
             <div className="mb-4 flex items-start justify-between">
@@ -317,7 +314,7 @@ export function IssuesClient({
         </FilterBar>
 
         <div
-          className={cn(panelClassName, "overflow-hidden rounded-3xl bg-card")}
+          className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}
         >
           <Table>
             <TableHeader>
@@ -356,7 +353,7 @@ export function IssuesClient({
               {filtered.map((item) => (
                 <TableRow
                   key={item.id}
-                  className="group border-border/60 transition-colors"
+                  className="group border-border transition-colors"
                 >
                   <TableCell className="px-6 py-5">
                     <Link
@@ -408,7 +405,7 @@ export function IssuesClient({
             </TableBody>
           </Table>
 
-          <div className="flex items-center justify-between border-t border-border/40 px-6 py-4">
+          <div className="flex items-center justify-between border-t border-border px-6 py-4">
             <span className="text-xs font-medium text-muted-foreground">
               Hiển thị {filtered.length} / {issues.length} phiếu
             </span>

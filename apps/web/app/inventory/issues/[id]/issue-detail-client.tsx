@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle, PlusCircle, Trash2, X } from "lucide-react";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -100,10 +100,7 @@ export function IssueDetailClient({
   ingredients: IngredientRow[];
 }) {
   const router = useRouter();
-  const panelClassName = getSurfacePanelClassName(
-    "inventory",
-    "ambient-shadow",
-  );
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const [issue, setIssue] = useState(initialIssue);
   const [lines, setLines] = useState(initialLines);
   const [isPending, startTransition] = useTransition();
@@ -216,7 +213,7 @@ export function IssueDetailClient({
           ].map((item) => (
             <div
               key={item.label}
-              className={cn(panelClassName, "rounded-2xl bg-card p-4")}
+              className={cn(panelClassName, "rounded-lg bg-card p-4")}
             >
               <p className="text-label uppercase tracking-wider text-muted-foreground">
                 {item.label}
@@ -228,7 +225,7 @@ export function IssueDetailClient({
 
         {issue.notes ? (
           <SectionCard
-            className="rounded-2xl border border-border/50 bg-gradient-to-br from-white via-background to-muted/30"
+            className="rounded-lg border border-border bg-card"
             density="compact"
           >
             <p className="text-label font-medium uppercase tracking-wider text-muted-foreground">
@@ -239,9 +236,9 @@ export function IssueDetailClient({
         ) : null}
 
         <section
-          className={cn(panelClassName, "overflow-hidden rounded-2xl bg-card")}
+          className={cn(panelClassName, "overflow-hidden rounded-lg bg-card")}
         >
-          <div className="flex flex-col gap-4 border-b border-border/50 bg-white p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div className="flex flex-col gap-4 border-b border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div>
               <h4 className="text-lg font-bold">{tTerm("ingredientsList")}</h4>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -282,7 +279,7 @@ export function IssueDetailClient({
                 {lines.map((line) => (
                   <div
                     key={line.id}
-                    className="rounded-2xl border border-border/70 bg-muted/20 p-4"
+                    className="rounded-lg border border-border bg-muted/20 p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -436,7 +433,7 @@ export function IssueDetailClient({
                 <span className="text-muted-foreground">Cộng tiền hàng:</span>
                 <span className="font-bold">{formatVND(totalAmount)}</span>
               </div>
-              <div className="flex items-end justify-between border-t border-border/40 pt-3">
+              <div className="flex items-end justify-between border-t border-border pt-3">
                 <span className="text-sm font-bold">TỔNG CỘNG</span>
                 <div className="text-right">
                   <span className="block text-2xl font-black leading-none text-primary">
@@ -452,7 +449,7 @@ export function IssueDetailClient({
         </section>
 
         {isDraft ? (
-          <footer className="flex flex-col gap-4 border-t border-border/50 py-6 md:flex-row md:items-center md:justify-between">
+          <footer className="flex flex-col gap-4 border-t border-border py-6 md:flex-row md:items-center md:justify-between">
             <Button
               type="button"
               variant="ghost"
@@ -500,7 +497,7 @@ export function IssueDetailClient({
                 <p>Thao tác này sẽ trừ tồn kho và không thể hoàn tác.</p>
                 {lines.length > 0 ? (
                   <SectionCard
-                    className="rounded-2xl bg-muted/30 text-left"
+                    className="rounded-lg bg-muted/30 text-left"
                     density="compact"
                   >
                     {lines.map((line) => (

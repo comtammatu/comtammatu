@@ -17,7 +17,7 @@ import {
   Truck,
 } from "lucide-react";
 import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import { StatCard, StatusBadge } from "./_components/shared";
 import { formatVND } from "./_lib/format";
 import { getInventoryPaths, type InventoryRouteBase } from "./_lib/paths";
@@ -251,7 +251,7 @@ function buildPriorityItems({
       cta: showProcurement ? "Mở đơn mua" : "Xem tồn kho",
       icon: <ShoppingCart className="size-5" />,
       panelClassName:
-        "border-destructive/20 bg-gradient-to-br from-destructive/10 via-white to-destructive/5",
+        "border-destructive/20 bg-destructive/5",
       iconClassName: "bg-destructive/10 text-destructive",
     });
   }
@@ -279,7 +279,7 @@ function buildPriorityItems({
       cta: "Mở hạn dùng",
       icon: <Hourglass className="size-5" />,
       panelClassName:
-        "border-warning/20 bg-gradient-to-br from-warning/10 via-white to-primary/5",
+        "border-warning/20 bg-warning/5",
       iconClassName: "bg-warning/10 text-warning",
     });
   }
@@ -298,7 +298,7 @@ function buildPriorityItems({
       cta: "Mở điều chuyển",
       icon: <Truck className="size-5" />,
       panelClassName:
-        "border-info/20 bg-gradient-to-br from-info/10 via-white to-success/5",
+        "border-info/20 bg-info/5",
       iconClassName: "bg-info/10 text-info",
     });
   }
@@ -317,7 +317,7 @@ function buildPriorityItems({
       cta: "Mở kiểm kê",
       icon: <ClipboardList className="size-5" />,
       panelClassName:
-        "border-success/20 bg-gradient-to-br from-success/10 via-white to-info/5",
+        "border-success/20 bg-success/5",
       iconClassName: "bg-success/10 text-success",
     });
   }
@@ -381,10 +381,7 @@ export function DashboardClient({
   stocktakeSessions,
 }: DashboardProps) {
   const now = useCurrentTime();
-  const panelClassName = getSurfacePanelClassName(
-    "inventory",
-    "ambient-shadow",
-  );
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const siteKindLabel = getInventorySiteKindLabelVi(siteKind);
   const paths = getInventoryPaths(routeBase);
   const quickActions = buildQuickActions(siteKind, routeBase);
@@ -418,25 +415,17 @@ export function DashboardClient({
   const reorderActionLabel = showProcurement ? "Mở đơn mua" : "Xem tồn kho";
 
   return (
-    <div className="ui-stagger-children space-y-6">
+    <div className="space-y-6">
       <div
         className={cn(
           panelClassName,
-          "ui-flow-panel overflow-hidden rounded-4xl border-primary/15 bg-gradient-to-br from-primary/10 via-white to-success/10 px-6 py-6 sm:px-7 lg:px-8",
+          "overflow-hidden px-6 py-6 sm:px-7 lg:px-8",
         )}
       >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 overflow-hidden"
-        >
-          <div className="absolute -right-20 top-0 h-56 w-56 rounded-full bg-primary/10 blur-3xl" />
-          <div className="absolute -left-12 bottom-0 h-48 w-48 rounded-full bg-info/10 blur-3xl" />
-          <div className="absolute bottom-0 left-1/2 h-48 w-48 -translate-x-1/2 rounded-full bg-success/10 blur-3xl" />
-        </div>
         <div className="grid gap-6 xl:grid-cols-3 xl:items-start">
           <div className="space-y-5 xl:col-span-2">
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Tổng quan ca vận hành
               </p>
               <div className="space-y-2">
@@ -453,11 +442,11 @@ export function DashboardClient({
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-white/80 px-3 py-2 text-sm font-medium shadow-sm">
+              <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-sm font-medium shadow-sm">
                 <Calendar className="size-3.5 shrink-0" />
                 {formatDate(now)}
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-white/80 px-3 py-2 text-sm font-medium shadow-sm">
+              <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-sm font-medium shadow-sm">
                 <Clock className="size-3.5 shrink-0" />
                 {formatTime(now)}
               </span>
@@ -470,44 +459,44 @@ export function DashboardClient({
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
-              <div className="ui-surface-lift rounded-3xl border border-border/40 bg-white/75 p-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+              <div className="rounded-xl border border-border bg-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Cảnh báo đang mở
                 </p>
                 <p className="mt-2 text-3xl font-semibold">{alertCount}</p>
-                <p className="mt-1 text-xs text-muted-foreground/80">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {reorderAlerts.length} tái đặt hàng, {expiryAlerts.length} hạn
                   dùng.
                 </p>
               </div>
-              <div className="ui-surface-lift rounded-3xl border border-border/40 bg-white/75 p-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+              <div className="rounded-xl border border-border bg-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Luồng đang mở
                 </p>
                 <p className="mt-2 text-3xl font-semibold">{activeFlowCount}</p>
-                <p className="mt-1 text-xs text-muted-foreground/80">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {pendingPO} PO, {activeTransfers} điều chuyển,{" "}
                   {activeStocktakes} kiểm kê.
                 </p>
               </div>
-              <div className="ui-surface-lift rounded-3xl border border-border/40 bg-white/75 p-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+              <div className="rounded-xl border border-border bg-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Điểm cần ưu tiên
                 </p>
                 <p className="mt-2 text-3xl font-semibold">
                   {reorderAlerts.length + criticalExpiryCount}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground/80">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Tái đặt hàng và các lô sắp quá hạn cần xử lý sớm.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="ui-flow-panel rounded-4xl border border-border/50 bg-white/80 p-5 shadow-sm">
+          <div className="rounded-4xl border border-border bg-card p-5 shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Mức áp lực vận hành
                 </p>
                 <p className="mt-2 text-4xl font-semibold tracking-tight">
@@ -523,24 +512,24 @@ export function DashboardClient({
               </span>
             </div>
 
-            <div className="ui-flow-progress mt-5">
+            <div className="mt-5 h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
-                className="ui-flow-progress-bar"
+                className="h-full rounded-full bg-primary transition-all"
                 style={{ width: `${operationalPressure}%` }}
               />
             </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-              <div className="rounded-3xl border border-border/50 bg-background/90 p-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+              <div className="rounded-xl border border-border bg-background p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Giá trị tồn kho
                 </p>
                 <p className="mt-2 text-xl font-semibold">
                   {formatVND(totalStockValue)}đ
                 </p>
               </div>
-              <div className="rounded-3xl border border-border/50 bg-background/90 p-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+              <div className="rounded-xl border border-border bg-background p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Trạng thái theo dõi
                 </p>
                 <p className="mt-2 text-xl font-semibold">
@@ -548,7 +537,7 @@ export function DashboardClient({
                     ? "Yên nhịp"
                     : "Đang vận hành"}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground/80">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {alertCount === 0 && activeFlowCount === 0
                     ? "Hiện chưa có cảnh báo hoặc luồng chờ xử lý."
                     : "Giữ nhịp xử lý để tránh dồn việc cuối ca."}
@@ -559,7 +548,7 @@ export function DashboardClient({
         </div>
       </div>
 
-      <div className="ui-stagger-children grid grid-cols-1 gap-6 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
         <StatCard
           label="Tổng giá trị tồn kho"
           value={`${formatVND(totalStockValue)}đ`}
@@ -574,7 +563,7 @@ export function DashboardClient({
           <div className={cn(panelClassName, "rounded-4xl bg-card p-6")}>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Việc cần xử lý trong ca
                 </p>
                 <h3 className="text-2xl font-semibold tracking-tight">
@@ -587,7 +576,7 @@ export function DashboardClient({
               </div>
               <Link
                 href={paths.reports}
-                className="focus-ring-standard inline-flex items-center gap-2 rounded-full border border-border/70 bg-white px-4 py-2 text-sm font-semibold text-primary shadow-sm transition-transform hover:-translate-y-0.5"
+                className="focus-ring-standard inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-primary shadow-sm transition-colors hover:bg-muted"
               >
                 Mở báo cáo
                 <ArrowRight className="size-4" />
@@ -595,7 +584,7 @@ export function DashboardClient({
             </div>
 
             {priorityItems.length === 0 ? (
-              <div className="ui-flow-panel mt-5 rounded-3xl border border-success/15 bg-gradient-to-br from-success/10 via-white to-primary/5 p-5">
+              <div className="mt-5 rounded-lg border border-success/15 bg-success/5 p-5">
                 <p className="text-xs font-semibold uppercase tracking-widest text-success">
                   Nhịp kho ổn định
                 </p>
@@ -614,7 +603,7 @@ export function DashboardClient({
                     key={item.key}
                     href={item.href}
                     className={cn(
-                      "ui-surface-lift group flex h-full flex-col justify-between rounded-3xl border p-5 transition-transform hover:-translate-y-1",
+                      "group flex h-full flex-col justify-between rounded-xl border p-5 transition-transform hover:-translate-y-1",
                       item.panelClassName,
                     )}
                   >
@@ -622,7 +611,7 @@ export function DashboardClient({
                       <div className="flex items-start justify-between gap-3">
                         <div
                           className={cn(
-                            "flex size-11 items-center justify-center rounded-2xl shadow-sm",
+                            "flex size-11 items-center justify-center rounded-lg shadow-sm",
                             item.iconClassName,
                           )}
                         >
@@ -631,7 +620,7 @@ export function DashboardClient({
                         <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
                       </div>
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                           {item.eyebrow}
                         </p>
                         <h4 className="text-lg font-semibold tracking-tight">
@@ -670,24 +659,24 @@ export function DashboardClient({
               </div>
               <div className="mt-5 space-y-3">
                 {reorderAlerts.length === 0 && (
-                  <p className="rounded-3xl border border-border/60 bg-background/90 px-4 py-8 text-center text-sm text-muted-foreground/70">
+                  <p className="rounded-xl border border-border bg-background px-4 py-8 text-center text-sm text-muted-foreground">
                     Không có cảnh báo tái đặt hàng.
                   </p>
                 )}
                 {reorderAlerts.slice(0, 4).map((item) => (
                   <div
                     key={`${item.branchId}:${item.ingredientId}`}
-                    className="ui-surface-lift flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-border/60 bg-background/95 p-4"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-background p-4"
                   >
                     <div className="min-w-0 flex flex-1 items-start gap-3">
-                      <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-sm font-semibold text-destructive shadow-sm">
+                      <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-sm font-semibold text-destructive shadow-sm">
                         {item.name.charAt(0)}
                       </div>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold">
                           {item.name}
                         </p>
-                        <p className="mt-1 text-xs text-muted-foreground/80">
+                        <p className="mt-1 text-xs text-muted-foreground">
                           Tồn kho {item.current}
                           {item.unit} • Ngưỡng {item.reorder}
                           {item.unit}
@@ -696,7 +685,7 @@ export function DashboardClient({
                     </div>
                     <Link
                       href={reorderActionHref}
-                      className="focus-ring-standard inline-flex items-center gap-2 rounded-full border border-border/70 bg-white px-3 py-2 text-xs font-semibold text-primary shadow-sm transition-transform hover:-translate-y-0.5"
+                      className="focus-ring-standard inline-flex items-center gap-2 rounded-full border border-border bg-white px-3 py-2 text-xs font-semibold text-primary shadow-sm transition-transform hover:-translate-y-0.5"
                     >
                       {reorderActionLabel}
                       <ArrowRight className="size-3.5" />
@@ -725,7 +714,7 @@ export function DashboardClient({
 
               <div className="mt-5 space-y-3">
                 {expiryAlerts.length === 0 && (
-                  <p className="rounded-3xl border border-border/60 bg-background/90 px-4 py-8 text-center text-sm text-muted-foreground/70">
+                  <p className="rounded-xl border border-border bg-background px-4 py-8 text-center text-sm text-muted-foreground">
                     Không có hàng sắp hết hạn.
                   </p>
                 )}
@@ -733,9 +722,9 @@ export function DashboardClient({
                   <Link
                     href={paths.expiry}
                     key={item.id}
-                    className="ui-surface-lift flex items-center gap-4 rounded-3xl border border-border/60 bg-background/95 p-4"
+                    className="flex items-center gap-4 rounded-xl border border-border bg-background p-4"
                   >
-                    <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-warning/10 text-warning shadow-sm">
+                    <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning shadow-sm">
                       <Hourglass className="size-5" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -766,7 +755,7 @@ export function DashboardClient({
         <div className="space-y-6">
           <div className={cn(panelClassName, "rounded-4xl bg-card p-6")}>
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Thao tác nhanh
               </p>
               <h3 className="text-2xl font-semibold tracking-tight">
@@ -783,7 +772,7 @@ export function DashboardClient({
                   key={action.label}
                   href={action.href}
                   className={cn(
-                    "ui-surface-lift group flex h-full flex-col gap-4 rounded-3xl border border-border/60 bg-background/95 p-4 transition-transform hover:-translate-y-1",
+                    "group flex h-full flex-col gap-4 rounded-xl border border-border bg-background p-4 transition-transform hover:-translate-y-1",
                     action.hoverClassName,
                   )}
                 >
@@ -802,7 +791,7 @@ export function DashboardClient({
                     <span className="block text-sm font-semibold">
                       {action.label}
                     </span>
-                    <span className="block text-xs leading-5 text-muted-foreground/80">
+                    <span className="block text-xs leading-5 text-muted-foreground">
                       {action.description}
                     </span>
                   </div>
@@ -814,7 +803,7 @@ export function DashboardClient({
           <div className={cn(panelClassName, "rounded-4xl bg-card p-6")}>
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Luồng đang mở
                 </p>
                 <h3 className="text-2xl font-semibold tracking-tight">
@@ -841,7 +830,7 @@ export function DashboardClient({
                   </Link>
                 </div>
                 {activeTransferList.length === 0 ? (
-                  <p className="rounded-3xl border border-border/60 bg-background/90 px-4 py-5 text-sm text-muted-foreground/70">
+                  <p className="rounded-xl border border-border bg-background px-4 py-5 text-sm text-muted-foreground">
                     Không có phiếu điều chuyển đang vận chuyển.
                   </p>
                 ) : (
@@ -849,12 +838,12 @@ export function DashboardClient({
                     <Link
                       href={paths.transferDetail(t.id)}
                       key={t.id}
-                      className="ui-surface-lift block rounded-3xl border border-border/60 bg-background/95 p-4"
+                      className="block rounded-xl border border-border bg-background p-4"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-sm font-semibold">{t.code}</p>
-                          <p className="mt-1 text-xs text-muted-foreground/80">
+                          <p className="mt-1 text-xs text-muted-foreground">
                             {t.fromBranch} → {t.toBranch}
                           </p>
                         </div>
@@ -879,7 +868,7 @@ export function DashboardClient({
                   </Link>
                 </div>
                 {activeStocktakeList.length === 0 ? (
-                  <p className="rounded-3xl border border-border/60 bg-background/90 px-4 py-5 text-sm text-muted-foreground/70">
+                  <p className="rounded-xl border border-border bg-background px-4 py-5 text-sm text-muted-foreground">
                     Không có phiếu kiểm kê đang thực hiện.
                   </p>
                 ) : (
@@ -887,14 +876,14 @@ export function DashboardClient({
                     <Link
                       href={paths.stocktakeDetail(s.id)}
                       key={s.id}
-                      className="ui-surface-lift block rounded-3xl border border-border/60 bg-background/95 p-4"
+                      className="block rounded-xl border border-border bg-background p-4"
                     >
                       <div className="flex items-end justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold">
                             {s.branchName}
                           </p>
-                          <p className="mt-1 text-xs text-muted-foreground/80">
+                          <p className="mt-1 text-xs text-muted-foreground">
                             {s.code}
                           </p>
                         </div>
@@ -902,7 +891,7 @@ export function DashboardClient({
                           {s.progress}%
                         </span>
                       </div>
-                      <div className="ui-flow-progress mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                         <div
                           className="h-full rounded-full bg-warning"
                           style={{ width: `${s.progress}%` }}

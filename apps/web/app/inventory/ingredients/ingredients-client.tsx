@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Filter, Pencil, Search } from "lucide-react";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import { FilterBar, PageHeader, SearchableSelect } from "../_components/shared";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { formatVND } from "../_lib/format";
@@ -54,10 +54,7 @@ function storageLabel(type: string | null): string {
 }
 
 export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
-  const panelClassName = getSurfacePanelClassName(
-    "inventory",
-    "ambient-shadow",
-  );
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const [rows, setRows] = useState(initial);
   const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState("all");
@@ -111,7 +108,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
           <button
             type="button"
             onClick={openCreate}
-            className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-xl shadow-primary/15 transition-all hover:opacity-90"
+            className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-lg transition-all hover:opacity-90"
           >
             + Tạo nguyên liệu
           </button>
@@ -165,7 +162,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
       <div
         className={cn(
           panelClassName,
-          "overflow-x-auto rounded-3xl bg-card p-1",
+          "overflow-x-auto rounded-xl bg-card p-1",
         )}
       >
         <table className="w-full border-separate border-spacing-y-3 text-left">

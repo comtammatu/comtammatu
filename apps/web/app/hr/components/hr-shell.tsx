@@ -18,12 +18,7 @@ import {
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
-import {
-  cn,
-  getSurfaceHeaderClassName,
-  getSurfaceShellClassName,
-  getSurfaceSidebarClassName,
-} from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 
 interface NavItem {
   href: string;
@@ -127,8 +122,8 @@ function NavContent({
                 className={cn(
                   "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150",
                   active
-                    ? "bg-white/60 text-primary"
-                    : "text-foreground/60 hover:bg-white/40 hover:text-foreground",
+                    ? "bg-accent text-primary"
+                    : "text-foreground/60 hover:bg-accent hover:text-foreground",
                 )}
               >
                 {active && (
@@ -164,7 +159,7 @@ function NavContent({
           <form action="/api/auth/signout" method="post">
             <button
               type="submit"
-              className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/60 hover:text-foreground"
+              className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               aria-label="Đăng xuất"
             >
               <LogOut className="size-4" />
@@ -187,11 +182,11 @@ export function HRShell({ children, user, role }: HRShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className={getSurfaceShellClassName("admin", "flex h-dvh overflow-hidden")}>
+    <div className={cn("min-h-screen bg-background", "flex h-dvh overflow-hidden")}>
       {/* Desktop sidebar */}
       <aside
-        className={getSurfaceSidebarClassName(
-          "admin",
+        className={cn(
+          "border-r bg-card",
           "hidden w-64 shrink-0 flex-col md:flex",
         )}
       >
@@ -202,8 +197,8 @@ export function HRShell({ children, user, role }: HRShellProps) {
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
         <header
-          className={getSurfaceHeaderClassName(
-            "admin",
+          className={cn(
+            "sticky top-0 z-30 border-b bg-background",
             "flex h-14 items-center gap-3 px-4 sm:px-6",
           )}
         >
@@ -244,15 +239,15 @@ export function HRShell({ children, user, role }: HRShellProps) {
             aria-label="Đóng menu"
           />
           <aside
-            className={getSurfaceSidebarClassName(
-              "admin",
+            className={cn(
+              "border-r bg-card",
               "fixed inset-y-0 left-0 z-50 w-72 shadow-2xl md:hidden",
             )}
           >
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
-              className="absolute right-3 top-4 flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-white/60"
+              className="absolute right-3 top-4 flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent"
               aria-label="Đóng"
             >
               <X className="size-4.5" />

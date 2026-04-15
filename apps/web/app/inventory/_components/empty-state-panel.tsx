@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 
 interface EmptyStatePanelProps {
   title: string;
@@ -18,16 +18,13 @@ export function EmptyStatePanel({
 }: EmptyStatePanelProps) {
   return (
     <div
-      className={getSurfacePanelClassName(
-        "inventory",
-        cn(
-          "ui-flow-panel flex flex-col items-center justify-center rounded-3xl border border-dashed border-border/70 bg-gradient-to-br from-white via-background to-muted/30 px-5 py-12 text-center shadow-sm",
-          className,
-        ),
+      className={cn(
+        "flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-card px-5 py-12 text-center shadow-sm",
+        className,
       )}
     >
       {icon ? (
-        <div className="flex size-12 items-center justify-center rounded-2xl border border-border/70 bg-white/80 text-muted-foreground shadow-sm">
+        <div className="flex size-12 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm">
           {icon}
         </div>
       ) : null}

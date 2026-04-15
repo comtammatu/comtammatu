@@ -6,7 +6,7 @@ import {
   buildLoginBlockedStatePath,
   extractClaims,
 } from "@comtammatu/shared/auth";
-import { getSurfaceShellClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import { SearchParamBlockedStateFlash } from "@/components/foundation/blocked-state-flash";
 import { MobileHeader } from "./components/mobile-header";
 import { BottomNav } from "./components/bottom-nav";
@@ -28,10 +28,7 @@ export default async function EmployeeLayout({
 
   return (
     <div
-      className={getSurfaceShellClassName(
-        "employee",
-        "flex min-h-dvh flex-col",
-      )}
+      className={cn("min-h-screen bg-background", "flex min-h-dvh flex-col")}
     >
       <MobileHeader />
       <main

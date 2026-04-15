@@ -93,8 +93,8 @@ export function RefundsClient({
   return (
     <>
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="app-kpi ui-surface-lift">
-          <p className="app-section-label">Chờ duyệt</p>
+        <div className="rounded-lg border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Chờ duyệt</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">
             {pendingCount}
           </p>
@@ -102,8 +102,8 @@ export function RefundsClient({
             Các yêu cầu cần quyết định ngay.
           </p>
         </div>
-        <div className="app-kpi ui-surface-lift">
-          <p className="app-section-label">Đã duyệt</p>
+        <div className="rounded-lg border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Đã duyệt</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">
             {approvedCount}
           </p>
@@ -111,8 +111,8 @@ export function RefundsClient({
             Yêu cầu đã được xử lý trong danh sách hiện tại.
           </p>
         </div>
-        <div className="app-kpi ui-surface-lift">
-          <p className="app-section-label">Tổng giá trị</p>
+        <div className="rounded-lg border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tổng giá trị</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">
             {formatVND(totalRefundAmount)}
           </p>
@@ -122,9 +122,9 @@ export function RefundsClient({
         </div>
       </div>
 
-      <div className="ui-flow-panel flex flex-wrap items-center justify-between gap-4 rounded-3xl p-4">
+      <div className="rounded-xl border bg-card shadow-sm flex flex-wrap items-center justify-between gap-4 p-4">
         <div className="space-y-1.5">
-          <p className="app-section-label">Điều phối hoàn tiền</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Điều phối hoàn tiền</p>
           <p className="text-sm text-muted-foreground">
             {refunds.length} yêu cầu hoàn tiền trong danh sách hiện tại.
           </p>
@@ -154,9 +154,9 @@ export function RefundsClient({
 
       {errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}
 
-      <SectionCard className="rounded-2xl">
+      <SectionCard className="rounded-lg">
         {refunds.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border px-6 py-16 text-center">
+          <div className="rounded-lg border border-dashed border-border px-6 py-16 text-center">
             <RotateCcw className="mx-auto size-8 text-muted-foreground" />
             <p className="mt-3 text-sm font-medium">
               Không có yêu cầu hoàn tiền nào
@@ -171,7 +171,7 @@ export function RefundsClient({
           {refunds.map((refund) => (
             <div
               key={refund.id}
-              className="rounded-2xl border border-border/70 bg-background p-4"
+              className="rounded-lg border border-border/70 bg-background p-4"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -253,7 +253,7 @@ export function RefundsClient({
           ))}
         </div>
 
-        <div className="hidden overflow-hidden rounded-2xl border border-border/70 md:block">
+        <div className="hidden overflow-hidden rounded-lg border border-border/70 md:block">
           <Table>
           <TableHeader>
             <TableRow>

@@ -58,7 +58,7 @@ export default async function MenuPage() {
 
       <SectionCard>
         <Tabs defaultValue="items">
-          <TabsList className="h-11 rounded-2xl bg-muted/60">
+          <TabsList className="h-11 rounded-lg bg-muted/60">
           <TabsTrigger value="items" className="px-5">
             Món ăn
             <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
@@ -77,7 +77,7 @@ export default async function MenuPage() {
             <div className="flex justify-end">
               <AddItemButton categories={categories} />
             </div>
-            <div className="rounded-2xl border border-border/70 shadow-sm">
+            <div className="rounded-lg border border-border/70 shadow-sm">
               <ItemTable items={items} categories={categories} />
             </div>
           </TabsContent>
@@ -86,7 +86,7 @@ export default async function MenuPage() {
             <div className="flex justify-end">
               <AddCategoryButton />
             </div>
-            <div className="rounded-2xl border border-border/70 shadow-sm">
+            <div className="rounded-lg border border-border/70 shadow-sm">
               <CategoryTable categories={categories} />
             </div>
           </TabsContent>

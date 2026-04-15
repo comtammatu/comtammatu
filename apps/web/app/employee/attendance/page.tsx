@@ -125,7 +125,7 @@ export default async function EmployeeAttendancePage() {
               {attendance.map((r) => (
                 <div
                   key={r.id}
-                  className="rounded-2xl border border-border/70 bg-white/82 p-4"
+                  className="rounded-lg border border-border/70 bg-white/82 p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>

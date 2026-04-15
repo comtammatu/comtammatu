@@ -832,28 +832,28 @@ export function ProductionHubClient({
     <div className="space-y-6">
       {readinessMessage && (
         <SectionCard
-          className="rounded-2xl border-warning/20 bg-warning/10"
+          className="rounded-lg border-warning/20 bg-warning/10"
           density="compact"
         >
           {readinessMessage}
         </SectionCard>
       )}
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="app-kpi ui-surface-lift">
-          <p className="app-section-label">Lệnh nháp</p>
+        <div className="rounded-lg border bg-card p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Lệnh nháp</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">{totals.draft}</p>
         </div>
-        <div className="app-kpi ui-surface-lift">
-          <p className="app-section-label">Đã hoàn tất</p>
+        <div className="rounded-lg border bg-card p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Đã hoàn tất</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">{totals.completed}</p>
         </div>
-        <div className="app-kpi ui-surface-lift">
-          <p className="app-section-label">Đã hủy</p>
+        <div className="rounded-lg border bg-card p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Đã hủy</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">{totals.cancelled}</p>
         </div>
       </div>
 
-      <div className="ui-flow-panel flex flex-wrap items-center justify-between gap-3 rounded-3xl p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl p-4">
         <div className="text-sm text-muted-foreground">
           {centralKitchenBranches.length > 0
             ? `Có ${centralKitchenBranches.length} bếp trung tâm đang hoạt động`
@@ -999,7 +999,7 @@ export function ProductionHubClient({
         </Dialog>
       </div>
 
-      <SectionCard className="overflow-hidden rounded-2xl" density="compact">
+      <SectionCard className="overflow-hidden rounded-lg" density="compact">
         <Table>
           <TableHeader>
             <TableRow>
@@ -1320,7 +1320,7 @@ export function ProductionHubClient({
             {groupedRecipes.map((group) => (
               <SectionCard
                 key={group.finishedGoodId}
-                className="group/recipe overflow-hidden rounded-2xl"
+                className="group/recipe overflow-hidden rounded-lg"
                 density="compact"
               >
                 <div

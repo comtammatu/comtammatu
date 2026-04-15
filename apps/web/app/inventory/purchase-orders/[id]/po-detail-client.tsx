@@ -6,7 +6,7 @@ import {
   XCircle,
   CheckCircle,
 } from "lucide-react";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import {
   Table,
   TableBody,
@@ -46,7 +46,7 @@ export type PODetail = {
 };
 
 export function PODetailClient({ po }: { po: PODetail }) {
-  const panelClassName = getSurfacePanelClassName("inventory", "ambient-shadow");
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const supplierInfoAvailable = [
     po.supplierInfo.address,
     po.supplierInfo.contact,
@@ -67,7 +67,7 @@ export function PODetailClient({ po }: { po: PODetail }) {
       <section
         className={cn(
           panelClassName,
-          "relative overflow-hidden rounded-2xl bg-muted p-5 shadow-sm sm:p-6 lg:p-8",
+          "relative overflow-hidden rounded-lg bg-muted p-5 shadow-sm sm:p-6 lg:p-8",
         )}
       >
         <div className="absolute right-5 top-5 sm:right-6 sm:top-6 lg:right-8 lg:top-8">
@@ -90,7 +90,7 @@ export function PODetailClient({ po }: { po: PODetail }) {
             </div>
           </div>
 
-          <div className="space-y-4 border-border/40 md:border-l md:pl-8 lg:pl-12">
+          <div className="space-y-4 border-border md:border-l md:pl-8 lg:pl-12">
             <div>
               <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
                 Ngày tạo
@@ -105,7 +105,7 @@ export function PODetailClient({ po }: { po: PODetail }) {
             </div>
           </div>
 
-          <div className="space-y-4 border-border/40 md:border-l md:pl-8 lg:pl-12">
+          <div className="space-y-4 border-border md:border-l md:pl-8 lg:pl-12">
             <div>
               <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
                 Tổng tiền hàng
@@ -128,7 +128,7 @@ export function PODetailClient({ po }: { po: PODetail }) {
       <section
         className={cn(
           panelClassName,
-          "flex justify-center overflow-hidden rounded-2xl bg-card py-6",
+          "flex justify-center overflow-hidden rounded-lg bg-card py-6",
         )}
       >
         <TimelineStepper
@@ -148,9 +148,9 @@ export function PODetailClient({ po }: { po: PODetail }) {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <section
-            className={cn(panelClassName, "overflow-hidden rounded-2xl bg-card")}
+            className={cn(panelClassName, "overflow-hidden rounded-lg bg-card")}
           >
-            <div className="flex flex-col gap-3 border-b border-border/50 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <h4 className="text-lg font-bold">Chi tiết danh mục hàng</h4>
               <span className="text-xs font-medium text-muted-foreground">
                 {po.items.length} mặt hàng
@@ -161,7 +161,7 @@ export function PODetailClient({ po }: { po: PODetail }) {
               {po.items.map((item) => (
                 <div
                   key={item.sku}
-                  className="rounded-2xl border border-border/70 bg-muted/20 p-4"
+                  className="rounded-lg border border-border bg-muted/20 p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -266,7 +266,7 @@ export function PODetailClient({ po }: { po: PODetail }) {
                   ))}
                 </TableBody>
                 <TableFooter>
-                  <TableRow className="border-border/50">
+                  <TableRow className="border-border">
                     <TableCell
                       colSpan={3}
                       className="px-6 py-3 text-right text-sm text-muted-foreground"
@@ -278,7 +278,7 @@ export function PODetailClient({ po }: { po: PODetail }) {
                     </TableCell>
                     <TableCell />
                   </TableRow>
-                  <TableRow className="border-border/50">
+                  <TableRow className="border-border">
                     <TableCell
                       colSpan={3}
                       className="px-6 py-3 text-right text-sm text-muted-foreground"
@@ -290,7 +290,7 @@ export function PODetailClient({ po }: { po: PODetail }) {
                     </TableCell>
                     <TableCell />
                   </TableRow>
-                  <TableRow className="border-border/50">
+                  <TableRow className="border-border">
                     <TableCell
                       colSpan={3}
                       className="px-6 py-3 text-right text-sm font-bold"
@@ -309,8 +309,8 @@ export function PODetailClient({ po }: { po: PODetail }) {
         </div>
 
         <div className="space-y-4">
-          <div className={cn(panelClassName, "rounded-2xl bg-card")}>
-            <div className="border-b border-border/50 p-6">
+          <div className={cn(panelClassName, "rounded-lg bg-card")}>
+            <div className="border-b border-border p-6">
               <h4 className="text-sm font-bold">Tóm tắt đơn mua</h4>
             </div>
             <div className="space-y-3 p-6 text-sm">
@@ -326,7 +326,7 @@ export function PODetailClient({ po }: { po: PODetail }) {
                 <span className="text-muted-foreground">Thuế</span>
                 <span className="font-semibold">{formatVND(po.tax)}đ</span>
               </div>
-              <div className="border-t border-border/50 pt-3">
+              <div className="border-t border-border pt-3">
                 <p className="text-muted-foreground">Tổng cộng</p>
                 <p className="mt-1 text-2xl font-black text-primary">
                   {formatVND(po.grandTotal)}đ
@@ -335,8 +335,8 @@ export function PODetailClient({ po }: { po: PODetail }) {
             </div>
           </div>
 
-          <div className={cn(panelClassName, "rounded-2xl bg-card")}>
-            <div className="border-b border-border/50 p-6">
+          <div className={cn(panelClassName, "rounded-lg bg-card")}>
+            <div className="border-b border-border p-6">
               <h4 className="text-sm font-bold">Thông tin NCC</h4>
             </div>
             {supplierInfoAvailable ? (
@@ -369,7 +369,7 @@ export function PODetailClient({ po }: { po: PODetail }) {
         </div>
       </div>
 
-      <footer className="flex flex-col gap-3 border-t border-border/50 py-6 sm:flex-row sm:items-center sm:justify-between">
+      <footer className="flex flex-col gap-3 border-t border-border py-6 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"
           className="focus-ring-standard flex min-h-11 items-center justify-center gap-2 rounded-full px-6 py-3 font-bold text-destructive transition-colors hover:bg-destructive/8"
@@ -379,7 +379,7 @@ export function PODetailClient({ po }: { po: PODetail }) {
         </button>
         <button
           type="button"
-          className="focus-ring-standard flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-10 py-3 font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-transform hover:scale-[0.98]"
+          className="focus-ring-standard flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-10 py-3 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-[0.98]"
         >
           <CheckCircle className="size-5" />
           Tạo Phiếu Nhập kho (GRN)

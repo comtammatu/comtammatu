@@ -114,9 +114,9 @@ export function ChartOfAccountsClient({
 
   return (
     <div className="space-y-4">
-      <div className="ui-flow-panel flex flex-wrap items-center justify-between gap-4 rounded-3xl p-4">
+      <div className="rounded-xl border bg-card shadow-sm flex flex-wrap items-center justify-between gap-4 p-4">
         <div className="space-y-1.5">
-          <p className="app-section-label">Danh mục tài khoản</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Danh mục tài khoản</p>
           <p className="text-sm text-muted-foreground">{accounts.length} tài khoản.</p>
         </div>
         <Button
@@ -130,7 +130,7 @@ export function ChartOfAccountsClient({
         </Button>
       </div>
 
-      <SectionCard className="overflow-hidden rounded-2xl" density="compact">
+      <SectionCard className="overflow-hidden rounded-lg" density="compact">
         <Table>
           <TableHeader>
             <TableRow>

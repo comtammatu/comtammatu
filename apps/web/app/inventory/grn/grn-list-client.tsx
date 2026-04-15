@@ -11,7 +11,7 @@ import {
   Receipt,
   TrendingUp,
 } from "lucide-react";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import {
   Table,
   TableBody,
@@ -36,10 +36,7 @@ export type GrnRow = {
 export function GrnListClient({ grns }: { grns: GrnRow[] }) {
   const totalValue = grns.reduce((s, g) => s + g.total, 0);
   const pendingCount = grns.filter((g) => g.status === "pending").length;
-  const panelClassName = getSurfacePanelClassName(
-    "inventory",
-    "ambient-shadow",
-  );
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
 
   return (
     <div className="space-y-6">
@@ -58,7 +55,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
           </button>
           <button
             type="button"
-            className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-xl shadow-primary/10 transition-transform hover:scale-[1.02]"
+            className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-[1.02]"
           >
             <Plus className="size-4" />
             Tạo GRN
@@ -72,12 +69,12 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
         <SectionCard
           className={cn(
             panelClassName,
-            "col-span-12 rounded-3xl bg-card md:col-span-4",
+            "col-span-12 rounded-xl bg-card md:col-span-4",
           )}
           density="comfortable"
         >
           <div className="mb-4 flex items-center gap-4">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-info/12">
+            <div className="flex size-12 items-center justify-center rounded-lg bg-info/12">
               <Clock className="size-5 text-info" />
             </div>
             <span className="text-sm font-semibold text-muted-foreground">
@@ -94,7 +91,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
         <div
           className={cn(
             panelClassName,
-            "relative col-span-12 flex items-center justify-between overflow-hidden rounded-3xl border-primary/15 bg-primary/5 p-6 md:col-span-8",
+            "relative col-span-12 flex items-center justify-between overflow-hidden rounded-xl border-primary/15 bg-primary/5 p-6 md:col-span-8",
           )}
         >
           <div className="z-10">
@@ -110,18 +107,18 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
               14.2% so với tháng trước
             </div>
           </div>
-          <div className="absolute right-0 top-0 flex h-full w-1/3 items-center justify-center bg-gradient-to-l from-success/12 to-transparent">
-            <Receipt className="size-24 translate-x-1/4 text-success opacity-10" />
+          <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-10">
+            <Receipt className="size-24 text-success" />
           </div>
         </div>
       </div>
 
       {/* Table Section */}
       <div
-        className={cn(panelClassName, "overflow-hidden rounded-3xl bg-card")}
+        className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}
       >
         {/* Table Toolbar */}
-        <div className="flex items-center justify-between border-b border-border/40 bg-muted/30 p-6">
+        <div className="flex items-center justify-between border-b border-border bg-muted/30 p-6">
           <div className="flex gap-4">
             <span className="rounded-full bg-muted px-3 py-1 text-sm font-bold text-muted-foreground">
               Tất cả ({grns.length})
@@ -144,26 +141,26 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
 
         <Table>
           <TableHeader>
-            <TableRow className="border-border/40">
-              <TableHead className="px-8 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground/70">
+            <TableRow className="border-border">
+              <TableHead className="px-8 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground">
                 Mã GRN
               </TableHead>
-              <TableHead className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground/70">
+              <TableHead className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground">
                 Nhà cung cấp
               </TableHead>
-              <TableHead className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground/70">
+              <TableHead className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground">
                 PO liên kết
               </TableHead>
-              <TableHead className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground/70">
+              <TableHead className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground">
                 Ngày nhận
               </TableHead>
-              <TableHead className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground/70">
+              <TableHead className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground">
                 Tổng tiền
               </TableHead>
-              <TableHead className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground/70">
+              <TableHead className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground">
                 Trạng thái
               </TableHead>
-              <TableHead className="px-8 py-5 text-right whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground/70">
+              <TableHead className="px-8 py-5 text-right whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground">
                 Thao tác
               </TableHead>
             </TableRow>

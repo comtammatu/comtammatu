@@ -53,12 +53,12 @@ function ReportCard({
   return (
     <Link
       href={href}
-      className="group flex h-full flex-col justify-between rounded-3xl border border-border/70 bg-background/85 p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:bg-white hover:shadow-md ui-surface-lift"
+      className="group flex h-full flex-col justify-between rounded-xl border border-border/70 bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-md"
     >
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div
-            className={`flex size-11 items-center justify-center rounded-2xl ${toneClassName}`}
+            className={`flex size-11 items-center justify-center rounded-lg ${toneClassName}`}
           >
             <Icon className="size-5" />
           </div>

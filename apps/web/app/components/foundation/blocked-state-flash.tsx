@@ -15,7 +15,7 @@ type BlockedStateFlashMode = "inline" | "toast" | "toast-inline";
 const TONE_STYLES = {
   neutral: {
     container:
-      "border-border/70 bg-muted/45 text-foreground shadow-sm shadow-black/5",
+      "border-border/70 bg-muted/45 text-foreground shadow-sm",
     icon: "bg-muted text-muted-foreground",
     eyebrow: "text-muted-foreground/80",
     body: "text-muted-foreground",
@@ -31,7 +31,7 @@ const TONE_STYLES = {
   },
   danger: {
     container:
-      "border-destructive/20 bg-destructive/8 text-foreground shadow-sm shadow-destructive/10",
+      "border-destructive/20 bg-destructive/8 text-foreground shadow-sm",
     icon: "bg-destructive/12 text-destructive",
     eyebrow: "text-destructive/80",
     body: "text-foreground/80",
@@ -132,7 +132,7 @@ export function SearchParamBlockedStateFlash({
   return (
     <div
       className={cn(
-        "rounded-2xl border px-4 py-3",
+        "rounded-lg border px-4 py-3",
         toneStyle.container,
         className,
       )}

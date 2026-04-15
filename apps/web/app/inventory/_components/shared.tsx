@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import { tStatus } from "../_lib/dictionary";
-import { cn, getSurfacePanelClassName, type UiTone } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import {
   Popover,
   PopoverContent,
@@ -21,6 +21,7 @@ import {
   FilterBar as SurfaceFilterBar,
   PageHeader as SurfacePageHeader,
   StatusBadge as SurfaceStatusBadge,
+  type StatusTone,
 } from "@/components/foundation/ui-patterns";
 export type DocumentStatus =
   | "draft"
@@ -74,13 +75,9 @@ interface StatCardProps {
 export function StatCard({ label, value, trend }: StatCardProps) {
   return (
     <div
-      className={getSurfacePanelClassName(
-        "inventory",
-        "ui-stat-card ui-surface-lift ambient-shadow relative overflow-hidden rounded-3xl px-5 py-5",
-      )}
+      className="rounded-lg border bg-card p-5 shadow-sm"
     >
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/70 via-success/60 to-warning/60" />
-      <p className="mb-2 truncate text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+      <p className="mb-2 truncate text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         {label}
       </p>
       <div className="flex items-baseline gap-1">
@@ -170,7 +167,7 @@ export function SearchableSelect({
         </button>
       </PopoverTrigger>
       <PopoverContent
-        className="rounded-xl border border-border/70 bg-card p-0 shadow-lg"
+        className="rounded-xl border border-border bg-card p-0 shadow-lg"
         align="start"
         style={{
           width: "var(--radix-popover-trigger-width)",
@@ -223,7 +220,7 @@ export function SearchableSelect({
 // ----------------------------------------------------------------
 // StatusBadge — MD3 container colors
 // ----------------------------------------------------------------
-const statusTones: Record<string, UiTone> = {
+const statusTones: Record<string, StatusTone> = {
   draft: "neutral",
   confirmed: "success",
   sent: "info",
@@ -290,28 +287,18 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <div
-      className={getSurfacePanelClassName(
-        "inventory",
-        cn(
-          "ui-flow-panel relative overflow-hidden rounded-4xl border-primary/15 bg-gradient-to-br from-primary/10 via-white to-info/5 px-5 py-5 shadow-sm sm:px-6",
-          className,
-        ),
+      className={cn(
+        "rounded-lg border bg-card px-5 py-5 shadow-sm sm:px-6",
+        className,
       )}
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 overflow-hidden"
-      >
-        <div className="absolute -right-16 top-0 h-36 w-36 rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute -left-12 bottom-0 h-32 w-32 rounded-full bg-success/10 blur-3xl" />
-      </div>
       <SurfacePageHeader
         surface="inventory"
         eyebrow={eyebrow}
         title={title}
         description={description}
         actions={actions}
-        className="relative z-10 gap-4"
+        className="gap-4"
       />
     </div>
   );
@@ -330,7 +317,7 @@ export function FilterBar({
     <SurfaceFilterBar
       surface="inventory"
       className={cn(
-        "ui-flow-panel relative overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-br from-white via-background to-muted/35 shadow-sm",
+        "rounded-lg border bg-card shadow-sm",
         className,
       )}
     >
@@ -383,7 +370,7 @@ export function TimelineStepper({ steps }: { steps: TimelineStep[] }) {
               {step.label}
             </p>
             {step.date && (
-              <p className="text-xs text-muted-foreground/70">{step.date}</p>
+              <p className="text-xs text-muted-foreground">{step.date}</p>
             )}
           </div>
           {i < steps.length - 1 && (
@@ -421,7 +408,7 @@ export function SimpleBarChart({
   const isLast = (i: number) => i === data.length - 1;
   return (
     <div
-      className="flex items-end gap-3 border-b border-border/50 px-4 pb-4"
+      className="flex items-end gap-3 border-b border-border px-4 pb-4"
       style={{ height }}
     >
       {data.map((item, di) => (
@@ -443,9 +430,8 @@ export function SimpleBarChart({
                   className="w-full cursor-pointer transition-[transform,filter,opacity] duration-300 hover:-translate-y-0.5 hover:brightness-110"
                   style={{
                     height: `${pct}%`,
-                    backgroundColor: isLast(di)
-                      ? color
-                      : `color-mix(in srgb, ${color} 25%, transparent)`,
+                    backgroundColor: color,
+                    opacity: isLast(di) ? 1 : 0.25,
                     borderRadius:
                       vi === 0
                         ? "0.5rem 0.5rem 0 0"

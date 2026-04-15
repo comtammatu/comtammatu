@@ -93,7 +93,7 @@ export default async function OrdersPage() {
       />
       <SectionCard>
         <Tabs defaultValue="orders">
-          <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto rounded-2xl bg-muted/60 p-2 shadow-sm">
+          <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto rounded-lg bg-muted/60 p-2 shadow-sm">
             <TabsTrigger
               value="orders"
               className="rounded-full px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"

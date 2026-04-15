@@ -499,7 +499,7 @@ export function CreateTransferDialog({
               <EmptyState
                 title="Chưa có nguyên liệu"
                 description="Thêm ít nhất một nguyên liệu để tạo phiếu luân chuyển."
-                className="rounded-2xl border-dashed bg-muted/10 py-6"
+                className="rounded-lg border-dashed bg-muted/10 py-6"
               />
             ) : (
               <div className="space-y-2">

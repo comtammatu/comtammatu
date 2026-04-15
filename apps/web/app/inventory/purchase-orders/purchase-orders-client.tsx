@@ -171,7 +171,7 @@ export function PurchaseOrdersClient({
       )}
 
       {/* Table card */}
-      <SectionCard className="overflow-hidden rounded-2xl" density="compact">
+      <SectionCard className="overflow-hidden rounded-lg" density="compact">
         {/* Search + filters bar */}
         <div className="-m-4 flex flex-wrap items-center gap-3 border-b bg-muted/20 px-4 py-3 md:-m-5 md:px-5">
           <div className="flex flex-1 items-center gap-3 min-w-0">

@@ -86,24 +86,24 @@ export function OrderHistory({
   return (
     <div className="flex flex-1 flex-col overflow-hidden bg-background">
       <div className="border-b border-border/60 px-4 py-4">
-        <div className="ui-flow-panel rounded-4xl p-4">
+        <div className="rounded-lg border bg-card shadow-sm rounded-4xl p-4">
           <div className="relative space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="app-section-label">Theo dõi ca</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Theo dõi ca</p>
                 <h2 className="mt-1 text-lg font-semibold tracking-tight">
                   Đơn đang chạy và đơn đã chốt nằm trong cùng một mạch quan sát.
                 </h2>
               </div>
-              <div className="rounded-full border border-primary/15 bg-white/82 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
+              <div className="rounded-full border border-primary/15 bg-card px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
                 {orders.length} đơn
               </div>
             </div>
 
             <div className="grid gap-2 sm:grid-cols-3">
-              <div className="ui-flow-step" data-state="current">
+              <div className="rounded-lg border bg-card shadow-sm p-3" data-state="current">
                 <div className="flex items-start gap-3">
-                  <div className="ui-flow-stage-index">
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">
                     <Clock3 className="size-3.5" />
                   </div>
                   <div>
@@ -115,11 +115,11 @@ export function OrderHistory({
                 </div>
               </div>
               <div
-                className="ui-flow-step"
+                className="rounded-lg border bg-card shadow-sm p-3"
                 data-state={archivedOrders.length > 0 ? "done" : "todo"}
               >
                 <div className="flex items-start gap-3">
-                  <div className="ui-flow-stage-index">
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">
                     <CheckCircle2 className="size-3.5" />
                   </div>
                   <div>
@@ -131,11 +131,11 @@ export function OrderHistory({
                 </div>
               </div>
               <div
-                className="ui-flow-step"
+                className="rounded-lg border bg-card shadow-sm p-3"
                 data-state={orders.length > 0 ? "done" : "todo"}
               >
                 <div className="flex items-start gap-3">
-                  <div className="ui-flow-stage-index">
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">
                     <PackageCheck className="size-3.5" />
                   </div>
                   <div>
@@ -152,7 +152,7 @@ export function OrderHistory({
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="ui-content-auto space-y-5 p-4">
+        <div className="space-y-5 p-4">
           <section className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -167,7 +167,7 @@ export function OrderHistory({
             </div>
 
             {activeOrders.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-border/70 bg-background/70 px-4 py-6 text-center text-sm text-muted-foreground">
+              <div className="rounded-xl border border-dashed border-border/70 bg-background/70 px-4 py-6 text-center text-sm text-muted-foreground">
                 Không có đơn đang phục vụ.
               </div>
             ) : (
@@ -181,7 +181,7 @@ export function OrderHistory({
                   return (
                     <div
                       key={order.id}
-                      className="ui-surface-lift rounded-3xl border border-border/70 bg-card/92 p-4 shadow-sm"
+                      className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-4 shadow-sm"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-2">
@@ -266,7 +266,7 @@ export function OrderHistory({
             </div>
 
             {archivedOrders.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-border/70 bg-background/70 px-4 py-6 text-center text-sm text-muted-foreground">
+              <div className="rounded-xl border border-dashed border-border/70 bg-background/70 px-4 py-6 text-center text-sm text-muted-foreground">
                 Chưa có đơn hoàn tất trong ca này.
               </div>
             ) : (
@@ -280,7 +280,7 @@ export function OrderHistory({
                   return (
                     <div
                       key={order.id}
-                      className="ui-surface-lift rounded-3xl border border-border/60 bg-background/88 p-4 shadow-sm"
+                      className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-background p-4 shadow-sm"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-2">
