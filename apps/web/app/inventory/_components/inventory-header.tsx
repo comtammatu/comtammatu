@@ -13,9 +13,9 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@comtammatu/ui/components/breadcrumb";
-import { SidebarTrigger } from "@comtammatu/ui/components/sidebar";
 import { cn } from "@comtammatu/ui";
 import { ChevronRight, MapPin, PackagePlus } from "lucide-react";
+import { InventoryMobileNav } from "./inventory-sidebar";
 import { tRoute } from "../_lib/dictionary";
 
 function getBreadcrumbs(pathname: string) {
@@ -61,8 +61,7 @@ export function InventoryHeader({
       <div className="mx-auto flex max-w-screen-2xl flex-col gap-4 px-4 py-4 sm:px-6">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-start gap-3">
-            <SidebarTrigger className="mt-0.5 shrink-0 md:hidden" />
-
+            <InventoryMobileNav userRole={userRole} />
             <div className="min-w-0 space-y-3">
               <Breadcrumb className="hidden md:block">
                 <BreadcrumbList>

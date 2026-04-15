@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -18,21 +19,20 @@ import {
   ShoppingCart,
   Users,
   UtensilsCrossed,
+  Menu,
 } from "lucide-react";
 import { canAccess, type StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { cn } from "@comtammatu/ui";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@comtammatu/ui/components/sidebar";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@comtammatu/ui/components/sheet";
 import { tNav } from "../_lib/dictionary";
 
 type NavItem = {
@@ -155,7 +155,7 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function NavContent({
+function InventoryNavigationContent({
   pathname,
   userRole,
   onNavigate,
@@ -173,8 +173,8 @@ function NavContent({
   })).filter((section) => section.items.length > 0);
 
   return (
-    <Sidebar className="border-r border-sidebar-border bg-sidebar">
-      <SidebarHeader className="border-b border-sidebar-border px-4 py-5">
+    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
+      <div className="border-b border-sidebar-border px-4 py-5">
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-black text-sidebar-primary-foreground">
@@ -207,58 +207,104 @@ function NavContent({
             </p>
           </div>
         </div>
-      </SidebarHeader>
+      </div>
 
-      <SidebarContent className="px-2 py-4">
+      <div className="flex-1 overflow-y-auto px-2 py-4">
         {visibleSections.map((section) => (
-          <SidebarGroup key={section.title}>
-            <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
-            <SidebarMenu>
+          <section key={section.title} className="px-2 py-2">
+            <p className="mb-2 px-2 text-xs font-medium text-sidebar-foreground/70">
+              {section.title}
+            </p>
+            <nav className="space-y-1">
               {section.items.map((item) => {
                 const active = isActive(pathname, item.href);
 
                 return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip={item.label}
-                      isActive={active}
-                      onClick={onNavigate}
-                    >
-                      <Link href={item.href} aria-current={active ? "page" : undefined}>
-                        <item.icon className="size-4" />
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    onClick={onNavigate}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+                      active
+                        ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    )}
+                  >
+                    <item.icon className="size-4 shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                  </Link>
                 );
               })}
-            </SidebarMenu>
-          </SidebarGroup>
+            </nav>
+          </section>
         ))}
-      </SidebarContent>
+      </div>
 
-      <SidebarFooter className="space-y-3 border-t border-sidebar-border px-3 pb-4 pt-4">
+      <div className="space-y-3 border-t border-sidebar-border px-3 pb-4 pt-4">
         <div className="rounded-lg border border-sidebar-border bg-background px-3 py-3">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Truy cập nhanh
           </p>
           <div className="mt-3 grid gap-2">
-            <Button asChild size="sm">
+            <Button asChild size="sm" onClick={onNavigate}>
               <Link href="/inventory/reports">Mở báo cáo</Link>
             </Button>
-            <Button asChild size="sm" variant="outline">
+            <Button asChild size="sm" variant="outline" onClick={onNavigate}>
               <Link href="/inventory/stocktake">Đi tới kiểm kê</Link>
             </Button>
           </div>
         </div>
-      </SidebarFooter>
-    </Sidebar>
+      </div>
+    </div>
   );
 }
 
 export function InventorySidebar({ userRole }: { userRole: StaffRole }) {
   const pathname = usePathname();
 
-  return <NavContent pathname={pathname} userRole={userRole} />;
+  return (
+    <aside className="hidden w-72 shrink-0 border-r border-border/70 lg:block xl:w-80">
+      <div className="sticky top-0 h-svh">
+        <InventoryNavigationContent pathname={pathname} userRole={userRole} />
+      </div>
+    </aside>
+  );
+}
+
+export function InventoryMobileNav({ userRole }: { userRole: StaffRole }) {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon"
+          className="mt-0.5 shrink-0 lg:hidden"
+          aria-label="Mở điều hướng kho"
+        >
+          <Menu className="size-4" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent
+        side="left"
+        className="w-80 border-r border-sidebar-border bg-sidebar p-0 text-sidebar-foreground sm:max-w-sm"
+      >
+        <SheetHeader className="sr-only">
+          <SheetTitle>Điều hướng kho</SheetTitle>
+          <SheetDescription>
+            Điều hướng các màn hình Inventory trên thiết bị nhỏ.
+          </SheetDescription>
+        </SheetHeader>
+        <InventoryNavigationContent
+          pathname={pathname}
+          userRole={userRole}
+          onNavigate={() => setOpen(false)}
+        />
+      </SheetContent>
+    </Sheet>
+  );
 }
