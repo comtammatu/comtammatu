@@ -18,9 +18,14 @@ import {
 } from "lucide-react";
 import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
 import { cn } from "@comtammatu/ui";
-import { StatCard, StatusBadge } from "./_components/shared";
+import { Badge } from "@comtammatu/ui/components/badge";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { formatVND } from "./_lib/format";
 import { getInventoryPaths, type InventoryRouteBase } from "./_lib/paths";
+import {
+  getInventoryStatusBadgeVariant,
+  getInventoryStatusLabel,
+} from "./_lib/ui";
 
 function useCurrentTime() {
   const [now, setNow] = useState(() => new Date());
@@ -549,13 +554,28 @@ export function DashboardClient({
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-        <StatCard
-          label="Tổng giá trị tồn kho"
-          value={`${formatVND(totalStockValue)}đ`}
-        />
-        <StatCard label="PO đang chờ" value={String(pendingPO)} />
-        <StatCard label="Phiếu điều chuyển" value={String(activeTransfers)} />
-        <StatCard label="Phiếu kiểm kê" value={String(activeStocktakes)} />
+        {[
+          {
+            label: "Tổng giá trị tồn kho",
+            value: `${formatVND(totalStockValue)}đ`,
+          },
+          { label: "PO đang chờ", value: String(pendingPO) },
+          { label: "Phiếu điều chuyển", value: String(activeTransfers) },
+          { label: "Phiếu kiểm kê", value: String(activeStocktakes) },
+        ].map((item) => (
+          <Card key={item.label}>
+            <CardContent className="space-y-3 p-5">
+              <p className="truncate text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                {item.label}
+              </p>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-semibold tracking-tight">
+                  {item.value}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
@@ -734,14 +754,13 @@ export function DashboardClient({
                       </h4>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         <span>Hạn dùng {item.expiryDate}</span>
-                        <StatusBadge
-                          status={item.urgency}
-                          label={
-                            item.daysLeft <= 0
-                              ? `Quá ${Math.abs(item.daysLeft)} ngày`
-                              : `Còn ${item.daysLeft} ngày`
-                          }
-                        />
+                        <Badge
+                          variant={getInventoryStatusBadgeVariant(item.urgency)}
+                        >
+                          {item.daysLeft <= 0
+                            ? `Quá ${Math.abs(item.daysLeft)} ngày`
+                            : `Còn ${item.daysLeft} ngày`}
+                        </Badge>
                       </div>
                     </div>
                     <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
@@ -847,7 +866,9 @@ export function DashboardClient({
                             {t.fromBranch} → {t.toBranch}
                           </p>
                         </div>
-                        <StatusBadge status={t.status} />
+                        <Badge variant={getInventoryStatusBadgeVariant(t.status)}>
+                          {getInventoryStatusLabel(t.status)}
+                        </Badge>
                       </div>
                     </Link>
                   ))

@@ -54,18 +54,16 @@ export default async function InventoryLayout({
 
   return (
     <SidebarProvider defaultOpen>
-      <div
-        className={cn("min-h-screen bg-background font-sans", "flex min-h-svh overflow-hidden")}
-      >
+      <div className={cn("flex min-h-svh overflow-hidden bg-muted/20 font-sans")}>
         <InventorySidebar userRole={claims.user_role} />
-        <SidebarInset className="flex flex-1 flex-col overflow-hidden">
+        <SidebarInset className="flex flex-1 flex-col overflow-hidden bg-transparent">
           <InventoryHeader
             siteName={resolvedSiteContext.branchName}
             siteKind={resolvedSiteContext.branchKind}
             userRole={claims.user_role}
           />
-          <main className="flex-1 overflow-y-auto bg-background px-4 py-5 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-screen-2xl">{children}</div>
+          <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-screen-2xl space-y-6">{children}</div>
           </main>
         </SidebarInset>
       </div>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import {
   CheckCircle,
   Pause,
@@ -11,6 +10,14 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
+import { Badge } from "@comtammatu/ui/components/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import {
   Table,
   TableBody,
@@ -31,8 +38,11 @@ import {
 } from "@comtammatu/ui/components/alert-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
-import { FilterBar, PageHeader, StatusBadge } from "../_components/shared";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
+import {
+  getInventoryStatusBadgeVariant,
+  getInventoryStatusLabel,
+} from "../_lib/ui";
 import { deleteSupplier, fetchSuppliers } from "../procurement-actions";
 import { SupplierDialog } from "./supplier-dialog";
 import type { SupplierRow } from "./supplier-dialog";
@@ -106,10 +116,12 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <PageHeader
-          title="Danh sách Nhà cung cấp"
-          description="Đối tác cung ứng."
-        />
+        <Card className="flex-1 border-border/70">
+          <CardHeader>
+            <CardTitle className="text-2xl">Danh sách Nhà cung cấp</CardTitle>
+            <CardDescription>Đối tác cung ứng.</CardDescription>
+          </CardHeader>
+        </Card>
         <button
           type="button"
           onClick={openCreate}
@@ -146,11 +158,11 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             value: String(suspended).padStart(2, "0"),
           },
         ].map((card) => (
-          <SectionCard
+          <Card
             key={card.label}
             className={cn(panelClassName, "rounded-lg bg-card")}
-            density="comfortable"
           >
+            <CardContent className="p-6">
             <div className="mb-4 flex items-start justify-between">
               <div
                 className={cn(
@@ -174,7 +186,8 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
               {card.value}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">{card.label}</p>
-          </SectionCard>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
@@ -183,10 +196,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
         className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}
       >
         {/* Search bar */}
-        <FilterBar
-          className="rounded-none border-0 border-b border-border px-6 py-4 shadow-none"
-          surface="inventory"
-        >
+        <div className="flex flex-wrap items-center gap-3 border-b border-border px-6 py-4">
           <Search className="size-4 shrink-0 text-muted-foreground" />
           <input
             type="text"
@@ -198,7 +208,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
           <span className="shrink-0 text-xs font-medium text-muted-foreground">
             {filtered.length} / {rows.length}
           </span>
-        </FilterBar>
+        </div>
 
         <Table>
           <TableHeader>
@@ -274,9 +284,15 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
                     {s.address ?? "—"}
                   </TableCell>
                   <TableCell className="px-6 py-5 text-center">
-                    <StatusBadge
-                      status={s.is_active ? "active" : "suspended"}
-                    />
+                    <Badge
+                      variant={getInventoryStatusBadgeVariant(
+                        s.is_active ? "active" : "suspended",
+                      )}
+                    >
+                      {getInventoryStatusLabel(
+                        s.is_active ? "active" : "suspended",
+                      )}
+                    </Badge>
                   </TableCell>
                   <TableCell className="px-6 py-5 text-right">
                     <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">

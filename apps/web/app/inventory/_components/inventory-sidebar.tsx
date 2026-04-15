@@ -3,23 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Package,
-  PackageOpen,
   ArrowDownToLine,
   ArrowLeftRight,
-  ClipboardList,
   BarChart3,
+  ClipboardList,
   Factory,
-  Leaf,
-  ShoppingCart,
   FileText,
+  Hourglass,
+  LayoutDashboard,
+  Leaf,
+  Package,
+  PackageOpen,
+  Receipt,
+  ShoppingCart,
   Users,
   UtensilsCrossed,
-  Hourglass,
-  Receipt,
 } from "lucide-react";
 import { canAccess, type StaffRole } from "@comtammatu/shared/auth";
+import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Sidebar,
   SidebarContent,
@@ -31,7 +33,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@comtammatu/ui/components/sidebar";
-import { Button } from "@comtammatu/ui/components/button";
 import { tNav } from "../_lib/dictionary";
 
 type NavItem = {
@@ -48,38 +49,103 @@ type NavGroup = {
 
 const NAV_SECTIONS: NavGroup[] = [
   {
-    title: "",
+    title: "Điều hành",
     items: [
-      { href: "/inventory", label: tNav("home", "navigation"), icon: LayoutDashboard },
-      { href: "/inventory/stock", label: tNav("stock", "navigation"), icon: Package },
+      {
+        href: "/inventory",
+        label: tNav("home", "navigation"),
+        icon: LayoutDashboard,
+      },
+      {
+        href: "/inventory/stock",
+        label: tNav("stock", "navigation"),
+        icon: Package,
+      },
     ],
   },
   {
-    title: "Nhập & Xuất",
+    title: "Nhập xuất",
     items: [
-      { href: "/inventory/purchase-orders", label: tNav("purchaseOrders", "navigation"), icon: ShoppingCart, requiresProcurement: true },
-      { href: "/inventory/grn", label: tNav("grn", "navigation"), icon: ArrowDownToLine, requiresProcurement: true },
-      { href: "/inventory/supplier-invoices", label: tNav("supplierInvoices", "navigation"), icon: Receipt, requiresProcurement: true },
-      { href: "/inventory/transfers", label: tNav("transfers", "navigation"), icon: ArrowLeftRight },
-      { href: "/inventory/production", label: tNav("production", "navigation"), icon: Factory },
-      { href: "/inventory/issues", label: tNav("issues", "navigation"), icon: PackageOpen },
+      {
+        href: "/inventory/purchase-orders",
+        label: tNav("purchaseOrders", "navigation"),
+        icon: ShoppingCart,
+        requiresProcurement: true,
+      },
+      {
+        href: "/inventory/grn",
+        label: tNav("grn", "navigation"),
+        icon: ArrowDownToLine,
+        requiresProcurement: true,
+      },
+      {
+        href: "/inventory/supplier-invoices",
+        label: tNav("supplierInvoices", "navigation"),
+        icon: Receipt,
+        requiresProcurement: true,
+      },
+      {
+        href: "/inventory/transfers",
+        label: tNav("transfers", "navigation"),
+        icon: ArrowLeftRight,
+      },
+      {
+        href: "/inventory/production",
+        label: tNav("production", "navigation"),
+        icon: Factory,
+      },
+      {
+        href: "/inventory/issues",
+        label: tNav("issues", "navigation"),
+        icon: PackageOpen,
+      },
     ],
   },
   {
     title: "Kiểm soát",
     items: [
-      { href: "/inventory/stocktake", label: tNav("stocktake", "navigation"), icon: ClipboardList },
-      { href: "/inventory/expiry", label: tNav("expiry", "navigation"), icon: Hourglass },
-      { href: "/inventory/reports", label: tNav("reports", "navigation"), icon: BarChart3 },
+      {
+        href: "/inventory/stocktake",
+        label: tNav("stocktake", "navigation"),
+        icon: ClipboardList,
+      },
+      {
+        href: "/inventory/expiry",
+        label: tNav("expiry", "navigation"),
+        icon: Hourglass,
+      },
+      {
+        href: "/inventory/reports",
+        label: tNav("reports", "navigation"),
+        icon: BarChart3,
+      },
     ],
   },
   {
     title: "Danh mục",
     items: [
-      { href: "/inventory/ingredients", label: tNav("ingredients", "navigation"), icon: FileText },
-      { href: "/inventory/suppliers", label: tNav("suppliers", "navigation"), icon: Users, requiresProcurement: true },
-      { href: "/inventory/recipes", label: tNav("recipes", "navigation"), icon: UtensilsCrossed, requiresProcurement: true },
-      { href: "/inventory/settings", label: tNav("settings", "navigation"), icon: Leaf },
+      {
+        href: "/inventory/ingredients",
+        label: tNav("ingredients", "navigation"),
+        icon: FileText,
+      },
+      {
+        href: "/inventory/suppliers",
+        label: tNav("suppliers", "navigation"),
+        icon: Users,
+        requiresProcurement: true,
+      },
+      {
+        href: "/inventory/recipes",
+        label: tNav("recipes", "navigation"),
+        icon: UtensilsCrossed,
+        requiresProcurement: true,
+      },
+      {
+        href: "/inventory/settings",
+        label: tNav("settings", "navigation"),
+        icon: Leaf,
+      },
     ],
   },
 ];
@@ -107,34 +173,46 @@ function NavContent({
   })).filter((section) => section.items.length > 0);
 
   return (
-    <Sidebar>
-      <SidebarHeader>
-        <div className="px-4 py-5">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-sm font-extrabold text-primary-foreground">
+    <Sidebar className="border-r border-sidebar-border bg-sidebar">
+      <SidebarHeader className="border-b border-sidebar-border px-4 py-5">
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-black text-sidebar-primary-foreground">
               MT
             </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Không gian kho vận
-              </p>
-              <h2 className="text-sm font-bold tracking-tight text-foreground">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-sidebar-foreground">
                 Cơm Tấm Má Tư
-              </h2>
+              </p>
+              <p className="text-xs uppercase tracking-widest text-sidebar-foreground/60">
+                Inventory Workspace
+              </p>
             </div>
           </div>
-          <p className="text-sm leading-6 text-muted-foreground">
-            Nhập, xuất, kiểm kê, báo cáo.
-          </p>
+
+          <div className="rounded-lg border border-sidebar-border bg-background px-3 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Phạm vi
+              </p>
+              <Badge
+                variant={canAccessProcurement ? "success" : "secondary"}
+                className="text-xs"
+              >
+                {canAccessProcurement ? "Procurement" : "Core"}
+              </Badge>
+            </div>
+            <p className="mt-2 text-sm leading-5 text-foreground">
+              Điều hành nhập, xuất, kiểm kê và báo cáo trong một luồng thống nhất.
+            </p>
+          </div>
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-2 py-4">
         {visibleSections.map((section) => (
           <SidebarGroup key={section.title}>
-            {section.title ? (
-              <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
-            ) : null}
+            <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
             <SidebarMenu>
               {section.items.map((item) => {
                 const active = isActive(pathname, item.href);
@@ -160,17 +238,19 @@ function NavContent({
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="space-y-2 px-3 pb-4">
-        <div className="rounded-lg border bg-background px-3 py-3">
+      <SidebarFooter className="space-y-3 border-t border-sidebar-border px-3 pb-4 pt-4">
+        <div className="rounded-lg border border-sidebar-border bg-background px-3 py-3">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Thao tác nhanh
+            Truy cập nhanh
           </p>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Lối tắt vận hành thường dùng.
-          </p>
-          <Button asChild size="sm" className="mt-3 w-full">
-            <Link href="/inventory/reports">Báo cáo</Link>
-          </Button>
+          <div className="mt-3 grid gap-2">
+            <Button asChild size="sm">
+              <Link href="/inventory/reports">Mở báo cáo</Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/inventory/stocktake">Đi tới kiểm kê</Link>
+            </Button>
+          </div>
         </div>
       </SidebarFooter>
     </Sidebar>

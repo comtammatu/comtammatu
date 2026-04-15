@@ -3,7 +3,6 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import {
   AlertTriangle,
   ChefHat,
@@ -15,6 +14,14 @@ import {
   Plus,
 } from "lucide-react";
 import { cn } from "@comtammatu/ui";
+import { Badge } from "@comtammatu/ui/components/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import {
   Dialog,
   DialogContent,
@@ -39,14 +46,13 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  FilterBar,
-  PageHeader,
-  SearchableSelect,
-  StatusBadge,
-} from "../_components/shared";
+import { SearchableSelect } from "../_components/searchable-select";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { tRoute } from "../_lib/dictionary";
+import {
+  getInventoryStatusBadgeVariant,
+  getInventoryStatusLabel,
+} from "../_lib/ui";
 import { createStockIssueDraft } from "../issue-actions";
 
 export type IssueRow = {
@@ -144,10 +150,16 @@ export function IssuesClient({
     <>
       <div className="space-y-6">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <PageHeader
-            title={tRoute("/inventory/issues")}
-            description="Tiêu hao, hư hỏng, cấp phát nội bộ."
-          />
+          <Card className="flex-1 border-border/70">
+            <CardHeader>
+              <CardTitle className="text-2xl">
+                {tRoute("/inventory/issues")}
+              </CardTitle>
+              <CardDescription>
+                Tiêu hao, hư hỏng, cấp phát nội bộ.
+              </CardDescription>
+            </CardHeader>
+          </Card>
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -168,10 +180,8 @@ export function IssuesClient({
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-          <SectionCard
-            className={panelClassName}
-            density="comfortable"
-          >
+          <Card className={panelClassName}>
+            <CardContent className="p-6">
             <div className="mb-4 flex items-start justify-between">
               <div className="flex size-10 items-center justify-center rounded-xl bg-warning/12">
                 <ClipboardList className="size-5 text-warning" />
@@ -186,12 +196,11 @@ export function IssuesClient({
             <p className="mt-1 text-sm text-muted-foreground">
               Tổng phiếu đã xuất
             </p>
-          </SectionCard>
+            </CardContent>
+          </Card>
 
-          <SectionCard
-            className={panelClassName}
-            density="comfortable"
-          >
+          <Card className={panelClassName}>
+            <CardContent className="p-6">
             <div className="mb-4 flex items-start justify-between">
               <div className="flex size-10 items-center justify-center rounded-xl bg-success/12">
                 <ChefHat className="size-5 text-success" />
@@ -208,12 +217,11 @@ export function IssuesClient({
                 ? `Chiếm ${Math.round((kitchenUseCount / issues.length) * 100)}% tỉ lệ xuất`
                 : "Chưa có dữ liệu"}
             </p>
-          </SectionCard>
+            </CardContent>
+          </Card>
 
-          <SectionCard
-            className={panelClassName}
-            density="comfortable"
-          >
+          <Card className={panelClassName}>
+            <CardContent className="p-6">
             <div className="mb-4 flex items-start justify-between">
               <div className="flex size-10 items-center justify-center rounded-xl bg-destructive/12">
                 <AlertTriangle className="size-5 text-destructive" />
@@ -228,12 +236,11 @@ export function IssuesClient({
             <p className="mt-1 text-sm text-muted-foreground">
               Cần tối ưu quy trình
             </p>
-          </SectionCard>
+            </CardContent>
+          </Card>
 
-          <SectionCard
-            className={panelClassName}
-            density="comfortable"
-          >
+          <Card className={panelClassName}>
+            <CardContent className="p-6">
             <div className="mb-4 flex items-start justify-between">
               <div className="flex size-10 items-center justify-center rounded-xl bg-muted">
                 <Clock className="size-5 text-muted-foreground" />
@@ -248,16 +255,17 @@ export function IssuesClient({
             <p className="mt-1 text-sm text-muted-foreground">
               Phiếu nháp hiện có
             </p>
-          </SectionCard>
+            </CardContent>
+          </Card>
         </div>
 
-        <FilterBar
+        <Card
           className={cn(
             panelClassName,
             "items-center justify-between bg-muted px-6 py-4",
           )}
-          surface="inventory"
         >
+          <CardContent className="flex items-center justify-between gap-4 p-0">
           <div className="flex items-center gap-6">
             <div className="flex flex-col gap-1">
               <label className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
@@ -311,7 +319,8 @@ export function IssuesClient({
             <FilterX className="size-4" />
             Xoá bộ lọc
           </button>
-        </FilterBar>
+          </CardContent>
+        </Card>
 
         <div
           className={cn(panelClassName, "overflow-hidden rounded-xl")}
@@ -390,7 +399,9 @@ export function IssuesClient({
                     </div>
                   </TableCell>
                   <TableCell className="px-6 py-5">
-                    <StatusBadge status={item.status} />
+                    <Badge variant={getInventoryStatusBadgeVariant(item.status)}>
+                      {getInventoryStatusLabel(item.status)}
+                    </Badge>
                   </TableCell>
                   <TableCell className="px-6 py-5 text-right">
                     <Link

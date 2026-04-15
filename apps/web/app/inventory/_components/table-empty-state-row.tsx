@@ -1,7 +1,7 @@
-import { type EmptyStateMode } from "@comtammatu/ui/components/inventory-patterns";
 import { cn } from "@comtammatu/ui";
 import type { ReactNode } from "react";
 import { TableCell, TableRow } from "@comtammatu/ui/components/table";
+import type { EmptyStateMode } from "./empty-state-panel";
 
 const TABLE_EMPTY_STATE_COPY: Record<EmptyStateMode, string> = {
   "no-data": "Chưa có dữ liệu",

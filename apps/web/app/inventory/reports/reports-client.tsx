@@ -11,18 +11,21 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { cn } from "@comtammatu/ui";
+import { Button } from "@comtammatu/ui/components/button";
 import {
-  Button,
-} from "@comtammatu/ui/components/button";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
+import { EmptyStatePanel } from "../_components/empty-state-panel";
+import { SimpleBarChart, TrendSparkline } from "../_lib/chart-primitives";
+import { formatVND } from "../_lib/format";
 import {
-  SimpleBarChart,
-  TrendSparkline,
-  PageHeader,
   resolveInventoryColorValue,
   type InventorySemanticColor,
-} from "../_components/shared";
-import { EmptyState } from "@comtammatu/ui/components/inventory-patterns";
-import { formatVND } from "../_lib/format";
+} from "../_lib/ui";
 
 export type ApAgingItem = { range: string; amount: number };
 export type VarianceItem = {
@@ -63,33 +66,36 @@ export function ReportsClient({
   const overdueAmount = apAging[apAging.length - 1]?.amount ?? 0;
   const varianceCount = consumptionVariance.length;
   const panelClassName = "rounded-lg border bg-card shadow-sm";
-  const pillClassName = cn(
-    panelClassName,
-    "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium",
-  );
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Hệ thống Báo cáo"
-      />
+      <Card className="border-border/70">
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Báo cáo
+            </p>
+            <div className="space-y-1">
+              <CardTitle className="text-3xl">Hệ thống báo cáo</CardTitle>
+              <CardDescription className="max-w-3xl leading-6">
+                Tổng hợp biến động kho, công nợ và chênh lệch tiêu hao theo cùng một nhịp vận hành.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
 
-      {/* Filter bar */}
-      <div
-        className={cn(
-          panelClassName,
-          "px-5 py-5 sm:px-6",
-        )}
-      >
+      <Card className="border-border/70">
+        <CardContent className="space-y-4 p-5 sm:p-6">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)] lg:items-center">
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-3">
-              <div className={cn(pillClassName, "")}>
+              <div className="flex items-center gap-2 rounded-full border border-border/70 bg-card px-4 py-2 text-sm font-medium shadow-sm">
                 <Calendar className="size-4 text-primary" />
                 <span className="text-foreground">Tháng này</span>
                 <ChevronDown className="size-3.5 text-muted-foreground" />
               </div>
-              <div className={cn(pillClassName, "")}>
+              <div className="flex items-center gap-2 rounded-full border border-border/70 bg-card px-4 py-2 text-sm font-medium shadow-sm">
                 <Store className="size-4 text-primary" />
                 <span className="text-foreground">Tất cả chi nhánh</span>
                 <ChevronDown className="size-3.5 text-muted-foreground" />
@@ -97,9 +103,7 @@ export function ReportsClient({
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div
-              className={cn(panelClassName, "px-4 py-4")}
-            >
+            <div className="rounded-lg border border-border/70 bg-muted/20 px-4 py-4">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Công nợ quá hạn
               </p>
@@ -107,9 +111,7 @@ export function ReportsClient({
                 {formatVND(overdueAmount)}đ
               </p>
             </div>
-            <div
-              className={cn(panelClassName, "px-4 py-4")}
-            >
+            <div className="rounded-lg border border-border/70 bg-muted/20 px-4 py-4">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Mã lệch định mức
               </p>
@@ -127,17 +129,13 @@ export function ReportsClient({
             Xuất CSV/Excel
           </Button>
         </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Dashboard Grid — 12 col asymmetric */}
       <div className="grid grid-cols-12 gap-6">
         {/* Stock Movement Summary — col-span-8 */}
-        <div
-          className={cn(
-            panelClassName,
-            "col-span-12 flex flex-col p-6 lg:col-span-8",
-          )}
-        >
+        <Card className={cn(panelClassName, "col-span-12 flex flex-col p-6 lg:col-span-8")}>
           <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
@@ -176,15 +174,9 @@ export function ReportsClient({
               Chi tiết
             </button>
           </div>
-        </div>
+        </Card>
 
-        {/* Supplier AP Aging — col-span-4 */}
-        <div
-          className={cn(
-            panelClassName,
-            "col-span-12 p-6 lg:col-span-4",
-          )}
-        >
+        <Card className={cn(panelClassName, "col-span-12 p-6 lg:col-span-4")}>
           <h3 className="mb-4 text-lg font-bold text-foreground">Công nợ nhà cung cấp</h3>
           <div className="space-y-4">
             {apAging.map((item, idx) => {
@@ -240,15 +232,9 @@ export function ReportsClient({
           >
             Xem danh sách NCC
           </Button>
-        </div>
+        </Card>
 
-        {/* Consumption Variance — col-span-6 */}
-        <div
-          className={cn(
-            panelClassName,
-            "col-span-12 p-6 md:col-span-6",
-          )}
-        >
+        <Card className={cn(panelClassName, "col-span-12 p-6 md:col-span-6")}>
           <h3 className="mb-2 text-lg font-bold text-foreground">
             Chênh lệch tiêu hao
           </h3>
@@ -298,15 +284,9 @@ export function ReportsClient({
               );
             })}
           </div>
-        </div>
+        </Card>
 
-        {/* Food Cost by Period — col-span-6 */}
-        <div
-          className={cn(
-            panelClassName,
-            "col-span-12 p-6 md:col-span-6",
-          )}
-        >
+        <Card className={cn(panelClassName, "col-span-12 p-6 md:col-span-6")}>
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold text-foreground">
@@ -331,13 +311,13 @@ export function ReportsClient({
               </p>
             </>
           ) : (
-            <EmptyState
+            <EmptyStatePanel
               title="Chưa có đủ dữ liệu food cost"
               description="Cần thêm dữ liệu thực tế."
               className="min-h-40 border-dashed bg-muted/20"
             />
           )}
-        </div>
+        </Card>
       </div>
 
       {/* Report catalog */}
@@ -365,7 +345,7 @@ export function ReportsClient({
             desc: "Giá trị tồn khi chốt.",
           },
         ].map((report) => (
-          <div
+          <Card
             key={report.title}
             className={cn(
               panelClassName,
@@ -381,7 +361,7 @@ export function ReportsClient({
             <p className="mt-0.5 text-xs text-muted-foreground">
               {report.desc}
             </p>
-          </div>
+          </Card>
         ))}
       </div>
     </div>

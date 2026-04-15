@@ -15,6 +15,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -41,8 +48,6 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
-import { PageHeader } from "../_components/shared";
 import { adjustStock, fetchExpiryAlerts } from "../actions";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import type { BranchOption, ExpiryAlertRow } from "../page";
@@ -182,7 +187,8 @@ export function ExpiryListClient({
 
   function renderTable(items: ExpiryAlertRow[]) {
     return (
-      <SectionCard className="overflow-hidden rounded-lg" density="compact">
+      <Card className="overflow-hidden rounded-lg">
+        <CardContent className="p-4 md:p-5">
         {/* Search + branch filter bar */}
         <div className="-m-4 flex flex-wrap items-center gap-3 border-b bg-muted/20 px-4 py-3 md:-m-5 md:px-5">
           <Search className="size-4 shrink-0 text-muted-foreground" />
@@ -363,16 +369,19 @@ export function ExpiryListClient({
             </TableBody>
           </Table>
         )}
-      </SectionCard>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <>
-      <PageHeader
-        title="Hạn sử dụng"
-        description="Theo dõi hàng sắp hết hạn."
-      />
+      <Card className="border-border/70">
+        <CardHeader>
+          <CardTitle className="text-2xl">Hạn sử dụng</CardTitle>
+          <CardDescription>Theo dõi hàng sắp hết hạn.</CardDescription>
+        </CardHeader>
+      </Card>
 
       {/* Urgency count badges */}
       <div className="flex flex-wrap items-center gap-2">

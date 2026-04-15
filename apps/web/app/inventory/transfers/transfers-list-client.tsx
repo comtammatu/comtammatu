@@ -7,6 +7,13 @@ import { ArrowRight, MoveRight, Plus, Search } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   Table,
@@ -24,8 +31,6 @@ import { CreateTransferDialog } from "./create-transfer-dialog";
 import type { BranchForTransfer } from "./create-transfer-dialog";
 import type { IngredientRow } from "../page";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
-import { PageHeader } from "../_components/shared";
-import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 
 export type { BranchForTransfer };
 
@@ -139,10 +144,14 @@ export function TransfersListClient({
 
   return (
     <>
-      <PageHeader
-        title="Luân chuyển nội bộ"
-        description="Trụ sở ↔ kho vận hành hoặc giữa các kho vận hành. Hàng từ NCC chỉ nhập tại Trụ sở (PO/GRN)."
-        actions={
+      <Card className="border-border/70">
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-2xl">Luân chuyển nội bộ</CardTitle>
+            <CardDescription>
+              Trụ sở ↔ kho vận hành hoặc giữa các kho vận hành. Hàng từ NCC chỉ nhập tại Trụ sở (PO/GRN).
+            </CardDescription>
+          </div>
           <Button
             type="button"
             onClick={() => setOpen(true)}
@@ -151,8 +160,8 @@ export function TransfersListClient({
             <Plus className="mr-2 size-4" />
             Tạo phiếu
           </Button>
-        }
-      />
+        </CardHeader>
+      </Card>
 
       {!canCreate && (
         <p className="text-sm text-warning">
@@ -198,7 +207,8 @@ export function TransfersListClient({
       </div>
 
       {/* Table card */}
-      <SectionCard className="overflow-hidden rounded-lg" density="compact">
+      <Card className="overflow-hidden rounded-lg">
+        <CardContent className="p-4 md:p-5">
         {/* Search bar */}
         <div className="-m-4 flex items-center gap-3 border-b bg-muted/20 px-4 py-3 md:-m-5 md:px-5">
           <Search className="size-4 shrink-0 text-muted-foreground" />
@@ -392,7 +402,8 @@ export function TransfersListClient({
             </TableBody>
           </Table>
         )}
-      </SectionCard>
+        </CardContent>
+      </Card>
 
       <CreateTransferDialog
         open={open}

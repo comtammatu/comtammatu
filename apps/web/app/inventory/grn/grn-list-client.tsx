@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import {
   Clock,
   Download,
@@ -12,6 +11,14 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { cn } from "@comtammatu/ui";
+import { Badge } from "@comtammatu/ui/components/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import {
   Table,
   TableBody,
@@ -20,8 +27,11 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { PageHeader, StatusBadge } from "../_components/shared";
 import { formatVND } from "../_lib/format";
+import {
+  getInventoryStatusBadgeVariant,
+  getInventoryStatusLabel,
+} from "../_lib/ui";
 
 export type GrnRow = {
   id: number;
@@ -41,10 +51,12 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <PageHeader
-          title="Phiếu nhập kho"
-          description="Phiếu nhập từ nhà cung cấp."
-        />
+        <Card className="flex-1 border-border/70">
+          <CardHeader>
+            <CardTitle className="text-2xl">Phiếu nhập kho</CardTitle>
+            <CardDescription>Phiếu nhập từ nhà cung cấp.</CardDescription>
+          </CardHeader>
+        </Card>
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -66,13 +78,13 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
       {/* Asymmetric Dashboard Highlights */}
       <div className="grid grid-cols-12 gap-6">
         {/* Pending Count */}
-        <SectionCard
+        <Card
           className={cn(
             panelClassName,
             "col-span-12 rounded-xl bg-card md:col-span-4",
           )}
-          density="comfortable"
         >
+          <CardContent className="p-6">
           <div className="mb-4 flex items-center gap-4">
             <div className="flex size-12 items-center justify-center rounded-lg bg-info/12">
               <Clock className="size-5 text-info" />
@@ -85,7 +97,8 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
             {String(pendingCount).padStart(2, "0")}
           </div>
           <div className="text-xs font-semibold text-info">+3 từ hôm qua</div>
-        </SectionCard>
+          </CardContent>
+        </Card>
 
         {/* Total Value Hero */}
         <div
@@ -196,7 +209,9 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
                   <span className="text-label opacity-40">₫</span>
                 </TableCell>
                 <TableCell className="px-6 py-6">
-                  <StatusBadge status={g.status} />
+                  <Badge variant={getInventoryStatusBadgeVariant(g.status)}>
+                    {getInventoryStatusLabel(g.status)}
+                  </Badge>
                 </TableCell>
                 <TableCell className="px-8 py-6 text-right">
                   <button

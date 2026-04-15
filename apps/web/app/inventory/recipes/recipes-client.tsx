@@ -3,13 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, UtensilsCrossed } from "lucide-react";
-import {
-  EmptyState,
-  SectionCard,
-} from "@comtammatu/ui/components/inventory-patterns";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
-import { PageHeader } from "../_components/shared";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
+import { EmptyStatePanel } from "../_components/empty-state-panel";
 import { formatVND } from "../_lib/format";
 import { RecipeLineDialog } from "./recipe-line-dialog";
 import type {
@@ -98,10 +101,14 @@ export function RecipesClient({
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Công thức món ăn"
-        description="Định mức nguyên liệu cho từng món."
-        actions={
+      <Card className="border-border/70">
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-2xl">Công thức món ăn</CardTitle>
+            <CardDescription>
+              Định mức nguyên liệu cho từng món.
+            </CardDescription>
+          </div>
           <Button
             type="button"
             onClick={() => openAddLine()}
@@ -109,11 +116,11 @@ export function RecipesClient({
           >
             + Tạo món mới
           </Button>
-        }
-      />
+        </CardHeader>
+      </Card>
 
       {recipes.length === 0 && (
-        <EmptyState
+        <EmptyStatePanel
           className={cn(panelClassName, "rounded-lg bg-card")}
           title="Chưa có công thức nào"
           description='Nhấn "Tạo món mới" để bắt đầu dựng định mức nguyên liệu.'
@@ -122,11 +129,11 @@ export function RecipesClient({
 
       <div className="space-y-10">
         {recipes.map((recipe) => (
-          <SectionCard
+          <Card
             key={recipe.id}
             className={cn(panelClassName, "overflow-hidden rounded-lg bg-card")}
-            density="compact"
           >
+            <CardContent className="p-5 md:p-6">
             {/* Recipe header */}
             <div
               className="-m-5 flex flex-wrap items-center justify-between gap-4 bg-muted px-5 py-5 md:-m-6 md:px-6"
@@ -248,7 +255,8 @@ export function RecipesClient({
                 / phần
               </span>
             </div>
-          </SectionCard>
+            </CardContent>
+          </Card>
         ))}
       </div>
 

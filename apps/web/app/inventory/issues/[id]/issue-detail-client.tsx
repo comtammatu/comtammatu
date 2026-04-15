@@ -22,7 +22,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -41,12 +48,15 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
-import { PageHeader, StatusBadge } from "../../_components/shared";
 import { EmptyStatePanel } from "../../_components/empty-state-panel";
+import { SectionCard } from "../../_components/section-card";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatDateTime, formatQty, formatVND } from "../../_lib/format";
+import {
+  getInventoryStatusBadgeVariant,
+  getInventoryStatusLabel,
+} from "../../_lib/ui";
 import {
   cancelStockIssue,
   confirmStockIssue,
@@ -185,12 +195,22 @@ export function IssueDetailClient({
           <ArrowLeft className="size-4" /> {tRoute("/inventory/issues")}
         </Link>
 
-        <PageHeader
-          eyebrow="Phiếu xuất"
-          title={issue.issue_number}
-          description={`${issue.branches?.name ?? `Chi nhánh #${issue.branch_id}`} • ${issue.issued_at ? formatDateTime(issue.issued_at) : "—"}`}
-          actions={<StatusBadge status={issue.status} />}
-        />
+        <Card className="border-border/70">
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Phiếu xuất
+              </p>
+              <CardTitle className="text-2xl">{issue.issue_number}</CardTitle>
+              <CardDescription>
+                {`${issue.branches?.name ?? `Chi nhánh #${issue.branch_id}`} • ${issue.issued_at ? formatDateTime(issue.issued_at) : "—"}`}
+              </CardDescription>
+            </div>
+            <Badge variant={getInventoryStatusBadgeVariant(issue.status)}>
+              {getInventoryStatusLabel(issue.status)}
+            </Badge>
+          </CardHeader>
+        </Card>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[

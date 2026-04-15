@@ -3,7 +3,11 @@ import {
   fetchMenuItemsForRecipes,
   fetchRecipes,
 } from "@/inventory/procurement-actions";
-import { PageHeader } from "../../_components/shared";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { tRoute } from "../../_lib/dictionary";
 import { formatDate } from "../../_lib/format";
 import { RecipesClient } from "../../recipes/recipes-client";
@@ -68,9 +72,13 @@ export default async function RecipesSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={tRoute("/inventory/settings/recipes", "heading")}
-      />
+      <Card className="border-border/70">
+        <CardHeader>
+          <CardTitle className="text-2xl">
+            {tRoute("/inventory/settings/recipes", "heading")}
+          </CardTitle>
+        </CardHeader>
+      </Card>
       <RecipesClient
         recipes={recipes}
         menuItems={menuItems}

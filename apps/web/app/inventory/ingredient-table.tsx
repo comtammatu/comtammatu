@@ -6,8 +6,8 @@ import { formatVND } from "@comtammatu/shared/format";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
-import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import {
   Table,
   TableBody,
@@ -85,7 +85,8 @@ export function IngredientTable({
       </div>
 
       {/* Table card */}
-      <SectionCard className="overflow-hidden rounded-lg" density="compact">
+      <Card className="overflow-hidden rounded-lg">
+        <CardContent className="p-4 md:p-5">
         {/* Search bar */}
         <div className="-m-4 flex items-center gap-3 border-b bg-muted/20 px-4 py-3 md:-m-5 md:px-5">
           <Search className="size-4 shrink-0 text-muted-foreground" />
@@ -251,7 +252,8 @@ export function IngredientTable({
             </TableBody>
           </Table>
         )}
-      </SectionCard>
+        </CardContent>
+      </Card>
 
       {canManageCatalog && (
         <>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import {
   AlertOctagon,
   AlertTriangle,
@@ -12,6 +11,13 @@ import {
 } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { tStatus } from "../_lib/dictionary";
 import {
   Table,
@@ -21,7 +27,6 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { PageHeader } from "../_components/shared";
 
 export type ExpiryAlertRow = {
   id: number;
@@ -60,10 +65,14 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <PageHeader
-          title="Hạn sử dụng"
-          description="Theo dõi lô gần quá hạn, quá hạn và ưu tiên xử lý trong kho."
-        />
+        <Card className="flex-1 border-border/70">
+          <CardHeader>
+            <CardTitle className="text-2xl">Hạn sử dụng</CardTitle>
+            <CardDescription>
+              Theo dõi lô gần quá hạn, quá hạn và ưu tiên xử lý trong kho.
+            </CardDescription>
+          </CardHeader>
+        </Card>
         <Button
           type="button"
           variant="destructive"
@@ -75,10 +84,8 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <SectionCard
-          className={cn(panelClassName, "rounded-lg bg-card")}
-          density="comfortable"
-        >
+        <Card className={cn(panelClassName, "rounded-lg bg-card")}>
+          <CardContent className="p-6">
           <div className="mb-4 flex items-start justify-between">
             <div className="flex size-10 items-center justify-center rounded-xl bg-destructive/12">
               <AlertOctagon className="size-5 text-destructive" />
@@ -93,12 +100,11 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
           <p className="mt-1 text-sm text-muted-foreground">
             Mặt hàng đã hết hạn
           </p>
-        </SectionCard>
+          </CardContent>
+        </Card>
 
-        <SectionCard
-          className={cn(panelClassName, "rounded-lg bg-card")}
-          density="comfortable"
-        >
+        <Card className={cn(panelClassName, "rounded-lg bg-card")}>
+          <CardContent className="p-6">
           <div className="mb-4 flex items-start justify-between">
             <div className="flex size-10 items-center justify-center rounded-xl bg-primary/12">
               <AlertTriangle className="size-5 text-primary" />
@@ -113,12 +119,11 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
           <p className="mt-1 text-sm text-muted-foreground">
             Hết hạn trong 3 ngày tới
           </p>
-        </SectionCard>
+          </CardContent>
+        </Card>
 
-        <SectionCard
-          className={cn(panelClassName, "rounded-lg bg-card")}
-          density="comfortable"
-        >
+        <Card className={cn(panelClassName, "rounded-lg bg-card")}>
+          <CardContent className="p-6">
           <div className="mb-4 flex items-start justify-between">
             <div className="flex size-10 items-center justify-center rounded-xl bg-warning/12">
               <Clock className="size-5 text-warning" />
@@ -133,7 +138,8 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
           <p className="mt-1 text-sm text-muted-foreground">
             Hết hạn trong 7 ngày tới
           </p>
-        </SectionCard>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="flex gap-1 rounded-lg bg-muted p-1">

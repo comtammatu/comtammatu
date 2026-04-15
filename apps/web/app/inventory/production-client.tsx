@@ -13,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Dialog,
@@ -35,11 +36,8 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@comtammatu/ui/components/table";
 import { cn } from "@comtammatu/ui";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  EmptyState,
-  SectionCard,
-  StatusBadge,
-} from "@comtammatu/ui/components/inventory-patterns";
+import { EmptyStatePanel as EmptyState } from "./_components/empty-state-panel";
+import { SectionCard } from "./_components/section-card";
 import { createIngredient } from "./actions";
 import {
   cancelProductionOrder,
@@ -437,6 +435,15 @@ function orderStatusTone(
   if (status === "completed") return "success";
   if (status === "cancelled") return "danger";
   return "warning";
+}
+
+function badgeVariantFromTone(
+  tone: "neutral" | "warning" | "success" | "danger",
+) {
+  if (tone === "success") return "success" as const;
+  if (tone === "warning") return "warning" as const;
+  if (tone === "danger") return "destructive" as const;
+  return "secondary" as const;
 }
 
 export function ProductionHubClient({
@@ -1031,20 +1038,20 @@ export function ProductionHubClient({
                 <TableCell>
                   <div className="flex flex-wrap gap-1.5">
                     {order.items.map((item) => (
-                      <StatusBadge
+                      <Badge
                         key={item.id}
-                        tone="neutral"
+                        variant={badgeVariantFromTone("neutral")}
                         className="px-2 py-1 text-xs"
                       >
                         {item.finished_good_name} x {item.quantity} {item.unit}
-                      </StatusBadge>
+                      </Badge>
                     ))}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <StatusBadge tone={orderStatusTone(order.status)}>
+                  <Badge variant={badgeVariantFromTone(orderStatusTone(order.status))}>
                     {orderStatusLabel(order.status)}
-                  </StatusBadge>
+                  </Badge>
                 </TableCell>
                 <TableCell className="font-mono tabular-nums">
                   {order.total_cost.toLocaleString("vi-VN")} ₫
@@ -1332,9 +1339,9 @@ export function ProductionHubClient({
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h4 className="font-semibold">{group.finishedGoodName}</h4>
-                      <StatusBadge tone="neutral">
+                      <Badge variant={badgeVariantFromTone("neutral")}>
                         {group.lines.length} nguyên liệu
-                      </StatusBadge>
+                      </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       Mỗi dòng bên dưới là một nguyên liệu cấu thành thành phẩm này.

@@ -10,9 +10,11 @@ import {
 } from "../production-actions";
 import { ProductionHubClient } from "../production-client";
 import {
-  PageHeader,
-  SectionCard,
-} from "@comtammatu/ui/components/inventory-patterns";
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { hasBranchKindSchema } from "../_lib/branch-kind-schema";
 
 type InventoryIngredientRow = {
@@ -101,20 +103,21 @@ export default async function ProductionPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Bếp trung tâm"
-      />
+      <Card className="border-border/70">
+        <CardHeader>
+          <CardTitle className="text-2xl">Bếp trung tâm</CardTitle>
+        </CardHeader>
+      </Card>
       {!branchKindSchemaAvailable && (
-        <SectionCard
-          className="rounded-lg border-warning/20 bg-warning/10 text-foreground"
-          density="compact"
-        >
-          <p className="text-sm leading-6">
-            Database hiện tại chưa có cột <code>branch_kind</code>. Màn Bếp
-            trung tâm đang ở chế độ chờ migration, nên các thao tác sản xuất tạm
-            thời bị khóa để tránh phát sinh lỗi mơ hồ.
-          </p>
-        </SectionCard>
+        <Card className="rounded-lg border-warning/20 bg-warning/10 text-foreground">
+          <CardContent className="p-4">
+            <p className="text-sm leading-6">
+              Database hiện tại chưa có cột <code>branch_kind</code>. Màn Bếp
+              trung tâm đang ở chế độ chờ migration, nên các thao tác sản xuất tạm
+              thời bị khóa để tránh phát sinh lỗi mơ hồ.
+            </p>
+          </CardContent>
+        </Card>
       )}
       <ProductionHubClient
         branchKindSchemaAvailable={branchKindSchemaAvailable}

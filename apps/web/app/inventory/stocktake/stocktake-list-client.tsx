@@ -8,6 +8,12 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -34,8 +40,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
-import { PageHeader } from "../_components/shared";
+import { SectionCard } from "../_components/section-card";
 import { tRoute } from "../_lib/dictionary";
 import { createStocktakeSession, fetchStocktakeSessions } from "../actions";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
@@ -152,16 +157,22 @@ export function StocktakeListClient({
 
   return (
     <>
-      <PageHeader
-        title={tRoute("/inventory/stocktake")}
-        description="Tạo phiên kiểm kê, đếm thực tế và đối chiếu chênh lệch kho."
-        actions={
+      <Card className="border-border/70">
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-2xl">
+              {tRoute("/inventory/stocktake")}
+            </CardTitle>
+            <CardDescription>
+              Tạo phiên kiểm kê, đếm thực tế và đối chiếu chênh lệch kho.
+            </CardDescription>
+          </div>
           <Button type="button" onClick={handleCreate} disabled={isPending}>
             <Plus className="mr-2 size-4" />
             Tạo kiểm kê
           </Button>
-        }
-      />
+        </CardHeader>
+      </Card>
 
       {/* Status count badges */}
       <div className="flex flex-wrap gap-1.5">

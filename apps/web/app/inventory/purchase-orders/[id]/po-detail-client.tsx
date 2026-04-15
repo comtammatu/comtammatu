@@ -7,6 +7,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { cn } from "@comtammatu/ui";
+import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Table,
   TableBody,
@@ -16,12 +17,13 @@ import {
   TableRow,
   TableFooter,
 } from "@comtammatu/ui/components/table";
-import {
-  StatusBadge,
-  TimelineStepper,
-} from "../../_components/shared";
+import { TimelineStepper } from "../../_components/timeline-stepper";
 import { formatVND } from "../../_lib/format";
 import { tRoute } from "../../_lib/dictionary";
+import {
+  getInventoryStatusBadgeVariant,
+  getInventoryStatusLabel,
+} from "../../_lib/ui";
 
 export type PODetail = {
   code: string;
@@ -71,7 +73,9 @@ export function PODetailClient({ po }: { po: PODetail }) {
         )}
       >
         <div className="absolute right-5 top-5 sm:right-6 sm:top-6 lg:right-8 lg:top-8">
-          <StatusBadge status={po.status} />
+          <Badge variant={getInventoryStatusBadgeVariant(po.status)}>
+            {getInventoryStatusLabel(po.status)}
+          </Badge>
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8 lg:gap-12">

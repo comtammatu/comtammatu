@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
+import { SectionCard } from "../../_components/section-card";
 import {
   ArrowLeft,
   CheckCircle,
@@ -19,9 +20,12 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { StatusBadge } from "../../_components/shared";
 import { formatVND } from "../../_lib/format";
 import { tRoute } from "../../_lib/dictionary";
+import {
+  getInventoryStatusBadgeVariant,
+  getInventoryStatusLabel,
+} from "../../_lib/ui";
 
 export type GRNDetail = {
   code: string;
@@ -68,7 +72,9 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
         )}
       >
         <div className="absolute right-5 top-5 sm:right-6 sm:top-6 lg:right-8 lg:top-8">
-          <StatusBadge status={grn.status} />
+          <Badge variant={getInventoryStatusBadgeVariant(grn.status)}>
+            {getInventoryStatusLabel(grn.status)}
+          </Badge>
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8 lg:gap-12">

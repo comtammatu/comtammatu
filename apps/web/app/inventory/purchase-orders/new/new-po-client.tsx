@@ -16,6 +16,12 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -31,12 +37,9 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import {
-  ActionIconButton,
-  EmptyState,
-  SectionCard,
-} from "@comtammatu/ui/components/inventory-patterns";
-import { PageHeader } from "../../_components/shared";
+import { ActionIconButton } from "../../_components/action-icon-button";
+import { EmptyStatePanel as EmptyState } from "../../_components/empty-state-panel";
+import { SectionCard } from "../../_components/section-card";
 import {
   createPurchaseOrder,
   fetchPoSuggestions,
@@ -241,16 +244,20 @@ export function NewPoClient({
 
   return (
     <div className="max-w-4xl space-y-5">
-      <PageHeader
-        eyebrow="Mua hàng"
-        title="Tạo đơn đặt hàng"
-        description="Tạo PO từ nhà cung cấp."
-        actions={
+      <Card className="border-border/70">
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Mua hàng
+            </p>
+            <CardTitle className="text-2xl">Tạo đơn đặt hàng</CardTitle>
+            <CardDescription>Tạo PO từ nhà cung cấp.</CardDescription>
+          </div>
           <Button variant="ghost" size="sm" asChild className="-mr-2">
             <Link href={poBasePath}>← Danh sách PO</Link>
           </Button>
-        }
-      />
+        </CardHeader>
+      </Card>
 
       {/* PO header */}
       <SupplierSection

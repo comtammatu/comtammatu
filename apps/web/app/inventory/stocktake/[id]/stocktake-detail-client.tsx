@@ -12,6 +12,12 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   AlertDialog,
@@ -23,7 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
-import { EmptyState, SectionCard } from "@comtammatu/ui/components/inventory-patterns";
+import { EmptyStatePanel as EmptyState } from "../../_components/empty-state-panel";
 import {
   Table,
   TableBody,
@@ -35,7 +41,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { PageHeader } from "../../_components/shared";
+import { SectionCard } from "../../_components/section-card";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import {
@@ -267,10 +273,12 @@ export function StocktakeDetailClient({
         <span className="font-medium text-foreground">KK-{session.id}</span>
       </div>
 
-      <PageHeader
-        title={`KK-${session.id}`}
-        description={headerDescription}
-        actions={
+      <Card className="border-border/70">
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-2xl">{`KK-${session.id}`}</CardTitle>
+            <CardDescription>{headerDescription}</CardDescription>
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <Badge className={cn("text-xs", meta.className)}>
               {meta.label}
@@ -295,8 +303,8 @@ export function StocktakeDetailClient({
               </>
             ) : null}
           </div>
-        }
-      />
+        </CardHeader>
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[

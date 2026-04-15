@@ -6,7 +6,7 @@ import {
 } from "../report-actions";
 import { ReportsClient } from "./reports-client";
 import type { ApAgingItem, VarianceItem } from "./reports-client";
-import type { InventorySemanticColor } from "../_components/shared";
+import type { InventorySemanticColor } from "../_lib/ui";
 
 type MovementSummaryItem = {
   label: string;

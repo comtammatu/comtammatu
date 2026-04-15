@@ -23,7 +23,6 @@ import {
 } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import {
   fetchInventoryValueByArea,
   fetchInventoryValueByBranch,
@@ -163,21 +162,18 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
           <Card className="rounded-xl border-border/70">
             <CardContent className="space-y-4 pt-6">
               <div className="grid gap-3 sm:grid-cols-2">
-                <SectionCard
-                  density="compact"
-                  className="rounded-lg bg-muted/25"
-                >
+                <Card className="rounded-lg border-border/70 bg-muted/25">
+                  <CardContent className="p-4">
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                     Giá trị hiện tại
                   </p>
                   <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
                     {systemTotal == null ? "—" : formatVND(systemTotal)}
                   </p>
-                </SectionCard>
-                <SectionCard
-                  density="compact"
-                  className="rounded-lg bg-muted/25"
-                >
+                  </CardContent>
+                </Card>
+                <Card className="rounded-lg border-border/70 bg-muted/25">
+                  <CardContent className="p-4">
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                     Phạm vi xem
                   </p>
@@ -185,7 +181,8 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                   <p className="mt-1 text-sm text-muted-foreground">
                     Tổng hợp tất cả chi nhánh theo WAC hoặc giá tham chiếu.
                   </p>
-                </SectionCard>
+                  </CardContent>
+                </Card>
               </div>
             </CardContent>
           </Card>
@@ -199,10 +196,8 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
           ) : areaRows.length === 0 ? (
             <EmptyStatePanel className="py-10" title={APP_COPY_VI.noAreaData} />
           ) : isMobile ? (
-            <SectionCard
-              className={sectionCardClassName}
-              density="compact"
-            >
+            <Card className={sectionCardClassName}>
+              <CardContent className="space-y-4 p-4 md:p-5">
               <div className={summaryBoxClassName}>
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                   Tổng theo khu vực
@@ -226,12 +221,11 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                   </div>
                 ))}
               </div>
-            </SectionCard>
+              </CardContent>
+            </Card>
           ) : (
-            <SectionCard
-              className={sectionCardClassName}
-              density="compact"
-            >
+            <Card className={sectionCardClassName}>
+              <CardContent className="space-y-4 p-4 md:p-5">
               <div className={summaryBoxClassName}>
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                   Tổng theo khu vực
@@ -266,7 +260,8 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                   </TableBody>
                 </Table>
               </div>
-            </SectionCard>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
       )}
@@ -281,10 +276,8 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               title={APP_COPY_VI.noScopedBranches}
             />
           ) : isMobile ? (
-            <SectionCard
-              className={sectionCardClassName}
-              density="compact"
-            >
+            <Card className={sectionCardClassName}>
+              <CardContent className="space-y-4 p-4 md:p-5">
               <div className={summaryBoxClassName}>
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                   Tổng theo chi nhánh
@@ -308,12 +301,11 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                   </div>
                 ))}
               </div>
-            </SectionCard>
+              </CardContent>
+            </Card>
           ) : (
-            <SectionCard
-              className={sectionCardClassName}
-              density="compact"
-            >
+            <Card className={sectionCardClassName}>
+              <CardContent className="space-y-4 p-4 md:p-5">
               <div className={summaryBoxClassName}>
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                   Tổng theo chi nhánh
@@ -348,7 +340,8 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                   </TableBody>
                 </Table>
               </div>
-            </SectionCard>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
       )}

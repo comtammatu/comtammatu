@@ -2,15 +2,17 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  AlertTriangle,
-  MoreHorizontal,
-  Pencil,
-  Search,
-  Wallet,
-} from "lucide-react";
-import { cn } from "@comtammatu/ui";
+import { AlertTriangle, MoreHorizontal, Pencil, Search, Wallet } from "lucide-react";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
+import { Input } from "@comtammatu/ui/components/input";
 import {
   Table,
   TableBody,
@@ -19,9 +21,14 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { PageHeader, StatusBadge } from "../_components/shared";
+import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
+import { cn } from "@comtammatu/ui";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
-import { formatVND, formatQty } from "../_lib/format";
+import { formatQty, formatVND } from "../_lib/format";
+import {
+  getInventoryStatusBadgeVariant,
+  getInventoryStatusLabel,
+} from "../_lib/ui";
 import { AdjustStockDialog } from "./adjust-stock-dialog";
 
 export type StockIngredient = {
@@ -43,10 +50,10 @@ export type StockIngredient = {
 type StockFilter = "all" | "in_stock" | "low" | "out";
 
 const categoryClasses: Record<string, string> = {
-  Thịt: "bg-destructive/12 text-destructive",
+  Thịt: "bg-destructive/10 text-destructive",
   Gạo: "bg-primary/10 text-primary",
-  "Gia vị": "bg-success/12 text-success",
-  "Rau củ": "bg-success/12 text-success",
+  "Gia vị": "bg-success/10 text-success",
+  "Rau củ": "bg-success/10 text-success",
   Trứng: "bg-primary/10 text-primary",
   "Chế biến": "bg-muted text-muted-foreground",
   Dầu: "bg-muted text-muted-foreground",
@@ -67,7 +74,6 @@ export function StockClient({
   branchId: number;
 }) {
   const router = useRouter();
-  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const [activeCategory, setActiveCategory] = useState("Tất cả");
   const [viewMode, setViewMode] = useState<"stats" | "detail">("stats");
   const [searchQuery, setSearchQuery] = useState("");
@@ -76,52 +82,54 @@ export function StockClient({
     null,
   );
 
-  // Derive categories from actual data
   const categories = useMemo(() => {
-    const cats = [
-      ...new Set(ingredients.map((i) => i.category).filter(Boolean)),
+    const values = [
+      ...new Set(ingredients.map((ingredient) => ingredient.category).filter(Boolean)),
     ];
-    cats.sort();
-    return ["Tất cả", ...cats];
+    values.sort((left, right) => left.localeCompare(right, "vi"));
+    return ["Tất cả", ...values];
   }, [ingredients]);
 
   const filtered = useMemo(() => {
     let result = ingredients;
 
-    // Category filter
     if (activeCategory !== "Tất cả") {
-      result = result.filter((i) => i.category === activeCategory);
+      result = result.filter((ingredient) => ingredient.category === activeCategory);
     }
 
-    // Stock status filter
     if (stockFilter === "in_stock") {
       result = result.filter(
-        (i) => i.status === "normal" || i.status === "over",
+        (ingredient) =>
+          ingredient.status === "normal" || ingredient.status === "over",
       );
     } else if (stockFilter === "low") {
-      result = result.filter((i) => i.status === "low");
+      result = result.filter((ingredient) => ingredient.status === "low");
     } else if (stockFilter === "out") {
-      result = result.filter((i) => i.status === "out");
+      result = result.filter((ingredient) => ingredient.status === "out");
     }
 
-    // Search filter
     if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
+      const query = searchQuery.trim().toLowerCase();
       result = result.filter(
-        (i) =>
-          i.name.toLowerCase().includes(q) || i.sku.toLowerCase().includes(q),
+        (ingredient) =>
+          ingredient.name.toLowerCase().includes(query) ||
+          ingredient.sku.toLowerCase().includes(query),
       );
     }
 
     return result;
   }, [ingredients, activeCategory, stockFilter, searchQuery]);
 
-  const totalValue = ingredients.reduce((sum, i) => sum + i.qty * i.cost, 0);
+  const totalValue = ingredients.reduce(
+    (sum, ingredient) => sum + ingredient.qty * ingredient.cost,
+    0,
+  );
   const lowCount = ingredients.filter(
-    (i) => i.status === "low" || i.status === "out",
+    (ingredient) => ingredient.status === "low" || ingredient.status === "out",
   ).length;
   const inStockCount = ingredients.filter(
-    (i) => i.status === "normal" || i.status === "over",
+    (ingredient) =>
+      ingredient.status === "normal" || ingredient.status === "over",
   ).length;
   const updatedAtLabel = new Intl.DateTimeFormat("vi-VN", {
     hour: "2-digit",
@@ -132,374 +140,268 @@ export function StockClient({
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow="Kho hàng"
-        title="Quản lý tồn kho"
-        description="Giá trị tồn, cảnh báo thiếu, điều chỉnh nhanh."
-        actions={
-          <div className="flex rounded-xl bg-muted p-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setViewMode("stats")}
-              className={cn(
-                "rounded-full px-4",
-                viewMode === "stats"
-                  ? "bg-background text-primary shadow-sm hover:bg-background"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              Thống kê
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setViewMode("detail")}
-              className={cn(
-                "rounded-full px-4",
-                viewMode === "detail"
-                  ? "bg-background text-primary shadow-sm hover:bg-background"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              Chi tiết
-            </Button>
-          </div>
-        }
-      />
-
-      {/* Bento Grid: Hero + Filters/Alerts */}
-      <div className="grid grid-cols-12 gap-6">
-        {/* Inventory Value Hero Card */}
-        <div
-          className={cn(
-            panelClassName,
-            "col-span-12 flex flex-col justify-between overflow-hidden rounded-lg bg-primary p-6 text-primary-foreground shadow-md lg:col-span-4",
-          )}
-        >
-          <div>
-            <div className="mb-4 flex items-center gap-2">
-              <Wallet className="size-5 opacity-70" />
-              <span className="text-xs font-semibold uppercase tracking-wider opacity-70">
-                Tổng giá trị tồn kho
-              </span>
-            </div>
-            <div className="mb-1 text-4xl font-extrabold leading-none tracking-tighter">
-              {formatVND(totalValue)}
-              <span className="ml-1 text-lg font-medium opacity-80">₫</span>
-            </div>
-            <div className="text-xs font-medium opacity-60">
-              Cập nhật: {updatedAtLabel}
+      <Card className="border-border/70">
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Kho hàng
+            </p>
+            <div className="space-y-1">
+              <CardTitle className="text-3xl">Quản lý tồn kho</CardTitle>
+              <CardDescription className="max-w-3xl leading-6">
+                Xem nhanh giá trị tồn, ngưỡng cảnh báo và điều chỉnh số lượng ngay tại một mặt bàn vận hành.
+              </CardDescription>
             </div>
           </div>
-          <div className="mt-8 flex gap-3">
-            <div className="flex-1 rounded-lg bg-primary-foreground/10 p-3">
-              <div className="text-label font-semibold uppercase opacity-60">
-                Mặt hàng
-              </div>
-              <div className="text-lg font-bold">{ingredients.length}</div>
-            </div>
-            <div className="flex-1 rounded-lg bg-primary-foreground/10 p-3">
-              <div className="text-label font-semibold uppercase opacity-60">
-                Còn hàng
-              </div>
-              <div className="text-lg font-bold">{inStockCount}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters & Alert */}
-        <div className="col-span-12 grid grid-cols-2 gap-4 lg:col-span-8">
-          {/* Category Filter Pills */}
-          <div
-            className={cn(
-              panelClassName,
-              "flex flex-col justify-center rounded-xl bg-muted p-6",
-            )}
+          <Tabs
+            value={viewMode}
+            onValueChange={(value) => setViewMode(value as "stats" | "detail")}
           >
-            <div className="mb-4 text-xs font-semibold uppercase text-muted-foreground">
-              Phân loại nhanh
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setActiveCategory(cat)}
-                  className={cn(
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full px-4 py-2 text-xs font-semibold transition-colors",
-                    activeCategory === cat
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-white text-foreground shadow-sm",
-                  )}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
+            <TabsList>
+              <TabsTrigger value="stats">Thống kê</TabsTrigger>
+              <TabsTrigger value="detail">Chi tiết</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </CardHeader>
+      </Card>
 
-          {/* Low Stock Alert */}
-          <div
-            className={cn(
-              panelClassName,
-              "relative flex flex-col justify-center overflow-hidden rounded-xl bg-muted p-6",
-            )}
-          >
-            <div className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
-              Cảnh báo tồn kho
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        <Card className="border-border/70 bg-primary text-primary-foreground">
+          <CardHeader>
+            <div className="flex items-center gap-2 text-primary-foreground/80">
+              <Wallet className="size-4" />
+              <CardTitle className="text-base">Tổng giá trị tồn kho</CardTitle>
             </div>
-            <div className="flex items-end gap-2">
-              <span className="text-3xl font-extrabold text-destructive">
-                {String(lowCount).padStart(2, "0")}
-              </span>
-              <span className="mb-1.5 border-b border-destructive/20 pb-0.5 text-xs font-medium text-muted-foreground">
-                Mặt hàng cần mua gấp
-              </span>
+            <CardDescription className="text-primary-foreground/70">
+              Cập nhật gần nhất: {updatedAtLabel}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="font-mono text-4xl font-semibold tracking-tight">
+              {formatVND(totalValue)}đ
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg bg-primary-foreground/10 p-4">
+                <p className="text-xs uppercase tracking-widest text-primary-foreground/70">
+                  Mặt hàng
+                </p>
+                <p className="mt-2 text-2xl font-semibold">{ingredients.length}</p>
+              </div>
+              <div className="rounded-lg bg-primary-foreground/10 p-4">
+                <p className="text-xs uppercase tracking-widest text-primary-foreground/70">
+                  Còn hàng
+                </p>
+                <p className="mt-2 text-2xl font-semibold">{inStockCount}</p>
+              </div>
             </div>
-            <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-10">
-              <AlertTriangle className="size-16" />
-            </div>
-          </div>
-        </div>
-      </div>
+          </CardContent>
+        </Card>
 
-      {/* Main Data Table */}
-      <div
-        className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}
-      >
-        {/* Table Header Bar */}
-        <div className="flex items-center justify-between border-b border-border px-8 py-6">
-          <h3 className="text-lg font-bold">Danh sách nguyên vật liệu</h3>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-              <span className="size-3 rounded-full bg-destructive" />
-              Hết/Sắp hết
-            </div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-              <span className="size-3 rounded-full bg-warning" />
-              Reorder
-            </div>
-          </div>
-        </div>
-
-        {/* Search + Stock Filter Bar */}
-        <div className="flex flex-wrap items-center gap-3 border-b border-border px-8 py-3">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Tìm kiếm tên/SKU..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="min-w-0 flex-1 border-none bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-          />
-          <div className="flex items-center gap-1">
-            {stockFilterOptions.map((opt) => (
-              <button
-                key={opt.value}
+        <Card className="border-border/70">
+          <CardHeader>
+            <CardTitle className="text-base">Phân loại nhanh</CardTitle>
+            <CardDescription>Lọc tồn kho theo nhóm nguyên liệu đang vận hành.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            {categories.map((category) => (
+              <Button
+                key={category}
                 type="button"
-                onClick={() => setStockFilter(opt.value)}
-                className={cn(
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full px-3 py-1 text-xs font-semibold transition-colors",
-                  stockFilter === opt.value
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground",
-                )}
+                size="sm"
+                variant={activeCategory === category ? "default" : "outline"}
+                onClick={() => setActiveCategory(category)}
               >
-                {opt.label}
-              </button>
+                {category}
+              </Button>
             ))}
-          </div>
-          <span className="text-xs font-medium text-muted-foreground">
-            {filtered.length} nguyên liệu
-          </span>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/40">
-                <TableHead className="px-8 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Nguyên liệu
-                </TableHead>
-                <TableHead className="px-4 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  SKU
-                </TableHead>
-                <TableHead className="px-4 py-4 text-center whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Đơn vị
-                </TableHead>
-                <TableHead className="px-4 py-4 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Tồn hiện tại
-                </TableHead>
-                <TableHead className="px-4 py-4 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Giá TB (WAC)
-                </TableHead>
-                <TableHead className="px-4 py-4 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Giá trị
-                </TableHead>
-                <TableHead className="px-4 py-4 text-center whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Min / Max
-                </TableHead>
-                <TableHead className="px-4 py-4 text-center whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Kiểm kê cuối
-                </TableHead>
-                <TableHead className="px-8 py-4 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Thao tác
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 && (
-                <TableEmptyStateRow
-                  colSpan={9}
-                  paddingClassName="py-16"
-                  title={
-                    searchQuery.trim()
-                      ? "Không tìm thấy nguyên liệu phù hợp"
-                      : "Chưa có dữ liệu tồn kho"
-                  }
-                  description={
-                    searchQuery.trim()
-                      ? "Thử từ khóa hoặc bộ lọc khác."
-                      : "Dữ liệu tồn kho sẽ xuất hiện khi có nguyên liệu và giao dịch phát sinh."
-                  }
-                />
-              )}
-              {filtered.map((item) => (
-                <TableRow
-                  key={item.id}
-                  className="group border-border transition-colors"
-                >
-                  <TableCell className="px-8 py-5">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={cn(
-                          "flex size-10 items-center justify-center rounded-xl",
-                          item.status === "low" || item.status === "out"
-                            ? "bg-destructive/12"
-                            : (categoryClasses[item.category] ??
-                                "bg-muted text-muted-foreground"),
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "text-sm font-bold",
-                            item.status === "low" || item.status === "out"
-                              ? "text-destructive"
-                              : "text-current",
-                          )}
-                        >
-                          {item.name.charAt(0)}
-                        </span>
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold">{item.name}</div>
-                        <StatusBadge status={item.status} />
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-4 py-5 font-mono text-xs text-muted-foreground">
-                    {item.sku}
-                  </TableCell>
-                  <TableCell className="px-4 py-5 text-center text-sm font-medium text-muted-foreground">
-                    {item.unit}
-                  </TableCell>
-                  <TableCell
-                    className={cn(
-                      "px-4 py-5 text-right font-mono text-sm tabular-nums",
-                      item.status === "low" || item.status === "out"
-                        ? "font-black text-destructive"
-                        : "font-semibold",
-                    )}
-                  >
-                    {formatQty(item.qty)}
-                  </TableCell>
-                  <TableCell className="px-4 py-5 text-right font-mono text-sm tabular-nums text-muted-foreground">
-                    {formatVND(item.cost)}
-                  </TableCell>
-                  <TableCell className="px-4 py-5 text-right font-mono text-sm font-semibold tabular-nums">
-                    {formatVND(item.qty * item.cost)}
-                  </TableCell>
-                  <TableCell className="px-4 py-5 text-center">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-label font-bold text-destructive">
-                        {item.min}
-                      </span>
-                      <span className="text-xs text-muted-foreground">/</span>
-                      <span className="rounded bg-success/10 px-1.5 py-0.5 text-label font-bold text-success">
-                        {item.max}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-4 py-5 text-center text-sm text-muted-foreground">
-                    {item.lastCount}
-                  </TableCell>
-                  <TableCell className="px-8 py-5 text-right">
-                    <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                      <button
-                        type="button"
-                        onClick={() => setAdjustTarget(item)}
-                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        aria-label={`Điều chỉnh ${item.name}`}
-                      >
-                        <Pencil className="size-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAdjustTarget(item)}
-                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        aria-label={`Thêm thao tác ${item.name}`}
-                      >
-                        <MoreHorizontal className="size-4" />
-                      </button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Pagination */}
-        <div className="flex items-center justify-between border-t border-border px-8 py-4">
-          <span className="text-xs font-medium text-muted-foreground">
-            Hiển thị {filtered.length} / {ingredients.length} nguyên liệu
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
-            >
-              ← Trước
-            </button>
-            <span className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-              1
-            </span>
-            <button
-              type="button"
-              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex size-8 items-center justify-center rounded-full text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              2
-            </button>
-            <button
-              type="button"
-              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
-            >
-              Sau →
-            </button>
-          </div>
-        </div>
+        <Card className="border-border/70">
+          <CardHeader>
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="size-4" />
+              <CardTitle className="text-base">Cảnh báo tồn kho</CardTitle>
+            </div>
+            <CardDescription>Số nguyên liệu đang thấp hơn ngưỡng an toàn.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-4xl font-semibold tracking-tight text-destructive">
+              {String(lowCount).padStart(2, "0")}
+            </p>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Ưu tiên bổ sung các nguyên liệu `low` hoặc `out` trước khi chạm
+              đỉnh ca vận hành tiếp theo.
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Adjust Stock Dialog */}
-      {adjustTarget && (
+      <Card className="border-border/70">
+        <CardHeader className="gap-4">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+              <CardTitle>Danh sách tồn kho</CardTitle>
+              <CardDescription>
+                Kết hợp số lượng hiện tại, WAC, ngưỡng min/max và thời điểm kiểm kê gần nhất.
+              </CardDescription>
+            </div>
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,320px)_auto]">
+              <div className="flex h-11 items-center gap-3 rounded-lg border border-input bg-background px-3">
+                <Search className="size-4 shrink-0 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Tìm tên hoặc SKU"
+                  className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {stockFilterOptions.map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    size="sm"
+                    variant={stockFilter === option.value ? "default" : "outline"}
+                    onClick={() => setStockFilter(option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+            <span>{filtered.length} nguyên liệu phù hợp bộ lọc hiện tại</span>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="destructive">Hết / sắp hết</Badge>
+              <Badge variant="warning">Chạm ngưỡng reorder</Badge>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto rounded-lg border border-border/70">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/20 hover:bg-muted/20">
+                  <TableHead className="min-w-56">Nguyên liệu</TableHead>
+                  <TableHead className="min-w-28">SKU</TableHead>
+                  <TableHead className="min-w-24">Đơn vị</TableHead>
+                  <TableHead className="min-w-28 text-right">Tồn hiện tại</TableHead>
+                  <TableHead className="min-w-28 text-right">WAC</TableHead>
+                  <TableHead className="min-w-28 text-right">Giá trị</TableHead>
+                  <TableHead className="min-w-40">Ngưỡng tồn</TableHead>
+                  <TableHead className="min-w-32">Kiểm kê cuối</TableHead>
+                  <TableHead className="w-24 text-right">Thao tác</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableEmptyStateRow
+                    colSpan={9}
+                    title={
+                      searchQuery.trim()
+                        ? "Không tìm thấy nguyên liệu phù hợp"
+                        : "Chưa có dữ liệu tồn kho"
+                    }
+                    description={
+                      searchQuery.trim()
+                        ? "Thử từ khóa hoặc bộ lọc khác."
+                        : "Dữ liệu tồn kho sẽ xuất hiện khi có nguyên liệu và giao dịch phát sinh."
+                    }
+                  />
+                ) : null}
+
+                {filtered.map((item) => (
+                  <TableRow key={item.id} className="hover:bg-muted/20">
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold">{item.name}</p>
+                          <Badge
+                            className={
+                              categoryClasses[item.category] ??
+                              "bg-muted text-muted-foreground"
+                            }
+                          >
+                          {item.category}
+                          </Badge>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant={getInventoryStatusBadgeVariant(item.status)}>
+                            {getInventoryStatusLabel(item.status)}
+                          </Badge>
+                          {item.qty <= item.reorder ? (
+                            <Badge variant="warning">Chạm reorder</Badge>
+                          ) : null}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-mono text-sm text-muted-foreground">
+                      {item.sku}
+                    </TableCell>
+                    <TableCell>{item.unit}</TableCell>
+                    <TableCell
+                      className={cn(
+                        "text-right font-mono",
+                        (item.status === "low" || item.status === "out") &&
+                          "font-semibold text-destructive",
+                      )}
+                    >
+                      {formatQty(item.qty)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {formatVND(item.cost)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-semibold">
+                      {formatVND(item.qty * item.cost)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="destructive">Min {item.min}</Badge>
+                        <Badge variant="secondary">Max {item.max}</Badge>
+                        <Badge variant="success">Re {item.reorder}</Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {item.lastCount}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setAdjustTarget(item)}
+                          aria-label={`Điều chỉnh ${item.name}`}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setAdjustTarget(item)}
+                          aria-label={`Thêm thao tác ${item.name}`}
+                        >
+                          <MoreHorizontal className="size-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {adjustTarget ? (
         <AdjustStockDialog
           open={adjustTarget !== null}
-          onOpenChange={(o) => {
-            if (!o) setAdjustTarget(null);
+          onOpenChange={(open) => {
+            if (!open) setAdjustTarget(null);
           }}
           branchId={branchId}
           ingredientId={adjustTarget.id}
@@ -510,7 +412,7 @@ export function StockClient({
             router.refresh();
           }}
         />
-      )}
+      ) : null}
     </div>
   );
 }

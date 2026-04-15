@@ -2,7 +2,11 @@ import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
 import { fetchExpiryAlerts } from "@/inventory/actions";
 import { ExpiryListClient } from "@/inventory/expiry/expiry-list-client";
-import { PageHeader } from "../../_components/shared";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import type { BranchOption, ExpiryAlertRow } from "@/inventory/page";
 import { tRoute } from "../../_lib/dictionary";
 
@@ -29,9 +33,13 @@ export default async function ExpirySettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={tRoute("/inventory/settings/expiry", "heading")}
-      />
+      <Card className="border-border/70">
+        <CardHeader>
+          <CardTitle className="text-2xl">
+            {tRoute("/inventory/settings/expiry", "heading")}
+          </CardTitle>
+        </CardHeader>
+      </Card>
       <ExpiryListClient
         initial={alerts}
         branches={branches}

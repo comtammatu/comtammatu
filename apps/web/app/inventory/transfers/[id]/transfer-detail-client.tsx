@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { ArrowLeft, MapPin, CheckCircle, Printer } from "lucide-react";
 import { cn } from "@comtammatu/ui";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import {
   Table,
   TableBody,
@@ -13,15 +20,15 @@ import {
   TableRow,
   TableFooter,
 } from "@comtammatu/ui/components/table";
-import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
-import {
-  PageHeader,
-  StatusBadge,
-  TimelineStepper,
-} from "../../_components/shared";
+import { SectionCard } from "../../_components/section-card";
+import { TimelineStepper } from "../../_components/timeline-stepper";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatVND } from "../../_lib/format";
+import {
+  getInventoryStatusBadgeVariant,
+  getInventoryStatusLabel,
+} from "../../_lib/ui";
 
 export type TransferDetail = {
   code: string;
@@ -64,12 +71,22 @@ export function TransferDetailClient({
         <ArrowLeft className="size-4" /> {tRoute("/inventory/transfers")}
       </Link>
 
-      <PageHeader
-        eyebrow="Điều chuyển"
-        title={transfer.code}
-        description={`Luồng ${transfer.fromBranch} → ${transfer.toBranch} • Người tạo ${transfer.createdBy} • ${transfer.date}`}
-        actions={<StatusBadge status={transfer.status} />}
-      />
+      <Card className="border-border/70">
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Điều chuyển
+            </p>
+            <CardTitle className="text-2xl">{transfer.code}</CardTitle>
+            <CardDescription>
+              {`Luồng ${transfer.fromBranch} → ${transfer.toBranch} • Người tạo ${transfer.createdBy} • ${transfer.date}`}
+            </CardDescription>
+          </div>
+          <Badge variant={getInventoryStatusBadgeVariant(transfer.status)}>
+            {getInventoryStatusLabel(transfer.status)}
+          </Badge>
+        </CardHeader>
+      </Card>
 
       {/* Timeline */}
       <section
