@@ -253,7 +253,7 @@ export async function fetchOrderForBill(
 
   const { supabase, claims } = ctx;
 
-  const { data: order, error } = await supabase
+  let billQuery = supabase
     .from("orders")
     .select(
       `
@@ -294,8 +294,14 @@ export async function fetchOrderForBill(
     `,
     )
     .eq("id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
+    .eq("tenant_id", claims.tenant_id);
+
+  // Branch-scoped users can only view their own branch's orders
+  if (claims.branch_id) {
+    billQuery = billQuery.eq("branch_id", claims.branch_id);
+  }
+
+  const { data: order, error } = await billQuery.single();
 
   if (error) {
     if (error.code === "PGRST116") {
@@ -331,7 +337,7 @@ export async function fetchOrderDetail(orderId: number): Promise<
 
   const { supabase, claims } = ctx;
 
-  const { data: order, error } = await supabase
+  let detailQuery = supabase
     .from("orders")
     .select(
       `
@@ -371,8 +377,14 @@ export async function fetchOrderDetail(orderId: number): Promise<
     `,
     )
     .eq("id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
+    .eq("tenant_id", claims.tenant_id);
+
+  // Branch-scoped users can only view their own branch's orders
+  if (claims.branch_id) {
+    detailQuery = detailQuery.eq("branch_id", claims.branch_id);
+  }
+
+  const { data: order, error } = await detailQuery.single();
 
   if (error) {
     if (error.code === "PGRST116") {
@@ -730,6 +742,21 @@ export async function fetchOrderItemsForReorder(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
+
+  // Verify the order belongs to this branch before fetching items
+  if (claims.branch_id) {
+    const { data: orderCheck } = await supabase
+      .from("orders")
+      .select("id")
+      .eq("id", parsedId.data)
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", claims.branch_id)
+      .maybeSingle();
+
+    if (!orderCheck) {
+      return { success: false, error: "Không tìm thấy đơn hàng" };
+    }
+  }
 
   const { data: rows, error } = await supabase
     .from("order_items")

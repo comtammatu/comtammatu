@@ -259,13 +259,20 @@ const checkOutSchema = z.object({
 export const checkOut = withAction(
   { roles: SHIFT_ROLES, schema: checkOutSchema },
   async (data, { supabase, claims }) => {
-    const { error } = await supabase
+    let query = supabase
       .from("attendance_records")
       .update({ check_out: new Date().toISOString() })
       .eq("id", data.attendanceId)
       .eq("tenant_id", claims.tenant_id);
 
-    if (error) {
+    // Branch manager can only check out attendance in their own branch
+    if (claims.branch_id) {
+      query = query.eq("branch_id", claims.branch_id);
+    }
+
+    const { data: result, error } = await query.select("id");
+
+    if (error || !result || result.length === 0) {
       return { success: false, error: "Không thể chấm công ra." };
     }
 
@@ -370,7 +377,7 @@ const updateAttendanceSchema = z.object({
 export const updateAttendanceStatus = withAction(
   { roles: SHIFT_ROLES, schema: updateAttendanceSchema },
   async (data, { supabase, claims }) => {
-    const { error } = await supabase
+    let query = supabase
       .from("attendance_records")
       .update({
         status: data.status,
@@ -379,7 +386,14 @@ export const updateAttendanceStatus = withAction(
       .eq("id", data.attendanceId)
       .eq("tenant_id", claims.tenant_id);
 
-    if (error) {
+    // Branch manager can only update attendance in their own branch
+    if (claims.branch_id) {
+      query = query.eq("branch_id", claims.branch_id);
+    }
+
+    const { data: result, error } = await query.select("id");
+
+    if (error || !result || result.length === 0) {
       return { success: false, error: "Không thể cập nhật trạng thái." };
     }
 

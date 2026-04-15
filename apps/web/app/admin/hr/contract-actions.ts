@@ -69,12 +69,20 @@ export const createContract = withAction(
     }
 
     // Expire any existing active contracts for this employee
-    await supabase
+    // TODO: migrate to atomic RPC to prevent partial-expire-no-insert race
+    const { error: expireError } = await supabase
       .from("employment_contracts")
       .update({ status: "expired", updated_at: new Date().toISOString() })
       .eq("employee_id", data.employeeId)
       .eq("tenant_id", claims.tenant_id)
       .eq("status", "active");
+
+    if (expireError) {
+      return {
+        success: false,
+        error: "Không thể hết hạn hợp đồng cũ. Vui lòng thử lại.",
+      };
+    }
 
     const { data: result, error } = await supabase
       .from("employment_contracts")

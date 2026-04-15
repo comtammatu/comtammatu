@@ -125,12 +125,19 @@ export const calculatePayroll = withAction(
     const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
     const endDate = `${year}-${String(month).padStart(2, "0")}-${daysInMonth}`;
 
-    const { data: attendance } = await supabase
+    const { data: attendance, error: attendanceErr } = await supabase
       .from("attendance_records")
       .select("employee_id, status")
       .eq("tenant_id", claims.tenant_id)
       .gte("date", startDate)
       .lte("date", endDate);
+
+    if (attendanceErr) {
+      return {
+        success: false,
+        error: "Không thể tải dữ liệu chấm công. Tính lương bị hủy.",
+      };
+    }
 
     // Build attendance map
     const attendanceMap = new Map<number, { present: number; half: number }>();

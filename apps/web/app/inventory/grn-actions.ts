@@ -582,7 +582,8 @@ export const markInvoicePaid = withAction(
     const paymentStatus = newPaid >= totalAmount ? "paid" : "partial";
     const paidAt = data.paidAt ?? new Date().toISOString();
 
-    // 2. Update invoice
+    // 2. Update invoice (optimistic concurrency: match current paid_amount to prevent race)
+    // TODO: migrate to atomic RPC (UPDATE SET paid_amount = paid_amount + $1 WHERE paid_amount + $1 <= total_amount)
     const { data: updated, error: updateErr } = await supabase
       .from("supplier_invoices")
       .update({
@@ -592,11 +593,15 @@ export const markInvoicePaid = withAction(
       })
       .eq("id", data.invoiceId)
       .eq("tenant_id", claims.tenant_id)
+      .eq("paid_amount", currentPaid) // optimistic lock: fail if concurrent write changed paid_amount
       .select("id, payment_status, paid_amount, paid_at")
       .single();
 
-    if (updateErr) {
-      return { success: false, error: "Không thể cập nhật thanh toán." };
+    if (updateErr || !updated) {
+      return {
+        success: false,
+        error: "Không thể cập nhật thanh toán. Có thể đã có thay đổi đồng thời — vui lòng tải lại.",
+      };
     }
 
     return { success: true, data: updated };
