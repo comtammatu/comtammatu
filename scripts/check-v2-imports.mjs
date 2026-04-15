@@ -1,25 +1,29 @@
 import { execSync } from "node:child_process";
 
+/**
+ * Use grep (universally available in CI) instead of rg.
+ * rg is faster locally but not installed on GitHub Actions runners.
+ */
 const checks = [
   {
     description: "legacy admin-patterns imports",
     command:
-      "rg -n '@comtammatu/ui/components/admin-patterns' apps/web/app --glob '!apps/web/app/admin/components/empty-state-panel.tsx' --glob '!apps/web/app/admin/components/table-empty-state-row.tsx'",
+      "grep -rn '@comtammatu/ui/components/admin-patterns' apps/web/app --exclude='empty-state-panel.tsx' --exclude='table-empty-state-row.tsx'",
   },
   {
     description: "legacy inventory-patterns imports",
     command:
-      "rg -n '@comtammatu/ui/components/inventory-patterns' apps/web/app",
+      "grep -rn '@comtammatu/ui/components/inventory-patterns' apps/web/app",
   },
   {
     description: "legacy sidebar imports in shipped routes",
     command:
-      "rg -n '@comtammatu/ui/components/sidebar' apps/web/app --glob '!apps/web/app/inventory/_components/inventory-sidebar.tsx' --glob '!apps/web/app/inventory/_components/inventory-header.tsx'",
+      "grep -rn '@comtammatu/ui/components/sidebar' apps/web/app --exclude='inventory-sidebar.tsx' --exclude='inventory-header.tsx'",
   },
   {
     description: "legacy inventory helper imports in shipped routes",
     command:
-      "rg -n '_components/(section-card|empty-state-panel|action-icon-button)' apps/web/app/inventory --glob '!apps/web/app/inventory/_components/**'",
+      "grep -rn -E '_components/(section-card|empty-state-panel|action-icon-button)' apps/web/app/inventory --exclude-dir='_components'",
   },
 ];
 
@@ -32,9 +36,11 @@ for (const check of checks) {
       cwd: process.cwd(),
       encoding: "utf8",
     });
+    // grep exit 0 = matches found = legacy import detected = failure
     failures.push(check.description);
   } catch (error) {
     if (typeof error?.status === "number" && error.status === 1) {
+      // grep exit 1 = no matches found = OK
       continue;
     }
 
