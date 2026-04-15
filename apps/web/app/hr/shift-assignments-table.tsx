@@ -145,9 +145,9 @@ export function ShiftAssignmentsTable({
       startTransition(async () => {
         const mondayStr = formatDate(monday);
         const [assignResult, shiftsResult, empResult] = await Promise.all([
-          fetchShiftAssignments(branchId, mondayStr),
-          fetchShifts(branchId),
-          fetchEmployeesForBranch(branchId),
+          fetchShiftAssignments({ branchId, weekStartDate: mondayStr }),
+          fetchShifts({ branchId }),
+          fetchEmployeesForBranch({ branchId }),
         ]);
 
         if (assignResult.success) {
@@ -220,7 +220,7 @@ export function ShiftAssignmentsTable({
     if (!deleteTarget) return;
 
     startTransition(async () => {
-      const result = await deleteShiftAssignment(deleteTarget.id);
+      const result = await deleteShiftAssignment({ assignmentId: deleteTarget.id });
       if (!result.success) {
         toast.error(result.error ?? "Không thể xóa phân ca");
         return;

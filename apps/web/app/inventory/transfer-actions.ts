@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "./_lib/auth";
+import { withAction } from "@/_lib/with-action";
 import { fetchHeadquartersBranchId } from "./_lib/headquarters";
 import type { Database, SupabaseClient } from "@comtammatu/database";
 import {
@@ -310,35 +311,25 @@ const transferLineSchema = z.object({
   unit: z.string().min(1),
 });
 
-export async function upsertTransferLine(
-  input: z.infer<typeof transferLineSchema>,
-): Promise<ActionResult> {
-  const parsed = transferLineSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-  const ctx = await getAuthContext(ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-  const d = parsed.data;
-  const { error } = await supabase.from("stock_transfer_items").upsert(
-    {
-      tenant_id: claims.tenant_id,
-      transfer_id: d.transferId,
-      ingredient_id: d.ingredientId,
-      quantity: d.quantity,
-      unit: d.unit,
-    },
-    { onConflict: "transfer_id,ingredient_id,tenant_id" },
-  );
-  if (error) {
-    return { success: false, error: "Không thể lưu dòng chuyển." };
-  }
-  return { success: true };
-}
+export const upsertTransferLine = withAction(
+  { roles: ROLES, schema: transferLineSchema },
+  async (d, { supabase, claims }) => {
+    const { error } = await supabase.from("stock_transfer_items").upsert(
+      {
+        tenant_id: claims.tenant_id,
+        transfer_id: d.transferId,
+        ingredient_id: d.ingredientId,
+        quantity: d.quantity,
+        unit: d.unit,
+      },
+      { onConflict: "transfer_id,ingredient_id,tenant_id" },
+    );
+    if (error) {
+      return { success: false, error: "Không thể lưu dòng chuyển." };
+    }
+    return { success: true };
+  },
+);
 
 export async function transferConfirmShip(
   transferId: number,

@@ -58,7 +58,7 @@ export function EmployeePortalActions({
     if (!attendance?.id) return;
     setLoading(true);
     setError(null);
-    const result = await checkOut(attendance.id);
+    const result = await checkOut({ attendanceId: attendance.id });
     setLoading(false);
     if (result.success) {
       setAttendance((prev) =>

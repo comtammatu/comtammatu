@@ -5,6 +5,7 @@ import { z } from "zod";
 import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "./_lib/auth";
+import { withAction } from "@/_lib/with-action";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 
 const ROLES = INVENTORY_OPS_ROLES;
@@ -81,22 +82,9 @@ export async function fetchStockIssues(opts?: {
 
 /* ─── createStockIssueDraft ─── */
 
-export async function createStockIssueDraft(
-  input: z.infer<typeof issueCreateSchema>,
-): Promise<ActionResult> {
-  const parsed = issueCreateSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-
-  const ctx = await getAuthContext(ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims, user } = ctx;
-  const d = parsed.data;
+export const createStockIssueDraft = withAction(
+  { roles: ROLES, schema: issueCreateSchema },
+  async (d, { supabase, claims, user }) => {
 
   // branch_manager can only create for their own branch
   if (claims.branch_id && claims.branch_id !== d.branchId) {
@@ -138,12 +126,13 @@ export async function createStockIssueDraft(
     .select("id, source_location_id, target_location_id")
     .single();
 
-  // RLS returns { data: null, error: null } on blocked writes
-  if (error || !data) {
-    return { success: false, error: "Không thể tạo phiếu xuất." };
-  }
-  return { success: true, data };
-}
+    // RLS returns { data: null, error: null } on blocked writes
+    if (error || !data) {
+      return { success: false, error: "Không thể tạo phiếu xuất." };
+    }
+    return { success: true, data };
+  },
+);
 
 /* ─── fetchStockIssueDetail ─── */
 
@@ -195,83 +184,62 @@ export async function fetchStockIssueDetail(
 
 /* ─── upsertStockIssueLine ─── */
 
-export async function upsertStockIssueLine(
-  input: z.infer<typeof issueLineSchema>,
-): Promise<ActionResult> {
-  const parsed = issueLineSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
+export const upsertStockIssueLine = withAction(
+  { roles: ROLES, schema: issueLineSchema },
+  async (d, { supabase, claims }) => {
+    const { error } = await supabase.from("stock_issue_items").upsert(
+      {
+        tenant_id: claims.tenant_id,
+        issue_id: d.issueId,
+        ingredient_id: d.ingredientId,
+        quantity: d.quantity,
+        unit: d.unit,
+        unit_cost: d.unitCost,
+        reason: d.reason ?? null,
+      },
+      { onConflict: "issue_id,ingredient_id,tenant_id" },
+    );
 
-  const ctx = await getAuthContext(ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-  const d = parsed.data;
-
-  const { error } = await supabase.from("stock_issue_items").upsert(
-    {
-      tenant_id: claims.tenant_id,
-      issue_id: d.issueId,
-      ingredient_id: d.ingredientId,
-      quantity: d.quantity,
-      unit: d.unit,
-      unit_cost: d.unitCost,
-      reason: d.reason ?? null,
-    },
-    { onConflict: "issue_id,ingredient_id,tenant_id" },
-  );
-
-  if (error) {
-    return { success: false, error: "Không thể lưu dòng phiếu xuất." };
-  }
-  return { success: true };
-}
+    if (error) {
+      return { success: false, error: "Không thể lưu dòng phiếu xuất." };
+    }
+    return { success: true };
+  },
+);
 
 /* ─── deleteStockIssueLine ─── */
 
-export async function deleteStockIssueLine(
-  input: z.infer<typeof issueLineDeleteSchema>,
-): Promise<ActionResult> {
-  const parsed = issueLineDeleteSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
+export const deleteStockIssueLine = withAction(
+  { roles: ROLES, schema: issueLineDeleteSchema },
+  async (d, { supabase, claims }) => {
+    // Verify issue is still draft
+    const { data: issue } = await supabase
+      .from("stock_issues")
+      .select("status")
+      .eq("id", d.issueId)
+      .eq("tenant_id", claims.tenant_id)
+      .single();
 
-  const ctx = await getAuthContext(ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    if (issue?.status !== "draft") {
+      return {
+        success: false,
+        error: "Chỉ có thể xóa dòng khi phiếu còn ở trạng thái nháp.",
+      };
+    }
 
-  const { supabase, claims } = ctx;
-  const d = parsed.data;
+    const { error } = await supabase
+      .from("stock_issue_items")
+      .delete()
+      .eq("id", d.itemId)
+      .eq("issue_id", d.issueId)
+      .eq("tenant_id", claims.tenant_id);
 
-  // Verify issue is still draft
-  const { data: issue } = await supabase
-    .from("stock_issues")
-    .select("status")
-    .eq("id", d.issueId)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
-
-  if (issue?.status !== "draft") {
-    return {
-      success: false,
-      error: "Chỉ có thể xóa dòng khi phiếu còn ở trạng thái nháp.",
-    };
-  }
-
-  const { error } = await supabase
-    .from("stock_issue_items")
-    .delete()
-    .eq("id", d.itemId)
-    .eq("issue_id", d.issueId)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (error) {
-    return { success: false, error: "Không thể xóa dòng." };
-  }
-  return { success: true };
-}
+    if (error) {
+      return { success: false, error: "Không thể xóa dòng." };
+    }
+    return { success: true };
+  },
+);
 
 /* ─── confirmStockIssue ─── */
 

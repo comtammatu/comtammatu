@@ -93,14 +93,14 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
     setSelectedMonth(month);
     startTransition(async () => {
       if (view === "summary") {
-        const result = await fetchAttendanceSummary(branchId, month);
+        const result = await fetchAttendanceSummary({ branchId, month });
         if (result.success) {
           setSummary((result.data ?? []) as AttendanceSummaryRow[]);
         } else {
           toast.error(result.error ?? "Lỗi");
         }
       } else {
-        const result = await fetchAttendance(branchId, month);
+        const result = await fetchAttendance({ branchId, month });
         if (result.success) {
           setRecords((result.data ?? []) as AttendanceRecord[]);
         } else {
