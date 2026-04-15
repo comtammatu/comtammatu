@@ -1,8 +1,11 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
-  PageContainer,
-  PageHeader,
-} from "@/components/foundation/ui-patterns";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { fetchEmployees } from "./actions";
 import { HrClient } from "./hr-client";
 
@@ -25,13 +28,24 @@ export default async function HrPage() {
   const branchOptions = (branches ?? []) as BranchOption[];
 
   return (
-    <PageContainer>
-      <PageHeader
-        eyebrow="Nhân sự & lương"
-        title="Nhân sự & Lương"
-      />
-      <HrClient employees={employees} branches={branchOptions} />
-    </PageContainer>
+    <div className="space-y-5">
+      <Card>
+        <CardHeader className="gap-3">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Nhân sự & lương
+          </p>
+          <CardTitle>Nhân sự & Lương</CardTitle>
+          <CardDescription>
+            Quản lý nhân sự và dữ liệu lương theo chi nhánh.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+      <Card>
+        <CardContent>
+          <HrClient employees={employees} branches={branchOptions} />
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

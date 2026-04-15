@@ -16,10 +16,11 @@ export async function fetchHeadquartersBranchId(
 
   if (!error && data) return data.id;
 
-  const { data: branchList } = await supabase.rpc("stock_transfer_list_branches");
+  const { data: branchList } = await supabase.rpc(
+    "stock_transfer_list_branches",
+  );
   const hqBranch = (
-    (branchList as Array<{ id: number; is_headquarters: boolean }> | null) ??
-    []
+    (branchList as Array<{ id: number; is_headquarters: boolean }> | null) ?? []
   ).find((branch) => branch.is_headquarters);
 
   return hqBranch?.id ?? null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -18,65 +18,55 @@ import {
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { cn } from "@comtammatu/ui";
 import {
-  cn,
-  getSurfaceHeaderClassName,
-  getSurfaceShellClassName,
-  getSurfaceSidebarClassName,
-} from "@comtammatu/ui";
+  findActiveNavItem,
+  formatPathSegment,
+  getInitials,
+  isNavItemActive,
+  type ShellNavGroup,
+} from "@/components/v2/shell-primitives";
 
-interface NavItem {
-  href: string;
-  label: string;
-  icon: React.ElementType;
-  alsoMatchPrefixes?: string[];
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { href: "/hr", label: "Tổng quan", icon: Briefcase },
+const NAV_GROUPS: ShellNavGroup[] = [
   {
-    href: "/hr/employees",
-    label: "Nhân viên",
-    icon: Users,
-    alsoMatchPrefixes: ["/hr/employee"],
+    title: "Nhân sự",
+    items: [
+      { href: "/hr", label: "Tổng quan", icon: Briefcase },
+      {
+        href: "/hr/employees",
+        label: "Nhân viên",
+        icon: Users,
+        matchPrefixes: ["/hr/employee"],
+      },
+      { href: "/hr/shifts", label: "Ca làm việc", icon: CalendarDays },
+      { href: "/hr/attendance", label: "Chấm công", icon: ClipboardList },
+      {
+        href: "/hr/payroll",
+        label: "Bảng lương",
+        icon: Wallet,
+        matchPrefixes: ["/hr/payroll/"],
+      },
+      { href: "/hr/reports", label: "Báo cáo", icon: BarChart3 },
+    ],
   },
-  { href: "/hr/shifts", label: "Ca làm việc", icon: CalendarDays },
-  {
-    href: "/hr/attendance",
-    label: "Chấm công",
-    icon: ClipboardList,
-  },
-  {
-    href: "/hr/payroll",
-    label: "Bảng lương",
-    icon: Wallet,
-    alsoMatchPrefixes: ["/hr/payroll/"],
-  },
-  { href: "/hr/reports", label: "Báo cáo", icon: BarChart3 },
 ];
 
-function isItemActive(item: NavItem, pathname: string): boolean {
-  if (item.href === "/hr") return pathname === "/hr";
-  if (pathname === item.href || pathname.startsWith(`${item.href}/`))
-    return true;
-  return (
-    item.alsoMatchPrefixes?.some(
-      (p) => pathname === p || pathname.startsWith(`${p}/`),
-    ) ?? false
-  );
-}
+function resolveTitle(pathname: string) {
+  const active = findActiveNavItem(NAV_GROUPS, pathname);
+  if (!active) {
+    return "Tổng quan";
+  }
 
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((p) => p[0] ?? "")
+  const pathTail = pathname
+    .slice(active.href.length)
+    .split("/")
     .filter(Boolean)
-    .slice(-2)
-    .join("")
-    .toUpperCase();
+    .map((segment) => formatPathSegment(segment));
+
+  return pathTail[pathTail.length - 1] ?? active.label;
 }
 
-function NavContent({
+function HRRail({
   pathname,
   role,
   user,
@@ -88,83 +78,95 @@ function NavContent({
   onNavigate?: () => void;
 }) {
   return (
-    <div className="flex h-full flex-col">
-      {/* Back to admin + brand */}
-      <div className="p-6 pb-4">
+    <div className="surface-shell flex h-full flex-col p-4">
+      <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
         <Link
           href="/admin/dashboard"
           onClick={onNavigate}
-          className="mb-6 flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/55"
         >
           <ArrowLeft className="size-3.5" />
           Quản lý
         </Link>
-
-        <div className="mb-6 flex items-center gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary shadow-sm">
-            <Briefcase className="size-4.5 text-primary-foreground" />
+        <div className="mt-4 flex items-start gap-3">
+          <div className="flex size-12 items-center justify-center rounded-2xl border border-white/10 bg-sidebar-primary text-sidebar-primary-foreground">
+            <Briefcase className="size-5" />
           </div>
-          <div>
-            <p className="text-base font-bold tracking-tight text-foreground">
+          <div className="min-w-0">
+            <p className="text-lg font-semibold text-sidebar-foreground">
               {APP_COPY_VI.hrWorkspace}
             </p>
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground/60">
-              {APP_COPY_VI.hrWorkspaceSubtitle}
+            <p className="mt-1 text-sm leading-6 text-sidebar-foreground/65">
+              Điều phối lịch, chấm công và bảng lương trong cùng một mặt điều
+              khiển.
             </p>
           </div>
         </div>
-
-        {/* Navigation */}
-        <nav className="space-y-0.5">
-          {NAV_ITEMS.map((item) => {
-            const active = isItemActive(item, pathname);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onNavigate}
-                className={cn(
-                  "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150",
-                  active
-                    ? "bg-white/60 text-primary"
-                    : "text-foreground/60 hover:bg-white/40 hover:text-foreground",
-                )}
-              >
-                {active && (
-                  <span className="absolute right-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-l-full bg-primary" />
-                )}
-                <Icon
-                  className={cn(
-                    "size-4.5 shrink-0",
-                    active ? "text-primary" : "text-foreground/40",
-                  )}
-                />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
       </div>
 
-      {/* User footer */}
-      <div className="mt-auto border-t border-sidebar-border p-4">
+      <div className="mt-5 flex-1 overflow-y-auto pr-1">
+        <div className="space-y-6">
+          {NAV_GROUPS.map((group) => (
+            <section key={group.title} className="space-y-2">
+              <p className="px-1 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/45">
+                {group.title}
+              </p>
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const active = isNavItemActive(item, pathname);
+                  const Icon = item.icon;
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onNavigate}
+                      className={cn(
+                        "flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm transition-colors",
+                        active
+                          ? "border-sidebar-primary/40 bg-sidebar-primary text-sidebar-primary-foreground"
+                          : "border-transparent text-sidebar-foreground/72 hover:border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex size-9 items-center justify-center rounded-xl border",
+                          active
+                            ? "border-white/10 bg-white/10"
+                            : "border-sidebar-border bg-sidebar-accent/80",
+                        )}
+                      >
+                        <Icon className="size-4" />
+                      </span>
+                      <span className="flex-1 truncate font-medium">
+                        {item.label}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-3">
         <div className="flex items-center gap-3">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+          <div className="flex size-11 items-center justify-center rounded-2xl border border-white/10 bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
             {getInitials(user.name)}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-foreground">
+            <p className="truncate text-sm font-semibold text-sidebar-foreground">
               {user.name}
             </p>
-            <p className="truncate text-xs text-muted-foreground">
+            <p className="truncate text-xs text-sidebar-foreground/60">
               {ROLE_LABEL_VI[role]}
             </p>
           </div>
           <form action="/api/auth/signout" method="post">
             <button
               type="submit"
-              className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/60 hover:text-foreground"
+              className="flex size-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-sidebar-foreground/70 transition-colors hover:bg-white/10 hover:text-sidebar-foreground"
               aria-label="Đăng xuất"
             >
               <LogOut className="size-4" />
@@ -177,7 +179,7 @@ function NavContent({
 }
 
 export interface HRShellProps {
-  children: React.ReactNode;
+  children: ReactNode;
   user: { name: string };
   role: StaffRole;
 }
@@ -185,87 +187,82 @@ export interface HRShellProps {
 export function HRShell({ children, user, role }: HRShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pageTitle = useMemo(() => resolveTitle(pathname), [pathname]);
 
   return (
-    <div className={getSurfaceShellClassName("admin", "flex h-dvh overflow-hidden")}>
-      {/* Desktop sidebar */}
-      <aside
-        className={getSurfaceSidebarClassName(
-          "admin",
-          "hidden w-64 shrink-0 flex-col md:flex",
-        )}
-      >
-        <NavContent pathname={pathname} role={role} user={user} />
-      </aside>
+    <div className="min-h-dvh bg-background text-foreground md:p-3">
+      <div className="mx-auto flex min-h-dvh w-full max-w-screen-2xl gap-3">
+        <aside className="hidden w-80 shrink-0 md:block">
+          <div className="sticky top-3 h-dvh">
+            <HRRail pathname={pathname} role={role} user={user} />
+          </div>
+        </aside>
 
-      {/* Main area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Header */}
-        <header
-          className={getSurfaceHeaderClassName(
-            "admin",
-            "flex h-14 items-center gap-3 px-4 sm:px-6",
-          )}
-        >
-          {/* Mobile toggle */}
-          <button
-            type="button"
-            onClick={() => setMobileOpen(true)}
-            className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
-            aria-label="Mở menu"
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <header className="surface-panel sticky top-0 z-30 px-4 py-4 md:top-3 md:px-6">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setMobileOpen(true)}
+                className="flex size-11 items-center justify-center rounded-2xl border border-border/70 bg-panel-subtle text-foreground md:hidden"
+                aria-label="Mở điều hướng"
+              >
+                <Menu className="size-5" />
+              </button>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  {APP_COPY_VI.hrWorkspaceSubtitle}
+                </p>
+                <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl">
+                  {pageTitle}
+                </h1>
+              </div>
+            </div>
+          </header>
+
+          <main
+            id="main-content"
+            className="min-w-0 flex-1 overflow-y-auto pb-6"
           >
-            <Menu className="size-5" />
-          </button>
-
-          <div className="flex-1" />
-
-          {/* Back to admin (desktop) */}
-          <Link
-            href="/admin/dashboard"
-            className="hidden items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:flex"
-          >
-            <ArrowLeft className="size-3.5" />
-            Quản lý
-          </Link>
-        </header>
-
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto p-6 sm:p-8">{children}</main>
+            <div className="space-y-4">{children}</div>
+          </main>
+        </div>
       </div>
 
-      {/* Mobile overlay */}
-      {mobileOpen && (
+      {mobileOpen ? (
         <>
           <button
             type="button"
-            className="fixed inset-0 z-40 bg-black/40 md:hidden"
+            className="fixed inset-0 z-40 bg-black/50 md:hidden"
             onClick={() => setMobileOpen(false)}
-            onKeyDown={(e) => e.key === "Escape" && setMobileOpen(false)}
-            aria-label="Đóng menu"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                setMobileOpen(false);
+              }
+            }}
+            aria-label="Đóng điều hướng"
           />
-          <aside
-            className={getSurfaceSidebarClassName(
-              "admin",
-              "fixed inset-y-0 left-0 z-50 w-72 shadow-2xl md:hidden",
-            )}
-          >
-            <button
-              type="button"
-              onClick={() => setMobileOpen(false)}
-              className="absolute right-3 top-4 flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-white/60"
-              aria-label="Đóng"
-            >
-              <X className="size-4.5" />
-            </button>
-            <NavContent
-              pathname={pathname}
-              role={role}
-              user={user}
-              onNavigate={() => setMobileOpen(false)}
-            />
-          </aside>
+          <div className="fixed inset-y-0 left-0 z-50 w-80 max-w-full p-3 md:hidden">
+            <div className="relative h-full">
+              <button
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                className="absolute right-6 top-6 z-10 flex size-10 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-sidebar-foreground"
+                aria-label="Đóng"
+              >
+                <X className="size-4" />
+              </button>
+              <HRRail
+                pathname={pathname}
+                role={role}
+                user={user}
+                onNavigate={() => setMobileOpen(false)}
+              />
+            </div>
+          </div>
         </>
-      )}
+      ) : null}
     </div>
   );
 }

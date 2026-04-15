@@ -4,6 +4,7 @@ import {
   buildLoginBlockedStatePath,
   extractClaims,
 } from "@comtammatu/shared/auth";
+import { Card, CardContent, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Table,
@@ -13,13 +14,6 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import {
-  EmptyState,
-  PageContainer,
-  PageHeader,
-  SectionCard,
-  StatusBadge,
-} from "@/components/foundation/ui-patterns";
 
 const STATUS_LABELS: Record<string, string> = {
   present: "Có mặt",
@@ -59,13 +53,17 @@ export default async function EmployeeAttendancePage() {
 
   if (!employee) {
     return (
-      <PageContainer density="compact">
-        <EmptyState
-          title="Không tìm thấy hồ sơ nhân viên"
-          surface="employee"
-          density="compact"
-        />
-      </PageContainer>
+      <Card>
+        <CardHeader className="gap-3">
+          <CardTitle className="text-2xl">Không tìm thấy hồ sơ nhân viên</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Không thể truy xuất hồ sơ nhân viên từ tài khoản này. Vui lòng liên
+            hệ quản trị viên.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -92,29 +90,36 @@ export default async function EmployeeAttendancePage() {
   const halfDay = attendance.filter((r) => r.status === "half_day").length;
 
   return (
-    <PageContainer className="mx-auto max-w-lg" density="compact">
-      <PageHeader
-        title="Chấm công"
-        surface="employee"
-        density="compact"
-      />
+    <div className="mx-auto max-w-lg space-y-5">
+      <Card>
+        <CardHeader className="gap-3">
+          <CardTitle className="text-2xl">Chấm công</CardTitle>
+        </CardHeader>
+      </Card>
 
       <div className="grid grid-cols-3 gap-3">
-        <SectionCard className="text-center" surface="employee" density="compact">
-          <p className="text-2xl font-bold text-success">{present}</p>
-          <p className="text-xs text-muted-foreground">Có mặt</p>
-        </SectionCard>
-        <SectionCard className="text-center" surface="employee" density="compact">
-          <p className="text-2xl font-bold text-destructive">{absent}</p>
-          <p className="text-xs text-muted-foreground">Vắng</p>
-        </SectionCard>
-        <SectionCard className="text-center" surface="employee" density="compact">
-          <p className="text-2xl font-bold text-info">{halfDay}</p>
-          <p className="text-xs text-muted-foreground">Nửa ngày</p>
-        </SectionCard>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-success">{present}</p>
+            <p className="text-xs text-muted-foreground">Có mặt</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-destructive">{absent}</p>
+            <p className="text-xs text-muted-foreground">Vắng</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-info">{halfDay}</p>
+            <p className="text-xs text-muted-foreground">Nửa ngày</p>
+          </CardContent>
+        </Card>
       </div>
 
-      <SectionCard className="overflow-hidden" surface="employee" density="compact">
+      <Card>
+        <CardContent className="overflow-hidden p-0">
         {attendance.length === 0 ? (
           <div className="py-8 text-center text-muted-foreground">
             Chưa có dữ liệu chấm công.
@@ -125,7 +130,7 @@ export default async function EmployeeAttendancePage() {
               {attendance.map((r) => (
                 <div
                   key={r.id}
-                  className="rounded-2xl border border-border/70 bg-white/82 p-4"
+                  className="rounded-lg border border-border/70 bg-white/82 p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -136,19 +141,12 @@ export default async function EmployeeAttendancePage() {
                         {r.shifts?.name ?? "Không có ca"}
                       </p>
                     </div>
-                    <StatusBadge
-                      tone={
-                        r.status === "present"
-                          ? "success"
-                          : r.status === "late"
-                            ? "warning"
-                            : r.status === "absent"
-                              ? "danger"
-                              : "info"
-                      }
+                    <Badge variant={
+                      STATUS_VARIANTS[r.status] ?? "secondary"
+                    }
                     >
                       {STATUS_LABELS[r.status] ?? r.status}
-                    </StatusBadge>
+                    </Badge>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div>
@@ -228,8 +226,9 @@ export default async function EmployeeAttendancePage() {
             </div>
           </>
         )}
-      </SectionCard>
-    </PageContainer>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

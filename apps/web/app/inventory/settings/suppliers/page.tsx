@@ -3,7 +3,7 @@ import {
   SuppliersClient,
   type SupplierRow,
 } from "@/inventory/suppliers/suppliers-client";
-import { PageHeader } from "../../_components/shared";
+import { Card, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
 import { tRoute } from "../../_lib/dictionary";
 
 export default async function SuppliersSettingsPage() {
@@ -14,9 +14,13 @@ export default async function SuppliersSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={tRoute("/inventory/settings/suppliers", "heading")}
-      />
+      <Card className="border-border/70">
+        <CardHeader>
+          <CardTitle className="text-2xl">
+            {tRoute("/inventory/settings/suppliers", "heading")}
+          </CardTitle>
+        </CardHeader>
+      </Card>
       <SuppliersClient initial={rows} />
     </div>
   );

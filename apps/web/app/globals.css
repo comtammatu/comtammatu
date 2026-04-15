@@ -5,15 +5,14 @@
 @source "../../../packages/shared/src";
 
 /* ============================================================
-   Cơm Tấm Má Tư — Design Tokens
+   Cơm Tấm Má Tư — Web App V2 Tokens
    Tailwind CSS v4 — CSS-first configuration
-   Style: MD3 Warm — based on Material Design 3 tonal palette
-   Primary: Burnt orange #d35400 | Surface: Warm white #f9f9f6
+   Style: Restaurant Ops OS
    Ref: docs/spec/design-system.md
    ============================================================ */
 
 @theme inline {
-  --font-sans: var(--font-be-vietnam-pro), system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
   /* Data-dense font sizes */
@@ -29,65 +28,51 @@
   --min-w-col-md: 10rem; /* 160px */
   --min-w-col-lg: 15rem; /* 240px */
 
-  /* MD3 Warm palette */
-  --color-background: #f9f9f6;
-  --color-foreground: #1a1c1a;
+  /* Warm operational palette */
+  --color-background: #f3efe6;
+  --color-foreground: #15191d;
+  --color-primary: #c35a22;
+  --color-primary-foreground: #fff8f2;
+  --color-secondary: #e5ddcf;
+  --color-secondary-foreground: #23282d;
+  --color-accent: #d7cebf;
+  --color-accent-foreground: #171a1e;
+  --color-muted: #e6dfd3;
+  --color-muted-foreground: #6c6c67;
+  --color-card: #fbf8f1;
+  --color-card-foreground: #15191d;
+  --color-popover: #fdf9f2;
+  --color-popover-foreground: #15191d;
+  --color-border: #c9c1b4;
+  --color-input: #c9c1b4;
+  --color-ring: #c35a22;
+  --color-ring-offset: #f3efe6;
 
-  /* Primary: Burnt orange — brand accent, CTA, active states */
-  --color-primary: #d35400;
-  --color-primary-foreground: #ffffff;
+  --color-destructive: #be3a2d;
+  --color-destructive-foreground: #fff7f5;
+  --color-success: #197355;
+  --color-warning: #ab7218;
+  --color-info: #285fc0;
 
-  /* Secondary: warm surface-low */
-  --color-secondary: #f3f4f1;
-  --color-secondary-foreground: #1a1c1a;
+  --color-sidebar: #12161a;
+  --color-sidebar-foreground: #f6f2e9;
+  --color-sidebar-primary: #c35a22;
+  --color-sidebar-primary-foreground: #fff8f2;
+  --color-sidebar-accent: #1e2429;
+  --color-sidebar-accent-foreground: #f6f2e9;
+  --color-sidebar-border: #2a3238;
+  --color-sidebar-ring: #c35a22;
 
-  /* Accent: same as secondary for minimal look */
-  --color-accent: #f3f4f1;
-  --color-accent-foreground: #1a1c1a;
-
-  /* Muted: surface-container tone */
-  --color-muted: #eeeeeb;
-  --color-muted-foreground: #594238;
-
-  /* Card: pure white elevated surface */
-  --color-card: #ffffff;
-  --color-card-foreground: #1a1c1a;
-
-  --color-popover: #ffffff;
-  --color-popover-foreground: #1a1c1a;
-
-  /* Border: warm subtle — md-on-surface at ~8% */
-  --color-border: color-mix(in srgb, #1a1c1a 8%, transparent);
-  --color-input: color-mix(in srgb, #1a1c1a 8%, transparent);
-  --color-ring: #d35400;
-  --color-ring-offset: #f9f9f6;
-
-  /* Destructive: md-error */
-  --color-destructive: #ba1a1a;
-  --color-destructive-foreground: #ffffff;
-
-  /* Status colors — MD3 semantic */
-  --color-success: #2c694e;
-  --color-warning: #d97706;
-  --color-info: #006193;
-
-  /* Sidebar: light frosted glass — md-surface-low */
-  --color-sidebar: #f3f4f1;
-  --color-sidebar-foreground: #1a1c1a;
-  --color-sidebar-primary: #d35400;
-  --color-sidebar-primary-foreground: #ffffff;
-  --color-sidebar-accent: rgba(255, 255, 255, 0.6);
-  --color-sidebar-accent-foreground: #d35400;
-  --color-sidebar-border: color-mix(in srgb, #1a1c1a 5%, transparent);
-  --color-sidebar-ring: #d35400;
-
-  /* Surface semantics */
-  --color-surface-raised: #ffffff;
-  --color-surface-sunken: #eeeeeb;
-  --color-state-pending: #d97706;
-  --color-state-processing: #e67e22;
-  --color-state-ready: #2c694e;
-  --color-state-cancelled: #594238;
+  --color-surface-raised: #fbf8f1;
+  --color-surface-sunken: #e8e1d5;
+  --color-panel-subtle: #efe8dc;
+  --color-panel-strong: #ddd2c2;
+  --color-shell: #12161a;
+  --color-shell-foreground: #f6f2e9;
+  --color-state-pending: #ab7218;
+  --color-state-processing: #c35a22;
+  --color-state-ready: #197355;
+  --color-state-cancelled: #767069;
 
   /* Spacing and layout scales */
   --space-1: 0.25rem;
@@ -98,17 +83,17 @@
   --space-8: 2rem;
   --space-12: 3rem;
 
-  /* Elevation — warm-tinted shadows */
-  --elevation-1: 0 1px 2px color-mix(in srgb, #d35400 6%, transparent);
-  --elevation-2: 0 8px 20px color-mix(in srgb, #d35400 8%, transparent);
-  --elevation-3: 0 18px 40px color-mix(in srgb, #d35400 10%, transparent);
+  /* Elevation — warmer, denser */
+  --elevation-1: 0 8px 20px rgba(21, 25, 29, 0.06);
+  --elevation-2: 0 16px 38px rgba(21, 25, 29, 0.1);
+  --elevation-3: 0 24px 56px rgba(21, 25, 29, 0.16);
   --z-overlay-1: 10;
   --z-overlay-2: 20;
   --z-overlay-3: 30;
   --z-overlay-4: 40;
   --z-overlay-5: 50;
 
-  /* Radius */
+  /* Radius — shadcn standard */
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.625rem;
@@ -182,27 +167,6 @@
     }
   }
 
-  @keyframes glow-sweep {
-    from {
-      transform: translateX(-120%);
-    }
-    to {
-      transform: translateX(120%);
-    }
-  }
-
-  @keyframes pulse-glow {
-    0%,
-    100% {
-      opacity: 0.42;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 0.7;
-      transform: scale(1.03);
-    }
-  }
-
   @keyframes accordion-down {
     from {
       height: 0;
@@ -248,17 +212,25 @@
   }
 
   *:hover::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, #1a1c1a 15%, transparent);
+    background: color-mix(in srgb, #09090b 15%, transparent);
   }
 
   body {
     @apply bg-background text-foreground antialiased;
-    background-image:
-      radial-gradient(circle at top left, color-mix(in srgb, #d35400 7%, transparent), transparent 28%),
-      radial-gradient(circle at top right, color-mix(in srgb, #2c694e 5%, transparent), transparent 22%),
-      linear-gradient(180deg, color-mix(in srgb, #ffffff 84%, #f9f9f6), #f9f9f6 22rem);
     min-height: 100vh;
     text-rendering: optimizeLegibility;
+    background-image:
+      linear-gradient(
+        to right,
+        color-mix(in srgb, var(--color-border) 18%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--color-border) 18%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 2rem 2rem;
   }
 
   h1,
@@ -309,417 +281,60 @@
   }
 }
 
-@layer components {
-  .app-shell,
-  .ui-shell {
-    background:
-      linear-gradient(180deg, color-mix(in srgb, #ffffff 82%, #f9f9f6), #f9f9f6 18rem);
-  }
-
-  .surface-admin {
-    background-image:
-      radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 7%, transparent), transparent 24%),
-      radial-gradient(circle at top right, color-mix(in srgb, var(--color-success) 4%, transparent), transparent 22%),
-      linear-gradient(180deg, color-mix(in srgb, #ffffff 86%, #f9f9f6), #f9f9f6 18rem);
-  }
-
-  .surface-auth {
-    background-image:
-      radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 13%, transparent), transparent 26%),
-      radial-gradient(circle at bottom right, color-mix(in srgb, var(--color-success) 8%, transparent), transparent 22%),
-      linear-gradient(180deg, color-mix(in srgb, #ffffff 90%, #f9f9f6), #f9f9f6 22rem);
-  }
-
-  .surface-employee {
-    background-image:
-      radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 24%),
-      radial-gradient(circle at top right, color-mix(in srgb, var(--color-info) 5%, transparent), transparent 20%),
-      linear-gradient(180deg, color-mix(in srgb, #ffffff 88%, #f9f9f6), #f9f9f6 20rem);
-  }
-
-  .surface-pos {
-    background-image:
-      radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 10%, transparent), transparent 22%),
-      radial-gradient(circle at bottom right, color-mix(in srgb, var(--color-warning) 7%, transparent), transparent 24%),
-      linear-gradient(180deg, color-mix(in srgb, #ffffff 84%, #f9f9f6), #f9f9f6 16rem);
-  }
-
-  .surface-kds {
-    background:
-      radial-gradient(circle at top left, color-mix(in srgb, var(--color-warning) 12%, transparent), transparent 24%),
-      radial-gradient(circle at bottom right, color-mix(in srgb, var(--color-success) 10%, transparent), transparent 20%),
-      linear-gradient(180deg, #161718, #111214 42%, #0c0d0f);
-  }
-
-  .app-page,
-  .ui-surface-panel {
-    @apply rounded-3xl border border-border/70 bg-white/85 shadow-sm backdrop-blur-sm;
-    box-shadow: var(--elevation-1);
-  }
-
-  .ui-surface-panel-admin {
-    @apply bg-white/82;
-  }
-
-  .ui-surface-panel-inventory {
-    @apply bg-white/88;
-    box-shadow: var(--elevation-2);
-  }
-
-  .ui-surface-panel-employee {
-    @apply bg-white/88;
-  }
-
-  .ui-surface-panel-strong {
-    box-shadow: var(--elevation-2);
-  }
-
-  .ui-surface-panel-touch {
-    @apply bg-white/92;
-    box-shadow: var(--elevation-2);
-  }
-
-  .ui-surface-panel-dark {
-    @apply border-white/10 bg-stone-950/92 text-white;
-    box-shadow: var(--elevation-2);
-  }
-
-  .app-section-label {
-    @apply text-xs font-semibold uppercase tracking-widest text-muted-foreground/70;
-  }
-
-  .app-kpi,
-  .ui-stat-card {
-    @apply rounded-2xl border border-border/70 bg-white/85 p-5 shadow-sm;
-    box-shadow: var(--elevation-1);
-  }
-
-  .ui-status-badge {
-    @apply text-xs font-medium;
-  }
-
-  .ui-page-header[data-surface="inventory"] .app-section-label {
-    @apply text-primary/80;
-  }
-
-  .ui-shell-sidebar {
-    @apply border-r border-sidebar-border bg-sidebar/92 backdrop-blur-xl;
-  }
-
-  .ui-shell-sidebar-admin {
-    @apply bg-white/82;
-  }
-
-  .ui-shell-sidebar-inventory {
-    @apply border-border/60 bg-card/84;
-  }
-
-  .ui-shell-sidebar-touch {
-    @apply bg-card/94;
-  }
-
-  .ui-shell-sidebar-dark {
-    @apply border-white/10 bg-stone-950/92 text-white;
-  }
-
-  .ui-shell-header {
-    @apply sticky top-0 z-30 border-b border-border/70 bg-background/88 backdrop-blur-xl;
-  }
-
-  .ui-shell-header-admin {
-    @apply bg-background/92;
-  }
-
-  .ui-shell-header-inventory {
-    @apply bg-card/84;
-  }
-
-  .ui-shell-header-compact {
-    @apply border-border/60 bg-background/92;
-  }
-
-  .ui-shell-header-touch {
-    @apply bg-card/94;
-  }
-
-  .ui-shell-header-dark {
-    @apply border-white/10 bg-stone-950/88 text-white;
-  }
-
-  .ui-login-brand-panel {
-    @apply relative overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-stone-950 via-stone-900 to-stone-800 p-8 text-white shadow-2xl shadow-black/10 lg:min-h-full lg:p-10;
-  }
-
-  .ui-login-brand-panel::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image:
-      radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 22%, transparent), transparent 32%),
-      radial-gradient(circle at bottom right, color-mix(in srgb, var(--color-success) 18%, transparent), transparent 28%);
-    pointer-events: none;
-  }
-
-  .surface-inventory {
-    --md-primary: var(--color-primary);
-    --md-primary-container: color-mix(in srgb, var(--color-primary) 72%, white);
-    --md-on-primary: var(--color-primary-foreground);
-    --md-on-primary-container: var(--color-primary);
-    --md-primary-fixed: color-mix(in srgb, var(--color-primary) 15%, white);
-    --md-primary-fixed-dim: color-mix(in srgb, var(--color-primary) 28%, white);
-    --md-secondary: var(--color-success);
-    --md-secondary-container: color-mix(in srgb, var(--color-success) 18%, white);
-    --md-on-secondary-container: var(--color-success);
-    --md-tertiary: var(--color-info);
-    --md-tertiary-container: color-mix(in srgb, var(--color-info) 18%, white);
-    --md-error: var(--color-destructive);
-    --md-error-container: color-mix(in srgb, var(--color-destructive) 15%, white);
-    --md-on-error-container: var(--color-destructive);
-    --md-surface: var(--color-background);
-    --md-surface-lowest: var(--color-card);
-    --md-surface-low: color-mix(in srgb, var(--color-card) 60%, var(--color-background));
-    --md-surface-container: var(--color-secondary);
-    --md-surface-high: color-mix(in srgb, var(--color-secondary) 76%, white);
-    --md-surface-highest: color-mix(in srgb, var(--color-secondary) 56%, white);
-    --md-on-surface: var(--color-foreground);
-    --md-on-surface-variant: var(--color-muted-foreground);
-    --md-outline: color-mix(in srgb, var(--color-foreground) 38%, transparent);
-    --md-outline-variant: color-mix(
-      in srgb,
-      var(--color-foreground) 14%,
-      transparent
-    );
-    --md-inverse-surface: color-mix(
-      in srgb,
-      var(--color-foreground) 88%,
-      var(--color-background)
-    );
-    --md-info: var(--color-info);
-    --md-info-container: color-mix(in srgb, var(--color-info) 14%, white);
-    --md-on-info-container: var(--color-info);
-    --md-warning-container: color-mix(in srgb, var(--color-warning) 18%, white);
-    --md-on-warning-container: var(--color-warning);
-  }
-
-  .surface-inventory .ambient-shadow {
-    box-shadow: var(--elevation-2);
-  }
-
-  .surface-pos .ui-flow-panel {
-    @apply bg-white/94;
-  }
-
-  .surface-kds .ui-flow-panel {
-    @apply border-white/10 bg-stone-900/92 text-white;
-  }
-
-  .surface-kds .ui-flow-panel::before {
-    background:
-      radial-gradient(circle at top left, color-mix(in srgb, var(--color-warning) 18%, transparent), transparent 34%),
-      radial-gradient(circle at bottom right, color-mix(in srgb, var(--color-success) 12%, transparent), transparent 28%);
-  }
-
-  .surface-kds .app-kpi,
-  .surface-kds .ui-stat-card {
-    @apply border-white/10 bg-stone-900/86 text-white;
-  }
-
-  .ui-flow-panel {
-    @apply relative overflow-hidden rounded-3xl border border-border/70 bg-white/90 backdrop-blur-sm;
-    box-shadow: var(--elevation-2);
-  }
-
-  .ui-flow-panel::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 16%, transparent), transparent 34%),
-      radial-gradient(circle at bottom right, color-mix(in srgb, var(--color-success) 12%, transparent), transparent 28%);
-    pointer-events: none;
-  }
-
-  .ui-flow-progress {
-    @apply relative h-2 overflow-hidden rounded-full bg-primary/10;
-  }
-
-  .ui-flow-progress-bar {
-    @apply absolute inset-y-0 left-0 overflow-hidden rounded-full;
-    background: linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--color-primary) 88%, white),
-      color-mix(in srgb, var(--color-warning) 76%, white) 52%,
-      color-mix(in srgb, var(--color-success) 72%, white)
-    );
-    transition:
-      width 220ms ease-out,
-      transform 220ms ease-out,
-      opacity 220ms ease-out;
-    will-change: width;
-  }
-
-  .ui-flow-progress-bar::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      110deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.15) 35%,
-      rgba(255, 255, 255, 0.55) 50%,
-      rgba(255, 255, 255, 0.18) 65%,
-      transparent 100%
-    );
-    animation: glow-sweep 2.4s linear infinite;
-    pointer-events: none;
-  }
-
-  .ui-flow-progress-bar[data-indeterminate="true"] {
-    width: 42%;
-    animation: pulse-glow 1.4s ease-in-out infinite;
-  }
-
-  .ui-flow-step {
-    @apply relative overflow-hidden rounded-2xl border px-3 py-3 transition-all;
-    background: color-mix(in srgb, #ffffff 78%, transparent);
-  }
-
-  .ui-flow-step[data-state="done"] {
-    @apply border-success/25 bg-success/10 text-success;
-  }
-
-  .ui-flow-step[data-state="current"] {
-    @apply border-primary/25 bg-primary/10 text-foreground;
-    box-shadow: 0 10px 24px color-mix(in srgb, var(--color-primary) 14%, transparent);
-  }
-
-  .ui-flow-step[data-state="todo"] {
-    @apply border-border/70 text-muted-foreground;
-  }
-
-  .ui-flow-stage-index {
-    @apply flex size-8 items-center justify-center rounded-full border text-xs font-bold;
-  }
-
-  .ui-flow-step[data-state="done"] .ui-flow-stage-index {
-    @apply border-success/35 bg-success text-white;
-  }
-
-  .ui-flow-step[data-state="current"] .ui-flow-stage-index {
-    @apply border-primary/35 bg-primary text-white;
-  }
-
-  .ui-flow-step[data-state="todo"] .ui-flow-stage-index {
-    @apply border-border/70 bg-white text-muted-foreground;
-  }
-
-  .ui-surface-lift {
-    transition:
-      transform 180ms ease,
-      box-shadow 180ms ease,
-      border-color 180ms ease,
-      background-color 180ms ease;
-    will-change: transform;
-  }
-
-  .ui-surface-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--elevation-2);
-  }
-
-  .ui-surface-lift:active {
-    transform: translateY(0);
-  }
-
-  .ui-stagger-children > * {
-    animation: fade-rise 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  }
-
-  .ui-stagger-children > *:nth-child(2) {
-    animation-delay: 40ms;
-  }
-
-  .ui-stagger-children > *:nth-child(3) {
-    animation-delay: 80ms;
-  }
-
-  .ui-stagger-children > *:nth-child(4) {
-    animation-delay: 120ms;
-  }
-
-  .ui-stagger-children > *:nth-child(5) {
-    animation-delay: 160ms;
-  }
-}
-
 @layer utilities {
-  .touch-target {
-    min-height: 44px;
-    min-width: 44px;
+  .shadow-app-sm {
+    box-shadow: var(--elevation-1);
   }
 
-  .touch-target-lg {
-    min-height: 56px;
-    min-width: 56px;
+  .shadow-app-md {
+    box-shadow: var(--elevation-2);
   }
 
-  .focus-ring-standard {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  .shadow-app-lg {
+    box-shadow: var(--elevation-3);
   }
 
-  .ui-safe-top {
-    padding-top: max(0px, env(safe-area-inset-top, 0px));
+  .surface-panel {
+    @apply rounded-3xl border border-border/80 bg-card;
+    box-shadow: var(--elevation-1);
   }
 
-  .ui-safe-bottom {
-    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0.5rem));
+  .surface-shell {
+    @apply rounded-4xl border border-sidebar-border bg-sidebar text-sidebar-foreground;
+    box-shadow: var(--elevation-3);
   }
 
-  /* Dialog/sheet max heights — replaces arbitrary max-h-[Xvh] */
-  .max-h-dialog {
-    max-height: 80vh;
+  .surface-chip {
+    @apply inline-flex items-center gap-2 rounded-full border border-border/70 bg-panel-subtle px-3 py-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground;
   }
 
-  .max-h-dialog-lg {
-    max-height: 90vh;
+  .ops-grid {
+    background-image:
+      linear-gradient(
+        to right,
+        color-mix(in srgb, var(--color-border) 12%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--color-border) 12%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 1.75rem 1.75rem;
   }
 
-  /* KDS board min height */
-  .min-h-kds-board {
-    min-height: 60vh;
-  }
-
-  /* POS item customizer sheet height */
-  .h-sheet-customizer {
-    height: 70dvh;
-  }
-
-  /* POS cart drawer max height (mobile) */
-  .max-h-drawer {
-    max-height: 85dvh;
-  }
-
-  .max-h-drawer-inner {
-    max-height: calc(85dvh - 2rem);
-  }
-
-  .ui-content-auto {
-    content-visibility: auto;
-    contain-intrinsic-size: 48rem;
-  }
-}
-
-/* Vietnamese-safe text utilities — prevents overflow with longer diacritical text */
-@layer components {
-  .ui-label-short {
-    @apply truncate whitespace-nowrap;
-  }
-
-  .ui-chip {
-    @apply inline-flex max-w-full items-center rounded-full whitespace-nowrap;
-  }
-
-  .ui-tab-pill {
-    @apply inline-flex items-center rounded-full whitespace-nowrap;
+  .ops-grid-dark {
+    background-image:
+      linear-gradient(
+        to right,
+        color-mix(in srgb, white 5%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, white 5%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 1.75rem 1.75rem;
   }
 }

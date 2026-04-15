@@ -1,9 +1,6 @@
 import { fetchJournalEntries } from "../accounting-actions";
 import { fetchChartOfAccounts } from "../accounting-actions";
-import {
-  PageContainer,
-  PageHeader,
-} from "@/components/foundation/ui-patterns";
+import { PageContainer, PageHeader } from "@/components/v2/patterns";
 import { JournalClient } from "./journal-client";
 
 export default async function JournalPage() {
@@ -21,10 +18,7 @@ export default async function JournalPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        eyebrow="Tài chính"
-        title="Nhật ký kế toán"
-      />
+      <PageHeader eyebrow="Tài chính" title="Nhật ký kế toán" />
       <JournalClient entries={entries} accounts={accounts} />
     </PageContainer>
   );
@@ -40,6 +34,7 @@ export interface JournalEntryLine {
 
 export interface JournalEntryRow {
   id: number;
+  entry_number: string;
   entry_date: string;
   description: string;
   ref_type: string | null;

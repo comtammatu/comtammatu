@@ -247,11 +247,11 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
             </SheetHeader>
 
             <div className="border-b px-4 py-3 print:hidden">
-              <div className="ui-flow-panel p-4">
+              <div className="rounded-lg border bg-card shadow-sm p-4">
                 <div className="relative space-y-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-2">
-                      <p className="app-section-label">Payment flow</p>
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Payment flow</p>
                       <h3 className="text-lg font-semibold tracking-tight">
                         {isPaid
                           ? "Hóa đơn đã hoàn tất, có thể in hoặc gửi khách."
@@ -270,7 +270,7 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
                           ? "border-success/15 bg-success/10 text-success"
                           : pendingExtras
                             ? "border-warning/15 bg-warning/10 text-warning"
-                            : "border-primary/15 bg-white/82 text-primary",
+                            : "border-primary/15 bg-card text-primary",
                       )}
                     >
                       {isPaid
@@ -286,9 +286,9 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
                       <span>Tiến độ thanh toán</span>
                       <span>{String(Math.round(paymentProgressPercent))}%</span>
                     </div>
-                    <div className="ui-flow-progress">
+                    <div className="h-2 w-full rounded-full bg-muted">
                       <div
-                        className="ui-flow-progress-bar"
+                        className="h-full rounded-full bg-primary transition-all"
                         data-indeterminate={payPending ? "true" : undefined}
                         style={payPending ? undefined : { width: `${paymentProgressPercent}%` }}
                       />
@@ -300,10 +300,10 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
                       <div
                         key={step.label}
                         data-state={step.state}
-                        className="ui-flow-step"
+                        className="rounded-lg border bg-card shadow-sm p-3"
                       >
                         <div className="flex items-start gap-3">
-                          <div className="ui-flow-stage-index">{index + 1}</div>
+                          <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">{index + 1}</div>
                           <div className="space-y-1">
                             <p className="text-sm font-semibold">{step.label}</p>
                             <p className="text-xs leading-5 text-muted-foreground">
@@ -451,16 +451,16 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
               {/* Payment actions — not printed */}
               {showPaySection && (
                 <div className="border-t px-4 py-3 print:hidden">
-                  <div className="ui-flow-panel p-4">
+                  <div className="rounded-lg border bg-card shadow-sm p-4">
                     <div className="relative space-y-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="app-section-label">Thanh toán</p>
+                          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Thanh toán</p>
                           <h4 className="mt-1 text-base font-semibold">
                             Chọn phương thức xử lý tại quầy
                           </h4>
                         </div>
-                        <div className="rounded-full border border-primary/15 bg-white/82 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
+                        <div className="rounded-full border border-primary/15 bg-card px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
                           {methods.length} phương thức
                         </div>
                       </div>
@@ -473,8 +473,8 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
                             variant={m === "cash" ? "default" : "secondary"}
                             disabled={payPending}
                             className={cn(
-                              "h-12 w-full justify-between rounded-2xl px-4 text-sm font-semibold shadow-sm transition-transform hover:translate-y-[-1px]",
-                              m === "cash" && "shadow-primary/15",
+                              "h-12 w-full justify-between rounded-lg px-4 text-sm font-semibold shadow-sm transition-transform hover:translate-y-[-1px]",
+                              m === "cash" && "shadow-md",
                             )}
                             onClick={() => handlePay(m)}
                           >
@@ -499,7 +499,7 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
                         <Button
                           type="button"
                           variant="outline"
-                          className="w-full rounded-2xl"
+                          className="w-full rounded-lg"
                           asChild
                         >
                           <a
@@ -514,7 +514,7 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
                       )}
                       {pendingExtras?.qr_data &&
                         pendingExtras.qr_data.startsWith("http") && (
-                          <div className="rounded-2xl border border-border/70 bg-white/82 p-3">
+                          <div className="rounded-lg border border-border/70 bg-card p-3">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={pendingExtras.qr_data}
@@ -528,7 +528,7 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
                         )}
                       {pendingExtras?.qr_data &&
                         !pendingExtras.qr_data.startsWith("http") && (
-                          <pre className="max-h-32 overflow-auto rounded-2xl border bg-muted p-3 text-xs">
+                          <pre className="max-h-32 overflow-auto rounded-lg border bg-muted p-3 text-xs">
                             {pendingExtras.qr_data}
                           </pre>
                         )}
@@ -540,7 +540,7 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
 
             {/* Print button (hidden in print) */}
             <div className="border-t p-4 print:hidden">
-              <Button className="w-full rounded-2xl shadow-sm transition-transform hover:translate-y-[-1px]" onClick={handlePrint}>
+              <Button className="w-full rounded-lg shadow-sm transition-transform hover:translate-y-[-1px]" onClick={handlePrint}>
                 {isPaid ? (
                   <CheckCircle2 className="mr-2 size-4" />
                 ) : (

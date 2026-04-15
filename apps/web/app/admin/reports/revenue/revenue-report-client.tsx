@@ -1,10 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import {
-  FilterBar,
-  SectionCard,
-} from "@/components/foundation/ui-patterns";
+import { FilterBar, SectionCard } from "@/components/v2/patterns";
 import {
   Table,
   TableBody,
@@ -138,7 +135,7 @@ export function RevenueReportClient({
           {rows.map((r) => (
             <div
               key={r.date}
-              className="rounded-2xl border border-border/70 bg-background p-4"
+              className="rounded-lg border border-border/70 bg-background p-4"
             >
               <div className="flex items-center justify-between gap-3">
                 <p className="font-medium tabular-nums">{r.date}</p>
@@ -181,78 +178,78 @@ export function RevenueReportClient({
 
         <div className="hidden md:block">
           <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-28">Ngày</TableHead>
-              <TableHead className="w-20 text-right">Đơn</TableHead>
-              <TableHead className="w-36 text-right">Doanh thu (₫)</TableHead>
-              <TableHead className="w-28 text-right">Tiền mặt (₫)</TableHead>
-              <TableHead className="w-28 text-right">VietQR (₫)</TableHead>
-              <TableHead className="w-28 text-right">MoMo (₫)</TableHead>
-              <TableHead className="w-28 text-right">Thuế (₫)</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
+            <TableHeader>
               <TableRow>
-                <TableCell
-                  colSpan={7}
-                  className="py-10 text-center text-muted-foreground"
-                >
-                  Không có dữ liệu trong khoảng thời gian này.
-                </TableCell>
+                <TableHead className="w-28">Ngày</TableHead>
+                <TableHead className="w-20 text-right">Đơn</TableHead>
+                <TableHead className="w-36 text-right">Doanh thu (₫)</TableHead>
+                <TableHead className="w-28 text-right">Tiền mặt (₫)</TableHead>
+                <TableHead className="w-28 text-right">VietQR (₫)</TableHead>
+                <TableHead className="w-28 text-right">MoMo (₫)</TableHead>
+                <TableHead className="w-28 text-right">Thuế (₫)</TableHead>
               </TableRow>
-            ) : (
-              rows.map((r) => (
-                <TableRow key={r.date}>
-                  <TableCell className="tabular-nums">{r.date}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {r.order_count.toLocaleString("vi-VN")}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums font-medium">
-                    {(r.total_revenue ?? 0).toLocaleString("vi-VN")}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums text-muted-foreground">
-                    {(r.cash_revenue ?? 0).toLocaleString("vi-VN")}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums text-muted-foreground">
-                    {(r.vietqr_revenue ?? 0).toLocaleString("vi-VN")}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums text-muted-foreground">
-                    {(r.momo_revenue ?? 0).toLocaleString("vi-VN")}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums text-muted-foreground">
-                    {(r.total_tax ?? 0).toLocaleString("vi-VN")}
+            </TableHeader>
+            <TableBody>
+              {rows.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="py-10 text-center text-muted-foreground"
+                  >
+                    Không có dữ liệu trong khoảng thời gian này.
                   </TableCell>
                 </TableRow>
-              ))
+              ) : (
+                rows.map((r) => (
+                  <TableRow key={r.date}>
+                    <TableCell className="tabular-nums">{r.date}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {r.order_count.toLocaleString("vi-VN")}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">
+                      {(r.total_revenue ?? 0).toLocaleString("vi-VN")}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {(r.cash_revenue ?? 0).toLocaleString("vi-VN")}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {(r.vietqr_revenue ?? 0).toLocaleString("vi-VN")}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {(r.momo_revenue ?? 0).toLocaleString("vi-VN")}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {(r.total_tax ?? 0).toLocaleString("vi-VN")}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+            {rows.length > 0 && (
+              <tfoot className="border-t bg-muted/40">
+                <tr>
+                  <td className="px-4 py-2 font-medium text-sm">Tổng cộng</td>
+                  <td className="px-4 py-2 text-right tabular-nums text-sm font-medium">
+                    {totalOrders.toLocaleString("vi-VN")}
+                  </td>
+                  <td className="px-4 py-2 text-right tabular-nums text-sm font-bold">
+                    {totalRevenue.toLocaleString("vi-VN")}
+                  </td>
+                  <td className="px-4 py-2 text-right tabular-nums text-sm">
+                    {totalCash.toLocaleString("vi-VN")}
+                  </td>
+                  <td className="px-4 py-2 text-right tabular-nums text-sm">
+                    {totalVietqr.toLocaleString("vi-VN")}
+                  </td>
+                  <td className="px-4 py-2 text-right tabular-nums text-sm">
+                    {totalMomo.toLocaleString("vi-VN")}
+                  </td>
+                  <td className="px-4 py-2 text-right tabular-nums text-sm">
+                    {totalTax.toLocaleString("vi-VN")}
+                  </td>
+                </tr>
+              </tfoot>
             )}
-          </TableBody>
-          {rows.length > 0 && (
-            <tfoot className="border-t bg-muted/40">
-              <tr>
-                <td className="px-4 py-2 font-medium text-sm">Tổng cộng</td>
-                <td className="px-4 py-2 text-right tabular-nums text-sm font-medium">
-                  {totalOrders.toLocaleString("vi-VN")}
-                </td>
-                <td className="px-4 py-2 text-right tabular-nums text-sm font-bold">
-                  {totalRevenue.toLocaleString("vi-VN")}
-                </td>
-                <td className="px-4 py-2 text-right tabular-nums text-sm">
-                  {totalCash.toLocaleString("vi-VN")}
-                </td>
-                <td className="px-4 py-2 text-right tabular-nums text-sm">
-                  {totalVietqr.toLocaleString("vi-VN")}
-                </td>
-                <td className="px-4 py-2 text-right tabular-nums text-sm">
-                  {totalMomo.toLocaleString("vi-VN")}
-                </td>
-                <td className="px-4 py-2 text-right tabular-nums text-sm">
-                  {totalTax.toLocaleString("vi-VN")}
-                </td>
-              </tr>
-            </tfoot>
-          )}
           </Table>
         </div>
       </SectionCard>

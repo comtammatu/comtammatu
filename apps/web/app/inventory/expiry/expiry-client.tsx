@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { SectionCard } from "@/components/foundation/ui-patterns";
 import {
   AlertOctagon,
   AlertTriangle,
@@ -10,8 +9,15 @@ import {
   Lightbulb,
   Trash2,
 } from "lucide-react";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { tStatus } from "../_lib/dictionary";
 import {
   Table,
@@ -21,7 +27,6 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { PageHeader } from "../_components/shared";
 
 export type ExpiryAlertRow = {
   id: number;
@@ -48,10 +53,7 @@ function getUrgencyBadgeClassName(urgency: string) {
 
 export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
   const [activeTab, setActiveTab] = useState<string>("Tất cả");
-  const panelClassName = getSurfacePanelClassName(
-    "inventory",
-    "ambient-shadow",
-  );
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const filtered =
     activeTab === "Tất cả"
       ? alerts
@@ -63,10 +65,14 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <PageHeader
-          title="Hạn sử dụng"
-          description="Theo dõi lô gần quá hạn, quá hạn và ưu tiên xử lý trong kho."
-        />
+        <Card className="flex-1 border-border/70">
+          <CardHeader>
+            <CardTitle className="text-2xl">Hạn sử dụng</CardTitle>
+            <CardDescription>
+              Theo dõi lô gần quá hạn, quá hạn và ưu tiên xử lý trong kho.
+            </CardDescription>
+          </CardHeader>
+        </Card>
         <Button
           type="button"
           variant="destructive"
@@ -78,68 +84,65 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <SectionCard
-          className={cn(panelClassName, "rounded-2xl bg-card")}
-          density="comfortable"
-        >
-          <div className="mb-4 flex items-start justify-between">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-destructive/12">
-              <AlertOctagon className="size-5 text-destructive" />
+        <Card className={cn(panelClassName, "rounded-lg bg-card")}>
+          <CardContent className="p-6">
+            <div className="mb-4 flex items-start justify-between">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-destructive/12">
+                <AlertOctagon className="size-5 text-destructive" />
+              </div>
+              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                Quá hạn
+              </span>
             </div>
-            <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-              Quá hạn
-            </span>
-          </div>
-          <h3 className="text-3xl font-black tracking-tight text-destructive">
-            {String(expiredCount).padStart(2, "0")}
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Mặt hàng đã hết hạn
-          </p>
-        </SectionCard>
+            <h3 className="text-3xl font-black tracking-tight text-destructive">
+              {String(expiredCount).padStart(2, "0")}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Mặt hàng đã hết hạn
+            </p>
+          </CardContent>
+        </Card>
 
-        <SectionCard
-          className={cn(panelClassName, "rounded-2xl bg-card")}
-          density="comfortable"
-        >
-          <div className="mb-4 flex items-start justify-between">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/12">
-              <AlertTriangle className="size-5 text-primary" />
+        <Card className={cn(panelClassName, "rounded-lg bg-card")}>
+          <CardContent className="p-6">
+            <div className="mb-4 flex items-start justify-between">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/12">
+                <AlertTriangle className="size-5 text-primary" />
+              </div>
+              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                3 ngày tới
+              </span>
             </div>
-            <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-              3 ngày tới
-            </span>
-          </div>
-          <h3 className="text-3xl font-black tracking-tight text-primary">
-            {String(criticalCount).padStart(2, "0")}
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Hết hạn trong 3 ngày tới
-          </p>
-        </SectionCard>
+            <h3 className="text-3xl font-black tracking-tight text-primary">
+              {String(criticalCount).padStart(2, "0")}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Hết hạn trong 3 ngày tới
+            </p>
+          </CardContent>
+        </Card>
 
-        <SectionCard
-          className={cn(panelClassName, "rounded-2xl bg-card")}
-          density="comfortable"
-        >
-          <div className="mb-4 flex items-start justify-between">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-warning/12">
-              <Clock className="size-5 text-warning" />
+        <Card className={cn(panelClassName, "rounded-lg bg-card")}>
+          <CardContent className="p-6">
+            <div className="mb-4 flex items-start justify-between">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-warning/12">
+                <Clock className="size-5 text-warning" />
+              </div>
+              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                7 ngày tới
+              </span>
             </div>
-            <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-              7 ngày tới
-            </span>
-          </div>
-          <h3 className="text-3xl font-black tracking-tight text-warning">
-            {String(warningCount).padStart(2, "0")}
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Hết hạn trong 7 ngày tới
-          </p>
-        </SectionCard>
+            <h3 className="text-3xl font-black tracking-tight text-warning">
+              {String(warningCount).padStart(2, "0")}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Hết hạn trong 7 ngày tới
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="flex gap-1 rounded-2xl bg-muted p-1">
+      <div className="flex gap-1 rounded-lg bg-muted p-1">
         {tabs.map((tab) => {
           const isActive = activeTab === tab;
           return (
@@ -148,7 +151,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
               type="button"
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "focus-ring-standard ui-tab-pill flex-1 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background inline-flex rounded-full whitespace-nowrap flex-1 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
                 isActive
                   ? "bg-white font-bold text-primary shadow-sm"
                   : "text-muted-foreground",
@@ -160,9 +163,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
         })}
       </div>
 
-      <div
-        className={cn(panelClassName, "overflow-hidden rounded-3xl bg-card")}
-      >
+      <div className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}>
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40">
@@ -243,7 +244,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
             </p>
           </div>
         </div>
-        <div className="rounded-xl border border-border/50 bg-muted/50 p-4">
+        <div className="rounded-xl border border-border bg-muted/50 p-4">
           <p className="text-sm font-semibold">Thông báo tự động</p>
           <p className="mt-1 text-xs text-muted-foreground">
             Cài đặt nhắc báo qua Email hoặc Zalo cho quản lý kho khi hàng hóa

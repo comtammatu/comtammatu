@@ -4,6 +4,10 @@ import { useState } from "react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Loader2, LogIn, LogOut } from "lucide-react";
 import { checkIn, checkOut } from "../admin/hr/actions";
+import {
+  Card,
+  CardContent,
+} from "@comtammatu/ui/components/card";
 
 interface TodayAttendance {
   id: number;
@@ -70,63 +74,65 @@ export function EmployeePortalActions({
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <div className="mb-3 flex gap-4 text-xs text-muted-foreground">
-        <span>
-          Vào:{" "}
-          <span className="font-medium text-foreground">
-            {attendance?.checkIn
-              ? new Date(attendance.checkIn).toLocaleTimeString("vi-VN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "—"}
+    <Card>
+      <CardContent className="space-y-3 p-4">
+        <div className="mb-3 flex gap-4 text-xs text-muted-foreground">
+          <span>
+            Vào:{" "}
+            <span className="font-medium text-foreground">
+              {attendance?.checkIn
+                ? new Date(attendance.checkIn).toLocaleTimeString("vi-VN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "—"}
+            </span>
           </span>
-        </span>
-        <span>
-          Ra:{" "}
-          <span className="font-medium text-foreground">
-            {attendance?.checkOut
-              ? new Date(attendance.checkOut).toLocaleTimeString("vi-VN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "—"}
+          <span>
+            Ra:{" "}
+            <span className="font-medium text-foreground">
+              {attendance?.checkOut
+                ? new Date(attendance.checkOut).toLocaleTimeString("vi-VN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "—"}
+            </span>
           </span>
-        </span>
-      </div>
+        </div>
 
-      <div className="flex gap-2">
-        <Button
-          onClick={() => void handleCheckIn()}
-          disabled={loading || hasCheckedIn}
-          className="flex-1"
-          variant={hasCheckedIn ? "outline" : "default"}
-        >
-          {loading && !hasCheckedIn ? (
-            <Loader2 className="mr-2 size-4 animate-spin" />
-          ) : (
-            <LogIn className="mr-2 size-4" />
-          )}
-          {hasCheckedIn ? "Đã vào ca" : "Chấm công vào"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => void handleCheckIn()}
+            disabled={loading || hasCheckedIn}
+            className="flex-1"
+            variant={hasCheckedIn ? "outline" : "default"}
+          >
+            {loading && !hasCheckedIn ? (
+              <Loader2 className="mr-2 size-4 animate-spin" />
+            ) : (
+              <LogIn className="mr-2 size-4" />
+            )}
+            {hasCheckedIn ? "Đã vào ca" : "Chấm công vào"}
+          </Button>
 
-        <Button
-          onClick={() => void handleCheckOut()}
-          disabled={loading || !hasCheckedIn || hasCheckedOut}
-          className="flex-1"
-          variant={hasCheckedOut ? "outline" : "secondary"}
-        >
-          {loading && hasCheckedIn && !hasCheckedOut ? (
-            <Loader2 className="mr-2 size-4 animate-spin" />
-          ) : (
-            <LogOut className="mr-2 size-4" />
-          )}
-          {hasCheckedOut ? "Đã ra ca" : "Chấm công ra"}
-        </Button>
-      </div>
+          <Button
+            onClick={() => void handleCheckOut()}
+            disabled={loading || !hasCheckedIn || hasCheckedOut}
+            className="flex-1"
+            variant={hasCheckedOut ? "outline" : "secondary"}
+          >
+            {loading && hasCheckedIn && !hasCheckedOut ? (
+              <Loader2 className="mr-2 size-4 animate-spin" />
+            ) : (
+              <LogOut className="mr-2 size-4" />
+            )}
+            {hasCheckedOut ? "Đã ra ca" : "Chấm công ra"}
+          </Button>
+        </div>
 
-      {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
-    </div>
+        {error && <p className="text-xs text-destructive">{error}</p>}
+      </CardContent>
+    </Card>
   );
 }

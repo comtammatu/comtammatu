@@ -1,8 +1,5 @@
 import { fetchPayrollPeriods } from "../payroll-actions";
-import {
-  PageContainer,
-  PageHeader,
-} from "@/components/foundation/ui-patterns";
+import { PageContainer, PageHeader } from "@/components/v2/patterns";
 import { PayrollListClient } from "./payroll-list-client";
 
 export default async function PayrollPage() {
@@ -13,10 +10,7 @@ export default async function PayrollPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        eyebrow="Phân hệ ERP"
-        title="Bảng lương"
-      />
+      <PageHeader eyebrow="Phân hệ ERP" title="Bảng lương" />
       <PayrollListClient initialPeriods={periods} />
     </PageContainer>
   );

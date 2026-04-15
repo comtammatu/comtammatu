@@ -226,26 +226,26 @@ function IngredientFormContent({
               <SelectContent>
                 <SelectItem value="ambient">Thường</SelectItem>
                 <SelectItem value="refrigerated">Lạnh</SelectItem>
-              <SelectItem value="frozen">Đông lạnh</SelectItem>
+                <SelectItem value="frozen">Đông lạnh</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="ing-kind" className="text-sm font-medium">
+            Loại hàng
+          </Label>
+          <Select value={itemKind} onValueChange={setItemKind}>
+            <SelectTrigger id="ing-kind" className="h-10">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="raw_material">Nguyên liệu</SelectItem>
+              <SelectItem value="finished_good">Thành phẩm</SelectItem>
             </SelectContent>
           </Select>
         </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="ing-kind" className="text-sm font-medium">
-          Loại hàng
-        </Label>
-        <Select value={itemKind} onValueChange={setItemKind}>
-          <SelectTrigger id="ing-kind" className="h-10">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="raw_material">Nguyên liệu</SelectItem>
-            <SelectItem value="finished_good">Thành phẩm</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
 
         {/* Row 4: min / max / reorder */}
         <div className="grid grid-cols-3 gap-4">

@@ -1,242 +1,215 @@
-# Design System — Cơm Tấm Má Tư
+# Design System — Cơm Tấm Má Tư Web App V2
 
-> Version: 5.0.0 | Updated: 2026-04-14
+> Version: 7.0.0 | Updated: 2026-04-16
 > Stack: Next.js 16.2 · React 19.2 · Tailwind CSS 4.2 · shadcn/ui · TypeScript 6.0
 
 ## Source of Truth
 
-Design system có đúng một nguồn sự thật vận hành:
+Design system co dung mot nguon su that van hanh:
 
 1. `apps/web/app/globals.css`
-   Đây là nguồn compile/runtime cho token, utility và shared surface classes.
-2. Tài liệu này
-   Đây là nguồn quyết định sản phẩm, governance và contract implementation.
+   Day la nguon compile/runtime cho token va utility classes.
+2. Tai lieu nay
+   Day la nguon quyet dinh san pham, governance va contract.
 
-Hai nơi này phải khớp 1:1. Nếu token trong `globals.css` thay đổi mà spec chưa đổi, spec được xem là lỗi thời và phải được cập nhật ngay.
+Hai noi nay phai khop 1:1.
 
 ## Design Direction
 
-Hướng chính thức là `Warm MD3`.
+Huong chinh thuc cua web app la `Restaurant Ops OS`.
 
-- Brand accent: burnt orange
-- Surface: warm white
-- Semantic status: success / warning / info / destructive
-- Typography: Be Vietnam Pro cho trải nghiệm tiếng Việt-first
-- Mục tiêu: đọc nhanh, vận hành dài giờ, tương thích dữ liệu dày và touch-first
+- Typography chinh: `Inter`
+- Typography mono: `Geist Mono`
+- Nen tong the: giay van hanh am (`paper`) thay vi trang tron
+- Accent thuong hieu: rust orange cho action va trang thai dang xu ly
+- Surface grammar: lenh dieu phoi, de doc nhanh, khong con shell/sidebar kieu cu
+- Tonality: calm under load, role-aware, action-first, mobile-capable
+- Khong dung AI-generic layouts, khong ra nhieu mini theme rieng cho tung surface
+- Cac surface duoc phep khac nhau o contrast, density, interaction rhythm; khong duoc tu tao token system rieng
 
-Không còn dùng hướng `red/zinc minimal` làm chuẩn chính thức.
+## Architecture
 
-## Kiến trúc hệ thống UI
+Design system gom 3 tang:
 
-Design system được chia thành 3 tầng:
+### 1. Foundation (tokens + utilities)
 
-### 1. Foundation
+Dinh nghia o `apps/web/app/globals.css`:
 
-Bao gồm:
-
-- Color tokens
-- Typography scale
+- Color tokens (zinc palette + orange accent)
+- Typography scale (Be Vietnam Pro, Geist Mono)
 - Spacing scale
 - Radius
-- Elevation
-- Motion
+- Elevation (neutral shadows)
+- Animations
 - Focus ring
-- Touch target
+- Touch target utilities
 - Safe-area utilities
+- Vietnamese text utilities
 
-Foundation được định nghĩa ở `apps/web/app/globals.css`.
+### 2. App-local V2 Composition
 
-### 2. Recipes
+Composition layer moi song trong `apps/web/app/components/v2/`.
 
-Shared recipe layer là contract bắt buộc cho page-level composition:
+- V2 shells
+- top context bars
+- nav rails / drawers
+- metric panels
+- dense tables / mobile cards
+- empty / loading / blocked states
+- route recovery states
 
-- `PageContainer`
-- `PageHeader`
-- `FilterBar`
-- `SectionCard`
-- `EmptyState`
-- `StatusBadge`
+`packages/ui` giu vai tro primitive-only. Khong mo rong `admin-patterns` / `inventory-patterns` nhu contract chinh cho surface moi.
 
-Recipe API hỗ trợ:
+### 3. Primitives (shadcn/ui)
 
-- `surface: "admin" | "inventory" | "pos" | "kds" | "employee" | "auth"`
-- `density: "comfortable" | "compact" | "touch"`
-- `tone: "neutral" | "success" | "warning" | "danger" | "info"`
+32+ shadcn/ui components based on Radix UI:
 
-Các helper class/variant chung được export từ `@comtammatu/ui`.
+- Location: `packages/ui/src/components/`
+- Export: `@comtammatu/ui/components/*`
+- Only `cn` is exported from `@comtammatu/ui` barrel
 
-### 3. Surface variants
-
-Surface được phép khác nhau ở:
-
-- Density
-- Emphasis
-- Contrast
-- Touch affordance
-- Status presentation
-
-Surface không được:
-
-- Tự remap semantic token
-- Tự tạo palette riêng
-- Tự định nghĩa shell riêng nếu chỉ khác visual
-- Import domain-level theme override CSS như pattern mặc định
-
-## Token contract
+## Token Contract
 
 ### Core colors
 
-Các token runtime chính nằm ở `@theme inline` trong `globals.css`:
+| Token                  | Value     | Description                 |
+| ---------------------- | --------- | --------------------------- |
+| `background`           | `#f3efe6` | Paper background            |
+| `foreground`           | `#15191d` | Primary ink                 |
+| `primary`              | `#c35a22` | Rust action                 |
+| `primary-foreground`   | `#fff8f2` | Light ink on rust           |
+| `secondary`            | `#e5ddcf` | Warm neutral block          |
+| `secondary-foreground` | `#23282d` | Dense neutral text          |
+| `accent`               | `#d7cebf` | Highlighted control surface |
+| `accent-foreground`    | `#171a1e` | Accent text                 |
+| `muted`                | `#e6dfd3` | Quiet surface               |
+| `muted-foreground`     | `#6c6c67` | Secondary text              |
+| `card`                 | `#fbf8f1` | Raised panel                |
+| `card-foreground`      | `#15191d` | Panel text                  |
+| `border`               | `#c9c1b4` | Warm divider                |
+| `input`                | `#c9c1b4` | Input stroke                |
+| `ring`                 | `#c35a22` | Focus ring                  |
+| `destructive`          | `#be3a2d` | Error                       |
+| `success`              | `#197355` | Success                     |
+| `warning`              | `#ab7218` | Warning                     |
+| `info`                 | `#285fc0` | Info                        |
 
-- `background`
-- `foreground`
-- `primary`
-- `primary-foreground`
-- `secondary`
-- `secondary-foreground`
-- `accent`
-- `accent-foreground`
-- `muted`
-- `muted-foreground`
-- `card`
-- `card-foreground`
-- `border`
-- `input`
-- `ring`
-- `destructive`
-- `destructive-foreground`
-- `success`
-- `warning`
-- `info`
+### Sidebar tokens
+
+| Token                        | Value     |
+| ---------------------------- | --------- |
+| `sidebar`                    | `#12161a` |
+| `sidebar-foreground`         | `#f6f2e9` |
+| `sidebar-primary`            | `#c35a22` |
+| `sidebar-primary-foreground` | `#fff8f2` |
+| `sidebar-accent`             | `#1e2429` |
+| `sidebar-accent-foreground`  | `#f6f2e9` |
+| `sidebar-border`             | `#2a3238` |
+| `sidebar-ring`               | `#c35a22` |
 
 ### Surface semantics
 
-- `surface-raised`
-- `surface-sunken`
-- `state-pending`
-- `state-processing`
-- `state-ready`
-- `state-cancelled`
+| Token              | Value     |
+| ------------------ | --------- |
+| `surface-raised`   | `#fbf8f1` |
+| `surface-sunken`   | `#e8e1d5` |
+| `panel-subtle`     | `#efe8dc` |
+| `panel-strong`     | `#ddd2c2` |
+| `shell`            | `#12161a` |
+| `shell-foreground` | `#f6f2e9` |
+| `state-pending`    | `#ab7218` |
+| `state-processing` | `#c35a22` |
+| `state-ready`      | `#197355` |
+| `state-cancelled`  | `#767069` |
 
-### Sidebar semantics
+### Typography
 
-- `sidebar`
-- `sidebar-foreground`
-- `sidebar-primary`
-- `sidebar-primary-foreground`
-- `sidebar-accent`
-- `sidebar-accent-foreground`
-- `sidebar-border`
-- `sidebar-ring`
+- `font-sans`: Inter
+- `font-mono`: Geist Mono
+- `text-data`: 13px (tables, lists)
+- `text-label`: 10px (badges, chips)
+- `text-caption`: 11px (captions)
 
-### Typography tokens
+### Layout
 
-- `font-sans`
-- `font-mono`
-- `text-data`
-- `text-label`
-- `text-caption`
+- Spacing: `space-1` (0.25rem) → `space-12` (3rem)
+- Radius: `radius-sm` → `radius-xl`
+- Elevation: neutral shadows, 3 levels
+- Z-index: `z-overlay-1` → `z-overlay-5`
 
-### Layout tokens
+## Styling Patterns
 
-- spacing: `space-1` → `space-12`
-- radius: `radius-sm` → `radius-xl`
-- elevation: `elevation-1` → `elevation-3`
-- z-index overlays: `z-overlay-1` → `z-overlay-5`
+### Standard panel
 
-## Surface defaults
+```tsx
+className = "rounded-3xl border border-border/80 bg-card shadow-app-sm";
+```
 
-### Admin
+### Standard header
 
-- Density: `comfortable`
-- Mood: calm, data-dense, low noise
-- Sidebar/header dùng shared shell contract
+```tsx
+className = "sticky top-0 z-30 border-b border-border/70 bg-background/95";
+```
 
-### Inventory
+### Standard shell rail
 
-- Density: `comfortable`
-- Có thể tăng emphasis cho operator workflows
-- Được phép dùng scoped alias variable để map legacy inventory UI về global tokens
-- Không được remap utility classes hoặc tạo theme CSS override mới
+```tsx
+className =
+  "rounded-[2rem] border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-app-lg";
+```
 
-### POS
+### Stat card
 
-- Density: `touch`
-- Touch target tối thiểu `44x44`, ưu tiên `56x56`
-- CTA và action phải rõ trạng thái disabled/loading/error
+```tsx
+className = "rounded-3xl border border-border/80 bg-card p-5 shadow-app-sm";
+```
 
-### KDS
+### Status badge tones
 
-- Density: `touch`
-- High contrast, distance readable
-- Dark presentation được phép như một surface variant, không phải token system riêng
+```txt
+success: "bg-green-50 text-green-700 border-green-200 text-xs font-medium"
+warning: "bg-amber-50 text-amber-700 border-amber-200 text-xs font-medium"
+danger:  "bg-red-50 text-red-700 border-red-200 text-xs font-medium"
+info:    "bg-blue-50 text-blue-700 border-blue-200 text-xs font-medium"
+neutral: "bg-muted text-muted-foreground border-border text-xs font-medium"
+```
 
-### Employee
+### KDS dark surface
 
-- Density: `compact` trên mobile, `comfortable` ở sections dài
-- Navigation dưới cùng và mobile header phải dùng shared shell rules
+```txt
+Shell:  "min-h-screen bg-zinc-950 text-white"
+Panel:  "rounded-lg border border-zinc-800 bg-zinc-900 text-white shadow-sm"
+Header: "sticky top-0 z-30 border-b border-zinc-800 bg-zinc-950 text-white"
+```
 
-### Auth
+### Hover lift
 
-- Có thể dùng brand emphasis mạnh hơn
-- Vẫn phải đi qua cùng token và shared panel contract
+```tsx
+className = "transition-all hover:-translate-y-0.5 hover:shadow-md";
+```
 
-## Shell contract
+## Accessibility
 
-Shell logic vẫn ở app layer, nhưng visual contract phải thống nhất:
-
-- Root shell dùng shared shell class/helper
-- Header sticky + backdrop + border rhythm thống nhất
-- Sidebar dùng shared sidebar surface contract
-- Main content dùng spacing rhythm nhất quán
-- Mobile nav/header phải có safe-area handling chung
-
-Không tạo shell mới nếu chỉ khác visual. Khi cần shell mới, phải extend shared contract trước.
-
-## Accessibility rules
-
-- Mọi control tương tác phải có visible focus state
-- Keyboard navigation bắt buộc hoạt động qua sidebar, dialog, sheet, dropdown, filter bar
-- Touch-first surfaces phải đạt minimum touch target
-- Reduced motion phải được tôn trọng
-- Status colors phải giữ contrast hợp lệ với text và border
-
-## Performance rules
-
-- Không thêm client boundary chỉ để styling
-- Static visual styling phải nằm trong token, utility hoặc shared recipe
-- Inline style chỉ chấp nhận cho giá trị thật sự dynamic:
-  - runtime width/height
-  - chart coordinates
-  - third-party primitive constraints
-- Không import per-domain theme CSS
-- Không duplicate recipe layer ở từng domain nếu khác biệt chỉ là visual
+- Moi control tuong tac phai co visible focus state
+- Keyboard navigation bat buoc hoat dong
+- Touch-first surfaces phai dat minimum touch target (44x44, uu tien 56x56)
+- Reduced motion phai duoc ton trong
+- Status colors phai giu contrast hop le
 
 ## Governance
 
-Các rule sau là bắt buộc:
+1. Khong import `theme.css` o domain/page de override system.
+2. Khong them static inline style vao foundation, shell hoac auth/mobile chrome.
+3. Khi can token moi, them vao `globals.css` truoc roi moi dung o component.
+4. App-local V2 composition phai song trong `apps/web/app/components/v2/`.
+5. `packages/ui` la primitive-first; khong coi `admin-patterns` / `inventory-patterns` la contract moi.
+6. Copy phai di qua glossary/dictionary khi dung term nghiep vu.
+7. `pnpm typecheck && pnpm lint && pnpm build` xanh truoc khi ship.
 
-1. Không commit spec UI khác ngoài file này làm nguồn sự thật cạnh tranh.
-2. Không import `theme.css` ở domain/page để override system.
-3. Không thêm static inline style vào foundation, shell hoặc auth/mobile chrome.
-4. Không map status màu trực tiếp trong feature page nếu đã có tone/recipe tương ứng.
-5. Khi cần token mới, thêm vào `globals.css` trước rồi mới dùng ở component.
-6. Khi cần visual khác cho surface, thêm variant ở shared recipe/helper trước rồi mới rollout vào page.
-
-## Implementation checkpoints
-
-Khi làm UI mới hoặc refactor UI cũ, tối thiểu phải kiểm:
-
-- Đúng `surface`, `density`, `tone`
-- Dùng shared recipe trước khi custom
-- Không có `theme.css` import
-- Không có static inline style ngoài whitelist
-- `pnpm typecheck && pnpm lint && pnpm build` xanh
-
-## Related files
+## Related Files
 
 - `apps/web/app/globals.css`
-- `apps/web/app/components/foundation/ui-patterns.tsx`
-- `packages/ui/src/lib/design-system.ts`
+- `apps/web/app/components/v2/`
+- `packages/ui/src/components/blocked-state-flash.tsx`
+- `packages/ui/src/components/` (shadcn/ui primitives)
 - `docs/modules/ui.md`
-- `tasks/regressions.md`

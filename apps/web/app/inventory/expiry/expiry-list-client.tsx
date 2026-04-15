@@ -15,6 +15,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -41,8 +48,6 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { SectionCard } from "@/components/foundation/ui-patterns";
-import { PageHeader } from "../_components/shared";
 import { adjustStock, fetchExpiryAlerts } from "../actions";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import type { BranchOption, ExpiryAlertRow } from "../page";
@@ -182,197 +187,205 @@ export function ExpiryListClient({
 
   function renderTable(items: ExpiryAlertRow[]) {
     return (
-      <SectionCard className="overflow-hidden rounded-2xl" density="compact">
-        {/* Search + branch filter bar */}
-        <div className="-m-4 flex flex-wrap items-center gap-3 border-b bg-muted/20 px-4 py-3 md:-m-5 md:px-5">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
-          <Input
-            placeholder="Tìm nguyên liệu, lô hàng, phiếu nhập..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-8 min-w-0 flex-1 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
-          />
-          {!isBranchLocked && (
-            <Select value={branchFilter} onValueChange={setBranchFilter}>
-              <SelectTrigger className="h-8 w-auto min-w-36 text-sm">
-                <SelectValue placeholder="Chi nhánh" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả chi nhánh</SelectItem>
-                {branches.map((b) => (
-                  <SelectItem key={b.id} value={String(b.id)}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <span className="shrink-0 text-xs text-muted-foreground">
-            {items.length} mục
-          </span>
-        </div>
-
-        {/* Mobile: card layout */}
-        {isMobile ? (
-          <div className="divide-y">
-            {items.length === 0 && (
-              <div className="py-16 text-center">
-                <CheckCircle2 className="mx-auto size-10 text-success/40" />
-                <p className="mt-2 text-sm font-medium text-muted-foreground">
-                  Không có hàng sắp hết hạn
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground/70">
-                  Tất cả nguyên liệu còn trong hạn sử dụng
-                </p>
-              </div>
+      <Card className="overflow-hidden rounded-lg">
+        <CardContent className="p-4 md:p-5">
+          {/* Search + branch filter bar */}
+          <div className="-m-4 flex flex-wrap items-center gap-3 border-b bg-muted/20 px-4 py-3 md:-m-5 md:px-5">
+            <Search className="size-4 shrink-0 text-muted-foreground" />
+            <Input
+              placeholder="Tìm nguyên liệu, lô hàng, phiếu nhập..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 min-w-0 flex-1 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+            />
+            {!isBranchLocked && (
+              <Select value={branchFilter} onValueChange={setBranchFilter}>
+                <SelectTrigger className="h-8 w-auto min-w-36 text-sm">
+                  <SelectValue placeholder="Chi nhánh" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả chi nhánh</SelectItem>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={String(b.id)}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
-            {items.map((alert, idx) => {
-              const meta = URGENCY_META[alert.urgency] ?? {
-                label: alert.urgency,
-                className: "bg-muted text-muted-foreground",
-              };
-              return (
-                <div
-                  key={`${alert.ingredient_id}-${alert.grn_number}-${alert.batch_number ?? ""}-${String(idx)}`}
-                  className="flex items-center justify-between gap-3 px-4 py-3"
-                >
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium truncate">
-                        {alert.ingredient_name}
-                      </span>
-                      <Badge className={cn("text-xs shrink-0", meta.className)}>
-                        {alert.urgency === "expired"
-                          ? "Đã hết hạn"
-                          : `${alert.days_remaining} ngày`}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">
-                      Lô: {alert.batch_number ?? "—"} · GRN: {alert.grn_number}{" "}
-                      · {alert.branch_name}
-                    </p>
-                  </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="h-7 gap-1.5 text-xs shrink-0"
-                    onClick={() => openWriteOff(alert)}
-                    disabled={isPending}
-                  >
-                    <Trash2 className="size-3.5" />
-                    Xóa sổ
-                  </Button>
-                </div>
-              );
-            })}
+            <span className="shrink-0 text-xs text-muted-foreground">
+              {items.length} mục
+            </span>
           </div>
-        ) : (
-          /* Desktop: table layout */
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/20 hover:bg-muted/20">
-                <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  Nguyên liệu
-                </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  Lô hàng
-                </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  Ngày hết hạn
-                </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  Còn lại
-                </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  Phiếu nhập
-                </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  Chi nhánh
-                </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  Hành động
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+
+          {/* Mobile: card layout */}
+          {isMobile ? (
+            <div className="divide-y">
               {items.length === 0 && (
-                <TableEmptyStateRow
-                  colSpan={7}
-                  paddingClassName="py-16"
-                  icon={
-                    <CheckCircle2 className="mx-auto size-10 text-success/40" />
-                  }
-                  title="Không có hàng sắp hết hạn"
-                  description="Tất cả nguyên liệu còn trong hạn sử dụng"
-                />
+                <div className="py-16 text-center">
+                  <CheckCircle2 className="mx-auto size-10 text-success/40" />
+                  <p className="mt-2 text-sm font-medium text-muted-foreground">
+                    Không có hàng sắp hết hạn
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground/70">
+                    Tất cả nguyên liệu còn trong hạn sử dụng
+                  </p>
+                </div>
               )}
-              {items.map((alert, idx) => (
-                <TableRow
-                  key={`${alert.ingredient_id}-${alert.grn_number}-${alert.batch_number ?? ""}-${String(idx)}`}
-                  className="hover:bg-muted/30 transition-colors"
-                >
-                  <TableCell className="text-sm font-medium">
-                    {alert.ingredient_name}
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {alert.batch_number ?? "\u2014"}
-                  </TableCell>
-                  <TableCell className="text-sm tabular-nums text-muted-foreground">
-                    {new Date(alert.expiry_date).toLocaleDateString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })}
-                  </TableCell>
-                  <TableCell>
-                    {alert.urgency === "expired" ? (
-                      <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-xs">
-                        Đã hết hạn
-                      </Badge>
-                    ) : (
-                      <span
-                        className={cn(
-                          "text-sm font-medium tabular-nums",
-                          alert.urgency === "critical"
-                            ? "text-destructive"
-                            : "text-warning",
-                        )}
-                      >
-                        {alert.days_remaining} ngày
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {alert.grn_number}
-                  </TableCell>
-                  <TableCell className="text-sm">{alert.branch_name}</TableCell>
-                  <TableCell>
+              {items.map((alert, idx) => {
+                const meta = URGENCY_META[alert.urgency] ?? {
+                  label: alert.urgency,
+                  className: "bg-muted text-muted-foreground",
+                };
+                return (
+                  <div
+                    key={`${alert.ingredient_id}-${alert.grn_number}-${alert.batch_number ?? ""}-${String(idx)}`}
+                    className="flex items-center justify-between gap-3 px-4 py-3"
+                  >
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium truncate">
+                          {alert.ingredient_name}
+                        </span>
+                        <Badge
+                          className={cn("text-xs shrink-0", meta.className)}
+                        >
+                          {alert.urgency === "expired"
+                            ? "Đã hết hạn"
+                            : `${alert.days_remaining} ngày`}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">
+                        Lô: {alert.batch_number ?? "—"} · GRN:{" "}
+                        {alert.grn_number} · {alert.branch_name}
+                      </p>
+                    </div>
                     <Button
                       variant="destructive"
                       size="sm"
-                      className="h-7 gap-1.5 text-xs"
+                      className="h-7 gap-1.5 text-xs shrink-0"
                       onClick={() => openWriteOff(alert)}
                       disabled={isPending}
                     >
                       <Trash2 className="size-3.5" />
                       Xóa sổ
                     </Button>
-                  </TableCell>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* Desktop: table layout */
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/20 hover:bg-muted/20">
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                    Nguyên liệu
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                    Lô hàng
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                    Ngày hết hạn
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                    Còn lại
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                    Phiếu nhập
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                    Chi nhánh
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                    Hành động
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </SectionCard>
+              </TableHeader>
+              <TableBody>
+                {items.length === 0 && (
+                  <TableEmptyStateRow
+                    colSpan={7}
+                    paddingClassName="py-16"
+                    icon={
+                      <CheckCircle2 className="mx-auto size-10 text-success/40" />
+                    }
+                    title="Không có hàng sắp hết hạn"
+                    description="Tất cả nguyên liệu còn trong hạn sử dụng"
+                  />
+                )}
+                {items.map((alert, idx) => (
+                  <TableRow
+                    key={`${alert.ingredient_id}-${alert.grn_number}-${alert.batch_number ?? ""}-${String(idx)}`}
+                    className="hover:bg-muted/30 transition-colors"
+                  >
+                    <TableCell className="text-sm font-medium">
+                      {alert.ingredient_name}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {alert.batch_number ?? "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-sm tabular-nums text-muted-foreground">
+                      {new Date(alert.expiry_date).toLocaleDateString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })}
+                    </TableCell>
+                    <TableCell>
+                      {alert.urgency === "expired" ? (
+                        <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-xs">
+                          Đã hết hạn
+                        </Badge>
+                      ) : (
+                        <span
+                          className={cn(
+                            "text-sm font-medium tabular-nums",
+                            alert.urgency === "critical"
+                              ? "text-destructive"
+                              : "text-warning",
+                          )}
+                        >
+                          {alert.days_remaining} ngày
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {alert.grn_number}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {alert.branch_name}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="h-7 gap-1.5 text-xs"
+                        onClick={() => openWriteOff(alert)}
+                        disabled={isPending}
+                      >
+                        <Trash2 className="size-3.5" />
+                        Xóa sổ
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <>
-      <PageHeader
-        title="Hạn sử dụng"
-        description="Theo dõi hàng sắp hết hạn."
-      />
+      <Card className="border-border/70">
+        <CardHeader>
+          <CardTitle className="text-2xl">Hạn sử dụng</CardTitle>
+          <CardDescription>Theo dõi hàng sắp hết hạn.</CardDescription>
+        </CardHeader>
+      </Card>
 
       {/* Urgency count badges */}
       <div className="flex flex-wrap items-center gap-2">

@@ -4,10 +4,7 @@ import {
   getInventoryValueVisibility,
 } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
-import {
-  PageContainer,
-  PageHeader,
-} from "@/components/foundation/ui-patterns";
+import { PageContainer, PageHeader } from "@/components/v2/patterns";
 import { InventoryValuePanel } from "@/inventory/inventory-value-panel";
 
 export default async function InventoryValueReportPage() {

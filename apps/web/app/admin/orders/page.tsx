@@ -12,7 +12,7 @@ import {
   PageContainer,
   PageHeader,
   SectionCard,
-} from "@/components/foundation/ui-patterns";
+} from "@/components/v2/patterns";
 import {
   Tabs,
   TabsContent,
@@ -33,10 +33,7 @@ export default async function OrdersPage() {
   if (!ctx) {
     return (
       <PageContainer>
-        <PageHeader
-          eyebrow="Điều phối giao dịch"
-          title="Đơn hàng"
-        />
+        <PageHeader eyebrow="Điều phối giao dịch" title="Đơn hàng" />
         <EmptyState
           icon={<CircleAlert className="size-5" />}
           title="Không có quyền truy cập"
@@ -55,9 +52,7 @@ export default async function OrdersPage() {
   if (!ordersResult.success || !ordersResult.data) {
     return (
       <PageContainer>
-        <PageHeader
-          title="Đơn hàng"
-        />
+        <PageHeader title="Đơn hàng" />
         <p className="text-sm text-destructive">
           {ordersResult.error ?? "Không thể tải đơn hàng"}
         </p>
@@ -93,7 +88,7 @@ export default async function OrdersPage() {
       />
       <SectionCard>
         <Tabs defaultValue="orders">
-          <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto rounded-2xl bg-muted/60 p-2 shadow-sm">
+          <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto rounded-lg bg-muted/60 p-2 shadow-sm">
             <TabsTrigger
               value="orders"
               className="rounded-full px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"

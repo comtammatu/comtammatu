@@ -291,7 +291,10 @@ export async function createStockTransfer(
       return { success: false, error: "Không có quyền tạo phiếu chuyển." };
     }
     if (error.code === "23514" || error.code === "22023") {
-      return { success: false, error: "Thông tin kho luân chuyển không hợp lệ." };
+      return {
+        success: false,
+        error: "Thông tin kho luân chuyển không hợp lệ.",
+      };
     }
     return { success: false, error: "Không thể tạo phiếu chuyển." };
   }

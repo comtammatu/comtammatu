@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { SectionCard } from "@/components/foundation/ui-patterns";
 import {
   CheckCircle,
   Pause,
@@ -11,6 +10,14 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
+import { Badge } from "@comtammatu/ui/components/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import {
   Table,
   TableBody,
@@ -30,9 +37,12 @@ import {
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
-import { FilterBar, PageHeader, StatusBadge } from "../_components/shared";
+import { cn } from "@comtammatu/ui";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
+import {
+  getInventoryStatusBadgeVariant,
+  getInventoryStatusLabel,
+} from "../_lib/ui";
 import { deleteSupplier, fetchSuppliers } from "../procurement-actions";
 import { SupplierDialog } from "./supplier-dialog";
 import type { SupplierRow } from "./supplier-dialog";
@@ -49,10 +59,7 @@ const avatarColors = [
 ];
 
 export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
-  const panelClassName = getSurfacePanelClassName(
-    "inventory",
-    "ambient-shadow",
-  );
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const [rows, setRows] = useState(initial);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -109,14 +116,16 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <PageHeader
-          title="Danh sách Nhà cung cấp"
-          description="Đối tác cung ứng."
-        />
+        <Card className="flex-1 border-border/70">
+          <CardHeader>
+            <CardTitle className="text-2xl">Danh sách Nhà cung cấp</CardTitle>
+            <CardDescription>Đối tác cung ứng.</CardDescription>
+          </CardHeader>
+        </Card>
         <button
           type="button"
           onClick={openCreate}
-          className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-xl shadow-primary/15 transition-transform hover:scale-[1.02]"
+          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-[1.02]"
         >
           <Plus className="size-4" />
           Thêm nhà cung cấp
@@ -149,47 +158,43 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             value: String(suspended).padStart(2, "0"),
           },
         ].map((card) => (
-          <SectionCard
+          <Card
             key={card.label}
-            className={cn(panelClassName, "rounded-2xl bg-card")}
-            density="comfortable"
+            className={cn(panelClassName, "rounded-lg bg-card")}
           >
-            <div className="mb-4 flex items-start justify-between">
-              <div
+            <CardContent className="p-6">
+              <div className="mb-4 flex items-start justify-between">
+                <div
+                  className={cn(
+                    "flex size-10 items-center justify-center rounded-xl",
+                    card.iconBg,
+                    card.iconColor,
+                  )}
+                >
+                  {card.icon}
+                </div>
+                <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                  Hệ thống
+                </span>
+              </div>
+              <h3
                 className={cn(
-                  "flex size-10 items-center justify-center rounded-xl",
-                  card.iconBg,
-                  card.iconColor,
+                  "text-3xl font-black tracking-tight",
+                  card.valueClassName,
                 )}
               >
-                {card.icon}
-              </div>
-              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-                Hệ thống
-              </span>
-            </div>
-            <h3
-              className={cn(
-                "text-3xl font-black tracking-tight",
-                card.valueClassName,
-              )}
-            >
-              {card.value}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">{card.label}</p>
-          </SectionCard>
+                {card.value}
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">{card.label}</p>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
       {/* Data Table */}
-      <div
-        className={cn(panelClassName, "overflow-hidden rounded-3xl bg-card")}
-      >
+      <div className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}>
         {/* Search bar */}
-        <FilterBar
-          className="rounded-none border-0 border-b border-border/40 px-6 py-4 shadow-none"
-          surface="inventory"
-        >
+        <div className="flex flex-wrap items-center gap-3 border-b border-border px-6 py-4">
           <Search className="size-4 shrink-0 text-muted-foreground" />
           <input
             type="text"
@@ -201,7 +206,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
           <span className="shrink-0 text-xs font-medium text-muted-foreground">
             {filtered.length} / {rows.length}
           </span>
-        </FilterBar>
+        </div>
 
         <Table>
           <TableHeader>
@@ -245,7 +250,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
               return (
                 <TableRow
                   key={s.id}
-                  className="group border-border/50 transition-colors"
+                  className="group border-border transition-colors"
                 >
                   <TableCell className="px-6 py-5">
                     <div className="flex items-center gap-3">
@@ -277,16 +282,22 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
                     {s.address ?? "—"}
                   </TableCell>
                   <TableCell className="px-6 py-5 text-center">
-                    <StatusBadge
-                      status={s.is_active ? "active" : "suspended"}
-                    />
+                    <Badge
+                      variant={getInventoryStatusBadgeVariant(
+                        s.is_active ? "active" : "suspended",
+                      )}
+                    >
+                      {getInventoryStatusLabel(
+                        s.is_active ? "active" : "suspended",
+                      )}
+                    </Badge>
                   </TableCell>
                   <TableCell className="px-6 py-5 text-right">
                     <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                       <button
                         type="button"
                         onClick={() => openEdit(s)}
-                        className="focus-ring-standard rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         aria-label={`Sửa ${s.name}`}
                       >
                         <Pencil className="size-4" />
@@ -294,7 +305,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
                       <button
                         type="button"
                         onClick={() => setDeleteConfirmId(s.id)}
-                        className="focus-ring-standard rounded-full p-1.5 text-destructive transition-colors hover:bg-destructive/10"
+                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full p-1.5 text-destructive transition-colors hover:bg-destructive/10"
                         aria-label={`Xóa ${s.name}`}
                       >
                         <Trash2 className="size-4" />
@@ -308,7 +319,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
         </Table>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between border-t border-border/40 px-6 py-4">
+        <div className="flex items-center justify-between border-t border-border px-6 py-4">
           <span className="text-xs font-medium text-muted-foreground">
             Hiển thị {filtered.length} nhà cung cấp
           </span>

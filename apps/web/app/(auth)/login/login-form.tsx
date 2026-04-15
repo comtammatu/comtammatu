@@ -49,7 +49,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
         >
           {statusState.status}
         </Badge>
-        <span className="rounded-full border border-border/70 bg-white/70 px-3 py-1 text-xs font-medium text-muted-foreground">
+        <span className="rounded-full border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
           Vào đúng phân hệ theo vai trò
         </span>
       </div>
@@ -75,7 +75,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
               autoComplete="email"
               spellCheck={false}
               placeholder="email@comtammatu.com"
-              className="touch-target h-12 rounded-2xl focus-ring-standard"
+              className="min-h-11 min-w-11 h-12 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             />
           </div>
 
@@ -89,14 +89,14 @@ export function LoginForm({ returnTo }: LoginFormProps) {
               type="password"
               required
               autoComplete="current-password"
-              className="touch-target h-12 rounded-2xl focus-ring-standard"
+              className="min-h-11 min-w-11 h-12 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             />
           </div>
         </div>
 
         {state?.error ? (
           <div
-            className="rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-2.5 text-sm leading-5 text-destructive"
+            className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-2.5 text-sm leading-5 text-destructive"
             role="alert"
           >
             <p className="font-semibold">Không thể đăng nhập</p>
@@ -106,16 +106,16 @@ export function LoginForm({ returnTo }: LoginFormProps) {
 
         <Button
           type="submit"
-          className="touch-target h-12 w-full rounded-2xl text-sm font-semibold shadow-sm transition-shadow hover:shadow-md"
+          className="min-h-11 min-w-11 h-12 w-full rounded-lg text-sm font-semibold shadow-sm transition-shadow hover:shadow-md"
           disabled={isPending}
         >
           {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
           {isPending ? "Đang kiểm tra..." : "Đăng nhập"}
         </Button>
 
-        <div className="rounded-2xl border border-border/70 bg-muted/35 px-4 py-3">
+        <div className="rounded-lg border border-border/70 bg-muted/35 px-4 py-3">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <ShieldCheck className="size-4" />
             </div>
             <div className="space-y-1">

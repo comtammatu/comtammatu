@@ -1,12 +1,14 @@
 import { Suspense } from "react";
-import { Building2, ShieldCheck, UtensilsCrossed } from "lucide-react";
 import {
-  getSurfacePanelClassName,
-  getSurfaceShellClassName,
-} from "@comtammatu/ui";
+  ArrowRight,
+  Building2,
+  ShieldCheck,
+  UtensilsCrossed,
+} from "lucide-react";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
@@ -16,73 +18,90 @@ import { LoginForm } from "./login-form";
 
 function BrandPanel() {
   return (
-    <section className="ui-login-brand-panel order-2 lg:order-1">
-      <div className="relative flex h-full flex-col justify-between gap-6 ui-stagger-children">
-        <div className="space-y-5">
-          <Badge
-            variant="outline"
-            className="w-fit border-white/15 bg-white/8 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white/78"
-          >
-            Cổng nhân viên
-          </Badge>
-          <div className="flex size-14 items-center justify-center rounded-3xl bg-white/10 ring-1 ring-white/10 shadow-xl shadow-black/10">
-            <UtensilsCrossed className="size-7 text-white" />
-          </div>
-          <div className="space-y-3">
-            <h2 className="max-w-lg text-3xl font-semibold leading-tight tracking-tight text-balance xl:text-5xl">
-              Vào đúng nơi làm việc, thật nhanh.
-            </h2>
-          </div>
+    <Card className="order-2 rounded-4xl border-border/80 bg-card shadow-app-md lg:order-1 lg:h-full">
+      <CardHeader className="space-y-6">
+        <Badge variant="secondary" className="w-fit rounded-full px-3 py-1">
+          Restaurant Ops OS
+        </Badge>
+        <div className="flex size-16 items-center justify-center rounded-3xl border border-border/70 bg-panel-subtle text-primary">
+          <UtensilsCrossed className="size-7" />
         </div>
-
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-white/8 p-4 shadow-lg shadow-black/10 backdrop-blur-sm">
-            <p className="text-xs font-semibold uppercase tracking-widest text-white/55">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Đăng nhập theo vai trò
+          </p>
+          <CardTitle className="max-w-lg text-3xl leading-tight sm:text-5xl">
+            Vào đúng không gian vận hành, thật nhanh.
+          </CardTitle>
+          <CardDescription className="max-w-lg leading-6">
+            Một bề mặt điều phối mới cho bán hàng, kho vận và nhân sự, vẫn giữ
+            nguyên quyền hạn và nghiệp vụ hiện có.
+          </CardDescription>
+        </div>
+      </CardHeader>
+      <CardContent className="grid gap-3 pt-0 sm:grid-cols-3">
+        <Card className="rounded-3xl border-border/70 bg-panel-subtle shadow-none">
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Bán hàng
             </p>
             <p className="mt-1.5 text-lg font-semibold">POS và KDS</p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/8 p-4 shadow-lg shadow-black/10 backdrop-blur-sm">
-            <p className="text-xs font-semibold uppercase tracking-widest text-white/55">
+          </CardContent>
+        </Card>
+        <Card className="rounded-3xl border-border/70 bg-panel-subtle shadow-none">
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Kho hàng
             </p>
             <p className="mt-1.5 text-lg font-semibold">Nhập, xuất, tồn</p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/8 p-4 shadow-lg shadow-black/10 backdrop-blur-sm">
-            <p className="text-xs font-semibold uppercase tracking-widest text-white/55">
+          </CardContent>
+        </Card>
+        <Card className="rounded-3xl border-border/70 bg-panel-subtle shadow-none">
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Nhân sự
             </p>
             <p className="mt-1.5 text-lg font-semibold">Ca làm và lương</p>
-          </div>
-        </div>
-      </div>
-    </section>
+          </CardContent>
+        </Card>
+      </CardContent>
+    </Card>
   );
 }
 
 function TrustRow() {
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:gap-3">
-          <div className="rounded-2xl border border-border/70 bg-white/78 p-3.5">
-            <div className="flex items-start gap-3">
-              <div className="flex size-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <ShieldCheck className="size-4" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-semibold">Đăng nhập an toàn</p>
-              </div>
+      <Card className="rounded-4xl border-border/80 bg-card shadow-app-sm">
+        <CardContent className="p-5">
+          <div className="flex items-start gap-3">
+            <div className="flex size-10 items-center justify-center rounded-2xl border border-border/70 bg-panel-subtle text-primary">
+              <ShieldCheck className="size-4" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-semibold">Đăng nhập an toàn</p>
+              <p className="text-sm text-muted-foreground">
+                Điều hướng đúng vai trò sau khi xác thực.
+              </p>
             </div>
           </div>
-          <div className="rounded-2xl border border-border/70 bg-white/78 p-3.5">
-            <div className="flex items-start gap-3">
-              <div className="flex size-9 items-center justify-center rounded-2xl bg-success/10 text-success">
-                <Building2 className="size-4" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-semibold">Đúng chi nhánh</p>
-              </div>
+        </CardContent>
+      </Card>
+      <Card className="rounded-4xl border-border/80 bg-card shadow-app-sm">
+        <CardContent className="p-5">
+          <div className="flex items-start gap-3">
+            <div className="flex size-10 items-center justify-center rounded-2xl border border-border/70 bg-success/10 text-success">
+              <Building2 className="size-4" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-semibold">Đúng chi nhánh</p>
+              <p className="text-sm text-muted-foreground">
+                Giữ nguyên phân quyền và ngữ cảnh vận hành hiện có.
+              </p>
             </div>
           </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -97,43 +116,34 @@ export default async function LoginPage({
   return (
     <main
       id="main-content"
-      className={getSurfaceShellClassName(
-        "auth",
-        "relative overflow-hidden min-h-dvh px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-5",
-      )}
+      className="min-h-dvh bg-background px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-6"
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(211,84,0,0.12),transparent_28%),radial-gradient(circle_at_top_right,rgba(44,105,78,0.08),transparent_22%)]"
-      />
-      <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-5 lg:grid lg:min-h-[calc(100dvh-2.5rem)] lg:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)] lg:items-center xl:min-h-[calc(100dvh-3rem)]">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 lg:grid lg:grid-cols-2 lg:items-center">
         <BrandPanel />
 
         <section className="order-1 flex lg:order-2 lg:items-center lg:justify-end">
           <div className="w-full space-y-3 lg:max-w-2xl">
-            <Card
-              className={getSurfacePanelClassName(
-                "auth",
-                "ui-surface-lift shadow-lg shadow-primary/10",
-              )}
-            >
-              <CardHeader className="space-y-3 pb-4 md:pb-5">
+            <Card className="rounded-4xl border-border/80 bg-card shadow-app-md">
+              <CardHeader className="space-y-4 pb-4 md:pb-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="flex size-12 items-center justify-center rounded-3xl bg-primary text-primary-foreground shadow-sm shadow-primary/20">
+                  <div className="flex size-14 items-center justify-center rounded-3xl border border-border/70 bg-primary text-primary-foreground">
                     <UtensilsCrossed className="size-6" />
                   </div>
-                  <Badge
-                    variant="outline"
-                    className="border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary"
-                  >
+                  <Badge variant="secondary" className="rounded-full px-3 py-1">
                     Cổng nhân viên
                   </Badge>
                 </div>
                 <div className="space-y-2">
-                  <p className="app-section-label">Đăng nhập cổng nhân viên</p>
-                  <CardTitle className="text-[clamp(1.85rem,2.8vw,2.35rem)] font-semibold tracking-tight">
-                    Vào ca nhanh, đúng vai trò
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Đăng nhập cổng nhân viên
+                  </p>
+                  <CardTitle className="text-3xl sm:text-4xl">
+                    Sẵn sàng vào ca, đúng vai trò
                   </CardTitle>
+                  <CardDescription>
+                    Giữ nguyên phân quyền, route và toàn bộ nghiệp vụ hiện có
+                    trong một bề mặt V2 thống nhất.
+                  </CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="space-y-5">
@@ -146,7 +156,8 @@ export default async function LoginPage({
 
             <TrustRow />
 
-            <p className="px-1 text-xs text-muted-foreground">
+            <p className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+              <ArrowRight className="size-3.5" />
               2026 Cơm Tấm Má Tư CTCP
             </p>
           </div>

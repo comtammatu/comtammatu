@@ -37,7 +37,7 @@ import {
   PageHeader,
   SectionCard,
   StatusBadge,
-} from "@/components/foundation/ui-patterns";
+} from "@/components/v2/patterns";
 import { fetchDashboardStats } from "./actions";
 
 interface StatCardProps {
@@ -59,12 +59,12 @@ function StatCard({ title, value, change, icon: Icon }: StatCardProps) {
   const isPositive = change >= 0;
 
   return (
-    <Card className="ui-surface-panel ambient-shadow ui-surface-lift">
+    <Card className="rounded-lg border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}
         </CardTitle>
-        <div className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+        <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <Icon className="size-5 text-primary" />
         </div>
       </CardHeader>
@@ -98,11 +98,11 @@ function SurfaceCard({
   return (
     <Link
       href={href}
-      className="group flex h-full flex-col justify-between rounded-3xl border border-border/70 bg-background/85 p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:bg-white hover:shadow-md ui-surface-lift"
+      className="group flex h-full flex-col justify-between rounded-xl border border-border/70 bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-md"
     >
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <div className="flex size-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Icon className="size-5" />
           </div>
           <StatusBadge tone="neutral" className="rounded-full px-3 py-1">
@@ -254,7 +254,9 @@ export default async function DashboardPage() {
               <Link href="/admin/settings">Nền tảng</Link>
             </Button>
             <Button asChild size="sm">
-              <Link href="/admin/reports">{APP_COPY_VI.executiveReporting}</Link>
+              <Link href="/admin/reports">
+                {APP_COPY_VI.executiveReporting}
+              </Link>
             </Button>
           </>
         }
@@ -285,9 +287,7 @@ export default async function DashboardPage() {
         <SectionCard>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold tracking-tight">
-                Nền tảng
-              </h2>
+              <h2 className="text-lg font-semibold tracking-tight">Nền tảng</h2>
             </div>
             <StatusBadge tone="neutral" className="rounded-full px-3 py-1.5">
               {foundationCards.length} mục
@@ -333,9 +333,9 @@ export default async function DashboardPage() {
               Tín hiệu
             </StatusBadge>
           </div>
-          <Card className="overflow-hidden border-border/70 bg-background/80 shadow-none">
+          <Card className="overflow-hidden border-border/70 bg-card shadow-none">
             <CardContent className="p-0">
-              <ul className="ui-stagger-children divide-y divide-border/60">
+              <ul className="divide-y divide-border/60">
                 {stats.recentOrders.map((order) => (
                   <li
                     key={order.id}

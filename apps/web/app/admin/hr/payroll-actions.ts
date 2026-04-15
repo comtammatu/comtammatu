@@ -288,6 +288,21 @@ export const approvePayroll = withAction(
       newData: { status: "approved" },
     });
 
+    // Auto-post GL journal for payroll (non-fatal — payroll approval still succeeds)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: glError } = await (supabase as any).rpc(
+      "post_payroll_journal",
+      {
+        p_payroll_period_id: data.periodId,
+      },
+    );
+    if (glError) {
+      console.error(
+        "[approvePayroll] post_payroll_journal failed:",
+        glError.message,
+      );
+    }
+
     return { success: true };
   },
 );

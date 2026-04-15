@@ -1,10 +1,10 @@
-import { Suspense, type ReactNode } from "react";
+import { Suspense } from "react";
 import { ChefHat, Loader2, TriangleAlert } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims, canAccess } from "@comtammatu/shared/auth";
 import { redirect } from "next/navigation";
-import { FlowStatePanel } from "@/components/foundation/ui-patterns";
 import { KdsBoard } from "./kds-board";
+import { RouteStateCard } from "@/components/v2/route-state-card";
 
 /* ─── Types shared with client ─── */
 
@@ -44,38 +44,6 @@ export interface KdsOrderItem {
   status: string;
 }
 
-function KdsRouteState({
-  title,
-  description,
-  status,
-  statusTone,
-  steps,
-}: {
-  title: string;
-  description: string;
-  status: ReactNode;
-  statusTone: "info" | "warning" | "danger";
-  steps: Array<{
-    label: string;
-    description: string;
-    state: "todo" | "current" | "done";
-  }>;
-}) {
-  return (
-    <FlowStatePanel
-      surface="kds"
-      icon={<ChefHat className="size-5" />}
-      title={title}
-      description={description}
-      status={status}
-      statusTone={statusTone}
-      steps={steps}
-      wrapperClassName="bg-background/30"
-      className="max-w-5xl"
-    />
-  );
-}
-
 export default async function KdsPage({
   params,
 }: {
@@ -106,9 +74,10 @@ export default async function KdsPage({
 
   if (stationsError) {
     return (
-      <KdsRouteState
+      <RouteStateCard
         title="Không thể dựng bảng điều phối bếp"
         description="Không tải được trạm KDS."
+        icon={<ChefHat className="size-5" />}
         status={
           <>
             <TriangleAlert className="size-3.5" />
@@ -133,6 +102,7 @@ export default async function KdsPage({
             state: "todo",
           },
         ]}
+        surface="dark"
       />
     );
   }
@@ -149,9 +119,10 @@ export default async function KdsPage({
 
   if (ticketsError) {
     return (
-      <KdsRouteState
+      <RouteStateCard
         title="Không thể dựng bảng điều phối bếp"
         description="Không tải được vé bếp."
+        icon={<ChefHat className="size-5" />}
         status={
           <>
             <TriangleAlert className="size-3.5" />
@@ -176,6 +147,7 @@ export default async function KdsPage({
             state: "current",
           },
         ]}
+        surface="dark"
       />
     );
   }
@@ -212,9 +184,10 @@ export default async function KdsPage({
   return (
     <Suspense
       fallback={
-        <KdsRouteState
+        <RouteStateCard
           title="Đang dựng bảng điều phối bếp"
           description="Đang nạp trạm và đơn."
+          icon={<ChefHat className="size-5" />}
           status={
             <>
               <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
@@ -222,7 +195,7 @@ export default async function KdsPage({
             </>
           }
           statusTone="info"
-        steps={[
+          steps={[
             {
               label: "Station sẵn sàng",
               description: "Danh sách trạm đã sẵn sàng.",
@@ -239,6 +212,7 @@ export default async function KdsPage({
               state: "todo",
             },
           ]}
+          surface="dark"
         />
       }
     >

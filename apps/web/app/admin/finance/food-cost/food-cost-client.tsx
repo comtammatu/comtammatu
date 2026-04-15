@@ -1,10 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import {
-  FilterBar,
-  SectionCard,
-} from "@/components/foundation/ui-patterns";
+import { FilterBar, SectionCard } from "@/components/v2/patterns";
 import {
   Table,
   TableBody,

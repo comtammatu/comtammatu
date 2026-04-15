@@ -19,7 +19,9 @@ const branchSchema = z.object({
 
 const updateBranchSchema = branchSchema.extend({
   id: z.coerce.number().int().positive(),
-  branchKind: z.enum(["branch", "central_kitchen", "headquarters"]).default("branch"),
+  branchKind: z
+    .enum(["branch", "central_kitchen", "headquarters"])
+    .default("branch"),
 });
 
 const toggleIdSchema = z.object({

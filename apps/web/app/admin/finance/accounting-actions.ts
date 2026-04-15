@@ -115,7 +115,7 @@ export async function fetchJournalEntries(
   let query = supabase
     .from("journal_entries")
     .select(
-      `id, entry_date, description, ref_type, ref_id, status, created_at,
+      `id, entry_number, entry_date, description, ref_type, ref_id, status, created_at,
        journal_entry_lines(id, account_id, debit, credit, description)`,
     )
     .eq("tenant_id", claims.tenant_id)

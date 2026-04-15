@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarDays, Clock, Home, User } from "lucide-react";
-import { cn } from "@comtammatu/ui";
+import { Button } from "@comtammatu/ui/components/button";
 
 const NAV_ITEMS = [
   { href: "/employee", label: "Trang chủ", icon: Home, exact: true },
@@ -37,31 +37,26 @@ export function BottomNav() {
 
   return (
     <nav
-      className={cn(
-        "fixed bottom-0 left-0 right-0 z-40",
-        "ui-safe-bottom border-t border-border/70 bg-background/92 backdrop-blur-xl",
-      )}
+      className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/70 bg-background/95 pb-[max(0.5rem,env(safe-area-inset-bottom,0.5rem))]"
       aria-label="Điều hướng chính"
     >
-      <div className="mx-auto flex max-w-6xl items-stretch px-2 py-2 sm:px-4 lg:px-6">
+      <div className="mx-auto flex max-w-6xl items-stretch gap-2 px-3 py-3 sm:px-4 lg:px-6">
         {NAV_ITEMS.map((item) => {
           const active = isActive(pathname, item.href, item.exact);
           const Icon = item.icon;
           return (
-            <Link
+            <Button
               key={item.href}
-              href={item.href}
-              className={cn(
-                "touch-target-lg focus-ring-standard flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-xs transition-all",
-                active
-                  ? "bg-white font-semibold text-primary shadow-sm"
-                  : "text-muted-foreground hover:bg-white/70 hover:text-foreground",
-              )}
-              aria-current={active ? "page" : undefined}
+              asChild
+              variant={active ? "default" : "outline"}
+              size="sm"
+              className="group flex h-auto flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2.5 text-xs shadow-app-sm"
             >
-              <Icon className="size-5" strokeWidth={active ? 2.4 : 2} />
-              <span>{item.label}</span>
-            </Link>
+              <Link href={item.href} aria-current={active ? "page" : undefined}>
+                <Icon className="size-5" strokeWidth={active ? 2.4 : 2} />
+                <span>{item.label}</span>
+              </Link>
+            </Button>
           );
         })}
       </div>

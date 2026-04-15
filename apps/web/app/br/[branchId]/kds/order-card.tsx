@@ -8,39 +8,42 @@ import { Card } from "@comtammatu/ui/components/card";
 import { Check, ChevronRight, RotateCcw, UtensilsCrossed } from "lucide-react";
 import type { KdsOrder } from "./kds-board";
 import type { KdsTicket } from "./page";
-import {
-  ActionIconButton,
-  StatusBadge,
-} from "@/components/foundation/ui-patterns";
 
 /* ─── Status config ─── */
 
 const STATUS_CONFIG = {
   pending: {
     label: "Chờ",
+    variant: "outline" as const,
     badgeClass: "bg-muted text-muted-foreground border-border",
   },
   preparing: {
     label: "Đang làm",
+    variant: "warning" as const,
     badgeClass: "bg-warning/20 text-warning border-warning/30",
   },
   ready: {
     label: "Xong",
+    variant: "success" as const,
     badgeClass: "bg-success/20 text-success border-success/30",
   },
   cancelled: {
     label: "Đã hủy",
+    variant: "destructive" as const,
     badgeClass: "bg-destructive/20 text-destructive border-destructive/30",
   },
 } as const;
 
+type KdsStatusConfig = (typeof STATUS_CONFIG)[keyof typeof STATUS_CONFIG];
+
 function getStatusConfig(status: string) {
   return (
     STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] ?? {
+      variant: "outline" as const,
       label: status,
       badgeClass: "bg-muted text-muted-foreground border-border",
     }
-  );
+  ) as KdsStatusConfig;
 }
 
 const ORDER_TYPE_CONFIG: Record<string, { label: string; className: string }> =
@@ -219,7 +222,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
   return (
     <Card
       className={cn(
-        "ui-surface-lift flex flex-col overflow-hidden border border-l-2 bg-white/92 shadow-sm",
+        "transition-all hover:-translate-y-0.5 hover:shadow-md flex flex-col overflow-hidden border border-l-2 bg-zinc-900 text-white shadow-sm",
         borderClass,
         getCardLeftAccent(overallStatus, elapsed),
       )}
@@ -238,15 +241,15 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
             {order.orderNumber}
           </span>
           <div className="flex flex-wrap items-center gap-1.5">
-            <Badge
-              variant="outline"
-              className={cn(
-                "border px-2 py-0.5 text-xs font-semibold",
-                typeConfig.className,
-              )}
-            >
-              {typeConfig.label}
-            </Badge>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "border px-2 py-0.5 text-xs font-semibold",
+                    typeConfig.className,
+                  )}
+                >
+                  {typeConfig.label}
+                </Badge>
             {order.tableNumber !== null && (
               <Badge
                 variant="secondary"
@@ -262,7 +265,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
         <Badge
           variant="outline"
           className={cn(
-            "flex shrink-0 flex-col items-center gap-0 rounded-2xl border px-3 py-2",
+            "flex shrink-0 flex-col items-center gap-0 rounded-lg border px-3 py-2",
             isComplete
               ? "border-success/40 bg-success/15 text-success"
               : elapsed >= 10
@@ -284,7 +287,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
       <div className="border-b border-border/30 px-3 py-3 md:px-4">
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-2xl border border-border/60 bg-background/82 px-3 py-2">
+            <div className="rounded-lg border border-border/60 bg-zinc-900 px-3 py-2">
               <p className="text-label font-semibold uppercase tracking-wide text-muted-foreground">
                 Chờ
               </p>
@@ -292,7 +295,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                 {pendingCount}
               </p>
             </div>
-            <div className="rounded-2xl border border-warning/20 bg-warning/10 px-3 py-2">
+            <div className="rounded-lg border border-warning/20 bg-warning/10 px-3 py-2">
               <p className="text-label font-semibold uppercase tracking-wide text-warning">
                 Đang làm
               </p>
@@ -300,7 +303,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                 {preparingCount}
               </p>
             </div>
-            <div className="rounded-2xl border border-success/20 bg-success/10 px-3 py-2">
+            <div className="rounded-lg border border-success/20 bg-success/10 px-3 py-2">
               <p className="text-label font-semibold uppercase tracking-wide text-success">
                 Sẵn sàng
               </p>
@@ -311,10 +314,10 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
-              <span className="rounded-full border border-border/70 bg-white/70 px-3 py-1.5">
+              <span className="rounded-full border border-border/70 bg-zinc-800 px-3 py-1.5">
                 {readyCount}/{totalTickets} món đã xong
               </span>
-              <span className="rounded-full border border-border/70 bg-white/70 px-3 py-1.5">
+              <span className="rounded-full border border-border/70 bg-zinc-800 px-3 py-1.5">
                 {pendingCount > 0
                   ? `${pendingCount} món cần nhận`
                   : "Không còn món chờ"}
@@ -324,7 +327,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
       </div>
 
       {/* ── Items list ── */}
-      <div className="ui-content-auto flex-1 divide-y divide-border/30">
+      <div className="flex-1 divide-y divide-border/30">
         {order.items.map((item) => {
           const ticket = ticketByItemId.get(item.id);
           const status = ticket?.status ?? "pending";
@@ -380,44 +383,49 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                   )}
                   aria-hidden
                 />
-                <StatusBadge
+                <Badge
+                  variant={config.variant}
                   className={cn(
                     "px-2 py-1 text-xs font-bold",
                     config.badgeClass,
                   )}
                 >
                   {config.label}
-                </StatusBadge>
+                </Badge>
               </div>
 
               {/* Action buttons — 56px min touch target */}
-              <div className="flex shrink-0 gap-1">
+                <div className="flex shrink-0 gap-1">
                 {ticket && canRecall && (
-                  <ActionIconButton
-                    icon={<RotateCcw className="size-4 md:size-5" />}
-                    label="Thu hồi món"
+                  <Button
+                    variant="outline"
+                    size="icon"
                     className="size-11 min-h-11 min-w-11 rounded-xl border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:size-14 md:min-h-14 md:min-w-14"
+                    aria-label="Thu hồi món"
                     onClick={() => void onRecall(ticket.id)}
-                  />
+                  >
+                    <RotateCcw className="size-4 md:size-5" />
+                  </Button>
                 )}
                 {ticket && canBump && (
-                  <ActionIconButton
-                    icon={
-                      status === "preparing" ? (
-                        <Check className="size-5 md:size-6" />
-                      ) : (
-                        <ChevronRight className="size-5 md:size-6" />
-                      )
-                    }
-                    label="Chuyển trạng thái món"
+                  <Button
+                    variant="outline"
+                    size="icon"
                     className={cn(
                       "size-11 min-h-11 min-w-11 rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:size-14 md:min-h-14 md:min-w-14",
                       status === "preparing"
                         ? "border-success/30 bg-success/20 text-success hover:bg-success/30"
                         : "border-warning/30 bg-warning/20 text-warning hover:bg-warning/30",
                     )}
+                    aria-label="Chuyển trạng thái món"
                     onClick={() => void onBump(ticket.id)}
-                  />
+                  >
+                    {status === "preparing" ? (
+                      <Check className="size-5 md:size-6" />
+                    ) : (
+                      <ChevronRight className="size-5 md:size-6" />
+                    )}
+                  </Button>
                 )}
               </div>
             </div>
@@ -444,30 +452,37 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                     Món #{String(ticket.order_item_id)}
                   </span>
                 </div>
-                <StatusBadge
+                <Badge
+                  variant={config.variant}
                   className={cn(
                     "shrink-0 px-2 py-1 text-xs font-bold",
                     config.badgeClass,
                   )}
                 >
                   {config.label}
-                </StatusBadge>
+                </Badge>
                 <div className="flex shrink-0 gap-1">
                   {canRecall && (
-                    <ActionIconButton
-                      icon={<RotateCcw className="size-4 md:size-5" />}
-                      label="Thu hồi món"
+                    <Button
+                      variant="outline"
+                      size="icon"
                       className="size-11 min-h-11 min-w-11 rounded-xl border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:size-14 md:min-h-14 md:min-w-14"
+                      aria-label="Thu hồi món"
                       onClick={() => void onRecall(ticket.id)}
-                    />
+                    >
+                      <RotateCcw className="size-4 md:size-5" />
+                    </Button>
                   )}
                   {canBump && (
-                    <ActionIconButton
-                      icon={<ChevronRight className="size-5 md:size-6" />}
-                      label="Chuyển trạng thái món"
+                    <Button
+                      variant="outline"
+                      size="icon"
                       className="size-11 min-h-11 min-w-11 rounded-xl border-warning/30 bg-warning/20 text-warning hover:bg-warning/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:size-14 md:min-h-14 md:min-w-14"
+                      aria-label="Chuyển trạng thái món"
                       onClick={() => void onBump(ticket.id)}
-                    />
+                    >
+                      <ChevronRight className="size-5 md:size-6" />
+                    </Button>
                   )}
                 </div>
               </div>

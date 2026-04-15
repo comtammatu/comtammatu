@@ -3,7 +3,7 @@
 "use client";
 
 import { type ChangeEvent, useState, useTransition } from "react";
-import { SectionCard } from "@/components/foundation/ui-patterns";
+import { SectionCard } from "@/components/v2/patterns";
 import {
   Table,
   TableBody,

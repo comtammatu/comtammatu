@@ -1,8 +1,11 @@
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims, INVENTORY_CATALOG_ROLES } from "@comtammatu/shared/auth";
+import {
+  extractClaims,
+  INVENTORY_CATALOG_ROLES,
+} from "@comtammatu/shared/auth";
 import { fetchIngredients } from "@/inventory/actions";
+import { Card, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
 import { IngredientsSettingsClient } from "./ingredients-settings-client";
-import { PageHeader } from "../../_components/shared";
 import type { IngredientRow } from "@/inventory/page";
 import { tRoute } from "../../_lib/dictionary";
 
@@ -26,9 +29,13 @@ export default async function IngredientsSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={tRoute("/inventory/settings/ingredients", "heading")}
-      />
+      <Card className="border-border/70">
+        <CardHeader>
+          <CardTitle className="text-2xl">
+            {tRoute("/inventory/settings/ingredients", "heading")}
+          </CardTitle>
+        </CardHeader>
+      </Card>
       <IngredientsSettingsClient
         ingredients={ingredients}
         canManageCatalog={canManageIngredientCatalog}

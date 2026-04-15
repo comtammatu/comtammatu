@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { Be_Vietnam_Pro, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Inter } from "next/font/google";
 import { Toaster } from "@comtammatu/ui/components/sonner";
 import "./globals.css";
 
-const beVietnamPro = Be_Vietnam_Pro({
+const inter = Inter({
   subsets: ["latin", "latin-ext", "vietnamese"],
-  weight: ["300", "400", "500", "600", "700", "800"],
-  variable: "--font-be-vietnam-pro",
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-inter",
   display: "swap",
 });
 
@@ -31,8 +31,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: light)", color: "#f3efe6" },
+    { media: "(prefers-color-scheme: dark)", color: "#111417" },
   ],
 };
 
@@ -40,7 +40,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="vi"
-      className={`${beVietnamPro.variable} ${geistMono.variable}`}
+      className={`${inter.variable} ${geistMono.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-screen font-sans antialiased">

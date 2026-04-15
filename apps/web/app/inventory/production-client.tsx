@@ -2,7 +2,14 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus, CheckCircle2, CircleSlash, Pencil, Trash2 } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  CheckCircle2,
+  CircleSlash,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Dialog,
@@ -32,14 +40,18 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@comtammatu/ui/components/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@comtammatu/ui/components/table";
 import { cn } from "@comtammatu/ui";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  EmptyState,
-  SectionCard,
-  StatusBadge,
-} from "@/components/foundation/ui-patterns";
+import { EmptyStatePanel as EmptyState } from "@/components/v2/patterns";
+import { SectionCard } from "@/components/v2/patterns";
 import { createIngredient } from "./actions";
 import {
   cancelProductionOrder,
@@ -188,7 +200,8 @@ function QuickFinishedGoodDialog({
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
             Danh sách trong BOM sản xuất lấy từ danh mục nguyên liệu có loại
-            <strong> Thành phẩm</strong>. Tạo mới ở đây để dùng ngay cho công thức.
+            <strong> Thành phẩm</strong>. Tạo mới ở đây để dùng ngay cho công
+            thức.
           </p>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -256,7 +269,9 @@ function QuickFinishedGoodDialog({
           <Button
             type="button"
             onClick={handleSubmit}
-            disabled={isPending || name.trim().length === 0 || unit.trim().length === 0}
+            disabled={
+              isPending || name.trim().length === 0 || unit.trim().length === 0
+            }
           >
             {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
             Tạo thành phẩm
@@ -337,8 +352,8 @@ function QuickRawIngredientDialog({
 
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Dòng BOM chỉ nhận các bản ghi loại <strong>Nguyên liệu</strong>.
-            Tạo mới ở đây để bổ sung đầu vào ngay trong lúc lập công thức.
+            Dòng BOM chỉ nhận các bản ghi loại <strong>Nguyên liệu</strong>. Tạo
+            mới ở đây để bổ sung đầu vào ngay trong lúc lập công thức.
           </p>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -406,7 +421,9 @@ function QuickRawIngredientDialog({
           <Button
             type="button"
             onClick={handleSubmit}
-            disabled={isPending || name.trim().length === 0 || unit.trim().length === 0}
+            disabled={
+              isPending || name.trim().length === 0 || unit.trim().length === 0
+            }
           >
             {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
             Tạo nguyên liệu
@@ -419,7 +436,10 @@ function QuickRawIngredientDialog({
 
 function defaultProductionNumber() {
   const now = new Date();
-  const stamp = now.toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
+  const stamp = now
+    .toISOString()
+    .replace(/[-:T.Z]/g, "")
+    .slice(0, 14);
   const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
   return `PRD-${stamp}-${suffix}`;
 }
@@ -437,6 +457,15 @@ function orderStatusTone(
   if (status === "completed") return "success";
   if (status === "cancelled") return "danger";
   return "warning";
+}
+
+function badgeVariantFromTone(
+  tone: "neutral" | "warning" | "success" | "danger",
+) {
+  if (tone === "success") return "success" as const;
+  if (tone === "warning") return "warning" as const;
+  if (tone === "danger") return "destructive" as const;
+  return "secondary" as const;
 }
 
 export function ProductionHubClient({
@@ -487,7 +516,8 @@ export function ProductionHubClient({
   ]);
   const [recipeDialogOpen, setRecipeDialogOpen] = useState(false);
   const [recipeError, setRecipeError] = useState<string | null>(null);
-  const [editingRecipe, setEditingRecipe] = useState<ProductionRecipeRow | null>(null);
+  const [editingRecipe, setEditingRecipe] =
+    useState<ProductionRecipeRow | null>(null);
   const [recipeGroupToDelete, setRecipeGroupToDelete] =
     useState<ProductionRecipeGroup | null>(null);
   const [recipeFinishedGoodId, setRecipeFinishedGoodId] = useState(
@@ -541,8 +571,12 @@ export function ProductionHubClient({
 
   const totals = useMemo(() => {
     const draft = orders.filter((order) => order.status === "draft").length;
-    const completed = orders.filter((order) => order.status === "completed").length;
-    const cancelled = orders.filter((order) => order.status === "cancelled").length;
+    const completed = orders.filter(
+      (order) => order.status === "completed",
+    ).length;
+    const cancelled = orders.filter(
+      (order) => order.status === "cancelled",
+    ).length;
     return { draft, completed, cancelled };
   }, [orders]);
 
@@ -646,7 +680,9 @@ export function ProductionHubClient({
   }
 
   function removeLine(index: number) {
-    setLines((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
+    setLines((prev) =>
+      prev.length <= 1 ? prev : prev.filter((_, i) => i !== index),
+    );
   }
 
   function resetDialog() {
@@ -832,28 +868,40 @@ export function ProductionHubClient({
     <div className="space-y-6">
       {readinessMessage && (
         <SectionCard
-          className="rounded-2xl border-warning/20 bg-warning/10"
+          className="rounded-lg border-warning/20 bg-warning/10"
           density="compact"
         >
           {readinessMessage}
         </SectionCard>
       )}
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="app-kpi ui-surface-lift">
-          <p className="app-section-label">Lệnh nháp</p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums">{totals.draft}</p>
+        <div className="rounded-lg border bg-card p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Lệnh nháp
+          </p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums">
+            {totals.draft}
+          </p>
         </div>
-        <div className="app-kpi ui-surface-lift">
-          <p className="app-section-label">Đã hoàn tất</p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums">{totals.completed}</p>
+        <div className="rounded-lg border bg-card p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Đã hoàn tất
+          </p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums">
+            {totals.completed}
+          </p>
         </div>
-        <div className="app-kpi ui-surface-lift">
-          <p className="app-section-label">Đã hủy</p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums">{totals.cancelled}</p>
+        <div className="rounded-lg border bg-card p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Đã hủy
+          </p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums">
+            {totals.cancelled}
+          </p>
         </div>
       </div>
 
-      <div className="ui-flow-panel flex flex-wrap items-center justify-between gap-3 rounded-3xl p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl p-4">
         <div className="text-sm text-muted-foreground">
           {centralKitchenBranches.length > 0
             ? `Có ${centralKitchenBranches.length} bếp trung tâm đang hoạt động`
@@ -920,14 +968,22 @@ export function ProductionHubClient({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label>Thành phẩm</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={addLine}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addLine}
+                  >
                     Thêm dòng
                   </Button>
                 </div>
 
                 <div className="space-y-3">
                   {lines.map((line, index) => (
-                    <div key={`${index}-${line.finishedGoodId}`} className="grid gap-3 md:grid-cols-[1fr_120px_120px_auto]">
+                    <div
+                      key={`${index}-${line.finishedGoodId}`}
+                      className="grid gap-3 md:grid-cols-[1fr_120px_120px_auto]"
+                    >
                       <Select
                         value={String(line.finishedGoodId)}
                         onValueChange={(value) => {
@@ -956,12 +1012,16 @@ export function ProductionHubClient({
                         min={0}
                         step={0.001}
                         value={line.quantity}
-                        onChange={(e) => updateLine(index, { quantity: e.target.value })}
+                        onChange={(e) =>
+                          updateLine(index, { quantity: e.target.value })
+                        }
                         placeholder="Số lượng"
                       />
                       <Input
                         value={line.unit}
-                        onChange={(e) => updateLine(index, { unit: e.target.value })}
+                        onChange={(e) =>
+                          updateLine(index, { unit: e.target.value })
+                        }
                         placeholder="ĐVT"
                       />
                       <Button
@@ -987,10 +1047,19 @@ export function ProductionHubClient({
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isPending}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                disabled={isPending}
+              >
                 Hủy
               </Button>
-              <Button type="button" onClick={handleCreate} disabled={isPending || !actionsEnabled}>
+              <Button
+                type="button"
+                onClick={handleCreate}
+                disabled={isPending || !actionsEnabled}
+              >
                 {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
                 Tạo lệnh
               </Button>
@@ -999,7 +1068,7 @@ export function ProductionHubClient({
         </Dialog>
       </div>
 
-      <SectionCard className="overflow-hidden rounded-2xl" density="compact">
+      <SectionCard className="overflow-hidden rounded-lg" density="compact">
         <Table>
           <TableHeader>
             <TableRow>
@@ -1014,13 +1083,19 @@ export function ProductionHubClient({
           <TableBody>
             {orders.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-12 text-center text-sm text-muted-foreground">
+                <TableCell
+                  colSpan={6}
+                  className="py-12 text-center text-sm text-muted-foreground"
+                >
                   Chưa có lệnh sản xuất nào
                 </TableCell>
               </TableRow>
             )}
             {orders.map((order) => (
-              <TableRow key={order.id} className={cn(isPending ? "opacity-70" : "")}>
+              <TableRow
+                key={order.id}
+                className={cn(isPending ? "opacity-70" : "")}
+              >
                 <TableCell className="font-medium">
                   <div>{order.production_number}</div>
                   <div className="text-xs text-muted-foreground">
@@ -1031,20 +1106,24 @@ export function ProductionHubClient({
                 <TableCell>
                   <div className="flex flex-wrap gap-1.5">
                     {order.items.map((item) => (
-                      <StatusBadge
+                      <Badge
                         key={item.id}
-                        tone="neutral"
+                        variant={badgeVariantFromTone("neutral")}
                         className="px-2 py-1 text-xs"
                       >
                         {item.finished_good_name} x {item.quantity} {item.unit}
-                      </StatusBadge>
+                      </Badge>
                     ))}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <StatusBadge tone={orderStatusTone(order.status)}>
+                  <Badge
+                    variant={badgeVariantFromTone(
+                      orderStatusTone(order.status),
+                    )}
+                  >
                     {orderStatusLabel(order.status)}
-                  </StatusBadge>
+                  </Badge>
                 </TableCell>
                 <TableCell className="font-mono tabular-nums">
                   {order.total_cost.toLocaleString("vi-VN")} ₫
@@ -1053,22 +1132,22 @@ export function ProductionHubClient({
                   <div className="flex items-center justify-end gap-2">
                     {order.status === "draft" ? (
                       <>
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => handleConfirm(order.id)}
-                            disabled={isPending || !branchKindSchemaAvailable}
-                          >
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => handleConfirm(order.id)}
+                          disabled={isPending || !branchKindSchemaAvailable}
+                        >
                           <CheckCircle2 className="mr-2 size-4" />
                           Xác nhận
                         </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleCancel(order.id)}
-                            disabled={isPending || !branchKindSchemaAvailable}
-                          >
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCancel(order.id)}
+                          disabled={isPending || !branchKindSchemaAvailable}
+                        >
                           Hủy
                         </Button>
                       </>
@@ -1096,7 +1175,9 @@ export function ProductionHubClient({
             type="button"
             variant="outline"
             onClick={() => openRecipeDialog()}
-            disabled={!branchKindSchemaAvailable || finishedGoodsOptions.length === 0}
+            disabled={
+              !branchKindSchemaAvailable || finishedGoodsOptions.length === 0
+            }
           >
             <Plus className="mr-2 size-4" />
             Thêm dòng BOM
@@ -1113,14 +1194,16 @@ export function ProductionHubClient({
           <DialogContent className="max-h-screen overflow-y-auto sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle>
-                {editingRecipe ? "Chỉnh sửa dòng nguyên liệu" : "Thêm dòng nguyên liệu"}
+                {editingRecipe
+                  ? "Chỉnh sửa dòng nguyên liệu"
+                  : "Thêm dòng nguyên liệu"}
               </DialogTitle>
             </DialogHeader>
 
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Một thành phẩm có thể có nhiều dòng nguyên liệu. Mỗi dòng bên dưới
-                tương ứng với một nguyên liệu trong BOM sản xuất.
+                Một thành phẩm có thể có nhiều dòng nguyên liệu. Mỗi dòng bên
+                dưới tương ứng với một nguyên liệu trong BOM sản xuất.
               </p>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -1203,8 +1286,8 @@ export function ProductionHubClient({
                   )}
                   {editingRecipe && (
                     <p className="text-xs text-muted-foreground">
-                      Muốn đổi thành phẩm hoặc nguyên liệu, hãy xóa dòng cũ và tạo
-                      dòng mới để tránh ghi đè sai BOM.
+                      Muốn đổi thành phẩm hoặc nguyên liệu, hãy xóa dòng cũ và
+                      tạo dòng mới để tránh ghi đè sai BOM.
                     </p>
                   )}
                 </div>
@@ -1261,10 +1344,19 @@ export function ProductionHubClient({
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setRecipeDialogOpen(false)} disabled={isPending}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setRecipeDialogOpen(false)}
+                disabled={isPending}
+              >
                 Hủy
               </Button>
-              <Button type="button" onClick={handleRecipeSubmit} disabled={isPending}>
+              <Button
+                type="button"
+                onClick={handleRecipeSubmit}
+                disabled={isPending}
+              >
                 {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
                 Lưu dòng BOM
               </Button>
@@ -1320,7 +1412,7 @@ export function ProductionHubClient({
             {groupedRecipes.map((group) => (
               <SectionCard
                 key={group.finishedGoodId}
-                className="group/recipe overflow-hidden rounded-2xl"
+                className="group/recipe overflow-hidden rounded-lg"
                 density="compact"
               >
                 <div
@@ -1331,13 +1423,16 @@ export function ProductionHubClient({
                 >
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="font-semibold">{group.finishedGoodName}</h4>
-                      <StatusBadge tone="neutral">
+                      <h4 className="font-semibold">
+                        {group.finishedGoodName}
+                      </h4>
+                      <Badge variant={badgeVariantFromTone("neutral")}>
                         {group.lines.length} nguyên liệu
-                      </StatusBadge>
+                      </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Mỗi dòng bên dưới là một nguyên liệu cấu thành thành phẩm này.
+                      Mỗi dòng bên dưới là một nguyên liệu cấu thành thành phẩm
+                      này.
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -1382,8 +1477,12 @@ export function ProductionHubClient({
                     {group.lines.map((recipe) => (
                       <TableRow key={recipe.id}>
                         <TableCell>
-                          <div className="font-medium">{recipe.ingredient_name}</div>
-                          <div className="text-xs text-muted-foreground">{recipe.unit}</div>
+                          <div className="font-medium">
+                            {recipe.ingredient_name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {recipe.unit}
+                          </div>
                         </TableCell>
                         <TableCell>
                           {recipe.quantity} {recipe.unit}

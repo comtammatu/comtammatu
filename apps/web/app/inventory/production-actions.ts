@@ -54,8 +54,14 @@ async function requireCentralKitchenBranch(
   const client = supabase as {
     from: (table: "branches") => {
       select: (columns: string) => {
-        eq: (column: string, value: unknown) => {
-          eq: (column: string, value: unknown) => {
+        eq: (
+          column: string,
+          value: unknown,
+        ) => {
+          eq: (
+            column: string,
+            value: unknown,
+          ) => {
             maybeSingle: () => PromiseLike<{
               data: { branch_kind: string | null } | null;
               error: { code?: string; message?: string } | null;
@@ -151,7 +157,10 @@ type ProductionRecipeQueryRow = {
 type ProductionRecipeQueryClient = {
   from: (table: "production_recipes") => {
     select: (columns: string) => {
-      eq: (column: string, value: unknown) => {
+      eq: (
+        column: string,
+        value: unknown,
+      ) => {
         order: (
           column: string,
           options?: { ascending?: boolean },
@@ -178,7 +187,10 @@ export async function fetchProductionRecipes(): Promise<
   const { supabase, claims } = ctx;
   if (claims.user_role === "branch_manager") {
     if (claims.branch_id == null) {
-      return { success: false, error: "Tài khoản chưa được gán bếp trung tâm." };
+      return {
+        success: false,
+        error: "Tài khoản chưa được gán bếp trung tâm.",
+      };
     }
     const access = await requireCentralKitchenBranch(
       supabase,
@@ -217,12 +229,14 @@ export async function fetchProductionRecipes(): Promise<
     success: true,
     data:
       (data ?? []).map((row) => {
-        const finishedGood = row.finished_good as
-          | { id: number; name: string }
-          | null;
-        const ingredient = row.ingredient as
-          | { id: number; name: string }
-          | null;
+        const finishedGood = row.finished_good as {
+          id: number;
+          name: string;
+        } | null;
+        const ingredient = row.ingredient as {
+          id: number;
+          name: string;
+        } | null;
         return {
           id: row.id,
           finished_good_id: row.finished_good_id,
@@ -247,7 +261,10 @@ export async function fetchProductionOrders(): Promise<
   const { supabase, claims } = ctx;
   if (claims.user_role === "branch_manager") {
     if (claims.branch_id == null) {
-      return { success: false, error: "Tài khoản chưa được gán bếp trung tâm." };
+      return {
+        success: false,
+        error: "Tài khoản chưa được gán bếp trung tâm.",
+      };
     }
     const access = await requireCentralKitchenBranch(
       supabase,
@@ -290,8 +307,15 @@ export async function fetchProductionOrders(): Promise<
 
   const rows: ProductionOrderRow[] = (data ?? []).map((row) => {
     const items = (row.production_order_items ?? []).map((item) => {
-      const ingredient = item.ingredients as { id: number; name: string; unit: string } | null;
-      const unitCost = item.unit_cost_at_production == null ? null : Number(item.unit_cost_at_production);
+      const ingredient = item.ingredients as {
+        id: number;
+        name: string;
+        unit: string;
+      } | null;
+      const unitCost =
+        item.unit_cost_at_production == null
+          ? null
+          : Number(item.unit_cost_at_production);
       return {
         id: item.id,
         finished_good_id: item.finished_good_id,
@@ -314,7 +338,8 @@ export async function fetchProductionOrders(): Promise<
       created_at: row.created_at,
       items,
       total_cost: items.reduce(
-        (sum, item) => sum + item.quantity * (item.unit_cost_at_production ?? 0),
+        (sum, item) =>
+          sum + item.quantity * (item.unit_cost_at_production ?? 0),
         0,
       ),
     };
@@ -364,7 +389,10 @@ export const upsertProductionRecipe = withAction(
     const { supabase, claims } = ctx;
   if (claims.user_role === "branch_manager") {
     if (claims.branch_id == null) {
-      return { success: false, error: "Tài khoản chưa được gán bếp trung tâm." };
+      return {
+        success: false,
+        error: "Tài khoản chưa được gán bếp trung tâm.",
+      };
     }
     const access = await requireCentralKitchenBranch(
       supabase,
@@ -420,7 +448,9 @@ export const upsertProductionRecipe = withAction(
   },
 );
 
-export async function deleteProductionRecipe(recipeId: number): Promise<ActionResult> {
+export async function deleteProductionRecipe(
+  recipeId: number,
+): Promise<ActionResult> {
   const parsed = idSchema.safeParse(recipeId);
   if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
 
@@ -430,7 +460,10 @@ export async function deleteProductionRecipe(recipeId: number): Promise<ActionRe
   const { supabase, claims } = ctx;
   if (claims.user_role === "branch_manager") {
     if (claims.branch_id == null) {
-      return { success: false, error: "Tài khoản chưa được gán bếp trung tâm." };
+      return {
+        success: false,
+        error: "Tài khoản chưa được gán bếp trung tâm.",
+      };
     }
     const access = await requireCentralKitchenBranch(
       supabase,
@@ -458,7 +491,8 @@ export async function deleteProductionRecipeGroup(
   finishedGoodId: number,
 ): Promise<ActionResult> {
   const parsed = idSchema.safeParse(finishedGoodId);
-  if (!parsed.success) return { success: false, error: "ID thành phẩm không hợp lệ" };
+  if (!parsed.success)
+    return { success: false, error: "ID thành phẩm không hợp lệ" };
 
   const ctx = await getAuthContext(PRODUCTION_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -466,7 +500,10 @@ export async function deleteProductionRecipeGroup(
   const { supabase, claims } = ctx;
   if (claims.user_role === "branch_manager") {
     if (claims.branch_id == null) {
-      return { success: false, error: "Tài khoản chưa được gán bếp trung tâm." };
+      return {
+        success: false,
+        error: "Tài khoản chưa được gán bếp trung tâm.",
+      };
     }
     const access = await requireCentralKitchenBranch(
       supabase,
@@ -508,7 +545,10 @@ export async function confirmProductionOrder(
 
   if (error) {
     if (error.code === "42501") {
-      return { success: false, error: "Không có quyền xác nhận lệnh sản xuất." };
+      return {
+        success: false,
+        error: "Không có quyền xác nhận lệnh sản xuất.",
+      };
     }
     if (
       error.code === "23514" ||
@@ -532,7 +572,9 @@ export async function confirmProductionOrder(
   return { success: true };
 }
 
-export async function cancelProductionOrder(orderId: number): Promise<ActionResult> {
+export async function cancelProductionOrder(
+  orderId: number,
+): Promise<ActionResult> {
   const parsed = idSchema.safeParse(orderId);
   if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
 

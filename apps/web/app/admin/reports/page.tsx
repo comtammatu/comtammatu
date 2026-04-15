@@ -24,7 +24,7 @@ import {
   PageHeader,
   SectionCard,
   StatusBadge,
-} from "@/components/foundation/ui-patterns";
+} from "@/components/v2/patterns";
 
 interface ReportCardProps {
   title: string;
@@ -53,12 +53,12 @@ function ReportCard({
   return (
     <Link
       href={href}
-      className="group flex h-full flex-col justify-between rounded-3xl border border-border/70 bg-background/85 p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:bg-white hover:shadow-md ui-surface-lift"
+      className="group flex h-full flex-col justify-between rounded-xl border border-border/70 bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-md"
     >
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div
-            className={`flex size-11 items-center justify-center rounded-2xl ${toneClassName}`}
+            className={`flex size-11 items-center justify-center rounded-lg ${toneClassName}`}
           >
             <Icon className="size-5" />
           </div>
@@ -194,12 +194,12 @@ export default async function ReportsPage() {
       />
 
       <SectionCard>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight">
-                Báo cáo lõi
-              </h2>
-            </div>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">
+              Báo cáo lõi
+            </h2>
+          </div>
           <StatusBadge tone="neutral" className="rounded-full px-3 py-1.5">
             Điều hành
           </StatusBadge>
@@ -230,7 +230,6 @@ export default async function ReportsPage() {
           </div>
         </SectionCard>
       ) : null}
-
     </PageContainer>
   );
 }

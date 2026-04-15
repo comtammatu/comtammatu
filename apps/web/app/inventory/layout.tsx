@@ -6,9 +6,7 @@ import {
   canAccess,
   extractClaims,
 } from "@comtammatu/shared/auth";
-import { getSurfaceShellClassName } from "@comtammatu/ui";
-import { InventorySidebar } from "./_components/inventory-sidebar";
-import { InventoryHeader } from "./_components/inventory-header";
+import { InventoryShell } from "./_components/inventory-shell";
 import { fetchInventorySiteContext } from "./_lib/headquarters";
 
 export default async function InventoryLayout({
@@ -52,25 +50,12 @@ export default async function InventoryLayout({
         });
 
   return (
-    <div
-      className={getSurfaceShellClassName(
-        "inventory",
-        "relative isolate flex h-dvh overflow-hidden font-sans",
-      )}
+    <InventoryShell
+      userRole={claims.user_role}
+      siteName={resolvedSiteContext.branchName}
+      siteKind={resolvedSiteContext.branchKind}
     >
-      <div className="relative z-10">
-        <InventorySidebar userRole={claims.user_role} />
-      </div>
-      <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
-        <InventoryHeader
-          siteName={resolvedSiteContext.branchName}
-          siteKind={resolvedSiteContext.branchKind}
-          userRole={claims.user_role}
-        />
-        <main className="flex-1 overflow-y-auto bg-gradient-to-b from-background/76 via-background/94 to-muted/20 px-4 py-5 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-screen-2xl">{children}</div>
-        </main>
-      </div>
-    </div>
+      {children}
+    </InventoryShell>
   );
 }

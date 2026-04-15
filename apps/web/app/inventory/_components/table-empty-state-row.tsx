@@ -1,10 +1,17 @@
 import { cn } from "@comtammatu/ui";
 import type { ReactNode } from "react";
 import { TableCell, TableRow } from "@comtammatu/ui/components/table";
+import type { EmptyStateMode } from "@/components/v2/patterns";
 
+const TABLE_EMPTY_STATE_COPY: Record<EmptyStateMode, string> = {
+  "no-data": "Chưa có dữ liệu",
+  "no-results": "Không có kết quả phù hợp",
+  "no-access": "Không có quyền truy cập",
+};
 interface TableEmptyStateRowProps {
   colSpan: number;
-  title: string;
+  title?: string;
+  mode?: EmptyStateMode;
   description?: string;
   icon?: ReactNode;
   paddingClassName?: string;
@@ -13,29 +20,30 @@ interface TableEmptyStateRowProps {
 export function TableEmptyStateRow({
   colSpan,
   title,
+  mode = "no-data",
   description,
   icon,
   paddingClassName = "py-12",
 }: TableEmptyStateRowProps) {
+  const resolvedTitle = title ?? TABLE_EMPTY_STATE_COPY[mode];
+
   return (
     <TableRow>
       <TableCell
         colSpan={colSpan}
-        className={`${paddingClassName} text-center`}
+        className={cn(paddingClassName, "text-center")}
       >
-        <div
-          className={cn(
-            "ui-flow-panel mx-auto flex max-w-sm flex-col items-center gap-2 rounded-3xl border border-dashed border-border/70 bg-gradient-to-br from-white via-background to-muted/30 px-4 py-6 shadow-sm",
-          )}
-        >
+        <div className="mx-auto flex max-w-sm flex-col items-center gap-3 rounded-lg border bg-background px-4 py-6">
           {icon ? (
-            <div className="flex size-11 items-center justify-center rounded-2xl border border-border/70 bg-white/80 text-muted-foreground shadow-sm">
+            <div className="flex size-11 items-center justify-center rounded-full border bg-muted/40 text-muted-foreground">
               {icon}
             </div>
           ) : null}
-          <p className="text-sm font-semibold text-foreground">{title}</p>
+          <p className="text-sm font-semibold text-foreground">
+            {resolvedTitle}
+          </p>
           {description ? (
-            <p className="text-xs leading-5 text-muted-foreground/80">
+            <p className="text-xs leading-5 text-muted-foreground">
               {description}
             </p>
           ) : null}

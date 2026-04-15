@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { SectionCard } from "@/components/foundation/ui-patterns";
+import { SectionCard } from "@/components/v2/patterns";
 import {
   ArrowLeft,
   CheckCircle,
@@ -10,7 +11,7 @@ import {
   AlertTriangle,
   X,
 } from "lucide-react";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import {
   Table,
   TableBody,
@@ -19,9 +20,12 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { StatusBadge } from "../../_components/shared";
 import { formatVND } from "../../_lib/format";
 import { tRoute } from "../../_lib/dictionary";
+import {
+  getInventoryStatusBadgeVariant,
+  getInventoryStatusLabel,
+} from "../../_lib/ui";
 
 export type GRNDetail = {
   code: string;
@@ -49,7 +53,7 @@ export type GRNDetail = {
 export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
   const qcPassed = grn.items.filter((i) => i.status === "pass").length;
   const qcWarning = grn.items.filter((i) => i.status === "warning").length;
-  const panelClassName = getSurfacePanelClassName("inventory", "ambient-shadow");
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
 
   return (
     <div className="space-y-6">
@@ -64,11 +68,13 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
       <section
         className={cn(
           panelClassName,
-          "relative overflow-hidden rounded-2xl bg-muted p-5 shadow-sm sm:p-6 lg:p-8",
+          "relative overflow-hidden bg-muted p-5 sm:p-6 lg:p-8",
         )}
       >
         <div className="absolute right-5 top-5 sm:right-6 sm:top-6 lg:right-8 lg:top-8">
-          <StatusBadge status={grn.status} />
+          <Badge variant={getInventoryStatusBadgeVariant(grn.status)}>
+            {getInventoryStatusLabel(grn.status)}
+          </Badge>
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8 lg:gap-12">
@@ -86,7 +92,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
               {grn.poCode && grn.poId ? (
                 <Link
                   href={`/inventory/purchase-orders/${grn.poId}`}
-                  className="focus-ring-standard rounded-sm font-semibold text-primary hover:underline"
+                  className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm font-semibold text-primary hover:underline"
                 >
                   {grn.poCode}
                 </Link>
@@ -96,7 +102,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
             </div>
           </div>
 
-          <div className="space-y-4 border-border/40 md:border-l md:pl-8 lg:pl-12">
+          <div className="space-y-4 border-border md:border-l md:pl-8 lg:pl-12">
             <div>
               <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
                 Nhà cung cấp
@@ -111,7 +117,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
             </div>
           </div>
 
-          <div className="space-y-4 border-border/40 md:border-l md:pl-8 lg:pl-12">
+          <div className="space-y-4 border-border md:border-l md:pl-8 lg:pl-12">
             <div>
               <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
                 Tổng giá trị nhập
@@ -133,10 +139,8 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <section
-            className={cn(panelClassName, "overflow-hidden rounded-2xl bg-card")}
-          >
-            <div className="flex flex-col gap-3 border-b border-border/50 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <section className={cn(panelClassName, "overflow-hidden")}>
+            <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <h4 className="text-lg font-bold">Danh sách mặt hàng nhập</h4>
               <span className="text-xs font-medium text-muted-foreground">
                 {grn.items.length} mặt hàng
@@ -147,12 +151,14 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
               {grn.items.map((item) => (
                 <div
                   key={item.sku || item.name}
-                  className="rounded-2xl border border-border/70 bg-muted/20 p-4"
+                  className="rounded-lg border border-border bg-muted/20 p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-bold">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">{item.sku}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.sku}
+                      </p>
                     </div>
                     {item.status === "pass" ? (
                       <CheckCircle2 className="size-4 text-success" />
@@ -163,7 +169,9 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
                   <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <p className="text-muted-foreground">Yêu cầu</p>
-                      <p className="mt-1 font-medium">{item.required} {item.unit}</p>
+                      <p className="mt-1 font-medium">
+                        {item.required} {item.unit}
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Thực nhận</p>
@@ -180,7 +188,9 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
                     <div className="col-span-2">
                       <p className="text-muted-foreground">Số lô / HSD</p>
                       <p className="mt-1 font-mono">{item.lot}</p>
-                      <p className="text-xs text-muted-foreground">{item.expiry}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.expiry}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -271,8 +281,8 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
         {/* Sidebar -- 1/3 */}
         <div className="space-y-4">
           {/* Quality Summary */}
-          <SectionCard className={cn(panelClassName, "rounded-2xl bg-card")} density="compact">
-            <div className="-m-5 border-b border-border/50 px-5 py-5 md:-m-6 md:px-6 md:py-6">
+          <SectionCard className={panelClassName} density="compact">
+            <div className="-m-5 border-b border-border px-5 py-5 md:-m-6 md:px-6 md:py-6">
               <h4 className="text-sm font-bold">Tổng hợp chất lượng</h4>
             </div>
             <div className="space-y-3">
@@ -299,7 +309,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
 
           {/* Total value card */}
           <SectionCard
-            className="rounded-2xl border-primary/20 bg-primary/5"
+            className="rounded-lg border-primary/20 bg-primary/5"
             density="compact"
           >
             <p className="text-label uppercase tracking-wider text-muted-foreground">
@@ -325,7 +335,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
       </div>
 
       {/* Footer Action Bar */}
-      <footer className="flex flex-col gap-3 border-t border-border/50 py-6 sm:flex-row sm:items-center sm:justify-between">
+      <footer className="flex flex-col gap-3 border-t border-border py-6 sm:flex-row sm:items-center sm:justify-between">
         <Button
           type="button"
           variant="ghost"
@@ -336,7 +346,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
         </Button>
         <Button
           type="button"
-          className="justify-center shadow-lg shadow-primary/20 transition-transform hover:scale-[0.98]"
+          className="justify-center shadow-lg transition-transform hover:scale-[0.98]"
         >
           <CheckCircle className="size-5" />
           Xác nhận nhập kho

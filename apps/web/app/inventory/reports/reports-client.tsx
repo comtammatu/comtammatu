@@ -10,19 +10,22 @@ import {
   Store,
   ChevronDown,
 } from "lucide-react";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
+import { Button } from "@comtammatu/ui/components/button";
 import {
-  Button,
-} from "@comtammatu/ui/components/button";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
+import { EmptyStatePanel } from "@/components/v2/patterns";
+import { SimpleBarChart, TrendSparkline } from "../_lib/chart-primitives";
+import { formatVND } from "../_lib/format";
 import {
-  SimpleBarChart,
-  TrendSparkline,
-  PageHeader,
   resolveInventoryColorValue,
   type InventorySemanticColor,
-} from "../_components/shared";
-import { EmptyState } from "@/components/foundation/ui-patterns";
-import { formatVND } from "../_lib/format";
+} from "../_lib/ui";
 
 export type ApAgingItem = { range: string; amount: number };
 export type VarianceItem = {
@@ -62,130 +65,114 @@ export function ReportsClient({
           : "Ổn định so với tháng trước";
   const overdueAmount = apAging[apAging.length - 1]?.amount ?? 0;
   const varianceCount = consumptionVariance.length;
-  const panelClassName = getSurfacePanelClassName("inventory", "ambient-shadow");
-  const glassPanelClassName =
-    "border-border/30 bg-white/85 supports-[backdrop-filter]:backdrop-blur-sm";
-  const pillClassName = cn(
-    getSurfacePanelClassName("inventory"),
-    "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium",
-  );
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
 
   return (
-    <div className="ui-stagger-children space-y-6">
-      <PageHeader
-        title="Hệ thống Báo cáo"
-      />
+    <div className="space-y-6">
+      <Card className="border-border/70">
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Báo cáo
+            </p>
+            <div className="space-y-1">
+              <CardTitle className="text-3xl">Hệ thống báo cáo</CardTitle>
+              <CardDescription className="max-w-3xl leading-6">
+                Tổng hợp biến động kho, công nợ và chênh lệch tiêu hao theo cùng
+                một nhịp vận hành.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
 
-      {/* Filter bar */}
-      <div
-        className={cn(
-          panelClassName,
-          glassPanelClassName,
-          "ui-flow-panel relative overflow-hidden bg-gradient-to-br from-success/12 via-white to-primary/10 px-5 py-5 sm:px-6",
-        )}
-      >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 overflow-hidden"
-        >
-          <div className="absolute -right-16 top-0 h-44 w-44 rounded-full bg-primary/10 blur-3xl" />
-          <div className="absolute bottom-0 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full bg-success/10 blur-3xl" />
-        </div>
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)] lg:items-center">
-          <div className="space-y-4">
-            <div className="ui-stagger-children flex flex-wrap items-center gap-3">
-              <div className={cn(pillClassName, "ui-surface-lift")}>
-                <Calendar className="size-4 text-primary" />
-                <span className="text-foreground">Tháng này</span>
-                <ChevronDown className="size-3.5 text-muted-foreground" />
+      <Card className="border-border/70">
+        <CardContent className="space-y-4 p-5 sm:p-6">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)] lg:items-center">
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 rounded-full border border-border/70 bg-card px-4 py-2 text-sm font-medium shadow-sm">
+                  <Calendar className="size-4 text-primary" />
+                  <span className="text-foreground">Tháng này</span>
+                  <ChevronDown className="size-3.5 text-muted-foreground" />
+                </div>
+                <div className="flex items-center gap-2 rounded-full border border-border/70 bg-card px-4 py-2 text-sm font-medium shadow-sm">
+                  <Store className="size-4 text-primary" />
+                  <span className="text-foreground">Tất cả chi nhánh</span>
+                  <ChevronDown className="size-3.5 text-muted-foreground" />
+                </div>
               </div>
-              <div className={cn(pillClassName, "ui-surface-lift")}>
-                <Store className="size-4 text-primary" />
-                <span className="text-foreground">Tất cả chi nhánh</span>
-                <ChevronDown className="size-3.5 text-muted-foreground" />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border border-border/70 bg-muted/20 px-4 py-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Công nợ quá hạn
+                </p>
+                <p className="mt-2 text-2xl font-semibold">
+                  {formatVND(overdueAmount)}đ
+                </p>
+              </div>
+              <div className="rounded-lg border border-border/70 bg-muted/20 px-4 py-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Mã lệch định mức
+                </p>
+                <p className="mt-2 text-2xl font-semibold">{varianceCount}</p>
               </div>
             </div>
           </div>
-          <div className="ui-stagger-children grid gap-3 sm:grid-cols-2">
-            <div
-              className={cn(
-                panelClassName,
-                glassPanelClassName,
-                "ui-surface-lift px-4 py-4",
-              )}
+          <div className="mt-4 flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full border-primary/30 bg-card px-5 font-bold text-primary hover:bg-muted"
             >
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                Công nợ quá hạn
-              </p>
-              <p className="mt-2 text-2xl font-semibold">
-                {formatVND(overdueAmount)}đ
-              </p>
-            </div>
-            <div
-              className={cn(
-                panelClassName,
-                glassPanelClassName,
-                "ui-surface-lift px-4 py-4",
-              )}
-            >
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                Mã lệch định mức
-              </p>
-              <p className="mt-2 text-2xl font-semibold">{varianceCount}</p>
-            </div>
+              <FileDown className="size-4" />
+              Xuất CSV/Excel
+            </Button>
           </div>
-        </div>
-        <div className="mt-4 flex justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-full border-primary/30 bg-white/60 px-5 font-bold text-primary hover:bg-white"
-          >
-            <FileDown className="size-4" />
-            Xuất CSV/Excel
-          </Button>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Dashboard Grid — 12 col asymmetric */}
       <div className="grid grid-cols-12 gap-6">
         {/* Stock Movement Summary — col-span-8 */}
-        <div
+        <Card
           className={cn(
             panelClassName,
-            glassPanelClassName,
-            "ui-flow-panel col-span-12 flex flex-col p-6 lg:col-span-8",
+            "col-span-12 flex flex-col p-6 lg:col-span-8",
           )}
         >
           <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
-              <BarChart3 className="size-5 text-primary" />
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
+                <BarChart3 className="size-5 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground">
+                Biến động kho theo nhóm
+              </h3>
             </div>
-            <h3 className="text-lg font-bold text-foreground">Biến động kho theo nhóm</h3>
+            <div className="flex items-center gap-4 text-xs font-medium">
+              <span className="flex items-center gap-1.5">
+                <span className="size-3 rounded-full bg-primary" />
+                <span className="text-muted-foreground">Nhập kho</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-3 rounded-full bg-success" />
+                <span className="text-muted-foreground">Chuyển vào</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-3 rounded-full bg-destructive" />
+                <span className="text-muted-foreground">Xuất / tiêu hao</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-3 rounded-full bg-info" />
+                <span className="text-muted-foreground">Sản xuất</span>
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-4 text-xs font-medium">
-            <span className="flex items-center gap-1.5">
-              <span className="size-3 rounded-full bg-primary" />
-              <span className="text-muted-foreground">Nhập kho</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-3 rounded-full bg-success" />
-              <span className="text-muted-foreground">Chuyển vào</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-3 rounded-full bg-destructive" />
-              <span className="text-muted-foreground">Xuất / tiêu hao</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-3 rounded-full bg-info" />
-              <span className="text-muted-foreground">Sản xuất</span>
-            </span>
+          <div className="flex-1">
+            <SimpleBarChart data={movementSummary} height={220} />
           </div>
-        </div>
-        <div className="flex-1">
-          <SimpleBarChart data={movementSummary} height={220} />
-        </div>
           <div className="mt-4 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">{trendLabel}</p>
             <button
@@ -195,17 +182,12 @@ export function ReportsClient({
               Chi tiết
             </button>
           </div>
-        </div>
+        </Card>
 
-        {/* Supplier AP Aging — col-span-4 */}
-        <div
-          className={cn(
-            panelClassName,
-            glassPanelClassName,
-            "ui-flow-panel col-span-12 p-6 lg:col-span-4",
-          )}
-        >
-          <h3 className="mb-4 text-lg font-bold text-foreground">Công nợ nhà cung cấp</h3>
+        <Card className={cn(panelClassName, "col-span-12 p-6 lg:col-span-4")}>
+          <h3 className="mb-4 text-lg font-bold text-foreground">
+            Công nợ nhà cung cấp
+          </h3>
           <div className="space-y-4">
             {apAging.map((item, idx) => {
               const isOverdue = idx === apAging.length - 1;
@@ -221,17 +203,28 @@ export function ReportsClient({
                 <div
                   key={item.range}
                   className={cn(
-                    "ui-surface-lift rounded-2xl p-3",
+                    " rounded-lg p-3",
                     isOverdue
                       ? "border border-destructive/20 bg-destructive/12"
                       : "bg-muted/35",
                   )}
                 >
                   <div className="mb-1 flex justify-between text-xs">
-                    <span className={cn(isOverdue ? "text-destructive" : "text-muted-foreground")}>
+                    <span
+                      className={cn(
+                        isOverdue
+                          ? "text-destructive"
+                          : "text-muted-foreground",
+                      )}
+                    >
                       {item.range}
                     </span>
-                    <span className={cn("font-bold", isOverdue ? "text-destructive" : "text-foreground")}>
+                    <span
+                      className={cn(
+                        "font-bold",
+                        isOverdue ? "text-destructive" : "text-foreground",
+                      )}
+                    >
                       {formatVND(item.amount)}đ
                     </span>
                   </div>
@@ -260,16 +253,9 @@ export function ReportsClient({
           >
             Xem danh sách NCC
           </Button>
-        </div>
+        </Card>
 
-        {/* Consumption Variance — col-span-6 */}
-        <div
-          className={cn(
-            panelClassName,
-            glassPanelClassName,
-            "ui-flow-panel col-span-12 p-6 md:col-span-6",
-          )}
-        >
+        <Card className={cn(panelClassName, "col-span-12 p-6 md:col-span-6")}>
           <h3 className="mb-2 text-lg font-bold text-foreground">
             Chênh lệch tiêu hao
           </h3>
@@ -282,7 +268,7 @@ export function ReportsClient({
               return (
                 <div
                   key={item.name}
-                  className="ui-surface-lift flex items-center justify-between rounded-2xl border border-border/50 bg-muted/35 p-4"
+                  className=" flex items-center justify-between rounded-lg border border-border bg-muted/35 p-4"
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex size-10 items-center justify-center rounded-full bg-card">
@@ -292,7 +278,9 @@ export function ReportsClient({
                       <p className="text-sm font-bold text-foreground">
                         {item.name}
                       </p>
-                      <p className="text-xs text-muted-foreground">Đơn vị: kg</p>
+                      <p className="text-xs text-muted-foreground">
+                        Đơn vị: kg
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -319,16 +307,9 @@ export function ReportsClient({
               );
             })}
           </div>
-        </div>
+        </Card>
 
-        {/* Food Cost by Period — col-span-6 */}
-        <div
-          className={cn(
-            panelClassName,
-            glassPanelClassName,
-            "ui-flow-panel col-span-12 p-6 md:col-span-6",
-          )}
-        >
+        <Card className={cn(panelClassName, "col-span-12 p-6 md:col-span-6")}>
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold text-foreground">
@@ -346,25 +327,23 @@ export function ReportsClient({
                 color="primary"
                 target={30}
               />
-              <p
-                className="mt-2 text-xs text-muted-foreground"
-              >
+              <p className="mt-2 text-xs text-muted-foreground">
                 Food cost theo tháng.
               </p>
             </>
           ) : (
-            <EmptyState
+            <EmptyStatePanel
               title="Chưa có đủ dữ liệu food cost"
               description="Cần thêm dữ liệu thực tế."
               className="min-h-40 border-dashed bg-muted/20"
             />
           )}
-        </div>
+        </Card>
       </div>
 
       {/* Report catalog */}
       <p className="text-xl font-bold text-foreground">Báo cáo chi tiết</p>
-      <div className="ui-stagger-children grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
             icon: BarChart3,
@@ -387,24 +366,21 @@ export function ReportsClient({
             desc: "Giá trị tồn khi chốt.",
           },
         ].map((report) => (
-          <div
+          <Card
             key={report.title}
             className={cn(
               panelClassName,
-              glassPanelClassName,
-              "ui-surface-lift group cursor-pointer p-5 transition-all hover:-translate-y-0.5 hover:shadow-md",
+              "group cursor-pointer p-5 transition-all hover:-translate-y-0.5 hover:shadow-md",
             )}
           >
-            <div
-              className="mb-4 flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-muted to-white transition-colors"
-            >
+            <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted transition-colors">
               <report.icon className="size-5 text-muted-foreground" />
             </div>
             <p className="font-bold text-foreground">{report.title}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               {report.desc}
             </p>
-          </div>
+          </Card>
         ))}
       </div>
     </div>

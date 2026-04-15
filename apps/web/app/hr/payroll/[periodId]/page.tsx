@@ -1,9 +1,12 @@
 import { fetchPayrollEntries } from "../../payroll-actions";
+import { AlertTriangle } from "lucide-react";
 import {
-  EmptyState,
-  PageContainer,
-  PageHeader,
-} from "@/components/foundation/ui-patterns";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { PayrollDetailClient } from "./payroll-detail-client";
 
 export default async function PayrollDetailPage({
@@ -16,12 +19,19 @@ export default async function PayrollDetailPage({
 
   if (!id || id <= 0) {
     return (
-      <PageContainer>
-        <EmptyState
-          title="ID không hợp lệ"
-          description="Không thể mở chi tiết bảng lương vì mã kỳ lương không đúng."
-        />
-      </PageContainer>
+      <Card>
+        <CardHeader className="gap-3">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="flex size-8 items-center justify-center rounded-full border bg-muted">
+              <AlertTriangle className="size-4" />
+            </div>
+            <CardTitle className="text-xl">ID không hợp lệ</CardTitle>
+          </div>
+          <CardDescription>
+            Không thể mở chi tiết bảng lương vì mã kỳ lương không đúng.
+          </CardDescription>
+        </CardHeader>
+      </Card>
     );
   }
 
@@ -31,14 +41,22 @@ export default async function PayrollDetailPage({
     : [];
 
   return (
-    <PageContainer>
-      <PageHeader
-        eyebrow="Nhân sự & lương"
-        title="Chi tiết bảng lương"
-        description={`Kỳ lương #${periodId}`}
-      />
-      <PayrollDetailClient periodId={id} initialEntries={entries} />
-    </PageContainer>
+    <div className="space-y-5">
+      <Card>
+        <CardHeader className="gap-3">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Nhân sự & lương
+          </p>
+          <CardTitle>Chi tiết bảng lương</CardTitle>
+          <CardDescription>Kỳ lương #{periodId}</CardDescription>
+        </CardHeader>
+      </Card>
+      <Card>
+        <CardContent>
+          <PayrollDetailClient periodId={id} initialEntries={entries} />
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

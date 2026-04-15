@@ -2,7 +2,7 @@
 
 import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
@@ -41,13 +41,10 @@ function InfoCard({
 }) {
   return (
     <div
-      className={getSurfacePanelClassName(
-        "pos",
-        "rounded-3xl p-4 shadow-none",
-      )}
+      className="rounded-xl border bg-card p-4 shadow-sm"
     >
       <div className="flex items-start gap-3">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
           {icon}
         </div>
         <div className="space-y-1">
@@ -132,11 +129,11 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
 
       <div className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-6 lg:grid-cols-2">
         <section className="space-y-5">
-          <div className="ui-flow-panel p-5 sm:p-6">
+          <div className="rounded-lg border bg-card shadow-sm p-5 sm:p-6">
             <div className="relative space-y-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="space-y-3">
-                  <p className="app-section-label">POS terminal</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">POS terminal</p>
                   <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
                     Mở ca nhanh, vào POS ngay.
                   </h1>
@@ -144,7 +141,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
                     Chọn máy POS và nhập tiền đầu ca để bắt đầu.
                   </p>
                 </div>
-                <div className="rounded-full border border-primary/15 bg-white/80 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
+                <div className="rounded-full border border-primary/15 bg-card px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
                   Vào POS
                 </div>
               </div>
@@ -154,23 +151,23 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
                   <span>Tiến độ vào ca</span>
                   <span>{String(Math.round(setupProgress))}% sẵn sàng</span>
                 </div>
-                <div className="ui-flow-progress">
+                <div className="h-2 w-full rounded-full bg-muted">
                   <div
-                    className="ui-flow-progress-bar"
+                    className="h-full rounded-full bg-primary transition-all"
                     style={{ width: `${setupProgress}%` }}
                   />
                 </div>
               </div>
 
-              <div className="ui-stagger-children grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-3">
                 {setupSteps.map((step, index) => (
                   <div
                     key={step.label}
                     data-state={step.state}
-                    className="ui-flow-step"
+                    className="rounded-lg border bg-card shadow-sm p-3"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="ui-flow-stage-index">{index + 1}</div>
+                      <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">{index + 1}</div>
                       <div className="space-y-1">
                         <p className="text-sm font-semibold">{step.label}</p>
                         <p className="text-xs leading-5 text-muted-foreground">
@@ -184,7 +181,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
             </div>
           </div>
 
-          <div className="ui-stagger-children grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             <InfoCard
               title="Đúng thiết bị"
               description="Mỗi máy mở ca riêng."
@@ -200,18 +197,15 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
 
         <section
           className={cn(
-            getSurfacePanelClassName(
-              "pos",
-              "mx-auto w-full max-w-md p-6 sm:p-7",
-            ),
-            "app-page",
+            "rounded-lg border bg-card shadow-sm",
+            "mx-auto w-full max-w-md p-6 sm:p-7",
           )}
         >
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-3xl bg-primary/10 text-primary">
+            <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Monitor className="size-7" />
             </div>
-            <p className="app-section-label">Chi nhánh #{branchId}</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Chi nhánh #{branchId}</p>
             <h2 className="mt-2 text-2xl font-semibold text-foreground">
               Mở ca bán hàng
             </h2>
@@ -224,16 +218,16 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
             <div className="flex flex-col gap-2">
               <Label htmlFor="terminal">Máy POS</Label>
               {terminals.length === 0 ? (
-                <div className="rounded-2xl border border-warning/20 bg-warning/10 px-4 py-3 text-sm leading-6 text-warning">
+                <div className="rounded-lg border border-warning/20 bg-warning/10 px-4 py-3 text-sm leading-6 text-warning">
                   Chưa có máy POS. Liên hệ quản lý để thiết lập trước.
                 </div>
               ) : availableTerminalCount === 0 ? (
-                <div className="rounded-2xl border border-warning/20 bg-warning/10 px-4 py-3 text-sm leading-6 text-warning">
+                <div className="rounded-lg border border-warning/20 bg-warning/10 px-4 py-3 text-sm leading-6 text-warning">
                   Tất cả máy POS đang có ca mở. Hãy đóng ca hiện tại trước.
                 </div>
               ) : (
                 <Select value={terminalId} onValueChange={setTerminalId}>
-                  <SelectTrigger id="terminal" className="focus-ring-standard bg-white">
+                  <SelectTrigger id="terminal" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background bg-white">
                     <SelectValue placeholder="Chọn máy POS" />
                   </SelectTrigger>
                   <SelectContent>
@@ -254,7 +248,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
             </div>
 
             {selectedTerminalOccupied ? (
-              <div className="rounded-2xl border border-warning/20 bg-warning/10 px-4 py-3 text-sm leading-6 text-warning">
+              <div className="rounded-lg border border-warning/20 bg-warning/10 px-4 py-3 text-sm leading-6 text-warning">
                 Máy POS này đang có ca mở. Chọn máy khác hoặc đóng ca hiện tại
                 trước khi tiếp tục.
               </div>
@@ -270,11 +264,11 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
                 value={openingCash}
                 onChange={(event) => setOpeningCash(event.target.value)}
                 placeholder="0"
-                className="focus-ring-standard bg-white"
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background bg-white"
               />
             </div>
 
-            <div className="rounded-2xl border border-border/70 bg-muted/35 px-4 py-3">
+            <div className="rounded-lg border border-border bg-muted/35 px-4 py-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -295,7 +289,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
             </div>
 
             <Button
-              className="focus-ring-standard mt-2 w-full"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background mt-2 w-full"
               size="lg"
               disabled={!canOpen}
               onClick={handleOpen}

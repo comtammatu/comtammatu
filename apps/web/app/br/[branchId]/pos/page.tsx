@@ -1,6 +1,5 @@
-import { Suspense, type ReactNode } from "react";
+import { Suspense } from "react";
 import { Loader2, MonitorSpeaker, TriangleAlert } from "lucide-react";
-import { FlowStatePanel } from "@/components/foundation/ui-patterns";
 import {
   fetchMenuForPos,
   fetchTablesForBranch,
@@ -11,38 +10,7 @@ import { PosMenu } from "./pos-menu";
 import type { MenuCategory } from "./pos-menu";
 import { SessionGate } from "./session-gate";
 import type { OrderType } from "./types";
-
-function PosRouteState({
-  title,
-  description,
-  status,
-  statusTone,
-  steps,
-}: {
-  title: string;
-  description: string;
-  status: ReactNode;
-  statusTone: "info" | "warning" | "danger";
-  steps: Array<{
-    label: string;
-    description: string;
-    state: "todo" | "current" | "done";
-  }>;
-}) {
-  return (
-    <FlowStatePanel
-      surface="pos"
-      icon={<MonitorSpeaker className="size-5" />}
-      title={title}
-      description={description}
-      status={status}
-      statusTone={statusTone}
-      steps={steps}
-      wrapperClassName="bg-background/40"
-      className="max-w-5xl"
-    />
-  );
-}
+import { RouteStateCard } from "@/components/v2/route-state-card";
 
 export default async function PosPage({
   params,
@@ -68,12 +36,10 @@ export default async function PosPage({
 
   if (!sessionResult.success) {
     return (
-      <PosRouteState
+      <RouteStateCard
         title="Không thể dựng phiên POS"
-        description={
-          sessionResult.error ??
-          "Chưa lấy được ca làm hiện tại."
-        }
+        description={sessionResult.error ?? "Chưa lấy được ca làm hiện tại."}
+        icon={<MonitorSpeaker className="size-5" />}
         status={
           <>
             <TriangleAlert className="size-3.5" />
@@ -108,12 +74,12 @@ export default async function PosPage({
 
     if (!terminalsResult.success) {
       return (
-        <PosRouteState
+        <RouteStateCard
           title="Không thể tải máy POS"
           description={
-            terminalsResult.error ??
-            "Chưa đồng bộ được danh sách thiết bị."
+            terminalsResult.error ?? "Chưa đồng bộ được danh sách thiết bị."
           }
+          icon={<MonitorSpeaker className="size-5" />}
           status={
             <>
               <TriangleAlert className="size-3.5" />
@@ -177,19 +143,17 @@ export default async function PosPage({
 
   if (!menuResult.success || !menuResult.data) {
     return (
-        <PosRouteState
-          title="Không thể tải menu bán hàng"
-          description={
-            menuResult.error ??
-            "Ca đã mở nhưng chưa tải được menu."
-          }
+      <RouteStateCard
+        title="Không thể tải menu bán hàng"
+        description={menuResult.error ?? "Ca đã mở nhưng chưa tải được menu."}
+        icon={<MonitorSpeaker className="size-5" />}
         status={
           <>
             <TriangleAlert className="size-3.5" />
             <span>Gián đoạn dữ liệu bán hàng</span>
           </>
         }
-          statusTone="warning"
+        statusTone="warning"
         steps={[
           {
             label: "Ca đang mở",
@@ -214,9 +178,10 @@ export default async function PosPage({
   return (
     <Suspense
       fallback={
-        <PosRouteState
+        <RouteStateCard
           title="Đang chuẩn bị quầy POS"
           description="Đang nạp ca làm, bàn và menu."
+          icon={<MonitorSpeaker className="size-5" />}
           status={
             <>
               <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
@@ -224,7 +189,7 @@ export default async function PosPage({
             </>
           }
           statusTone="info"
-        steps={[
+          steps={[
             {
               label: "Phiên hợp lệ",
               description: "Ca làm và thiết bị đã sẵn sàng.",

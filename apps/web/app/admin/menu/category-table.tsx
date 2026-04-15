@@ -112,7 +112,11 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-9 rounded-full">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-9 rounded-full"
+                      >
                         <MoreHorizontal className="size-4" />
                         <span className="sr-only">Menu</span>
                       </Button>

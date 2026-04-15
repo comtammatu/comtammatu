@@ -17,7 +17,7 @@ import { ChefHat, Filter, Flame, PackageCheck } from "lucide-react";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { OrderCard } from "./order-card";
 import type { KdsStation, KdsTicket, KdsOrderInfo, KdsOrderItem } from "./page";
-import { EmptyState } from "@/components/foundation/ui-patterns";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 
 /* ─── Types ─── */
 
@@ -468,19 +468,19 @@ export function KdsBoard({
 
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
-      <div className="border-b border-border/60 bg-background/90 px-3 py-3 backdrop-blur-xl md:px-4">
+      <div className="border-b border-border/60 bg-zinc-950 px-3 py-3 md:px-4">
         <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-4">
           <div className="flex items-center gap-2">
             <EmployeePortalBackControl className="h-8 rounded-full px-2 text-xs" />
-            <span className="app-section-label">KDS chi nhánh #{branchId}</span>
+            <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">KDS chi nhánh #{branchId}</span>
           </div>
 
           <div className="grid gap-4 xl:grid-cols-4">
-            <div className="ui-flow-panel rounded-4xl p-5 xl:col-span-3">
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900 text-white shadow-sm p-5 xl:col-span-3">
               <div className="relative space-y-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="space-y-2">
-                    <p className="app-section-label">Điều phối line bếp</p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Điều phối line bếp</p>
                     <h1 className="text-2xl font-semibold tracking-tight text-foreground">
                       Món cần nhận, đang làm, đã xong.
                     </h1>
@@ -496,19 +496,19 @@ export function KdsBoard({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
-                  <span className="rounded-full border border-border/70 bg-white/70 px-3 py-1.5">
+                  <span className="rounded-full border border-border/70 bg-zinc-800 px-3 py-1.5">
                     {readyCount} món đã xong
                   </span>
-                  <span className="rounded-full border border-border/70 bg-white/70 px-3 py-1.5">
+                  <span className="rounded-full border border-border/70 bg-zinc-800 px-3 py-1.5">
                     {preparingCount} món đang chạy
                   </span>
-                  <span className="rounded-full border border-border/70 bg-white/70 px-3 py-1.5">
+                  <span className="rounded-full border border-border/70 bg-zinc-800 px-3 py-1.5">
                     {pendingCount} món đang chờ nhận
                   </span>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="ui-surface-lift rounded-3xl border border-warning/20 bg-warning/10 p-4 shadow-sm">
+                  <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-warning/20 bg-warning/10 p-4 shadow-sm">
                     <p className="text-xs font-semibold uppercase tracking-wide text-warning">
                       Hàng chờ
                     </p>
@@ -519,7 +519,7 @@ export function KdsBoard({
                       Chưa vào line.
                     </p>
                   </div>
-                  <div className="ui-surface-lift rounded-3xl border border-primary/15 bg-primary/8 p-4 shadow-sm">
+                  <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-primary/15 bg-primary/8 p-4 shadow-sm">
                     <p className="text-xs font-semibold uppercase tracking-wide text-primary">
                       Đang chế biến
                     </p>
@@ -530,7 +530,7 @@ export function KdsBoard({
                       Đang xử lý.
                     </p>
                   </div>
-                  <div className="ui-surface-lift rounded-3xl border border-success/15 bg-success/10 p-4 shadow-sm">
+                  <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-success/15 bg-success/10 p-4 shadow-sm">
                     <p className="text-xs font-semibold uppercase tracking-wide text-success">
                       Khu pass
                     </p>
@@ -555,7 +555,7 @@ export function KdsBoard({
                       {hotOrders.map((order) => (
                         <div
                           key={`hot-${order.orderId}`}
-                          className="ui-surface-lift rounded-3xl border border-warning/20 bg-warning/10 p-4 shadow-sm"
+                          className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-warning/20 bg-warning/10 p-4 shadow-sm"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
@@ -568,7 +568,7 @@ export function KdsBoard({
                                   : "Mang đi"}
                               </p>
                             </div>
-                            <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-warning">
+                            <span className="rounded-full bg-zinc-800 px-3 py-1 text-xs font-semibold text-warning">
                               {getElapsedMinutes(order.createdAt)} phút
                             </span>
                           </div>
@@ -586,21 +586,21 @@ export function KdsBoard({
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-              <div className="app-kpi p-4">
-                <p className="app-section-label">Đơn hiển thị</p>
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900 shadow-sm p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Đơn hiển thị</p>
                 <p className="mt-2 text-2xl font-semibold tabular-nums">
                   {displayOrders.length}
                 </p>
               </div>
-              <div className="app-kpi p-4">
-                <p className="app-section-label">Món còn việc</p>
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900 shadow-sm p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Món còn việc</p>
                 <p className="mt-2 flex items-center gap-2 text-2xl font-semibold tabular-nums">
                   <Flame className="size-5 text-warning" />
                   {totalActiveCount}
                 </p>
               </div>
-              <div className="app-kpi p-4">
-                    <p className="app-section-label">Order lâu nhất</p>
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900 shadow-sm p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Order lâu nhất</p>
                     <p className="mt-2 flex items-center gap-2 text-2xl font-semibold tabular-nums">
                       <PackageCheck className="size-5 text-info" />
                       {oldestActiveOrderMinutes}m
@@ -611,7 +611,7 @@ export function KdsBoard({
         </div>
       </div>
 
-      <div className="border-b border-border/40 bg-background/75 px-3 py-3 md:px-4">
+      <div className="border-b border-border/40 bg-zinc-950 px-3 py-3 md:px-4">
         <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {stationSummary.map((station) => (
@@ -619,10 +619,10 @@ export function KdsBoard({
                 key={`summary-${station.stationId}`}
                 type="button"
                 className={cn(
-                  "ui-surface-lift rounded-3xl border p-4 text-left shadow-sm transition-all",
+                  "transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border p-4 text-left shadow-sm",
                   activeStationId === station.stationId
                     ? "border-primary/30 bg-primary/10"
-                    : "border-border/60 bg-white/82",
+                    : "border-border/60 bg-zinc-900",
                 )}
                 onClick={() =>
                   replaceQuery({
@@ -668,7 +668,7 @@ export function KdsBoard({
             <button
               type="button"
               className={cn(
-                "ui-surface-lift flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-2xl px-3 text-sm font-bold transition-colors duration-150 md:min-h-14 md:px-5 md:text-base",
+                "transition-all hover:-translate-y-0.5 hover:shadow-md flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-bold duration-150 md:min-h-14 md:px-5 md:text-base",
                 activeStationId === null
                   ? "bg-accent text-accent-foreground shadow-sm"
                   : "bg-secondary text-secondary-foreground hover:bg-muted",
@@ -697,7 +697,7 @@ export function KdsBoard({
                   key={station.id}
                   type="button"
                   className={cn(
-                    "ui-surface-lift flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-2xl px-3 text-sm font-bold transition-colors duration-150 md:min-h-14 md:px-5 md:text-base",
+                    "transition-all hover:-translate-y-0.5 hover:shadow-md flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-bold duration-150 md:min-h-14 md:px-5 md:text-base",
                     isActive
                       ? "bg-accent text-accent-foreground shadow-sm"
                       : "bg-secondary text-secondary-foreground hover:bg-muted",
@@ -728,7 +728,7 @@ export function KdsBoard({
 
       <div className="border-b border-border/30 bg-secondary/45 px-3 py-2 md:px-4">
         <div className="mx-auto w-full max-w-screen-2xl">
-          <div className="ui-flow-panel rounded-3xl px-3 py-2.5">
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900 text-white shadow-sm px-3 py-2.5">
           <div className="relative flex shrink-0 flex-nowrap items-center gap-2 overflow-x-auto md:flex-wrap">
             <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
               <Filter className="size-4 shrink-0" aria-hidden />
@@ -742,7 +742,7 @@ export function KdsBoard({
               }}
             >
               <SelectTrigger
-                className="h-10 min-h-10 w-auto min-w-32 shrink-0 rounded-2xl text-sm md:h-11 md:min-h-11 md:min-w-40"
+                className="h-10 min-h-10 w-auto min-w-32 shrink-0 rounded-lg text-sm md:h-11 md:min-h-11 md:min-w-40"
                 aria-label="Lọc theo trạng thái món"
               >
                 <SelectValue placeholder="Trạng thái" />
@@ -763,7 +763,7 @@ export function KdsBoard({
               }}
             >
               <SelectTrigger
-                className="h-10 min-h-10 w-auto min-w-28 shrink-0 rounded-2xl text-sm md:h-11 md:min-h-11 md:min-w-36"
+                className="h-10 min-h-10 w-auto min-w-28 shrink-0 rounded-lg text-sm md:h-11 md:min-h-11 md:min-w-36"
                 aria-label="Lọc theo loại đơn"
               >
                 <SelectValue placeholder="Loại đơn" />
@@ -790,23 +790,31 @@ export function KdsBoard({
       <ScrollArea className="flex-1">
         {displayOrders.length === 0 ? (
           <div className="mx-auto w-full max-w-screen-2xl p-3 md:p-4">
-            <EmptyState
-              icon={<ChefHat className="size-12" />}
-              title={
-                groupedOrders.length > 0
-                  ? "Không có đơn phù hợp bộ lọc"
-                  : "Bếp đang rảnh"
-              }
-              description={
-                groupedOrders.length > 0
-                  ? "Thử thay đổi bộ lọc để xem thêm đơn."
-                  : "Chưa có đơn hàng mới."
-              }
-              className="min-h-kds-board"
-            />
+            <Card>
+              <CardContent
+                className="flex min-h-52 flex-col items-center justify-center gap-4 px-6 py-10 text-center"
+                style={{ minHeight: "60vh" }}
+              >
+                <div className="flex size-12 items-center justify-center rounded-full border bg-muted/40 text-muted-foreground">
+                  <ChefHat className="size-4" />
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-base font-semibold">
+                    {groupedOrders.length > 0
+                      ? "Không có đơn phù hợp bộ lọc"
+                      : "Bếp đang rảnh"}
+                  </p>
+                  <p className="max-w-sm text-sm leading-6 text-muted-foreground">
+                    {groupedOrders.length > 0
+                      ? "Thử thay đổi bộ lọc để xem thêm đơn."
+                      : "Chưa có đơn hàng mới."}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         ) : (
-          <div className="ui-content-auto mx-auto grid w-full max-w-screen-2xl grid-cols-1 gap-3 p-3 md:grid-cols-2 md:p-4 xl:grid-cols-3 2xl:grid-cols-4">
+          <div className="mx-auto grid w-full max-w-screen-2xl grid-cols-1 gap-3 p-3 md:grid-cols-2 md:p-4 xl:grid-cols-3 2xl:grid-cols-4">
             {displayOrders.map((order) => (
               <OrderCard
                 key={order.orderId}

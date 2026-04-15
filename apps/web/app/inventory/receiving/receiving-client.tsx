@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { SectionCard } from "@/components/foundation/ui-patterns";
 import {
   ArrowRight,
   ClipboardCheck,
@@ -10,6 +9,15 @@ import {
   ShoppingCart,
   Zap,
 } from "lucide-react";
+import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import {
   Table,
   TableBody,
@@ -18,17 +26,20 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
-import { PageHeader, StatusBadge } from "../_components/shared";
+import { cn } from "@comtammatu/ui";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { tNav } from "../_lib/dictionary";
 import { formatVND } from "../_lib/format";
+import {
+  getInventoryStatusBadgeVariant,
+  getInventoryStatusLabel,
+} from "../_lib/ui";
 import type { RecentActivityItem } from "../procurement-actions";
 
 function activityHref(item: RecentActivityItem): string {
   if (item.type === "po") return `/inventory/purchase-orders/${item.id}`;
   if (item.type === "grn") return `/inventory/grn/${item.id}`;
-  return `/inventory/supplier-invoices`;
+  return "/inventory/supplier-invoices";
 }
 
 function formatActivityDate(iso: string): string {
@@ -56,237 +67,262 @@ export type ReceivingProps = {
   recentActivity: RecentActivityItem[];
 };
 
+const WORKFLOW_STEPS = [
+  {
+    key: "po",
+    icon: ShoppingCart,
+    label: tNav("purchaseOrders", "heading"),
+    href: "/inventory/purchase-orders",
+    cta: "Quản lý PO",
+    description: "Tạo và theo dõi đơn đặt hàng trước khi nhận thực tế.",
+    toneClassName: "text-primary",
+    badgeClassName: "bg-primary/10 text-primary",
+  },
+  {
+    key: "grn",
+    icon: ClipboardCheck,
+    label: tNav("grn", "heading"),
+    href: "/inventory/grn",
+    cta: "Mở GRN",
+    description: "Xác nhận số lượng nhận, batch và chi phí đầu vào.",
+    toneClassName: "text-success",
+    badgeClassName: "bg-success/10 text-success",
+  },
+  {
+    key: "invoice",
+    icon: FileText,
+    label: tNav("supplierInvoices", "heading"),
+    href: "/inventory/supplier-invoices",
+    cta: "Đối soát hóa đơn",
+    description: "Khóa công nợ với quy trình 3-way matching.",
+    toneClassName: "text-info",
+    badgeClassName: "bg-info/10 text-info",
+  },
+] as const;
+
 export function ReceivingClient({
   poCount,
   grnCount,
   invoiceCount,
   recentActivity,
 }: ReceivingProps) {
-  const panelClassName = getSurfacePanelClassName(
-    "inventory",
-    "ambient-shadow",
-  );
-  const steps = [
-    {
-      step: 1,
-      icon: ShoppingCart,
-      label: tNav("purchaseOrders", "heading"),
-      count: poCount,
-      sub: "Đơn đang chờ duyệt/gửi",
-      href: "/inventory/purchase-orders",
-      btnLabel: "Quản lý đơn đặt hàng NCC",
-      toneClassName: "text-primary",
-      stepClassName: "bg-primary text-primary-foreground",
-      ctaClassName: "border-primary/15 bg-primary/8 text-primary",
-    },
-    {
-      step: 2,
-      icon: ClipboardCheck,
-      label: tNav("grn", "heading"),
-      count: grnCount,
-      sub: "Phiếu đang chờ xác nhận",
-      href: "/inventory/grn",
-      btnLabel: "Quản lý phiếu nhập kho",
-      toneClassName: "text-success",
-      stepClassName: "bg-success text-success-foreground",
-      ctaClassName: "border-success/20 bg-success/10 text-success",
-    },
-    {
-      step: 3,
-      icon: FileText,
-      label: tNav("supplierInvoices", "heading"),
-      count: invoiceCount,
-      sub: "Hóa đơn cần đối soát 3-way",
-      href: "/inventory/supplier-invoices",
-      btnLabel: "Quản lý hóa đơn NCC",
-      toneClassName: "text-info",
-      stepClassName: "bg-info text-info-foreground",
-      ctaClassName: "border-info/20 bg-info/10 text-info",
-    },
-  ];
+  const countsByKey = {
+    po: poCount,
+    grn: grnCount,
+    invoice: invoiceCount,
+  } satisfies Record<(typeof WORKFLOW_STEPS)[number]["key"], number>;
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={tNav("receiving", "heading")}
-        description="Theo dõi chuỗi PO, GRN và hóa đơn nhà cung cấp."
-      />
-
-      {/* Workflow Stepper Bento Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        {steps.map((item) => {
-          const Icon = item.icon;
-          return (
-            <SectionCard
-              key={item.step}
-              className={cn(
-                panelClassName,
-                "group relative overflow-hidden rounded-3xl bg-card shadow-sm transition-shadow hover:shadow-md",
-              )}
-              density="touch"
-            >
-              {/* Watermark icon */}
-              <div className="absolute right-4 top-4 opacity-5 transition-opacity group-hover:opacity-10">
-                <Icon className="size-24" />
-              </div>
-
-              {/* Step number + label */}
-              <div className="mb-6 flex items-center gap-3">
-                <span
-                  className={cn(
-                    "flex size-8 items-center justify-center rounded-full font-bold",
-                    item.stepClassName,
-                  )}
-                >
-                  {item.step}
-                </span>
-                <h3 className="text-lg font-bold leading-tight sm:text-xl">
-                  {item.label}
-                </h3>
-              </div>
-
-              {/* Count */}
-              <div className="mb-8">
-                <span
-                  className={cn(
-                    "text-4xl font-black tracking-tighter",
-                    item.toneClassName,
-                  )}
-                >
-                  {String(item.count).padStart(2, "0")}
-                </span>
-                <p className="mt-1 text-sm text-muted-foreground">{item.sub}</p>
-              </div>
-
-              {/* CTA button */}
-              <Link
-                href={item.href}
-                className={cn(
-                  "focus-ring-standard flex w-full whitespace-nowrap items-center justify-center gap-2 rounded-full border py-3 text-sm font-bold transition-all",
-                  item.ctaClassName,
-                )}
-              >
-                {item.btnLabel}
-                <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+      <Card className="border-border/70">
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Nhập kho
+            </p>
+            <div className="space-y-1">
+              <CardTitle className="text-3xl">
+                {tNav("receiving", "heading")}
+              </CardTitle>
+              <CardDescription className="max-w-3xl leading-6">
+                Điều phối xuyên suốt luồng đặt hàng, nhập kho và đối soát hóa
+                đơn nhà cung cấp.
+              </CardDescription>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link href="/inventory/grn">Mở GRN</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/inventory/purchase-orders/new">
+                <Zap className="size-4" />
+                Tạo PO nhanh
               </Link>
-            </SectionCard>
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
+
+      <div className="grid gap-4 xl:grid-cols-3">
+        {WORKFLOW_STEPS.map((step, index) => {
+          const Icon = step.icon;
+          return (
+            <Card key={step.key} className="border-border/70">
+              <CardHeader className="space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-2">
+                    <div
+                      className={cn(
+                        "inline-flex size-10 items-center justify-center rounded-lg",
+                        step.badgeClassName,
+                      )}
+                    >
+                      <Icon className="size-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">{step.label}</CardTitle>
+                      <CardDescription className="mt-1">
+                        {step.description}
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <div className="rounded-full border border-border/70 bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
+                    Bước {index + 1}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-end justify-between gap-3 rounded-lg border border-border/70 bg-muted/20 p-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Đang mở
+                    </p>
+                    <p
+                      className={cn(
+                        "mt-2 text-4xl font-semibold",
+                        step.toneClassName,
+                      )}
+                    >
+                      {String(countsByKey[step.key]).padStart(2, "0")}
+                    </p>
+                  </div>
+                  <p className="max-w-36 text-right text-sm text-muted-foreground">
+                    Hồ sơ cần xử lý ở bước này.
+                  </p>
+                </div>
+
+                <Button
+                  asChild
+                  variant="outline"
+                  className="w-full justify-between"
+                >
+                  <Link href={step.href}>
+                    {step.cta}
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
           );
         })}
       </div>
 
-      {/* Activity + Sidebar */}
-      <div className="grid gap-8 lg:grid-cols-4">
-        {/* Recent Activity Table */}
-        <div className="lg:col-span-3">
-          <div className="mb-6 flex items-center justify-between">
-            <h3 className="text-lg font-bold">Hoạt động gần đây</h3>
-            <button
-              type="button"
-              className="focus-ring-standard rounded-sm text-sm font-semibold text-primary hover:underline"
-            >
-              Xem tất cả
-            </button>
-          </div>
-          <div
-            className={cn(
-              panelClassName,
-              "overflow-hidden rounded-3xl bg-card",
-            )}
-          >
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/40">
-                  {[
-                    "Mã Phiếu",
-                    "Nhà Cung Cấp",
-                    "Ngày",
-                    "Trạng Thái",
-                    "Tổng Tiền",
-                  ].map((h) => (
-                    <TableHead
-                      key={h}
-                      className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wide text-muted-foreground ${h === "Tổng Tiền" ? "text-right" : ""}`}
-                    >
-                      {h}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_360px]">
+        <Card className="border-border/70">
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <div>
+              <CardTitle>Hoạt động gần đây</CardTitle>
+              <CardDescription>
+                Theo dõi PO, GRN và hóa đơn mới nhất trong cùng một dòng thời
+                gian.
+              </CardDescription>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/inventory/supplier-invoices">Xem hóa đơn</Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto rounded-lg border border-border/70">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/20 hover:bg-muted/20">
+                    <TableHead className="min-w-36">Mã phiếu</TableHead>
+                    <TableHead className="min-w-44">Nhà cung cấp</TableHead>
+                    <TableHead className="min-w-32">Thời gian</TableHead>
+                    <TableHead className="min-w-32">Trạng thái</TableHead>
+                    <TableHead className="min-w-28 text-right">
+                      Tổng tiền
                     </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentActivity.length === 0 && (
-                  <TableEmptyStateRow
-                    colSpan={5}
-                    title="Chưa có hoạt động nào"
-                    description="PO, GRN và hóa đơn mới sẽ xuất hiện ở đây khi phát sinh."
-                  />
-                )}
-                {recentActivity.map((item) => (
-                  <TableRow
-                    key={item.code}
-                    className="border-border/40 transition-colors"
-                  >
-                    <TableCell className="px-6 py-4 font-mono text-sm font-medium">
-                      <Link
-                        href={activityHref(item)}
-                        className="focus-ring-standard rounded-sm text-primary hover:underline"
-                      >
-                        {item.code}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-sm font-semibold">
-                      {item.supplier}
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-sm text-muted-foreground">
-                      {formatActivityDate(item.date)}
-                    </TableCell>
-                    <TableCell className="px-6 py-4">
-                      <StatusBadge status={item.status} />
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-right text-sm font-bold text-primary">
-                      {item.total != null ? `${formatVND(item.total)}đ` : "—"}
-                    </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-4">
-          {/* Quick Actions */}
-          <div className={cn(panelClassName, "rounded-3xl bg-card p-5")}>
-            <h4 className="mb-3 text-sm font-semibold">Thao tác nhanh</h4>
-            <div className="space-y-2">
-              <Link
-                href="/inventory/purchase-orders/new"
-                className="focus-ring-standard flex w-full items-center gap-2 rounded-full border border-border/60 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
-              >
-                <Zap className="size-4 text-primary" />
-                Tạo PO nhanh
-              </Link>
-              <button
-                type="button"
-                className="focus-ring-standard flex w-full items-center gap-2 rounded-full border border-border/60 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
-              >
-                Nhập hàng không qua PO
-              </button>
+                </TableHeader>
+                <TableBody>
+                  {recentActivity.length === 0 ? (
+                    <TableEmptyStateRow
+                      colSpan={5}
+                      title="Chưa có hoạt động nào"
+                      description="PO, GRN và hóa đơn mới sẽ xuất hiện tại đây khi phát sinh."
+                    />
+                  ) : null}
+                  {recentActivity.map((item) => (
+                    <TableRow
+                      key={`${item.type}-${item.id}`}
+                      className="hover:bg-muted/20"
+                    >
+                      <TableCell className="font-mono font-medium">
+                        <Link
+                          href={activityHref(item)}
+                          className="text-primary hover:underline"
+                        >
+                          {item.code}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{item.supplier}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatActivityDate(item.date)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={getInventoryStatusBadgeVariant(item.status)}
+                        >
+                          {getInventoryStatusLabel(item.status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-semibold">
+                        {item.total != null ? `${formatVND(item.total)}đ` : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Tip Card */}
-          <div className="rounded-3xl border border-primary/10 bg-primary/5 p-5">
-            <div className="flex items-center gap-2">
-              <Lightbulb className="size-4 text-primary" />
-              <p className="text-xs font-semibold text-muted-foreground">
-                Mẹo quản lý
+        <div className="space-y-6">
+          <Card className="border-border/70">
+            <CardHeader>
+              <CardTitle className="text-base">Thao tác nhanh</CardTitle>
+              <CardDescription>
+                Mở trực tiếp các tuyến công việc dùng thường xuyên.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-2">
+              <Button asChild className="justify-between">
+                <Link href="/inventory/purchase-orders/new">
+                  Tạo PO nhanh
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="justify-between">
+                <Link href="/inventory/grn">
+                  Vào danh sách GRN
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="justify-between">
+                <Link href="/inventory/supplier-invoices">
+                  Mở hóa đơn NCC
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader>
+              <div className="flex items-center gap-2 text-primary">
+                <Lightbulb className="size-4" />
+                <CardTitle className="text-base">Nguyên tắc vận hành</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Luôn khóa luồng nhận hàng theo thứ tự PO → GRN → Hóa đơn để đối
+                chiếu đủ số lượng, giá và hạn thanh toán trước khi chốt công nợ.
               </p>
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Sử dụng quy trình 3-way matching để đảm bảo số lượng nhận thực tế
-              khớp với đơn đặt và hóa đơn nhà cung cấp.
-            </p>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

@@ -126,7 +126,7 @@ export function ScheduleClient({
         <Button
           variant="outline"
           size="icon"
-          className="touch-target"
+          className="min-h-11 min-w-11"
           onClick={goToPrevWeek}
           disabled={isPending}
           aria-label="Tuần trước"
@@ -150,7 +150,7 @@ export function ScheduleClient({
         <Button
           variant="outline"
           size="icon"
-          className="touch-target"
+          className="min-h-11 min-w-11"
           onClick={goToNextWeek}
           disabled={isPending}
           aria-label="Tuần sau"

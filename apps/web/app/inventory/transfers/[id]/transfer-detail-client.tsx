@@ -2,8 +2,15 @@
 
 import Link from "next/link";
 import { ArrowLeft, MapPin, CheckCircle, Printer } from "lucide-react";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import {
   Table,
   TableBody,
@@ -13,15 +20,15 @@ import {
   TableRow,
   TableFooter,
 } from "@comtammatu/ui/components/table";
-import { SectionCard } from "@/components/foundation/ui-patterns";
-import {
-  PageHeader,
-  StatusBadge,
-  TimelineStepper,
-} from "../../_components/shared";
+import { SectionCard } from "@/components/v2/patterns";
+import { TimelineStepper } from "../../_components/timeline-stepper";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatVND } from "../../_lib/format";
+import {
+  getInventoryStatusBadgeVariant,
+  getInventoryStatusLabel,
+} from "../../_lib/ui";
 
 export type TransferDetail = {
   code: string;
@@ -50,10 +57,7 @@ export function TransferDetailClient({
 }: {
   transfer: TransferDetail;
 }) {
-  const panelClassName = getSurfacePanelClassName(
-    "inventory",
-    "ambient-shadow",
-  );
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const receivedCount = transfer.items.filter(
     (item) => item.received != null,
   ).length;
@@ -67,18 +71,28 @@ export function TransferDetailClient({
         <ArrowLeft className="size-4" /> {tRoute("/inventory/transfers")}
       </Link>
 
-      <PageHeader
-        eyebrow="Điều chuyển"
-        title={transfer.code}
-        description={`Luồng ${transfer.fromBranch} → ${transfer.toBranch} • Người tạo ${transfer.createdBy} • ${transfer.date}`}
-        actions={<StatusBadge status={transfer.status} />}
-      />
+      <Card className="border-border/70">
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Điều chuyển
+            </p>
+            <CardTitle className="text-2xl">{transfer.code}</CardTitle>
+            <CardDescription>
+              {`Luồng ${transfer.fromBranch} → ${transfer.toBranch} • Người tạo ${transfer.createdBy} • ${transfer.date}`}
+            </CardDescription>
+          </div>
+          <Badge variant={getInventoryStatusBadgeVariant(transfer.status)}>
+            {getInventoryStatusLabel(transfer.status)}
+          </Badge>
+        </CardHeader>
+      </Card>
 
       {/* Timeline */}
       <section
         className={cn(
           panelClassName,
-          "flex justify-center overflow-hidden rounded-2xl bg-card py-6",
+          "flex justify-center overflow-hidden rounded-lg bg-card py-6",
         )}
       >
         <TimelineStepper
@@ -130,7 +144,7 @@ export function TransferDetailClient({
         ].map((info) => (
           <div
             key={info.label}
-            className={cn(panelClassName, "rounded-2xl bg-card p-4")}
+            className={cn(panelClassName, "rounded-lg bg-card p-4")}
           >
             <p className="text-label uppercase tracking-wider text-muted-foreground">
               {info.label}
@@ -145,7 +159,7 @@ export function TransferDetailClient({
       {/* Note */}
       {transfer.note && (
         <SectionCard
-          className="rounded-2xl border border-border/50 bg-gradient-to-br from-white via-background to-muted/30"
+          className="rounded-lg border border-border bg-card"
           density="compact"
         >
           <p className="text-label font-medium uppercase tracking-wider text-muted-foreground">
@@ -159,12 +173,9 @@ export function TransferDetailClient({
         {/* Items table */}
         <div className="lg:col-span-2">
           <section
-            className={cn(
-              panelClassName,
-              "overflow-hidden rounded-2xl bg-card",
-            )}
+            className={cn(panelClassName, "overflow-hidden rounded-lg bg-card")}
           >
-            <div className="flex flex-col gap-3 border-b border-border/50 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <h4 className="text-lg font-bold">{tTerm("ingredientsList")}</h4>
               <button
                 type="button"
@@ -178,7 +189,7 @@ export function TransferDetailClient({
               {transfer.items.map((item) => (
                 <div
                   key={item.sku || item.name}
-                  className="rounded-2xl border border-border/70 bg-muted/20 p-4"
+                  className="rounded-lg border border-border bg-muted/20 p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -281,7 +292,7 @@ export function TransferDetailClient({
                   ))}
                 </TableBody>
                 <TableFooter>
-                  <TableRow className="border-border/50">
+                  <TableRow className="border-border">
                     <TableCell
                       colSpan={4}
                       className="px-6 py-3 text-right text-sm text-muted-foreground"
@@ -293,7 +304,7 @@ export function TransferDetailClient({
                     </TableCell>
                     <TableCell />
                   </TableRow>
-                  <TableRow className="border-border/50">
+                  <TableRow className="border-border">
                     <TableCell
                       colSpan={4}
                       className="px-6 py-3 text-right text-sm text-muted-foreground"
@@ -305,7 +316,7 @@ export function TransferDetailClient({
                     </TableCell>
                     <TableCell />
                   </TableRow>
-                  <TableRow className="border-border/50">
+                  <TableRow className="border-border">
                     <TableCell
                       colSpan={4}
                       className="px-6 py-3 text-right text-sm font-bold"
@@ -325,7 +336,7 @@ export function TransferDetailClient({
 
         {/* Sidebar value card */}
         <SectionCard
-          className="h-fit rounded-2xl border-primary/20 bg-primary/5"
+          className="h-fit rounded-lg border-primary/20 bg-primary/5"
           density="comfortable"
         >
           <p className="text-label uppercase tracking-wider text-muted-foreground">
@@ -346,7 +357,7 @@ export function TransferDetailClient({
       </div>
 
       {/* Footer Action Bar */}
-      <footer className="flex flex-col gap-3 border-t border-border/50 py-6 sm:flex-row sm:items-center sm:justify-between">
+      <footer className="flex flex-col gap-3 border-t border-border py-6 sm:flex-row sm:items-center sm:justify-between">
         <Button
           type="button"
           variant="outline"

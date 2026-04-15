@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle, PlusCircle, Trash2, X } from "lucide-react";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +22,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -41,12 +48,14 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { SectionCard } from "@/components/foundation/ui-patterns";
-import { PageHeader, StatusBadge } from "../../_components/shared";
-import { EmptyStatePanel } from "../../_components/empty-state-panel";
+import { EmptyStatePanel, SectionCard } from "@/components/v2/patterns";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatDateTime, formatQty, formatVND } from "../../_lib/format";
+import {
+  getInventoryStatusBadgeVariant,
+  getInventoryStatusLabel,
+} from "../../_lib/ui";
 import {
   cancelStockIssue,
   confirmStockIssue,
@@ -100,10 +109,7 @@ export function IssueDetailClient({
   ingredients: IngredientRow[];
 }) {
   const router = useRouter();
-  const panelClassName = getSurfacePanelClassName(
-    "inventory",
-    "ambient-shadow",
-  );
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const [issue, setIssue] = useState(initialIssue);
   const [lines, setLines] = useState(initialLines);
   const [isPending, startTransition] = useTransition();
@@ -188,12 +194,22 @@ export function IssueDetailClient({
           <ArrowLeft className="size-4" /> {tRoute("/inventory/issues")}
         </Link>
 
-        <PageHeader
-          eyebrow="Phiếu xuất"
-          title={issue.issue_number}
-          description={`${issue.branches?.name ?? `Chi nhánh #${issue.branch_id}`} • ${issue.issued_at ? formatDateTime(issue.issued_at) : "—"}`}
-          actions={<StatusBadge status={issue.status} />}
-        />
+        <Card className="border-border/70">
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Phiếu xuất
+              </p>
+              <CardTitle className="text-2xl">{issue.issue_number}</CardTitle>
+              <CardDescription>
+                {`${issue.branches?.name ?? `Chi nhánh #${issue.branch_id}`} • ${issue.issued_at ? formatDateTime(issue.issued_at) : "—"}`}
+              </CardDescription>
+            </div>
+            <Badge variant={getInventoryStatusBadgeVariant(issue.status)}>
+              {getInventoryStatusLabel(issue.status)}
+            </Badge>
+          </CardHeader>
+        </Card>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
@@ -214,10 +230,7 @@ export function IssueDetailClient({
               value: `${formatVND(totalAmount)}đ`,
             },
           ].map((item) => (
-            <div
-              key={item.label}
-              className={cn(panelClassName, "rounded-2xl bg-card p-4")}
-            >
+            <div key={item.label} className={cn(panelClassName, "p-4")}>
               <p className="text-label uppercase tracking-wider text-muted-foreground">
                 {item.label}
               </p>
@@ -228,7 +241,7 @@ export function IssueDetailClient({
 
         {issue.notes ? (
           <SectionCard
-            className="rounded-2xl border border-border/50 bg-gradient-to-br from-white via-background to-muted/30"
+            className="rounded-lg border border-border bg-card"
             density="compact"
           >
             <p className="text-label font-medium uppercase tracking-wider text-muted-foreground">
@@ -238,10 +251,8 @@ export function IssueDetailClient({
           </SectionCard>
         ) : null}
 
-        <section
-          className={cn(panelClassName, "overflow-hidden rounded-2xl bg-card")}
-        >
-          <div className="flex flex-col gap-4 border-b border-border/50 bg-white p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <section className={cn(panelClassName, "overflow-hidden")}>
+          <div className="flex flex-col gap-4 border-b border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div>
               <h4 className="text-lg font-bold">{tTerm("ingredientsList")}</h4>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -282,7 +293,7 @@ export function IssueDetailClient({
                 {lines.map((line) => (
                   <div
                     key={line.id}
-                    className="rounded-2xl border border-border/70 bg-muted/20 p-4"
+                    className="rounded-lg border border-border bg-muted/20 p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -298,7 +309,7 @@ export function IssueDetailClient({
                           type="button"
                           onClick={() => setPendingDeleteId(line.id)}
                           disabled={isPending}
-                          className="focus-ring-standard rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:opacity-60"
+                          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:opacity-60"
                         >
                           <Trash2 className="size-4" />
                         </button>
@@ -406,7 +417,7 @@ export function IssueDetailClient({
                               type="button"
                               onClick={() => setPendingDeleteId(line.id)}
                               disabled={isPending}
-                              className="focus-ring-standard rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:opacity-60"
+                              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:opacity-60"
                             >
                               <Trash2 className="size-4" />
                             </button>
@@ -436,7 +447,7 @@ export function IssueDetailClient({
                 <span className="text-muted-foreground">Cộng tiền hàng:</span>
                 <span className="font-bold">{formatVND(totalAmount)}</span>
               </div>
-              <div className="flex items-end justify-between border-t border-border/40 pt-3">
+              <div className="flex items-end justify-between border-t border-border pt-3">
                 <span className="text-sm font-bold">TỔNG CỘNG</span>
                 <div className="text-right">
                   <span className="block text-2xl font-black leading-none text-primary">
@@ -452,7 +463,7 @@ export function IssueDetailClient({
         </section>
 
         {isDraft ? (
-          <footer className="flex flex-col gap-4 border-t border-border/50 py-6 md:flex-row md:items-center md:justify-between">
+          <footer className="flex flex-col gap-4 border-t border-border py-6 md:flex-row md:items-center md:justify-between">
             <Button
               type="button"
               variant="ghost"
@@ -500,7 +511,7 @@ export function IssueDetailClient({
                 <p>Thao tác này sẽ trừ tồn kho và không thể hoàn tác.</p>
                 {lines.length > 0 ? (
                   <SectionCard
-                    className="rounded-2xl bg-muted/30 text-left"
+                    className="rounded-lg bg-muted/30 text-left"
                     density="compact"
                   >
                     {lines.map((line) => (
@@ -767,14 +778,14 @@ function AddIssueLineDialog({
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="focus-ring-standard rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="focus-ring-standard rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
             >
               {isPending ? "Đang lưu..." : "Lưu dòng"}
             </button>

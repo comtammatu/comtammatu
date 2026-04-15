@@ -110,11 +110,11 @@ export function CartSidebar({
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-background">
       <div className="border-b border-border/60 px-4 py-4">
-        <div className="ui-flow-panel rounded-4xl p-4">
+        <div className="rounded-xl border bg-card shadow-sm p-4">
           <div className="relative space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="app-section-label">Điều phối đơn</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Điều phối đơn</p>
                 <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
                   {progressHeadline}
                 </h2>
@@ -122,13 +122,13 @@ export function CartSidebar({
                   {progressHint}
                 </p>
               </div>
-              <div className="rounded-full border border-primary/15 bg-white/82 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
+              <div className="rounded-full border border-primary/15 bg-card px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
                 {Math.round(progressPercent)}%
               </div>
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2">
-              <div className="ui-surface-lift rounded-3xl border border-border/60 bg-white/82 p-3 shadow-sm">
+              <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-3 shadow-sm">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Chế độ phục vụ
                 </p>
@@ -142,7 +142,7 @@ export function CartSidebar({
                     role="radio"
                     aria-checked={orderType === "dine_in"}
                     className={cn(
-                      "touch-target flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold transition-all",
+                      "min-h-11 min-w-11 flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all",
                       orderType === "dine_in"
                         ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
                         : "border-border/70 bg-background text-foreground hover:border-primary/20",
@@ -157,7 +157,7 @@ export function CartSidebar({
                     role="radio"
                     aria-checked={orderType === "takeaway"}
                     className={cn(
-                      "touch-target flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold transition-all",
+                      "min-h-11 min-w-11 flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all",
                       orderType === "takeaway"
                         ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
                         : "border-border/70 bg-background text-foreground hover:border-primary/20",
@@ -170,7 +170,7 @@ export function CartSidebar({
                 </div>
               </div>
 
-              <div className="ui-surface-lift rounded-3xl border border-border/60 bg-white/82 p-3 shadow-sm">
+              <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-3 shadow-sm">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Ngữ cảnh đơn
                 </p>
@@ -211,9 +211,9 @@ export function CartSidebar({
                 <span>Tiến độ tạo đơn</span>
                 <span>{Math.round(progressPercent)}%</span>
               </div>
-              <div className="ui-flow-progress">
+              <div className="h-2 w-full rounded-full bg-muted">
                 <div
-                  className="ui-flow-progress-bar"
+                  className="h-full rounded-full bg-primary transition-all"
                   data-indeterminate={isSubmitting ? "true" : undefined}
                   style={isSubmitting ? undefined : { width: `${progressPercent}%` }}
                 />
@@ -225,7 +225,7 @@ export function CartSidebar({
                 <div
                   key={step.label}
                   className={cn(
-                    "ui-surface-lift flex items-start gap-3 rounded-3xl border px-3 py-3",
+                    "transition-all hover:-translate-y-0.5 hover:shadow-md flex items-start gap-3 rounded-xl border px-3 py-3",
                     step.state === "done" && "border-success/25 bg-success/10",
                     step.state === "current" && "border-primary/25 bg-primary/8",
                     step.state === "todo" && "border-border/70 bg-background/80",
@@ -249,7 +249,7 @@ export function CartSidebar({
 
       <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
         <div className="flex items-center gap-2">
-          <div className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <ShoppingCart className="size-5" />
           </div>
           <div>
@@ -267,7 +267,7 @@ export function CartSidebar({
               <Button
                 variant="ghost"
                 size="sm"
-                className="touch-target h-9 rounded-full px-3 text-xs text-muted-foreground"
+                className="min-h-11 min-w-11 h-9 rounded-full px-3 text-xs text-muted-foreground"
               >
                 <Trash2 className="mr-1 size-3.5" />
                 Xóa giỏ
@@ -307,19 +307,19 @@ export function CartSidebar({
       ) : (
         <>
           <ScrollArea className="flex-1">
-            <div className="ui-content-auto space-y-3 p-4">
+            <div className="space-y-3 p-4">
               {items.map((item) => {
                 const subtotal = calcItemSubtotal(item);
 
                 return (
                   <div
                     key={item.key}
-                    className="ui-surface-lift rounded-3xl border border-border/70 bg-card/92 p-4 shadow-sm"
+                    className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-4 shadow-sm"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start gap-3">
-                          <span className="rounded-2xl bg-warning/12 px-2.5 py-1 text-sm font-black text-warning tabular-nums">
+                          <span className="rounded-lg bg-warning/12 px-2.5 py-1 text-sm font-black text-warning tabular-nums">
                             {item.quantity}x
                           </span>
                           <div className="min-w-0">
@@ -347,7 +347,7 @@ export function CartSidebar({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="touch-target size-9 shrink-0 rounded-full text-muted-foreground hover:text-destructive"
+                        className="min-h-11 min-w-11 size-9 shrink-0 rounded-full text-muted-foreground hover:text-destructive"
                         aria-label={`Xóa ${item.item_name} khỏi giỏ`}
                         onClick={() => onRemoveItem(item.key)}
                       >
@@ -360,7 +360,7 @@ export function CartSidebar({
                         <Button
                           variant="outline"
                           size="icon"
-                          className="touch-target size-11 rounded-2xl"
+                          className="min-h-11 min-w-11 size-11 rounded-lg"
                           aria-label={`Giảm số lượng ${item.item_name}`}
                           onClick={() => onUpdateQuantity(item.key, -1)}
                         >
@@ -372,7 +372,7 @@ export function CartSidebar({
                         <Button
                           variant="outline"
                           size="icon"
-                          className="touch-target size-11 rounded-2xl"
+                          className="min-h-11 min-w-11 size-11 rounded-lg"
                           aria-label={`Tăng số lượng ${item.item_name}`}
                           onClick={() => onUpdateQuantity(item.key, 1)}
                         >
@@ -409,7 +409,7 @@ export function CartSidebar({
                 placeholder="Ví dụ: ít đường, không hành…"
                 maxLength={500}
                 rows={2}
-                className="resize-none rounded-2xl text-sm"
+                className="resize-none rounded-lg text-sm"
                 aria-describedby="pos-order-note-hint"
               />
               <p
@@ -420,7 +420,7 @@ export function CartSidebar({
               </p>
             </div>
 
-            <div className="ui-flow-panel mt-4 rounded-4xl p-4">
+            <div className="rounded-xl border bg-card shadow-sm mt-4 p-4">
               <div className="relative space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <div>
@@ -446,7 +446,7 @@ export function CartSidebar({
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
-                      className="touch-target-lg h-14 w-full rounded-3xl text-base font-bold tracking-wide shadow-md transition-transform hover:-translate-y-0.5"
+                      className="min-h-14 min-w-14 h-14 w-full rounded-xl text-base font-bold tracking-wide shadow-md transition-transform hover:-translate-y-0.5"
                       size="lg"
                       disabled={!canSubmit || isSubmitting}
                     >

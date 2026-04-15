@@ -68,7 +68,7 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
   return (
     <>
       {staff.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border px-6 py-16 text-center">
+        <div className="rounded-lg border border-dashed border-border px-6 py-16 text-center">
           <Users className="mx-auto size-8 text-muted-foreground" />
           <p className="mt-3 text-sm font-medium">Chưa có nhân viên nào</p>
         </div>
@@ -78,7 +78,7 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
         {staff.map((member) => (
           <div
             key={member.id}
-            className={`rounded-2xl border border-border/70 bg-background p-4 transition-colors ${isPending ? "opacity-60" : ""}`}
+            className={`rounded-lg border border-border/70 bg-background p-4 transition-colors ${isPending ? "opacity-60" : ""}`}
           >
             <div className="flex items-start justify-between gap-3">
               <div>

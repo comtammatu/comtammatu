@@ -101,6 +101,7 @@ const VI_DICTIONARY: InventoryDictionary = {
     draft: { long: "Nháp" },
     confirmed: { short: "Xác nhận", long: "Đã xác nhận" },
     sent: { long: "Đã gửi" },
+    partially_received: { short: "Nhận một phần", long: "Đã nhận một phần" },
     in_transit: { short: "Đang giao", long: "Đang vận chuyển" },
     received: { long: "Đã nhận" },
     completed: { short: "Xong", long: "Hoàn thành" },
@@ -111,6 +112,9 @@ const VI_DICTIONARY: InventoryDictionary = {
     discrepancy: { short: "Lệch", long: "Chênh lệch" },
     approved: { long: "Đã duyệt" },
     overdue: { long: "Quá hạn" },
+    unpaid: { short: "Chưa trả", long: "Chưa thanh toán" },
+    partial: { short: "Trả một phần", long: "Thanh toán một phần" },
+    paid: { long: "Đã thanh toán" },
     expired: { short: "Hết hạn", long: "Đã hết hạn" },
     critical: { short: "Sắp hết hạn", long: "Sắp hết hạn" },
     warning: { long: "Theo dõi" },
@@ -181,10 +185,7 @@ export function tRoute(
   return resolveLabelByContext(variants, context);
 }
 
-export function tTerm(
-  key: string,
-  context: LabelContext = "table",
-): string {
+export function tTerm(key: string, context: LabelContext = "table"): string {
   const variants = VI_DICTIONARY.terms[key];
   if (!variants) return key;
   return resolveLabelByContext(variants, context);

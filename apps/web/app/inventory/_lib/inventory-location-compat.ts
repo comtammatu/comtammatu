@@ -50,7 +50,9 @@ function formatCompatError(error: CompatError | null): string {
     .join(" ");
 }
 
-export function isInventoryLocationCompatError(error: CompatError | null): boolean {
+export function isInventoryLocationCompatError(
+  error: CompatError | null,
+): boolean {
   if (!error) return false;
   if (error.code && LOCATION_COMPAT_CODES.has(error.code)) return true;
 

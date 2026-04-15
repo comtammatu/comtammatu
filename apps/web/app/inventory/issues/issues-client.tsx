@@ -3,7 +3,6 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { SectionCard } from "@/components/foundation/ui-patterns";
 import {
   AlertTriangle,
   ChefHat,
@@ -14,7 +13,15 @@ import {
   MoreVertical,
   Plus,
 } from "lucide-react";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
+import { Badge } from "@comtammatu/ui/components/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import {
   Dialog,
   DialogContent,
@@ -39,14 +46,13 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  FilterBar,
-  PageHeader,
-  SearchableSelect,
-  StatusBadge,
-} from "../_components/shared";
+import { SearchableSelect } from "../_components/searchable-select";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { tRoute } from "../_lib/dictionary";
+import {
+  getInventoryStatusBadgeVariant,
+  getInventoryStatusLabel,
+} from "../_lib/ui";
 import { createStockIssueDraft } from "../issue-actions";
 
 export type IssueRow = {
@@ -92,10 +98,7 @@ export function IssuesClient({
   const [issueType, setIssueType] = useState<IssueTypeValue>("consumption");
   const [notes, setNotes] = useState("");
   const [isPending, startTransition] = useTransition();
-  const panelClassName = getSurfacePanelClassName(
-    "inventory",
-    "ambient-shadow",
-  );
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
 
   const filtered = useMemo(
     () =>
@@ -147,14 +150,20 @@ export function IssuesClient({
     <>
       <div className="space-y-6">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <PageHeader
-            title={tRoute("/inventory/issues")}
-            description="Tiêu hao, hư hỏng, cấp phát nội bộ."
-          />
+          <Card className="flex-1 border-border/70">
+            <CardHeader>
+              <CardTitle className="text-2xl">
+                {tRoute("/inventory/issues")}
+              </CardTitle>
+              <CardDescription>
+                Tiêu hao, hư hỏng, cấp phát nội bộ.
+              </CardDescription>
+            </CardHeader>
+          </Card>
           <div className="flex items-center gap-3">
             <button
               type="button"
-              className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full border border-border/40 bg-card px-5 py-2.5 font-semibold shadow-sm transition-all"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 font-semibold shadow-sm transition-all"
             >
               <FileDown className="size-4" />
               <span>Xuất báo cáo</span>
@@ -162,7 +171,7 @@ export function IssuesClient({
             <button
               type="button"
               onClick={() => setCreateOpen(true)}
-              className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-xl shadow-primary/15 transition-transform active:scale-[0.98]"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-lg transition-transform active:scale-[0.98]"
             >
               <Plus className="size-4" />
               <span>Tạo phiếu mới</span>
@@ -171,154 +180,149 @@ export function IssuesClient({
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-          <SectionCard
-            className={cn(panelClassName, "rounded-2xl bg-card")}
-            density="comfortable"
-          >
-            <div className="mb-4 flex items-start justify-between">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-warning/12">
-                <ClipboardList className="size-5 text-warning" />
+          <Card className={panelClassName}>
+            <CardContent className="p-6">
+              <div className="mb-4 flex items-start justify-between">
+                <div className="flex size-10 items-center justify-center rounded-xl bg-warning/12">
+                  <ClipboardList className="size-5 text-warning" />
+                </div>
+                <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                  Tháng này
+                </span>
               </div>
-              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-                Tháng này
-              </span>
-            </div>
-            <h3 className="text-3xl font-black tracking-tight">
-              {issues.length}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Tổng phiếu đã xuất
-            </p>
-          </SectionCard>
+              <h3 className="text-3xl font-black tracking-tight">
+                {issues.length}
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Tổng phiếu đã xuất
+              </p>
+            </CardContent>
+          </Card>
 
-          <SectionCard
-            className={cn(panelClassName, "rounded-2xl bg-card")}
-            density="comfortable"
-          >
-            <div className="mb-4 flex items-start justify-between">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-success/12">
-                <ChefHat className="size-5 text-success" />
+          <Card className={panelClassName}>
+            <CardContent className="p-6">
+              <div className="mb-4 flex items-start justify-between">
+                <div className="flex size-10 items-center justify-center rounded-xl bg-success/12">
+                  <ChefHat className="size-5 text-success" />
+                </div>
+                <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                  Cấp phát bếp
+                </span>
               </div>
-              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-                Cấp phát bếp
-              </span>
-            </div>
-            <h3 className="text-3xl font-black tracking-tight text-success">
-              {kitchenUseCount}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {issues.length > 0
-                ? `Chiếm ${Math.round((kitchenUseCount / issues.length) * 100)}% tỉ lệ xuất`
-                : "Chưa có dữ liệu"}
-            </p>
-          </SectionCard>
+              <h3 className="text-3xl font-black tracking-tight text-success">
+                {kitchenUseCount}
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {issues.length > 0
+                  ? `Chiếm ${Math.round((kitchenUseCount / issues.length) * 100)}% tỉ lệ xuất`
+                  : "Chưa có dữ liệu"}
+              </p>
+            </CardContent>
+          </Card>
 
-          <SectionCard
-            className={cn(panelClassName, "rounded-2xl bg-card")}
-            density="comfortable"
-          >
-            <div className="mb-4 flex items-start justify-between">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-destructive/12">
-                <AlertTriangle className="size-5 text-destructive" />
+          <Card className={panelClassName}>
+            <CardContent className="p-6">
+              <div className="mb-4 flex items-start justify-between">
+                <div className="flex size-10 items-center justify-center rounded-xl bg-destructive/12">
+                  <AlertTriangle className="size-5 text-destructive" />
+                </div>
+                <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                  Hư hỏng
+                </span>
               </div>
-              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-                Hư hỏng
-              </span>
-            </div>
-            <h3 className="text-3xl font-black tracking-tight text-destructive">
-              {writeOffCount}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Cần tối ưu quy trình
-            </p>
-          </SectionCard>
+              <h3 className="text-3xl font-black tracking-tight text-destructive">
+                {writeOffCount}
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Cần tối ưu quy trình
+              </p>
+            </CardContent>
+          </Card>
 
-          <SectionCard
-            className={cn(panelClassName, "rounded-2xl bg-card")}
-            density="comfortable"
-          >
-            <div className="mb-4 flex items-start justify-between">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-muted">
-                <Clock className="size-5 text-muted-foreground" />
+          <Card className={panelClassName}>
+            <CardContent className="p-6">
+              <div className="mb-4 flex items-start justify-between">
+                <div className="flex size-10 items-center justify-center rounded-xl bg-muted">
+                  <Clock className="size-5 text-muted-foreground" />
+                </div>
+                <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                  Chờ duyệt
+                </span>
               </div>
-              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-                Chờ duyệt
-              </span>
-            </div>
-            <h3 className="text-3xl font-black tracking-tight">
-              {String(draftCount).padStart(2, "0")}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Phiếu nháp hiện có
-            </p>
-          </SectionCard>
+              <h3 className="text-3xl font-black tracking-tight">
+                {String(draftCount).padStart(2, "0")}
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Phiếu nháp hiện có
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
-        <FilterBar
+        <Card
           className={cn(
             panelClassName,
             "items-center justify-between bg-muted px-6 py-4",
           )}
-          surface="inventory"
         >
-          <div className="flex items-center gap-6">
-            <div className="flex flex-col gap-1">
-              <label className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-                Trạng thái
-              </label>
-              <SearchableSelect
-                options={[
-                  { value: "all", label: "Tất cả trạng thái" },
-                  { value: "draft", label: "Nháp" },
-                  { value: "confirmed", label: "Đã xác nhận" },
-                  { value: "cancelled", label: "Đã huỷ" },
-                ]}
-                value={activeStatus}
-                onValueChange={setActiveStatus}
-                placeholder="Tất cả trạng thái"
-                searchPlaceholder="Tìm trạng thái..."
-                variant="ghost"
-                className="text-foreground"
-              />
+          <CardContent className="flex items-center justify-between gap-4 p-0">
+            <div className="flex items-center gap-6">
+              <div className="flex flex-col gap-1">
+                <label className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                  Trạng thái
+                </label>
+                <SearchableSelect
+                  options={[
+                    { value: "all", label: "Tất cả trạng thái" },
+                    { value: "draft", label: "Nháp" },
+                    { value: "confirmed", label: "Đã xác nhận" },
+                    { value: "cancelled", label: "Đã huỷ" },
+                  ]}
+                  value={activeStatus}
+                  onValueChange={setActiveStatus}
+                  placeholder="Tất cả trạng thái"
+                  searchPlaceholder="Tìm trạng thái..."
+                  variant="ghost"
+                  className="text-foreground"
+                />
+              </div>
+              <div className="h-8 w-px bg-border/40" />
+              <div className="flex flex-col gap-1">
+                <label className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                  Loại xuất
+                </label>
+                <SearchableSelect
+                  options={[
+                    { value: "all", label: "Tất cả loại xuất" },
+                    ...ISSUE_TYPES.map((option) => ({
+                      value: option.value,
+                      label: option.label,
+                    })),
+                  ]}
+                  value={activeType}
+                  onValueChange={setActiveType}
+                  placeholder="Tất cả loại xuất"
+                  searchPlaceholder="Tìm loại xuất..."
+                  variant="ghost"
+                  className="text-foreground"
+                />
+              </div>
             </div>
-            <div className="h-8 w-px bg-border/40" />
-            <div className="flex flex-col gap-1">
-              <label className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-                Loại xuất
-              </label>
-              <SearchableSelect
-                options={[
-                  { value: "all", label: "Tất cả loại xuất" },
-                  ...ISSUE_TYPES.map((option) => ({
-                    value: option.value,
-                    label: option.label,
-                  })),
-                ]}
-                value={activeType}
-                onValueChange={setActiveType}
-                placeholder="Tất cả loại xuất"
-                searchPlaceholder="Tìm loại xuất..."
-                variant="ghost"
-                className="text-foreground"
-              />
-            </div>
-          </div>
-          <button
-            type="button"
-            className="focus-ring-standard flex items-center gap-1 rounded-full px-2 text-sm font-medium text-primary hover:underline"
-            onClick={() => {
-              setActiveStatus("all");
-              setActiveType("all");
-            }}
-          >
-            <FilterX className="size-4" />
-            Xoá bộ lọc
-          </button>
-        </FilterBar>
+            <button
+              type="button"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex items-center gap-1 rounded-full px-2 text-sm font-medium text-primary hover:underline"
+              onClick={() => {
+                setActiveStatus("all");
+                setActiveType("all");
+              }}
+            >
+              <FilterX className="size-4" />
+              Xoá bộ lọc
+            </button>
+          </CardContent>
+        </Card>
 
-        <div
-          className={cn(panelClassName, "overflow-hidden rounded-3xl bg-card")}
-        >
+        <div className={cn(panelClassName, "overflow-hidden rounded-xl")}>
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40">
@@ -356,12 +360,12 @@ export function IssuesClient({
               {filtered.map((item) => (
                 <TableRow
                   key={item.id}
-                  className="group border-border/60 transition-colors"
+                  className="group border-border transition-colors"
                 >
                   <TableCell className="px-6 py-5">
                     <Link
                       href={`/inventory/issues/${item.id}`}
-                      className="focus-ring-standard rounded-sm text-sm font-bold hover:underline"
+                      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm text-sm font-bold hover:underline"
                     >
                       {item.code}
                     </Link>
@@ -393,12 +397,16 @@ export function IssuesClient({
                     </div>
                   </TableCell>
                   <TableCell className="px-6 py-5">
-                    <StatusBadge status={item.status} />
+                    <Badge
+                      variant={getInventoryStatusBadgeVariant(item.status)}
+                    >
+                      {getInventoryStatusLabel(item.status)}
+                    </Badge>
                   </TableCell>
                   <TableCell className="px-6 py-5 text-right">
                     <Link
                       href={`/inventory/issues/${item.id}`}
-                      className="focus-ring-standard inline-flex rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background inline-flex rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     >
                       <MoreVertical className="size-5" />
                     </Link>
@@ -408,14 +416,14 @@ export function IssuesClient({
             </TableBody>
           </Table>
 
-          <div className="flex items-center justify-between border-t border-border/40 px-6 py-4">
+          <div className="flex items-center justify-between border-t border-border px-6 py-4">
             <span className="text-xs font-medium text-muted-foreground">
               Hiển thị {filtered.length} / {issues.length} phiếu
             </span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="focus-ring-standard rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
               >
                 ← Trước
               </button>
@@ -424,7 +432,7 @@ export function IssuesClient({
               </span>
               <button
                 type="button"
-                className="focus-ring-standard rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
               >
                 Sau →
               </button>
@@ -489,7 +497,7 @@ export function IssuesClient({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                className="focus-ring-standard w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none"
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none"
                 placeholder="Nhập ghi chú cho phiếu xuất"
               />
             </div>
@@ -498,14 +506,14 @@ export function IssuesClient({
               <button
                 type="button"
                 onClick={() => setCreateOpen(false)}
-                className="focus-ring-standard rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground"
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground"
               >
                 Hủy
               </button>
               <button
                 type="submit"
                 disabled={isPending}
-                className="focus-ring-standard rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
               >
                 {isPending ? "Đang tạo..." : "Tạo phiếu"}
               </button>
