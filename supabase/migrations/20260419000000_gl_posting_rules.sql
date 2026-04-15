@@ -176,14 +176,21 @@ BEGIN
 END;
 $$;
 
+-- Internal seeding function — called during tenant setup, not directly by users.
 REVOKE ALL ON FUNCTION public.seed_posting_rules(BIGINT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.seed_posting_rules(BIGINT) TO authenticated;
+REVOKE ALL ON FUNCTION public.seed_posting_rules(BIGINT) FROM authenticated;
 
 
--- ─── 4. Auto-seed for existing tenant (id=1) ───
+-- ─── 4. Auto-seed for ALL existing tenants ───
 
--- Add account 155 for existing tenant
-SELECT public.seed_chart_of_accounts(1);
-
--- Seed posting rules for existing tenant
-SELECT public.seed_posting_rules(1);
+DO $$
+DECLARE
+  v_tid BIGINT;
+BEGIN
+  FOR v_tid IN SELECT id FROM public.tenants
+  LOOP
+    PERFORM public.seed_chart_of_accounts(v_tid);
+    PERFORM public.seed_posting_rules(v_tid);
+  END LOOP;
+END;
+$$;

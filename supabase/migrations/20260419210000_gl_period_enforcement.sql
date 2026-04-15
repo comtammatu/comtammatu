@@ -168,5 +168,7 @@ BEGIN
 END;
 $$;
 
+-- auto_post_journal is an INTERNAL helper called only from other SECURITY DEFINER RPCs.
+-- No direct EXECUTE grant to authenticated — prevents arbitrary journal creation.
 REVOKE ALL ON FUNCTION public.auto_post_journal(BIGINT, BIGINT, TEXT, BIGINT, TEXT, JSONB, TIMESTAMPTZ, UUID) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.auto_post_journal(BIGINT, BIGINT, TEXT, BIGINT, TEXT, JSONB, TIMESTAMPTZ, UUID) TO authenticated;
+REVOKE ALL ON FUNCTION public.auto_post_journal(BIGINT, BIGINT, TEXT, BIGINT, TEXT, JSONB, TIMESTAMPTZ, UUID) FROM authenticated;

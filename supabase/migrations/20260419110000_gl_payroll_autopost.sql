@@ -142,6 +142,9 @@ BEGIN
 
   v_desc := 'Lương tháng ' || v_period.period_month || '/' || v_period.period_year;
 
+  -- Use last day of the payroll period as entry_date (not now()).
+  -- This ensures the journal lands in the correct fiscal period,
+  -- even when approved in a later month.
   v_journal_id := public.auto_post_journal(
     v_tenant,
     NULL,  -- payroll is tenant-level, not branch-specific
@@ -149,7 +152,7 @@ BEGIN
     p_payroll_period_id,
     v_desc,
     v_lines,
-    now(),
+    (make_date(v_period.period_year, v_period.period_month, 1) + INTERVAL '1 month' - INTERVAL '1 day')::TIMESTAMPTZ,
     v_uid
   );
 

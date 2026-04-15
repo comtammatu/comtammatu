@@ -138,8 +138,9 @@ BEGIN
 END;
 $$;
 
+-- Internal helper only — called from other SECURITY DEFINER RPCs, not directly by users.
 REVOKE ALL ON FUNCTION public.auto_post_journal(BIGINT, BIGINT, TEXT, BIGINT, TEXT, JSONB, TIMESTAMPTZ, UUID) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.auto_post_journal(BIGINT, BIGINT, TEXT, BIGINT, TEXT, JSONB, TIMESTAMPTZ, UUID) TO authenticated;
+REVOKE ALL ON FUNCTION public.auto_post_journal(BIGINT, BIGINT, TEXT, BIGINT, TEXT, JSONB, TIMESTAMPTZ, UUID) FROM authenticated;
 
 -- Grant sequence usage
 GRANT USAGE, SELECT ON SEQUENCE public.auto_journal_seq TO authenticated;

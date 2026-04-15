@@ -26,6 +26,17 @@ DECLARE
   v_gl_total   NUMERIC(15,2);
   v_entry_ids  BIGINT[];
 BEGIN
+  -- Auth + tenant validation
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
+  END IF;
+  IF public.auth_role() NOT IN ('owner', 'super_manager', 'area_manager') THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+  IF p_tenant_id <> public.auth_tenant_id() THEN
+    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
+  END IF;
+
   v_start_date := make_date(p_year, p_month, 1);
   v_end_date   := (v_start_date + INTERVAL '1 month' - INTERVAL '1 day')::DATE;
 
@@ -197,6 +208,11 @@ BEGIN
 
   IF public.auth_role() NOT IN ('owner', 'super_manager') THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
+  -- Tenant validation: prevent cross-tenant period close
+  IF p_tenant_id <> public.auth_tenant_id() THEN
+    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
   END IF;
 
   -- Fetch period

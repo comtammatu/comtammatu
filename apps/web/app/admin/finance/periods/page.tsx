@@ -14,7 +14,13 @@ export default async function PeriodsPage() {
   return (
     <PageContainer>
       <PageHeader eyebrow="Tài chính" title="Kỳ kế toán" />
-      <PeriodsClient periods={periods} />
+      {!result.success ? (
+        <p className="py-10 text-center text-destructive">
+          {result.error ?? "Không thể tải danh sách kỳ kế toán."}
+        </p>
+      ) : (
+        <PeriodsClient periods={periods} />
+      )}
     </PageContainer>
   );
 }

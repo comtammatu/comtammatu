@@ -73,6 +73,32 @@ export async function updatePostingRule(
     return { success: false, error: "Không có thay đổi." };
   }
 
+  // Validate account codes exist for this tenant before persisting
+  const codesToValidate: string[] = [];
+  if (parsed.data.debitAccountCode) codesToValidate.push(parsed.data.debitAccountCode);
+  if (parsed.data.creditAccountCode) codesToValidate.push(parsed.data.creditAccountCode);
+
+  if (codesToValidate.length > 0) {
+    const { data: validAccounts } = await supabase
+      .from("chart_of_accounts")
+      .select("account_code")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .in("account_code", codesToValidate);
+
+    const validCodes = new Set(
+      (validAccounts ?? []).map((a: { account_code: string }) => a.account_code),
+    );
+    for (const code of codesToValidate) {
+      if (!validCodes.has(code)) {
+        return {
+          success: false,
+          error: `Mã tài khoản "${code}" không tồn tại hoặc đã bị vô hiệu.`,
+        };
+      }
+    }
+  }
+
   // posting_rules table added in gl_posting_rules migration — cast until db:types
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)

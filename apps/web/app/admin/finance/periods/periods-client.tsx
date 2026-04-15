@@ -78,8 +78,13 @@ export function PeriodsClient({ periods: initial }: Props) {
       }
       const newPeriod = res.data as FiscalPeriodRow;
       setPeriods((prev) => {
-        const exists = prev.find((p) => p.id === newPeriod.id);
-        if (exists) return prev;
+        const idx = prev.findIndex((p) => p.id === newPeriod.id);
+        if (idx >= 0) {
+          // Upsert returned existing — merge updated data
+          const updated = [...prev];
+          updated[idx] = { ...prev[idx]!, ...newPeriod };
+          return updated;
+        }
         return [newPeriod, ...prev];
       });
     });
