@@ -489,6 +489,11 @@ export function ProductionRecipePanel({
     setRecipeNote("");
   }
 
+  function handleRecipeDialogOpenChange(open: boolean) {
+    setRecipeDialogOpen(open);
+    if (!open) resetRecipeForm();
+  }
+
   function openRecipeDialog(finishedGoodId?: number) {
     setRecipeError(null);
     setEditingRecipe(null);
@@ -622,10 +627,7 @@ export function ProductionRecipePanel({
 
       <Dialog
         open={recipeDialogOpen}
-        onOpenChange={(open) => {
-          setRecipeDialogOpen(open);
-          if (!open) resetRecipeForm();
-        }}
+        onOpenChange={handleRecipeDialogOpenChange}
       >
         <DialogContent className="max-h-screen overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
@@ -783,7 +785,7 @@ export function ProductionRecipePanel({
             <Button
               type="button"
               variant="outline"
-              onClick={() => setRecipeDialogOpen(false)}
+              onClick={() => handleRecipeDialogOpenChange(false)}
               disabled={isPending}
             >
               Hủy
@@ -935,6 +937,8 @@ export function ProductionRecipePanel({
                             size="icon"
                             onClick={() => setEditingRecipe(recipe)}
                             disabled={!branchKindSchemaAvailable}
+                            aria-label={`Chỉnh sửa dòng BOM ${recipe.ingredient_name}`}
+                            title="Chỉnh sửa dòng BOM"
                           >
                             <Pencil className="size-4" />
                           </Button>

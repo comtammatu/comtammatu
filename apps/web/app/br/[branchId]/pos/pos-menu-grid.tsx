@@ -46,7 +46,10 @@ export function PosMenuGrid({
   }, [activeMenuZone, availableMenuZones]);
 
   const categoriesInActiveZone = useMemo(
-    () => categories.filter((c) => c.type === effectiveMenuZone),
+    () =>
+      categories.filter(
+        (c) => c.type === effectiveMenuZone && c.menu_items.length > 0,
+      ),
     [categories, effectiveMenuZone],
   );
 

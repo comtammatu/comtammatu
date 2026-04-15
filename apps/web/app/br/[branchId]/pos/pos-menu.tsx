@@ -789,7 +789,10 @@ export function PosMenu({
                       {...sidebarSharedProps}
                       onSubmitOrder={() => {
                         handleSubmitOrder();
-                        setCartDrawerOpen(false);
+                        // Drawer closes via cart clearing — when cartItems
+                        // becomes empty after successful submit, the drawer
+                        // has nothing to show. Don't close eagerly on submit
+                        // to avoid hiding errors on failure.
                       }}
                     />
                   </div>

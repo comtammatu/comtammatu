@@ -164,14 +164,13 @@ export function ProductionOrderForm({
     });
   }
 
+  function handleDialogOpenChange(open: boolean) {
+    setIsDialogOpen(open);
+    if (!open) resetDialog();
+  }
+
   return (
-    <Dialog
-      open={isDialogOpen}
-      onOpenChange={(open) => {
-        setIsDialogOpen(open);
-        if (!open) resetDialog();
-      }}
-    >
+    <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
       <DialogTrigger asChild>
         <Button disabled={!actionsEnabled}>
           <Plus className="mr-2 size-4" />
@@ -306,7 +305,7 @@ export function ProductionOrderForm({
           <Button
             type="button"
             variant="outline"
-            onClick={() => setIsDialogOpen(false)}
+            onClick={() => handleDialogOpenChange(false)}
             disabled={isPending}
           >
             Hủy
