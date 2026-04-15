@@ -643,7 +643,7 @@ export function PosMenu({
           </Button>
         </div>
 
-                <div className="rounded-lg border bg-card shadow-sm rounded-4xl p-4 md:p-5">
+                <div className="rounded-xl border bg-card shadow-sm p-4 md:p-5">
           <div className="relative space-y-4">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div className="space-y-2">
@@ -778,7 +778,7 @@ export function PosMenu({
     ) : null;
 
   const serviceModeSelector = (
-    <div className="rounded-lg border bg-card shadow-sm rounded-4xl p-3">
+    <div className="rounded-xl border bg-card shadow-sm p-3">
           <div className="relative space-y-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -831,7 +831,7 @@ export function PosMenu({
   const workflowRail = (
     <aside className="hidden xl:flex xl:w-80 xl:shrink-0 xl:flex-col xl:gap-4 xl:border-r xl:border-border/60 xl:bg-background/70 xl:p-4">
       {serviceModeSelector}
-      <div className="rounded-lg border bg-card shadow-sm rounded-4xl p-4">
+      <div className="rounded-xl border bg-card shadow-sm p-4">
           <div className="relative space-y-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -1155,7 +1155,7 @@ export function PosMenu({
                           <button
                             key={item.id}
                             type="button"
-                            className="transition-all hover:-translate-y-0.5 hover:shadow-md touch-target-lg focus-ring-standard flex min-h-40 cursor-pointer flex-col rounded-4xl border border-border bg-card p-4 text-left shadow-sm hover:border-primary/25 active:scale-[0.985]"
+                            className="transition-all hover:-translate-y-0.5 hover:shadow-md touch-target-lg focus-ring-standard flex min-h-40 cursor-pointer flex-col rounded-xl border border-border bg-card p-4 text-left shadow-sm hover:border-primary/25 active:scale-[0.985]"
                             onClick={() => handleItemTap(item)}
                           >
                             <div className="flex items-start justify-between gap-3">

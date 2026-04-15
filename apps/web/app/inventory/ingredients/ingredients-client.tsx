@@ -162,7 +162,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
       <div
         className={cn(
           panelClassName,
-          "overflow-x-auto rounded-xl bg-card p-1",
+          "overflow-x-auto rounded-xl p-1",
         )}
       >
         <table className="w-full border-separate border-spacing-y-3 text-left">

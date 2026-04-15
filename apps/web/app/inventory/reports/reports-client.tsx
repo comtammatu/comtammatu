@@ -63,10 +63,8 @@ export function ReportsClient({
   const overdueAmount = apAging[apAging.length - 1]?.amount ?? 0;
   const varianceCount = consumptionVariance.length;
   const panelClassName = "rounded-lg border bg-card shadow-sm";
-  const glassPanelClassName =
-    "";
   const pillClassName = cn(
-    "rounded-lg border bg-card shadow-sm",
+    panelClassName,
     "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium",
   );
 
@@ -80,7 +78,6 @@ export function ReportsClient({
       <div
         className={cn(
           panelClassName,
-          glassPanelClassName,
           "px-5 py-5 sm:px-6",
         )}
       >
@@ -101,11 +98,7 @@ export function ReportsClient({
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div
-              className={cn(
-                panelClassName,
-                glassPanelClassName,
-                " px-4 py-4",
-              )}
+              className={cn(panelClassName, "px-4 py-4")}
             >
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Công nợ quá hạn
@@ -115,11 +108,7 @@ export function ReportsClient({
               </p>
             </div>
             <div
-              className={cn(
-                panelClassName,
-                glassPanelClassName,
-                " px-4 py-4",
-              )}
+              className={cn(panelClassName, "px-4 py-4")}
             >
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Mã lệch định mức
@@ -146,7 +135,6 @@ export function ReportsClient({
         <div
           className={cn(
             panelClassName,
-            glassPanelClassName,
             "col-span-12 flex flex-col p-6 lg:col-span-8",
           )}
         >
@@ -194,7 +182,6 @@ export function ReportsClient({
         <div
           className={cn(
             panelClassName,
-            glassPanelClassName,
             "col-span-12 p-6 lg:col-span-4",
           )}
         >
@@ -259,7 +246,6 @@ export function ReportsClient({
         <div
           className={cn(
             panelClassName,
-            glassPanelClassName,
             "col-span-12 p-6 md:col-span-6",
           )}
         >
@@ -318,7 +304,6 @@ export function ReportsClient({
         <div
           className={cn(
             panelClassName,
-            glassPanelClassName,
             "col-span-12 p-6 md:col-span-6",
           )}
         >
@@ -384,8 +369,7 @@ export function ReportsClient({
             key={report.title}
             className={cn(
               panelClassName,
-              glassPanelClassName,
-              " group cursor-pointer p-5 transition-all hover:-translate-y-0.5 hover:shadow-md",
+              "group cursor-pointer p-5 transition-all hover:-translate-y-0.5 hover:shadow-md",
             )}
           >
             <div

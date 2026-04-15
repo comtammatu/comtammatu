@@ -51,7 +51,7 @@ export function PosTableGate({
       )}
     >
       <div className="border-b border-border bg-background px-4 py-4 sm:px-6">
-        <div className="rounded-lg border bg-card shadow-sm rounded-4xl p-5">
+        <div className="rounded-xl border bg-card shadow-sm p-5">
           <div className="relative space-y-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="space-y-2">

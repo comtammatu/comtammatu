@@ -69,7 +69,7 @@ function TrustRow() {
       </div>
       <div className="rounded-lg border bg-card p-3.5">
         <div className="flex items-start gap-3">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-green-50 text-green-700">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-success/10 text-success">
             <Building2 className="size-4" />
           </div>
           <div className="space-y-1">

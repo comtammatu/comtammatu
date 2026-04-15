@@ -117,6 +117,8 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
     areaRows?.reduce((sum, row) => sum + Number(row.totalValue), 0) ?? 0;
   const branchTotal =
     branchRows?.reduce((sum, row) => sum + Number(row.totalValue), 0) ?? 0;
+  const sectionCardClassName = "space-y-4 overflow-hidden rounded-lg";
+  const summaryBoxClassName = "rounded-lg bg-muted/25 px-4 py-4";
 
   return (
     <Tabs defaultValue={defaultTab} className="space-y-4">
@@ -198,10 +200,10 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
             <EmptyStatePanel className="py-10" title={APP_COPY_VI.noAreaData} />
           ) : isMobile ? (
             <SectionCard
-              className="space-y-4 overflow-hidden rounded-lg"
+              className={sectionCardClassName}
               density="compact"
             >
-              <div className="rounded-lg bg-muted/25 px-4 py-4">
+              <div className={summaryBoxClassName}>
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                   Tổng theo khu vực
                 </p>
@@ -227,10 +229,10 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
             </SectionCard>
           ) : (
             <SectionCard
-              className="space-y-4 overflow-hidden rounded-lg"
+              className={sectionCardClassName}
               density="compact"
             >
-              <div className="rounded-lg bg-muted/25 px-4 py-4">
+              <div className={summaryBoxClassName}>
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                   Tổng theo khu vực
                 </p>
@@ -280,10 +282,10 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
             />
           ) : isMobile ? (
             <SectionCard
-              className="space-y-4 overflow-hidden rounded-lg"
+              className={sectionCardClassName}
               density="compact"
             >
-              <div className="rounded-lg bg-muted/25 px-4 py-4">
+              <div className={summaryBoxClassName}>
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                   Tổng theo chi nhánh
                 </p>
@@ -309,10 +311,10 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
             </SectionCard>
           ) : (
             <SectionCard
-              className="space-y-4 overflow-hidden rounded-lg"
+              className={sectionCardClassName}
               density="compact"
             >
-              <div className="rounded-lg bg-muted/25 px-4 py-4">
+              <div className={summaryBoxClassName}>
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                   Tổng theo chi nhánh
                 </p>

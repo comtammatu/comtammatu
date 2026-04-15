@@ -30,7 +30,7 @@ Huong chinh thuc la `Minimalist B/W + Orange Accent` (shadcn/ui based).
 
 ## Architecture
 
-Design system gom 2 tang:
+Design system gom 3 tang:
 
 ### 1. Foundation (tokens + utilities)
 
@@ -137,27 +137,27 @@ Recipe API su dung Tailwind utility classes truc tiep. Khong con surface/density
 ## Styling Patterns
 
 ### Standard panel
-```
+```tsx
 className="rounded-lg border bg-card shadow-sm"
 ```
 
 ### Standard header
-```
+```tsx
 className="sticky top-0 z-30 border-b bg-background"
 ```
 
 ### Standard sidebar
-```
+```tsx
 className="border-r bg-sidebar"
 ```
 
 ### Stat card
-```
+```tsx
 className="rounded-lg border bg-card p-5 shadow-sm"
 ```
 
 ### Status badge tones
-```
+```txt
 success: "bg-green-50 text-green-700 border-green-200 text-xs font-medium"
 warning: "bg-amber-50 text-amber-700 border-amber-200 text-xs font-medium"
 danger:  "bg-red-50 text-red-700 border-red-200 text-xs font-medium"
@@ -166,14 +166,14 @@ neutral: "bg-muted text-muted-foreground border-border text-xs font-medium"
 ```
 
 ### KDS dark surface
-```
+```txt
 Shell:  "min-h-screen bg-zinc-950 text-white"
 Panel:  "rounded-lg border border-zinc-800 bg-zinc-900 text-white shadow-sm"
 Header: "sticky top-0 z-30 border-b border-zinc-800 bg-zinc-950 text-white"
 ```
 
 ### Hover lift
-```
+```tsx
 className="transition-all hover:-translate-y-0.5 hover:shadow-md"
 ```
 

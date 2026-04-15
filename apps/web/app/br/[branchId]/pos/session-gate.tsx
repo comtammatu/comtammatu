@@ -41,10 +41,7 @@ function InfoCard({
 }) {
   return (
     <div
-      className={cn(
-        "border bg-card shadow-sm",
-        "rounded-xl p-4 shadow-none",
-      )}
+      className="rounded-xl border bg-card p-4 shadow-sm"
     >
       <div className="flex items-start gap-3">
         <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">

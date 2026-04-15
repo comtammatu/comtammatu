@@ -319,7 +319,7 @@ export function StocktakeDetailClient({
         ].map((item) => (
           <div
             key={item.label}
-            className={cn(panelClassName, "rounded-lg bg-card p-4")}
+            className={cn(panelClassName, "p-4")}
           >
             <p className="text-label uppercase tracking-wider text-muted-foreground">
               {item.label}

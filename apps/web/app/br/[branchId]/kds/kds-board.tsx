@@ -478,7 +478,7 @@ export function KdsBoard({
           </div>
 
           <div className="grid gap-4 xl:grid-cols-4">
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900 text-white shadow-sm rounded-4xl p-5 xl:col-span-3">
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900 text-white shadow-sm p-5 xl:col-span-3">
               <div className="relative space-y-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="space-y-2">
@@ -588,20 +588,20 @@ export function KdsBoard({
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 shadow-sm p-4">
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900 shadow-sm p-4">
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Đơn hiển thị</p>
                 <p className="mt-2 text-2xl font-semibold tabular-nums">
                   {displayOrders.length}
                 </p>
               </div>
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 shadow-sm p-4">
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900 shadow-sm p-4">
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Món còn việc</p>
                 <p className="mt-2 flex items-center gap-2 text-2xl font-semibold tabular-nums">
                   <Flame className="size-5 text-warning" />
                   {totalActiveCount}
                 </p>
               </div>
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 shadow-sm p-4">
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900 shadow-sm p-4">
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Order lâu nhất</p>
                     <p className="mt-2 flex items-center gap-2 text-2xl font-semibold tabular-nums">
                       <PackageCheck className="size-5 text-info" />
@@ -670,7 +670,7 @@ export function KdsBoard({
             <button
               type="button"
               className={cn(
-                "transition-all hover:-translate-y-0.5 hover:shadow-md flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-bold transition-colors duration-150 md:min-h-14 md:px-5 md:text-base",
+                "transition-all hover:-translate-y-0.5 hover:shadow-md flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-bold duration-150 md:min-h-14 md:px-5 md:text-base",
                 activeStationId === null
                   ? "bg-accent text-accent-foreground shadow-sm"
                   : "bg-secondary text-secondary-foreground hover:bg-muted",
@@ -699,7 +699,7 @@ export function KdsBoard({
                   key={station.id}
                   type="button"
                   className={cn(
-                    "transition-all hover:-translate-y-0.5 hover:shadow-md flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-bold transition-colors duration-150 md:min-h-14 md:px-5 md:text-base",
+                    "transition-all hover:-translate-y-0.5 hover:shadow-md flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-bold duration-150 md:min-h-14 md:px-5 md:text-base",
                     isActive
                       ? "bg-accent text-accent-foreground shadow-sm"
                       : "bg-secondary text-secondary-foreground hover:bg-muted",

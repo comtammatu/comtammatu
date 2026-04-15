@@ -493,7 +493,7 @@ export function DashboardClient({
             </div>
           </div>
 
-          <div className="rounded-4xl border border-border bg-card p-5 shadow-sm">
+          <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -560,7 +560,7 @@ export function DashboardClient({
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">
-          <div className={cn(panelClassName, "rounded-4xl bg-card p-6")}>
+          <div className={cn(panelClassName, "rounded-xl bg-card p-6")}>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -641,7 +641,7 @@ export function DashboardClient({
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <div className={cn(panelClassName, "rounded-4xl bg-card p-6")}>
+            <div className={cn(panelClassName, "rounded-xl bg-card p-6")}>
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm font-semibold text-destructive">
@@ -685,7 +685,7 @@ export function DashboardClient({
                     </div>
                     <Link
                       href={reorderActionHref}
-                      className="focus-ring-standard inline-flex items-center gap-2 rounded-full border border-border bg-white px-3 py-2 text-xs font-semibold text-primary shadow-sm transition-transform hover:-translate-y-0.5"
+                      className="focus-ring-standard inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-xs font-semibold text-primary shadow-sm transition-transform hover:-translate-y-0.5"
                     >
                       {reorderActionLabel}
                       <ArrowRight className="size-3.5" />
@@ -695,7 +695,7 @@ export function DashboardClient({
               </div>
             </div>
 
-            <div className={cn(panelClassName, "rounded-4xl bg-card p-6")}>
+            <div className={cn(panelClassName, "rounded-xl bg-card p-6")}>
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm font-semibold text-warning">
@@ -753,7 +753,7 @@ export function DashboardClient({
         </div>
 
         <div className="space-y-6">
-          <div className={cn(panelClassName, "rounded-4xl bg-card p-6")}>
+          <div className={cn(panelClassName, "rounded-xl bg-card p-6")}>
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Thao tác nhanh
@@ -800,7 +800,7 @@ export function DashboardClient({
             </div>
           </div>
 
-          <div className={cn(panelClassName, "rounded-4xl bg-card p-6")}>
+          <div className={cn(panelClassName, "rounded-xl bg-card p-6")}>
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">

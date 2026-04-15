@@ -28,7 +28,7 @@ export default async function EmployeeLayout({
 
   return (
     <div
-      className={cn("min-h-screen bg-background", "flex min-h-dvh flex-col")}
+      className={cn("bg-background", "flex min-h-dvh flex-col")}
     >
       <MobileHeader />
       <main

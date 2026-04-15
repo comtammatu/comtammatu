@@ -86,8 +86,8 @@ function DisabledPanel({
   return (
     <div
       className={cn(
-        "border bg-card shadow-sm",
-        "flex items-center gap-4 rounded-xl border-dashed bg-muted/30 p-4 shadow-none",
+        "border bg-card",
+        "flex items-center gap-4 rounded-xl border-dashed bg-muted/30 p-4",
       )}
     >
       <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">

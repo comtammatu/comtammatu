@@ -213,7 +213,7 @@ export function IssueDetailClient({
           ].map((item) => (
             <div
               key={item.label}
-              className={cn(panelClassName, "rounded-lg bg-card p-4")}
+              className={cn(panelClassName, "p-4")}
             >
               <p className="text-label uppercase tracking-wider text-muted-foreground">
                 {item.label}
@@ -236,7 +236,7 @@ export function IssueDetailClient({
         ) : null}
 
         <section
-          className={cn(panelClassName, "overflow-hidden rounded-lg bg-card")}
+          className={cn(panelClassName, "overflow-hidden")}
         >
           <div className="flex flex-col gap-4 border-b border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div>

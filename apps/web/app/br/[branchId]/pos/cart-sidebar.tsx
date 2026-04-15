@@ -110,7 +110,7 @@ export function CartSidebar({
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-background">
       <div className="border-b border-border/60 px-4 py-4">
-        <div className="rounded-lg border bg-card shadow-sm rounded-4xl p-4">
+        <div className="rounded-xl border bg-card shadow-sm p-4">
           <div className="relative space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -420,7 +420,7 @@ export function CartSidebar({
               </p>
             </div>
 
-            <div className="rounded-lg border bg-card shadow-sm mt-4 rounded-4xl p-4">
+            <div className="rounded-xl border bg-card shadow-sm mt-4 p-4">
               <div className="relative space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <div>

@@ -169,7 +169,7 @@ export function IssuesClient({
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
           <SectionCard
-            className={cn(panelClassName, "rounded-lg bg-card")}
+            className={panelClassName}
             density="comfortable"
           >
             <div className="mb-4 flex items-start justify-between">
@@ -189,7 +189,7 @@ export function IssuesClient({
           </SectionCard>
 
           <SectionCard
-            className={cn(panelClassName, "rounded-lg bg-card")}
+            className={panelClassName}
             density="comfortable"
           >
             <div className="mb-4 flex items-start justify-between">
@@ -211,7 +211,7 @@ export function IssuesClient({
           </SectionCard>
 
           <SectionCard
-            className={cn(panelClassName, "rounded-lg bg-card")}
+            className={panelClassName}
             density="comfortable"
           >
             <div className="mb-4 flex items-start justify-between">
@@ -231,7 +231,7 @@ export function IssuesClient({
           </SectionCard>
 
           <SectionCard
-            className={cn(panelClassName, "rounded-lg bg-card")}
+            className={panelClassName}
             density="comfortable"
           >
             <div className="mb-4 flex items-start justify-between">
@@ -314,7 +314,7 @@ export function IssuesClient({
         </FilterBar>
 
         <div
-          className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}
+          className={cn(panelClassName, "overflow-hidden rounded-xl")}
         >
           <Table>
             <TableHeader>

@@ -64,7 +64,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
       <section
         className={cn(
           panelClassName,
-          "relative overflow-hidden rounded-lg bg-muted p-5 shadow-sm sm:p-6 lg:p-8",
+          "relative overflow-hidden bg-muted p-5 sm:p-6 lg:p-8",
         )}
       >
         <div className="absolute right-5 top-5 sm:right-6 sm:top-6 lg:right-8 lg:top-8">
@@ -134,7 +134,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <section
-            className={cn(panelClassName, "overflow-hidden rounded-lg bg-card")}
+            className={cn(panelClassName, "overflow-hidden")}
           >
             <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <h4 className="text-lg font-bold">Danh sách mặt hàng nhập</h4>
@@ -271,7 +271,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
         {/* Sidebar -- 1/3 */}
         <div className="space-y-4">
           {/* Quality Summary */}
-          <SectionCard className={cn(panelClassName, "rounded-lg bg-card")} density="compact">
+          <SectionCard className={panelClassName} density="compact">
             <div className="-m-5 border-b border-border px-5 py-5 md:-m-6 md:px-6 md:py-6">
               <h4 className="text-sm font-bold">Tổng hợp chất lượng</h4>
             </div>

@@ -86,7 +86,7 @@ export function OrderHistory({
   return (
     <div className="flex flex-1 flex-col overflow-hidden bg-background">
       <div className="border-b border-border/60 px-4 py-4">
-        <div className="rounded-lg border bg-card shadow-sm rounded-4xl p-4">
+        <div className="rounded-xl border bg-card shadow-sm p-4">
           <div className="relative space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div>
