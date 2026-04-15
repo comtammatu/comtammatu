@@ -22,7 +22,6 @@ import {
   Menu,
 } from "lucide-react";
 import { canAccess, type StaffRole } from "@comtammatu/shared/auth";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { cn } from "@comtammatu/ui";
 import {
@@ -175,35 +174,16 @@ function InventoryNavigationContent({
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       <div className="border-b border-sidebar-border px-4 py-5">
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-black text-sidebar-primary-foreground">
-              MT
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-sidebar-foreground">
-                Cơm Tấm Má Tư
-              </p>
-              <p className="text-xs uppercase tracking-widest text-sidebar-foreground/60">
-                Inventory Workspace
-              </p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-black text-sidebar-primary-foreground">
+            MT
           </div>
-
-          <div className="rounded-lg border border-sidebar-border bg-background px-3 py-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Phạm vi
-              </p>
-              <Badge
-                variant={canAccessProcurement ? "success" : "secondary"}
-                className="text-xs"
-              >
-                {canAccessProcurement ? "Procurement" : "Core"}
-              </Badge>
-            </div>
-            <p className="mt-2 text-sm leading-5 text-foreground">
-              Điều hành nhập, xuất, kiểm kê và báo cáo trong một luồng thống nhất.
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-sidebar-foreground">
+              Cơm Tấm Má Tư
+            </p>
+            <p className="text-xs uppercase tracking-widest text-sidebar-foreground/60">
+              Inventory Workspace
             </p>
           </div>
         </div>
