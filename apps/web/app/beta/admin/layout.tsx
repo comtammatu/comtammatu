@@ -42,7 +42,7 @@ export default async function BetaAdminLayout({
   return (
     <BetaShell
       workspaceTitle="Điều hành quản trị"
-      workspaceDescription="Một lớp cockpit mới cho admin surface: dày tín hiệu hơn, bớt chrome hơn, nhưng vẫn bám cùng auth và dữ liệu hiện có."
+      workspaceDescription="Surface beta cho cây route quản trị, giữ nguyên auth, ACL và dữ liệu hiện có."
       navGroups={getAdminBetaNavGroups()}
       userName={userName}
       roleLabel={ROLE_LABEL_VI[claims.user_role]}

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -361,115 +362,40 @@
     background-size: 1.75rem 1.75rem;
   }
 
-  .beta-paper {
-    @apply rounded-4xl border border-border/60 bg-card/95;
-    box-shadow:
-      0 24px 60px rgba(43, 33, 24, 0.14),
-      inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  }
-
-  .beta-shell {
-    @apply rounded-4xl border border-sidebar-border/60 bg-sidebar/95 text-sidebar-foreground;
-    box-shadow:
-      0 30px 80px rgba(29, 25, 23, 0.28),
-      inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  }
-
-  .beta-ledger-grid {
-    background-image:
-      linear-gradient(
-        to right,
-        color-mix(in srgb, var(--color-border) 22%, transparent) 1px,
-        transparent 1px
-      ),
-      linear-gradient(
-        to bottom,
-        color-mix(in srgb, var(--color-border) 22%, transparent) 1px,
-        transparent 1px
-      );
-    background-size: 1.4rem 1.4rem;
-  }
-
-  .beta-grain {
-    position: relative;
-    isolation: isolate;
-  }
-
-  .beta-grain::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    opacity: 0.18;
-    pointer-events: none;
-    background-image:
-      radial-gradient(circle at 20% 20%, rgba(109, 58, 39, 0.18) 0, transparent 28%),
-      radial-gradient(circle at 80% 10%, rgba(41, 93, 79, 0.12) 0, transparent 30%),
-      radial-gradient(circle at 70% 80%, rgba(34, 34, 34, 0.1) 0, transparent 32%);
-  }
 }
-
 [data-beta-ui] {
-  --radius: 0.72rem;
-  --font-heading: var(--font-beta-display), "Times New Roman", serif;
-  --color-background: #f5ecdf;
-  --color-foreground: #1e1a17;
-  --color-primary: #8f3d2a;
-  --color-primary-foreground: #fff7f0;
-  --color-secondary: #d7c7ae;
-  --color-secondary-foreground: #2d2823;
-  --color-accent: #275c52;
-  --color-accent-foreground: #f0f6f4;
-  --color-muted: #e8dbc8;
-  --color-muted-foreground: #6f6258;
-  --color-card: #fbf5ec;
-  --color-card-foreground: #1e1a17;
-  --color-popover: #fffaf3;
-  --color-popover-foreground: #1e1a17;
-  --color-border: #cab59d;
-  --color-input: #d7c6b3;
-  --color-ring: #8f3d2a;
-  --color-ring-offset: #f5ecdf;
-  --color-destructive: #a53c2f;
-  --color-destructive-foreground: #fff3f0;
-  --color-success: #2f796a;
-  --color-warning: #9b6f24;
-  --color-info: #3b5f84;
-  --color-sidebar: #1d1917;
-  --color-sidebar-foreground: #f6ecdf;
-  --color-sidebar-primary: #b85b3b;
-  --color-sidebar-primary-foreground: #fff7f1;
-  --color-sidebar-accent: #322a25;
-  --color-sidebar-accent-foreground: #f6ecdf;
-  --color-sidebar-border: #463a33;
-  --color-sidebar-ring: #d07a56;
-  --color-surface-raised: #fff8ef;
-  --color-surface-sunken: #eadbc7;
-  --color-panel-subtle: #efe2d1;
-  --color-panel-strong: #deccb5;
-  --color-shell: #1d1917;
-  --color-shell-foreground: #f6ecdf;
-  --color-state-pending: #9b6f24;
-  --color-state-processing: #8f3d2a;
-  --color-state-ready: #2f796a;
-  --color-state-cancelled: #73675f;
-  --color-chart-1: #b85b3b;
-  --color-chart-2: #2f796a;
-  --color-chart-3: #8b6f49;
-  --color-chart-4: #55606d;
-  --color-chart-5: #4d4039;
+  --color-background: oklch(1 0 0);
+  --color-foreground: oklch(0.145 0 0);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.145 0 0);
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.145 0 0);
+  --color-primary: oklch(0.205 0 0);
+  --color-primary-foreground: oklch(0.985 0 0);
+  --color-secondary: oklch(0.97 0 0);
+  --color-secondary-foreground: oklch(0.205 0 0);
+  --color-muted: oklch(0.97 0 0);
+  --color-muted-foreground: oklch(0.556 0 0);
+  --color-accent: oklch(0.97 0 0);
+  --color-accent-foreground: oklch(0.205 0 0);
+  --color-destructive: oklch(0.577 0.245 27.325);
+  --color-destructive-foreground: oklch(0.985 0 0);
+  --color-border: oklch(0.922 0 0);
+  --color-input: oklch(0.922 0 0);
+  --color-ring: oklch(0.708 0 0);
+  --color-chart-1: oklch(0.87 0 0);
+  --color-chart-2: oklch(0.556 0 0);
+  --color-chart-3: oklch(0.439 0 0);
+  --color-chart-4: oklch(0.371 0 0);
+  --color-chart-5: oklch(0.269 0 0);
+  --color-sidebar: oklch(0.985 0 0);
+  --color-sidebar-foreground: oklch(0.145 0 0);
+  --color-sidebar-primary: oklch(0.205 0 0);
+  --color-sidebar-primary-foreground: oklch(0.985 0 0);
+  --color-sidebar-accent: oklch(0.97 0 0);
+  --color-sidebar-accent-foreground: oklch(0.205 0 0);
+  --color-sidebar-border: oklch(0.922 0 0);
+  --color-sidebar-ring: oklch(0.708 0 0);
+  background-color: var(--color-background);
   color: var(--color-foreground);
-  font-family: var(--font-beta-sans), "IBM Plex Sans", sans-serif;
-  background:
-    radial-gradient(circle at top left, rgba(168, 88, 54, 0.14), transparent 32%),
-    radial-gradient(circle at right center, rgba(39, 92, 82, 0.12), transparent 28%),
-    linear-gradient(180deg, #f8f0e4 0%, #f1e6d7 100%);
-}
-
-[data-beta-ui] .font-sans {
-  font-family: inherit;
-}
-
-[data-beta-ui] .font-heading {
-  font-family: var(--font-heading);
 }

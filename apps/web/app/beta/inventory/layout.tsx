@@ -42,7 +42,7 @@ export default async function BetaInventoryLayout({
   return (
     <BetaShell
       workspaceTitle="Kho vận"
-      workspaceDescription="Editorial-industrial shell cho inventory surface: giữ dữ liệu thật, nhấn mạnh cảnh báo và điều phối theo site."
+      workspaceDescription="Surface beta cho cây route kho vận, giữ nguyên auth, ACL và loader hiện có."
       navGroups={getInventoryBetaNavGroups()}
       userName={userName}
       roleLabel={ROLE_LABEL_VI[claims.user_role]}

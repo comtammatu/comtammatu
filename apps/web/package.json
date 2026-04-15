@@ -13,6 +13,7 @@
     "test:e2e:ui": "dotenv -e .env.test.local -- playwright test --ui"
   },
   "dependencies": {
+    "@base-ui/react": "^1.4.0",
     "@comtammatu/database": "workspace:*",
     "@comtammatu/security": "workspace:*",
     "@comtammatu/shared": "workspace:*",
