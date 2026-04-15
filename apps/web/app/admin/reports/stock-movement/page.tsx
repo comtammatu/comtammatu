@@ -4,7 +4,7 @@ import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import {
   PageContainer,
   PageHeader,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 import { StockMovementClient } from "./stock-movement-client";
 
 export default async function StockMovementReportPage() {

@@ -43,7 +43,7 @@ export default async function KdsLayout({
       id="main-content"
       className={cn(
         "min-h-screen bg-zinc-950 text-white",
-        "ui-safe-top flex h-dvh flex-col touch-manipulation overflow-hidden",
+        "pt-[max(0px,env(safe-area-inset-top,0px))] flex h-dvh flex-col touch-manipulation overflow-hidden",
       )}
     >
       {children}

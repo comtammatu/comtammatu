@@ -3,7 +3,7 @@ import {
   EmptyState,
   PageContainer,
   PageHeader,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 
 export default function CrmPage() {
   return (

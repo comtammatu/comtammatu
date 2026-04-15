@@ -2,7 +2,7 @@ import { fetchFiscalPeriods } from "../period-actions";
 import {
   PageContainer,
   PageHeader,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 import { PeriodsClient } from "./periods-client";
 
 export default async function PeriodsPage() {

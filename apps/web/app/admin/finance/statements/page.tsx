@@ -1,7 +1,7 @@
 import {
   PageContainer,
   PageHeader,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 import { StatementsClient } from "./statements-client";
 
 export default function StatementsPage() {

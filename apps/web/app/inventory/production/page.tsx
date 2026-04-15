@@ -12,7 +12,7 @@ import { ProductionHubClient } from "../production-client";
 import {
   PageHeader,
   SectionCard,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/inventory-patterns";
 import { hasBranchKindSchema } from "../_lib/branch-kind-schema";
 
 type InventoryIngredientRow = {

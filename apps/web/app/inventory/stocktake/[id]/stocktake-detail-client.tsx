@@ -23,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
-import { EmptyState, SectionCard } from "@/components/foundation/ui-patterns";
+import { EmptyState, SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import {
   Table,
   TableBody,

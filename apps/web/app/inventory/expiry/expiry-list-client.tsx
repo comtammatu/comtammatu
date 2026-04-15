@@ -41,7 +41,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { SectionCard } from "@/components/foundation/ui-patterns";
+import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import { PageHeader } from "../_components/shared";
 import { adjustStock, fetchExpiryAlerts } from "../actions";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";

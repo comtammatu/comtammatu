@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { SectionCard } from "@/components/foundation/ui-patterns";
+import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import {
   ArrowRight,
   ClipboardCheck,
@@ -159,7 +159,7 @@ export function ReceivingClient({
               <Link
                 href={item.href}
                 className={cn(
-                  "focus-ring-standard flex w-full whitespace-nowrap items-center justify-center gap-2 rounded-full border py-3 text-sm font-bold transition-all",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex w-full whitespace-nowrap items-center justify-center gap-2 rounded-full border py-3 text-sm font-bold transition-all",
                   item.ctaClassName,
                 )}
               >
@@ -179,7 +179,7 @@ export function ReceivingClient({
             <h3 className="text-lg font-bold">Hoạt động gần đây</h3>
             <button
               type="button"
-              className="focus-ring-standard rounded-sm text-sm font-semibold text-primary hover:underline"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm text-sm font-semibold text-primary hover:underline"
             >
               Xem tất cả
             </button>
@@ -225,7 +225,7 @@ export function ReceivingClient({
                     <TableCell className="px-6 py-4 font-mono text-sm font-medium">
                       <Link
                         href={activityHref(item)}
-                        className="focus-ring-standard rounded-sm text-primary hover:underline"
+                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm text-primary hover:underline"
                       >
                         {item.code}
                       </Link>
@@ -257,14 +257,14 @@ export function ReceivingClient({
             <div className="space-y-2">
               <Link
                 href="/inventory/purchase-orders/new"
-                className="focus-ring-standard flex w-full items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex w-full items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
               >
                 <Zap className="size-4 text-primary" />
                 Tạo PO nhanh
               </Link>
               <button
                 type="button"
-                className="focus-ring-standard flex w-full items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex w-full items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
               >
                 Nhập hàng không qua PO
               </button>

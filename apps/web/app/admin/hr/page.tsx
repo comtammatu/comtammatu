@@ -2,7 +2,7 @@ import { createClient } from "@comtammatu/database/supabase/server";
 import {
   PageContainer,
   PageHeader,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 import { fetchEmployees } from "./actions";
 import { HrClient } from "./hr-client";
 

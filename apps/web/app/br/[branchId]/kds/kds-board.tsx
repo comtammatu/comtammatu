@@ -17,7 +17,7 @@ import { ChefHat, Filter, Flame, PackageCheck } from "lucide-react";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { OrderCard } from "./order-card";
 import type { KdsStation, KdsTicket, KdsOrderInfo, KdsOrderItem } from "./page";
-import { EmptyState } from "@/components/foundation/ui-patterns";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 
 /* ─── Types ─── */
 
@@ -792,20 +792,28 @@ export function KdsBoard({
       <ScrollArea className="flex-1">
         {displayOrders.length === 0 ? (
           <div className="mx-auto w-full max-w-screen-2xl p-3 md:p-4">
-            <EmptyState
-              icon={<ChefHat className="size-12" />}
-              title={
-                groupedOrders.length > 0
-                  ? "Không có đơn phù hợp bộ lọc"
-                  : "Bếp đang rảnh"
-              }
-              description={
-                groupedOrders.length > 0
-                  ? "Thử thay đổi bộ lọc để xem thêm đơn."
-                  : "Chưa có đơn hàng mới."
-              }
-              className="min-h-kds-board"
-            />
+            <Card>
+              <CardContent
+                className="flex min-h-52 flex-col items-center justify-center gap-4 px-6 py-10 text-center"
+                style={{ minHeight: "60vh" }}
+              >
+                <div className="flex size-12 items-center justify-center rounded-full border bg-muted/40 text-muted-foreground">
+                  <ChefHat className="size-4" />
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-base font-semibold">
+                    {groupedOrders.length > 0
+                      ? "Không có đơn phù hợp bộ lọc"
+                      : "Bếp đang rảnh"}
+                  </p>
+                  <p className="max-w-sm text-sm leading-6 text-muted-foreground">
+                    {groupedOrders.length > 0
+                      ? "Thử thay đổi bộ lọc để xem thêm đơn."
+                      : "Chưa có đơn hàng mới."}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         ) : (
           <div className="mx-auto grid w-full max-w-screen-2xl grid-cols-1 gap-3 p-3 md:grid-cols-2 md:p-4 xl:grid-cols-3 2xl:grid-cols-4">

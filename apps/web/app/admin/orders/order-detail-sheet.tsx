@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import type { OrderRow } from "./actions";
-import { StatusBadge } from "@/components/foundation/ui-patterns";
+import { StatusBadge } from "@comtammatu/ui/components/admin-patterns";
 
 /* ─── Helpers ─── */
 

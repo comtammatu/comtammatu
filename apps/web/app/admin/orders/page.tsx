@@ -12,7 +12,7 @@ import {
   PageContainer,
   PageHeader,
   SectionCard,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 import {
   Tabs,
   TabsContent,

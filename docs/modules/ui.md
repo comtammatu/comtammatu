@@ -6,12 +6,12 @@ UI không còn chỉ là một thư viện primitive. Hệ hiện tại có 3 t�
 
 1. `Foundation`
    Token, spacing, radius, elevation, motion, focus ring, touch target trong `apps/web/app/globals.css`
-2. `Recipes`
-   Page-level composition trong `apps/web/app/components/foundation/ui-patterns.tsx`
+2. `Domain composition`
+   Thin wrappers cho admin/inventory/blocked-state trong `packages/ui/src/components/`
 3. `Shared UI package`
    Primitive và helper API trong `packages/ui/`
 
-**Owners:** `apps/web/app/globals.css`, `apps/web/app/components/foundation/`, `packages/ui/`
+**Owners:** `apps/web/app/globals.css`, `packages/ui/src/components/`, `packages/ui/`
 
 ## Public APIs
 
@@ -19,9 +19,15 @@ UI không còn chỉ là một thư viện primitive. Hệ hiện tại có 3 t�
 
 Các component shadcn/ui sống ở `packages/ui/src/components/`.
 
-### Recipe and governance layer
+### Domain composition layer
 
-Shared recipe contract:
+Shared thin wrappers:
+
+- `@comtammatu/ui/components/admin-patterns`
+- `@comtammatu/ui/components/inventory-patterns`
+- `@comtammatu/ui/components/blocked-state-flash`
+
+Shared composition contract:
 
 - `PageContainer`
 - `PageHeader`
@@ -29,18 +35,7 @@ Shared recipe contract:
 - `SectionCard`
 - `EmptyState`
 - `StatusBadge`
-
-Shared design-system helper contract từ `@comtammatu/ui`:
-
-- `UiSurface`
-- `UiDensity`
-- `UiTone`
-- `getSurfaceShellClassName()`
-- `getSurfaceSidebarClassName()`
-- `getSurfaceHeaderClassName()`
-- `getSurfacePanelClassName()`
-- `getSurfaceStackClassName()`
-- `getToneBadgeClassName()`
+- `ActionIconButton`
 
 ## Surface model
 
@@ -60,8 +55,8 @@ Surface chỉ được khác nhau ở density, emphasis, contrast và interactio
 - Single source of truth: `docs/spec/design-system.md` + `apps/web/app/globals.css`
 - Không import `theme.css` theo domain/page
 - Không thêm static inline style vào foundation, shell hoặc mobile/auth chrome
-- Không bypass recipe layer nếu khác biệt chỉ là visual
-- Không thêm arbitrary Tailwind dimension value; mở rộng `@theme` thay thế
+- Không tạo custom design system layer mới ngoài `packages/ui/src/components/*`
+- Không thêm arbitrary Tailwind dimension value; mở rộng `@theme` thay thế khi thật sự cần
 
 ## Components
 

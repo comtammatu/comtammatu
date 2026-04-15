@@ -21,8 +21,9 @@ import {
   FilterBar as SurfaceFilterBar,
   PageHeader as SurfacePageHeader,
   StatusBadge as SurfaceStatusBadge,
-  type StatusTone,
-} from "@/components/foundation/ui-patterns";
+  STATUS_TONE_MAP,
+} from "@comtammatu/ui/components/inventory-patterns";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 export type DocumentStatus =
   | "draft"
   | "confirmed"
@@ -74,30 +75,22 @@ interface StatCardProps {
 
 export function StatCard({ label, value, trend }: StatCardProps) {
   return (
-    <div
-      className="rounded-lg border bg-card p-5 shadow-sm"
-    >
-      <p className="mb-2 truncate text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-        {label}
-      </p>
-      <div className="flex items-baseline gap-1">
-        <span className="text-2xl font-semibold tracking-tight">{value}</span>
-      </div>
-      {trend && (
-        <div
-          className={cn(
-            "mt-3 inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium",
-            trend.positive ? "text-success" : "text-destructive",
-          )}
-        >
-          <span>{trend.positive ? "↑" : "↓"}</span>
-          <span>
-            {trend.positive ? "+" : ""}
-            {trend.value}
-          </span>
+    <Card>
+      <CardContent className="space-y-3 p-5">
+        <p className="truncate text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          {label}
+        </p>
+        <div className="flex items-baseline gap-1">
+          <span className="text-2xl font-semibold tracking-tight">{value}</span>
         </div>
-      )}
-    </div>
+        {trend ? (
+          <SurfaceStatusBadge tone={trend.positive ? "success" : "danger"}>
+            <span>{trend.positive ? "+" : "-"}</span>
+            <span>{trend.value}</span>
+          </SurfaceStatusBadge>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -144,7 +137,7 @@ export function SearchableSelect({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "focus-ring-standard inline-flex items-center gap-1.5 text-sm font-semibold transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background inline-flex items-center gap-1.5 text-sm font-semibold transition-colors",
             variant === "default" &&
               "rounded-xl border-none px-4 py-3 font-medium focus:outline-none focus:ring-0",
             variant === "ghost" &&
@@ -220,34 +213,6 @@ export function SearchableSelect({
 // ----------------------------------------------------------------
 // StatusBadge — MD3 container colors
 // ----------------------------------------------------------------
-const statusTones: Record<string, StatusTone> = {
-  draft: "neutral",
-  confirmed: "success",
-  sent: "info",
-  in_transit: "info",
-  received: "success",
-  completed: "success",
-  cancelled: "danger",
-  pending: "warning",
-  in_progress: "info",
-  matched: "success",
-  discrepancy: "danger",
-  approved: "success",
-  overdue: "danger",
-  expired: "danger",
-  critical: "warning",
-  warning: "warning",
-  kitchen_use: "info",
-  write_off: "danger",
-  consumption: "success",
-  normal: "success",
-  low: "danger",
-  out: "danger",
-  over: "warning",
-  active: "success",
-  suspended: "danger",
-};
-
 export function StatusBadge({
   status,
   label,
@@ -257,10 +222,10 @@ export function StatusBadge({
 }) {
   return (
     <SurfaceStatusBadge
-      tone={statusTones[status] ?? "neutral"}
-      className="font-semibold"
+      tone={STATUS_TONE_MAP[status] ?? "neutral"}
+      className="font-medium"
     >
-      <span className="ui-label-short">
+      <span className="truncate">
         {label ?? tStatus(status, "badge")}
       </span>
     </SurfaceStatusBadge>
@@ -286,21 +251,14 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   return (
-    <div
-      className={cn(
-        "rounded-lg border bg-card px-5 py-5 shadow-sm sm:px-6",
-        className,
-      )}
-    >
-      <SurfacePageHeader
-        surface="inventory"
-        eyebrow={eyebrow}
-        title={title}
-        description={description}
-        actions={actions}
-        className="gap-4"
-      />
-    </div>
+    <SurfacePageHeader
+      surface="inventory"
+      eyebrow={eyebrow}
+      title={title}
+      description={description}
+      actions={actions}
+      className={cn("gap-4", className)}
+    />
   );
 }
 
@@ -316,10 +274,7 @@ export function FilterBar({
   return (
     <SurfaceFilterBar
       surface="inventory"
-      className={cn(
-        "rounded-lg border bg-card shadow-sm",
-        className,
-      )}
+      className={className}
     >
       {children}
     </SurfaceFilterBar>

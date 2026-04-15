@@ -28,7 +28,7 @@ import {
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { EmptyState } from "@/components/foundation/ui-patterns";
+import { EmptyState } from "@comtammatu/ui/components/inventory-patterns";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
 import { createStockTransfer } from "../transfer-actions";
 import type { IngredientRow } from "../page";

@@ -35,7 +35,7 @@ import {
   ActionIconButton,
   EmptyState,
   SectionCard,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/inventory-patterns";
 import { PageHeader } from "../../_components/shared";
 import {
   createPurchaseOrder,

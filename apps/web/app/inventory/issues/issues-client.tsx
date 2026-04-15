@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { SectionCard } from "@/components/foundation/ui-patterns";
+import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import {
   AlertTriangle,
   ChefHat,
@@ -151,7 +151,7 @@ export function IssuesClient({
           <div className="flex items-center gap-3">
             <button
               type="button"
-              className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 font-semibold shadow-sm transition-all"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 font-semibold shadow-sm transition-all"
             >
               <FileDown className="size-4" />
               <span>Xuất báo cáo</span>
@@ -159,7 +159,7 @@ export function IssuesClient({
             <button
               type="button"
               onClick={() => setCreateOpen(true)}
-              className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-lg transition-transform active:scale-[0.98]"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-lg transition-transform active:scale-[0.98]"
             >
               <Plus className="size-4" />
               <span>Tạo phiếu mới</span>
@@ -302,7 +302,7 @@ export function IssuesClient({
           </div>
           <button
             type="button"
-            className="focus-ring-standard flex items-center gap-1 rounded-full px-2 text-sm font-medium text-primary hover:underline"
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex items-center gap-1 rounded-full px-2 text-sm font-medium text-primary hover:underline"
             onClick={() => {
               setActiveStatus("all");
               setActiveType("all");
@@ -358,7 +358,7 @@ export function IssuesClient({
                   <TableCell className="px-6 py-5">
                     <Link
                       href={`/inventory/issues/${item.id}`}
-                      className="focus-ring-standard rounded-sm text-sm font-bold hover:underline"
+                      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm text-sm font-bold hover:underline"
                     >
                       {item.code}
                     </Link>
@@ -395,7 +395,7 @@ export function IssuesClient({
                   <TableCell className="px-6 py-5 text-right">
                     <Link
                       href={`/inventory/issues/${item.id}`}
-                      className="focus-ring-standard inline-flex rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background inline-flex rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     >
                       <MoreVertical className="size-5" />
                     </Link>
@@ -412,7 +412,7 @@ export function IssuesClient({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="focus-ring-standard rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
               >
                 ← Trước
               </button>
@@ -421,7 +421,7 @@ export function IssuesClient({
               </span>
               <button
                 type="button"
-                className="focus-ring-standard rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
               >
                 Sau →
               </button>
@@ -486,7 +486,7 @@ export function IssuesClient({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                className="focus-ring-standard w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none"
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none"
                 placeholder="Nhập ghi chú cho phiếu xuất"
               />
             </div>
@@ -495,14 +495,14 @@ export function IssuesClient({
               <button
                 type="button"
                 onClick={() => setCreateOpen(false)}
-                className="focus-ring-standard rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground"
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground"
               >
                 Hủy
               </button>
               <button
                 type="submit"
                 disabled={isPending}
-                className="focus-ring-standard rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
               >
                 {isPending ? "Đang tạo..." : "Tạo phiếu"}
               </button>

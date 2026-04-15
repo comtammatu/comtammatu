@@ -75,7 +75,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
               autoComplete="email"
               spellCheck={false}
               placeholder="email@comtammatu.com"
-              className="touch-target h-12 rounded-lg focus-ring-standard"
+              className="min-h-11 min-w-11 h-12 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             />
           </div>
 
@@ -89,7 +89,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
               type="password"
               required
               autoComplete="current-password"
-              className="touch-target h-12 rounded-lg focus-ring-standard"
+              className="min-h-11 min-w-11 h-12 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             />
           </div>
         </div>
@@ -106,7 +106,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
 
         <Button
           type="submit"
-          className="touch-target h-12 w-full rounded-lg text-sm font-semibold shadow-sm transition-shadow hover:shadow-md"
+          className="min-h-11 min-w-11 h-12 w-full rounded-lg text-sm font-semibold shadow-sm transition-shadow hover:shadow-md"
           disabled={isPending}
         >
           {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}

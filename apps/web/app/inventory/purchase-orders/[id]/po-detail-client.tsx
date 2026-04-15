@@ -372,14 +372,14 @@ export function PODetailClient({ po }: { po: PODetail }) {
       <footer className="flex flex-col gap-3 border-t border-border py-6 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"
-          className="focus-ring-standard flex min-h-11 items-center justify-center gap-2 rounded-full px-6 py-3 font-bold text-destructive transition-colors hover:bg-destructive/8"
+          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-11 items-center justify-center gap-2 rounded-full px-6 py-3 font-bold text-destructive transition-colors hover:bg-destructive/8"
         >
           <XCircle className="size-5" />
           Hủy PO
         </button>
         <button
           type="button"
-          className="focus-ring-standard flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-10 py-3 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-[0.98]"
+          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-10 py-3 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-[0.98]"
         >
           <CheckCircle className="size-5" />
           Tạo Phiếu Nhập kho (GRN)

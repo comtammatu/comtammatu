@@ -1,6 +1,6 @@
 # UI Redesign Review Loop
 
-Updated: 2026-04-09
+Updated: 2026-04-15
 
 ## Checkpoint A - UI/UX Pro Max (UX domain)
 
@@ -11,7 +11,7 @@ Executed query:
 Critical checks applied in this rollout:
 
 - Visible focus states on interactive controls.
-- Minimum touch target (`44x44`, preferred `56x56`) via `.touch-target` and `.touch-target-lg`.
+- Minimum touch target (`44x44`, preferred `56x56`) via direct Tailwind/shadcn composition or semantic button sizing.
 - Reduced motion baseline already respected in global styles.
 - Contrast-aware semantic state colors for warning/success/destructive badges and actions.
 
@@ -23,8 +23,8 @@ Executed query:
 
 Actions taken:
 
-- Introduced route-local reusable UI patterns under `apps/web/app/components/foundation`.
-- Reused these patterns in Admin/KDS/POS/Auth/Employee surfaces to reduce per-page drift.
+- Introduced thin domain wrappers in `packages/ui/src/components/` for shared admin/inventory/state composition.
+- Reused these wrappers in Admin/KDS/POS/Auth/Employee surfaces to reduce per-page drift without creating a second design system.
 
 ## Cross-wave spot check
 

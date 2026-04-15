@@ -10,6 +10,7 @@ import { cn } from "@comtammatu/ui";
 import { InventorySidebar } from "./_components/inventory-sidebar";
 import { InventoryHeader } from "./_components/inventory-header";
 import { fetchInventorySiteContext } from "./_lib/headquarters";
+import { SidebarProvider, SidebarInset } from "@comtammatu/ui/components/sidebar";
 
 export default async function InventoryLayout({
   children,
@@ -52,20 +53,22 @@ export default async function InventoryLayout({
         });
 
   return (
-    <div
-      className={cn("min-h-screen bg-background", "flex h-dvh overflow-hidden font-sans")}
-    >
-      <InventorySidebar userRole={claims.user_role} />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <InventoryHeader
-          siteName={resolvedSiteContext.branchName}
-          siteKind={resolvedSiteContext.branchKind}
-          userRole={claims.user_role}
-        />
-        <main className="flex-1 overflow-y-auto bg-background px-4 py-5 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-screen-2xl">{children}</div>
-        </main>
+    <SidebarProvider defaultOpen>
+      <div
+        className={cn("min-h-screen bg-background font-sans", "flex min-h-svh overflow-hidden")}
+      >
+        <InventorySidebar userRole={claims.user_role} />
+        <SidebarInset className="flex flex-1 flex-col overflow-hidden">
+          <InventoryHeader
+            siteName={resolvedSiteContext.branchName}
+            siteKind={resolvedSiteContext.branchKind}
+            userRole={claims.user_role}
+          />
+          <main className="flex-1 overflow-y-auto bg-background px-4 py-5 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-screen-2xl">{children}</div>
+          </main>
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }

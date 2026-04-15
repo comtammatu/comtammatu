@@ -106,7 +106,7 @@ Nếu reason code bị thiếu hoặc lạ, shell phải fallback về copy gene
 
 `buildLoginBlockedStatePath()` chuẩn hóa fallback `/login?forbidden=1&reason=missing-auth-context` cho các host/layout-level entry points khi session còn tồn tại nhưng claims/context không resolve được. Case `unauthenticated` vẫn dùng `/login` trơn.
 
-`blocked-state-flash.tsx` là presentation helper dùng lại contract này cho các surface auth-adjacent. Helper chỉ đọc `forbidden/reason` và render hoặc toast copy tương ứng; nó không được phép tự quyết định auth policy hay redirect target.
+`blocked-state-flash.tsx` là presentation helper dùng lại contract này cho các surface auth-adjacent. Helper chỉ đọc `forbidden/reason` và render hoặc toast copy tương ứng; nó không được phép tự quyết định auth policy hay redirect target. Implementation gốc lives in `packages/ui/src/components/blocked-state-flash.tsx`, còn file trong `apps/web/app/components/foundation/` chỉ là adapter.
 
 `tone` trong shared blocked-state contract giờ cũng được helper này consume trực tiếp để phân biệt visual severity, toast severity, và accessibility semantics (`role` / `aria-live`) giữa `neutral`, `warning`, và `danger`, nhưng vẫn chỉ ở tầng presentation.
 

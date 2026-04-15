@@ -9,7 +9,7 @@ import {
   PageContainer,
   PageHeader,
   SectionCard,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 import { CategoryTable } from "./category-table";
 import { AddCategoryButton } from "./add-category-button";
 import { ItemTable } from "./item-table";

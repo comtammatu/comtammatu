@@ -3,7 +3,7 @@ import { fetchChartOfAccounts } from "../accounting-actions";
 import {
   PageContainer,
   PageHeader,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 import { JournalClient } from "./journal-client";
 
 export default async function JournalPage() {

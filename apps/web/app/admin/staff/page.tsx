@@ -5,7 +5,7 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import {
   PageContainer,
   PageHeader,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 import { StaffTable } from "./staff-table";
 import { StaffFilters } from "./staff-filters";
 import { AddStaffButton } from "./add-staff-button";

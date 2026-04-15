@@ -23,7 +23,7 @@ import {
 } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { SectionCard } from "@/components/foundation/ui-patterns";
+import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import {
   fetchInventoryValueByArea,
   fetchInventoryValueByBranch,

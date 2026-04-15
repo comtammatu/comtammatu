@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { SectionCard } from "@/components/foundation/ui-patterns";
+import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import {
   CheckCircle,
   Pause,
@@ -113,7 +113,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
         <button
           type="button"
           onClick={openCreate}
-          className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-[1.02]"
+          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-[1.02]"
         >
           <Plus className="size-4" />
           Thêm nhà cung cấp
@@ -283,7 +283,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
                       <button
                         type="button"
                         onClick={() => openEdit(s)}
-                        className="focus-ring-standard rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         aria-label={`Sửa ${s.name}`}
                       >
                         <Pencil className="size-4" />
@@ -291,7 +291,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
                       <button
                         type="button"
                         onClick={() => setDeleteConfirmId(s.id)}
-                        className="focus-ring-standard rounded-full p-1.5 text-destructive transition-colors hover:bg-destructive/10"
+                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full p-1.5 text-destructive transition-colors hover:bg-destructive/10"
                         aria-label={`Xóa ${s.name}`}
                       >
                         <Trash2 className="size-4" />

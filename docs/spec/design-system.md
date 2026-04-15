@@ -47,20 +47,15 @@ Dinh nghia o `apps/web/app/globals.css`:
 - Safe-area utilities
 - Vietnamese text utilities
 
-### 2. Recipe Components
+### 2. Domain Composition
 
-Shared recipe layer cho page-level composition:
+Shared thin wrappers cho page-level composition:
 
-- `PageContainer` — spacing container
-- `PageHeader` — eyebrow, title, description, actions
-- `FilterBar` — filter UI panel
-- `SectionCard` — bordered card
-- `EmptyState` — icon, title, description, action
-- `StatusBadge` — semantic tone badges
+- `packages/ui/src/components/admin-patterns.tsx`
+- `packages/ui/src/components/inventory-patterns.tsx`
+- `packages/ui/src/components/blocked-state-flash.tsx`
 
-Location: `apps/web/app/components/foundation/ui-patterns.tsx`
-
-Recipe API su dung Tailwind utility classes truc tiep. Khong con surface/density helpers.
+Composition API vẫn dùng shadcn primitives làm nền. Mục tiêu là gom cấu trúc lặp lại theo domain, không tạo design system riêng. Các helper `density`/`surface` chỉ còn để migration compatibility và sẽ được giảm dần khi chạm các màn liên quan.
 
 ### 3. Primitives (shadcn/ui)
 
@@ -196,6 +191,8 @@ className="transition-all hover:-translate-y-0.5 hover:shadow-md"
 ## Related Files
 
 - `apps/web/app/globals.css`
-- `apps/web/app/components/foundation/ui-patterns.tsx`
+- `packages/ui/src/components/admin-patterns.tsx`
+- `packages/ui/src/components/inventory-patterns.tsx`
+- `packages/ui/src/components/blocked-state-flash.tsx`
 - `packages/ui/src/components/` (shadcn/ui primitives)
 - `docs/modules/ui.md`

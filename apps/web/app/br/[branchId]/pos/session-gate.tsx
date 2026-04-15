@@ -227,7 +227,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
                 </div>
               ) : (
                 <Select value={terminalId} onValueChange={setTerminalId}>
-                  <SelectTrigger id="terminal" className="focus-ring-standard bg-white">
+                  <SelectTrigger id="terminal" className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background bg-white">
                     <SelectValue placeholder="Chọn máy POS" />
                   </SelectTrigger>
                   <SelectContent>
@@ -264,7 +264,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
                 value={openingCash}
                 onChange={(event) => setOpeningCash(event.target.value)}
                 placeholder="0"
-                className="focus-ring-standard bg-white"
+                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background bg-white"
               />
             </div>
 
@@ -289,7 +289,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
             </div>
 
             <Button
-              className="focus-ring-standard mt-2 w-full"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background mt-2 w-full"
               size="lg"
               disabled={!canOpen}
               onClick={handleOpen}

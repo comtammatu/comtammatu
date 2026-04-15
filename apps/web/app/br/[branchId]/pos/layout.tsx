@@ -43,7 +43,7 @@ export default async function PosLayout({
       id="main-content"
       className={cn(
         "min-h-screen bg-background",
-        "ui-safe-top flex h-dvh touch-manipulation overflow-hidden",
+        "pt-[max(0px,env(safe-area-inset-top,0px))] flex h-dvh touch-manipulation overflow-hidden",
       )}
     >
       {children}

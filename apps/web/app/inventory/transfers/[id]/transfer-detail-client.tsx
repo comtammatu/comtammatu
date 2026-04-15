@@ -13,7 +13,7 @@ import {
   TableRow,
   TableFooter,
 } from "@comtammatu/ui/components/table";
-import { SectionCard } from "@/components/foundation/ui-patterns";
+import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import {
   PageHeader,
   StatusBadge,

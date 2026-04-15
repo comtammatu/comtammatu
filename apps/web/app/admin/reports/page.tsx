@@ -24,7 +24,7 @@ import {
   PageHeader,
   SectionCard,
   StatusBadge,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 
 interface ReportCardProps {
   title: string;

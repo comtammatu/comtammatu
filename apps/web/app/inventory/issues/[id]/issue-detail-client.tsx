@@ -41,7 +41,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { SectionCard } from "@/components/foundation/ui-patterns";
+import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import { PageHeader, StatusBadge } from "../../_components/shared";
 import { EmptyStatePanel } from "../../_components/empty-state-panel";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
@@ -295,7 +295,7 @@ export function IssueDetailClient({
                           type="button"
                           onClick={() => setPendingDeleteId(line.id)}
                           disabled={isPending}
-                          className="focus-ring-standard rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:opacity-60"
+                          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:opacity-60"
                         >
                           <Trash2 className="size-4" />
                         </button>
@@ -403,7 +403,7 @@ export function IssueDetailClient({
                               type="button"
                               onClick={() => setPendingDeleteId(line.id)}
                               disabled={isPending}
-                              className="focus-ring-standard rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:opacity-60"
+                              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:opacity-60"
                             >
                               <Trash2 className="size-4" />
                             </button>
@@ -764,14 +764,14 @@ function AddIssueLineDialog({
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="focus-ring-standard rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="focus-ring-standard rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
             >
               {isPending ? "Đang lưu..." : "Lưu dòng"}
             </button>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { SectionCard } from "@/components/foundation/ui-patterns";
+import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import {
   Clock,
   Download,
@@ -48,14 +48,14 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full bg-muted px-5 py-2.5 font-semibold text-foreground transition-colors hover:bg-muted/80"
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-11 items-center gap-2 rounded-full bg-muted px-5 py-2.5 font-semibold text-foreground transition-colors hover:bg-muted/80"
           >
             <Filter className="size-4" />
             Lọc dữ liệu
           </button>
           <button
             type="button"
-            className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-[1.02]"
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-[1.02]"
           >
             <Plus className="size-4" />
             Tạo GRN
@@ -132,7 +132,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
           </div>
           <button
             type="button"
-            className="focus-ring-standard flex min-h-10 items-center gap-1 rounded-full px-2 text-sm font-bold text-primary hover:underline"
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-10 items-center gap-1 rounded-full px-2 text-sm font-bold text-primary hover:underline"
           >
             Xuất báo cáo Excel
             <Download className="size-4" />
@@ -177,7 +177,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
                 <TableCell className="px-8 py-6">
                   <Link
                     href={`/inventory/grn/${g.id}`}
-                    className="focus-ring-standard rounded-sm font-bold hover:underline"
+                    className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm font-bold hover:underline"
                   >
                     {g.code}
                   </Link>
@@ -201,7 +201,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
                 <TableCell className="px-8 py-6 text-right">
                   <button
                     type="button"
-                    className="focus-ring-standard rounded-lg p-2 text-muted-foreground opacity-0 transition-all group-hover:opacity-100"
+                    className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-lg p-2 text-muted-foreground opacity-0 transition-all group-hover:opacity-100"
                   >
                     <MoreVertical className="size-5" />
                   </button>

@@ -3,7 +3,7 @@ import { fetchDailyRevenue, fetchTaxInvoices, fetchTopItems } from "./actions";
 import {
   PageContainer,
   PageHeader,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 import { FinanceClient } from "./finance-client";
 
 export default async function FinancePage() {

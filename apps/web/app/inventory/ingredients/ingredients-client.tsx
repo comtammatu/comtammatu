@@ -108,7 +108,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
           <button
             type="button"
             onClick={openCreate}
-            className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-lg transition-all hover:opacity-90"
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-lg transition-all hover:opacity-90"
           >
             + Tạo nguyên liệu
           </button>
@@ -127,7 +127,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
             placeholder="Tìm kiếm theo tên hoặc SKU..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="focus-ring-standard w-full rounded-xl border-none bg-card py-3 pl-12 pr-4 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background w-full rounded-xl border-none bg-card py-3 pl-12 pr-4 text-sm text-foreground outline-none placeholder:text-muted-foreground"
           />
         </div>
         <div className="flex items-center gap-3">
@@ -151,7 +151,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
           />
           <button
             type="button"
-            className="focus-ring-standard rounded-full bg-card p-3 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full bg-card p-3 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <Filter className="size-4" />
           </button>
@@ -306,7 +306,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
                     <button
                       type="button"
                       onClick={() => openEdit(item)}
-                      className="focus-ring-standard rounded-full p-2 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:bg-muted hover:text-foreground group-focus-within:opacity-100"
+                      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full p-2 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:bg-muted hover:text-foreground group-focus-within:opacity-100"
                       aria-label={`Sửa ${item.name}`}
                     >
                       <Pencil className="size-4" />

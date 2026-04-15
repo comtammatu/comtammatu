@@ -24,7 +24,7 @@ import {
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import type { SupplierRow } from "../suppliers/suppliers-client";
-import { SectionCard } from "@/components/foundation/ui-patterns";
+import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import { PageHeader } from "../_components/shared";
 import { EmptyStatePanel } from "../_components/empty-state-panel";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";

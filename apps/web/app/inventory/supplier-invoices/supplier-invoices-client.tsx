@@ -2,7 +2,7 @@
 
 import { FileDown, Plus } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import { SectionCard } from "@/components/foundation/ui-patterns";
+import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import { cn } from "@comtammatu/ui";
 import {
   Table,

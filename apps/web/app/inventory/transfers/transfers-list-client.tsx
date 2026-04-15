@@ -25,7 +25,7 @@ import type { BranchForTransfer } from "./create-transfer-dialog";
 import type { IngredientRow } from "../page";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { PageHeader } from "../_components/shared";
-import { SectionCard } from "@/components/foundation/ui-patterns";
+import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 
 export type { BranchForTransfer };
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@comtammatu/ui/components/button";
-import { SectionCard } from "@/components/foundation/ui-patterns";
+import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import {
   ArrowLeft,
   CheckCircle,
@@ -86,7 +86,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
               {grn.poCode && grn.poId ? (
                 <Link
                   href={`/inventory/purchase-orders/${grn.poId}`}
-                  className="focus-ring-standard rounded-sm font-semibold text-primary hover:underline"
+                  className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm font-semibold text-primary hover:underline"
                 >
                   {grn.poCode}
                 </Link>

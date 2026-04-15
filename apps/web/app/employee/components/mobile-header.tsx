@@ -4,7 +4,7 @@ import {
   extractClaims,
   ROLE_LABEL_VI,
 } from "@comtammatu/shared/auth";
-import { cn } from "@comtammatu/ui";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { redirect } from "next/navigation";
 
 export async function MobileHeader() {
@@ -32,22 +32,19 @@ export async function MobileHeader() {
   }
 
   return (
-    <header
-      className={cn(
-        "sticky top-0 z-30 border-b bg-background",
-        "ui-safe-top",
-      )}
-    >
+    <header className="sticky top-0 z-30 border-b bg-background pt-[max(0px,env(safe-area-inset-top,0px))]">
       <div className="mx-auto flex min-h-15 w-full max-w-6xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
         <div className="min-w-0 space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Cổng nhân viên</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Cổng nhân viên
+          </p>
           <p className="truncate text-sm font-semibold text-foreground">
             {branchName ?? "Không gian cá nhân"}
           </p>
         </div>
-        <span className="shrink-0 rounded-full border border-primary/15 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
+        <Badge variant="outline" className="shrink-0">
           {roleLabel}
-        </span>
+        </Badge>
       </div>
     </header>
   );

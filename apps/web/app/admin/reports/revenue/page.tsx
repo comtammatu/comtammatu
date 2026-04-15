@@ -3,7 +3,7 @@ import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import {
   PageContainer,
   PageHeader,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 import { fetchDailyRevenue } from "../../finance/actions";
 import { RevenueReportClient } from "./revenue-report-client";
 

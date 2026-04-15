@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SectionCard } from "@/components/foundation/ui-patterns";
+import { SectionCard } from "@comtammatu/ui/components/inventory-patterns";
 import {
   AlertOctagon,
   AlertTriangle,
@@ -145,7 +145,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
               type="button"
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "focus-ring-standard ui-tab-pill flex-1 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background inline-flex rounded-full whitespace-nowrap flex-1 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
                 isActive
                   ? "bg-white font-bold text-primary shadow-sm"
                   : "text-muted-foreground",

@@ -2,7 +2,7 @@ import { fetchChartOfAccounts } from "../chart-of-accounts-actions";
 import {
   PageContainer,
   PageHeader,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 import { ChartOfAccountsClient } from "./coa-client";
 
 export default async function ChartOfAccountsPage() {

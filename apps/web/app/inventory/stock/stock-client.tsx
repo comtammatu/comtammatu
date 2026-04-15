@@ -229,7 +229,7 @@ export function StockClient({
                   type="button"
                   onClick={() => setActiveCategory(cat)}
                   className={cn(
-                    "focus-ring-standard rounded-full px-4 py-2 text-xs font-semibold transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full px-4 py-2 text-xs font-semibold transition-colors",
                     activeCategory === cat
                       ? "bg-primary text-primary-foreground"
                       : "bg-white text-foreground shadow-sm",
@@ -302,7 +302,7 @@ export function StockClient({
                 type="button"
                 onClick={() => setStockFilter(opt.value)}
                 className={cn(
-                  "focus-ring-standard rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full px-3 py-1 text-xs font-semibold transition-colors",
                   stockFilter === opt.value
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-muted-foreground",
@@ -442,7 +442,7 @@ export function StockClient({
                       <button
                         type="button"
                         onClick={() => setAdjustTarget(item)}
-                        className="focus-ring-standard rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         aria-label={`Điều chỉnh ${item.name}`}
                       >
                         <Pencil className="size-4" />
@@ -450,7 +450,7 @@ export function StockClient({
                       <button
                         type="button"
                         onClick={() => setAdjustTarget(item)}
-                        className="focus-ring-standard rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         aria-label={`Thêm thao tác ${item.name}`}
                       >
                         <MoreHorizontal className="size-4" />
@@ -471,7 +471,7 @@ export function StockClient({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="focus-ring-standard rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
             >
               ← Trước
             </button>
@@ -480,13 +480,13 @@ export function StockClient({
             </span>
             <button
               type="button"
-              className="focus-ring-standard flex size-8 items-center justify-center rounded-full text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex size-8 items-center justify-center rounded-full text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               2
             </button>
             <button
               type="button"
-              className="focus-ring-standard rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
             >
               Sau →
             </button>

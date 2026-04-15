@@ -5,7 +5,7 @@ import {
   EmptyState,
   SectionCard,
   StatusBadge,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {

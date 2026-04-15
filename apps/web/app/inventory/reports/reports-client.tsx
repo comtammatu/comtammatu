@@ -21,7 +21,7 @@ import {
   resolveInventoryColorValue,
   type InventorySemanticColor,
 } from "../_components/shared";
-import { EmptyState } from "@/components/foundation/ui-patterns";
+import { EmptyState } from "@comtammatu/ui/components/inventory-patterns";
 import { formatVND } from "../_lib/format";
 
 export type ApAgingItem = { range: string; amount: number };

@@ -635,7 +635,7 @@ export function PosMenu({
           <Button
             variant="ghost"
             size="sm"
-            className="touch-target h-9 shrink-0 gap-1.5 rounded-full px-4 text-xs text-muted-foreground hover:text-destructive"
+            className="min-h-11 min-w-11 h-9 shrink-0 gap-1.5 rounded-full px-4 text-xs text-muted-foreground hover:text-destructive"
             onClick={() => setShowCloseSession(true)}
           >
             <LogOut className="size-3.5" />
@@ -765,7 +765,7 @@ export function PosMenu({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="touch-target h-9 shrink-0 gap-1 rounded-full px-3 text-xs text-foreground hover:bg-warning/25"
+                className="min-h-11 min-w-11 h-9 shrink-0 gap-1 rounded-full px-3 text-xs text-foreground hover:bg-warning/25"
                 onClick={() => setAppendTarget(null)}
               >
                 <X className="size-3.5" />
@@ -798,7 +798,7 @@ export function PosMenu({
             role="radio"
             aria-checked={orderType === "dine_in"}
             className={cn(
-              "touch-target flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              "min-h-11 min-w-11 flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               orderType === "dine_in"
                 ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
                 : "border-border/70 bg-background text-foreground hover:border-primary/20",
@@ -813,7 +813,7 @@ export function PosMenu({
             role="radio"
             aria-checked={orderType === "takeaway"}
             className={cn(
-              "touch-target flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              "min-h-11 min-w-11 flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               orderType === "takeaway"
                 ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
                 : "border-border/70 bg-background text-foreground hover:border-primary/20",
@@ -909,7 +909,7 @@ export function PosMenu({
           role="tab"
           aria-selected={!showOrders}
           className={cn(
-            "touch-target flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all",
+            "min-h-11 min-w-11 flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all",
             !showOrders
               ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
               : "border-border/70 bg-background text-muted-foreground hover:text-foreground",
@@ -928,7 +928,7 @@ export function PosMenu({
           role="tab"
           aria-selected={showOrders}
           className={cn(
-            "touch-target flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all",
+            "min-h-11 min-w-11 flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all",
             showOrders
               ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
               : "border-border/70 bg-background text-muted-foreground hover:text-foreground",
@@ -1090,7 +1090,7 @@ export function PosMenu({
                               role="tab"
                               aria-selected={effectiveMenuZone === z}
                               className={cn(
-                                "touch-target flex h-11 shrink-0 cursor-pointer items-center rounded-lg border px-4 text-sm font-semibold transition-all",
+                                "min-h-11 min-w-11 flex h-11 shrink-0 cursor-pointer items-center rounded-lg border px-4 text-sm font-semibold transition-all",
                                 effectiveMenuZone === z
                                   ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
                                   : "border-border/70 bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -1117,7 +1117,7 @@ export function PosMenu({
                                 role="tab"
                                 aria-selected={activeCategoryId === cat.id}
                                 className={cn(
-                                  "touch-target flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-all",
+                                  "min-h-11 min-w-11 flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-all",
                                   activeCategoryId === cat.id
                                     ? "border-primary/25 bg-primary/10 text-primary font-semibold shadow-sm"
                                     : "border-border/70 bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -1155,7 +1155,7 @@ export function PosMenu({
                           <button
                             key={item.id}
                             type="button"
-                            className="transition-all hover:-translate-y-0.5 hover:shadow-md touch-target-lg focus-ring-standard flex min-h-40 cursor-pointer flex-col rounded-xl border border-border bg-card p-4 text-left shadow-sm hover:border-primary/25 active:scale-[0.985]"
+                            className="transition-all hover:-translate-y-0.5 hover:shadow-md min-h-14 min-w-14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-40 cursor-pointer flex-col rounded-xl border border-border bg-card p-4 text-left shadow-sm hover:border-primary/25 active:scale-[0.985]"
                             onClick={() => handleItemTap(item)}
                           >
                             <div className="flex items-start justify-between gap-3">
@@ -1239,7 +1239,7 @@ export function PosMenu({
             {isMobile && (
               <button
                 type="button"
-                className="touch-target-lg fixed bottom-6 right-4 z-40 flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-lg transition-transform active:scale-95 md:hidden"
+                className="min-h-14 min-w-14 fixed bottom-6 right-4 z-40 flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-lg transition-transform active:scale-95 md:hidden"
                 onClick={() => setCartDrawerOpen(true)}
                 aria-label="Mở giỏ hàng"
               >
@@ -1262,9 +1262,9 @@ export function PosMenu({
                 onOpenChange={setCartDrawerOpen}
                 shouldScaleBackground={false}
               >
-                <DrawerContent className="max-h-drawer">
+                <DrawerContent className="p-0" style={{ maxHeight: "85dvh" }}>
                   <DrawerTitle className="sr-only">Giỏ hàng</DrawerTitle>
-                  <div className="max-h-drawer-inner flex flex-col overflow-hidden">
+                  <div className="flex flex-col overflow-hidden" style={{ maxHeight: "calc(85dvh - 2rem)" }}>
                     {sidebarTabs}
                     {showOrders ? (
                       <div className="flex flex-1 flex-col overflow-hidden">

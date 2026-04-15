@@ -3,7 +3,7 @@ import {
   EmptyState,
   PageContainer,
   PageHeader,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 import { PayrollDetailClient } from "./payroll-detail-client";
 
 export default async function PayrollDetailPage({

@@ -2,7 +2,7 @@ import { fetchPayrollPeriods } from "../payroll-actions";
 import {
   PageContainer,
   PageHeader,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 import { PayrollListClient } from "./payroll-list-client";
 
 export default async function PayrollPage() {

@@ -4,7 +4,7 @@ import React, { useState, useTransition } from "react";
 import {
   FilterBar,
   SectionCard,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 import {
   Table,
   TableBody,

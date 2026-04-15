@@ -18,7 +18,7 @@ import { TableEmptyStateRow } from "../components/table-empty-state-row";
 import {
   SectionCard,
   StatusBadge,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 
 /* ─── Status helpers ─── */
 

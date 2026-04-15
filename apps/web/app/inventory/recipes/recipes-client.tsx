@@ -6,7 +6,7 @@ import { Pencil, UtensilsCrossed } from "lucide-react";
 import {
   EmptyState,
   SectionCard,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/inventory-patterns";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { PageHeader } from "../_components/shared";

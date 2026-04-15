@@ -1,8 +1,12 @@
 import type { ReactNode } from "react";
-import { cn } from "@comtammatu/ui";
+import {
+  type EmptyStateMode,
+  EmptyState,
+} from "@comtammatu/ui/components/inventory-patterns";
 
 interface EmptyStatePanelProps {
-  title: string;
+  title?: string;
+  mode?: EmptyStateMode;
   description?: string;
   icon?: ReactNode;
   className?: string;
@@ -11,32 +15,20 @@ interface EmptyStatePanelProps {
 
 export function EmptyStatePanel({
   title,
+  mode = "no-data",
   description,
   icon,
   className,
   children,
 }: EmptyStatePanelProps) {
   return (
-    <div
-      className={cn(
-        "flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-card px-5 py-12 text-center shadow-sm",
-        className,
-      )}
-    >
-      {icon ? (
-        <div className="flex size-12 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm">
-          {icon}
-        </div>
-      ) : null}
-      <h3 className="mt-3 text-base font-semibold tracking-tight text-foreground">
-        {title}
-      </h3>
-      {description ? (
-        <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-          {description}
-        </p>
-      ) : null}
-      {children ? <div className="mt-4">{children}</div> : null}
-    </div>
+    <EmptyState
+      mode={mode}
+      icon={icon}
+      title={title}
+      description={description}
+      action={children}
+      className={className}
+    />
   );
 }

@@ -2,7 +2,7 @@ import { fetchFoodCost } from "../accounting-actions";
 import {
   PageContainer,
   PageHeader,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 import { FoodCostClient } from "./food-cost-client";
 
 export default async function FoodCostPage() {

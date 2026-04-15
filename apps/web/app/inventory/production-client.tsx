@@ -39,7 +39,7 @@ import {
   EmptyState,
   SectionCard,
   StatusBadge,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/inventory-patterns";
 import { createIngredient } from "./actions";
 import {
   cancelProductionOrder,

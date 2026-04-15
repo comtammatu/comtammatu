@@ -1,6 +1,7 @@
 import { Suspense, type ReactNode } from "react";
 import { Loader2, MonitorSpeaker, TriangleAlert } from "lucide-react";
-import { FlowStatePanel } from "@/components/foundation/ui-patterns";
+import { Card, CardContent, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
+import { Badge } from "@comtammatu/ui/components/badge";
 import {
   fetchMenuForPos,
   fetchTablesForBranch,
@@ -11,6 +12,33 @@ import { PosMenu } from "./pos-menu";
 import type { MenuCategory } from "./pos-menu";
 import { SessionGate } from "./session-gate";
 import type { OrderType } from "./types";
+
+const FLOW_STATE_BADGE: Record<
+  "todo" | "current" | "done",
+  { title: string; bg: string }
+> = {
+  todo: {
+    title: "bg-muted text-muted-foreground",
+    bg: "border-border",
+  },
+  current: {
+    title: "bg-primary text-primary-foreground",
+    bg: "border-primary",
+  },
+  done: {
+    title: "bg-success text-success",
+    bg: "border-success",
+  },
+};
+
+const ROUTE_TONE_BADGE: Record<
+  "info" | "warning" | "danger",
+  "info" | "warning" | "destructive"
+> = {
+  info: "info",
+  warning: "warning",
+  danger: "destructive",
+};
 
 function PosRouteState({
   title,
@@ -30,17 +58,56 @@ function PosRouteState({
   }>;
 }) {
   return (
-    <FlowStatePanel
-      surface="pos"
-      icon={<MonitorSpeaker className="size-5" />}
-      title={title}
-      description={description}
-      status={status}
-      statusTone={statusTone}
-      steps={steps}
-      wrapperClassName="bg-background/40"
-      className="max-w-5xl"
-    />
+    <Card className="bg-background/40">
+      <CardHeader className="gap-3">
+        <div className="flex items-start gap-3">
+          <div className="flex size-9 items-center justify-center rounded-full border bg-muted text-muted-foreground">
+            <MonitorSpeaker className="size-5" />
+          </div>
+          <div className="min-w-0 space-y-1">
+            <CardTitle className="text-3xl">{title}</CardTitle>
+            <p className="text-sm text-muted-foreground">{description}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Badge
+            variant={ROUTE_TONE_BADGE[statusTone]}
+            className="px-3 py-1 text-xs font-semibold"
+          >
+            <span className="inline-flex items-center gap-1">{status}</span>
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {steps?.length ? (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {steps.map((step, index) => {
+              const stateClasses = FLOW_STATE_BADGE[step.state];
+              return (
+                <div
+                  key={`${step.label}-${index}`}
+                  className={`rounded-lg border p-3 ${stateClasses.bg}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold ${stateClasses.title}`}
+                    >
+                      {index + 1}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold">{step.label}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {step.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }
 

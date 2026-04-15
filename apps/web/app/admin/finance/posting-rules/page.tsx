@@ -3,7 +3,7 @@ import { fetchChartOfAccounts } from "../chart-of-accounts-actions";
 import {
   PageContainer,
   PageHeader,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/admin-patterns";
 import { PostingRulesClient } from "./posting-rules-client";
 
 export default async function PostingRulesPage() {

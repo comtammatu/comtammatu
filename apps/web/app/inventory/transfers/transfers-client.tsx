@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ActionIconButton,
   SectionCard,
-} from "@/components/foundation/ui-patterns";
+} from "@comtammatu/ui/components/inventory-patterns";
 import {
   CheckCircle,
   Clock,
@@ -239,7 +239,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
                   <TableCell className="px-6 py-5">
                     <Link
                       href={`/inventory/transfers/${t.id}`}
-                      className="focus-ring-standard rounded-sm font-bold tracking-tight text-primary hover:underline"
+                      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm font-bold tracking-tight text-primary hover:underline"
                     >
                       {t.code}
                     </Link>

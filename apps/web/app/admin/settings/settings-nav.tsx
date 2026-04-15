@@ -72,7 +72,7 @@ export function SettingsNav({ role }: { role: StaffRole }) {
               key={tab.href}
               href={tab.href}
               className={cn(
-                "ui-tab-pill focus-ring-standard relative -mb-2 inline-flex min-h-11 items-center rounded-full border px-4 py-2.5 text-sm font-semibold transition-all duration-150",
+                "inline-flex rounded-full whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background relative -mb-2 inline-flex min-h-11 items-center rounded-full border px-4 py-2.5 text-sm font-semibold transition-all duration-150",
                 isActive
                   ? "border-primary/20 bg-primary/10 text-primary shadow-sm"
                   : "border-transparent bg-transparent text-muted-foreground hover:border-border/60 hover:bg-muted/70 hover:text-foreground",

@@ -1,21 +1,19 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ChevronDown,
   BarChart3,
   Briefcase,
-  Check,
-  ChefHat,
+  ChevronDown,
   ChevronRight,
+  ChefHat,
   ExternalLink,
   Heart,
   Home,
   LayoutDashboard,
   LogOut,
-  Menu,
   Monitor,
   Package,
   PanelLeft,
@@ -37,21 +35,9 @@ import {
 import type { ModuleKey } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { cn } from "@comtammatu/ui";
-import { Button } from "@comtammatu/ui/components/button";
-import { Separator } from "@comtammatu/ui/components/separator";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@comtammatu/ui/components/tooltip";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "@comtammatu/ui/components/sheet";
+import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,39 +45,46 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
-import { SearchParamBlockedStateFlash } from "@/components/foundation/blocked-state-flash";
-import { StatusBadge } from "@/components/foundation/ui-patterns";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
+} from "@comtammatu/ui/components/sidebar";
+import {
+  SearchParamBlockedStateFlash,
+} from "@/components/foundation/blocked-state-flash";
+import { StatusBadge } from "@comtammatu/ui/components/admin-patterns";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 
-/* ─── Icon registry (Lucide name → component) ─── */
-
-const ICON_MAP: Record<string, React.ElementType> = {
+const ADMIN_ICON_MAP: Record<string, React.ElementType> = {
   LayoutDashboard,
-  UtensilsCrossed,
-  Receipt,
+  BarChart3,
   Users,
   Heart,
   Wallet,
-  BarChart3,
-  Settings,
   Package,
   Briefcase,
   Monitor,
+  Settings,
   ChefHat,
+  Receipt,
+  UtensilsCrossed,
 };
-
-/* ─── Helpers ─── */
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((part) => part[0] ?? "")
-    .filter(Boolean)
-    .slice(-2)
-    .join("")
-    .toUpperCase();
-}
-
-/* ─── Derive nav from MODULE_ACL + ADMIN_NAV_GROUPS ─── */
 
 interface ResolvedNavItem {
   label: string;
@@ -115,11 +108,21 @@ interface BreadcrumbItem {
   href?: string;
 }
 
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((part) => part[0] ?? "")
+    .filter(Boolean)
+    .slice(-2)
+    .join("")
+    .toUpperCase();
+}
+
 function mapResolvedNavLink(item: ResolvedNavLink): ResolvedNavItem {
   return {
     label: item.label,
     href: item.href,
-    icon: ICON_MAP[item.icon] ?? LayoutDashboard,
+    icon: ADMIN_ICON_MAP[item.icon] ?? LayoutDashboard,
     moduleKey: item.moduleKey,
   };
 }
@@ -198,8 +201,6 @@ function buildBreadcrumb(
   };
 }
 
-/* ─── Quick launch menu for adjacent workspaces and branch tools ─── */
-
 function QuickLaunchMenu({
   groups,
   compact = false,
@@ -217,8 +218,8 @@ function QuickLaunchMenu({
           size={compact ? "icon" : "sm"}
           className={cn(
             compact
-              ? "touch-target size-8 text-muted-foreground hover:text-foreground"
-              : "touch-target h-9 gap-2 rounded-full border-border/70 bg-background/90 px-3 text-foreground shadow-sm hover:bg-muted/80",
+              ? "min-h-11 min-w-11 size-8 text-muted-foreground hover:text-foreground"
+              : "min-h-11 min-w-11 h-9 gap-2 rounded-full border-border/70 bg-background/90 px-3 text-foreground shadow-sm hover:bg-muted/80",
           )}
           aria-label={APP_COPY_VI.quickAccessAria}
         >
@@ -258,156 +259,71 @@ function QuickLaunchMenu({
   );
 }
 
-/* ─── Sidebar Navigation (shared between desktop & mobile sheet) ─── */
-
 function SidebarNav({
   groups,
   pathname,
   onNavigate,
-  collapsed = false,
 }: {
   groups: ResolvedNavGroup[];
   pathname: string;
   onNavigate?: () => void;
-  collapsed?: boolean;
 }) {
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  const closeMobile = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
+
   return (
-    <nav className={collapsed ? "space-y-1" : "space-y-5"}>
-      {groups.map((group) => (
-        <div key={group.title}>
-          {!collapsed && (
-            <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/40">
-              {group.title}
-            </p>
-          )}
-          <div className="space-y-0.5">
+    <SidebarContent>
+      {groups.map((group, groupIndex) => (
+        <SidebarGroup key={`${group.title || "default"}-${groupIndex}`}>
+          {group.title ? <SidebarGroupLabel>{group.title}</SidebarGroupLabel> : null}
+          <SidebarMenu>
             {group.items.map((item) => {
-              const isActive = pathname.startsWith(item.href);
+              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
               const Icon = item.icon;
 
-              if (collapsed) {
-                return (
-                  <Tooltip key={item.href}>
-                    <TooltipTrigger asChild>
-                      <Link
-                        href={item.href}
-                        onClick={onNavigate}
-                        className={cn(
-                          "touch-target group relative flex items-center justify-center rounded-lg py-2.5 transition-all",
-                          isActive
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                            : "text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
-                        )}
-                      >
-                        {isActive && (
-                          <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-sidebar-primary" />
-                        )}
-                        <Icon
-                          className={cn(
-                            "size-4.5 shrink-0 transition-colors",
-                            isActive
-                              ? "text-sidebar-primary"
-                              : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/70",
-                          )}
-                        />
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">{item.label}</TooltipContent>
-                  </Tooltip>
-                );
-              }
+              const navigate = () => {
+                onNavigate?.();
+                closeMobile();
+              };
 
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={onNavigate}
-                  className={cn(
-                    "touch-target group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-                    isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                      : "text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
-                  )}
-                >
-                  {isActive && (
-                    <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-sidebar-primary" />
-                  )}
-                  <Icon
-                    className={cn(
-                      "size-4.5 shrink-0 transition-colors",
-                      isActive
-                        ? "text-sidebar-primary"
-                        : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/70",
-                    )}
-                  />
-                  {item.label}
-                </Link>
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive}
+                    tooltip={item.label}
+                  >
+                    <Link href={item.href} onClick={navigate}>
+                      <Icon className="size-4" />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               );
             })}
-          </div>
-        </div>
+          </SidebarMenu>
+        </SidebarGroup>
       ))}
-    </nav>
+    </SidebarContent>
   );
 }
-
-/* ─── Sidebar User Footer ─── */
 
 function SidebarUserFooter({
   user,
   role,
-  collapsed = false,
 }: {
   user: { name: string };
   role: StaffRole;
-  collapsed?: boolean;
 }) {
-  const roleLabel = ROLE_LABEL_VI[role];
-
-  if (collapsed) {
-    return (
-      <>
-        <Separator className="bg-sidebar-border" />
-        <div className="flex flex-col items-center gap-2 p-3">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Avatar className="size-8 cursor-default ring-2 ring-sidebar-primary/20">
-                <AvatarFallback className="bg-sidebar-accent text-xs font-semibold text-sidebar-accent-foreground">
-                  {getInitials(user.name)}
-                </AvatarFallback>
-              </Avatar>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <p className="font-medium">{user.name}</p>
-              <p className="text-xs text-muted-foreground">{roleLabel}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <form action="/api/auth/signout" method="post">
-                <Button
-                  type="submit"
-                  variant="ghost"
-                  size="icon"
-                  className="touch-target size-8 text-sidebar-foreground/50 hover:text-sidebar-foreground"
-                  aria-label="Đăng xuất"
-                >
-                  <LogOut className="size-4" />
-                </Button>
-              </form>
-            </TooltipTrigger>
-            <TooltipContent side="right">Đăng xuất</TooltipContent>
-          </Tooltip>
-        </div>
-      </>
-    );
-  }
-
   return (
-    <>
-      <Separator className="bg-sidebar-border" />
-      <div className="flex items-center gap-3 p-4">
-        <Avatar className="size-9 ring-2 ring-sidebar-primary/20">
+    <SidebarFooter className="pt-2">
+      <div className="flex items-center gap-3 px-2 py-2">
+        <Avatar className="size-8">
           <AvatarFallback className="bg-sidebar-accent text-xs font-semibold text-sidebar-accent-foreground">
             {getInitials(user.name)}
           </AvatarFallback>
@@ -417,31 +333,24 @@ function SidebarUserFooter({
             {user.name}
           </p>
           <p className="truncate text-xs font-medium text-sidebar-foreground/45">
-            {roleLabel}
+            {ROLE_LABEL_VI[role]}
           </p>
         </div>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <form action="/api/auth/signout" method="post">
-              <Button
-                type="submit"
-                variant="ghost"
-                size="icon"
-                className="touch-target size-8 text-sidebar-foreground/50 hover:text-sidebar-foreground"
-                aria-label="Đăng xuất"
-              >
-                <LogOut className="size-4" />
-              </Button>
-            </form>
-          </TooltipTrigger>
-          <TooltipContent>Đăng xuất</TooltipContent>
-        </Tooltip>
+        <form action="/api/auth/signout" method="post">
+          <Button
+            type="submit"
+            variant="ghost"
+            size="icon"
+            className="size-8 text-sidebar-foreground/50 hover:text-sidebar-foreground"
+            aria-label="Đăng xuất"
+          >
+            <LogOut className="size-4" />
+          </Button>
+        </form>
       </div>
-    </>
+    </SidebarFooter>
   );
 }
-
-/* ─── Admin Workspace Shell ─── */
 
 interface AdminShellProps {
   children: React.ReactNode;
@@ -457,48 +366,7 @@ export function AdminShell({
   branchId,
 }: AdminShellProps) {
   const pathname = usePathname();
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [sidebarMode, setSidebarMode] = useState<
-    "expanded" | "collapsed" | "hover"
-  >("expanded");
-  const [isHoverOpen, setIsHoverOpen] = useState(false);
-  const [modeMenuOpen, setModeMenuOpen] = useState(false);
-  const hoverTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const mobileSignOutFormRef = useRef<HTMLFormElement>(null);
-
-  // Restore sidebar mode from cookie
-  useEffect(() => {
-    const match = document.cookie.match(
-      /sidebar_mode=(expanded|collapsed|hover)/,
-    );
-    const saved = match?.[1];
-    if (saved === "expanded" || saved === "collapsed" || saved === "hover") {
-      setSidebarMode(saved);
-    }
-  }, []);
-
-  // Persist mode to cookie + reset hover state when mode changes
-  useEffect(() => {
-    document.cookie = `sidebar_mode=${sidebarMode};path=/;max-age=${60 * 60 * 24 * 365}`;
-    if (sidebarMode !== "hover") setIsHoverOpen(false);
-  }, [sidebarMode]);
-
-  useEffect(() => () => clearTimeout(hoverTimerRef.current), []);
-
-  const isCollapsed =
-    sidebarMode === "collapsed" || (sidebarMode === "hover" && !isHoverOpen);
-
-  const handleSidebarMouseEnter = () => {
-    if (sidebarMode !== "hover") return;
-    clearTimeout(hoverTimerRef.current);
-    hoverTimerRef.current = setTimeout(() => setIsHoverOpen(true), 100);
-  };
-
-  const handleSidebarMouseLeave = () => {
-    if (sidebarMode !== "hover" || modeMenuOpen) return;
-    clearTimeout(hoverTimerRef.current);
-    hoverTimerRef.current = setTimeout(() => setIsHoverOpen(false), 300);
-  };
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const filteredGroups = useMemo(
     () => mapResolvedNavGroups(resolveAdminNavGroups(role)),
@@ -516,164 +384,49 @@ export function AdminShell({
     () => filteredGroups.flatMap((group) => group.items),
     [filteredGroups],
   );
-  const quickLaunchCount = useMemo(
-    () => quickLaunchGroups.reduce((total, group) => total + group.items.length, 0),
-    [quickLaunchGroups],
-  );
-  const workspaceLabel = branchId
-    ? `Chi nhánh #${branchId}`
-    : "Toàn hệ thống";
+  const workspaceLabel = branchId ? `Chi nhánh #${branchId}` : "Toàn hệ thống";
   const headerBreadcrumb = useMemo(
     () => buildBreadcrumb(pathname, navItems),
     [pathname, navItems],
   );
+  const quickLaunchCount = quickLaunchGroups.reduce(
+    (sum, group) => sum + group.items.length,
+    0,
+  );
 
   return (
-    <TooltipProvider delayDuration={300}>
-      <div className="flex min-h-screen overflow-hidden bg-background">
-        {/* ── Desktop Sidebar spacer (hover mode: keeps layout stable) ── */}
-        {sidebarMode === "hover" && (
-          <div className="hidden w-16 shrink-0 md:block" />
-        )}
-
-        {/* ── Desktop Sidebar (hidden on mobile) ── */}
-        <aside
-          className={cn(
-            "border-r bg-sidebar",
-            "hidden flex-col transition-all duration-200 md:flex",
-            sidebarMode === "hover"
-              ? cn(
-                  "fixed inset-y-0 left-0 z-40",
-                  isHoverOpen ? "w-64 shadow-xl" : "w-16",
-                )
-              : isCollapsed
-                ? "w-16"
-                : "w-64",
-          )}
-          onMouseEnter={handleSidebarMouseEnter}
-          onMouseLeave={handleSidebarMouseLeave}
-        >
-          {/* Brand */}
-          <div
-            className={cn(
-              "flex h-16 items-center border-b border-sidebar-border/80",
-              isCollapsed ? "justify-center px-2" : "gap-3 px-4",
-            )}
-          >
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary shadow-sm">
-              <UtensilsCrossed className="size-5 text-sidebar-primary-foreground" />
-            </div>
-            {!isCollapsed && (
+    <SidebarProvider
+      defaultOpen
+      open={sidebarOpen}
+      onOpenChange={setSidebarOpen}
+    >
+      <div className="flex min-h-screen w-full overflow-hidden bg-background">
+        <Sidebar collapsible="icon">
+          <SidebarHeader className="gap-3 px-2 py-3">
+            <div className="flex items-center gap-2 rounded-lg bg-sidebar-accent p-2">
+              <div className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary text-lg font-extrabold text-sidebar-primary-foreground">
+                MT
+              </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/45">
                   {APP_COPY_VI.erpCockpit}
                 </p>
-                <span className="text-base font-bold tracking-tight text-sidebar-foreground">
+                <span className="truncate text-sm font-bold tracking-tight text-sidebar-foreground">
                   Cơm Tấm Má Tư
                 </span>
               </div>
-            )}
-          </div>
+            </div>
+          </SidebarHeader>
 
-          {/* Nav */}
-          <ScrollArea
-            className={cn("flex-1 py-4", isCollapsed ? "px-2" : "px-3")}
-          >
-            <SidebarNav
-              groups={filteredGroups}
-              pathname={pathname}
-              collapsed={isCollapsed}
-            />
-          </ScrollArea>
+          <SidebarNav groups={filteredGroups} pathname={pathname} />
 
-          {/* Sidebar mode control */}
-          <div
-            className={cn(
-              "flex border-t border-sidebar-border p-2",
-              isCollapsed ? "justify-center" : "justify-end",
-            )}
-          >
-            <DropdownMenu
-              open={modeMenuOpen}
-              onOpenChange={(open) => {
-                setModeMenuOpen(open);
-                if (!open && sidebarMode === "hover") {
-                  clearTimeout(hoverTimerRef.current);
-                  hoverTimerRef.current = setTimeout(
-                    () => setIsHoverOpen(false),
-                    400,
-                  );
-                }
-              }}
-            >
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8 text-sidebar-foreground/50 hover:text-sidebar-foreground"
-                  aria-label="Chế độ sidebar"
-                >
-                  {isCollapsed ? (
-                    <PanelLeft className="size-4" />
-                  ) : (
-                    <PanelLeftClose className="size-4" />
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                side={isCollapsed ? "right" : "top"}
-                align="end"
-              >
-                <DropdownMenuItem onClick={() => setSidebarMode("expanded")}>
-                  <PanelLeft className="size-4" />
-                  Mở rộng
-                  {sidebarMode === "expanded" && (
-                    <Check className="ml-auto size-4" />
-                  )}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSidebarMode("collapsed")}>
-                  <PanelLeftClose className="size-4" />
-                  Thu gọn
-                  {sidebarMode === "collapsed" && (
-                    <Check className="ml-auto size-4" />
-                  )}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSidebarMode("hover")}>
-                  <PanelLeft className="size-4" />
-                  Mở khi rê chuột
-                  {sidebarMode === "hover" && (
-                    <Check className="ml-auto size-4" />
-                  )}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <SidebarUserFooter user={user} role={role} />
+        </Sidebar>
 
-          {/* User footer — ONLY on desktop sidebar */}
-          <SidebarUserFooter user={user} role={role} collapsed={isCollapsed} />
-        </aside>
+        <SidebarInset>
+          <header className="sticky top-0 z-30 flex min-h-16 items-center gap-4 border-b bg-background px-4 py-3 sm:px-6">
+            <SidebarTrigger className="md:hidden" />
 
-        {/* ── Main Area ── */}
-        <div className="flex flex-1 flex-col">
-          {/* Header */}
-          <header
-            className={cn(
-              "sticky top-0 z-30 border-b bg-background",
-              "flex min-h-16 items-center gap-4 px-4 py-3 sm:px-6",
-            )}
-          >
-            {/* Mobile: sidebar toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="touch-target md:hidden"
-              aria-label="Mở menu"
-              onClick={() => setSheetOpen(true)}
-            >
-              <Menu className="size-5" />
-            </Button>
-
-            {/* Breadcrumb + page title */}
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground hidden md:block">
                 {APP_COPY_VI.adminFoundation}
@@ -685,10 +438,7 @@ export function AdminShell({
                 {headerBreadcrumb.items.map((item, index) => {
                   const isLast = index === headerBreadcrumb.items.length - 1;
                   return (
-                    <div
-                      key={`${item.label}-${index}`}
-                      className="flex items-center gap-1"
-                    >
+                    <div key={`${item.label}-${index}`} className="flex items-center gap-1">
                       {index > 0 && (
                         <ChevronRight className="size-3 text-muted-foreground/70" />
                       )}
@@ -710,9 +460,7 @@ export function AdminShell({
                         <span
                           className={cn(
                             "truncate font-medium",
-                            isLast
-                              ? "text-foreground"
-                              : "text-muted-foreground",
+                            isLast ? "text-foreground" : "text-muted-foreground",
                           )}
                         >
                           {item.label}
@@ -727,11 +475,25 @@ export function AdminShell({
               </p>
             </div>
 
-            <div className="hidden md:block">
-              <QuickLaunchMenu groups={quickLaunchGroups} />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="min-h-11 min-w-11"
+                aria-label="Chuyển trạng thái sidebar"
+                onClick={() => setSidebarOpen((open) => !open)}
+              >
+                {sidebarOpen ? (
+                  <PanelLeftClose className="size-4" />
+                ) : (
+                  <PanelLeft className="size-4" />
+                )}
+              </Button>
+              <div className="hidden md:block">
+                <QuickLaunchMenu groups={quickLaunchGroups} />
+              </div>
             </div>
 
-            {/* Mobile only: user avatar with dropdown */}
             <div className="flex items-center gap-1 md:hidden">
               <QuickLaunchMenu groups={quickLaunchGroups} compact />
               <DropdownMenu>
@@ -739,7 +501,7 @@ export function AdminShell({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="touch-target size-8"
+                    className="min-h-11 min-w-11 size-8"
                     aria-label="Menu tài khoản"
                   >
                     <Avatar className="size-8">
@@ -757,103 +519,60 @@ export function AdminShell({
                     </p>
                   </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onSelect={() =>
-                      mobileSignOutFormRef.current?.requestSubmit()
-                    }
-                  >
-                    <LogOut className="size-4" />
-                    Đăng xuất
+                  <DropdownMenuItem asChild>
+                    <form action="/api/auth/signout" method="post">
+                      <button className="flex w-full items-center gap-2" type="submit">
+                        <LogOut className="size-4" />
+                        <span>Đăng xuất</span>
+                      </button>
+                    </form>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </header>
 
-          {/* Content */}
-          <main id="main-content" className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8">
+          <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8">
             <div className="mx-auto flex max-w-screen-2xl flex-col">
               <div className="mb-5 hidden md:block">
-                <div className="rounded-xl border bg-card shadow-sm flex flex-wrap items-center justify-between gap-4 p-4 md:p-5">
-                  <div className="min-w-0 space-y-1.5">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Quản trị</p>
-                    <h2 className="text-lg font-semibold tracking-tight">
-                      {ROLE_LABEL_VI[role]}
-                    </h2>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    <StatusBadge
-                      tone="info"
-                      className="rounded-full px-3 py-1.5 text-xs font-semibold"
-                    >
-                      Vai trò {ROLE_LABEL_VI[role]}
-                    </StatusBadge>
-                    <StatusBadge
-                      tone="neutral"
-                      className="rounded-full px-3 py-1.5 text-xs font-semibold"
-                    >
-                      {workspaceLabel}
-                    </StatusBadge>
-                    <StatusBadge
-                      tone={quickLaunchCount > 0 ? "success" : "warning"}
-                      className="rounded-full px-3 py-1.5 text-xs font-semibold"
-                    >
-                      {navItems.length} mục chính · {quickLaunchCount} truy cập nhanh
-                    </StatusBadge>
-                  </div>
-                </div>
+                <Card>
+                  <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div className="min-w-0 space-y-1.5">
+                      <CardDescription>Quản trị</CardDescription>
+                      <CardTitle>{ROLE_LABEL_VI[role]}</CardTitle>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <StatusBadge
+                        tone="info"
+                        className="rounded-full px-3 py-1 text-xs font-semibold"
+                      >
+                        Vai trò {ROLE_LABEL_VI[role]}
+                      </StatusBadge>
+                      <StatusBadge
+                        tone="neutral"
+                        className="rounded-full px-3 py-1 text-xs font-semibold"
+                      >
+                        {workspaceLabel}
+                      </StatusBadge>
+                      <Badge
+                        variant={quickLaunchCount > 0 ? "success" : "warning"}
+                        className="rounded-full px-3 py-1 text-xs font-semibold"
+                      >
+                        {navItems.length} mục chính · {quickLaunchCount} truy cập nhanh
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                </Card>
               </div>
-              <div>
-              {children}
-              </div>
+              <div>{children}</div>
             </div>
           </main>
-        </div>
-
-        {/* ── Mobile Sheet Sidebar ── */}
-        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-          <SheetContent
-            side="left"
-            className={cn("border-r bg-sidebar", "w-72 p-0")}
-          >
-            <SheetTitle className="sr-only">Menu điều hướng</SheetTitle>
-            <div className="flex h-16 items-center gap-3 border-b border-sidebar-border/80 px-4">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-sidebar-primary shadow-sm">
-                <UtensilsCrossed className="size-5 text-sidebar-primary-foreground" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/45">
-                  {APP_COPY_VI.erpCockpit}
-                </p>
-                <span className="text-base font-bold tracking-tight text-sidebar-foreground">
-                  Cơm Tấm Má Tư
-                </span>
-              </div>
-            </div>
-            <ScrollArea className="flex-1 px-3 py-4">
-              <SidebarNav
-                groups={filteredGroups}
-                pathname={pathname}
-                onNavigate={() => setSheetOpen(false)}
-              />
-            </ScrollArea>
-            <SidebarUserFooter user={user} role={role} />
-          </SheetContent>
-        </Sheet>
+        </SidebarInset>
       </div>
 
-      {/* Hidden form for mobile sign-out */}
-      <form
-        ref={mobileSignOutFormRef}
-        action="/api/auth/signout"
-        method="post"
-        className="hidden"
-      />
-
-      {/* Forbidden access notification — Suspense required for useSearchParams */}
       <Suspense fallback={null}>
         <SearchParamBlockedStateFlash mode="toast" autoClear />
       </Suspense>
-    </TooltipProvider>
+    </SidebarProvider>
   );
 }
