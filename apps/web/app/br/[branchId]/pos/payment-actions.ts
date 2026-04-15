@@ -292,7 +292,8 @@ export async function createPayment(
 
 /**
  * Confirm a pending VietQR/MoMo payment (called by webhook or poll).
- * Internal use — validates provider_ref.
+ * Uses atomic RPC: update payment → update order → auto-post GL journal.
+ * Stock consumption remains non-fatal secondary call.
  */
 export async function confirmPayment(
   paymentId: number,
@@ -313,10 +314,10 @@ export async function confirmPayment(
     return { success: false, error: "Không xác định được chi nhánh" };
   }
 
-  // Fetch payment — scope by tenant + branch for defense in depth
+  // Fetch order_id for stock consumption (needed after RPC)
   const { data: payment, error: fetchErr } = await supabase
     .from("payments")
-    .select("id, order_id, branch_id, status")
+    .select("id, order_id, status")
     .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
     .eq("branch_id", claims.branch_id)
@@ -330,54 +331,46 @@ export async function confirmPayment(
     return { success: false, error: "Thanh toán không ở trạng thái chờ." };
   }
 
-  // Update payment to completed — re-scope by tenant
-  const { error: updateErr } = await supabase
-    .from("payments")
-    .update({
-      status: "completed",
-      provider_ref: providerRef,
-      paid_at: new Date().toISOString(),
-    })
-    .eq("id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id);
+  // Atomic RPC: confirm payment + update order + auto-post GL journal
+  // Must run BEFORE stock consumption so if it fails, no stock is deducted.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error: rpcError } = await (supabase as any).rpc(
+    "confirm_payment_and_post",
+    {
+      p_payment_id: parsedId.data,
+      p_tenant_id: claims.tenant_id,
+      p_branch_id: claims.branch_id,
+      p_provider_ref: providerRef,
+    },
+  );
 
-  if (updateErr) {
+  if (rpcError) {
+    const msg = rpcError.message ?? "";
+    if (msg.includes("payment_not_found")) {
+      return { success: false, error: "Thanh toán không tồn tại." };
+    }
+    if (msg.includes("payment_not_pending")) {
+      return { success: false, error: "Thanh toán không ở trạng thái chờ." };
+    }
     return { success: false, error: "Không thể xác nhận thanh toán." };
   }
 
-  // Update order — scope by tenant for defense in depth
-  const { error: orderErr } = await supabase
-    .from("orders")
-    .update({ payment_status: "paid" })
-    .eq("id", payment.order_id)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (orderErr) {
-    // Payment completed but order status desync — log for manual reconciliation
-    console.error(
-      `[confirmPayment] order status desync: payment=${parsedId.data} order=${payment.order_id}`,
-      orderErr.message,
-    );
-  }
-
-  // Deduct ingredients consumed by this order from stock.
-  // All stock errors are non-fatal for pilot: stock_levels may not be initialized yet.
-  // TODO(M4-VietQR): when wiring real VietQR polling, validate confirmed amount
-  // matches payment.amount before calling confirmPayment to prevent underpayment.
+  // Deduct ingredients AFTER payment confirmed successfully.
+  // Non-fatal: stock_levels may not be initialized yet.
+  // COGS in GL journal uses stock_movements from create_payment (cash)
+  // or will be 0 for e-wallet (reconciled via period close).
   const { error: stockErr } = await consumeStockForOrderCompat(
     supabase,
     payment.order_id,
   );
   if (stockErr) {
-    // Non-fatal: payment succeeded, stock reconciliation can be done manually.
-    // See tasks/todo.md for payment-order desync recovery query.
     console.error(
       "[confirmPayment] consume_stock_for_order failed:",
       stockErr.message,
     );
   }
 
-  return { success: true };
+  return { success: true, data };
 }
 
 /* ─── fetchPaymentForOrder ─── */

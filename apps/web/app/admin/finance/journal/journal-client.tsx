@@ -104,6 +104,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
       // Prepend optimistic entry
       const newEntry: JournalEntryRow = {
         id: (res.data as { id: number }).id,
+        entry_number: (res.data as { id: number; entry_number?: string }).entry_number ?? "JE-pending",
         entry_date: form.entryDate,
         description: form.description,
         ref_type: form.refType || null,
@@ -130,12 +131,22 @@ export function JournalClient({ entries: initial, accounts }: Props) {
     });
   }
 
-  const statusBadge = (s: string) =>
-    s === "posted" ? (
-      <Badge variant="default">Đã ghi sổ</Badge>
-    ) : (
-      <Badge variant="secondary">{s}</Badge>
-    );
+  const statusBadge = (s: string, entryNumber?: string) => {
+    const isAuto = entryNumber?.startsWith("AUTO-");
+    if (s === "posted") {
+      return (
+        <span className="flex items-center gap-1.5">
+          <Badge variant="default">Đã ghi sổ</Badge>
+          {isAuto && (
+            <Badge variant="outline" className="text-xs">
+              Tự động
+            </Badge>
+          )}
+        </span>
+      );
+    }
+    return <Badge variant="secondary">{s}</Badge>;
+  };
 
   return (
     <>
@@ -182,7 +193,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                     <TableCell className="text-muted-foreground text-sm">
                       {e.ref_type ? `${e.ref_type}#${e.ref_id}` : "—"}
                     </TableCell>
-                    <TableCell>{statusBadge(e.status)}</TableCell>
+                    <TableCell>{statusBadge(e.status, e.entry_number)}</TableCell>
                     <TableCell className="text-right tabular-nums">
                       {totalDr.toLocaleString("vi-VN")}
                     </TableCell>

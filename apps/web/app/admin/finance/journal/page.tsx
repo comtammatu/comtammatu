@@ -40,6 +40,7 @@ export interface JournalEntryLine {
 
 export interface JournalEntryRow {
   id: number;
+  entry_number: string;
   entry_date: string;
   description: string;
   ref_type: string | null;
