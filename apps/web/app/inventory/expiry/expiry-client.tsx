@@ -90,7 +90,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
               <div className="flex size-10 items-center justify-center rounded-xl bg-destructive/12">
                 <AlertOctagon className="size-5 text-destructive" />
               </div>
-              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+              <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Quá hạn
               </span>
             </div>
@@ -109,7 +109,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
               <div className="flex size-10 items-center justify-center rounded-xl bg-primary/12">
                 <AlertTriangle className="size-5 text-primary" />
               </div>
-              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+              <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 3 ngày tới
               </span>
             </div>
@@ -128,7 +128,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
               <div className="flex size-10 items-center justify-center rounded-xl bg-warning/12">
                 <Clock className="size-5 text-warning" />
               </div>
-              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+              <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 7 ngày tới
               </span>
             </div>

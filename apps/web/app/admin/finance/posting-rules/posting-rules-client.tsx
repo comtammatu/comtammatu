@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { SectionCard } from "@/components/v2/patterns";
+import { SectionCard } from "@/components/patterns";
 import {
   Table,
   TableBody,

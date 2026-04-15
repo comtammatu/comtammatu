@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { SectionCard } from "@/components/v2/patterns";
+import { SectionCard } from "@/components/patterns";
 import type { ProductionOrderRow } from "./production-types";
 
 interface ProductionStatsProps {

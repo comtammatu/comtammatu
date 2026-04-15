@@ -10,7 +10,7 @@ import { PosMenu } from "./pos-menu";
 import type { MenuCategory } from "./pos-menu";
 import { SessionGate } from "./session-gate";
 import type { OrderType } from "./types";
-import { RouteStateCard } from "@/components/v2/route-state-card";
+import { RouteStateCard } from "@/components/route-state-card";
 
 export default async function PosPage({
   params,

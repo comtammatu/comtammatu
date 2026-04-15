@@ -3,7 +3,7 @@ import {
   EmptyState,
   PageContainer,
   PageHeader,
-} from "@/components/v2/patterns";
+} from "@/components/patterns";
 import { PayrollDetailClient } from "./payroll-detail-client";
 
 export default async function PayrollDetailPage({

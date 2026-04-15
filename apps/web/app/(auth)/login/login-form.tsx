@@ -1,8 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { Loader2, ShieldCheck } from "lucide-react";
-import { Badge } from "@comtammatu/ui/components/badge";
+import { ArrowRight, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
@@ -18,53 +17,52 @@ export function LoginForm({ returnTo }: LoginFormProps) {
 
   const statusState = isPending
     ? {
-        status: "Đang kiểm tra",
-        description: "Hệ thống đang xác thực tài khoản của bạn.",
-        statusClassName:
-          "border-info/20 bg-info/10 text-info shadow-sm shadow-info/10",
+        status: "Đang xác thực",
+        description: "Hệ thống đang kiểm tra tài khoản và quyền truy cập của bạn.",
+        className:
+          "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/15 dark:text-sky-100",
       }
     : state?.error
       ? {
-        status: "Cần xem lại",
-        description: state.error,
-        statusClassName:
-          "border-warning/20 bg-warning/10 text-warning shadow-sm shadow-warning/10",
-      }
+          status: "Cần xem lại",
+          description: state.error,
+          className:
+            "border-amber-200 bg-amber-50 text-amber-800 dark:border-warning/30 dark:bg-warning/15 dark:text-amber-100",
+        }
       : {
-        status: "Sẵn sàng",
-        description: "Nhập email và mật khẩu để bắt đầu.",
-        statusClassName:
-          "border-border/70 bg-muted/50 text-muted-foreground shadow-sm",
-      };
+          status: "Sẵn sàng",
+          description: "Nhập thông tin để hệ thống đưa bạn vào đúng không gian làm việc.",
+          className:
+            "border-border bg-secondary/70 text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground",
+        };
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge
-          variant="outline"
+        <span
           className={cn(
-            "rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-widest",
-            statusState.statusClassName,
+            "inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-widest",
+            statusState.className,
           )}
         >
           {statusState.status}
-        </Badge>
-        <span className="rounded-full border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-          Vào đúng phân hệ theo vai trò
+        </span>
+        <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
+          <ArrowRight className="size-3.5 text-primary" />
+          Điều hướng theo vai trò
         </span>
       </div>
 
-      <form action={formAction} className="space-y-4" aria-busy={isPending}>
+      <form action={formAction} className="space-y-5" aria-busy={isPending}>
         {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
-        <div className="space-y-2">
-          <p className="text-sm leading-6 text-muted-foreground">
-            {statusState.description}
-          </p>
-        </div>
 
-        <div className="grid gap-3">
+        <p className="text-sm leading-6 text-muted-foreground">
+          {statusState.description}
+        </p>
+
+        <div className="grid gap-4">
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm font-medium">
+            <Label htmlFor="email" className="text-sm font-semibold">
               Email
             </Label>
             <Input
@@ -75,12 +73,12 @@ export function LoginForm({ returnTo }: LoginFormProps) {
               autoComplete="email"
               spellCheck={false}
               placeholder="email@comtammatu.com"
-              className="min-h-11 min-w-11 h-12 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="touch-target rounded-2xl border-border bg-card text-sm shadow-sm"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-sm font-medium">
+            <Label htmlFor="password" className="text-sm font-semibold">
               Mật khẩu
             </Label>
             <Input
@@ -89,33 +87,43 @@ export function LoginForm({ returnTo }: LoginFormProps) {
               type="password"
               required
               autoComplete="current-password"
-              className="min-h-11 min-w-11 h-12 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="touch-target rounded-2xl border-border bg-card text-sm shadow-sm"
             />
           </div>
         </div>
 
         {state?.error ? (
           <div
-            className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-2.5 text-sm leading-5 text-destructive"
+            className="rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm leading-6 text-destructive"
             role="alert"
           >
             <p className="font-semibold">Không thể đăng nhập</p>
-            <p className="mt-1">{state.error}</p>
+            <p>{state.error}</p>
           </div>
         ) : null}
 
         <Button
           type="submit"
-          className="min-h-11 min-w-11 h-12 w-full rounded-lg text-sm font-semibold shadow-sm transition-shadow hover:shadow-md"
+          size="lg"
+          className="touch-target h-12 w-full rounded-full text-sm font-semibold"
           disabled={isPending}
         >
-          {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
-          {isPending ? "Đang kiểm tra..." : "Đăng nhập"}
+          {isPending ? (
+            <>
+              <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
+              Đang kiểm tra...
+            </>
+          ) : (
+            <>
+              Đăng nhập
+              <ArrowRight className="size-4" />
+            </>
+          )}
         </Button>
 
-        <div className="rounded-lg border border-border/70 bg-muted/35 px-4 py-3">
+        <div className="surface-muted p-4">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <div className="flex size-10 items-center justify-center rounded-full border border-border bg-card text-primary">
               <ShieldCheck className="size-4" />
             </div>
             <div className="space-y-1">
@@ -123,7 +131,8 @@ export function LoginForm({ returnTo }: LoginFormProps) {
                 Tài khoản đã được phân quyền sẵn
               </p>
               <p className="text-sm leading-6 text-muted-foreground">
-                Sau khi đăng nhập, hệ thống sẽ đưa bạn vào đúng nơi làm việc.
+                Sau khi đăng nhập, hệ thống sẽ đưa bạn vào đúng nơi làm việc mà
+                không cần chọn lại bối cảnh thủ công.
               </p>
             </div>
           </div>

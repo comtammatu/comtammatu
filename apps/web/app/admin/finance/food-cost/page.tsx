@@ -1,5 +1,5 @@
 import { fetchFoodCost } from "../accounting-actions";
-import { PageContainer, PageHeader } from "@/components/v2/patterns";
+import { PageContainer, PageHeader } from "@/components/patterns";
 import { FoodCostClient } from "./food-cost-client";
 
 export default async function FoodCostPage() {

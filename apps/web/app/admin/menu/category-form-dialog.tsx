@@ -12,7 +12,7 @@ import {
 import { createCategory, updateCategory } from "./actions";
 import { CATEGORY_TYPE_LABELS } from "./category-labels";
 import type { CategoryRow } from "./category-table";
-import { CrudDialog } from "../../components/v2/crud-dialog";
+import { CrudDialog } from "../../components/crud-dialog";
 
 interface CategoryFormDialogProps {
   open: boolean;

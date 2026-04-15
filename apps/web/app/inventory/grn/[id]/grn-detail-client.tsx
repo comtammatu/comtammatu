@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { SectionCard } from "@/components/v2/patterns";
+import { SectionCard } from "@/components/patterns";
 import {
   ArrowLeft,
   CheckCircle,
@@ -80,13 +80,13 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8 lg:gap-12">
           <div className="space-y-4">
             <div>
-              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
+              <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
                 Mã phiếu nhập
               </p>
               <h3 className="text-3xl font-black tracking-tight">{grn.code}</h3>
             </div>
             <div>
-              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
+              <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
                 Mã PO
               </p>
               {grn.poCode && grn.poId ? (
@@ -104,13 +104,13 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
 
           <div className="space-y-4 border-border md:border-l md:pl-8 lg:pl-12">
             <div>
-              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
+              <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
                 Nhà cung cấp
               </p>
               <p className="font-semibold">{grn.supplier}</p>
             </div>
             <div>
-              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
+              <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
                 Ngày nhập
               </p>
               <p className="font-semibold">{grn.date}</p>
@@ -119,7 +119,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
 
           <div className="space-y-4 border-border md:border-l md:pl-8 lg:pl-12">
             <div>
-              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
+              <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
                 Tổng giá trị nhập
               </p>
               <p className="text-2xl font-black text-primary">
@@ -128,7 +128,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
               </p>
             </div>
             <div>
-              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
+              <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
                 Thuế (VAT)
               </p>
               <p className="font-semibold">{formatVND(grn.tax)} VNĐ</p>
@@ -212,7 +212,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
                     ].map((h) => (
                       <TableHead
                         key={h.label}
-                        className={`px-6 py-4 whitespace-nowrap text-label font-bold uppercase tracking-wider ${h.align}`}
+                        className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${h.align}`}
                       >
                         {h.label}
                       </TableHead>
@@ -228,7 +228,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
                       <TableCell className="px-6 py-4">
                         <div className="flex flex-col">
                           <span className="font-bold">{item.name}</span>
-                          <span className="text-label text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             {item.sku}
                           </span>
                         </div>
@@ -312,7 +312,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
             className="rounded-lg border-primary/20 bg-primary/5"
             density="compact"
           >
-            <p className="text-label uppercase tracking-wider text-muted-foreground">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">
               Tổng giá trị nhập
             </p>
             <p className="mt-2 text-2xl font-black tabular-nums text-primary">

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarDays, Clock, Home, User } from "lucide-react";
-import { Button } from "@comtammatu/ui/components/button";
+import { cn } from "@comtammatu/ui";
 
 const NAV_ITEMS = [
   { href: "/employee", label: "Trang chủ", icon: Home, exact: true },
@@ -37,28 +37,35 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/70 bg-background/95 pb-[max(0.5rem,env(safe-area-inset-bottom,0.5rem))]"
+      className="safe-bottom-pad fixed inset-x-0 bottom-0 z-40"
       aria-label="Điều hướng chính"
     >
-      <div className="mx-auto flex max-w-6xl items-stretch gap-2 px-3 py-3 sm:px-4 lg:px-6">
-        {NAV_ITEMS.map((item) => {
-          const active = isActive(pathname, item.href, item.exact);
-          const Icon = item.icon;
-          return (
-            <Button
-              key={item.href}
-              asChild
-              variant={active ? "default" : "outline"}
-              size="sm"
-              className="group flex h-auto flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2.5 text-xs shadow-app-sm"
-            >
-              <Link href={item.href} aria-current={active ? "page" : undefined}>
-                <Icon className="size-5" strokeWidth={active ? 2.4 : 2} />
-                <span>{item.label}</span>
-              </Link>
-            </Button>
-          );
-        })}
+      <div className="mx-auto max-w-6xl px-3 pb-3 sm:px-4 lg:px-6">
+        <div className="surface-panel-strong px-2 py-2">
+          <div className="grid grid-cols-4 gap-2">
+            {NAV_ITEMS.map((item) => {
+              const active = isActive(pathname, item.href, item.exact);
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-xs font-semibold transition-all",
+                    active
+                      ? "bg-primary text-primary-foreground shadow-app-sm"
+                      : "border border-transparent bg-secondary/55 text-muted-foreground hover:border-border hover:bg-accent/75 hover:text-accent-foreground",
+                  )}
+                >
+                  <Icon className="size-4" strokeWidth={active ? 2.4 : 2} />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </nav>
   );

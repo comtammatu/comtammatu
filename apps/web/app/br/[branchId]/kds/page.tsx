@@ -4,7 +4,7 @@ import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims, canAccess } from "@comtammatu/shared/auth";
 import { redirect } from "next/navigation";
 import { KdsBoard } from "./kds-board";
-import { RouteStateCard } from "@/components/v2/route-state-card";
+import { RouteStateCard } from "@/components/route-state-card";
 
 /* ─── Types shared with client ─── */
 

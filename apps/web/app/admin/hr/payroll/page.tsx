@@ -1,5 +1,5 @@
 import { fetchPayrollPeriods } from "../payroll-actions";
-import { PageContainer, PageHeader } from "@/components/v2/patterns";
+import { PageContainer, PageHeader } from "@/components/patterns";
 import { PayrollListClient } from "./payroll-list-client";
 
 export default async function PayrollPage() {

@@ -13,7 +13,7 @@ import {
 import { createItem, updateItem } from "./actions";
 import type { CategoryRow } from "./category-table";
 import type { ItemRow } from "./item-table";
-import { CrudDialog } from "../../components/v2/crud-dialog";
+import { CrudDialog } from "../../components/crud-dialog";
 
 interface ItemFormDialogProps {
   open: boolean;

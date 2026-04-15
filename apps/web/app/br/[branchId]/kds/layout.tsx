@@ -6,7 +6,6 @@ import {
   canAccess,
   extractClaims,
 } from "@comtammatu/shared/auth";
-import { cn } from "@comtammatu/ui";
 
 export default async function KdsLayout({
   children,
@@ -41,16 +40,10 @@ export default async function KdsLayout({
   return (
     <main
       id="main-content"
-      className={cn(
-        "min-h-screen bg-shell text-shell-foreground",
-        "pt-[max(0px,env(safe-area-inset-top,0px))] flex h-dvh flex-col touch-manipulation overflow-hidden",
-      )}
+      className="flex h-dvh min-h-screen flex-col touch-manipulation overflow-hidden bg-sidebar pt-[max(0px,env(safe-area-inset-top,0px))] text-sidebar-foreground"
     >
-      <div className="relative flex min-h-full w-full flex-1">
-        <div className="ops-grid-dark pointer-events-none absolute inset-0 opacity-30" />
-        <div className="relative z-10 flex min-h-full w-full flex-1 flex-col">
-          {children}
-        </div>
+      <div className="relative flex min-h-full w-full flex-1 flex-col">
+        {children}
       </div>
     </main>
   );

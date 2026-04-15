@@ -12,7 +12,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { createBranch, updateBranch } from "./actions";
 import type { BranchRow } from "./branch-table";
-import { CrudDialog } from "../../../components/v2/crud-dialog";
+import { CrudDialog } from "../../../components/crud-dialog";
 
 interface BranchFormDialogProps {
   open: boolean;

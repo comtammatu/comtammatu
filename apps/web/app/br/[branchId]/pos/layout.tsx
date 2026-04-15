@@ -6,7 +6,6 @@ import {
   canAccess,
   extractClaims,
 } from "@comtammatu/shared/auth";
-import { cn } from "@comtammatu/ui";
 
 export default async function PosLayout({
   children,
@@ -41,16 +40,10 @@ export default async function PosLayout({
   return (
     <main
       id="main-content"
-      className={cn(
-        "min-h-screen bg-background",
-        "pt-[max(0px,env(safe-area-inset-top,0px))] flex h-dvh touch-manipulation overflow-hidden",
-      )}
+      className="flex h-dvh min-h-screen touch-manipulation overflow-hidden bg-background pt-[max(0px,env(safe-area-inset-top,0px))]"
     >
       <div className="relative flex min-h-full w-full flex-1">
-        <div className="ops-grid pointer-events-none absolute inset-0 opacity-50" />
-        <div className="relative z-10 flex min-h-full w-full flex-1">
-          {children}
-        </div>
+        {children}
       </div>
     </main>
   );

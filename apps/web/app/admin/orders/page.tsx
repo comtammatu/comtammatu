@@ -12,7 +12,7 @@ import {
   PageContainer,
   PageHeader,
   SectionCard,
-} from "@/components/v2/patterns";
+} from "@/components/patterns";
 import {
   Tabs,
   TabsContent,

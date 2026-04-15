@@ -1,26 +1,32 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { Geist_Mono, Inter } from "next/font/google";
-import { Toaster } from "@comtammatu/ui/components/sonner";
+import { Be_Vietnam_Pro, IBM_Plex_Mono, Lora } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+const bodyFont = Be_Vietnam_Pro({
   subsets: ["latin", "latin-ext", "vietnamese"],
   weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-inter",
+  variable: "--font-body",
   display: "swap",
 });
 
-const geistMono = Geist_Mono({
+const displayFont = Lora({
+  subsets: ["latin", "latin-ext", "vietnamese"],
+  weight: ["500", "600", "700"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+const monoFont = IBM_Plex_Mono({
   subsets: ["latin", "latin-ext"],
-  variable: "--font-geist-mono",
+  variable: "--font-code",
   weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "Cơm Tấm Má Tư",
-  description: "Hệ thống quản lý nhà hàng Cơm Tấm Má Tư",
+  description: "Hệ thống điều hành nhà hàng Cơm Tấm Má Tư",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -31,8 +37,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f3efe6" },
-    { media: "(prefers-color-scheme: dark)", color: "#111417" },
+    { media: "(prefers-color-scheme: light)", color: "#f5efe5" },
+    { media: "(prefers-color-scheme: dark)", color: "#161311" },
   ],
 };
 
@@ -40,18 +46,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="vi"
-      className={`${inter.variable} ${geistMono.variable}`}
+      className={`${bodyFont.variable} ${displayFont.variable} ${monoFont.variable}`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen font-sans antialiased">
+      <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         <a
           href="#main-content"
-          className="sr-only z-50 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+          className="sr-only z-50 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
         >
           Bỏ qua điều hướng
         </a>
         {children}
-        <Toaster richColors position="top-right" />
       </body>
     </html>
   );

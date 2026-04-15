@@ -24,7 +24,7 @@ import {
   PageHeader,
   SectionCard,
   StatusBadge,
-} from "@/components/v2/patterns";
+} from "@/components/patterns";
 
 interface ReportCardProps {
   title: string;

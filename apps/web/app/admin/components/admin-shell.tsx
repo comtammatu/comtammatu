@@ -1,16 +1,13 @@
 "use client";
 
-import { Suspense, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Briefcase,
-  ChevronDown,
   ChevronRight,
   ChefHat,
-  ExternalLink,
-  Heart,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -19,6 +16,7 @@ import {
   Receipt,
   Settings,
   ShieldCheck,
+  Sparkles,
   Users,
   UtensilsCrossed,
   Wallet,
@@ -28,37 +26,22 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import {
   ROLE_LABEL_VI,
   resolveAdminNavGroups,
-  resolveQuickLaunchGroups,
   type ResolvedNavGroup as SharedResolvedNavGroup,
-  type ResolvedNavLink,
 } from "@comtammatu/shared/auth";
-import type { ModuleKey } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { cn } from "@comtammatu/ui";
-import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
-import { Badge } from "@comtammatu/ui/components/badge";
-import { Button } from "@comtammatu/ui/components/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@comtammatu/ui/components/dropdown-menu";
-import { SearchParamBlockedStateFlash } from "@/components/foundation/blocked-state-flash";
 import {
   findActiveNavItem,
   formatPathSegment,
   getInitials,
   isNavItemActive,
   type ShellNavGroup,
-} from "@/components/v2/shell-primitives";
+} from "@/lib/shell-primitives";
 
 const ADMIN_ICON_MAP: Record<string, React.ElementType> = {
   LayoutDashboard,
   BarChart3,
   Users,
-  Heart,
   Wallet,
   Package,
   Briefcase,
@@ -68,27 +51,6 @@ const ADMIN_ICON_MAP: Record<string, React.ElementType> = {
   Receipt,
   UtensilsCrossed,
 };
-
-interface ResolvedNavItem {
-  label: string;
-  href: string;
-  icon: React.ElementType;
-  moduleKey: ModuleKey;
-}
-
-type UiQuickLaunchGroup = {
-  title: string;
-  items: ResolvedNavItem[];
-};
-
-function mapResolvedNavLink(item: ResolvedNavLink): ResolvedNavItem {
-  return {
-    label: item.label,
-    href: item.href,
-    icon: ADMIN_ICON_MAP[item.icon] ?? LayoutDashboard,
-    moduleKey: item.moduleKey,
-  };
-}
 
 function mapResolvedNavGroups(
   groups: SharedResolvedNavGroup[],
@@ -101,15 +63,6 @@ function mapResolvedNavGroups(
       icon: (ADMIN_ICON_MAP[item.icon] ??
         LayoutDashboard) as typeof LayoutDashboard,
     })),
-  }));
-}
-
-function mapQuickLaunchGroups(
-  groups: ReturnType<typeof resolveQuickLaunchGroups>,
-): UiQuickLaunchGroup[] {
-  return groups.map((group) => ({
-    title: group.title,
-    items: group.items.map((item) => mapResolvedNavLink(item)),
   }));
 }
 
@@ -130,65 +83,14 @@ function buildContext(
     .split("/")
     .filter(Boolean)
     .map((segment) => formatPathSegment(segment));
-  const trail = [APP_COPY_VI.adminSurface, active.label, ...pathTail];
 
   return {
-    title: trail[trail.length - 1] ?? APP_COPY_VI.adminSurface,
-    trail,
+    title: pathTail[pathTail.length - 1] ?? active.label,
+    trail: [APP_COPY_VI.adminSurface, active.label, ...pathTail],
   };
 }
 
-function QuickLaunchMenu({ groups }: { groups: UiQuickLaunchGroup[] }) {
-  if (groups.length === 0) return null;
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-11 rounded-full border-border/70 bg-card px-4 shadow-app-sm"
-          aria-label={APP_COPY_VI.quickAccessAria}
-        >
-          <ExternalLink className="size-4" />
-          <span className="font-medium">{APP_COPY_VI.quickAccess}</span>
-          <ChevronDown className="size-4 text-muted-foreground" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        className="w-64 rounded-3xl border-border/80 p-2"
-      >
-        {groups.map((group, index) => (
-          <div key={group.title}>
-            {index > 0 ? <DropdownMenuSeparator /> : null}
-            <div className="px-2 py-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              {group.title}
-            </div>
-            {group.items.map((item) => {
-              const Icon = item.icon;
-              return (
-                <DropdownMenuItem
-                  key={item.href}
-                  asChild
-                  className="rounded-2xl"
-                >
-                  <Link href={item.href} className="flex items-center gap-2.5">
-                    <Icon className="size-4" />
-                    <span>{item.label}</span>
-                    <ExternalLink className="ml-auto size-3.5 opacity-60" />
-                  </Link>
-                </DropdownMenuItem>
-              );
-            })}
-          </div>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function NavSection({
+function AdminNav({
   pathname,
   groups,
   onNavigate,
@@ -200,11 +102,11 @@ function NavSection({
   return (
     <div className="space-y-6">
       {groups.map((group) => (
-        <section key={group.title} className="space-y-2">
-          <p className="px-1 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/45">
+        <section key={group.title} className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/45">
             {group.title}
           </p>
-          <div className="space-y-1">
+          <div className="space-y-2">
             {group.items.map((item) => {
               const active = isNavItemActive(item, pathname);
               const Icon = item.icon;
@@ -215,26 +117,26 @@ function NavSection({
                   href={item.href}
                   onClick={onNavigate}
                   className={cn(
-                    "flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm transition-colors",
+                    "group flex items-center gap-3 rounded-3xl border px-3 py-3 transition-all",
                     active
-                      ? "border-sidebar-primary/40 bg-sidebar-primary text-sidebar-primary-foreground"
-                      : "border-transparent bg-transparent text-sidebar-foreground/72 hover:border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                      ? "border-sidebar-primary/35 bg-sidebar-primary text-sidebar-primary-foreground shadow-app-sm"
+                      : "border-white/8 bg-white/4 text-sidebar-foreground/70 hover:border-white/12 hover:bg-white/8 hover:text-sidebar-foreground",
                   )}
                 >
                   <span
                     className={cn(
-                      "flex size-9 items-center justify-center rounded-xl border",
+                      "flex size-11 items-center justify-center rounded-full border transition-colors",
                       active
-                        ? "border-white/10 bg-white/10"
-                        : "border-sidebar-border bg-sidebar-accent/80",
+                        ? "border-white/12 bg-white/12"
+                        : "border-white/10 bg-sidebar-accent text-sidebar-foreground/80",
                     )}
                   >
                     <Icon className="size-4" />
                   </span>
-                  <span className="min-w-0 flex-1 truncate font-medium">
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">
                     {item.label}
                   </span>
-                  <ChevronRight className="size-4 opacity-60" />
+                  <ChevronRight className="size-4 opacity-60 transition-transform group-hover:translate-x-0.5" />
                 </Link>
               );
             })}
@@ -248,58 +150,52 @@ function NavSection({
 function AdminRail({
   pathname,
   groups,
-  quickLaunchGroups,
   user,
   role,
   onNavigate,
 }: {
   pathname: string;
   groups: ShellNavGroup[];
-  quickLaunchGroups: UiQuickLaunchGroup[];
   user: { name: string };
   role: StaffRole;
   onNavigate?: () => void;
 }) {
   return (
-    <div className="surface-shell flex h-full flex-col p-4">
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-        <p className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/55">
-          Restaurant Ops OS
-        </p>
-        <div className="mt-3 flex items-start gap-3">
-          <div className="flex size-12 items-center justify-center rounded-2xl border border-white/10 bg-sidebar-primary text-sidebar-primary-foreground">
-            <ShieldCheck className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-lg font-semibold text-sidebar-foreground">
-              Cơm Tấm Má Tư
-            </p>
-            <p className="mt-1 text-sm leading-5 text-sidebar-foreground/65">
-              Trung tâm điều phối hệ thống và backoffice.
-            </p>
+    <div className="surface-shell paper-grid-dark flex h-dvh flex-col gap-5 overflow-hidden p-4">
+      <div className="rounded-4xl border border-white/10 bg-white/10 p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/70">
+              <Sparkles className="size-3.5" />
+              Nền tảng quản trị
+            </div>
+            <div className="space-y-2">
+              <div className="flex size-14 items-center justify-center rounded-full border border-white/12 bg-sidebar-primary text-sidebar-primary-foreground">
+                <ShieldCheck className="size-6" />
+              </div>
+              <div>
+                <p className="text-2xl font-semibold text-sidebar-foreground">
+                  Cơm Tấm Má Tư
+                </p>
+                <p className="mt-2 max-w-xs text-sm leading-6 text-sidebar-foreground/70">
+                  Buồng lái dành cho quản trị, báo cáo điều hành và cấu hình hệ
+                  thống.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="mt-4">
-        <QuickLaunchMenu groups={quickLaunchGroups} />
+      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+        <AdminNav pathname={pathname} groups={groups} onNavigate={onNavigate} />
       </div>
 
-      <div className="mt-5 flex-1 overflow-y-auto pr-1">
-        <NavSection
-          pathname={pathname}
-          groups={groups}
-          onNavigate={onNavigate}
-        />
-      </div>
-
-      <div className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-3">
+      <div className="rounded-4xl border border-white/10 bg-white/10 p-4">
         <div className="flex items-center gap-3">
-          <Avatar className="size-11 rounded-2xl border border-white/10">
-            <AvatarFallback className="rounded-2xl bg-sidebar-primary text-sidebar-primary-foreground">
-              {getInitials(user.name)}
-            </AvatarFallback>
-          </Avatar>
+          <div className="flex size-12 items-center justify-center rounded-full border border-white/12 bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
+            {getInitials(user.name)}
+          </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-sidebar-foreground">
               {user.name}
@@ -311,7 +207,7 @@ function AdminRail({
           <form action="/api/auth/signout" method="post">
             <button
               type="submit"
-              className="flex size-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-sidebar-foreground/70 transition-colors hover:bg-white/10 hover:text-sidebar-foreground"
+              className="touch-target flex items-center justify-center rounded-full border border-white/10 bg-white/8 text-sidebar-foreground/75 transition-colors hover:bg-white/12 hover:text-sidebar-foreground"
               aria-label="Đăng xuất"
             >
               <LogOut className="size-4" />
@@ -326,7 +222,7 @@ function AdminRail({
 export function AdminShell({
   user,
   role,
-  branchId,
+  branchId: _branchId,
   children,
 }: {
   user: { name: string };
@@ -341,74 +237,61 @@ export function AdminShell({
     () => mapResolvedNavGroups(resolveAdminNavGroups(role)),
     [role],
   );
-  const quickLaunchGroups = useMemo(
-    () => mapQuickLaunchGroups(resolveQuickLaunchGroups(role, branchId)),
-    [branchId, role],
-  );
   const pageContext = useMemo(
     () => buildContext(pathname, navGroups),
     [navGroups, pathname],
   );
 
   return (
-    <div className="min-h-dvh bg-background text-foreground md:p-3">
-      <div className="mx-auto flex min-h-dvh w-full max-w-screen-2xl gap-3">
-        <aside className="hidden w-80 shrink-0 md:block">
-          <div className="sticky top-3 h-dvh">
-            <AdminRail
-              pathname={pathname}
-              groups={navGroups}
-              quickLaunchGroups={quickLaunchGroups}
-              user={user}
-              role={role}
-            />
+    <div data-slot="app-shell" className="min-h-dvh bg-background text-foreground">
+      <div className="mx-auto min-h-dvh max-w-screen-2xl gap-4 px-3 py-3 xl:flex">
+        <aside className="hidden xl:block">
+          <div className="sticky top-3">
+            <AdminRail pathname={pathname} groups={navGroups} user={user} role={role} />
           </div>
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-3">
-          <header className="surface-panel sticky top-0 z-30 px-4 py-4 md:top-3 md:px-6">
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setMobileOpen(true)}
-                className="flex size-11 items-center justify-center rounded-2xl border border-border/70 bg-panel-subtle text-foreground md:hidden"
-                aria-label="Mở điều hướng"
-              >
-                <Menu className="size-5" />
-              </button>
-
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  {pageContext.trail.slice(0, -1).join(" · ") ||
-                    APP_COPY_VI.adminSurface}
-                </p>
-                <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl">
-                  {pageContext.title}
-                </h1>
+        <div className="min-w-0 flex-1 space-y-4">
+          <header className="surface-panel-strong sticky top-3 z-30 overflow-hidden px-5 py-5 sm:px-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="flex items-start gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMobileOpen(true)}
+                  className="touch-target flex items-center justify-center rounded-full border border-border bg-secondary text-secondary-foreground xl:hidden"
+                  aria-label="Mở điều hướng"
+                >
+                  <Menu className="size-5" />
+                </button>
+                <div className="space-y-2">
+                  <p className="ops-kicker">
+                    {pageContext.trail.slice(0, -1).join(" · ") ||
+                      APP_COPY_VI.adminSurface}
+                  </p>
+                  <div className="space-y-1">
+                    <h1 className="text-4xl font-semibold tracking-tight text-foreground">
+                      {pageContext.title}
+                    </h1>
+                    <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+                      Không gian điều phối trung tâm cho nền tảng vận hành nhà
+                      hàng.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary" className="rounded-full px-3 py-1">
-                  {ROLE_LABEL_VI[role]}
-                </Badge>
-                <div className="hidden sm:block">
-                  <QuickLaunchMenu groups={quickLaunchGroups} />
-                </div>
+                <span className="ops-chip">{ROLE_LABEL_VI[role]}</span>
+                <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
+                  <ShieldCheck className="size-3.5 text-primary" />
+                  {APP_COPY_VI.adminFoundation}
+                </span>
               </div>
             </div>
           </header>
 
-          <main id="main-content" className="min-w-0 flex-1 pb-6">
-            <div className="space-y-4">
-              <Suspense fallback={null}>
-                <SearchParamBlockedStateFlash
-                  autoClear
-                  className="surface-panel p-4"
-                  mode="inline"
-                />
-              </Suspense>
-              {children}
-            </div>
+          <main id="main-content" className="min-w-0 pb-6">
+            <div className="space-y-4">{children}</div>
           </main>
         </div>
       </div>
@@ -417,7 +300,7 @@ export function AdminShell({
         <>
           <button
             type="button"
-            className="fixed inset-0 z-40 bg-black/50 md:hidden"
+            className="fixed inset-0 z-40 bg-black/55 xl:hidden"
             onClick={() => setMobileOpen(false)}
             onKeyDown={(event) => {
               if (event.key === "Escape") {
@@ -426,12 +309,12 @@ export function AdminShell({
             }}
             aria-label="Đóng điều hướng"
           />
-          <div className="fixed inset-y-0 left-0 z-50 w-80 max-w-full p-3 md:hidden">
-            <div className="relative h-full">
+          <div className="fixed inset-y-0 left-0 z-50 w-full max-w-sm p-3 xl:hidden">
+            <div className="relative">
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
-                className="absolute right-6 top-6 z-10 flex size-10 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-sidebar-foreground"
+                className="touch-target absolute right-5 top-5 z-10 flex items-center justify-center rounded-full border border-white/10 bg-white/10 text-sidebar-foreground"
                 aria-label="Đóng"
               >
                 <X className="size-4" />
@@ -439,7 +322,6 @@ export function AdminShell({
               <AdminRail
                 pathname={pathname}
                 groups={navGroups}
-                quickLaunchGroups={quickLaunchGroups}
                 user={user}
                 role={role}
                 onNavigate={() => setMobileOpen(false)}

@@ -9,7 +9,7 @@ import {
   PageContainer,
   PageHeader,
   SectionCard,
-} from "@/components/v2/patterns";
+} from "@/components/patterns";
 import { CategoryTable } from "./category-table";
 import { AddCategoryButton } from "./add-category-button";
 import { ItemTable } from "./item-table";

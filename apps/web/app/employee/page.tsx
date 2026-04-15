@@ -83,7 +83,7 @@ function ActionLink({
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-semibold text-foreground">{title}</p>
                 {badge ? (
-                  <Badge variant="outline" className="h-5 rounded-full">
+                  <Badge variant="warning" className="h-5 rounded-full">
                     {badge}
                   </Badge>
                 ) : null}

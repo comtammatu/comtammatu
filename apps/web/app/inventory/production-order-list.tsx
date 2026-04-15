@@ -15,7 +15,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { cn } from "@comtammatu/ui";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { SectionCard } from "@/components/v2/patterns";
+import { SectionCard } from "@/components/patterns";
 import {
   cancelProductionOrder,
   confirmProductionOrder,

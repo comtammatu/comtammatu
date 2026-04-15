@@ -28,7 +28,7 @@ import {
   fetchInventoryValueByBranch,
   fetchInventoryValueSystem,
 } from "./inventory-value-actions";
-import { EmptyStatePanel } from "@/components/v2/patterns";
+import { EmptyStatePanel } from "@/components/patterns";
 
 interface InventoryValuePanelProps {
   visibility: InventoryValueVisibility;

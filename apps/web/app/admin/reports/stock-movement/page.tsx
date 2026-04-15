@@ -1,7 +1,7 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
-import { PageContainer, PageHeader } from "@/components/v2/patterns";
+import { PageContainer, PageHeader } from "@/components/patterns";
 import { StockMovementClient } from "./stock-movement-client";
 
 export default async function StockMovementReportPage() {

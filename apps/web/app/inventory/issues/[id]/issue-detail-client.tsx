@@ -48,7 +48,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { EmptyStatePanel, SectionCard } from "@/components/v2/patterns";
+import { EmptyStatePanel, SectionCard } from "@/components/patterns";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatDateTime, formatQty, formatVND } from "../../_lib/format";
@@ -231,7 +231,7 @@ export function IssueDetailClient({
             },
           ].map((item) => (
             <div key={item.label} className={cn(panelClassName, "p-4")}>
-              <p className="text-label uppercase tracking-wider text-muted-foreground">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">
                 {item.label}
               </p>
               <p className="mt-1 text-sm font-semibold">{item.value}</p>
@@ -244,7 +244,7 @@ export function IssueDetailClient({
             className="rounded-lg border border-border bg-card"
             density="compact"
           >
-            <p className="text-label font-medium uppercase tracking-wider text-muted-foreground">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Ghi chú phiếu xuất
             </p>
             <p className="mt-1 text-sm text-muted-foreground">{issue.notes}</p>
@@ -366,7 +366,7 @@ export function IssueDetailClient({
                       ].map((header) => (
                         <TableHead
                           key={header.label || "delete"}
-                          className={`px-6 py-4 whitespace-nowrap text-label font-bold uppercase tracking-wider ${header.align}`}
+                          className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${header.align}`}
                         >
                           {header.label}
                         </TableHead>
@@ -389,7 +389,7 @@ export function IssueDetailClient({
                               {line.ingredients?.name ??
                                 `#${line.ingredient_id}`}
                             </span>
-                            <span className="text-label text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               ID: {line.ingredient_id}
                             </span>
                           </div>
@@ -453,7 +453,7 @@ export function IssueDetailClient({
                   <span className="block text-2xl font-black leading-none text-primary">
                     {formatVND(totalAmount)}
                   </span>
-                  <span className="text-label font-semibold text-muted-foreground">
+                  <span className="text-xs font-semibold text-muted-foreground">
                     VNĐ
                   </span>
                 </div>

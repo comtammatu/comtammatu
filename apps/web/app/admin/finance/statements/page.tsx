@@ -1,4 +1,4 @@
-import { PageContainer, PageHeader } from "@/components/v2/patterns";
+import { PageContainer, PageHeader } from "@/components/patterns";
 import { StatementsClient } from "./statements-client";
 
 export default function StatementsPage() {

@@ -1,6 +1,6 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { fetchDailyRevenue, fetchTaxInvoices, fetchTopItems } from "./actions";
-import { PageContainer, PageHeader } from "@/components/v2/patterns";
+import { PageContainer, PageHeader } from "@/components/patterns";
 import { FinanceClient } from "./finance-client";
 
 export default async function FinancePage() {

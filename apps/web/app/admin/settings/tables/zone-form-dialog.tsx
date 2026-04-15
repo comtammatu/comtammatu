@@ -4,7 +4,7 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { createZone, updateZone } from "./actions";
 import type { ZoneRow } from "./zone-table";
-import { CrudDialog } from "../../../components/v2/crud-dialog";
+import { CrudDialog } from "../../../components/crud-dialog";
 
 interface ZoneFormDialogProps {
   open: boolean;

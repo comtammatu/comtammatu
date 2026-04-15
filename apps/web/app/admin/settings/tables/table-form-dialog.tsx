@@ -13,7 +13,7 @@ import { createTable, updateTable } from "./actions";
 import { STATUS_OPTIONS } from "./constants";
 import type { ZoneRow } from "./zone-table";
 import type { TableRow } from "./table-table";
-import { CrudDialog } from "../../../components/v2/crud-dialog";
+import { CrudDialog } from "../../../components/crud-dialog";
 
 interface TableFormDialogProps {
   open: boolean;

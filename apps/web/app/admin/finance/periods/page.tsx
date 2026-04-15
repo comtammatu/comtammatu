@@ -1,5 +1,5 @@
 import { fetchFiscalPeriods } from "../period-actions";
-import { PageContainer, PageHeader } from "@/components/v2/patterns";
+import { PageContainer, PageHeader } from "@/components/patterns";
 import { PeriodsClient } from "./periods-client";
 
 export default async function PeriodsPage() {

@@ -21,7 +21,7 @@ import {
 import { Plus, Pencil } from "lucide-react";
 import { StationFormDialog } from "./station-form-dialog";
 import { EmptyStatePanel } from "../../components/empty-state-panel";
-import { StatusBadge } from "@/components/v2/patterns";
+import { StatusBadge } from "@/components/patterns";
 
 /* ─── Types ─── */
 

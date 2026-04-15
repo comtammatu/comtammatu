@@ -37,7 +37,7 @@ import {
   PageHeader,
   SectionCard,
   StatusBadge,
-} from "@/components/v2/patterns";
+} from "@/components/patterns";
 import { fetchDashboardStats } from "./actions";
 
 interface StatCardProps {

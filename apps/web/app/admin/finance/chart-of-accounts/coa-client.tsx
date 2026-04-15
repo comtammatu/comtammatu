@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { EmptyState, SectionCard, StatusBadge } from "@/components/v2/patterns";
+import { EmptyState, SectionCard, StatusBadge } from "@/components/patterns";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {

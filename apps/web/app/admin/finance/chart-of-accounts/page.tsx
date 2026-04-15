@@ -1,5 +1,5 @@
 import { fetchChartOfAccounts } from "../chart-of-accounts-actions";
-import { PageContainer, PageHeader } from "@/components/v2/patterns";
+import { PageContainer, PageHeader } from "@/components/patterns";
 import { ChartOfAccountsClient } from "./coa-client";
 
 export default async function ChartOfAccountsPage() {

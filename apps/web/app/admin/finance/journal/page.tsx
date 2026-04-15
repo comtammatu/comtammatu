@@ -1,6 +1,6 @@
 import { fetchJournalEntries } from "../accounting-actions";
 import { fetchChartOfAccounts } from "../accounting-actions";
-import { PageContainer, PageHeader } from "@/components/v2/patterns";
+import { PageContainer, PageHeader } from "@/components/patterns";
 import { JournalClient } from "./journal-client";
 
 export default async function JournalPage() {

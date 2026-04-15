@@ -2,10 +2,10 @@
 
 ## Overview
 
-UI không còn chỉ là một thư viện primitive. Hệ hiện tại có 3 tầng:
+UI khong con chi la mot thu vien primitive. He hien tai co 3 tang:
 
 1. `Foundation`
-   Token, spacing, radius, elevation, motion, focus ring, touch target trong `apps/web/app/globals.css`
+   Token, typography, spacing, radius, elevation, motion, focus ring, touch target trong `apps/web/app/globals.css`
 2. `Domain composition`
    Thin wrappers cho admin/inventory/blocked-state trong `packages/ui/src/components/`
 3. `Shared UI package`
@@ -36,10 +36,11 @@ Shared composition contract:
 - `EmptyState`
 - `StatusBadge`
 - `ActionIconButton`
+- `RouteStateCard`
 
 ## Surface model
 
-Surface chính thức:
+Surface chinh thuc:
 
 - `admin`
 - `inventory`
@@ -48,7 +49,7 @@ Surface chính thức:
 - `employee`
 - `auth`
 
-Surface chỉ được khác nhau ở density, emphasis, contrast và interaction affordance. Không surface nào được tự định nghĩa token system riêng.
+Surface chi duoc khac nhau o density, emphasis, contrast va interaction rhythm. Khong surface nao duoc tu dinh nghia token system rieng.
 
 ## Governance
 

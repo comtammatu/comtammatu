@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
-import { EmptyStatePanel } from "@/components/v2/patterns";
+import { EmptyStatePanel } from "@/components/patterns";
 import { formatVND } from "../_lib/format";
 import { RecipeLineDialog } from "./recipe-line-dialog";
 import type {
@@ -145,7 +145,7 @@ export function RecipesClient({
                       <h3 className="text-lg font-bold sm:text-xl">
                         {recipe.name}
                       </h3>
-                      <span className="shrink-0 whitespace-nowrap rounded-full bg-success/12 px-2 py-0.5 text-label font-bold uppercase tracking-wide text-success">
+                      <span className="shrink-0 whitespace-nowrap rounded-full bg-success/12 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-success">
                         {recipe.category}
                       </span>
                     </div>

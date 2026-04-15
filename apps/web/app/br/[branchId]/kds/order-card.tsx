@@ -14,7 +14,7 @@ import type { KdsTicket } from "./page";
 const STATUS_CONFIG = {
   pending: {
     label: "Chờ",
-    variant: "outline" as const,
+    variant: "warning" as const,
     badgeClass: "bg-muted text-muted-foreground border-border",
   },
   preparing: {
@@ -39,7 +39,7 @@ type KdsStatusConfig = (typeof STATUS_CONFIG)[keyof typeof STATUS_CONFIG];
 function getStatusConfig(status: string) {
   return (
     STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] ?? {
-      variant: "outline" as const,
+      variant: "warning" as const,
       label: status,
       badgeClass: "bg-muted text-muted-foreground border-border",
     }
@@ -288,7 +288,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-2">
             <div className="rounded-lg border border-border/60 bg-zinc-900 px-3 py-2">
-              <p className="text-label font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Chờ
               </p>
               <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
@@ -296,7 +296,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
               </p>
             </div>
             <div className="rounded-lg border border-warning/20 bg-warning/10 px-3 py-2">
-              <p className="text-label font-semibold uppercase tracking-wide text-warning">
+              <p className="text-xs font-semibold uppercase tracking-wide text-warning">
                 Đang làm
               </p>
               <p className="mt-1 text-lg font-semibold tabular-nums text-warning">
@@ -304,7 +304,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
               </p>
             </div>
             <div className="rounded-lg border border-success/20 bg-success/10 px-3 py-2">
-              <p className="text-label font-semibold uppercase tracking-wide text-success">
+              <p className="text-xs font-semibold uppercase tracking-wide text-success">
                 Sẵn sàng
               </p>
               <p className="mt-1 text-lg font-semibold tabular-nums text-success">

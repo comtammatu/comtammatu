@@ -173,7 +173,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
                 >
                   {card.icon}
                 </div>
-                <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Hệ thống
                 </span>
               </div>

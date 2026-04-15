@@ -7,7 +7,7 @@ import {
   isAdminRole,
 } from "@comtammatu/shared/auth";
 import { SettingsNav } from "./settings-nav";
-import { PageHeader } from "@/components/v2/patterns";
+import { PageHeader } from "@/components/patterns";
 
 export default async function SettingsLayout({
   children,

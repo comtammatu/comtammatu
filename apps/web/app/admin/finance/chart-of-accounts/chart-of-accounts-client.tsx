@@ -3,7 +3,7 @@
 "use client";
 
 import { type ChangeEvent, useState, useTransition } from "react";
-import { SectionCard } from "@/components/v2/patterns";
+import { SectionCard } from "@/components/patterns";
 import {
   Table,
   TableBody,
@@ -137,7 +137,7 @@ export function ChartOfAccountsClient({ accounts: initial }: Props) {
                   </TableCell>
                   <TableCell>
                     {a.is_active ? (
-                      <Badge variant="default">
+                      <Badge variant="success">
                         {ACTIVE_STATE_LABELS_VI.active}
                       </Badge>
                     ) : (

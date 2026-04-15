@@ -1,6 +1,6 @@
 import { fetchPostingRules } from "../posting-rules-actions";
 import { fetchChartOfAccounts } from "../chart-of-accounts-actions";
-import { PageContainer, PageHeader } from "@/components/v2/patterns";
+import { PageContainer, PageHeader } from "@/components/patterns";
 import { PostingRulesClient } from "./posting-rules-client";
 
 export default async function PostingRulesPage() {

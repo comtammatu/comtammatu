@@ -10,13 +10,21 @@ export type InventorySemanticColor =
   | "muted";
 
 const INVENTORY_COLOR_VALUE: Record<InventorySemanticColor, string> = {
-  primary: "var(--color-primary)",
-  success: "var(--color-success)",
-  warning: "var(--color-warning)",
-  danger: "var(--color-destructive)",
-  info: "var(--color-info)",
-  muted: "var(--color-muted-foreground)",
+  primary: "var(--primary)",
+  success: "var(--success)",
+  warning: "var(--warning)",
+  danger: "var(--destructive)",
+  info: "var(--info)",
+  muted: "var(--muted-foreground)",
 };
+
+export function resolveInventoryColorValue(
+  color: InventorySemanticColor | string,
+) {
+  return color in INVENTORY_COLOR_VALUE
+    ? INVENTORY_COLOR_VALUE[color as InventorySemanticColor]
+    : color;
+}
 
 const STATUS_BADGE_VARIANTS: Record<string, BadgeProps["variant"]> = {
   draft: "secondary",
@@ -58,12 +66,4 @@ export function getInventoryStatusBadgeVariant(
   status: string,
 ): BadgeProps["variant"] {
   return STATUS_BADGE_VARIANTS[status] ?? "secondary";
-}
-
-export function resolveInventoryColorValue(
-  color: InventorySemanticColor | string,
-) {
-  return color in INVENTORY_COLOR_VALUE
-    ? INVENTORY_COLOR_VALUE[color as InventorySemanticColor]
-    : color;
 }

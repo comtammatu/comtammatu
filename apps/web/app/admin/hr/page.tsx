@@ -1,5 +1,5 @@
 import { createClient } from "@comtammatu/database/supabase/server";
-import { PageContainer, PageHeader } from "@/components/v2/patterns";
+import { PageContainer, PageHeader } from "@/components/patterns";
 import { fetchEmployees } from "./actions";
 import { HrClient } from "./hr-client";
 

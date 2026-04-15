@@ -31,7 +31,7 @@ import {
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import type { SupplierRow } from "../suppliers/suppliers-client";
-import { EmptyStatePanel } from "@/components/v2/patterns";
+import { EmptyStatePanel } from "@/components/patterns";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { tRoute, tStatus } from "../_lib/dictionary";
 import {

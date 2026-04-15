@@ -6,7 +6,7 @@ import { Label } from "@comtammatu/ui/components/label";
 import { Switch } from "@comtammatu/ui/components/switch";
 import { createTerminal, updateTerminal } from "./actions";
 import type { TerminalRow } from "./terminals-client";
-import { CrudDialog } from "../../../components/v2/crud-dialog";
+import { CrudDialog } from "../../../components/crud-dialog";
 
 interface TerminalFormDialogProps {
   open: boolean;

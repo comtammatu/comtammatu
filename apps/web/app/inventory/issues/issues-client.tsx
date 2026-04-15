@@ -186,7 +186,7 @@ export function IssuesClient({
                 <div className="flex size-10 items-center justify-center rounded-xl bg-warning/12">
                   <ClipboardList className="size-5 text-warning" />
                 </div>
-                <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Tháng này
                 </span>
               </div>
@@ -205,7 +205,7 @@ export function IssuesClient({
                 <div className="flex size-10 items-center justify-center rounded-xl bg-success/12">
                   <ChefHat className="size-5 text-success" />
                 </div>
-                <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Cấp phát bếp
                 </span>
               </div>
@@ -226,7 +226,7 @@ export function IssuesClient({
                 <div className="flex size-10 items-center justify-center rounded-xl bg-destructive/12">
                   <AlertTriangle className="size-5 text-destructive" />
                 </div>
-                <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Hư hỏng
                 </span>
               </div>
@@ -245,7 +245,7 @@ export function IssuesClient({
                 <div className="flex size-10 items-center justify-center rounded-xl bg-muted">
                   <Clock className="size-5 text-muted-foreground" />
                 </div>
-                <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Chờ duyệt
                 </span>
               </div>
@@ -268,7 +268,7 @@ export function IssuesClient({
           <CardContent className="flex items-center justify-between gap-4 p-0">
             <div className="flex items-center gap-6">
               <div className="flex flex-col gap-1">
-                <label className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                <label className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Trạng thái
                 </label>
                 <SearchableSelect
@@ -288,7 +288,7 @@ export function IssuesClient({
               </div>
               <div className="h-8 w-px bg-border/40" />
               <div className="flex flex-col gap-1">
-                <label className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                <label className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Loại xuất
                 </label>
                 <SearchableSelect
@@ -326,25 +326,25 @@ export function IssuesClient({
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40">
-                <TableHead className="px-6 py-5 whitespace-nowrap text-label font-bold uppercase tracking-wider text-muted-foreground">
+                <TableHead className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Mã phiếu
                 </TableHead>
-                <TableHead className="px-6 py-5 whitespace-nowrap text-label font-bold uppercase tracking-wider text-muted-foreground">
+                <TableHead className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Loại xuất
                 </TableHead>
-                <TableHead className="px-6 py-5 whitespace-nowrap text-label font-bold uppercase tracking-wider text-muted-foreground">
+                <TableHead className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Chi nhánh
                 </TableHead>
-                <TableHead className="px-6 py-5 whitespace-nowrap text-label font-bold uppercase tracking-wider text-muted-foreground">
+                <TableHead className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Ngày tạo
                 </TableHead>
-                <TableHead className="px-6 py-5 whitespace-nowrap text-label font-bold uppercase tracking-wider text-muted-foreground">
+                <TableHead className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Người tạo
                 </TableHead>
-                <TableHead className="px-6 py-5 whitespace-nowrap text-label font-bold uppercase tracking-wider text-muted-foreground">
+                <TableHead className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Trạng thái
                 </TableHead>
-                <TableHead className="px-6 py-5 text-right whitespace-nowrap text-label font-bold uppercase tracking-wider text-muted-foreground">
+                <TableHead className="px-6 py-5 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Thao tác
                 </TableHead>
               </TableRow>
@@ -384,7 +384,7 @@ export function IssuesClient({
                   </TableCell>
                   <TableCell className="px-6 py-5">
                     <div className="flex items-center gap-2">
-                      <div className="flex size-6 items-center justify-center rounded-full bg-muted text-label font-bold">
+                      <div className="flex size-6 items-center justify-center rounded-full bg-muted text-xs font-bold">
                         {item.createdBy
                           .split(" ")
                           .map((word) => word[0])

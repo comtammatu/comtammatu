@@ -41,7 +41,7 @@ import {
   ActionIconButton,
   EmptyStatePanel as EmptyState,
   SectionCard,
-} from "@/components/v2/patterns";
+} from "@/components/patterns";
 import {
   createPurchaseOrder,
   fetchPoSuggestions,

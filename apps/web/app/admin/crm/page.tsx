@@ -3,7 +3,7 @@ import {
   EmptyState,
   PageContainer,
   PageHeader,
-} from "@/components/v2/patterns";
+} from "@/components/patterns";
 
 export default function CrmPage() {
   return (

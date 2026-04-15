@@ -1,12 +1,11 @@
+import { redirect } from "next/navigation";
+import { Building2, Sparkles } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
+  ROLE_LABEL_VI,
   buildLoginBlockedStatePath,
   extractClaims,
-  ROLE_LABEL_VI,
 } from "@comtammatu/shared/auth";
-import { Badge } from "@comtammatu/ui/components/badge";
-import { redirect } from "next/navigation";
-import { Sparkles } from "lucide-react";
 
 export async function MobileHeader() {
   const supabase = await createClient();
@@ -33,20 +32,33 @@ export async function MobileHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border/70 bg-background/95 pt-[max(0px,env(safe-area-inset-top,0px))]">
-      <div className="mx-auto flex min-h-18 w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
-        <div className="min-w-0 space-y-1.5">
-          <div className="surface-chip">
-            <Sparkles className="size-3.5" />
-            Cổng nhân viên
+    <header className="safe-top-pad sticky top-0 z-30">
+      <div className="mx-auto max-w-6xl px-3 pt-3 sm:px-4 lg:px-6">
+        <div className="surface-panel-strong overflow-hidden px-4 py-4 sm:px-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/80 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-secondary-foreground">
+                <Sparkles className="size-3.5 text-primary" />
+                Cổng nhân viên
+              </div>
+              <div className="space-y-1">
+                <p className="text-2xl font-semibold tracking-tight text-foreground">
+                  {branchName ?? "Không gian cá nhân"}
+                </p>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  Nhịp làm việc trong ngày, ca làm và tác vụ tiền tuyến của bạn.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="ops-chip">
+                <Building2 className="size-3.5 text-primary" />
+                {roleLabel}
+              </span>
+            </div>
           </div>
-          <p className="truncate text-base font-semibold tracking-tight text-foreground">
-            {branchName ?? "Không gian cá nhân"}
-          </p>
         </div>
-        <Badge variant="secondary" className="shrink-0 rounded-full px-3 py-1">
-          {roleLabel}
-        </Badge>
       </div>
     </header>
   );

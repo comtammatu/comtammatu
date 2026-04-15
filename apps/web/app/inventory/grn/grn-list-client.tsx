@@ -153,25 +153,25 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
         <Table>
           <TableHeader>
             <TableRow className="border-border">
-              <TableHead className="px-8 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground">
+              <TableHead className="px-8 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Mã GRN
               </TableHead>
-              <TableHead className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground">
+              <TableHead className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Nhà cung cấp
               </TableHead>
-              <TableHead className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground">
+              <TableHead className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 PO liên kết
               </TableHead>
-              <TableHead className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground">
+              <TableHead className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Ngày nhận
               </TableHead>
-              <TableHead className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground">
+              <TableHead className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Tổng tiền
               </TableHead>
-              <TableHead className="px-6 py-5 whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground">
+              <TableHead className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Trạng thái
               </TableHead>
-              <TableHead className="px-8 py-5 text-right whitespace-nowrap text-caption font-bold uppercase tracking-wider text-muted-foreground">
+              <TableHead className="px-8 py-5 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Thao tác
               </TableHead>
             </TableRow>
@@ -204,7 +204,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
                 </TableCell>
                 <TableCell className="px-6 py-6 text-sm font-bold">
                   {formatVND(g.total)}{" "}
-                  <span className="text-label opacity-40">₫</span>
+                  <span className="text-xs opacity-40">₫</span>
                 </TableCell>
                 <TableCell className="px-6 py-6">
                   <Badge variant={getInventoryStatusBadgeVariant(g.status)}>

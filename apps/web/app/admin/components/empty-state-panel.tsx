@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { type EmptyStateMode, EmptyState } from "@/components/v2/patterns";
+import { type EmptyStateMode, EmptyState } from "@/components/patterns";
 
 interface EmptyStatePanelProps {
   title?: string;
@@ -22,7 +22,7 @@ export function EmptyStatePanel({
     <EmptyState
       mode={mode}
       icon={icon}
-      title={title}
+      title={title ?? "Chưa có dữ liệu"}
       description={description}
       action={children}
       className={className}

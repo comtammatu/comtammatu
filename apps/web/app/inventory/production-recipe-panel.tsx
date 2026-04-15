@@ -42,8 +42,8 @@ import {
 } from "@comtammatu/ui/components/table";
 import { cn } from "@comtammatu/ui";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { EmptyStatePanel as EmptyState } from "@/components/v2/patterns";
-import { SectionCard } from "@/components/v2/patterns";
+import { EmptyStatePanel as EmptyState } from "@/components/patterns";
+import { SectionCard } from "@/components/patterns";
 import { createIngredient } from "./actions";
 import {
   deleteProductionRecipeGroup,

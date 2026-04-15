@@ -77,13 +77,13 @@ export function PODetailClient({ po }: { po: PODetail }) {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8 lg:gap-12">
           <div className="space-y-4">
             <div>
-              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
+              <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
                 Mã PO
               </p>
               <h3 className="text-3xl font-black tracking-tight">{po.code}</h3>
             </div>
             <div>
-              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
+              <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
                 Nhà cung cấp
               </p>
               <p className="font-semibold">{po.supplier}</p>
@@ -92,13 +92,13 @@ export function PODetailClient({ po }: { po: PODetail }) {
 
           <div className="space-y-4 border-border md:border-l md:pl-8 lg:pl-12">
             <div>
-              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
+              <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
                 Ngày tạo
               </p>
               <p className="font-semibold">{po.date}</p>
             </div>
             <div>
-              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
+              <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
                 Ngày gửi
               </p>
               <p className="font-semibold">{po.sentAt}</p>
@@ -107,13 +107,13 @@ export function PODetailClient({ po }: { po: PODetail }) {
 
           <div className="space-y-4 border-border md:border-l md:pl-8 lg:pl-12">
             <div>
-              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
+              <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
                 Tổng tiền hàng
               </p>
               <p className="text-sm font-semibold">{formatVND(po.total)} VNĐ</p>
             </div>
             <div>
-              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
+              <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
                 Tổng cộng (incl. VAT)
               </p>
               <p className="text-2xl font-black text-primary">
@@ -219,7 +219,7 @@ export function PODetailClient({ po }: { po: PODetail }) {
                     ].map((h) => (
                       <TableHead
                         key={h.label}
-                        className={`px-6 py-4 whitespace-nowrap text-label font-bold uppercase tracking-wider ${h.align}`}
+                        className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${h.align}`}
                       >
                         {h.label}
                       </TableHead>
@@ -235,7 +235,7 @@ export function PODetailClient({ po }: { po: PODetail }) {
                       <TableCell className="px-6 py-4">
                         <div className="flex flex-col">
                           <span className="font-bold">{item.name}</span>
-                          <span className="text-label text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             {item.sku}
                           </span>
                         </div>
@@ -344,19 +344,19 @@ export function PODetailClient({ po }: { po: PODetail }) {
             {supplierInfoAvailable ? (
               <div className="space-y-3 p-6 text-sm">
                 <div>
-                  <p className="text-label uppercase tracking-wider text-muted-foreground">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">
                     Địa chỉ xuất hóa đơn
                   </p>
                   <p className="mt-1 font-medium">{po.supplierInfo.address}</p>
                 </div>
                 <div>
-                  <p className="text-label uppercase tracking-wider text-muted-foreground">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">
                     Người liên hệ
                   </p>
                   <p className="mt-1 font-medium">{po.supplierInfo.contact}</p>
                 </div>
                 <div>
-                  <p className="text-label uppercase tracking-wider text-muted-foreground">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">
                     Hạn thanh toán
                   </p>
                   <p className="mt-1 font-medium">{po.supplierInfo.payment}</p>

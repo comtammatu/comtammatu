@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { SectionCard } from "@/components/v2/patterns";
+import { SectionCard } from "@/components/patterns";
 import {
   Table,
   TableBody,
@@ -138,7 +138,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
     if (s === "posted") {
       return (
         <span className="flex items-center gap-1.5">
-          <Badge variant="default">Đã ghi sổ</Badge>
+          <Badge variant="success">Đã ghi sổ</Badge>
           {isAuto && (
             <Badge variant="outline" className="text-xs">
               Tự động

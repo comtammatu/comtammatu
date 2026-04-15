@@ -20,7 +20,7 @@ import {
   TableRow,
   TableFooter,
 } from "@comtammatu/ui/components/table";
-import { SectionCard } from "@/components/v2/patterns";
+import { SectionCard } from "@/components/patterns";
 import { TimelineStepper } from "../../_components/timeline-stepper";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
@@ -146,7 +146,7 @@ export function TransferDetailClient({
             key={info.label}
             className={cn(panelClassName, "rounded-lg bg-card p-4")}
           >
-            <p className="text-label uppercase tracking-wider text-muted-foreground">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">
               {info.label}
             </p>
             <p className="mt-1 flex items-center gap-1 text-sm font-semibold">
@@ -162,7 +162,7 @@ export function TransferDetailClient({
           className="rounded-lg border border-border bg-card"
           density="compact"
         >
-          <p className="text-label font-medium uppercase tracking-wider text-muted-foreground">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Ghi chú vận chuyển
           </p>
           <p className="mt-1 text-sm italic">&ldquo;{transfer.note}&rdquo;</p>
@@ -242,7 +242,7 @@ export function TransferDetailClient({
                     ].map((h) => (
                       <TableHead
                         key={h.label}
-                        className={`px-6 py-4 whitespace-nowrap text-label font-bold uppercase tracking-wider ${h.align}`}
+                        className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${h.align}`}
                       >
                         {h.label}
                       </TableHead>
@@ -266,7 +266,7 @@ export function TransferDetailClient({
                       <TableCell className="px-6 py-4">
                         <div className="flex flex-col">
                           <span className="font-bold">{item.name}</span>
-                          <span className="text-label text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             {item.sku}
                           </span>
                         </div>
@@ -339,14 +339,14 @@ export function TransferDetailClient({
           className="h-fit rounded-lg border-primary/20 bg-primary/5"
           density="comfortable"
         >
-          <p className="text-label uppercase tracking-wider text-muted-foreground">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">
             Tổng giá trị luân chuyển
           </p>
           <p className="mt-2 text-2xl font-black tabular-nums text-primary">
             {formatVND(transfer.total)} VNĐ
           </p>
           <SectionCard className="mt-3 rounded-xl bg-card" density="compact">
-            <p className="text-label uppercase tracking-wider text-muted-foreground">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">
               Tổng mặt hàng
             </p>
             <p className="text-lg font-bold tabular-nums">

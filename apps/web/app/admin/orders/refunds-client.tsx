@@ -15,7 +15,7 @@ import {
 import { approveRefund, fetchRefunds } from "./refund-actions";
 import type { RefundRow } from "./refund-actions";
 import { TableEmptyStateRow } from "../components/table-empty-state-row";
-import { SectionCard, StatusBadge } from "@/components/v2/patterns";
+import { SectionCard, StatusBadge } from "@/components/patterns";
 
 /* ─── Status helpers ─── */
 

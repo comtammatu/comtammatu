@@ -1,107 +1,101 @@
-import { Suspense } from "react";
 import {
   ArrowRight,
   Building2,
   ShieldCheck,
+  Sparkles,
   UtensilsCrossed,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
-import { Badge } from "@comtammatu/ui/components/badge";
-import { SearchParamBlockedStateFlash } from "@/components/foundation/blocked-state-flash";
 import { LoginForm } from "./login-form";
 
 function BrandPanel() {
   return (
-    <Card className="order-2 rounded-4xl border-border/80 bg-card shadow-app-md lg:order-1 lg:h-full">
-      <CardHeader className="space-y-6">
-        <Badge variant="secondary" className="w-fit rounded-full px-3 py-1">
-          Restaurant Ops OS
-        </Badge>
-        <div className="flex size-16 items-center justify-center rounded-3xl border border-border/70 bg-panel-subtle text-primary">
-          <UtensilsCrossed className="size-7" />
+    <section className="surface-shell paper-grid-dark order-2 overflow-hidden p-6 lg:order-1 lg:min-h-dvh">
+      <div className="flex h-full flex-col justify-between gap-8">
+        <div className="space-y-6">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/70">
+            <Sparkles className="size-3.5" />
+            Hệ điều hành nhà hàng
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex size-16 items-center justify-center rounded-full border border-white/12 bg-sidebar-primary text-sidebar-primary-foreground">
+              <UtensilsCrossed className="size-7" />
+            </div>
+            <div className="space-y-3">
+              <p className="text-sm font-semibold uppercase tracking-widest text-sidebar-foreground/50">
+                Đăng nhập theo vai trò
+              </p>
+              <h1 className="max-w-xl text-4xl font-semibold leading-tight text-sidebar-foreground sm:text-5xl">
+                Vào đúng nhịp vận hành ngay từ màn hình đầu tiên.
+              </h1>
+              <p className="max-w-xl text-sm leading-7 text-sidebar-foreground/72 sm:text-base">
+                Một lớp giao diện mới cho quản trị, kho hàng, nhân sự, POS và
+                KDS, nhưng vẫn giữ nguyên route, phân quyền và logic nghiệp vụ.
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Đăng nhập theo vai trò
-          </p>
-          <CardTitle className="max-w-lg text-3xl leading-tight sm:text-5xl">
-            Vào đúng không gian vận hành, thật nhanh.
-          </CardTitle>
-          <CardDescription className="max-w-lg leading-6">
-            Một bề mặt điều phối mới cho bán hàng, kho vận và nhân sự, vẫn giữ
-            nguyên quyền hạn và nghiệp vụ hiện có.
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent className="grid gap-3 pt-0 sm:grid-cols-3">
-        <Card className="rounded-3xl border-border/70 bg-panel-subtle shadow-none">
-          <CardContent className="p-5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-3xl border border-white/10 bg-white/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/50">
               Bán hàng
             </p>
-            <p className="mt-1.5 text-lg font-semibold">POS và KDS</p>
-          </CardContent>
-        </Card>
-        <Card className="rounded-3xl border-border/70 bg-panel-subtle shadow-none">
-          <CardContent className="p-5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <p className="mt-2 text-lg font-semibold text-sidebar-foreground">
+              POS và KDS
+            </p>
+          </div>
+          <div className="rounded-3xl border border-white/10 bg-white/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/50">
               Kho hàng
             </p>
-            <p className="mt-1.5 text-lg font-semibold">Nhập, xuất, tồn</p>
-          </CardContent>
-        </Card>
-        <Card className="rounded-3xl border-border/70 bg-panel-subtle shadow-none">
-          <CardContent className="p-5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <p className="mt-2 text-lg font-semibold text-sidebar-foreground">
+              Nhập, nhận, tồn
+            </p>
+          </div>
+          <div className="rounded-3xl border border-white/10 bg-white/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/50">
               Nhân sự
             </p>
-            <p className="mt-1.5 text-lg font-semibold">Ca làm và lương</p>
-          </CardContent>
-        </Card>
-      </CardContent>
-    </Card>
+            <p className="mt-2 text-lg font-semibold text-sidebar-foreground">
+              Ca làm và lương
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
 function TrustRow() {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:gap-3">
-      <Card className="rounded-4xl border-border/80 bg-card shadow-app-sm">
-        <CardContent className="p-5">
-          <div className="flex items-start gap-3">
-            <div className="flex size-10 items-center justify-center rounded-2xl border border-border/70 bg-panel-subtle text-primary">
-              <ShieldCheck className="size-4" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-semibold">Đăng nhập an toàn</p>
-              <p className="text-sm text-muted-foreground">
-                Điều hướng đúng vai trò sau khi xác thực.
-              </p>
-            </div>
+    <div className="grid gap-3 sm:grid-cols-2">
+      <div className="surface-panel px-4 py-4">
+        <div className="flex items-start gap-3">
+          <div className="flex size-11 items-center justify-center rounded-full border border-border bg-secondary text-primary">
+            <ShieldCheck className="size-4" />
           </div>
-        </CardContent>
-      </Card>
-      <Card className="rounded-4xl border-border/80 bg-card shadow-app-sm">
-        <CardContent className="p-5">
-          <div className="flex items-start gap-3">
-            <div className="flex size-10 items-center justify-center rounded-2xl border border-border/70 bg-success/10 text-success">
-              <Building2 className="size-4" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-semibold">Đúng chi nhánh</p>
-              <p className="text-sm text-muted-foreground">
-                Giữ nguyên phân quyền và ngữ cảnh vận hành hiện có.
-              </p>
-            </div>
+          <div className="space-y-1">
+            <p className="text-sm font-semibold">Đăng nhập an toàn</p>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Điều hướng đúng quyền ngay sau khi xác thực.
+            </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+      <div className="surface-panel px-4 py-4">
+        <div className="flex items-start gap-3">
+          <div className="flex size-11 items-center justify-center rounded-full border border-border bg-secondary text-primary">
+            <Building2 className="size-4" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-semibold">Đúng site vận hành</p>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Giữ nguyên ngữ cảnh chi nhánh và tuyến nghiệp vụ hiện có.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -114,49 +108,40 @@ export default async function LoginPage({
   const sp = await searchParams;
 
   return (
-    <main
-      id="main-content"
-      className="min-h-dvh bg-background px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-6"
-    >
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 lg:grid lg:grid-cols-2 lg:items-center">
+    <main id="main-content" className="min-h-dvh px-3 py-3 sm:px-4 lg:px-6">
+      <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-2 lg:items-stretch">
         <BrandPanel />
 
-        <section className="order-1 flex lg:order-2 lg:items-center lg:justify-end">
-          <div className="w-full space-y-3 lg:max-w-2xl">
-            <Card className="rounded-4xl border-border/80 bg-card shadow-app-md">
-              <CardHeader className="space-y-4 pb-4 md:pb-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="flex size-14 items-center justify-center rounded-3xl border border-border/70 bg-primary text-primary-foreground">
-                    <UtensilsCrossed className="size-6" />
+        <section className="order-1 flex lg:order-2 lg:items-center">
+          <div className="w-full space-y-4">
+            <div className="surface-panel-strong overflow-hidden p-6 sm:p-7">
+              <div className="flex flex-col gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex size-14 items-center justify-center rounded-full border border-border bg-primary text-primary-foreground">
+                      <UtensilsCrossed className="size-6" />
+                    </div>
+                    <span className="ops-chip">Cổng nhân viên</span>
                   </div>
-                  <Badge variant="secondary" className="rounded-full px-3 py-1">
-                    Cổng nhân viên
-                  </Badge>
+                  <div className="space-y-2">
+                    <p className="ops-kicker">Đăng nhập cổng nhân viên</p>
+                    <h2 className="text-4xl font-semibold tracking-tight text-foreground">
+                      Sẵn sàng vào ca, đúng vai trò
+                    </h2>
+                    <p className="text-sm leading-6 text-muted-foreground sm:text-base">
+                      Giao diện mới, hành động rõ hơn, nhưng không thay đổi luồng
+                      quyền hay đường dẫn đang vận hành.
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Đăng nhập cổng nhân viên
-                  </p>
-                  <CardTitle className="text-3xl sm:text-4xl">
-                    Sẵn sàng vào ca, đúng vai trò
-                  </CardTitle>
-                  <CardDescription>
-                    Giữ nguyên phân quyền, route và toàn bộ nghiệp vụ hiện có
-                    trong một bề mặt V2 thống nhất.
-                  </CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <Suspense fallback={null}>
-                  <SearchParamBlockedStateFlash autoClear mode="inline" />
-                </Suspense>
+
                 <LoginForm returnTo={sp.returnTo} />
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             <TrustRow />
 
-            <p className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+            <p className="flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-widest text-muted-foreground">
               <ArrowRight className="size-3.5" />
               2026 Cơm Tấm Má Tư CTCP
             </p>

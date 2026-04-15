@@ -1,6 +1,6 @@
 # Design System — Cơm Tấm Má Tư Web App V2
 
-> Version: 7.0.0 | Updated: 2026-04-16
+> Version: 8.0.0 | Updated: 2026-04-16
 > Stack: Next.js 16.2 · React 19.2 · Tailwind CSS 4.2 · shadcn/ui · TypeScript 6.0
 
 ## Source of Truth
@@ -16,14 +16,15 @@ Hai noi nay phai khop 1:1.
 
 ## Design Direction
 
-Huong chinh thuc cua web app la `Restaurant Ops OS`.
+Huong chinh thuc cua web app la `Restaurant Ops Ledger`.
 
-- Typography chinh: `Inter`
-- Typography mono: `Geist Mono`
-- Nen tong the: giay van hanh am (`paper`) thay vi trang tron
+- Typography chinh: `Be Vietnam Pro`
+- Typography tieu de: `Lora`
+- Typography mono: `IBM Plex Mono`
+- Nen tong the: giay van hanh am (`paper`) co luoi in nhe va lop nhan do
 - Accent thuong hieu: rust orange cho action va trang thai dang xu ly
-- Surface grammar: lenh dieu phoi, de doc nhanh, khong con shell/sidebar kieu cu
-- Tonality: calm under load, role-aware, action-first, mobile-capable
+- Surface grammar: panel bo tron lon, rail toi mau, chip thong tin, action-first
+- Tonality: calm under load, role-aware, editorial nhưng van day nghiep vu
 - Khong dung AI-generic layouts, khong ra nhieu mini theme rieng cho tung surface
 - Cac surface duoc phep khac nhau o contrast, density, interaction rhythm; khong duoc tu tao token system rieng
 
@@ -35,8 +36,8 @@ Design system gom 3 tang:
 
 Dinh nghia o `apps/web/app/globals.css`:
 
-- Color tokens (zinc palette + orange accent)
-- Typography scale (Be Vietnam Pro, Geist Mono)
+- Color tokens (warm ledger palette + rust accent)
+- Typography scale (`Be Vietnam Pro`, `Lora`, `IBM Plex Mono`)
 - Spacing scale
 - Radius
 - Elevation (neutral shadows)
@@ -74,21 +75,21 @@ Composition layer moi song trong `apps/web/app/components/v2/`.
 
 | Token                  | Value     | Description                 |
 | ---------------------- | --------- | --------------------------- |
-| `background`           | `#f3efe6` | Paper background            |
-| `foreground`           | `#15191d` | Primary ink                 |
-| `primary`              | `#c35a22` | Rust action                 |
+| `background`           | `#f5efe5` | Paper background            |
+| `foreground`           | `#1f1916` | Primary ink                 |
+| `primary`              | `#b85726` | Rust action                 |
 | `primary-foreground`   | `#fff8f2` | Light ink on rust           |
-| `secondary`            | `#e5ddcf` | Warm neutral block          |
+| `secondary`            | `#eadcc8` | Warm neutral block          |
 | `secondary-foreground` | `#23282d` | Dense neutral text          |
 | `accent`               | `#d7cebf` | Highlighted control surface |
 | `accent-foreground`    | `#171a1e` | Accent text                 |
 | `muted`                | `#e6dfd3` | Quiet surface               |
 | `muted-foreground`     | `#6c6c67` | Secondary text              |
-| `card`                 | `#fbf8f1` | Raised panel                |
-| `card-foreground`      | `#15191d` | Panel text                  |
-| `border`               | `#c9c1b4` | Warm divider                |
-| `input`                | `#c9c1b4` | Input stroke                |
-| `ring`                 | `#c35a22` | Focus ring                  |
+| `card`                 | `#fff8ef` | Raised panel                |
+| `card-foreground`      | `#241c17` | Panel text                  |
+| `border`               | `#ccb8a1` | Warm divider                |
+| `input`                | `#ccb8a1` | Input stroke                |
+| `ring`                 | `#b85726` | Focus ring                  |
 | `destructive`          | `#be3a2d` | Error                       |
 | `success`              | `#197355` | Success                     |
 | `warning`              | `#ab7218` | Warning                     |
@@ -124,8 +125,9 @@ Composition layer moi song trong `apps/web/app/components/v2/`.
 
 ### Typography
 
-- `font-sans`: Inter
-- `font-mono`: Geist Mono
+- `font-sans`: Be Vietnam Pro
+- `font-heading`: Lora
+- `font-mono`: IBM Plex Mono
 - `text-data`: 13px (tables, lists)
 - `text-label`: 10px (badges, chips)
 - `text-caption`: 11px (captions)
@@ -142,20 +144,19 @@ Composition layer moi song trong `apps/web/app/components/v2/`.
 ### Standard panel
 
 ```tsx
-className = "rounded-3xl border border-border/80 bg-card shadow-app-sm";
+className = "surface-panel";
 ```
 
 ### Standard header
 
 ```tsx
-className = "sticky top-0 z-30 border-b border-border/70 bg-background/95";
+className = "surface-panel-strong sticky top-3 z-30";
 ```
 
 ### Standard shell rail
 
 ```tsx
-className =
-  "rounded-[2rem] border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-app-lg";
+className = "surface-shell paper-grid-dark";
 ```
 
 ### Stat card

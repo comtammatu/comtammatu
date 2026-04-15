@@ -19,7 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
-import { EmptyStatePanel } from "@/components/v2/patterns";
+import { EmptyStatePanel } from "@/components/patterns";
 import { SimpleBarChart, TrendSparkline } from "../_lib/chart-primitives";
 import { formatVND } from "../_lib/format";
 import {
@@ -294,7 +294,7 @@ export function ReportsClient({
                     </p>
                     <span
                       className={cn(
-                        "inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-label font-bold",
+                        "inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-bold",
                         isUp
                           ? "bg-destructive/10 text-destructive"
                           : "bg-success/10 text-success",
