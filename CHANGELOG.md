@@ -18,8 +18,8 @@ All notable changes to this project will be documented in this file.
 - Month-end close procedure with MV refresh and 5-category GL reconciliation
 - Posting rules admin page at `/admin/finance/posting-rules`
 - Fiscal periods page at `/admin/finance/periods` with close workflow and reconciliation dialog
-- "Tu dong" badge on auto-posted journal entries
-- Account 155 (Thanh pham) added to VAS chart of accounts
+- Badge "Tự động" on auto-posted journal entries
+- Account 155 (Thành phẩm) added to VAS chart of accounts
 - `confirm_payment_and_post()` atomic RPC replacing non-atomic VietQR/Momo confirmation
 - Implicit subledger FK (`journal_entry_id`) on payments, GRN, invoices, payroll, transfers, production
 

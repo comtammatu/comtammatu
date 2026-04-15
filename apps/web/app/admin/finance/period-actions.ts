@@ -80,6 +80,11 @@ export async function openFiscalPeriod(
     return { success: false, error: "Không thể mở kỳ kế toán." };
   }
 
+  // RLS returns { data: null, error: null } on blocked writes
+  if (!data) {
+    return { success: false, error: "Không có quyền mở kỳ kế toán." };
+  }
+
   return { success: true, data };
 }
 

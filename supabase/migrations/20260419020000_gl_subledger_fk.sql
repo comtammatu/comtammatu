@@ -67,6 +67,6 @@ ALTER TABLE public.production_orders
   ADD COLUMN IF NOT EXISTS journal_entry_id BIGINT
   REFERENCES public.journal_entries(id) ON DELETE SET NULL;
 
-CREATE INDEX IF NOT EXISTS idx_po_prod_journal
+CREATE INDEX IF NOT EXISTS idx_production_orders_journal
   ON public.production_orders(journal_entry_id)
   WHERE journal_entry_id IS NOT NULL;

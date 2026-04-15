@@ -75,14 +75,21 @@ export async function updatePostingRule(
 
   // posting_rules table added in gl_posting_rules migration — cast until db:types
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { data, error } = await (supabase as any)
     .from("posting_rules")
     .update(updatePayload)
     .eq("id", parsed.data.id)
-    .eq("tenant_id", claims.tenant_id);
+    .eq("tenant_id", claims.tenant_id)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     return { success: false, error: "Không thể cập nhật quy tắc hạch toán." };
+  }
+
+  // RLS returns { data: null, error: null } on blocked writes
+  if (!data) {
+    return { success: false, error: "Không tìm thấy quy tắc hoặc không có quyền." };
   }
 
   return { success: true };

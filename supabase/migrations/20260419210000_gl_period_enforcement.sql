@@ -36,10 +36,17 @@ DECLARE
   v_period_year   INT;
   v_period_status TEXT;
 BEGIN
+  -- ═══ TENANT VALIDATION ═══
+  -- Prevent cross-tenant access: caller-supplied p_tenant_id must match auth context.
+  -- Only skip check when called from service-role context (auth.uid() IS NULL).
+  IF auth.uid() IS NOT NULL AND p_tenant_id <> public.auth_tenant_id() THEN
+    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
+  END IF;
+
   -- Resolve actor
   v_actor := COALESCE(p_posted_by, auth.uid());
 
-  -- ═══ FISCAL PERIOD CHECK ═══
+  -- ═══ FISCAL PERIOD CHECK (with row lock to prevent TOCTOU race) ═══
   v_period_month := EXTRACT(MONTH FROM p_entry_date)::INT;
   v_period_year  := EXTRACT(YEAR FROM p_entry_date)::INT;
 
@@ -47,7 +54,8 @@ BEGIN
   FROM public.fiscal_periods fp
   WHERE fp.tenant_id = p_tenant_id
     AND fp.period_month = v_period_month
-    AND fp.period_year = v_period_year;
+    AND fp.period_year = v_period_year
+  FOR SHARE;
 
   IF FOUND THEN
     IF v_period_status = 'closed' THEN
@@ -91,12 +99,14 @@ BEGIN
       AND pr.is_active = true;
 
     IF NOT FOUND THEN
-      CONTINUE;
+      RAISE EXCEPTION 'posting_rule_not_found: % for tenant %', (v_line ->> 'rule_code'), p_tenant_id
+        USING ERRCODE = 'P0002';
     END IF;
 
     v_amount := (v_line ->> 'amount')::NUMERIC(15,2);
     v_line_desc := v_line ->> 'line_description';
 
+    -- Skip zero-amount lines (legitimate: e.g. COGS=0 when no stock consumed)
     IF v_amount IS NULL OR v_amount <= 0 THEN
       CONTINUE;
     END IF;

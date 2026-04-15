@@ -165,6 +165,9 @@ BEGIN
     (p_tenant_id, 'PAYROLL_BHYT_ER',       'BHYT phần doanh nghiệp',               'payroll', '627', '3384'),
     (p_tenant_id, 'PAYROLL_BHTN_ER',       'BHTN phần doanh nghiệp',               'payroll', '627', '3386'),
     (p_tenant_id, 'PAYROLL_PIT',           'Thuế TNCN khấu trừ',                   'payroll', '334', '3335'),
+    (p_tenant_id, 'PAYROLL_BHXH_EE',      'BHXH phần người lao động',              'payroll', '334', '3383'),
+    (p_tenant_id, 'PAYROLL_BHYT_EE',      'BHYT phần người lao động',              'payroll', '334', '3384'),
+    (p_tenant_id, 'PAYROLL_BHTN_EE',      'BHTN phần người lao động',              'payroll', '334', '3386'),
     -- Transfer
     (p_tenant_id, 'TRANSFER_INVENTORY',    'Chuyển kho liên chi nhánh',             'transfer', '152', '152'),
     -- Production

@@ -42,7 +42,8 @@ BEGIN
     v_entry_ids := ARRAY[]::BIGINT[];
   END IF;
 
-  -- ═══ 1. SALES: payments vs GL revenue (account 511) ═══
+  -- ═══ 1. SALES: payments vs GL revenue (511) + VAT (33311) ═══
+  -- payments.amount is gross (includes VAT), so compare against 511 + 33311 credits
   SELECT COALESCE(SUM(p.amount), 0) INTO v_sub_total
   FROM public.payments p
   WHERE p.tenant_id = p_tenant_id
@@ -53,12 +54,14 @@ BEGIN
   SELECT COALESCE(SUM(jel.credit_amount), 0) INTO v_gl_total
   FROM public.journal_entry_lines jel
   JOIN public.chart_of_accounts coa ON coa.id = jel.account_id
+  JOIN public.journal_entries je ON je.id = jel.journal_entry_id
   WHERE jel.tenant_id = p_tenant_id
     AND jel.journal_entry_id = ANY(v_entry_ids)
-    AND coa.account_code = '511';
+    AND coa.account_code IN ('511', '33311')
+    AND je.reference_type = 'sale';
 
   v_result := v_result || jsonb_build_array(jsonb_build_object(
-    'category', 'Doanh thu (511)',
+    'category', 'Doanh thu + VAT (511+33311)',
     'subledger_total', v_sub_total,
     'gl_total', v_gl_total,
     'difference', v_sub_total - v_gl_total

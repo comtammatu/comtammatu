@@ -331,20 +331,8 @@ export async function confirmPayment(
     return { success: false, error: "Thanh toán không ở trạng thái chờ." };
   }
 
-  // Deduct ingredients BEFORE confirming payment so COGS is available for GL posting.
-  // Non-fatal: stock_levels may not be initialized yet.
-  const { error: stockErr } = await consumeStockForOrderCompat(
-    supabase,
-    payment.order_id,
-  );
-  if (stockErr) {
-    console.error(
-      "[confirmPayment] consume_stock_for_order failed:",
-      stockErr.message,
-    );
-  }
-
   // Atomic RPC: confirm payment + update order + auto-post GL journal
+  // Must run BEFORE stock consumption so if it fails, no stock is deducted.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error: rpcError } = await (supabase as any).rpc(
     "confirm_payment_and_post",
@@ -365,6 +353,21 @@ export async function confirmPayment(
       return { success: false, error: "Thanh toán không ở trạng thái chờ." };
     }
     return { success: false, error: "Không thể xác nhận thanh toán." };
+  }
+
+  // Deduct ingredients AFTER payment confirmed successfully.
+  // Non-fatal: stock_levels may not be initialized yet.
+  // COGS in GL journal uses stock_movements from create_payment (cash)
+  // or will be 0 for e-wallet (reconciled via period close).
+  const { error: stockErr } = await consumeStockForOrderCompat(
+    supabase,
+    payment.order_id,
+  );
+  if (stockErr) {
+    console.error(
+      "[confirmPayment] consume_stock_for_order failed:",
+      stockErr.message,
+    );
   }
 
   return { success: true, data };

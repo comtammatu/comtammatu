@@ -84,6 +84,11 @@ BEGIN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
+  -- Tenant validation: prevent cross-tenant access
+  IF p_tenant_id <> public.auth_tenant_id() THEN
+    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
+  END IF;
+
   IF p_payment_method NOT IN ('cash', 'bank_transfer') THEN
     RAISE EXCEPTION 'invalid_payment_method' USING ERRCODE = '22023';
   END IF;
@@ -143,7 +148,7 @@ BEGIN
   v_lines := jsonb_build_array(jsonb_build_object(
     'rule_code', v_rule_code,
     'amount', p_amount,
-    'line_description', 'Thanh toán hóa đơn NCC #' || v_invoice.invoice_number
+    'line_description', 'Thanh toán hóa đơn NCC #' || COALESCE(v_invoice.invoice_number, v_invoice.id::text)
   ));
 
   v_journal_id := public.auto_post_journal(

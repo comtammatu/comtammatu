@@ -104,7 +104,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
       // Prepend optimistic entry
       const newEntry: JournalEntryRow = {
         id: (res.data as { id: number }).id,
-        entry_number: "JE-" + new Date().toISOString().slice(0, 10).replace(/-/g, ""),
+        entry_number: (res.data as { id: number; entry_number?: string }).entry_number ?? "JE-pending",
         entry_date: form.entryDate,
         description: form.description,
         ref_type: form.refType || null,

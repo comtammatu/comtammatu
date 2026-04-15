@@ -25,6 +25,11 @@ BEGIN
     RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
   END IF;
 
+  -- Role check: only owner/super_manager can post payroll journals
+  IF public.auth_role() NOT IN ('owner', 'super_manager') THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
   -- Fetch and validate period
   SELECT pp.*
   INTO v_period
@@ -49,7 +54,9 @@ BEGIN
   -- Aggregate all entries in this period
   SELECT
     COALESCE(SUM(pe.gross_total), 0) AS total_gross,
-    COALESCE(SUM(pe.bhxh_employee + pe.bhyt_employee + pe.bhtn_employee), 0) AS total_ins_ee,
+    COALESCE(SUM(pe.bhxh_employee), 0) AS total_bhxh_ee,
+    COALESCE(SUM(pe.bhyt_employee), 0) AS total_bhyt_ee,
+    COALESCE(SUM(pe.bhtn_employee), 0) AS total_bhtn_ee,
     COALESCE(SUM(pe.bhxh_employer), 0) AS total_bhxh_er,
     COALESCE(SUM(pe.bhyt_employer), 0) AS total_bhyt_er,
     COALESCE(SUM(pe.bhtn_employer), 0) AS total_bhtn_er,
@@ -103,6 +110,33 @@ BEGIN
       'rule_code', 'PAYROLL_PIT',
       'amount', v_totals.total_pit,
       'line_description', 'Thuế TNCN T' || v_period.period_month || '/' || v_period.period_year
+    ));
+  END IF;
+
+  -- 6. Employee BHXH deduction: Dr 334 / Cr 3383
+  IF v_totals.total_bhxh_ee > 0 THEN
+    v_lines := v_lines || jsonb_build_array(jsonb_build_object(
+      'rule_code', 'PAYROLL_BHXH_EE',
+      'amount', v_totals.total_bhxh_ee,
+      'line_description', 'BHXH NLĐ T' || v_period.period_month || '/' || v_period.period_year
+    ));
+  END IF;
+
+  -- 7. Employee BHYT deduction: Dr 334 / Cr 3384
+  IF v_totals.total_bhyt_ee > 0 THEN
+    v_lines := v_lines || jsonb_build_array(jsonb_build_object(
+      'rule_code', 'PAYROLL_BHYT_EE',
+      'amount', v_totals.total_bhyt_ee,
+      'line_description', 'BHYT NLĐ T' || v_period.period_month || '/' || v_period.period_year
+    ));
+  END IF;
+
+  -- 8. Employee BHTN deduction: Dr 334 / Cr 3386
+  IF v_totals.total_bhtn_ee > 0 THEN
+    v_lines := v_lines || jsonb_build_array(jsonb_build_object(
+      'rule_code', 'PAYROLL_BHTN_EE',
+      'amount', v_totals.total_bhtn_ee,
+      'line_description', 'BHTN NLĐ T' || v_period.period_month || '/' || v_period.period_year
     ));
   END IF;
 
