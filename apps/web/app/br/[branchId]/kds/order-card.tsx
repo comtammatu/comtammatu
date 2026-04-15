@@ -219,7 +219,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
   return (
     <Card
       className={cn(
-        "ui-surface-lift flex flex-col overflow-hidden border border-l-2 bg-white/92 shadow-sm",
+        "transition-all hover:-translate-y-0.5 hover:shadow-md flex flex-col overflow-hidden border border-l-2 bg-zinc-900 text-white shadow-sm",
         borderClass,
         getCardLeftAccent(overallStatus, elapsed),
       )}
@@ -262,7 +262,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
         <Badge
           variant="outline"
           className={cn(
-            "flex shrink-0 flex-col items-center gap-0 rounded-2xl border px-3 py-2",
+            "flex shrink-0 flex-col items-center gap-0 rounded-lg border px-3 py-2",
             isComplete
               ? "border-success/40 bg-success/15 text-success"
               : elapsed >= 10
@@ -284,7 +284,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
       <div className="border-b border-border/30 px-3 py-3 md:px-4">
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-2xl border border-border/60 bg-background/82 px-3 py-2">
+            <div className="rounded-lg border border-border/60 bg-zinc-900 px-3 py-2">
               <p className="text-label font-semibold uppercase tracking-wide text-muted-foreground">
                 Chờ
               </p>
@@ -292,7 +292,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                 {pendingCount}
               </p>
             </div>
-            <div className="rounded-2xl border border-warning/20 bg-warning/10 px-3 py-2">
+            <div className="rounded-lg border border-warning/20 bg-warning/10 px-3 py-2">
               <p className="text-label font-semibold uppercase tracking-wide text-warning">
                 Đang làm
               </p>
@@ -300,7 +300,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                 {preparingCount}
               </p>
             </div>
-            <div className="rounded-2xl border border-success/20 bg-success/10 px-3 py-2">
+            <div className="rounded-lg border border-success/20 bg-success/10 px-3 py-2">
               <p className="text-label font-semibold uppercase tracking-wide text-success">
                 Sẵn sàng
               </p>
@@ -311,10 +311,10 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
-              <span className="rounded-full border border-border/70 bg-white/70 px-3 py-1.5">
+              <span className="rounded-full border border-border/70 bg-zinc-800 px-3 py-1.5">
                 {readyCount}/{totalTickets} món đã xong
               </span>
-              <span className="rounded-full border border-border/70 bg-white/70 px-3 py-1.5">
+              <span className="rounded-full border border-border/70 bg-zinc-800 px-3 py-1.5">
                 {pendingCount > 0
                   ? `${pendingCount} món cần nhận`
                   : "Không còn món chờ"}
@@ -324,7 +324,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
       </div>
 
       {/* ── Items list ── */}
-      <div className="ui-content-auto flex-1 divide-y divide-border/30">
+      <div className="flex-1 divide-y divide-border/30">
         {order.items.map((item) => {
           const ticket = ticketByItemId.get(item.id);
           const status = ticket?.status ?? "pending";

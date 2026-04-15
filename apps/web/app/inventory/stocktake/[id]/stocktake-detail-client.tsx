@@ -33,7 +33,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { PageHeader } from "../../_components/shared";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
@@ -113,10 +113,7 @@ export function StocktakeDetailClient({
   const [savedLines, setSavedLines] = useState<Set<number>>(new Set());
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const panelClassName = getSurfacePanelClassName(
-    "inventory",
-    "ambient-shadow",
-  );
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
 
   const meta = STATUS_META[session.status] ?? {
     label: session.status,
@@ -322,7 +319,7 @@ export function StocktakeDetailClient({
         ].map((item) => (
           <div
             key={item.label}
-            className={cn(panelClassName, "rounded-2xl bg-card p-4")}
+            className={cn(panelClassName, "p-4")}
           >
             <p className="text-label uppercase tracking-wider text-muted-foreground">
               {item.label}
@@ -334,7 +331,7 @@ export function StocktakeDetailClient({
 
       {/* Progress (in_progress only) */}
       {session.status === "in_progress" && (
-        <SectionCard className="rounded-2xl" density="compact">
+        <SectionCard className="rounded-lg" density="compact">
           <div className="flex items-center gap-3 text-sm">
             <ClipboardCheck className="size-4 text-muted-foreground" />
             <span className="text-muted-foreground">
@@ -446,7 +443,7 @@ function CountingPhase({
 }) {
   if (isMobile) {
     return (
-      <SectionCard className="overflow-hidden rounded-2xl" density="compact">
+      <SectionCard className="overflow-hidden rounded-lg" density="compact">
         {lines.length === 0 ? (
           <EmptyState
             title="Không có nguyên liệu để kiểm kê"
@@ -503,7 +500,7 @@ function CountingPhase({
   }
 
   return (
-    <SectionCard className="overflow-hidden rounded-2xl" density="compact">
+    <SectionCard className="overflow-hidden rounded-lg" density="compact">
       <div className="-m-4 md:-m-5">
         <Table>
           <TableHeader>
@@ -627,7 +624,7 @@ function ResultsPhase({
       </div>
 
       {isMobile ? (
-        <SectionCard className="overflow-hidden rounded-2xl" density="compact">
+        <SectionCard className="overflow-hidden rounded-lg" density="compact">
           {lines.length === 0 ? (
             <EmptyState
               title="Không có dữ liệu kiểm kê"
@@ -676,7 +673,7 @@ function ResultsPhase({
           )}
         </SectionCard>
       ) : (
-        <SectionCard className="overflow-hidden rounded-2xl" density="compact">
+        <SectionCard className="overflow-hidden rounded-lg" density="compact">
           <div className="-m-4 md:-m-5">
             <Table>
               <TableHeader>

@@ -39,7 +39,7 @@ export function BottomNav() {
     <nav
       className={cn(
         "fixed bottom-0 left-0 right-0 z-40",
-        "ui-safe-bottom border-t border-border/70 bg-background/92 backdrop-blur-xl",
+        "ui-safe-bottom border-t bg-background",
       )}
       aria-label="Điều hướng chính"
     >
@@ -52,10 +52,10 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "touch-target-lg focus-ring-standard flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 text-xs transition-all",
+                "touch-target-lg focus-ring-standard flex flex-1 flex-col items-center justify-center gap-1 rounded-lg py-2 text-xs transition-all",
                 active
-                  ? "bg-white font-semibold text-primary shadow-sm"
-                  : "text-muted-foreground hover:bg-white/70 hover:text-foreground",
+                  ? "bg-accent font-semibold text-primary shadow-sm"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground",
               )}
               aria-current={active ? "page" : undefined}
             >

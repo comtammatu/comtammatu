@@ -146,8 +146,8 @@ export function OrdersClient({
   return (
     <>
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="app-kpi ui-surface-lift">
-          <p className="app-section-label">Đang xử lý</p>
+        <div className="rounded-lg border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Đang xử lý</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">
             {orderSummary.pending}
           </p>
@@ -155,8 +155,8 @@ export function OrdersClient({
             Đơn đang chờ hoặc đang làm cần theo dõi.
           </p>
         </div>
-        <div className="app-kpi ui-surface-lift">
-          <p className="app-section-label">Hoàn thành</p>
+        <div className="rounded-lg border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Hoàn thành</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">
             {orderSummary.completed}
           </p>
@@ -164,8 +164,8 @@ export function OrdersClient({
             Đơn đã hoàn tất trong tập kết quả hiện tại.
           </p>
         </div>
-        <div className="app-kpi ui-surface-lift">
-          <p className="app-section-label">Giá trị đơn</p>
+        <div className="rounded-lg border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Giá trị đơn</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">
             {formatVND(orderSummary.revenue)}
           </p>
@@ -278,9 +278,9 @@ export function OrdersClient({
       </div>
 
       {/* ─── Table ─── */}
-      <SectionCard className="rounded-2xl">
+      <SectionCard className="rounded-lg">
         {displayOrders.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border px-6 py-16 text-center">
+          <div className="rounded-lg border border-dashed border-border px-6 py-16 text-center">
             <ShoppingBag className="mx-auto size-8 text-muted-foreground" />
             <p className="mt-3 text-sm font-medium">Không có đơn hàng nào</p>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -297,7 +297,7 @@ export function OrdersClient({
               key={order.id}
               type="button"
               onClick={() => setSelectedOrder(order)}
-              className="w-full rounded-2xl border border-border/70 bg-background p-4 text-left transition-colors hover:bg-muted/20"
+              className="w-full rounded-lg border border-border/70 bg-background p-4 text-left transition-colors hover:bg-muted/20"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -347,7 +347,7 @@ export function OrdersClient({
           ))}
         </div>
 
-        <div className="hidden overflow-hidden rounded-2xl border border-border/70 md:block">
+        <div className="hidden overflow-hidden rounded-lg border border-border/70 md:block">
           <Table>
           <TableHeader>
             <TableRow>

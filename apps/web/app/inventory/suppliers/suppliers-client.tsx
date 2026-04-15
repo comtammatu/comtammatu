@@ -30,7 +30,7 @@ import {
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import { FilterBar, PageHeader, StatusBadge } from "../_components/shared";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { deleteSupplier, fetchSuppliers } from "../procurement-actions";
@@ -49,10 +49,7 @@ const avatarColors = [
 ];
 
 export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
-  const panelClassName = getSurfacePanelClassName(
-    "inventory",
-    "ambient-shadow",
-  );
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const [rows, setRows] = useState(initial);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -116,7 +113,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
         <button
           type="button"
           onClick={openCreate}
-          className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-xl shadow-primary/15 transition-transform hover:scale-[1.02]"
+          className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-[1.02]"
         >
           <Plus className="size-4" />
           Thêm nhà cung cấp
@@ -151,7 +148,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
         ].map((card) => (
           <SectionCard
             key={card.label}
-            className={cn(panelClassName, "rounded-2xl bg-card")}
+            className={cn(panelClassName, "rounded-lg bg-card")}
             density="comfortable"
           >
             <div className="mb-4 flex items-start justify-between">
@@ -183,11 +180,11 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
 
       {/* Data Table */}
       <div
-        className={cn(panelClassName, "overflow-hidden rounded-3xl bg-card")}
+        className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}
       >
         {/* Search bar */}
         <FilterBar
-          className="rounded-none border-0 border-b border-border/40 px-6 py-4 shadow-none"
+          className="rounded-none border-0 border-b border-border px-6 py-4 shadow-none"
           surface="inventory"
         >
           <Search className="size-4 shrink-0 text-muted-foreground" />
@@ -245,7 +242,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
               return (
                 <TableRow
                   key={s.id}
-                  className="group border-border/50 transition-colors"
+                  className="group border-border transition-colors"
                 >
                   <TableCell className="px-6 py-5">
                     <div className="flex items-center gap-3">
@@ -308,7 +305,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
         </Table>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between border-t border-border/40 px-6 py-4">
+        <div className="flex items-center justify-between border-t border-border px-6 py-4">
           <span className="text-xs font-medium text-muted-foreground">
             Hiển thị {filtered.length} nhà cung cấp
           </span>

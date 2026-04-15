@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { canAccess, type StaffRole } from "@comtammatu/shared/auth";
 import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
-import { cn, getSurfaceHeaderClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import { tRoute } from "../_lib/dictionary";
 
 function getBreadcrumbs(pathname: string) {
@@ -46,10 +46,7 @@ export function InventoryHeader({
 
   return (
     <header
-      className={getSurfaceHeaderClassName(
-        "inventory",
-        "relative flex items-center justify-between gap-4 border-b border-border/60 bg-background/90 px-4 py-3 shadow-[0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-xl sm:px-6",
-      )}
+      className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b bg-background px-4 py-3 sm:px-6"
     >
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         <div className="hidden items-center text-xs font-medium uppercase tracking-wider text-muted-foreground md:flex">
@@ -70,7 +67,7 @@ export function InventoryHeader({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div className="ui-surface-lift flex min-w-0 items-center gap-2 rounded-full border border-border/70 bg-white/86 px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm">
+          <div className="flex min-w-0 items-center gap-2 rounded-full border border-border bg-card px-3 py-2.5 text-sm font-semibold text-foreground shadow-sm">
             <MapPin className="size-3.5" />
             <span className="flex min-w-0 flex-col items-start leading-tight">
               <span className="truncate">{siteName}</span>
@@ -81,10 +78,10 @@ export function InventoryHeader({
           </div>
 
           <div className="hidden flex-wrap items-center gap-2 md:flex">
-            <span className="ui-surface-lift inline-flex items-center rounded-full border border-border/70 bg-white/80 px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm">
+            <span className="inline-flex items-center rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm">
               {routeLabel}
             </span>
-            <span className="ui-surface-lift inline-flex items-center rounded-full border border-success/20 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success shadow-sm">
+            <span className="inline-flex items-center rounded-full border border-success/20 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success shadow-sm">
               {canAccessProcurement
                 ? "Procurement mở"
                 : "Core kho vận"}
@@ -98,13 +95,13 @@ export function InventoryHeader({
           <div className="flex gap-2">
             <Link
               href="/inventory/grn"
-              className="ui-surface-lift focus-ring-standard rounded-full border border-border/70 bg-white/85 px-4 py-2.5 text-sm font-medium text-primary shadow-sm transition-transform hover:-translate-y-0.5"
+              className="focus-ring-standard rounded-full border border-border bg-card px-4 py-2.5 text-sm font-medium text-primary shadow-sm transition-colors hover:bg-muted"
             >
               GRN
             </Link>
             <Link
               href="/inventory/purchase-orders/new"
-              className="focus-ring-standard inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-transform hover:-translate-y-0.5"
+              className="focus-ring-standard inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
             >
               <PackagePlus className="size-4" />
               Tạo đơn đặt hàng NCC

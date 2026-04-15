@@ -36,12 +36,7 @@ import {
 } from "@comtammatu/shared/auth";
 import type { ModuleKey } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
-import {
-  cn,
-  getSurfaceHeaderClassName,
-  getSurfaceShellClassName,
-  getSurfaceSidebarClassName,
-} from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { Separator } from "@comtammatu/ui/components/separator";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
@@ -535,7 +530,7 @@ export function AdminShell({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className={getSurfaceShellClassName("admin", "flex min-h-screen overflow-hidden")}>
+      <div className="flex min-h-screen overflow-hidden bg-background">
         {/* ── Desktop Sidebar spacer (hover mode: keeps layout stable) ── */}
         {sidebarMode === "hover" && (
           <div className="hidden w-16 shrink-0 md:block" />
@@ -544,7 +539,7 @@ export function AdminShell({
         {/* ── Desktop Sidebar (hidden on mobile) ── */}
         <aside
           className={cn(
-            getSurfaceSidebarClassName("admin"),
+            "border-r bg-sidebar",
             "hidden flex-col transition-all duration-200 md:flex",
             sidebarMode === "hover"
               ? cn(
@@ -565,7 +560,7 @@ export function AdminShell({
               isCollapsed ? "justify-center px-2" : "gap-3 px-4",
             )}
           >
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-sidebar-primary shadow-sm shadow-sidebar-primary/15">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary shadow-sm">
               <UtensilsCrossed className="size-5 text-sidebar-primary-foreground" />
             </div>
             {!isCollapsed && (
@@ -662,8 +657,8 @@ export function AdminShell({
         <div className="flex flex-1 flex-col">
           {/* Header */}
           <header
-            className={getSurfaceHeaderClassName(
-              "admin",
+            className={cn(
+              "sticky top-0 z-30 border-b bg-background",
               "flex min-h-16 items-center gap-4 px-4 py-3 sm:px-6",
             )}
           >
@@ -680,7 +675,7 @@ export function AdminShell({
 
             {/* Breadcrumb + page title */}
             <div className="min-w-0 flex-1">
-              <p className="app-section-label hidden md:block">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground hidden md:block">
                 {APP_COPY_VI.adminFoundation}
               </p>
               <nav
@@ -779,9 +774,9 @@ export function AdminShell({
           <main id="main-content" className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8">
             <div className="mx-auto flex max-w-screen-2xl flex-col">
               <div className="mb-5 hidden md:block">
-                <div className="ui-flow-panel flex flex-wrap items-center justify-between gap-4 rounded-3xl p-4 md:p-5">
+                <div className="rounded-xl border bg-card shadow-sm flex flex-wrap items-center justify-between gap-4 p-4 md:p-5">
                   <div className="min-w-0 space-y-1.5">
-                    <p className="app-section-label">Quản trị</p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Quản trị</p>
                     <h2 className="text-lg font-semibold tracking-tight">
                       {ROLE_LABEL_VI[role]}
                     </h2>
@@ -819,11 +814,11 @@ export function AdminShell({
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetContent
             side="left"
-            className={getSurfaceSidebarClassName("admin", "w-72 p-0")}
+            className={cn("border-r bg-sidebar", "w-72 p-0")}
           >
             <SheetTitle className="sr-only">Menu điều hướng</SheetTitle>
             <div className="flex h-16 items-center gap-3 border-b border-sidebar-border/80 px-4">
-              <div className="flex size-10 items-center justify-center rounded-2xl bg-sidebar-primary shadow-sm shadow-sidebar-primary/15">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-sidebar-primary shadow-sm">
                 <UtensilsCrossed className="size-5 text-sidebar-primary-foreground" />
               </div>
               <div>

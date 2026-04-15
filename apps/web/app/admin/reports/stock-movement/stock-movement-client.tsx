@@ -183,7 +183,7 @@ export function StockMovementClient({
 
       {loaded && (
         <Tabs defaultValue="detail">
-          <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto rounded-2xl border border-border/70 bg-muted/40 p-2">
+          <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto rounded-lg border border-border/70 bg-muted/40 p-2">
             <TabsTrigger value="detail">
               Chi tiết ({movementRows.length})
             </TabsTrigger>
@@ -205,7 +205,7 @@ export function StockMovementClient({
                   {movementRows.map((row) => (
                     <div
                       key={row.ingredient_id}
-                      className="rounded-2xl border border-border/70 bg-background p-4"
+                      className="rounded-lg border border-border/70 bg-background p-4"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -327,7 +327,7 @@ export function StockMovementClient({
                   {branchRows.map((row) => (
                     <div
                       key={row.branch_id}
-                      className="rounded-2xl border border-border/70 bg-background p-4"
+                      className="rounded-lg border border-border/70 bg-background p-4"
                     >
                       <p className="font-medium">{row.branch_name}</p>
                       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">

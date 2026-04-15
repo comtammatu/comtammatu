@@ -14,7 +14,7 @@ import {
   UserRound,
   Warehouse,
 } from "lucide-react";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
   buildLoginBlockedStatePath,
@@ -46,12 +46,12 @@ function ActionLink({
   return (
     <Link
       href={href}
-      className={getSurfacePanelClassName(
-        "employee",
-        "group touch-target-lg focus-ring-standard flex items-center gap-4 rounded-3xl p-4 transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:bg-white/92",
+      className={cn(
+        "border bg-card shadow-sm",
+        "group touch-target-lg focus-ring-standard flex items-center gap-4 rounded-xl p-4 transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:bg-accent",
       )}
     >
-      <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+      <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
         {icon}
       </div>
       <div className="min-w-0 flex-1">
@@ -86,11 +86,11 @@ function DisabledPanel({
   return (
     <div
       className={cn(
-        getSurfacePanelClassName("employee"),
-        "flex items-center gap-4 rounded-3xl border-dashed bg-muted/30 p-4 shadow-none",
+        "border bg-card",
+        "flex items-center gap-4 rounded-xl border-dashed bg-muted/30 p-4",
       )}
     >
-      <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+      <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
         {icon}
       </div>
       <div className="min-w-0">
@@ -197,14 +197,14 @@ export default async function EmployeePage() {
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            <div className="app-kpi">
-              <p className="app-section-label">Vai trò</p>
+            <div className="rounded-lg border bg-card p-5 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Vai trò</p>
               <p className="mt-2 text-lg font-semibold text-foreground">
                 {ROLE_LABEL_VI[claims.user_role]}
               </p>
             </div>
-            <div className="app-kpi">
-              <p className="app-section-label">Ca làm</p>
+            <div className="rounded-lg border bg-card p-5 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Ca làm</p>
               <p className="mt-2 text-lg font-semibold text-foreground">
                 Sẵn sàng vào ca
               </p>
@@ -217,7 +217,7 @@ export default async function EmployeePage() {
         <SectionCard surface="employee">
           <div className="space-y-4">
             <div>
-              <p className="app-section-label">Việc trong ngày</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Việc trong ngày</p>
               <h2 className="mt-2 text-xl font-semibold text-foreground">
                 Bắt đầu ca
               </h2>
@@ -251,7 +251,7 @@ export default async function EmployeePage() {
         <SectionCard surface="employee">
           <div className="space-y-4">
             <div>
-              <p className="app-section-label">Không gian làm việc</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Không gian làm việc</p>
               <h2 className="mt-2 text-xl font-semibold text-foreground">
                 Theo vai trò hiện tại
               </h2>
@@ -310,12 +310,12 @@ export default async function EmployeePage() {
               ))}
 
               {!branchId && (canPos || canKds) && (
-                <p className="rounded-2xl border border-warning/20 bg-warning/10 px-4 py-3 text-sm leading-6 text-warning">
+                <p className="rounded-lg border border-warning/20 bg-warning/10 px-4 py-3 text-sm leading-6 text-warning">
                   Chưa gắn chi nhánh. Liên hệ quản lý.
                 </p>
               )}
               {branchId && branchIsHq && (canPos || canKds) && (
-                <p className="rounded-2xl border border-warning/20 bg-warning/10 px-4 py-3 text-sm leading-6 text-warning">
+                <p className="rounded-lg border border-warning/20 bg-warning/10 px-4 py-3 text-sm leading-6 text-warning">
                   Trụ sở không dùng POS/KDS.
                 </p>
               )}
@@ -329,7 +329,7 @@ export default async function EmployeePage() {
         <Button
           type="submit"
           variant="outline"
-          className="focus-ring-standard inline-flex items-center gap-2 rounded-full border-border/70 bg-white/72 px-4 text-muted-foreground hover:bg-white hover:text-foreground"
+          className="focus-ring-standard inline-flex items-center gap-2 rounded-full border-border bg-card px-4 text-muted-foreground hover:bg-accent hover:text-foreground"
         >
           <LogOut className="size-4" />
           Đăng xuất

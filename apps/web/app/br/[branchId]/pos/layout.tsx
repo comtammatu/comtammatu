@@ -6,7 +6,7 @@ import {
   canAccess,
   extractClaims,
 } from "@comtammatu/shared/auth";
-import { getSurfaceShellClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 
 export default async function PosLayout({
   children,
@@ -41,8 +41,8 @@ export default async function PosLayout({
   return (
     <main
       id="main-content"
-      className={getSurfaceShellClassName(
-        "pos",
+      className={cn(
+        "min-h-screen bg-background",
         "ui-safe-top flex h-dvh touch-manipulation overflow-hidden",
       )}
     >

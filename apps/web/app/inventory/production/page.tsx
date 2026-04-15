@@ -106,7 +106,7 @@ export default async function ProductionPage() {
       />
       {!branchKindSchemaAvailable && (
         <SectionCard
-          className="rounded-2xl border-warning/20 bg-warning/10 text-foreground"
+          className="rounded-lg border-warning/20 bg-warning/10 text-foreground"
           density="compact"
         >
           <p className="text-sm leading-6">

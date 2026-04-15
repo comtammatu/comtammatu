@@ -50,14 +50,14 @@ export function PosTableGate({
         className,
       )}
     >
-      <div className="border-b border-border/60 bg-background px-4 py-4 sm:px-6">
-        <div className="ui-flow-panel rounded-4xl p-5">
+      <div className="border-b border-border bg-background px-4 py-4 sm:px-6">
+        <div className="rounded-xl border bg-card shadow-sm p-5">
           <div className="relative space-y-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-primary">
                   <LayoutGrid className="size-5" />
-                  <p className="app-section-label">Ngữ cảnh phục vụ</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Ngữ cảnh phục vụ</p>
                 </div>
                 <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
                   Chọn đúng bàn trước khi bắt đầu đơn tại chỗ.
@@ -68,7 +68,7 @@ export function PosTableGate({
               </div>
 
               <div className="grid gap-2 sm:grid-cols-3">
-                <div className="ui-surface-lift rounded-3xl border border-border/60 bg-white/82 p-3 shadow-sm">
+                <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-3 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Bàn trống
                   </p>
@@ -76,7 +76,7 @@ export function PosTableGate({
                     {availableCount}
                   </p>
                 </div>
-                <div className="ui-surface-lift rounded-3xl border border-border/60 bg-white/82 p-3 shadow-sm">
+                <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-3 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Đang sử dụng
                   </p>
@@ -84,7 +84,7 @@ export function PosTableGate({
                     {occupiedCount}
                   </p>
                 </div>
-                <div className="ui-surface-lift rounded-3xl border border-primary/20 bg-primary/8 p-3 shadow-sm">
+                <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-primary/20 bg-primary/8 p-3 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-wide text-primary">
                     Bàn đang chọn
                   </p>
@@ -106,18 +106,18 @@ export function PosTableGate({
                     : "Sẵn sàng mở menu"}
                 </span>
               </div>
-              <div className="ui-flow-progress">
+              <div className="h-2 w-full rounded-full bg-muted">
                 <div
-                  className="ui-flow-progress-bar"
+                  className="h-full rounded-full bg-primary transition-all"
                   style={{ width: `${selectionProgress}%` }}
                 />
               </div>
             </div>
 
             <div className="grid gap-3 lg:grid-cols-3">
-              <div className="ui-flow-step" data-state="done">
+              <div className="rounded-lg border bg-card shadow-sm p-3" data-state="done">
                 <div className="flex items-start gap-3">
-                  <div className="ui-flow-stage-index">1</div>
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">1</div>
                   <div>
                     <p className="text-sm font-semibold">Chế độ phục vụ</p>
                     <p className="text-xs leading-5 text-muted-foreground">
@@ -127,11 +127,11 @@ export function PosTableGate({
                 </div>
               </div>
               <div
-                className="ui-flow-step"
+                className="rounded-lg border bg-card shadow-sm p-3"
                 data-state={selectedTableId == null ? "current" : "done"}
               >
                 <div className="flex items-start gap-3">
-                  <div className="ui-flow-stage-index">2</div>
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">2</div>
                   <div>
                     <p className="text-sm font-semibold">Chọn bàn đang phục vụ</p>
                     <p className="text-xs leading-5 text-muted-foreground">
@@ -141,11 +141,11 @@ export function PosTableGate({
                 </div>
               </div>
               <div
-                className="ui-flow-step"
+                className="rounded-lg border bg-card shadow-sm p-3"
                 data-state={selectedTableId == null ? "todo" : "done"}
               >
                 <div className="flex items-start gap-3">
-                  <div className="ui-flow-stage-index">3</div>
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">3</div>
                   <div>
                     <p className="text-sm font-semibold">Bắt đầu lên món</p>
                     <p className="text-xs leading-5 text-muted-foreground">
@@ -167,12 +167,12 @@ export function PosTableGate({
         </div>
       ) : (
         <ScrollArea className="min-h-0 flex-1">
-          <div className="ui-content-auto mx-auto w-full max-w-6xl space-y-6 p-4 sm:p-6">
+          <div className="mx-auto w-full max-w-6xl space-y-6 p-4 sm:p-6">
             {Array.from(tablesByZone.entries()).map(([zoneName, zoneTables]) => (
               <section key={zoneName} className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <div className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       <MapPinned className="size-5" />
                     </div>
                     <div>
@@ -184,7 +184,7 @@ export function PosTableGate({
                       </p>
                     </div>
                   </div>
-                  <span className="rounded-full border border-border/70 bg-white/82 px-3 py-1 text-xs font-semibold text-muted-foreground">
+                  <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
                     {
                       zoneTables.filter((table) => table.status === "available")
                         .length
@@ -209,11 +209,11 @@ export function PosTableGate({
                             : `Bàn ${String(table.number)} — đang sử dụng`
                         }
                         className={cn(
-                          "ui-surface-lift flex min-h-28 flex-col items-start justify-between rounded-3xl border p-4 text-left transition-all",
+                          "transition-all hover:-translate-y-0.5 hover:shadow-md flex min-h-28 flex-col items-start justify-between rounded-xl border p-4 text-left",
                           isSelected
                             ? "border-primary/30 bg-primary text-primary-foreground shadow-md"
                             : isAvailable
-                              ? "border-border/70 bg-card/92 shadow-sm hover:border-primary/25 hover:bg-white"
+                              ? "border-border bg-card shadow-sm hover:border-primary/25"
                               : "cursor-not-allowed border-border/50 bg-muted/55 text-muted-foreground/65",
                         )}
                         onClick={() => onTableSelect(isSelected ? null : table.id)}
@@ -273,7 +273,7 @@ export function PosTableGate({
         </ScrollArea>
       )}
 
-      <div className="border-t border-border/60 bg-background px-4 py-3 sm:px-6">
+      <div className="border-t border-border bg-background px-4 py-3 sm:px-6">
         <p className="text-center text-xs text-muted-foreground">
           {selectedTableId == null
             ? "Chạm một bàn trống để tiếp tục mở menu."

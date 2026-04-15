@@ -1,76 +1,74 @@
 import type { ReactNode } from "react";
-import {
-  cn,
-  getSurfacePanelClassName,
-  getSurfaceStackClassName,
-  getToneBadgeClassName,
-  type UiDensity,
-  type UiSurface,
-  type UiTone,
-} from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 
-const TITLE_CLASSNAME: Record<UiDensity, string> = {
-  compact: "text-xl font-bold tracking-tight md:text-2xl",
-  comfortable: "text-2xl font-bold tracking-tight md:text-3xl",
-  touch: "text-3xl font-bold tracking-tight md:text-4xl",
+export type StatusTone = "success" | "warning" | "danger" | "info" | "neutral";
+
+const TONE_CLASSNAMES: Record<StatusTone, string> = {
+  success: "bg-green-50 text-green-700 border-green-200",
+  warning: "bg-amber-50 text-amber-700 border-amber-200",
+  danger: "bg-red-50 text-red-700 border-red-200",
+  info: "bg-blue-50 text-blue-700 border-blue-200",
+  neutral: "bg-muted text-muted-foreground border-border",
 };
 
-const DESCRIPTION_CLASSNAME: Record<UiDensity, string> = {
-  compact: "max-w-3xl text-sm leading-6 text-muted-foreground",
-  comfortable: "max-w-3xl text-sm leading-6 text-muted-foreground",
-  touch: "max-w-3xl text-base leading-7 text-muted-foreground",
-};
-
+/** @deprecated surface/density props are ignored — kept for backward compat */
 export function PageContainer({
   children,
   className,
-  density = "comfortable",
 }: {
   children: ReactNode;
   className?: string;
-  density?: UiDensity;
+  /** @deprecated ignored */
+  density?: string;
 }) {
   return (
-    <section className={getSurfaceStackClassName(density, className)}>
+    <section className={cn("space-y-5 p-5 md:space-y-6 md:p-6", className)}>
       {children}
     </section>
   );
 }
 
+/** @deprecated surface/density props are ignored — kept for backward compat */
 export function PageHeader({
   eyebrow,
   title,
   description,
   actions,
   className,
-  density = "comfortable",
-  surface = "admin",
 }: {
   eyebrow?: string;
   title: string;
   description?: string;
   actions?: ReactNode;
   className?: string;
-  density?: UiDensity;
-  surface?: UiSurface;
+  /** @deprecated ignored */
+  density?: string;
+  /** @deprecated ignored */
+  surface?: string;
 }) {
   return (
     <header
-      data-surface={surface}
-      data-density={density}
       className={cn(
-        "ui-page-header flex flex-wrap items-start justify-between gap-3",
+        "flex flex-wrap items-start justify-between gap-3",
         className,
       )}
     >
       <div className="space-y-2">
-        {eyebrow ? <p className="app-section-label">{eyebrow}</p> : null}
-        <h1 className={TITLE_CLASSNAME[density]}>{title}</h1>
+        {eyebrow ? (
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            {eyebrow}
+          </p>
+        ) : null}
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+          {title}
+        </h1>
         {description ? (
-          <p className={DESCRIPTION_CLASSNAME[density]}>{description}</p>
+          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+            {description}
+          </p>
         ) : null}
       </div>
       {actions ? (
@@ -80,21 +78,21 @@ export function PageHeader({
   );
 }
 
+/** @deprecated surface prop is ignored — kept for backward compat */
 export function FilterBar({
   children,
   className,
-  surface = "admin",
 }: {
   children: ReactNode;
   className?: string;
-  surface?: UiSurface;
+  /** @deprecated ignored */
+  surface?: string;
 }) {
   return (
     <div
-      data-surface={surface}
-      className={getSurfacePanelClassName(
-        surface,
-        cn("flex flex-wrap items-end gap-3 rounded-2xl p-4 md:p-5", className),
+      className={cn(
+        "flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4 shadow-sm md:p-5",
+        className,
       )}
     >
       {children}
@@ -102,33 +100,29 @@ export function FilterBar({
   );
 }
 
+/** @deprecated surface/density props are ignored — kept for backward compat */
 export function EmptyState({
   icon,
   title,
   description,
   action,
   className,
-  surface = "admin",
-  density = "comfortable",
 }: {
   icon?: ReactNode;
   title: string;
   description?: string;
   action?: ReactNode;
   className?: string;
-  surface?: UiSurface;
-  density?: UiDensity;
+  /** @deprecated ignored */
+  surface?: string;
+  /** @deprecated ignored */
+  density?: string;
 }) {
   return (
     <div
-      data-surface={surface}
-      data-density={density}
-      className={getSurfacePanelClassName(
-        surface,
-        cn(
-          "flex min-h-55 flex-col items-center justify-center gap-3 rounded-2xl px-6 text-center",
-          className,
-        ),
+      className={cn(
+        "flex min-h-52 flex-col items-center justify-center gap-3 rounded-lg border bg-card px-6 text-center shadow-sm",
+        className,
       )}
     >
       {icon ? <div className="text-muted-foreground/60">{icon}</div> : null}
@@ -143,6 +137,19 @@ export function EmptyState({
   );
 }
 
+const STEP_STATE_CLASSNAMES: Record<string, string> = {
+  todo: "border-border bg-muted/50 text-muted-foreground",
+  current: "border-primary bg-primary/10 text-primary",
+  done: "border-green-200 bg-green-50 text-green-700",
+};
+
+const STEP_INDEX_CLASSNAMES: Record<string, string> = {
+  todo: "border-border bg-background text-muted-foreground",
+  current: "border-primary bg-primary text-primary-foreground",
+  done: "border-green-200 bg-green-100 text-green-700",
+};
+
+/** @deprecated surface prop is ignored — kept for backward compat */
 export function FlowStatePanel({
   title,
   description,
@@ -153,13 +160,12 @@ export function FlowStatePanel({
   actions,
   className,
   wrapperClassName,
-  surface = "admin",
 }: {
   title: string;
   description?: string;
   icon?: ReactNode;
   status?: ReactNode;
-  statusTone?: UiTone;
+  statusTone?: StatusTone;
   steps?: Array<{
     label: string;
     description?: string;
@@ -168,7 +174,8 @@ export function FlowStatePanel({
   actions?: ReactNode;
   className?: string;
   wrapperClassName?: string;
-  surface?: UiSurface;
+  /** @deprecated ignored */
+  surface?: string;
 }) {
   return (
     <div
@@ -178,10 +185,9 @@ export function FlowStatePanel({
       )}
     >
       <section
-        data-surface={surface}
-        className={getSurfacePanelClassName(
-          surface,
-          cn("ui-flow-panel w-full max-w-4xl rounded-4xl p-5 md:p-6", className),
+        className={cn(
+          "w-full max-w-4xl rounded-lg border bg-card p-5 shadow-sm md:p-6",
+          className,
         )}
       >
         <div className="relative space-y-5">
@@ -189,7 +195,7 @@ export function FlowStatePanel({
             <div className="min-w-0 flex-1">
               <div className="flex items-start gap-3">
                 {icon ? (
-                  <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-border/70 bg-background/85 text-foreground shadow-sm">
+                  <div className="flex size-11 shrink-0 items-center justify-center rounded-lg border bg-background text-foreground shadow-sm">
                     {icon}
                   </div>
                 ) : null}
@@ -205,26 +211,35 @@ export function FlowStatePanel({
                 </div>
               </div>
             </div>
-          {status ? (
-            <StatusBadge
-              tone={statusTone}
-              className="min-h-9 rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm"
-            >
-              {status}
-            </StatusBadge>
-          ) : null}
-        </div>
+            {status ? (
+              <StatusBadge
+                tone={statusTone}
+                className="min-h-9 rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm"
+              >
+                {status}
+              </StatusBadge>
+            ) : null}
+          </div>
 
           {steps?.length ? (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {steps.map((step, index) => (
                 <div
                   key={`${step.label}-${index}`}
-                  className="ui-flow-step"
-                  data-state={step.state}
+                  className={cn(
+                    "rounded-lg border p-3",
+                    STEP_STATE_CLASSNAMES[step.state],
+                  )}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="ui-flow-stage-index">{index + 1}</div>
+                    <div
+                      className={cn(
+                        "flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold",
+                        STEP_INDEX_CLASSNAMES[step.state],
+                      )}
+                    >
+                      {index + 1}
+                    </div>
                     <div>
                       <p className="text-sm font-semibold">{step.label}</p>
                     </div>
@@ -243,30 +258,21 @@ export function FlowStatePanel({
   );
 }
 
+/** @deprecated surface/density props are ignored — kept for backward compat */
 export function SectionCard({
   children,
   className,
-  surface = "admin",
-  density = "comfortable",
 }: {
   children: ReactNode;
   className?: string;
-  surface?: UiSurface;
-  density?: UiDensity;
+  /** @deprecated ignored */
+  surface?: string;
+  /** @deprecated ignored */
+  density?: string;
 }) {
   return (
-    <Card className={getSurfacePanelClassName(surface, className)}>
-      <CardContent
-        className={cn(
-          density === "compact"
-            ? "p-4 md:p-5"
-            : density === "touch"
-              ? "p-6 md:p-7"
-              : "p-5 md:p-6",
-        )}
-      >
-        {children}
-      </CardContent>
+    <Card className={cn("rounded-lg border bg-card shadow-sm", className)}>
+      <CardContent className="p-5 md:p-6">{children}</CardContent>
     </Card>
   );
 }
@@ -276,14 +282,14 @@ export function StatusBadge({
   className,
   children,
 }: {
-  tone?: UiTone;
+  tone?: StatusTone;
   className?: string;
   children: ReactNode;
 }) {
   return (
     <Badge
       variant="outline"
-      className={getToneBadgeClassName(tone, className)}
+      className={cn(TONE_CLASSNAMES[tone], className)}
     >
       {children}
     </Badge>

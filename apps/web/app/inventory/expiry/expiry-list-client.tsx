@@ -182,7 +182,7 @@ export function ExpiryListClient({
 
   function renderTable(items: ExpiryAlertRow[]) {
     return (
-      <SectionCard className="overflow-hidden rounded-2xl" density="compact">
+      <SectionCard className="overflow-hidden rounded-lg" density="compact">
         {/* Search + branch filter bar */}
         <div className="-m-4 flex flex-wrap items-center gap-3 border-b bg-muted/20 px-4 py-3 md:-m-5 md:px-5">
           <Search className="size-4 shrink-0 text-muted-foreground" />

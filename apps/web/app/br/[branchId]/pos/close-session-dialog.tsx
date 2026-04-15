@@ -126,11 +126,11 @@ export function CloseSessionDialog({
 
         {summary ? (
           <div className="flex flex-col gap-3">
-            <div className="ui-flow-panel p-4">
+            <div className="rounded-lg border bg-card shadow-sm p-4">
               <div className="relative space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="app-section-label">Tổng kết ca</p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tổng kết ca</p>
                     <p className="mt-1 text-base font-semibold">
                       Ca đã được đối soát, chỉ còn bước xác nhận cuối.
                     </p>
@@ -139,16 +139,16 @@ export function CloseSessionDialog({
                     100%
                   </div>
                 </div>
-                <div className="ui-flow-progress">
+                <div className="h-2 w-full rounded-full bg-muted">
                   <div
-                    className="ui-flow-progress-bar"
+                    className="h-full rounded-full bg-primary transition-all"
                     style={{ width: "100%" }}
                   />
                 </div>
               </div>
             </div>
 
-            <div className="ui-flow-panel p-4">
+            <div className="rounded-lg border bg-card shadow-sm p-4">
               <div className="relative flex flex-col gap-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Tiền đầu ca</span>
@@ -190,7 +190,7 @@ export function CloseSessionDialog({
                 </div>
                 <div
                   className={cn(
-                    "rounded-2xl border px-3 py-2 text-xs font-medium",
+                    "rounded-lg border px-3 py-2 text-xs font-medium",
                     summary.cash_difference === 0
                       ? "border-success/20 bg-success/10 text-success"
                       : Math.abs(summary.cash_difference) <= 50000
@@ -209,7 +209,7 @@ export function CloseSessionDialog({
 
             <DialogFooter>
               <Button
-                className="w-full rounded-2xl shadow-sm transition-transform hover:translate-y-[-1px]"
+                className="w-full rounded-lg shadow-sm transition-transform hover:translate-y-[-1px]"
                 size="lg"
                 onClick={handleConfirm}
               >
@@ -220,33 +220,33 @@ export function CloseSessionDialog({
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            <div className="ui-flow-panel p-4">
+            <div className="rounded-lg border bg-card shadow-sm p-4">
               <div className="relative space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="app-section-label">Đóng ca</p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Đóng ca</p>
                     <p className="mt-1 text-base font-semibold">
                       Nhập tiền mặt cuối ca để hệ thống đối chiếu và chốt phiên.
                     </p>
                   </div>
-                  <div className="rounded-full border border-primary/15 bg-white/82 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
+                  <div className="rounded-full border border-primary/15 bg-card px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
                     {String(Math.round(closeProgressPercent))}%
                   </div>
                 </div>
-                <div className="ui-flow-progress">
+                <div className="h-2 w-full rounded-full bg-muted">
                   <div
-                    className="ui-flow-progress-bar"
+                    className="h-full rounded-full bg-primary transition-all"
                     data-indeterminate={isPending ? "true" : undefined}
                     style={isPending ? undefined : { width: `${closeProgressPercent}%` }}
                   />
                 </div>
                 <div className="grid gap-2 sm:grid-cols-3">
                   <div
-                    className="ui-flow-step"
+                    className="rounded-lg border bg-card shadow-sm p-3"
                     data-state={closingCash !== "" ? "done" : "current"}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="ui-flow-stage-index">
+                      <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">
                         <CircleDollarSign className="size-3.5" />
                       </div>
                       <div>
@@ -258,11 +258,11 @@ export function CloseSessionDialog({
                     </div>
                   </div>
                   <div
-                    className="ui-flow-step"
+                    className="rounded-lg border bg-card shadow-sm p-3"
                     data-state={isPending ? "current" : closingCash !== "" ? "done" : "todo"}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="ui-flow-stage-index">
+                      <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">
                         <ShieldCheck className="size-3.5" />
                       </div>
                       <div>
@@ -274,11 +274,11 @@ export function CloseSessionDialog({
                     </div>
                   </div>
                   <div
-                    className="ui-flow-step"
+                    className="rounded-lg border bg-card shadow-sm p-3"
                     data-state={summary ? "done" : "todo"}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="ui-flow-stage-index">
+                      <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">
                         <AlertTriangle className="size-3.5" />
                       </div>
                       <div>
@@ -320,14 +320,14 @@ export function CloseSessionDialog({
             <DialogFooter>
               <Button
                 variant="outline"
-                className="rounded-2xl"
+                className="rounded-lg"
                 onClick={() => onOpenChange(false)}
                 disabled={isPending}
               >
                 Hủy
               </Button>
               <Button
-                className="rounded-2xl"
+                className="rounded-lg"
                 onClick={handleClose}
                 disabled={isPending || closingCash === ""}
               >

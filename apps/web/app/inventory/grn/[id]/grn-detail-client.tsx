@@ -10,7 +10,7 @@ import {
   AlertTriangle,
   X,
 } from "lucide-react";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import {
   Table,
   TableBody,
@@ -49,7 +49,7 @@ export type GRNDetail = {
 export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
   const qcPassed = grn.items.filter((i) => i.status === "pass").length;
   const qcWarning = grn.items.filter((i) => i.status === "warning").length;
-  const panelClassName = getSurfacePanelClassName("inventory", "ambient-shadow");
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
 
   return (
     <div className="space-y-6">
@@ -64,7 +64,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
       <section
         className={cn(
           panelClassName,
-          "relative overflow-hidden rounded-2xl bg-muted p-5 shadow-sm sm:p-6 lg:p-8",
+          "relative overflow-hidden bg-muted p-5 sm:p-6 lg:p-8",
         )}
       >
         <div className="absolute right-5 top-5 sm:right-6 sm:top-6 lg:right-8 lg:top-8">
@@ -96,7 +96,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
             </div>
           </div>
 
-          <div className="space-y-4 border-border/40 md:border-l md:pl-8 lg:pl-12">
+          <div className="space-y-4 border-border md:border-l md:pl-8 lg:pl-12">
             <div>
               <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
                 Nhà cung cấp
@@ -111,7 +111,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
             </div>
           </div>
 
-          <div className="space-y-4 border-border/40 md:border-l md:pl-8 lg:pl-12">
+          <div className="space-y-4 border-border md:border-l md:pl-8 lg:pl-12">
             <div>
               <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
                 Tổng giá trị nhập
@@ -134,9 +134,9 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <section
-            className={cn(panelClassName, "overflow-hidden rounded-2xl bg-card")}
+            className={cn(panelClassName, "overflow-hidden")}
           >
-            <div className="flex flex-col gap-3 border-b border-border/50 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <h4 className="text-lg font-bold">Danh sách mặt hàng nhập</h4>
               <span className="text-xs font-medium text-muted-foreground">
                 {grn.items.length} mặt hàng
@@ -147,7 +147,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
               {grn.items.map((item) => (
                 <div
                   key={item.sku || item.name}
-                  className="rounded-2xl border border-border/70 bg-muted/20 p-4"
+                  className="rounded-lg border border-border bg-muted/20 p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -271,8 +271,8 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
         {/* Sidebar -- 1/3 */}
         <div className="space-y-4">
           {/* Quality Summary */}
-          <SectionCard className={cn(panelClassName, "rounded-2xl bg-card")} density="compact">
-            <div className="-m-5 border-b border-border/50 px-5 py-5 md:-m-6 md:px-6 md:py-6">
+          <SectionCard className={panelClassName} density="compact">
+            <div className="-m-5 border-b border-border px-5 py-5 md:-m-6 md:px-6 md:py-6">
               <h4 className="text-sm font-bold">Tổng hợp chất lượng</h4>
             </div>
             <div className="space-y-3">
@@ -299,7 +299,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
 
           {/* Total value card */}
           <SectionCard
-            className="rounded-2xl border-primary/20 bg-primary/5"
+            className="rounded-lg border-primary/20 bg-primary/5"
             density="compact"
           >
             <p className="text-label uppercase tracking-wider text-muted-foreground">
@@ -325,7 +325,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
       </div>
 
       {/* Footer Action Bar */}
-      <footer className="flex flex-col gap-3 border-t border-border/50 py-6 sm:flex-row sm:items-center sm:justify-between">
+      <footer className="flex flex-col gap-3 border-t border-border py-6 sm:flex-row sm:items-center sm:justify-between">
         <Button
           type="button"
           variant="ghost"
@@ -336,7 +336,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
         </Button>
         <Button
           type="button"
-          className="justify-center shadow-lg shadow-primary/20 transition-transform hover:scale-[0.98]"
+          className="justify-center shadow-lg transition-transform hover:scale-[0.98]"
         >
           <CheckCircle className="size-5" />
           Xác nhận nhập kho

@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import { PageHeader, StatusBadge } from "../_components/shared";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { tNav } from "../_lib/dictionary";
@@ -62,10 +62,7 @@ export function ReceivingClient({
   invoiceCount,
   recentActivity,
 }: ReceivingProps) {
-  const panelClassName = getSurfacePanelClassName(
-    "inventory",
-    "ambient-shadow",
-  );
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const steps = [
     {
       step: 1,
@@ -121,7 +118,7 @@ export function ReceivingClient({
               key={item.step}
               className={cn(
                 panelClassName,
-                "group relative overflow-hidden rounded-3xl bg-card shadow-sm transition-shadow hover:shadow-md",
+                "group relative overflow-hidden rounded-xl bg-card shadow-sm transition-shadow hover:shadow-md",
               )}
               density="touch"
             >
@@ -190,7 +187,7 @@ export function ReceivingClient({
           <div
             className={cn(
               panelClassName,
-              "overflow-hidden rounded-3xl bg-card",
+              "overflow-hidden rounded-xl bg-card",
             )}
           >
             <Table>
@@ -223,7 +220,7 @@ export function ReceivingClient({
                 {recentActivity.map((item) => (
                   <TableRow
                     key={item.code}
-                    className="border-border/40 transition-colors"
+                    className="border-border transition-colors"
                   >
                     <TableCell className="px-6 py-4 font-mono text-sm font-medium">
                       <Link
@@ -255,19 +252,19 @@ export function ReceivingClient({
         {/* Sidebar */}
         <div className="space-y-4">
           {/* Quick Actions */}
-          <div className={cn(panelClassName, "rounded-3xl bg-card p-5")}>
+          <div className={cn(panelClassName, "rounded-xl bg-card p-5")}>
             <h4 className="mb-3 text-sm font-semibold">Thao tác nhanh</h4>
             <div className="space-y-2">
               <Link
                 href="/inventory/purchase-orders/new"
-                className="focus-ring-standard flex w-full items-center gap-2 rounded-full border border-border/60 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
+                className="focus-ring-standard flex w-full items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
               >
                 <Zap className="size-4 text-primary" />
                 Tạo PO nhanh
               </Link>
               <button
                 type="button"
-                className="focus-ring-standard flex w-full items-center gap-2 rounded-full border border-border/60 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
+                className="focus-ring-standard flex w-full items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
               >
                 Nhập hàng không qua PO
               </button>
@@ -275,7 +272,7 @@ export function ReceivingClient({
           </div>
 
           {/* Tip Card */}
-          <div className="rounded-3xl border border-primary/10 bg-primary/5 p-5">
+          <div className="rounded-xl border border-primary/10 bg-primary/5 p-5">
             <div className="flex items-center gap-2">
               <Lightbulb className="size-4 text-primary" />
               <p className="text-xs font-semibold text-muted-foreground">

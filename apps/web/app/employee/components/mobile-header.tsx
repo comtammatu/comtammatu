@@ -4,7 +4,7 @@ import {
   extractClaims,
   ROLE_LABEL_VI,
 } from "@comtammatu/shared/auth";
-import { getSurfaceHeaderClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import { redirect } from "next/navigation";
 
 export async function MobileHeader() {
@@ -33,14 +33,14 @@ export async function MobileHeader() {
 
   return (
     <header
-      className={getSurfaceHeaderClassName(
-        "employee",
-        "ui-safe-top border-border/60 bg-background/92",
+      className={cn(
+        "sticky top-0 z-30 border-b bg-background",
+        "ui-safe-top",
       )}
     >
       <div className="mx-auto flex min-h-15 w-full max-w-6xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
         <div className="min-w-0 space-y-1">
-          <p className="app-section-label">Cổng nhân viên</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Cổng nhân viên</p>
           <p className="truncate text-sm font-semibold text-foreground">
             {branchName ?? "Không gian cá nhân"}
           </p>

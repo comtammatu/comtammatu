@@ -86,7 +86,7 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
     <>
       <div className="space-y-4">
         {invoices.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border px-6 py-10 text-center">
+          <div className="rounded-lg border border-dashed border-border px-6 py-10 text-center">
             <Receipt className="mx-auto size-8 text-muted-foreground" />
             <p className="mt-3 text-sm text-muted-foreground">
               Chưa có hóa đơn nào
@@ -98,7 +98,7 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
           {invoices.map((inv) => (
             <div
               key={inv.id}
-              className="rounded-2xl border border-border/70 bg-background p-4"
+              className="rounded-lg border border-border/70 bg-background p-4"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>

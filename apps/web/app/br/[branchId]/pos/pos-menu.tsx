@@ -611,7 +611,7 @@ export function PosMenu({
   const activeMenuItemCount = activeCategory?.menu_items.length ?? 0;
 
   const sessionHeader = (
-    <div className="border-b border-border/60 bg-background/92 px-3 py-3 backdrop-blur-xl md:px-4">
+    <div className="border-b border-border/60 bg-card px-3 py-3 md:px-4">
       <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -643,11 +643,11 @@ export function PosMenu({
           </Button>
         </div>
 
-                <div className="ui-flow-panel rounded-4xl p-4 md:p-5">
+                <div className="rounded-xl border bg-card shadow-sm p-4 md:p-5">
           <div className="relative space-y-4">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div className="space-y-2">
-                <p className="app-section-label">Ca POS</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Ca POS</p>
                 <h1 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
                   {flowHeadline}
                 </h1>
@@ -656,7 +656,7 @@ export function PosMenu({
                 </p>
               </div>
               <div className="grid gap-2 sm:grid-cols-2 xl:min-w-88">
-                <div className="ui-surface-lift rounded-3xl border border-border/60 bg-white/84 p-3 shadow-sm">
+                <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-3 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Ngữ cảnh hiện tại
                   </p>
@@ -668,7 +668,7 @@ export function PosMenu({
                         : "Chưa gán bàn"}
                   </p>
                 </div>
-                <div className="ui-surface-lift rounded-3xl border border-border/60 bg-white/84 p-3 shadow-sm">
+                <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-3 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Đơn đang chạy
                   </p>
@@ -680,21 +680,21 @@ export function PosMenu({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
-              <span className="rounded-full border border-border/70 bg-white/70 px-3 py-1.5">
+              <span className="rounded-full border border-border/70 bg-card px-3 py-1.5">
                 {isPending
                   ? "Đang xử lý thay đổi đơn"
                   : `${String(Math.round(flowProgressPercent))}% mạch tạo đơn đã sẵn`}
               </span>
-              <span className="rounded-full border border-border/70 bg-white/70 px-3 py-1.5">
+              <span className="rounded-full border border-border/70 bg-card px-3 py-1.5">
                 {canSubmit ? "Có thể gửi bếp" : "Chưa đủ điều kiện gửi bếp"}
               </span>
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
               {flowSteps.map((step, index) => (
-                <div key={step.label} className="ui-flow-step" data-state={step.state}>
+                <div key={step.label} className="rounded-lg border bg-card shadow-sm p-3" data-state={step.state}>
                   <div className="flex items-start gap-3">
-                    <div className="ui-flow-stage-index">{index + 1}</div>
+                    <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">{index + 1}</div>
                     <div className="space-y-1">
                       <p className="text-sm font-semibold">{step.label}</p>
                       <p className="text-xs leading-5 text-muted-foreground">
@@ -707,7 +707,7 @@ export function PosMenu({
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="ui-surface-lift rounded-3xl border border-primary/15 bg-primary/8 p-3 shadow-sm">
+              <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-primary/15 bg-primary/8 p-3 shadow-sm">
                 <p className="text-xs font-semibold uppercase tracking-wide text-primary">
                   Giỏ hiện tại
                 </p>
@@ -715,7 +715,7 @@ export function PosMenu({
                   {cartQuantity > 0 ? `${cartQuantity} món` : "Chưa có món trong giỏ"}
                 </p>
               </div>
-              <div className="ui-surface-lift rounded-3xl border border-success/15 bg-success/10 p-3 shadow-sm">
+              <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-success/15 bg-success/10 p-3 shadow-sm">
                 <p className="text-xs font-semibold uppercase tracking-wide text-success">
                   Đơn sẵn sàng
                 </p>
@@ -723,7 +723,7 @@ export function PosMenu({
                   {readySessionOrders.length} đơn
                 </p>
               </div>
-              <div className="ui-surface-lift rounded-3xl border border-border/60 bg-white/84 p-3 shadow-sm">
+              <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-3 shadow-sm">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Đã hoàn tất
                 </p>
@@ -731,7 +731,7 @@ export function PosMenu({
                   {completedSessionOrders.length} đơn
                 </p>
               </div>
-              <div className="ui-surface-lift rounded-3xl border border-warning/15 bg-warning/10 p-3 shadow-sm">
+              <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-warning/15 bg-warning/10 p-3 shadow-sm">
                 <p className="text-xs font-semibold uppercase tracking-wide text-warning">
                   Doanh thu ca
                 </p>
@@ -750,7 +750,7 @@ export function PosMenu({
     appendTarget != null ? (
       <div className="border-b border-warning/15 bg-warning/10 px-3 py-3 md:px-4" role="status">
         <div className="mx-auto w-full max-w-screen-2xl">
-          <div className="ui-flow-panel rounded-3xl border-warning/20 bg-warning/10 p-3">
+          <div className="rounded-xl border border-warning/20 bg-warning/10 shadow-sm p-3">
             <div className="relative flex items-center justify-between gap-2">
               <p className="min-w-0 text-sm leading-6 text-foreground">
                 <span className="font-semibold">
@@ -778,7 +778,7 @@ export function PosMenu({
     ) : null;
 
   const serviceModeSelector = (
-    <div className="ui-flow-panel rounded-4xl p-3">
+    <div className="rounded-xl border bg-card shadow-sm p-3">
           <div className="relative space-y-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -798,7 +798,7 @@ export function PosMenu({
             role="radio"
             aria-checked={orderType === "dine_in"}
             className={cn(
-              "touch-target flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              "touch-target flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               orderType === "dine_in"
                 ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
                 : "border-border/70 bg-background text-foreground hover:border-primary/20",
@@ -813,7 +813,7 @@ export function PosMenu({
             role="radio"
             aria-checked={orderType === "takeaway"}
             className={cn(
-              "touch-target flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              "touch-target flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               orderType === "takeaway"
                 ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
                 : "border-border/70 bg-background text-foreground hover:border-primary/20",
@@ -831,7 +831,7 @@ export function PosMenu({
   const workflowRail = (
     <aside className="hidden xl:flex xl:w-80 xl:shrink-0 xl:flex-col xl:gap-4 xl:border-r xl:border-border/60 xl:bg-background/70 xl:p-4">
       {serviceModeSelector}
-      <div className="ui-flow-panel rounded-4xl p-4">
+      <div className="rounded-xl border bg-card shadow-sm p-4">
           <div className="relative space-y-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -857,10 +857,10 @@ export function PosMenu({
             {flowSteps.map((step, index) => (
               <div
                 key={step.label}
-                className="ui-surface-lift rounded-3xl border border-border/60 bg-white/82 px-3 py-3 shadow-sm"
+                className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card px-3 py-3 shadow-sm"
               >
                 <div className="flex items-start gap-3">
-                  <div className="ui-flow-stage-index">{index + 1}</div>
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">{index + 1}</div>
                   <div>
                     <p className="text-sm font-semibold text-foreground">
                       {step.label}
@@ -877,7 +877,7 @@ export function PosMenu({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-        <div className="ui-surface-lift rounded-3xl border border-border/60 bg-white/82 p-4 shadow-sm">
+        <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Đơn đang chạy
           </p>
@@ -885,7 +885,7 @@ export function PosMenu({
             {activeSessionOrders.length}
           </p>
         </div>
-        <div className="ui-surface-lift rounded-3xl border border-success/15 bg-success/10 p-4 shadow-sm">
+        <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-success/15 bg-success/10 p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-success">
             Sẵn sàng giao
           </p>
@@ -909,7 +909,7 @@ export function PosMenu({
           role="tab"
           aria-selected={!showOrders}
           className={cn(
-            "touch-target flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold transition-all",
+            "touch-target flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all",
             !showOrders
               ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
               : "border-border/70 bg-background text-muted-foreground hover:text-foreground",
@@ -928,7 +928,7 @@ export function PosMenu({
           role="tab"
           aria-selected={showOrders}
           className={cn(
-            "touch-target flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold transition-all",
+            "touch-target flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all",
             showOrders
               ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
               : "border-border/70 bg-background text-muted-foreground hover:text-foreground",
@@ -1040,7 +1040,7 @@ export function PosMenu({
                     <div className="space-y-3">
                       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div className="space-y-1">
-                          <p className="app-section-label">Khu thực đơn</p>
+                          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Khu thực đơn</p>
                           <h2 className="text-xl font-semibold tracking-tight text-foreground">
                             {activeZoneLabel}
                           </h2>
@@ -1050,7 +1050,7 @@ export function PosMenu({
                           </p>
                         </div>
                         <div className="grid gap-2 sm:grid-cols-3">
-                          <div className="ui-surface-lift rounded-3xl border border-border/60 bg-white/82 px-4 py-3 shadow-sm">
+                          <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
                             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                               Danh mục
                             </p>
@@ -1058,7 +1058,7 @@ export function PosMenu({
                               {categoriesInActiveZone.length}
                             </p>
                           </div>
-                          <div className="ui-surface-lift rounded-3xl border border-primary/15 bg-primary/8 px-4 py-3 shadow-sm">
+                          <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-primary/15 bg-primary/8 px-4 py-3 shadow-sm">
                             <p className="text-xs font-semibold uppercase tracking-wide text-primary">
                               Giỏ hiện tại
                             </p>
@@ -1066,7 +1066,7 @@ export function PosMenu({
                               {cartQuantity} món
                             </p>
                           </div>
-                          <div className="ui-surface-lift rounded-3xl border border-success/15 bg-success/10 px-4 py-3 shadow-sm">
+                          <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-success/15 bg-success/10 px-4 py-3 shadow-sm">
                             <p className="text-xs font-semibold uppercase tracking-wide text-success">
                               Tạm tính
                             </p>
@@ -1090,10 +1090,10 @@ export function PosMenu({
                               role="tab"
                               aria-selected={effectiveMenuZone === z}
                               className={cn(
-                                "touch-target flex h-11 shrink-0 cursor-pointer items-center rounded-2xl border px-4 text-sm font-semibold transition-all",
+                                "touch-target flex h-11 shrink-0 cursor-pointer items-center rounded-lg border px-4 text-sm font-semibold transition-all",
                                 effectiveMenuZone === z
                                   ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
-                                  : "border-border/70 bg-white/72 text-muted-foreground hover:bg-muted hover:text-foreground",
+                                  : "border-border/70 bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
                               )}
                               onClick={() => setActiveMenuZone(z)}
                             >
@@ -1117,10 +1117,10 @@ export function PosMenu({
                                 role="tab"
                                 aria-selected={activeCategoryId === cat.id}
                                 className={cn(
-                                  "touch-target flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-2xl border px-3 text-sm font-medium transition-all",
+                                  "touch-target flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-all",
                                   activeCategoryId === cat.id
                                     ? "border-primary/25 bg-primary/10 text-primary font-semibold shadow-sm"
-                                    : "border-border/70 bg-white/72 text-muted-foreground hover:bg-muted hover:text-foreground",
+                                    : "border-border/70 bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
                                 )}
                                 onClick={() => setActiveCategoryId(cat.id)}
                               >
@@ -1144,7 +1144,7 @@ export function PosMenu({
                   </div>
 
                   <ScrollArea className="flex-1">
-                    <div className="ui-content-auto grid grid-cols-1 gap-3 p-3 md:grid-cols-2 md:p-4 xl:grid-cols-3 2xl:grid-cols-4">
+                    <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 md:p-4 xl:grid-cols-3 2xl:grid-cols-4">
                       {activeCategory?.menu_items.map((item) => {
                         const hasCustomization =
                           item.menu_item_variants.length > 0 ||
@@ -1155,7 +1155,7 @@ export function PosMenu({
                           <button
                             key={item.id}
                             type="button"
-                            className="ui-surface-lift touch-target-lg focus-ring-standard flex min-h-40 cursor-pointer flex-col rounded-4xl border border-border/70 bg-card/92 p-4 text-left shadow-sm transition-all hover:border-primary/25 hover:bg-white active:scale-[0.985]"
+                            className="transition-all hover:-translate-y-0.5 hover:shadow-md touch-target-lg focus-ring-standard flex min-h-40 cursor-pointer flex-col rounded-xl border border-border bg-card p-4 text-left shadow-sm hover:border-primary/25 active:scale-[0.985]"
                             onClick={() => handleItemTap(item)}
                           >
                             <div className="flex items-start justify-between gap-3">

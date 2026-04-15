@@ -63,11 +63,11 @@ export default async function ProfilePage() {
       <SectionCard surface="employee" density="compact">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <div className="flex size-16 items-center justify-center rounded-3xl bg-primary/10 text-primary">
+            <div className="flex size-16 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <User className="size-8" />
             </div>
             <div className="space-y-1">
-              <p className="app-section-label">Thông tin cá nhân</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Thông tin cá nhân</p>
               <p className="text-xl font-semibold text-foreground">{displayName}</p>
               <p className="text-sm text-muted-foreground">{session.user.email}</p>
             </div>

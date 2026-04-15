@@ -99,7 +99,7 @@ export function RevenueOverview({
           </CardHeader>
           <CardContent className="space-y-4 p-4 sm:p-6">
             {topItems.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+              <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
                 Chưa có dữ liệu
               </div>
             ) : null}
@@ -108,7 +108,7 @@ export function RevenueOverview({
               {topItems.slice(0, 5).map((item) => (
                 <div
                   key={item.menu_item_id}
-                  className="rounded-2xl border border-border/70 bg-muted/25 p-4"
+                  className="rounded-lg border border-border/70 bg-muted/25 p-4"
                 >
                   <p className="font-medium">{item.item_name}</p>
                   <div className="mt-3 flex items-center justify-between gap-3 text-sm">
@@ -176,7 +176,7 @@ export function RevenueOverview({
           </CardHeader>
           <CardContent className="space-y-4 p-4 sm:p-6">
             {last7.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+              <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
                 Chưa có dữ liệu
               </div>
             ) : null}
@@ -185,7 +185,7 @@ export function RevenueOverview({
               {last7.map((row) => (
                 <div
                   key={row.date}
-                  className="rounded-2xl border border-border/70 bg-muted/25 p-4"
+                  className="rounded-lg border border-border/70 bg-muted/25 p-4"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <p className="font-medium">{formatDay(row.date)}</p>

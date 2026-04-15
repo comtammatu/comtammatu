@@ -10,7 +10,7 @@ import {
   Lightbulb,
   Trash2,
 } from "lucide-react";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { tStatus } from "../_lib/dictionary";
 import {
@@ -48,10 +48,7 @@ function getUrgencyBadgeClassName(urgency: string) {
 
 export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
   const [activeTab, setActiveTab] = useState<string>("Tất cả");
-  const panelClassName = getSurfacePanelClassName(
-    "inventory",
-    "ambient-shadow",
-  );
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const filtered =
     activeTab === "Tất cả"
       ? alerts
@@ -79,7 +76,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <SectionCard
-          className={cn(panelClassName, "rounded-2xl bg-card")}
+          className={cn(panelClassName, "rounded-lg bg-card")}
           density="comfortable"
         >
           <div className="mb-4 flex items-start justify-between">
@@ -99,7 +96,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
         </SectionCard>
 
         <SectionCard
-          className={cn(panelClassName, "rounded-2xl bg-card")}
+          className={cn(panelClassName, "rounded-lg bg-card")}
           density="comfortable"
         >
           <div className="mb-4 flex items-start justify-between">
@@ -119,7 +116,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
         </SectionCard>
 
         <SectionCard
-          className={cn(panelClassName, "rounded-2xl bg-card")}
+          className={cn(panelClassName, "rounded-lg bg-card")}
           density="comfortable"
         >
           <div className="mb-4 flex items-start justify-between">
@@ -139,7 +136,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
         </SectionCard>
       </div>
 
-      <div className="flex gap-1 rounded-2xl bg-muted p-1">
+      <div className="flex gap-1 rounded-lg bg-muted p-1">
         {tabs.map((tab) => {
           const isActive = activeTab === tab;
           return (
@@ -161,7 +158,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
       </div>
 
       <div
-        className={cn(panelClassName, "overflow-hidden rounded-3xl bg-card")}
+        className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}
       >
         <Table>
           <TableHeader>
@@ -243,7 +240,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
             </p>
           </div>
         </div>
-        <div className="rounded-xl border border-border/50 bg-muted/50 p-4">
+        <div className="rounded-xl border border-border bg-muted/50 p-4">
           <p className="text-sm font-semibold">Thông báo tự động</p>
           <p className="mt-1 text-xs text-muted-foreground">
             Cài đặt nhắc báo qua Email hoặc Zalo cho quản lý kho khi hàng hóa

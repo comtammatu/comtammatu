@@ -7,7 +7,7 @@ import {
   EmptyState,
   SectionCard,
 } from "@/components/foundation/ui-patterns";
-import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { PageHeader } from "../_components/shared";
 import { formatVND } from "../_lib/format";
@@ -66,7 +66,7 @@ export function RecipesClient({
   ingredients: IngredientOption[];
 }) {
   const router = useRouter();
-  const panelClassName = getSurfacePanelClassName("inventory", "ambient-shadow");
+  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const [lineDialogOpen, setLineDialogOpen] = useState(false);
   const [lineDialogMenuItemId, setLineDialogMenuItemId] = useState<
     number | undefined
@@ -105,7 +105,7 @@ export function RecipesClient({
           <Button
             type="button"
             onClick={() => openAddLine()}
-            className="shadow-lg shadow-primary/25"
+            className="shadow-lg"
           >
             + Tạo món mới
           </Button>
@@ -114,7 +114,7 @@ export function RecipesClient({
 
       {recipes.length === 0 && (
         <EmptyState
-          className={cn(panelClassName, "rounded-2xl bg-card")}
+          className={cn(panelClassName, "rounded-lg bg-card")}
           title="Chưa có công thức nào"
           description='Nhấn "Tạo món mới" để bắt đầu dựng định mức nguyên liệu.'
         />
@@ -124,7 +124,7 @@ export function RecipesClient({
         {recipes.map((recipe) => (
           <SectionCard
             key={recipe.id}
-            className={cn(panelClassName, "overflow-hidden rounded-2xl bg-card")}
+            className={cn(panelClassName, "overflow-hidden rounded-lg bg-card")}
             density="compact"
           >
             {/* Recipe header */}
@@ -196,7 +196,7 @@ export function RecipesClient({
                   {recipe.items.map((item) => (
                     <tr
                       key={item.ingredientId}
-                      className="cursor-pointer border-b border-border/60 transition-colors hover:bg-primary/3"
+                      className="cursor-pointer border-b border-border transition-colors hover:bg-primary/3"
                       onClick={() => openEditLine(recipe.menuItemId, item)}
                     >
                       <td className="px-6 py-4">
@@ -238,7 +238,7 @@ export function RecipesClient({
 
             {/* Cost estimate footer */}
             <div
-              className="flex items-center justify-between border-t border-border/60 px-6 py-4"
+              className="flex items-center justify-between border-t border-border px-6 py-4"
             >
               <span className="text-xs font-medium uppercase tracking-tight text-muted-foreground">
                 Giá vốn tạm tính:{" "}
