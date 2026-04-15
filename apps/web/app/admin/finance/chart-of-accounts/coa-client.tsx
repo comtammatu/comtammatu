@@ -68,7 +68,7 @@ export function ChartOfAccountsClient({
 
   function handleToggle(accountId: number) {
     startTransition(async () => {
-      const result = await toggleAccountActive(accountId);
+      const result = await toggleAccountActive({ id: accountId });
       if (result.success) {
         setAccounts((prev) =>
           prev.map((a) =>

@@ -74,7 +74,7 @@ export function StationFormDialog({
 
     if (stationId) {
       startCategoryTransition(async () => {
-        const catResult = await saveStationCategories(stationId, cats);
+        const catResult = await saveStationCategories({ stationId, categoryIds: cats });
         if (!catResult.success) {
           toast.error(catResult.error ?? "Không thể lưu danh mục");
           return;

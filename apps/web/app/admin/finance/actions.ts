@@ -64,7 +64,7 @@ export async function createTaxInvoice(
   const { data: order, error: orderErr } = await supabase
     .from("orders")
     .select(
-      "id, branch_id, subtotal, tax_amount, total_amount, payment_status, order_items(id, item_name, variant_name, quantity, unit_price, subtotal)",
+      "id, branch_id, subtotal, tax_amount, total_amount, payment_status, order_items(id, item_name, variant_name, quantity, unit_price, subtotal, status)",
     )
     .eq("id", parsed.data.orderId)
     .eq("tenant_id", claims.tenant_id)
@@ -124,18 +124,19 @@ export async function createTaxInvoice(
   let invoiceStatus: "draft" | "signing" | "submitted" | "issued";
   let providerData: Record<string, unknown> | undefined;
 
-  // Build invoice line items from order_items
-  const orderItems = (order as Record<string, unknown>).order_items as
-    | Array<{
-        id: number;
-        item_name: string;
-        variant_name: string | null;
-        quantity: number;
-        unit_price: number;
-        subtotal: number;
-      }>
-    | undefined;
-  const invoiceItems = (orderItems ?? []).map((item) => ({
+  // Build invoice line items from order_items (exclude cancelled)
+  const activeItems = order.order_items.filter(
+    (item) => item.status !== "cancelled",
+  );
+
+  if (activeItems.length === 0) {
+    return {
+      success: false,
+      error: "Đơn hàng không có món nào để xuất hóa đơn.",
+    };
+  }
+
+  const invoiceItems = activeItems.map((item) => ({
     name: item.variant_name
       ? `${item.item_name} - ${item.variant_name}`
       : item.item_name,
@@ -146,20 +147,6 @@ export async function createTaxInvoice(
   }));
 
   if (invoiceProvider) {
-    const { data: _orderItems, error: itemsErr } = await supabase
-      .from("order_items")
-      .select("item_name, quantity, unit_price, subtotal")
-      .eq("order_id", parsed.data.orderId)
-      .eq("tenant_id", claims.tenant_id)
-      .neq("status", "cancelled");
-
-    if (itemsErr) {
-      return {
-        success: false,
-        error: "Không thể tải danh sách món trong đơn.",
-      };
-    }
-
     const result = await invoiceProvider.createInvoice({
       orderId: parsed.data.orderId,
       orderNumber: `ORD-${parsed.data.orderId}`,

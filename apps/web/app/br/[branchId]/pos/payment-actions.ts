@@ -44,9 +44,7 @@ async function consumeStockForOrderCompat(
   supabase: PosSupabase,
   orderId: number,
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC shape may evolve under the same function name during location-ledger rollout
-  const sb = supabase as any;
-  return sb.rpc("consume_stock_for_order", {
+  return supabase.rpc("consume_stock_for_order", {
     p_order_id: orderId,
   });
 }

@@ -7,6 +7,7 @@ import {
   INVENTORY_OPS_ROLES,
 } from "@comtammatu/shared/auth";
 import { getAuthContext } from "./_lib/auth";
+import { withAction } from "@/_lib/with-action";
 import {
   resolveDefaultInventoryLocation,
   withInventoryLocationCompatFallback,
@@ -55,40 +56,28 @@ export async function fetchIngredients(limit = 2000): Promise<ActionResult> {
 
 /* ─── createIngredient ─── */
 
-export async function createIngredient(
-  input: z.infer<typeof ingredientSchema>,
-): Promise<ActionResult> {
-  const parsed = ingredientSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
+export const createIngredient = withAction(
+  { roles: INVENTORY_CATALOG_ROLES, schema: ingredientSchema },
+  async (data, { supabase, claims }) => {
+    const { data: result, error } = await supabase
+      .from("ingredients")
+      .insert({
+        tenant_id: claims.tenant_id,
+        ...data,
+      })
+      .select("id")
+      .single();
 
-  const ctx = await getAuthContext(INVENTORY_CATALOG_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  const { data, error } = await supabase
-    .from("ingredients")
-    .insert({
-      tenant_id: claims.tenant_id,
-      ...parsed.data,
-    })
-    .select("id")
-    .single();
-
-  if (error) {
-    if (error.code === "23505") {
-      return { success: false, error: "Nguyên liệu này đã tồn tại." };
+    if (error) {
+      if (error.code === "23505") {
+        return { success: false, error: "Nguyên liệu này đã tồn tại." };
+      }
+      return { success: false, error: "Không thể tạo nguyên liệu." };
     }
-    return { success: false, error: "Không thể tạo nguyên liệu." };
-  }
 
-  return { success: true, data };
-}
+    return { success: true, data: result };
+  },
+);
 
 /* ─── updateIngredient ─── */
 
@@ -181,69 +170,47 @@ const adjustSchema = z.object({
   reason: z.string().optional(),
 });
 
-export async function adjustStock(
-  input: z.infer<typeof adjustSchema>,
-): Promise<ActionResult> {
-  const parsed = adjustSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-
-  const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims, user } = ctx;
-
-  if (
-    claims.user_role === "branch_manager" &&
-    claims.branch_id !== parsed.data.branchId
-  ) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
-
-  const defaultLocationId = await resolveDefaultInventoryLocation(
-    supabase,
-    claims.tenant_id,
-    parsed.data.branchId,
-    "issue",
-  );
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- location columns are compatibility-prep before db:types regenerate
-  const sb = supabase as any;
-  const basePayload = {
-    tenant_id: claims.tenant_id,
-    branch_id: parsed.data.branchId,
-    ingredient_id: parsed.data.ingredientId,
-    type: parsed.data.type,
-    quantity_change: parsed.data.quantityChange,
-    reason: parsed.data.reason ?? null,
-    created_by: user.id,
-  };
-
-  const { error } = await withInventoryLocationCompatFallback(
-    () =>
-      sb.from("stock_movements").insert({
-        ...basePayload,
-        location_id: defaultLocationId,
-      }),
-    () => sb.from("stock_movements").insert(basePayload),
-  );
-
-  if (error) {
-    if (error.code === "23514") {
-      return {
-        success: false,
-        error: "Không thể điều chỉnh tồn kho do vi phạm ràng buộc dữ liệu.",
-      };
+export const adjustStock = withAction(
+  { roles: INVENTORY_OPS_ROLES, schema: adjustSchema },
+  async (data, { supabase, claims, user }) => {
+    if (
+      claims.user_role === "branch_manager" &&
+      claims.branch_id !== data.branchId
+    ) {
+      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
-    return { success: false, error: "Không thể điều chỉnh tồn kho." };
-  }
 
-  return { success: true };
-}
+    const defaultLocationId = await resolveDefaultInventoryLocation(
+      supabase,
+      claims.tenant_id,
+      data.branchId,
+      "issue",
+    );
+
+    const { error } = await supabase.from("stock_movements").insert({
+      tenant_id: claims.tenant_id,
+      branch_id: data.branchId,
+      ingredient_id: data.ingredientId,
+      type: data.type,
+      quantity_change: data.quantityChange,
+      reason: data.reason ?? null,
+      created_by: user.id,
+      location_id: defaultLocationId,
+    });
+
+    if (error) {
+      if (error.code === "23514") {
+        return {
+          success: false,
+          error: "Không thể điều chỉnh tồn kho do vi phạm ràng buộc dữ liệu.",
+        };
+      }
+      return { success: false, error: "Không thể điều chỉnh tồn kho." };
+    }
+
+    return { success: true };
+  },
+);
 
 /* ─── fetchStockAlerts ─── */
 
@@ -331,7 +298,7 @@ export async function createStocktakeSession(
     "receive",
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- compatibility RPC payload before db:types regenerate
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC create_stocktake_session missing p_location_id in generated types
   const sb = supabase as any;
   const { data, error } = await withInventoryLocationCompatFallback(
     () =>
@@ -375,44 +342,32 @@ export async function fetchStocktakeSessions(
 
   const { supabase, claims } = ctx;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- location columns are compatibility-prep before db:types regenerate
-  const sb = supabase as any;
-  const buildQuery = (selectClause: string) => {
-    let query = sb
-      .from("stocktake_sessions")
-      .select(selectClause)
-      .eq("tenant_id", claims.tenant_id)
-      .order("created_at", { ascending: false });
+  let query = supabase
+    .from("stocktake_sessions")
+    .select(
+      "id, branch_id, location_id, started_at, completed_at, status, notes, created_at, created_by, branches(id, name)",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .order("created_at", { ascending: false });
 
-    if (claims.user_role === "branch_manager" && claims.branch_id != null) {
-      query = query.eq("branch_id", claims.branch_id);
-    } else if (branchId) {
-      query = query.eq("branch_id", branchId);
-    }
-    return query;
-  };
+  if (claims.user_role === "branch_manager" && claims.branch_id != null) {
+    query = query.eq("branch_id", claims.branch_id);
+  } else if (branchId) {
+    query = query.eq("branch_id", branchId);
+  }
 
-  const { data, error } = await withInventoryLocationCompatFallback(
-    () =>
-      buildQuery(
-        "id, branch_id, location_id, started_at, completed_at, status, notes, created_at, created_by, branches(id, name)",
-      ),
-    () =>
-      buildQuery(
-        "id, branch_id, started_at, completed_at, status, notes, created_at, created_by, branches(id, name)",
-      ),
-  );
+  const { data, error } = await query;
 
   if (error) {
     return { success: false, error: "Không thể tải danh sách kiểm kê." };
   }
 
-  const sessions = (data ?? []) as Array<Record<string, unknown>>;
+  const sessions = data ?? [];
   if (sessions.length === 0) {
     return { success: true, data: [] };
   }
 
-  const sessionIds = sessions.map((s) => Number(s.id)).filter(Number.isFinite);
+  const sessionIds = sessions.map((s) => s.id);
   const { data: lines, error: linesError } = await supabase
     .from("stocktake_lines")
     .select("session_id, counted_quantity")
@@ -439,8 +394,7 @@ export async function fetchStocktakeSessions(
   }
 
   const enriched = sessions.map((s) => {
-    const sid = Number(s.id);
-    const agg = bySession.get(sid) ?? { total: 0, counted: 0 };
+    const agg = bySession.get(s.id) ?? { total: 0, counted: 0 };
     return {
       ...s,
       total_items: agg.total,
@@ -500,75 +454,63 @@ export async function fetchStocktakeDetail(
 
 /* ─── updateStocktakeLine ─── */
 
-export async function updateStocktakeLine(
-  input: z.infer<typeof stocktakeLineUpdateSchema>,
-): Promise<ActionResult> {
-  const parsed = stocktakeLineUpdateSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
+export const updateStocktakeLine = withAction(
+  { roles: INVENTORY_OPS_ROLES, schema: stocktakeLineUpdateSchema },
+  async (data, { supabase, claims }) => {
+    // Fetch the line to get session_id
+    const { data: line, error: lineError } = await supabase
+      .from("stocktake_lines")
+      .select("session_id")
+      .eq("id", data.lineId)
+      .eq("tenant_id", claims.tenant_id)
+      .single();
 
-  const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    if (lineError || !line) {
+      return { success: false, error: "Không thể cập nhật dòng kiểm kê." };
+    }
 
-  const { supabase, claims } = ctx;
+    // Fetch session to verify status
+    const { data: session, error: sessionError } = await supabase
+      .from("stocktake_sessions")
+      .select("status, branch_id")
+      .eq("id", line.session_id)
+      .eq("tenant_id", claims.tenant_id)
+      .single();
 
-  // Fetch the line to get session_id
-  const { data: line, error: lineError } = await supabase
-    .from("stocktake_lines")
-    .select("session_id")
-    .eq("id", parsed.data.lineId)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
+    if (sessionError || !session) {
+      return { success: false, error: "Không thể cập nhật dòng kiểm kê." };
+    }
 
-  if (lineError || !line) {
-    return { success: false, error: "Không thể cập nhật dòng kiểm kê." };
-  }
+    if (session.status !== "in_progress") {
+      return {
+        success: false,
+        error: "Phiên kiểm kê đã hoàn tất hoặc đã hủy.",
+      };
+    }
 
-  // Fetch session to verify status
-  const { data: session, error: sessionError } = await supabase
-    .from("stocktake_sessions")
-    .select("status, branch_id")
-    .eq("id", line.session_id)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
+    if (
+      claims.user_role === "branch_manager" &&
+      claims.branch_id !== session.branch_id
+    ) {
+      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+    }
 
-  if (sessionError || !session) {
-    return { success: false, error: "Không thể cập nhật dòng kiểm kê." };
-  }
+    const { error: updateError } = await supabase
+      .from("stocktake_lines")
+      .update({
+        counted_quantity: data.countedQuantity,
+        variance_reason: data.varianceReason ?? null,
+      })
+      .eq("id", data.lineId)
+      .eq("tenant_id", claims.tenant_id);
 
-  if (session.status !== "in_progress") {
-    return {
-      success: false,
-      error: "Phiên kiểm kê đã hoàn tất hoặc đã hủy.",
-    };
-  }
+    if (updateError) {
+      return { success: false, error: "Không thể cập nhật dòng kiểm kê." };
+    }
 
-  if (
-    claims.user_role === "branch_manager" &&
-    claims.branch_id !== session.branch_id
-  ) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
-
-  const { error: updateError } = await supabase
-    .from("stocktake_lines")
-    .update({
-      counted_quantity: parsed.data.countedQuantity,
-      variance_reason: parsed.data.varianceReason ?? null,
-    })
-    .eq("id", parsed.data.lineId)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (updateError) {
-    return { success: false, error: "Không thể cập nhật dòng kiểm kê." };
-  }
-
-  return { success: true };
-}
+    return { success: true };
+  },
+);
 
 /* ─── completeStocktake ─── */
 

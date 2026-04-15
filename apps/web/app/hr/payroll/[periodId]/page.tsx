@@ -35,7 +35,7 @@ export default async function PayrollDetailPage({
     );
   }
 
-  const result = await fetchPayrollEntries(id);
+  const result = await fetchPayrollEntries({ periodId: id });
   const entries = result.success
     ? ((result.data ?? []) as PayrollEntryRow[])
     : [];

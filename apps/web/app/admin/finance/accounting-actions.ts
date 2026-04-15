@@ -3,7 +3,8 @@
 import { z } from "zod";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "../_lib/auth";
+import { getAuthContext } from "@/_lib/auth";
+import { withAction } from "@/_lib/with-action";
 
 const FINANCE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 const REPORT_ROLES: readonly StaffRole[] = [
@@ -41,40 +42,28 @@ const createAccountSchema = z.object({
   parentId: z.coerce.number().int().positive().optional(),
 });
 
-export async function createAccount(
-  input: z.infer<typeof createAccountSchema>,
-): Promise<ActionResult> {
-  const parsed = createAccountSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
+export const createAccount = withAction(
+  { roles: FINANCE_ROLES, schema: createAccountSchema },
+  async (data, { supabase, claims }) => {
+    const { data: result, error } = await supabase
+      .from("chart_of_accounts")
+      .insert({
+        tenant_id: claims.tenant_id,
+        account_code: data.code,
+        account_name: data.name,
+        account_type: data.accountType,
+        parent_id: data.parentId ?? null,
+      })
+      .select("id, account_code, account_name")
+      .single();
 
-  const ctx = await getAuthContext(FINANCE_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    if (error) {
+      return { success: false, error: "Không thể tạo tài khoản." };
+    }
 
-  const { supabase, claims } = ctx;
-
-  const { data, error } = await supabase
-    .from("chart_of_accounts")
-    .insert({
-      tenant_id: claims.tenant_id,
-      account_code: parsed.data.code,
-      account_name: parsed.data.name,
-      account_type: parsed.data.accountType,
-      parent_id: parsed.data.parentId ?? null,
-    })
-    .select("id, account_code, account_name")
-    .single();
-
-  if (error) {
-    return { success: false, error: "Không thể tạo tài khoản." };
-  }
-
-  return { success: true, data };
-}
+    return { success: true, data: result };
+  },
+);
 
 const updateAccountSchema = z.object({
   id: z.coerce.number().int().positive(),
@@ -82,39 +71,26 @@ const updateAccountSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export async function updateAccount(
-  input: z.infer<typeof updateAccountSchema>,
-): Promise<ActionResult> {
-  const parsed = updateAccountSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
+export const updateAccount = withAction(
+  { roles: FINANCE_ROLES, schema: updateAccountSchema },
+  async (data, { supabase, claims }) => {
+    const updatePayload: Record<string, unknown> = {};
+    if (data.name !== undefined) updatePayload.name = data.name;
+    if (data.isActive !== undefined) updatePayload.is_active = data.isActive;
 
-  const ctx = await getAuthContext(FINANCE_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    const { error } = await supabase
+      .from("chart_of_accounts")
+      .update(updatePayload)
+      .eq("id", data.id)
+      .eq("tenant_id", claims.tenant_id);
 
-  const { supabase, claims } = ctx;
+    if (error) {
+      return { success: false, error: "Không thể cập nhật tài khoản." };
+    }
 
-  const updatePayload: Record<string, unknown> = {};
-  if (parsed.data.name !== undefined) updatePayload.name = parsed.data.name;
-  if (parsed.data.isActive !== undefined)
-    updatePayload.is_active = parsed.data.isActive;
-
-  const { error } = await supabase
-    .from("chart_of_accounts")
-    .update(updatePayload)
-    .eq("id", parsed.data.id)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (error) {
-    return { success: false, error: "Không thể cập nhật tài khoản." };
-  }
-
-  return { success: true };
-}
+    return { success: true };
+  },
+);
 
 /* ─── Journal Entries ────────────────────────────────────────────────────── */
 

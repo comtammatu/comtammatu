@@ -41,7 +41,7 @@ export function HrClient({ employees, branches }: HrClientProps) {
   function loadShifts(branchId: number) {
     setSelectedBranchId(branchId);
     startTransition(async () => {
-      const result = await fetchShifts(branchId);
+      const result = await fetchShifts({ branchId });
       if (result.success) {
         setShifts((result.data as ShiftRow[]) ?? []);
       } else {

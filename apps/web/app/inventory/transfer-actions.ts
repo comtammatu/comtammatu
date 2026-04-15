@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "./_lib/auth";
+import { withAction } from "@/_lib/with-action";
 import { fetchHeadquartersBranchId } from "./_lib/headquarters";
 import type { Database, SupabaseClient } from "@comtammatu/database";
 import {
@@ -56,26 +57,23 @@ export async function fetchStockTransfers(): Promise<ActionResult> {
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- location columns are compatibility-prep before db:types regenerate
-  const sb = supabase as any;
-  const { data: transfers, error } = await withInventoryLocationCompatFallback(
-    () =>
-      sb
-        .from("stock_transfers")
-        .select(
-          "id, transfer_number, status, notes, vehicle_info, shipped_at, received_at, receive_started_at, from_branch_id, to_branch_id, from_location_id, to_location_id, created_at",
-        )
-        .eq("tenant_id", claims.tenant_id)
-        .order("created_at", { ascending: false }),
-    () =>
-      sb
-        .from("stock_transfers")
-        .select(
-          "id, transfer_number, status, notes, vehicle_info, shipped_at, received_at, receive_started_at, from_branch_id, to_branch_id, created_at",
-        )
-        .eq("tenant_id", claims.tenant_id)
-        .order("created_at", { ascending: false }),
-  );
+  let transferQuery = supabase
+    .from("stock_transfers")
+    .select(
+      "id, transfer_number, status, notes, vehicle_info, shipped_at, received_at, receive_started_at, from_branch_id, to_branch_id, from_location_id, to_location_id, created_at",
+    )
+    .eq("tenant_id", claims.tenant_id);
+
+  // Branch manager can only see transfers involving their branch
+  if (claims.branch_id) {
+    transferQuery = transferQuery.or(
+      `from_branch_id.eq.${claims.branch_id},to_branch_id.eq.${claims.branch_id}`,
+    );
+  }
+
+  const { data: transfers, error } = await transferQuery.order("created_at", {
+    ascending: false,
+  });
   if (error) return { success: false, error: "Không thể tải phiếu chuyển." };
   const { data: branches } = await supabase
     .from("branches")
@@ -84,13 +82,7 @@ export async function fetchStockTransfers(): Promise<ActionResult> {
   const nameById = new Map(
     (branches ?? []).map((b) => [b.id, b.name] as const),
   );
-  const transferRows = (transfers ?? []) as Array<
-    {
-      from_branch_id: number;
-      to_branch_id: number;
-    } & Record<string, unknown>
-  >;
-  const enriched = transferRows.map((t) => ({
+  const enriched = (transfers ?? []).map((t) => ({
     ...t,
     from_branch_name: nameById.get(t.from_branch_id) ?? "—",
     to_branch_name: nameById.get(t.to_branch_id) ?? "—",
@@ -264,7 +256,7 @@ export async function createStockTransfer(
     "receive",
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- compatibility RPC payload before db:types regenerate
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC create_stock_transfer_draft missing p_from/to_location_id in generated types
   const sb = supabase as any;
   const transferLines = (parsed.data.lines ?? []).map((line) => ({
     ingredientId: line.ingredientId,
@@ -322,35 +314,25 @@ const transferLineSchema = z.object({
   unit: z.string().min(1),
 });
 
-export async function upsertTransferLine(
-  input: z.infer<typeof transferLineSchema>,
-): Promise<ActionResult> {
-  const parsed = transferLineSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-  const ctx = await getAuthContext(ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-  const d = parsed.data;
-  const { error } = await supabase.from("stock_transfer_items").upsert(
-    {
-      tenant_id: claims.tenant_id,
-      transfer_id: d.transferId,
-      ingredient_id: d.ingredientId,
-      quantity: d.quantity,
-      unit: d.unit,
-    },
-    { onConflict: "transfer_id,ingredient_id,tenant_id" },
-  );
-  if (error) {
-    return { success: false, error: "Không thể lưu dòng chuyển." };
-  }
-  return { success: true };
-}
+export const upsertTransferLine = withAction(
+  { roles: ROLES, schema: transferLineSchema },
+  async (d, { supabase, claims }) => {
+    const { error } = await supabase.from("stock_transfer_items").upsert(
+      {
+        tenant_id: claims.tenant_id,
+        transfer_id: d.transferId,
+        ingredient_id: d.ingredientId,
+        quantity: d.quantity,
+        unit: d.unit,
+      },
+      { onConflict: "transfer_id,ingredient_id,tenant_id" },
+    );
+    if (error) {
+      return { success: false, error: "Không thể lưu dòng chuyển." };
+    }
+    return { success: true };
+  },
+);
 
 export async function transferConfirmShip(
   transferId: number,

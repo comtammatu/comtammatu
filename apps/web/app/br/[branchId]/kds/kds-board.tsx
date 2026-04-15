@@ -341,8 +341,7 @@ export function KdsBoard({
         }),
       );
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- KDS RPCs not in generated types yet
-      const sb = supabaseRef.current as any;
+      const sb = supabaseRef.current;
       const { error } = await sb.rpc("bump_kds_ticket", {
         p_ticket_id: ticketId,
       });
@@ -384,8 +383,7 @@ export function KdsBoard({
         }),
       );
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- KDS RPCs not in generated types yet
-      const sb = supabaseRef.current as any;
+      const sb = supabaseRef.current;
       const { error } = await sb.rpc("recall_kds_ticket", {
         p_ticket_id: ticketId,
       });

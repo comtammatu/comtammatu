@@ -2,20 +2,20 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient } from "@comtammatu/database/supabase/server";
 import {
   BRANCH_FLOOR_SETTINGS_ROLES,
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "../../_lib/auth";
+import { getAuthContext } from "@/_lib/auth";
+import { withAction, withFormAction, type ActionContext } from "@/_lib/with-action";
 
 /* ─── Helpers ─── */
 
 const SETTINGS_ROLES: readonly StaffRole[] = BRANCH_FLOOR_SETTINGS_ROLES;
 
 async function verifyBranchOwnership(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ActionContext["supabase"],
   branchId: number,
   tenantId: number,
 ): Promise<boolean> {
@@ -28,12 +28,11 @@ async function verifyBranchOwnership(
   return !!data;
 }
 
-/** Branch manager can only operate on their own branch */
 function canOperateBranch(
   claimsBranchId: number | null,
   targetBranchId: number,
 ): boolean {
-  if (claimsBranchId === null) return true; // owner/super_manager/area_manager
+  if (claimsBranchId === null) return true;
   return claimsBranchId === targetBranchId;
 }
 
@@ -61,11 +60,16 @@ const updateStationSchema = z.object({
     .optional(),
 });
 
+const saveStationCategoriesSchema = z.object({
+  stationId: z.coerce.number().int().positive({ error: "Station ID không hợp lệ" }),
+  categoryIds: z.array(z.coerce.number().int().positive()),
+});
+
 /* ─── Actions ─── */
 
 /**
  * Fetch KDS stations with their category assignments.
- * Optionally filter by branchId.
+ * Optionally filter by branchId. Kept manual (auth-only + complex optional filter).
  */
 export async function fetchStations(branchId?: number): Promise<ActionResult> {
   const ctx = await getAuthContext(SETTINGS_ROLES);
@@ -73,7 +77,6 @@ export async function fetchStations(branchId?: number): Promise<ActionResult> {
 
   const { supabase, claims } = ctx;
 
-  // If branchId provided, validate
   if (branchId !== undefined) {
     const parsedBranchId = z.coerce
       .number()
@@ -92,7 +95,6 @@ export async function fetchStations(branchId?: number): Promise<ActionResult> {
     }
   }
 
-  // kds_stations not yet in generated types — remove cast after pnpm db:types
   let query = supabase
     .from("kds_stations")
     .select(
@@ -117,7 +119,6 @@ export async function fetchStations(branchId?: number): Promise<ActionResult> {
     query = query.eq("branch_id", branchId);
   }
 
-  // Branch manager can only see their own branch
   if (claims.branch_id !== null && branchId === undefined) {
     query = query.eq("branch_id", claims.branch_id);
   }
@@ -134,205 +135,142 @@ export async function fetchStations(branchId?: number): Promise<ActionResult> {
   return { success: true, data: stations ?? [] };
 }
 
-/**
- * Create a new KDS station.
- */
-export async function createStation(
-  _prev: ActionResult | null,
-  formData: FormData,
-): Promise<ActionResult> {
-  const parsed = createStationSchema.safeParse({
-    name: formData.get("name"),
-    branch_id: formData.get("branch_id"),
-    position: formData.get("position") || 0,
-  });
+export const createStation = withFormAction(
+  {
+    roles: SETTINGS_ROLES,
+    schema: createStationSchema,
+    extract: (fd) => ({
+      name: fd.get("name"),
+      branch_id: fd.get("branch_id"),
+      position: fd.get("position") || 0,
+    }),
+  },
+  async (data, { supabase, claims }) => {
+    if (!canOperateBranch(claims.branch_id, data.branch_id)) {
+      return { success: false, error: "Không có quyền thao tác chi nhánh này" };
+    }
 
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    if (
+      !(await verifyBranchOwnership(supabase, data.branch_id, claims.tenant_id))
+    ) {
+      return { success: false, error: "Chi nhánh không hợp lệ" };
+    }
+
+    const { data: result, error } = await supabase
+      .from("kds_stations")
+      .insert({
+        tenant_id: claims.tenant_id,
+        branch_id: data.branch_id,
+        name: data.name,
+        position: data.position,
+      })
+      .select("id");
+
+    if (error) {
+      return { success: false, error: mapStationDbError(error.code) };
+    }
+
+    if (!result || result.length === 0) {
+      return {
+        success: false,
+        error: "Không thể tạo trạm KDS. Kiểm tra quyền truy cập.",
+      };
+    }
+
+    revalidatePath("/admin/settings/kds");
+    return { success: true, data: { id: result[0]!.id } };
+  },
+);
+
+export const updateStation = withFormAction(
+  {
+    roles: SETTINGS_ROLES,
+    schema: updateStationSchema,
+    extract: (fd) => {
+      const rawIsActive = fd.get("is_active");
+      return {
+        id: fd.get("id"),
+        name: fd.get("name"),
+        position: fd.get("position") || 0,
+        is_active: rawIsActive ? rawIsActive : undefined,
+      };
+    },
+  },
+  async (data, { supabase, claims }) => {
+    const updatePayload: Record<string, unknown> = {
+      name: data.name,
+      position: data.position,
     };
-  }
 
-  const ctx = await getAuthContext(SETTINGS_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    if (data.is_active !== undefined) {
+      updatePayload.is_active = data.is_active;
+    }
 
-  const { supabase, claims } = ctx;
+    let query = supabase
+      .from("kds_stations")
+      .update(updatePayload)
+      .eq("id", data.id)
+      .eq("tenant_id", claims.tenant_id);
 
-  if (!canOperateBranch(claims.branch_id, parsed.data.branch_id)) {
-    return { success: false, error: "Không có quyền thao tác chi nhánh này" };
-  }
+    if (claims.branch_id !== null) {
+      query = query.eq("branch_id", claims.branch_id);
+    }
 
-  if (
-    !(await verifyBranchOwnership(
-      supabase,
-      parsed.data.branch_id,
-      claims.tenant_id,
-    ))
-  ) {
-    return { success: false, error: "Chi nhánh không hợp lệ" };
-  }
+    const { data: result, error } = await query.select("id");
 
-  // kds_stations not yet in generated types — remove cast after pnpm db:types
-  const { data, error } = await supabase
-    .from("kds_stations")
-    .insert({
-      tenant_id: claims.tenant_id,
-      branch_id: parsed.data.branch_id,
-      name: parsed.data.name,
-      position: parsed.data.position,
-    })
-    .select("id");
+    if (error) {
+      return { success: false, error: mapStationDbError(error.code) };
+    }
 
-  if (error) {
-    return { success: false, error: mapStationDbError(error.code) };
-  }
+    if (!result || result.length === 0) {
+      return {
+        success: false,
+        error: "Trạm KDS không tồn tại hoặc không có quyền",
+      };
+    }
 
-  // RLS returns { data: [], error: null } on blocked writes
-  if (!data || data.length === 0) {
-    return {
-      success: false,
-      error: "Không thể tạo trạm KDS. Kiểm tra quyền truy cập.",
-    };
-  }
+    revalidatePath("/admin/settings/kds");
+    return { success: true };
+  },
+);
 
-  revalidatePath("/admin/settings/kds");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { success: true, data: { id: (data as any[])[0].id as number } };
-}
+export const saveStationCategories = withAction(
+  { roles: SETTINGS_ROLES, schema: saveStationCategoriesSchema },
+  async (data, { supabase, claims }) => {
+    const { data: station } = await supabase
+      .from("kds_stations")
+      .select("id, branch_id")
+      .eq("id", data.stationId)
+      .eq("tenant_id", claims.tenant_id)
+      .single();
 
-/**
- * Update an existing KDS station.
- */
-export async function updateStation(
-  _prev: ActionResult | null,
-  formData: FormData,
-): Promise<ActionResult> {
-  const rawIsActive = formData.get("is_active");
-
-  const parsed = updateStationSchema.safeParse({
-    id: formData.get("id"),
-    name: formData.get("name"),
-    position: formData.get("position") || 0,
-    is_active: rawIsActive ? rawIsActive : undefined,
-  });
-
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-
-  const ctx = await getAuthContext(SETTINGS_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  const updatePayload: Record<string, unknown> = {
-    name: parsed.data.name,
-    position: parsed.data.position,
-  };
-
-  if (parsed.data.is_active !== undefined) {
-    updatePayload.is_active = parsed.data.is_active;
-  }
-
-  // kds_stations not yet in generated types — remove cast after pnpm db:types
-  let query = supabase
-    .from("kds_stations")
-    .update(updatePayload)
-    .eq("id", parsed.data.id)
-    .eq("tenant_id", claims.tenant_id);
-
-  // Branch manager can only update stations in their own branch
-  if (claims.branch_id !== null) {
-    query = query.eq("branch_id", claims.branch_id);
-  }
-
-  const { data, error } = await query.select("id");
-
-  if (error) {
-    return { success: false, error: mapStationDbError(error.code) };
-  }
-
-  // RLS returns { data: [], error: null } on blocked writes
-  if (!data || data.length === 0) {
-    return {
-      success: false,
-      error: "Trạm KDS không tồn tại hoặc không có quyền",
-    };
-  }
-
-  revalidatePath("/admin/settings/kds");
-  return { success: true };
-}
-
-/**
- * Save category assignments for a KDS station.
- * Deletes existing assignments and inserts new ones.
- */
-export async function saveStationCategories(
-  stationId: number,
-  categoryIds: number[],
-): Promise<ActionResult> {
-  const parsedStationId = z.coerce
-    .number()
-    .int()
-    .positive()
-    .safeParse(stationId);
-  if (!parsedStationId.success) {
-    return { success: false, error: "Station ID không hợp lệ" };
-  }
-
-  const parsedCategoryIds = z
-    .array(z.coerce.number().int().positive())
-    .safeParse(categoryIds);
-  if (!parsedCategoryIds.success) {
-    return { success: false, error: "Danh sách danh mục không hợp lệ" };
-  }
-
-  const ctx = await getAuthContext(SETTINGS_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  // Verify station belongs to user's tenant (and branch if branch_manager)
-  const { data: station } = await supabase
-    .from("kds_stations")
-    .select("id, branch_id")
-    .eq("id", parsedStationId.data)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
-
-  if (!station) {
-    return { success: false, error: "Trạm KDS không tồn tại" };
-  }
-
-  if (
-    claims.user_role === "branch_manager" &&
-    station.branch_id !== claims.branch_id
-  ) {
-    return { success: false, error: "Không có quyền chỉnh sửa trạm này" };
-  }
-
-  // Use atomic RPC — DELETE + INSERT in single transaction
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.rpc as any)("save_station_categories", {
-    p_station_id: parsedStationId.data,
-    p_category_ids: parsedCategoryIds.data,
-  });
-
-  if (error) {
-    if (error.message?.includes("not found")) {
+    if (!station) {
       return { success: false, error: "Trạm KDS không tồn tại" };
     }
-    return {
-      success: false,
-      error: "Không thể cập nhật danh mục. Vui lòng thử lại.",
-    };
-  }
 
-  revalidatePath("/admin/settings/kds");
-  return { success: true };
-}
+    if (
+      claims.user_role === "branch_manager" &&
+      station.branch_id !== claims.branch_id
+    ) {
+      return { success: false, error: "Không có quyền chỉnh sửa trạm này" };
+    }
+
+    const { error } = await supabase.rpc("save_station_categories", {
+      p_station_id: data.stationId,
+      p_category_ids: data.categoryIds,
+    });
+
+    if (error) {
+      if (error.message?.includes("not found")) {
+        return { success: false, error: "Trạm KDS không tồn tại" };
+      }
+      return {
+        success: false,
+        error: "Không thể cập nhật danh mục. Vui lòng thử lại.",
+      };
+    }
+
+    revalidatePath("/admin/settings/kds");
+    return { success: true };
+  },
+);

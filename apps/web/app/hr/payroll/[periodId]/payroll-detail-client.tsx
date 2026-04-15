@@ -38,7 +38,7 @@ export function PayrollDetailClient({
 
   function reload() {
     startTransition(async () => {
-      const result = await fetchPayrollEntries(periodId);
+      const result = await fetchPayrollEntries({ periodId });
       if (result.success) {
         setEntries((result.data ?? []) as PayrollEntryRow[]);
       }
@@ -47,7 +47,7 @@ export function PayrollDetailClient({
 
   function handleCalculate() {
     startTransition(async () => {
-      const result = await calculatePayroll(periodId);
+      const result = await calculatePayroll({ periodId });
       if (result.success) {
         toast.success(
           `Đã tính lương cho ${(result.meta as { employeeCount: number })?.employeeCount ?? 0} nhân viên`,
@@ -61,7 +61,7 @@ export function PayrollDetailClient({
 
   function handleApprove() {
     startTransition(async () => {
-      const result = await approvePayroll(periodId);
+      const result = await approvePayroll({ periodId });
       if (result.success) {
         toast.success("Đã duyệt bảng lương");
       } else {
@@ -72,7 +72,7 @@ export function PayrollDetailClient({
 
   function handlePay() {
     startTransition(async () => {
-      const result = await markPayrollPaid(periodId);
+      const result = await markPayrollPaid({ periodId });
       if (result.success) {
         toast.success("Đã đánh dấu thanh toán");
       } else {

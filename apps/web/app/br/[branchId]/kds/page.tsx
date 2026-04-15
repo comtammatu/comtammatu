@@ -6,9 +6,6 @@ import { redirect } from "next/navigation";
 import { KdsBoard } from "./kds-board";
 import { RouteStateCard } from "@/components/v2/route-state-card";
 
-// KDS tables (kds_stations, kds_tickets) and RPCs (bump_kds_ticket, recall_kds_ticket)
-// are not in generated types yet. Remove `as any` casts after `pnpm db:types`.
-
 /* ─── Types shared with client ─── */
 
 export interface KdsStation {
@@ -67,11 +64,8 @@ export default async function KdsPage({
   const { branchId } = await params;
   const branchIdNum = Number(branchId);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- kds_stations not in generated types yet
-  const sb = supabase as any;
-
   // Fetch stations for this branch
-  const { data: rawStations, error: stationsError } = await sb
+  const { data: rawStations, error: stationsError } = await supabase
     .from("kds_stations")
     .select("id, name, position, is_active")
     .eq("branch_id", branchIdNum)
@@ -114,7 +108,7 @@ export default async function KdsPage({
   }
 
   // Fetch active tickets for this branch
-  const { data: rawTickets } = await sb
+  const { data: rawTickets, error: ticketsError } = await supabase
     .from("kds_tickets")
     .select(
       "id, station_id, order_id, order_item_id, status, bumped_at, created_at",
@@ -122,6 +116,41 @@ export default async function KdsPage({
     .eq("branch_id", branchIdNum)
     .in("status", ["pending", "preparing", "ready"])
     .order("created_at");
+
+  if (ticketsError) {
+    return (
+      <RouteStateCard
+        title="Không thể dựng bảng điều phối bếp"
+        description="Không tải được vé bếp."
+        icon={<ChefHat className="size-5" />}
+        status={
+          <>
+            <TriangleAlert className="size-3.5" />
+            <span>Lỗi tải vé bếp</span>
+          </>
+        }
+        statusTone="danger"
+        steps={[
+          {
+            label: "Xác minh quyền bếp",
+            description: "Đã xác minh quyền truy cập.",
+            state: "done",
+          },
+          {
+            label: "Nạp trạm chế biến",
+            description: "Đã tải trạm hoạt động.",
+            state: "done",
+          },
+          {
+            label: "Hiển thị đơn đang chạy",
+            description: "Không thể tải vé bếp.",
+            state: "current",
+          },
+        ]}
+        surface="dark"
+      />
+    );
+  }
 
   const stations = (rawStations ?? []) as KdsStation[];
   const tickets = (rawTickets ?? []) as KdsTicket[];

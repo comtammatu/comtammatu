@@ -3,9 +3,30 @@
 import { z } from "zod";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "../../_lib/auth";
+import { getAuthContext } from "@/_lib/auth";
+import { withAction } from "@/_lib/with-action";
 
 const AREA_ADMIN_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+
+/* ─── Schemas ─── */
+
+const createAreaSchema = z.object({
+  name: z.string().min(1, { error: "Tên khu vực không được để trống" }),
+});
+
+const updateAreaSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  name: z.string().min(1, { error: "Tên khu vực không được để trống" }),
+});
+
+const assignSchema = z.object({
+  areaId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive(),
+});
+
+const removeSchema = z.object({
+  areaBranchId: z.coerce.number().int().positive(),
+});
 
 /* ─── fetchAreas ─── */
 
@@ -44,142 +65,88 @@ export async function fetchAreas(): Promise<ActionResult> {
 
 /* ─── createArea ─── */
 
-const createAreaSchema = z.object({
-  name: z.string().min(1, { error: "Tên khu vực không được để trống" }),
-});
+export const createArea = withAction(
+  { roles: AREA_ADMIN_ROLES, schema: createAreaSchema },
+  async (data, { supabase, claims }) => {
+    const { data: result, error } = await supabase
+      .from("areas")
+      .insert({ tenant_id: claims.tenant_id, name: data.name })
+      .select("id")
+      .single();
 
-export async function createArea(name: string): Promise<ActionResult> {
-  const parsed = createAreaSchema.safeParse({ name });
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-
-  const ctx = await getAuthContext(AREA_ADMIN_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  const { data, error } = await supabase
-    .from("areas")
-    .insert({ tenant_id: claims.tenant_id, name: parsed.data.name })
-    .select("id")
-    .single();
-
-  if (error) {
-    if (error.code === "23505") {
-      return { success: false, error: "Khu vực này đã tồn tại." };
+    if (error) {
+      if (error.code === "23505") {
+        return { success: false, error: "Khu vực này đã tồn tại." };
+      }
+      return { success: false, error: "Không thể tạo khu vực." };
     }
-    return { success: false, error: "Không thể tạo khu vực." };
-  }
 
-  return { success: true, data };
-}
+    return { success: true, data: result };
+  },
+);
 
 /* ─── updateArea ─── */
 
-const updateAreaSchema = z.object({
-  id: z.coerce.number().int().positive(),
-  name: z.string().min(1, { error: "Tên khu vực không được để trống" }),
-});
+export const updateArea = withAction(
+  { roles: AREA_ADMIN_ROLES, schema: updateAreaSchema },
+  async (data, { supabase, claims }) => {
+    const { error } = await supabase
+      .from("areas")
+      .update({ name: data.name })
+      .eq("id", data.id)
+      .eq("tenant_id", claims.tenant_id);
 
-export async function updateArea(
-  id: number,
-  name: string,
-): Promise<ActionResult> {
-  const parsed = updateAreaSchema.safeParse({ id, name });
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-
-  const ctx = await getAuthContext(AREA_ADMIN_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  const { error } = await supabase
-    .from("areas")
-    .update({ name: parsed.data.name })
-    .eq("id", parsed.data.id)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (error) {
-    if (error.code === "23505") {
-      return { success: false, error: "Tên khu vực đã tồn tại." };
+    if (error) {
+      if (error.code === "23505") {
+        return { success: false, error: "Tên khu vực đã tồn tại." };
+      }
+      return { success: false, error: "Không thể cập nhật khu vực." };
     }
-    return { success: false, error: "Không thể cập nhật khu vực." };
-  }
 
-  return { success: true };
-}
+    return { success: true };
+  },
+);
 
 /* ─── assignBranchToArea ─── */
 
-const assignSchema = z.object({
-  areaId: z.coerce.number().int().positive(),
-  branchId: z.coerce.number().int().positive(),
-});
+export const assignBranchToArea = withAction(
+  { roles: AREA_ADMIN_ROLES, schema: assignSchema },
+  async (data, { supabase, claims }) => {
+    const { error } = await supabase.from("area_branches").insert({
+      tenant_id: claims.tenant_id,
+      area_id: data.areaId,
+      branch_id: data.branchId,
+    });
 
-export async function assignBranchToArea(
-  areaId: number,
-  branchId: number,
-): Promise<ActionResult> {
-  const parsed = assignSchema.safeParse({ areaId, branchId });
-  if (!parsed.success) {
-    return { success: false, error: "Dữ liệu không hợp lệ" };
-  }
-
-  const ctx = await getAuthContext(AREA_ADMIN_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  const { error } = await supabase.from("area_branches").insert({
-    tenant_id: claims.tenant_id,
-    area_id: parsed.data.areaId,
-    branch_id: parsed.data.branchId,
-  });
-
-  if (error) {
-    if (error.code === "23505") {
-      return { success: false, error: "Chi nhánh đã thuộc khu vực này." };
+    if (error) {
+      if (error.code === "23505") {
+        return { success: false, error: "Chi nhánh đã thuộc khu vực này." };
+      }
+      return { success: false, error: "Không thể gán chi nhánh." };
     }
-    return { success: false, error: "Không thể gán chi nhánh." };
-  }
 
-  return { success: true };
-}
+    return { success: true };
+  },
+);
 
 /* ─── removeBranchFromArea ─── */
 
-export async function removeBranchFromArea(
-  areaBranchId: number,
-): Promise<ActionResult> {
-  const idSchema = z.coerce.number().int().positive();
-  const parsed = idSchema.safeParse(areaBranchId);
-  if (!parsed.success) {
-    return { success: false, error: "ID không hợp lệ" };
-  }
+export const removeBranchFromArea = withAction(
+  { roles: AREA_ADMIN_ROLES, schema: removeSchema },
+  async (data, { supabase, claims }) => {
+    const { error } = await supabase
+      .from("area_branches")
+      .delete()
+      .eq("id", data.areaBranchId)
+      .eq("tenant_id", claims.tenant_id);
 
-  const ctx = await getAuthContext(AREA_ADMIN_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    if (error) {
+      return {
+        success: false,
+        error: "Không thể xóa chi nhánh khỏi khu vực.",
+      };
+    }
 
-  const { supabase, claims } = ctx;
-
-  const { error } = await supabase
-    .from("area_branches")
-    .delete()
-    .eq("id", parsed.data)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (error) {
-    return { success: false, error: "Không thể xóa chi nhánh khỏi khu vực." };
-  }
-
-  return { success: true };
-}
+    return { success: true };
+  },
+);

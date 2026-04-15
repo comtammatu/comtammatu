@@ -2,8 +2,7 @@
 
 import { z } from "zod";
 import type { StaffRole } from "@comtammatu/shared/auth";
-import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "../admin/_lib/auth";
+import { withAction } from "@/_lib/with-action";
 import { canAccessBranch } from "../admin/_lib/branch-scope";
 
 const SHIFT_ROLES: readonly StaffRole[] = [
@@ -15,42 +14,27 @@ const SHIFT_ROLES: readonly StaffRole[] = [
 
 /* ─── Fetch Shift Assignments for a week ─── */
 
-export async function fetchShiftAssignments(
-  branchId: number,
-  weekStartDate: string, // 'YYYY-MM-DD' (Monday)
-): Promise<ActionResult> {
-  const parsedBranch = z.coerce.number().int().positive().safeParse(branchId);
-  if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
+const fetchShiftAssignmentsSchema = z.object({
+  branchId: z.coerce.number().int().positive(),
+  weekStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
 
-  const parsedDate = z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .safeParse(weekStartDate);
-  if (!parsedDate.success) {
-    return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
-  }
+export const fetchShiftAssignments = withAction(
+  { roles: SHIFT_ROLES, schema: fetchShiftAssignmentsSchema },
+  async (data, { supabase, claims }) => {
+    if (!(await canAccessBranch(supabase, claims, data.branchId))) {
+      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+    }
 
-  const ctx = await getAuthContext(SHIFT_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    const start = new Date(data.weekStartDate);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    const weekEndDate = end.toISOString().split("T")[0];
 
-  const { supabase, claims } = ctx;
-
-  if (!(await canAccessBranch(supabase, claims, parsedBranch.data))) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
-
-  // Calculate week end (6 days after start = Sunday)
-  const start = new Date(parsedDate.data);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 6);
-  const weekEndDate = end.toISOString().split("T")[0];
-
-  const { data, error } = await supabase
-    .from("shift_assignments")
-    .select(
-      `
+    const { data: result, error } = await supabase
+      .from("shift_assignments")
+      .select(
+        `
       id, date, employee_id, shift_id,
       shifts ( id, name, start_time, end_time ),
       employees (
@@ -58,18 +42,19 @@ export async function fetchShiftAssignments(
         profiles ( full_name )
       )
     `,
-    )
-    .eq("branch_id", parsedBranch.data)
-    .eq("tenant_id", claims.tenant_id)
-    .gte("date", parsedDate.data)
-    .lte("date", weekEndDate!);
+      )
+      .eq("branch_id", data.branchId)
+      .eq("tenant_id", claims.tenant_id)
+      .gte("date", data.weekStartDate)
+      .lte("date", weekEndDate!);
 
-  if (error) {
-    return { success: false, error: "Không thể tải phân ca." };
-  }
+    if (error) {
+      return { success: false, error: "Không thể tải phân ca." };
+    }
 
-  return { success: true, data: data ?? [] };
-}
+    return { success: true, data: result ?? [] };
+  },
+);
 
 /* ─── Create Shift Assignment ─── */
 
@@ -80,54 +65,40 @@ const createAssignmentSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
 
-export async function createShiftAssignment(
-  input: z.infer<typeof createAssignmentSchema>,
-): Promise<ActionResult> {
-  const parsed = createAssignmentSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
+export const createShiftAssignment = withAction(
+  { roles: SHIFT_ROLES, schema: createAssignmentSchema },
+  async (data, { supabase, claims }) => {
+    if (!(await canAccessBranch(supabase, claims, data.branchId))) {
+      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+    }
 
-  const ctx = await getAuthContext(SHIFT_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    const { data: existing } = await supabase
+      .from("shift_assignments")
+      .select("id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("employee_id", data.employeeId)
+      .eq("shift_id", data.shiftId)
+      .eq("date", data.date)
+      .maybeSingle();
 
-  const { supabase, claims } = ctx;
+    if (existing) {
+      return {
+        success: false,
+        error: "Nhân viên đã được phân ca này trong ngày.",
+      };
+    }
 
-  if (!(await canAccessBranch(supabase, claims, parsed.data.branchId))) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
-
-  // Check for duplicate: same employee + same date + same shift
-  const { data: existing } = await supabase
-    .from("shift_assignments")
-    .select("id")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("employee_id", parsed.data.employeeId)
-    .eq("shift_id", parsed.data.shiftId)
-    .eq("date", parsed.data.date)
-    .maybeSingle();
-
-  if (existing) {
-    return {
-      success: false,
-      error: "Nhân viên đã được phân ca này trong ngày.",
-    };
-  }
-
-  const { data, error } = await supabase
-    .from("shift_assignments")
-    .insert({
-      tenant_id: claims.tenant_id,
-      branch_id: parsed.data.branchId,
-      employee_id: parsed.data.employeeId,
-      shift_id: parsed.data.shiftId,
-      date: parsed.data.date,
-    })
-    .select(
-      `
+    const { data: result, error } = await supabase
+      .from("shift_assignments")
+      .insert({
+        tenant_id: claims.tenant_id,
+        branch_id: data.branchId,
+        employee_id: data.employeeId,
+        shift_id: data.shiftId,
+        date: data.date,
+      })
+      .select(
+        `
       id, date, employee_id, shift_id,
       shifts ( id, name, start_time, end_time ),
       employees (
@@ -135,84 +106,74 @@ export async function createShiftAssignment(
         profiles ( full_name )
       )
     `,
-    )
-    .single();
+      )
+      .single();
 
-  if (error) {
-    if (error.code === "23505") {
-      return { success: false, error: "Phân ca trùng lặp." };
+    if (error) {
+      if (error.code === "23505") {
+        return { success: false, error: "Phân ca trùng lặp." };
+      }
+      return { success: false, error: "Không thể tạo phân ca." };
     }
-    return { success: false, error: "Không thể tạo phân ca." };
-  }
 
-  return { success: true, data };
-}
+    return { success: true, data: result };
+  },
+);
 
 /* ─── Delete Shift Assignment ─── */
 
-export async function deleteShiftAssignment(
-  assignmentId: number,
-): Promise<ActionResult> {
-  const parsedId = z.coerce.number().int().positive().safeParse(assignmentId);
-  if (!parsedId.success) {
-    return { success: false, error: "ID không hợp lệ" };
-  }
+const deleteAssignmentSchema = z.object({
+  assignmentId: z.coerce.number().int().positive(),
+});
 
-  const ctx = await getAuthContext(SHIFT_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+export const deleteShiftAssignment = withAction(
+  { roles: SHIFT_ROLES, schema: deleteAssignmentSchema },
+  async (data, { supabase, claims }) => {
+    const { error } = await supabase
+      .from("shift_assignments")
+      .delete()
+      .eq("id", data.assignmentId)
+      .eq("tenant_id", claims.tenant_id);
 
-  const { supabase, claims } = ctx;
+    if (error) {
+      return { success: false, error: "Không thể xóa phân ca." };
+    }
 
-  const { error } = await supabase
-    .from("shift_assignments")
-    .delete()
-    .eq("id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (error) {
-    return { success: false, error: "Không thể xóa phân ca." };
-  }
-
-  return { success: true };
-}
+    return { success: true };
+  },
+);
 
 /* ─── Fetch Active Employees for Branch ─── */
 
-export async function fetchEmployeesForBranch(
-  branchId: number,
-): Promise<ActionResult> {
-  const parsedBranch = z.coerce.number().int().positive().safeParse(branchId);
-  if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
+const fetchEmployeesForBranchSchema = z.object({
+  branchId: z.coerce.number().int().positive(),
+});
 
-  const ctx = await getAuthContext(SHIFT_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+export const fetchEmployeesForBranch = withAction(
+  { roles: SHIFT_ROLES, schema: fetchEmployeesForBranchSchema },
+  async (data, { supabase, claims }) => {
+    if (!(await canAccessBranch(supabase, claims, data.branchId))) {
+      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+    }
 
-  const { supabase, claims } = ctx;
-
-  if (!(await canAccessBranch(supabase, claims, parsedBranch.data))) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
-
-  const { data, error } = await supabase
-    .from("employees")
-    .select(
-      `
+    const { data: result, error } = await supabase
+      .from("employees")
+      .select(
+        `
       id, employee_code,
       profiles ( full_name, branch_id )
     `,
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .eq("is_active", true)
-    .eq("profiles.branch_id", parsedBranch.data);
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .eq("profiles.branch_id", data.branchId);
 
-  if (error) {
-    return { success: false, error: "Không thể tải danh sách nhân viên." };
-  }
+    if (error) {
+      return { success: false, error: "Không thể tải danh sách nhân viên." };
+    }
 
-  // Filter out employees whose profile didn't match the branch join
-  const filtered = (data ?? []).filter((e) => e.profiles !== null);
+    const filtered = (result ?? []).filter((e) => e.profiles !== null);
 
-  return { success: true, data: filtered };
-}
+    return { success: true, data: filtered };
+  },
+);

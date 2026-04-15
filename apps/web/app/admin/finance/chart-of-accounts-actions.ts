@@ -3,7 +3,8 @@
 import { z } from "zod";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "../_lib/auth";
+import { getAuthContext } from "@/_lib/auth";
+import { withAction } from "@/_lib/with-action";
 
 const COA_READ_ROLES: readonly StaffRole[] = [
   "owner",
@@ -12,7 +13,7 @@ const COA_READ_ROLES: readonly StaffRole[] = [
 ];
 const COA_WRITE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 
-/* ─── Seed Chart of Accounts ─── */
+/* ─── Seed Chart of Accounts (auth-only) ─── */
 
 export async function seedChartOfAccounts(): Promise<ActionResult> {
   const ctx = await getAuthContext(COA_WRITE_ROLES);
@@ -31,7 +32,7 @@ export async function seedChartOfAccounts(): Promise<ActionResult> {
   return { success: true };
 }
 
-/* ─── Fetch Chart of Accounts ─── */
+/* ─── Fetch Chart of Accounts (auth-only) ─── */
 
 export async function fetchChartOfAccounts(): Promise<ActionResult> {
   const ctx = await getAuthContext(COA_READ_ROLES);
@@ -52,7 +53,7 @@ export async function fetchChartOfAccounts(): Promise<ActionResult> {
   return { success: true, data: data ?? [] };
 }
 
-/* ─── Create Account ─── */
+/* ─── Schemas ─── */
 
 const createAccountSchema = z.object({
   accountCode: z.string().min(1, "Mã tài khoản không được trống"),
@@ -62,47 +63,6 @@ const createAccountSchema = z.object({
   level: z.coerce.number().int().min(1).max(5).optional(),
 });
 
-export async function createAccount(
-  input: z.infer<typeof createAccountSchema>,
-): Promise<ActionResult> {
-  const parsed = createAccountSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-
-  const ctx = await getAuthContext(COA_WRITE_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  const { data, error } = await supabase
-    .from("chart_of_accounts")
-    .insert({
-      tenant_id: claims.tenant_id,
-      account_code: parsed.data.accountCode,
-      account_name: parsed.data.accountName,
-      account_type: parsed.data.accountType,
-      parent_id: parsed.data.parentId ?? null,
-      level: parsed.data.level ?? 1,
-    })
-    .select("id, account_code, account_name")
-    .single();
-
-  if (error) {
-    if (error.code === "23505") {
-      return { success: false, error: "Mã tài khoản đã tồn tại." };
-    }
-    return { success: false, error: "Không thể tạo tài khoản." };
-  }
-
-  return { success: true, data };
-}
-
-/* ─── Update Account ─── */
-
 const updateAccountSchema = z.object({
   id: z.coerce.number().int().positive(),
   accountName: z.string().min(1, "Tên tài khoản không được trống"),
@@ -111,76 +71,89 @@ const updateAccountSchema = z.object({
   level: z.coerce.number().int().min(1).max(5).optional(),
 });
 
-export async function updateAccount(
-  input: z.infer<typeof updateAccountSchema>,
-): Promise<ActionResult> {
-  const parsed = updateAccountSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
+const toggleIdSchema = z.object({
+  id: z.coerce.number().int().positive({ error: "Account ID không hợp lệ" }),
+});
 
-  const ctx = await getAuthContext(COA_WRITE_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+/* ─── Create Account ─── */
 
-  const { supabase, claims } = ctx;
+export const createAccount = withAction(
+  { roles: COA_WRITE_ROLES, schema: createAccountSchema },
+  async (data, { supabase, claims }) => {
+    const { data: result, error } = await supabase
+      .from("chart_of_accounts")
+      .insert({
+        tenant_id: claims.tenant_id,
+        account_code: data.accountCode,
+        account_name: data.accountName,
+        account_type: data.accountType,
+        parent_id: data.parentId ?? null,
+        level: data.level ?? 1,
+      })
+      .select("id, account_code, account_name")
+      .single();
 
-  const { error } = await supabase
-    .from("chart_of_accounts")
-    .update({
-      account_name: parsed.data.accountName,
-      account_type: parsed.data.accountType,
-      parent_id: parsed.data.parentId ?? null,
-      level: parsed.data.level,
-    })
-    .eq("id", parsed.data.id)
-    .eq("tenant_id", claims.tenant_id);
+    if (error) {
+      if (error.code === "23505") {
+        return { success: false, error: "Mã tài khoản đã tồn tại." };
+      }
+      return { success: false, error: "Không thể tạo tài khoản." };
+    }
 
-  if (error) {
-    return { success: false, error: "Không thể cập nhật tài khoản." };
-  }
+    return { success: true, data: result };
+  },
+);
 
-  return { success: true };
-}
+/* ─── Update Account ─── */
+
+export const updateAccount = withAction(
+  { roles: COA_WRITE_ROLES, schema: updateAccountSchema },
+  async (data, { supabase, claims }) => {
+    const { error } = await supabase
+      .from("chart_of_accounts")
+      .update({
+        account_name: data.accountName,
+        account_type: data.accountType,
+        parent_id: data.parentId ?? null,
+        level: data.level,
+      })
+      .eq("id", data.id)
+      .eq("tenant_id", claims.tenant_id);
+
+    if (error) {
+      return { success: false, error: "Không thể cập nhật tài khoản." };
+    }
+
+    return { success: true };
+  },
+);
 
 /* ─── Toggle Account Active ─── */
 
-export async function toggleAccountActive(
-  accountId: number,
-): Promise<ActionResult> {
-  const parsedId = z.coerce.number().int().positive().safeParse(accountId);
-  if (!parsedId.success) {
-    return { success: false, error: "Account ID không hợp lệ" };
-  }
+export const toggleAccountActive = withAction(
+  { roles: COA_WRITE_ROLES, schema: toggleIdSchema },
+  async (data, { supabase, claims }) => {
+    const { data: account, error: fetchErr } = await supabase
+      .from("chart_of_accounts")
+      .select("id, is_active")
+      .eq("id", data.id)
+      .eq("tenant_id", claims.tenant_id)
+      .single();
 
-  const ctx = await getAuthContext(COA_WRITE_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    if (fetchErr || !account) {
+      return { success: false, error: "Tài khoản không tồn tại." };
+    }
 
-  const { supabase, claims } = ctx;
+    const { error } = await supabase
+      .from("chart_of_accounts")
+      .update({ is_active: !account.is_active })
+      .eq("id", data.id)
+      .eq("tenant_id", claims.tenant_id);
 
-  // Fetch current state
-  const { data: account, error: fetchErr } = await supabase
-    .from("chart_of_accounts")
-    .select("id, is_active")
-    .eq("id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
+    if (error) {
+      return { success: false, error: "Không thể thay đổi trạng thái." };
+    }
 
-  if (fetchErr || !account) {
-    return { success: false, error: "Tài khoản không tồn tại." };
-  }
-
-  const { error } = await supabase
-    .from("chart_of_accounts")
-    .update({ is_active: !account.is_active })
-    .eq("id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (error) {
-    return { success: false, error: "Không thể thay đổi trạng thái." };
-  }
-
-  return { success: true, data: { is_active: !account.is_active } };
-}
+    return { success: true, data: { is_active: !account.is_active } };
+  },
+);

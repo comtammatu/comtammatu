@@ -48,7 +48,7 @@ export function AreasManager({ areas, branches }: AreasManagerProps) {
   const handleCreateArea = () => {
     if (!newAreaName.trim()) return;
     startTransition(async () => {
-      const result = await createArea(newAreaName.trim());
+      const result = await createArea({ name: newAreaName.trim() });
       if (result.success) {
         setNewAreaName("");
         router.refresh();
@@ -60,7 +60,7 @@ export function AreasManager({ areas, branches }: AreasManagerProps) {
 
   const handleAssignBranch = (areaId: number, branchId: number) => {
     startTransition(async () => {
-      const result = await assignBranchToArea(areaId, branchId);
+      const result = await assignBranchToArea({ areaId, branchId });
       if (result.success) {
         router.refresh();
       } else {
@@ -71,7 +71,7 @@ export function AreasManager({ areas, branches }: AreasManagerProps) {
 
   const handleRemoveBranch = (areaBranchId: number) => {
     startTransition(async () => {
-      const result = await removeBranchFromArea(areaBranchId);
+      const result = await removeBranchFromArea({ areaBranchId });
       if (result.success) {
         router.refresh();
       } else {

@@ -4,8 +4,13 @@ import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { getAuthContext } from "./_lib/auth";
+import { withAction } from "@/_lib/with-action";
 
-const PRODUCTION_ROLES: readonly StaffRole[] = ["super_manager"];
+const PRODUCTION_ROLES: readonly StaffRole[] = [
+  "owner",
+  "super_manager",
+  "branch_manager",
+];
 
 const productionLineSchema = z.object({
   finishedGoodId: z.coerce.number().int().positive(),
@@ -347,67 +352,45 @@ export async function fetchProductionOrders(): Promise<
   return { success: true, data: rows };
 }
 
-export async function createProductionOrder(
-  input: z.input<typeof createProductionOrderSchema>,
-): Promise<ActionResult> {
-  const parsed = createProductionOrderSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
+export const createProductionOrder = withAction(
+  { roles: PRODUCTION_ROLES, schema: createProductionOrderSchema },
+  async (data, { supabase }) => {
+    const sb = supabase as unknown as RpcClient;
+    const { error } = await sb.rpc("create_production_order", {
+      p_branch_id: data.branchId,
+      p_production_number: data.productionNumber,
+      p_notes: data.notes ?? null,
+      p_items: data.items.map((item) => ({
+        finishedGoodId: item.finishedGoodId,
+        quantity: item.quantity,
+        unit: item.unit,
+      })),
+    });
 
-  const ctx = await getAuthContext(PRODUCTION_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase } = ctx;
-  const sb = supabase as unknown as RpcClient;
-  const { error } = await sb.rpc("create_production_order", {
-    p_branch_id: parsed.data.branchId,
-    p_production_number: parsed.data.productionNumber,
-    p_notes: parsed.data.notes ?? null,
-    p_items: parsed.data.items.map((item) => ({
-      finishedGoodId: item.finishedGoodId,
-      quantity: item.quantity,
-      unit: item.unit,
-    })),
-  });
-
-  if (error) {
-    if (error.code === "23505") {
-      return { success: false, error: "Số lệnh sản xuất đã tồn tại." };
+    if (error) {
+      if (error.code === "23505") {
+        return { success: false, error: "Số lệnh sản xuất đã tồn tại." };
+      }
+      if (error.code === "23514" || error.code === "22023") {
+        return {
+          success: false,
+          error: "Bếp trung tâm hoặc thành phẩm chưa hợp lệ.",
+        };
+      }
+      if (error.code === "42501") {
+        return { success: false, error: "Không có quyền tạo lệnh sản xuất." };
+      }
+      return { success: false, error: "Không thể tạo lệnh sản xuất." };
     }
-    if (error.code === "23514" || error.code === "22023") {
-      return {
-        success: false,
-        error: "Bếp trung tâm hoặc thành phẩm chưa hợp lệ.",
-      };
-    }
-    if (error.code === "42501") {
-      return { success: false, error: "Không có quyền tạo lệnh sản xuất." };
-    }
-    return { success: false, error: "Không thể tạo lệnh sản xuất." };
-  }
 
-  return { success: true };
-}
+    return { success: true };
+  },
+);
 
-export async function upsertProductionRecipe(
-  input: z.input<typeof productionRecipeSchema>,
-): Promise<ActionResult> {
-  const parsed = productionRecipeSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-
-  const ctx = await getAuthContext(PRODUCTION_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
+export const upsertProductionRecipe = withAction(
+  { roles: PRODUCTION_ROLES, schema: productionRecipeSchema },
+  async (data, ctx) => {
+    const { supabase, claims } = ctx;
   if (claims.user_role === "branch_manager") {
     if (claims.branch_id == null) {
       return {
@@ -428,48 +411,46 @@ export async function upsertProductionRecipe(
     .from("ingredients")
     .select("id, item_kind")
     .eq("tenant_id", claims.tenant_id)
-    .in("id", [parsed.data.finishedGoodId, parsed.data.ingredientId]);
+    .in("id", [data.finishedGoodId, data.ingredientId]);
 
-  if (ingredientError) {
-    return { success: false, error: "Không thể kiểm tra nguyên liệu." };
-  }
+    if (ingredientError) {
+      return { success: false, error: "Không thể kiểm tra nguyên liệu." };
+    }
 
-  const finishedGood = (ingredients ?? []).find(
-    (item) => item.id === parsed.data.finishedGoodId,
-  );
-  const ingredient = (ingredients ?? []).find(
-    (item) => item.id === parsed.data.ingredientId,
-  );
+    const finishedGood = (ingredients ?? []).find(
+      (item) => item.id === data.finishedGoodId,
+    );
+    const ingredient = (ingredients ?? []).find(
+      (item) => item.id === data.ingredientId,
+    );
 
-  if (
-    finishedGood?.item_kind !== "finished_good" ||
-    ingredient?.item_kind !== "raw_material"
-  ) {
-    return {
-      success: false,
-      error: "Công thức phải nối thành phẩm với nguyên liệu.",
-    };
-  }
+    if (finishedGood?.item_kind !== "finished_good" || ingredient?.item_kind !== "raw_material") {
+      return {
+        success: false,
+        error: "Công thức phải nối thành phẩm với nguyên liệu.",
+      };
+    }
 
-  const { error } = await supabase.from("production_recipes").upsert(
-    {
-      tenant_id: claims.tenant_id,
-      finished_good_id: parsed.data.finishedGoodId,
-      ingredient_id: parsed.data.ingredientId,
-      quantity: parsed.data.quantity,
-      unit: parsed.data.unit,
-      yield_factor: parsed.data.yieldFactor,
-      note: parsed.data.note ?? null,
-    },
-    { onConflict: "finished_good_id,ingredient_id,tenant_id" },
-  );
+    const { error } = await supabase.from("production_recipes").upsert(
+      {
+        tenant_id: claims.tenant_id,
+        finished_good_id: data.finishedGoodId,
+        ingredient_id: data.ingredientId,
+        quantity: data.quantity,
+        unit: data.unit,
+        yield_factor: data.yieldFactor,
+        note: data.note ?? null,
+      },
+      { onConflict: "finished_good_id,ingredient_id,tenant_id" },
+    );
 
-  if (error) {
-    return { success: false, error: "Không thể lưu công thức." };
-  }
+    if (error) {
+      return { success: false, error: "Không thể lưu công thức." };
+    }
 
-  return { success: true };
-}
+    return { success: true };
+  },
+);
 
 export async function deleteProductionRecipe(
   recipeId: number,

@@ -59,7 +59,7 @@ export function ItemTable({ items, categories }: ItemTableProps) {
 
   function handleToggleActive(id: number) {
     startTransition(async () => {
-      const result = await toggleItemActive(id);
+      const result = await toggleItemActive({ id });
       if (!result.success) {
         toast.error(result.error);
       }
