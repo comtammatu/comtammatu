@@ -13,8 +13,8 @@ M0-M3, M5 SHIPPED. M5-Ext central kitchen production is live. M4/M6/M7 PARTIAL w
 - [ ] When Inventory behavior changes materially, update `docs/ref/inventory.md`, `docs/ref/inventory-sop.md`, and `docs/worklog/inventory/adoption-matrix.md` together
 - [ ] Khi cần tách tồn riêng `Kho chi nhánh` / `Bếp chi nhánh`, triển khai project location-ledger theo `docs/plan/inventory-branch-kitchen-model.md`
 - [ ] Khi mở phase tách tồn thật, triển khai theo `docs/plan/inventory-location-ledger.md` với rollout `seed -> compatibility -> dual-write -> cutover`
-- [ ] Owner apply migration `20260417040000_inventory_locations_phase1.sql`, rồi mới bắt đầu Phase 2 compatibility columns
-- [ ] Khi Phase 1 đã apply xong, owner tiếp tục apply Migration A `20260417050000_inventory_location_compat_columns.sql`, rồi mới backfill / siết constraint cho Phase 2
+- [x] Owner apply migration `20260417040000_inventory_locations_phase1.sql` — APPLIED, types regenerated (confirmed 2026-04-15)
+- [x] Owner apply Migration A `20260417050000_inventory_location_compat_columns.sql` — APPLIED, compat columns in types (confirmed 2026-04-15)
 - [ ] Khi Phase 1 đã apply xong, triển khai Phase 2 theo `docs/plan/inventory-location-ledger-phase2.md`
 - [ ] Khi Phase 2 bắt đầu, đi theo app patch map ở `docs/plan/inventory-location-ledger-phase2-app-patch.md`
 
@@ -37,10 +37,11 @@ M0-M3, M5 SHIPPED. M5-Ext central kitchen production is live. M4/M6/M7 PARTIAL w
 - [x] `consume_stock_for_order` never called — wired after cash + VietQR confirm (2026-04-10)
 - [ ] P3: Login rate limit fail-open khi Upstash unreachable — documented design decision, cần observability
 - [x] Migration applied: `20260413000000_fix_void_cancel_branch_scope.sql` — applied + types regenerated
+- [x] P2: 14x `as any` type safety bypasses removed — KDS/POS/inventory/finance (PR #15, 2026-04-15). 3 remaining blocked on RPC type gen
 
 ## Pre-deploy Fixes (pending)
 
-- [ ] Fix: Invoice empty `items[]` — populate line items from order_items (finance/actions.ts:131)
+- [x] Fix: Invoice empty `items[]` — use typed nested select, filter cancelled, validate non-empty (PR #15, 2026-04-15)
 - [ ] Uptime monitor on `/api/health` (UptimeRobot — ops task, not code)
 - [ ] Momo webhook: atomic `complete_payment_and_consume_stock` RPC (migration needed when M4 wired)
 - [ ] Ops reconciliation: before Momo go-live, add admin query to find payment-order desync:
