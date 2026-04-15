@@ -68,7 +68,7 @@ export function badgeVariantFromTone(
   if (tone === "success") return "success" as const;
   if (tone === "warning") return "warning" as const;
   if (tone === "danger") return "destructive" as const;
-  return "neutral" as const;
+  return "secondary" as const;
 }
 
 export function defaultProductionNumber() {

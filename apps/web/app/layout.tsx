@@ -1,7 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { Be_Vietnam_Pro, IBM_Plex_Mono, Lora } from "next/font/google";
+import { Be_Vietnam_Pro, IBM_Plex_Mono, Lora, Inter } from "next/font/google";
+import { Toaster } from "@comtammatu/ui/components/sonner";
+import { TooltipProvider } from "@comtammatu/ui/components/tooltip";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
 const bodyFont = Be_Vietnam_Pro({
   subsets: ["latin", "latin-ext", "vietnamese"],
@@ -46,7 +51,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="vi"
-      className={`${bodyFont.variable} ${displayFont.variable} ${monoFont.variable}`}
+      className={cn(bodyFont.variable, displayFont.variable, monoFont.variable, "font-sans", inter.variable)}
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
@@ -56,7 +61,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         >
           Bỏ qua điều hướng
         </a>
-        {children}
+        <TooltipProvider>
+          {children}
+        </TooltipProvider>
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   );

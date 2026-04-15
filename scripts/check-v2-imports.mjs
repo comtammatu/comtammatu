@@ -15,11 +15,12 @@ const checks = [
     command:
       "grep -rn '@comtammatu/ui/components/inventory-patterns' apps/web/app",
   },
-  {
-    description: "legacy sidebar imports in shipped routes",
-    command:
-      "grep -rn '@comtammatu/ui/components/sidebar' apps/web/app --exclude='inventory-sidebar.tsx' --exclude='inventory-header.tsx'",
-  },
+  // sidebar is now the proper shadcn component — no longer legacy
+  // {
+  //   description: "legacy sidebar imports in shipped routes",
+  //   command:
+  //     "grep -rn '@comtammatu/ui/components/sidebar' apps/web/app --exclude='inventory-sidebar.tsx' --exclude='inventory-header.tsx'",
+  // },
   {
     description: "legacy inventory helper imports in shipped routes",
     command:

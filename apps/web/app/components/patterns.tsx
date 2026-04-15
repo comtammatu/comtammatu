@@ -1,6 +1,15 @@
 import type { ReactNode } from "react";
 import { cn } from "@comtammatu/ui";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 
 export type EmptyStateMode =
   | "full"
@@ -11,41 +20,7 @@ export type EmptyStateMode =
   | "no-access"
   | "error";
 
-const SECTION_DENSITY = {
-  compact: "gap-4 p-4 sm:p-5",
-  default: "gap-5 p-5 sm:p-6",
-  comfortable: "gap-6 p-6 sm:p-7",
-} as const;
-
-const STATUS_VARIANTS: Record<string, string> = {
-  active:
-    "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-100",
-  success:
-    "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-100",
-  ready:
-    "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-100",
-  pending:
-    "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-100",
-  warning:
-    "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-100",
-  processing:
-    "border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-500/30 dark:bg-orange-500/15 dark:text-orange-100",
-  info: "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/15 dark:text-sky-100",
-  error:
-    "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/15 dark:text-rose-100",
-  danger:
-    "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/15 dark:text-rose-100",
-  destructive:
-    "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/15 dark:text-rose-100",
-  cancelled:
-    "border-border bg-secondary/70 text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground",
-  inactive:
-    "border-border bg-secondary/70 text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground",
-  neutral:
-    "border-border bg-secondary/70 text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground",
-  default:
-    "border-border bg-secondary/70 text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground",
-};
+/* ── PageContainer ── */
 
 export function PageContainer({
   children,
@@ -54,17 +29,10 @@ export function PageContainer({
   children: ReactNode;
   className?: string;
 }) {
-  return (
-    <section
-      className={cn(
-        "surface-panel paper-grid relative overflow-hidden px-5 py-5 sm:px-6 sm:py-6",
-        className,
-      )}
-    >
-      {children}
-    </section>
-  );
+  return <Card className={className}>{children}</Card>;
 }
+
+/* ── PageHeader ── */
 
 export function PageHeader({
   title,
@@ -80,28 +48,30 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-4 border-b border-border/70 pb-5 sm:flex-row sm:items-end sm:justify-between">
-      <div className="max-w-3xl space-y-2">
-        {eyebrow ? <p className="ops-kicker">{eyebrow}</p> : null}
-        <div className="space-y-2">
-          <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            {title}
-          </h2>
-          {description ? (
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-              {description}
+    <CardHeader>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          {eyebrow ? (
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              {eyebrow}
             </p>
           ) : null}
+          <CardTitle className="text-2xl sm:text-3xl">{title}</CardTitle>
+          {description ? (
+            <CardDescription>{description}</CardDescription>
+          ) : null}
         </div>
+        {actions ?? children ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {actions ?? children}
+          </div>
+        ) : null}
       </div>
-      {actions ?? children ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {actions ?? children}
-        </div>
-      ) : null}
-    </div>
+    </CardHeader>
   );
 }
+
+/* ── SectionCard ── */
 
 export function SectionCard({
   title,
@@ -109,7 +79,7 @@ export function SectionCard({
   children,
   className,
   action,
-  density,
+  density: _density,
 }: {
   title?: string;
   description?: string;
@@ -118,34 +88,23 @@ export function SectionCard({
   action?: ReactNode;
   density?: string;
 }) {
-  const densityClass =
-    SECTION_DENSITY[density as keyof typeof SECTION_DENSITY] ??
-    SECTION_DENSITY.default;
-
   return (
-    <section
-      className={cn(
-        "surface-panel-strong relative overflow-hidden",
-        className,
-      )}
-    >
+    <Card className={className}>
       {title ? (
-        <div className="flex flex-col gap-4 border-b border-border/70 px-5 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6">
-          <div className="space-y-1">
-            <h3 className="text-xl font-semibold text-foreground">{title}</h3>
-            {description ? (
-              <p className="text-sm leading-6 text-muted-foreground">
-                {description}
-              </p>
-            ) : null}
-          </div>
-          {action ? <div className="shrink-0">{action}</div> : null}
-        </div>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+          {description ? (
+            <CardDescription>{description}</CardDescription>
+          ) : null}
+          {action ? <CardAction>{action}</CardAction> : null}
+        </CardHeader>
       ) : null}
-      <div className={cn("flex flex-col", densityClass)}>{children}</div>
-    </section>
+      <CardContent>{children}</CardContent>
+    </Card>
   );
 }
+
+/* ── EmptyState ── */
 
 export function EmptyState({
   icon,
@@ -169,28 +128,32 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-4 px-5 py-12 text-center sm:px-8 sm:py-14",
+        "flex flex-col items-center justify-center gap-4 py-12 text-center",
         className,
       )}
     >
       {icon ? (
-        <div className="flex size-16 items-center justify-center rounded-full border border-border bg-secondary/75 text-primary shadow-app-sm">
+        <div className="flex size-12 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground">
           {icon}
         </div>
       ) : null}
-      <div className="space-y-2">
-        <h3 className="text-2xl font-semibold text-foreground">{title}</h3>
+      <div className="space-y-1.5">
+        <h3 className="text-lg font-semibold">{title}</h3>
         {description ? (
-          <p className="max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
+          <p className="max-w-md text-sm text-muted-foreground">
             {description}
           </p>
         ) : null}
       </div>
-      {action ? <div className="flex flex-wrap justify-center gap-2">{action}</div> : null}
+      {action ? (
+        <div className="flex flex-wrap justify-center gap-2">{action}</div>
+      ) : null}
       {children}
     </div>
   );
 }
+
+/* ── EmptyStatePanel ── */
 
 export function EmptyStatePanel({
   icon,
@@ -210,18 +173,42 @@ export function EmptyStatePanel({
   children?: ReactNode;
 }) {
   return (
-    <div className={cn("surface-panel overflow-hidden", className)}>
-      <EmptyState
-        icon={icon}
-        title={title}
-        description={description}
-        action={action}
-        mode={mode}
-      />
-      {children}
-    </div>
+    <Card className={className}>
+      <CardContent>
+        <EmptyState
+          icon={icon}
+          title={title}
+          description={description}
+          action={action}
+          mode={mode}
+        />
+        {children}
+      </CardContent>
+    </Card>
   );
 }
+
+/* ── StatusBadge ── */
+
+const STATUS_TO_BADGE_VARIANT: Record<
+  string,
+  "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info"
+> = {
+  active: "success",
+  success: "success",
+  ready: "success",
+  pending: "warning",
+  warning: "warning",
+  processing: "info",
+  info: "info",
+  error: "destructive",
+  danger: "destructive",
+  destructive: "destructive",
+  cancelled: "secondary",
+  inactive: "secondary",
+  neutral: "secondary",
+  default: "outline",
+};
 
 export function StatusBadge({
   variant,
@@ -235,19 +222,16 @@ export function StatusBadge({
   className?: string;
 }) {
   const key = variant ?? tone ?? "default";
+  const badgeVariant = STATUS_TO_BADGE_VARIANT[key] ?? "outline";
 
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold",
-        STATUS_VARIANTS[key] ?? STATUS_VARIANTS.default,
-        className,
-      )}
-    >
+    <Badge variant={badgeVariant} className={className}>
       {children}
-    </span>
+    </Badge>
   );
 }
+
+/* ── FilterBar ── */
 
 export function FilterBar({
   children,
@@ -259,7 +243,7 @@ export function FilterBar({
   return (
     <div
       className={cn(
-        "surface-muted flex flex-wrap items-center gap-2 p-3 sm:p-4",
+        "flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/50 p-3",
         className,
       )}
     >
@@ -267,6 +251,8 @@ export function FilterBar({
     </div>
   );
 }
+
+/* ── ActionIconButton ── */
 
 export function ActionIconButton({
   icon,
@@ -287,10 +273,7 @@ export function ActionIconButton({
       variant="ghost"
       size="icon-sm"
       onClick={onClick}
-      className={cn(
-        "rounded-full border border-border bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-        className,
-      )}
+      className={className}
       aria-label={label}
     >
       {icon}
