@@ -11,8 +11,6 @@ import {
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   Drawer,
@@ -21,89 +19,36 @@ import {
 } from "@comtammatu/ui/components/drawer";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
-  Clock,
-  DoorOpen,
-  LogOut,
-  Monitor,
   Package,
   ShoppingCart,
   UtensilsCrossed,
   X,
 } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
-import type { CategoryType } from "@comtammatu/shared";
-import { CATEGORY_TYPE_LABELS } from "@comtammatu/shared/menu";
 import { PosTableGate } from "./pos-table-gate";
-import { CartSidebar } from "./cart-sidebar";
 import { ItemCustomizer } from "./item-customizer";
 import { CloseSessionDialog } from "./close-session-dialog";
 import { BillReceipt } from "./bill-receipt";
-import { OrderHistory } from "./order-history";
-import { EmployeePortalBackControl } from "../employee-portal-back-control";
-import { submitOrder, fetchSessionOrders, appendOrderItems } from "./actions";
 import { OrderDetailSheet } from "./order-detail-sheet";
+import { PosSessionHeader } from "./pos-session-header";
+import { PosMenuGrid } from "./pos-menu-grid";
+import { PosSidebarTabs, PosSidebarContent } from "./pos-sidebar-panel";
+import { submitOrder, fetchSessionOrders, appendOrderItems } from "./actions";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import { calcCartTotal } from "./types";
 import type { BranchTable, ActiveSession } from "./page";
 import type { SessionOrder } from "./order-history";
 
-/* ─── Menu data types (derived from fetchMenuForPos action) ─── */
-
-export interface MenuVariant {
-  id: number;
-  name: string;
-  price_adjustment: number;
-  sort_order: number;
-}
-
-export interface MenuModifier {
-  id: number;
-  name: string;
-  price: number;
-  sort_order: number;
-}
-
-export interface MenuAvailableSide {
-  id: number;
-  is_default: boolean;
-  side_item: { id: number; name: string; base_price: number };
-}
-
-export interface MenuItem {
-  id: number;
-  name: string;
-  base_price: number;
-  description: string | null;
-  image_url: string | null;
-  sort_order: number;
-  menu_item_variants: MenuVariant[];
-  menu_item_modifiers: MenuModifier[];
-  menu_item_available_sides: MenuAvailableSide[];
-}
-
-export interface MenuCategory {
-  id: number;
-  name: string;
-  type: string;
-  sort_order: number;
-  menu_items: MenuItem[];
-}
-
-const MENU_ZONE_ORDER: CategoryType[] = [
-  "main_dish",
-  "side_dish",
-  "drink",
-  "dessert",
-];
+/* ─── Re-exports for external consumers ─── */
+export type {
+  MenuVariant,
+  MenuModifier,
+  MenuAvailableSide,
+  MenuItem,
+  MenuCategory,
+} from "./pos-menu-types";
 
 /* ─── Helpers ─── */
-
-function formatTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function makeCartKey(
   itemId: number,
@@ -126,7 +71,7 @@ function makeCartKey(
 
 interface PosMenuProps {
   branchId: number;
-  categories: MenuCategory[];
+  categories: import("./pos-menu-types").MenuCategory[];
   tables: BranchTable[];
   session: ActiveSession;
   /** From URL `?table=` — preselect dine-in table when valid */
@@ -134,8 +79,6 @@ interface PosMenuProps {
   /** From server: `dine_in` when `?table=` matches a non-maintenance table; else `takeaway` */
   initialOrderType: OrderType;
 }
-
-type PosFlowStepState = "done" | "current" | "todo";
 
 export function PosMenu({
   branchId,
@@ -148,14 +91,8 @@ export function PosMenu({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [activeCategoryId, setActiveCategoryId] = useState<number | null>(
-    categories[0]?.id ?? null,
-  );
-  const [activeMenuZone, setActiveMenuZone] = useState<CategoryType | null>(
-    null,
-  );
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [customizerItem, setCustomizerItem] = useState<MenuItem | null>(null);
+  const [customizerItem, setCustomizerItem] = useState<import("./pos-menu-types").MenuItem | null>(null);
   const [orderType, setOrderType] = useState<OrderType>(initialOrderType);
   const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -209,33 +146,6 @@ export function PosMenu({
     }
   }, [initialTableId, initialTables]);
 
-  const availableMenuZones = useMemo(
-    () =>
-      MENU_ZONE_ORDER.filter((z) =>
-        categories.some((c) => c.type === z && c.menu_items.length > 0),
-      ),
-    [categories],
-  );
-
-  const effectiveMenuZone = useMemo(() => {
-    if (activeMenuZone != null && availableMenuZones.includes(activeMenuZone)) {
-      return activeMenuZone;
-    }
-    return availableMenuZones[0] ?? "main_dish";
-  }, [activeMenuZone, availableMenuZones]);
-
-  const categoriesInActiveZone = useMemo(
-    () => categories.filter((c) => c.type === effectiveMenuZone),
-    [categories, effectiveMenuZone],
-  );
-
-  useEffect(() => {
-    setActiveCategoryId((prev) => {
-      const ok = categoriesInActiveZone.some((c) => c.id === prev);
-      return ok ? prev : (categoriesInActiveZone[0]?.id ?? null);
-    });
-  }, [categoriesInActiveZone]);
-
   const orderContextReady =
     orderType === "takeaway" || selectedTableId !== null;
 
@@ -252,11 +162,6 @@ export function PosMenu({
     loadedRef.current = true;
     void loadSessionOrders();
   }, [loadSessionOrders]);
-
-  const activeCategory = useMemo(
-    () => categories.find((c) => c.id === activeCategoryId),
-    [categories, activeCategoryId],
-  );
 
   const cartTotal = useMemo(() => calcCartTotal(cartItems), [cartItems]);
 
@@ -279,7 +184,7 @@ export function PosMenu({
     ReadonlyArray<{
       label: string;
       meta: string;
-      state: PosFlowStepState;
+      state: "done" | "current" | "todo";
     }>
   >(
     () => [
@@ -349,7 +254,7 @@ export function PosMenu({
 
   const addToCart = useCallback(
     (
-      item: MenuItem,
+      item: import("./pos-menu-types").MenuItem,
       variantId?: number,
       variantName?: string,
       unitPrice?: number,
@@ -495,7 +400,7 @@ export function PosMenu({
   ]);
 
   const handleItemTap = useCallback(
-    (item: MenuItem) => {
+    (item: import("./pos-menu-types").MenuItem) => {
       const hasVariants = item.menu_item_variants.length > 0;
       const hasModifiers = item.menu_item_modifiers.length > 0;
       const hasSides = item.menu_item_available_sides.length > 0;
@@ -541,7 +446,7 @@ export function PosMenu({
 
   const handleCustomizerConfirm = useCallback(
     (
-      item: MenuItem,
+      item: import("./pos-menu-types").MenuItem,
       variantId: number | undefined,
       variantName: string | undefined,
       unitPrice: number,
@@ -607,175 +512,6 @@ export function PosMenu({
       sessionOrders.reduce((sum, order) => sum + Number(order.total_amount), 0),
     [sessionOrders],
   );
-  const activeZoneLabel = CATEGORY_TYPE_LABELS[effectiveMenuZone] ?? effectiveMenuZone;
-  const activeMenuItemCount = activeCategory?.menu_items.length ?? 0;
-
-  const sessionHeader = (
-    <div className="border-b border-border/60 bg-card px-3 py-3 md:px-4">
-      <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <EmployeePortalBackControl />
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5 font-medium text-foreground">
-                <Monitor className="size-3.5 shrink-0 text-primary" />
-                <span className="truncate">
-                  {session.pos_terminals?.name ?? "POS"}
-                </span>
-              </span>
-              <span className="flex min-w-0 items-center gap-1.5">
-                <Clock className="size-3.5 shrink-0" />
-                <span className="truncate">
-                  <span className="hidden sm:inline">Ca mở lúc </span>
-                  {formatTime(session.opened_at)}
-                </span>
-              </span>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="min-h-11 min-w-11 h-9 shrink-0 gap-1.5 rounded-full px-4 text-xs text-muted-foreground hover:text-destructive"
-            onClick={() => setShowCloseSession(true)}
-          >
-            <LogOut className="size-3.5" />
-            Đóng ca
-          </Button>
-        </div>
-
-                <div className="rounded-xl border bg-card shadow-sm p-4 md:p-5">
-          <div className="relative space-y-4">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Ca POS</p>
-                <h1 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
-                  {flowHeadline}
-                </h1>
-                <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-                  {flowHint}
-                </p>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2 xl:min-w-88">
-                <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-3 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Ngữ cảnh hiện tại
-                  </p>
-                  <p className="mt-2 text-base font-semibold text-foreground">
-                    {orderType === "takeaway"
-                      ? "Mang về"
-                      : selectedTableNumber != null
-                        ? `Bàn ${selectedTableNumber}`
-                        : "Chưa gán bàn"}
-                  </p>
-                </div>
-                <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-3 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Đơn đang chạy
-                  </p>
-                  <p className="mt-2 text-base font-semibold text-foreground">
-                    {activeSessionOrders.length} đơn đang chạy
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
-              <span className="rounded-full border border-border/70 bg-card px-3 py-1.5">
-                {isPending
-                  ? "Đang xử lý thay đổi đơn"
-                  : `${String(Math.round(flowProgressPercent))}% mạch tạo đơn đã sẵn`}
-              </span>
-              <span className="rounded-full border border-border/70 bg-card px-3 py-1.5">
-                {canSubmit ? "Có thể gửi bếp" : "Chưa đủ điều kiện gửi bếp"}
-              </span>
-            </div>
-
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-              {flowSteps.map((step, index) => (
-                <div key={step.label} className="rounded-lg border bg-card shadow-sm p-3" data-state={step.state}>
-                  <div className="flex items-start gap-3">
-                    <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">{index + 1}</div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold">{step.label}</p>
-                      <p className="text-xs leading-5 text-muted-foreground">
-                        {step.meta}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-primary/15 bg-primary/8 p-3 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                  Giỏ hiện tại
-                </p>
-                <p className="mt-2 text-lg font-semibold text-foreground">
-                  {cartQuantity > 0 ? `${cartQuantity} món` : "Chưa có món trong giỏ"}
-                </p>
-              </div>
-              <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-success/15 bg-success/10 p-3 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-success">
-                  Đơn sẵn sàng
-                </p>
-                <p className="mt-2 text-lg font-semibold text-foreground">
-                  {readySessionOrders.length} đơn
-                </p>
-              </div>
-              <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-3 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Đã hoàn tất
-                </p>
-                <p className="mt-2 text-lg font-semibold text-foreground">
-                  {completedSessionOrders.length} đơn
-                </p>
-              </div>
-              <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-warning/15 bg-warning/10 p-3 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-warning">
-                  Doanh thu ca
-                </p>
-                <p className="mt-2 text-lg font-semibold text-foreground">
-                  {formatVND(sessionRevenue)}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const appendBannerRow =
-    appendTarget != null ? (
-      <div className="border-b border-warning/15 bg-warning/10 px-3 py-3 md:px-4" role="status">
-        <div className="mx-auto w-full max-w-screen-2xl">
-          <div className="rounded-xl border border-warning/20 bg-warning/10 shadow-sm p-3">
-            <div className="relative flex items-center justify-between gap-2">
-              <p className="min-w-0 text-sm leading-6 text-foreground">
-                <span className="font-semibold">
-                  Thêm món vào đơn #{appendTarget.orderNumber}
-                </span>
-                <span className="text-muted-foreground">
-                  {" "}
-                  Chọn món trên lưới bên dưới để tiếp tục cùng một flow.
-                </span>
-              </p>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="min-h-11 min-w-11 h-9 shrink-0 gap-1 rounded-full px-3 text-xs text-foreground hover:bg-warning/25"
-                onClick={() => setAppendTarget(null)}
-              >
-                <X className="size-3.5" />
-                Hủy
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    ) : null;
 
   const serviceModeSelector = (
     <div className="rounded-xl border bg-card shadow-sm p-3">
@@ -897,107 +633,86 @@ export function PosMenu({
     </aside>
   );
 
-  const sidebarTabs = (
-    <div className="border-b border-border/60 px-3 py-3">
-      <div
-        role="tablist"
-        aria-label="POS sidebar"
-        className="grid grid-cols-2 gap-2"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={!showOrders}
-          className={cn(
-            "min-h-11 min-w-11 flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all",
-            !showOrders
-              ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
-              : "border-border/70 bg-background text-muted-foreground hover:text-foreground",
-          )}
-          onClick={() => setShowOrders(false)}
-        >
-          Giỏ hàng
-          {cartItems.length > 0 && (
-            <span className="rounded-full bg-primary-foreground/15 px-2 py-0.5 text-xs font-semibold text-primary-foreground">
-              {cartQuantity}
-            </span>
-          )}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={showOrders}
-          className={cn(
-            "min-h-11 min-w-11 flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all",
-            showOrders
-              ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
-              : "border-border/70 bg-background text-muted-foreground hover:text-foreground",
-          )}
-          onClick={() => {
-            setShowOrders(true);
-            void loadSessionOrders();
-          }}
-        >
-          Đơn hàng
-        </button>
-      </div>
-    </div>
-  );
-
-  const sidebarContent = showOrders ? (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold">Đơn hàng</span>
-          {sessionOrders.length > 0 && (
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-              {sessionOrders.length}
-            </span>
-          )}
+  const appendBannerRow =
+    appendTarget != null ? (
+      <div className="border-b border-warning/15 bg-warning/10 px-3 py-3 md:px-4" role="status">
+        <div className="mx-auto w-full max-w-screen-2xl">
+          <div className="rounded-xl border border-warning/20 bg-warning/10 shadow-sm p-3">
+            <div className="relative flex items-center justify-between gap-2">
+              <p className="min-w-0 text-sm leading-6 text-foreground">
+                <span className="font-semibold">
+                  Thêm món vào đơn #{appendTarget.orderNumber}
+                </span>
+                <span className="text-muted-foreground">
+                  {" "}
+                  Chọn món trên lưới bên dưới để tiếp tục cùng một flow.
+                </span>
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="min-h-11 min-w-11 h-9 shrink-0 gap-1 rounded-full px-3 text-xs text-foreground hover:bg-warning/25"
+                onClick={() => setAppendTarget(null)}
+              >
+                <X className="size-3.5" />
+                Hủy
+              </Button>
+            </div>
+          </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-9 rounded-full px-3 text-xs"
-          onClick={() => void loadSessionOrders()}
-        >
-          <DoorOpen className="mr-1 size-3.5" />
-          Tải lại
-        </Button>
       </div>
-      <OrderHistory
-        orders={sessionOrders}
-        onViewBill={(id) => setBillOrderId(id)}
-        onViewDetail={(id) => setOrderDetailId(id)}
-      />
-    </div>
-  ) : (
-    <CartSidebar
-      items={cartItems}
-      total={cartTotal}
-      orderType={orderType}
-      selectedTableId={selectedTableId}
-      tables={localTables}
-      progressPercent={flowProgressPercent}
-      progressHeadline={flowHeadline}
-      progressHint={flowHint}
-      steps={flowSteps}
-      canSubmit={canSubmit}
-      isSubmitting={isPending}
-      onUpdateQuantity={updateQuantity}
-      onRemoveItem={removeItem}
-      onClearCart={clearCart}
-      onOrderTypeChange={handleOrderTypeChange}
-      onRequestChangeTable={handleRequestChangeTable}
-      onSubmitOrder={handleSubmitOrder}
-      orderNote={orderNote}
-      onOrderNoteChange={setOrderNote}
-    />
-  );
+    ) : null;
+
+  const sidebarSharedProps = {
+    showOrders,
+    onShowOrdersChange: setShowOrders,
+    cartItems,
+    cartTotal,
+    cartQuantity,
+    orderType,
+    selectedTableId,
+    tables: localTables,
+    flowProgressPercent,
+    flowHeadline,
+    flowHint,
+    flowSteps,
+    canSubmit,
+    isPending,
+    sessionOrders,
+    orderNote,
+    onUpdateQuantity: updateQuantity,
+    onRemoveItem: removeItem,
+    onClearCart: clearCart,
+    onOrderTypeChange: handleOrderTypeChange,
+    onRequestChangeTable: handleRequestChangeTable,
+    onSubmitOrder: handleSubmitOrder,
+    onOrderNoteChange: setOrderNote,
+    onViewBill: (id: number) => setBillOrderId(id),
+    onViewDetail: (id: number) => setOrderDetailId(id),
+    onLoadSessionOrders: () => void loadSessionOrders(),
+  } as const;
 
   return (
     <>
-      {sessionHeader}
+      <PosSessionHeader
+        session={session}
+        orderType={orderType}
+        selectedTableNumber={selectedTableNumber}
+        flowHeadline={flowHeadline}
+        flowHint={flowHint}
+        flowSteps={flowSteps}
+        flowProgressPercent={flowProgressPercent}
+        isPending={isPending}
+        canSubmit={canSubmit}
+        cartQuantity={cartQuantity}
+        cartTotal={cartTotal}
+        activeOrderCount={activeSessionOrders.length}
+        readyOrderCount={readySessionOrders.length}
+        completedOrderCount={completedSessionOrders.length}
+        sessionRevenue={sessionRevenue}
+        onShowCloseSession={() => setShowCloseSession(true)}
+      />
 
       {!orderContextReady ? (
         <div className="flex min-h-0 flex-1 overflow-hidden bg-background/35">
@@ -1027,213 +742,17 @@ export function PosMenu({
                 {serviceModeSelector}
               </div>
 
-              {availableMenuZones.length === 0 ? (
-                <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center text-muted-foreground">
-                  <p className="text-sm font-medium">Chưa có món trong thực đơn</p>
-                  <p className="text-xs leading-5">
-                    Thêm danh mục và món trong quản trị để phục vụ tại POS.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="border-b border-border/60 bg-background/75 px-3 py-3 md:px-4">
-                    <div className="space-y-3">
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="space-y-1">
-                          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Khu thực đơn</p>
-                          <h2 className="text-xl font-semibold tracking-tight text-foreground">
-                            {activeZoneLabel}
-                          </h2>
-                          <p className="text-sm text-muted-foreground">
-                            {activeCategory?.name ?? "Chọn danh mục để bắt đầu thêm món"} ·{" "}
-                            {activeMenuItemCount} món khả dụng
-                          </p>
-                        </div>
-                        <div className="grid gap-2 sm:grid-cols-3">
-                          <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                              Danh mục
-                            </p>
-                            <p className="mt-1 text-base font-semibold text-foreground">
-                              {categoriesInActiveZone.length}
-                            </p>
-                          </div>
-                          <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-primary/15 bg-primary/8 px-4 py-3 shadow-sm">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                              Giỏ hiện tại
-                            </p>
-                            <p className="mt-1 text-base font-semibold text-foreground">
-                              {cartQuantity} món
-                            </p>
-                          </div>
-                          <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-success/15 bg-success/10 px-4 py-3 shadow-sm">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-success">
-                              Tạm tính
-                            </p>
-                            <p className="mt-1 text-base font-semibold text-foreground">
-                              {formatVND(cartTotal)}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <ScrollArea className="w-full">
-                        <div
-                          className="flex gap-2 pb-1"
-                          role="tablist"
-                          aria-label="Khu thực đơn"
-                        >
-                          {availableMenuZones.map((z) => (
-                            <button
-                              key={z}
-                              type="button"
-                              role="tab"
-                              aria-selected={effectiveMenuZone === z}
-                              className={cn(
-                                "min-h-11 min-w-11 flex h-11 shrink-0 cursor-pointer items-center rounded-lg border px-4 text-sm font-semibold transition-all",
-                                effectiveMenuZone === z
-                                  ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
-                                  : "border-border/70 bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
-                              )}
-                              onClick={() => setActiveMenuZone(z)}
-                            >
-                              {CATEGORY_TYPE_LABELS[z] ?? z}
-                            </button>
-                          ))}
-                        </div>
-                      </ScrollArea>
-
-                      {categoriesInActiveZone.length > 1 ? (
-                        <ScrollArea className="w-full">
-                          <div
-                            className="flex gap-2 pb-1"
-                            role="tablist"
-                            aria-label="Danh mục món"
-                          >
-                            {categoriesInActiveZone.map((cat) => (
-                              <button
-                                key={cat.id}
-                                type="button"
-                                role="tab"
-                                aria-selected={activeCategoryId === cat.id}
-                                className={cn(
-                                  "min-h-11 min-w-11 flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-all",
-                                  activeCategoryId === cat.id
-                                    ? "border-primary/25 bg-primary/10 text-primary font-semibold shadow-sm"
-                                    : "border-border/70 bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
-                                )}
-                                onClick={() => setActiveCategoryId(cat.id)}
-                              >
-                                {cat.name}
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    "text-xs",
-                                    activeCategoryId === cat.id &&
-                                      "border-primary/30 bg-primary/10 text-primary",
-                                  )}
-                                >
-                                  {cat.menu_items.length}
-                                </Badge>
-                              </button>
-                            ))}
-                          </div>
-                        </ScrollArea>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <ScrollArea className="flex-1">
-                    <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 md:p-4 xl:grid-cols-3 2xl:grid-cols-4">
-                      {activeCategory?.menu_items.map((item) => {
-                        const hasCustomization =
-                          item.menu_item_variants.length > 0 ||
-                          item.menu_item_modifiers.length > 0 ||
-                          item.menu_item_available_sides.length > 0;
-
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            className="transition-all hover:-translate-y-0.5 hover:shadow-md min-h-14 min-w-14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-40 cursor-pointer flex-col rounded-xl border border-border bg-card p-4 text-left shadow-sm hover:border-primary/25 active:scale-[0.985]"
-                            onClick={() => handleItemTap(item)}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="space-y-2">
-                                <span className="inline-flex rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
-                                  {activeCategory?.name ?? activeZoneLabel}
-                                </span>
-                                <div>
-                              <p className="line-clamp-2 text-lg font-semibold leading-snug text-foreground">
-                                {item.name}
-                              </p>
-                              <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">
-                                {item.description ??
-                                      "Chạm để thêm nhanh hoặc mở tuỳ chọn của món."}
-                              </p>
-                            </div>
-                          </div>
-                              <span
-                                className={cn(
-                                  "rounded-full px-3 py-1 text-xs font-semibold",
-                                  hasCustomization
-                                    ? "bg-warning/12 text-warning"
-                                    : "bg-success/10 text-success",
-                                )}
-                              >
-                                {hasCustomization ? "Tùy chỉnh" : "Thêm nhanh"}
-                              </span>
-                            </div>
-
-                            <div className="mt-auto space-y-3 pt-6">
-                              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                                {item.menu_item_variants.length > 0 && (
-                                  <span className="rounded-full bg-muted px-2.5 py-1">
-                                    {item.menu_item_variants.length} lựa chọn
-                                  </span>
-                                )}
-                                {item.menu_item_modifiers.length > 0 && (
-                                  <span className="rounded-full bg-muted px-2.5 py-1">
-                                    {item.menu_item_modifiers.length} topping
-                                  </span>
-                                )}
-                                {item.menu_item_available_sides.length > 0 && (
-                                  <span className="rounded-full bg-muted px-2.5 py-1">
-                                    {item.menu_item_available_sides.length} món kèm
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-end justify-between gap-3">
-                                <div>
-                                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                    Giá bán
-                                  </p>
-                                  <p className="mt-1 text-xl font-bold text-primary">
-                                    {formatVND(item.base_price)}
-                                  </p>
-                                </div>
-                                <span className="text-sm font-semibold text-foreground">
-                                  Chạm để chọn
-                                </span>
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {activeCategory?.menu_items.length === 0 && (
-                      <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-                        Không có món trong danh mục này
-                      </div>
-                    )}
-                  </ScrollArea>
-                </>
-              )}
+              <PosMenuGrid
+                categories={categories}
+                cartQuantity={cartQuantity}
+                cartTotal={cartTotal}
+                onItemTap={handleItemTap}
+              />
             </div>
 
             <div className="hidden w-80 shrink-0 flex-col border-l border-border/60 bg-background md:flex lg:w-96">
-              {sidebarTabs}
-              {sidebarContent}
+              <PosSidebarTabs {...sidebarSharedProps} />
+              <PosSidebarContent {...sidebarSharedProps} />
             </div>
 
             {isMobile && (
@@ -1265,60 +784,17 @@ export function PosMenu({
                 <DrawerContent className="p-0" style={{ maxHeight: "85dvh" }}>
                   <DrawerTitle className="sr-only">Giỏ hàng</DrawerTitle>
                   <div className="flex flex-col overflow-hidden" style={{ maxHeight: "calc(85dvh - 2rem)" }}>
-                    {sidebarTabs}
-                    {showOrders ? (
-                      <div className="flex flex-1 flex-col overflow-hidden">
-                        <div className="flex items-center justify-between px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">Đơn hàng</span>
-                            {sessionOrders.length > 0 && (
-                              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                                {sessionOrders.length}
-                              </span>
-                            )}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-9 rounded-full px-3 text-xs"
-                            onClick={() => void loadSessionOrders()}
-                          >
-                            <DoorOpen className="mr-1 size-3.5" />
-                            Tải lại
-                          </Button>
-                        </div>
-                        <OrderHistory
-                          orders={sessionOrders}
-                          onViewBill={(id) => setBillOrderId(id)}
-                          onViewDetail={(id) => setOrderDetailId(id)}
-                        />
-                      </div>
-                    ) : (
-                      <CartSidebar
-                        items={cartItems}
-                        total={cartTotal}
-                        orderType={orderType}
-                        selectedTableId={selectedTableId}
-                        tables={localTables}
-                        progressPercent={flowProgressPercent}
-                        progressHeadline={flowHeadline}
-                        progressHint={flowHint}
-                        steps={flowSteps}
-                        canSubmit={canSubmit}
-                        isSubmitting={isPending}
-                        onUpdateQuantity={updateQuantity}
-                        onRemoveItem={removeItem}
-                        onClearCart={clearCart}
-                        onOrderTypeChange={handleOrderTypeChange}
-                        onRequestChangeTable={handleRequestChangeTable}
-                        onSubmitOrder={() => {
-                          handleSubmitOrder();
-                          setCartDrawerOpen(false);
-                        }}
-                        orderNote={orderNote}
-                        onOrderNoteChange={setOrderNote}
-                      />
-                    )}
+                    <PosSidebarTabs {...sidebarSharedProps} />
+                    <PosSidebarContent
+                      {...sidebarSharedProps}
+                      onSubmitOrder={() => {
+                        handleSubmitOrder();
+                        // Drawer closes via cart clearing — when cartItems
+                        // becomes empty after successful submit, the drawer
+                        // has nothing to show. Don't close eagerly on submit
+                        // to avoid hiding errors on failure.
+                      }}
+                    />
                   </div>
                 </DrawerContent>
               </Drawer>
