@@ -383,7 +383,8 @@ export async function fetchSessionOrders(
     .eq("branch_id", parsedBranchId.data)
     .eq("tenant_id", claims.tenant_id)
     .eq("pos_session_id", parsedSessionId.data)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
 
   if (error) {
     return { success: false, error: "Không thể tải danh sách đơn hàng." };
@@ -429,7 +430,38 @@ export async function fetchPosTerminals(
     };
   }
 
-  return { success: true, data: terminals ?? [] };
+  const terminalIds = (terminals ?? []).map((terminal) => terminal.id);
+
+  if (terminalIds.length === 0) {
+    return { success: true, data: [] };
+  }
+
+  const { data: openSessions, error: sessionError } = await supabase
+    .from("pos_sessions")
+    .select("terminal_id")
+    .eq("branch_id", parsedBranchId.data)
+    .eq("tenant_id", claims.tenant_id)
+    .eq("status", "open")
+    .in("terminal_id", terminalIds);
+
+  if (sessionError) {
+    return {
+      success: false,
+      error: "Không thể tải trạng thái máy POS. Vui lòng thử lại.",
+    };
+  }
+
+  const occupiedTerminalIds = new Set(
+    (openSessions ?? []).map((session) => session.terminal_id),
+  );
+
+  return {
+    success: true,
+    data: (terminals ?? []).map((terminal) => ({
+      ...terminal,
+      has_open_session: occupiedTerminalIds.has(terminal.id),
+    })),
+  };
 }
 
 /* ─── fetchActiveSession ─── */

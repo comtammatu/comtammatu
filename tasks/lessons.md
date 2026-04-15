@@ -32,3 +32,8 @@
    - Pattern: `/verify` only ran typecheck + build, but CI also runs lint. Unused vars passed locally, failed on push.
    - Rule: `/verify` = `pnpm typecheck && pnpm lint && pnpm build` — must mirror CI steps exactly
    - Prevention: Updated `/verify` skill to include `pnpm lint`. Before adding any new CI step, update `/verify` to match.
+
+7. **Domain terminology has a single source of truth**
+   - Pattern: Ad-hoc hardcoded Vietnamese copy introduced drift terms (e.g. "Employee Portal" instead of canonical label, "Kiểm kê kho" instead of "Stocktake")
+   - Rule: All domain/UI wording must come from one of three canonical sources: `docs/ref/glossary.md` (business meaning), `packages/shared/src/labels/vi.ts` (shared labels), or `apps/web/app/inventory/_lib/dictionary.ts` (inventory-specific adapters). Never introduce new copy inline.
+   - Prevention: When adding or changing copy, update the canonical source first (or in the same PR). Run `pnpm lint:copy` to catch drift. See regression rule TERMINOLOGY-SOURCE-OF-TRUTH.

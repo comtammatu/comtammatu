@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
+import {
+  buildLoginBlockedStatePath,
+  extractClaims,
+} from "@comtammatu/shared/auth";
 import { PayslipClient } from "./payslip-client";
 
 export default async function PayslipPage() {
@@ -12,7 +15,7 @@ export default async function PayslipPage() {
   if (!session?.user) redirect("/login");
 
   const claims = extractClaims(session.user.app_metadata);
-  if (!claims) redirect("/login");
+  if (!claims) redirect(buildLoginBlockedStatePath());
 
   // Find this user's employee record
   const { data: employee } = await supabase

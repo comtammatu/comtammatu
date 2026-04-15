@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useTransition } from "react";
+import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
 import type { PaymentMethod } from "@comtammatu/shared/providers";
 import { Button } from "@comtammatu/ui/components/button";
@@ -13,7 +14,15 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@comtammatu/ui/components/sheet";
-import { Loader2, Printer, ExternalLink } from "lucide-react";
+import {
+  CheckCircle2,
+  CircleDollarSign,
+  ExternalLink,
+  Loader2,
+  Printer,
+  ReceiptText,
+  ScanQrCode,
+} from "lucide-react";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { fetchOrderForBill } from "./actions";
 import { createPayment, fetchPaymentMethodsForPos } from "./payment-actions";
@@ -57,6 +66,8 @@ const METHOD_LABELS: Record<string, string> = {
   vietqr: "VietQR",
   momo: "MoMo",
 };
+
+type PaymentStepState = "done" | "current" | "todo";
 
 interface BillReceiptProps {
   branchId: number;
@@ -177,6 +188,40 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
 
   const isPaid = order?.payment_status === "paid";
   const showPaySection = order && !isPaid && methods.length > 0;
+  const paymentProgressPercent = isPaid
+    ? 100
+    : payPending
+      ? 72
+      : pendingExtras
+        ? 84
+        : methods.length > 0
+          ? 46
+          : 24;
+
+  const paymentSteps: ReadonlyArray<{
+    label: string;
+    meta: string;
+    state: PaymentStepState;
+  }> = [
+    {
+      label: "Xác nhận đơn",
+      meta: order ? `Đơn #${order.order_number}` : "Đang tải đơn",
+      state: order ? "done" : "current",
+    },
+    {
+      label: "Chọn thanh toán",
+      meta:
+        isPaid || pendingExtras || payPending
+          ? METHOD_LABELS[order?.payment_method ?? ""] ?? "Đã chọn phương thức"
+          : "Chọn tiền mặt, QR hoặc ví điện tử",
+      state: order ? (isPaid || pendingExtras || payPending ? "done" : "current") : "todo",
+    },
+    {
+      label: "Hoàn tất",
+      meta: isPaid ? "Đã thanh toán" : pendingExtras ? "Đang chờ khách hoàn tất" : "Chưa hoàn tất",
+      state: isPaid ? "done" : pendingExtras || payPending ? "current" : "todo",
+    },
+  ];
 
   return (
     <Sheet open={orderId !== null} onOpenChange={handleOpenChange}>
@@ -200,6 +245,78 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
                 #{order.order_number}
               </SheetDescription>
             </SheetHeader>
+
+            <div className="border-b px-4 py-3 print:hidden">
+              <div className="ui-flow-panel p-4">
+                <div className="relative space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-2">
+                      <p className="app-section-label">Payment flow</p>
+                      <h3 className="text-lg font-semibold tracking-tight">
+                        {isPaid
+                          ? "Hóa đơn đã hoàn tất, có thể in hoặc gửi khách."
+                          : pendingExtras
+                            ? "Thanh toán đã được khởi tạo, đang chờ khách xác nhận."
+                            : "Chọn phương thức và hoàn tất thanh toán ngay tại quầy."}
+                      </h3>
+                      <p className="text-sm leading-6 text-muted-foreground">
+                        Trạng thái thanh toán được hiển thị theo từng bước để thu ngân không phải suy đoán.
+                      </p>
+                    </div>
+                    <div
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm",
+                        isPaid
+                          ? "border-success/15 bg-success/10 text-success"
+                          : pendingExtras
+                            ? "border-warning/15 bg-warning/10 text-warning"
+                            : "border-primary/15 bg-white/82 text-primary",
+                      )}
+                    >
+                      {isPaid
+                        ? "Đã thanh toán"
+                        : pendingExtras
+                          ? "Đang chờ khách"
+                          : "Chờ thu ngân"}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground">
+                      <span>Tiến độ thanh toán</span>
+                      <span>{String(Math.round(paymentProgressPercent))}%</span>
+                    </div>
+                    <div className="ui-flow-progress">
+                      <div
+                        className="ui-flow-progress-bar"
+                        data-indeterminate={payPending ? "true" : undefined}
+                        style={payPending ? undefined : { width: `${paymentProgressPercent}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {paymentSteps.map((step, index) => (
+                      <div
+                        key={step.label}
+                        data-state={step.state}
+                        className="ui-flow-step"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="ui-flow-stage-index">{index + 1}</div>
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold">{step.label}</p>
+                            <p className="text-xs leading-5 text-muted-foreground">
+                              {step.meta}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <ScrollArea className="flex-1">
               {/* Receipt content — printable area */}
@@ -334,67 +451,101 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
               {/* Payment actions — not printed */}
               {showPaySection && (
                 <div className="border-t px-4 py-3 print:hidden">
-                  <p className="mb-2 text-sm font-medium">Thanh toán</p>
-                  <div className="flex flex-col gap-2">
-                    {methods.map((m) => (
-                      <Button
-                        key={m}
-                        type="button"
-                        variant={m === "cash" ? "default" : "secondary"}
-                        disabled={payPending}
-                        className="w-full justify-center"
-                        onClick={() => handlePay(m)}
-                      >
-                        {payPending && (
-                          <Loader2 className="mr-2 size-4 animate-spin" />
+                  <div className="ui-flow-panel p-4">
+                    <div className="relative space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="app-section-label">Thanh toán</p>
+                          <h4 className="mt-1 text-base font-semibold">
+                            Chọn phương thức xử lý tại quầy
+                          </h4>
+                        </div>
+                        <div className="rounded-full border border-primary/15 bg-white/82 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
+                          {methods.length} phương thức
+                        </div>
+                      </div>
+
+                      <div className="grid gap-2">
+                        {methods.map((m) => (
+                          <Button
+                            key={m}
+                            type="button"
+                            variant={m === "cash" ? "default" : "secondary"}
+                            disabled={payPending}
+                            className={cn(
+                              "h-12 w-full justify-between rounded-2xl px-4 text-sm font-semibold shadow-sm transition-transform hover:translate-y-[-1px]",
+                              m === "cash" && "shadow-primary/15",
+                            )}
+                            onClick={() => handlePay(m)}
+                          >
+                            <span className="flex items-center gap-2">
+                              {m === "cash" ? (
+                                <CircleDollarSign className="size-4" />
+                              ) : (
+                                <ScanQrCode className="size-4" />
+                              )}
+                              {METHOD_LABELS[m] ?? m}
+                            </span>
+                            {payPending ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <ReceiptText className="size-4 opacity-70" />
+                            )}
+                          </Button>
+                        ))}
+                      </div>
+
+                      {pendingExtras?.redirect_url && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full rounded-2xl"
+                          asChild
+                        >
+                          <a
+                            href={pendingExtras.redirect_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="mr-2 size-4" />
+                            Mở trang thanh toán MoMo
+                          </a>
+                        </Button>
+                      )}
+                      {pendingExtras?.qr_data &&
+                        pendingExtras.qr_data.startsWith("http") && (
+                          <div className="rounded-2xl border border-border/70 bg-white/82 p-3">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={pendingExtras.qr_data}
+                              alt="QR thanh toán"
+                              className="mx-auto max-h-56 w-full max-w-56 object-contain"
+                            />
+                            <p className="mt-2 text-center text-xs text-muted-foreground">
+                              Khách quét mã để hoàn tất thanh toán.
+                            </p>
+                          </div>
                         )}
-                        {METHOD_LABELS[m] ?? m}
-                      </Button>
-                    ))}
+                      {pendingExtras?.qr_data &&
+                        !pendingExtras.qr_data.startsWith("http") && (
+                          <pre className="max-h-32 overflow-auto rounded-2xl border bg-muted p-3 text-xs">
+                            {pendingExtras.qr_data}
+                          </pre>
+                        )}
+                    </div>
                   </div>
-                  {pendingExtras?.redirect_url && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="mt-2 w-full"
-                      asChild
-                    >
-                      <a
-                        href={pendingExtras.redirect_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="mr-2 size-4" />
-                        Mở trang thanh toán MoMo
-                      </a>
-                    </Button>
-                  )}
-                  {pendingExtras?.qr_data &&
-                    pendingExtras.qr_data.startsWith("http") && (
-                      <>
-                        {/* Dynamic QR URL from payment provider */}
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={pendingExtras.qr_data}
-                          alt="QR thanh toán"
-                          className="mt-2 max-h-48 w-full object-contain"
-                        />
-                      </>
-                    )}
-                  {pendingExtras?.qr_data &&
-                    !pendingExtras.qr_data.startsWith("http") && (
-                      <pre className="mt-2 max-h-32 overflow-auto rounded border bg-muted p-2 text-xs">
-                        {pendingExtras.qr_data}
-                      </pre>
-                    )}
                 </div>
               )}
             </ScrollArea>
 
             {/* Print button (hidden in print) */}
             <div className="border-t p-4 print:hidden">
-              <Button className="w-full" onClick={handlePrint}>
-                <Printer className="mr-2 size-4" />
+              <Button className="w-full rounded-2xl shadow-sm transition-transform hover:translate-y-[-1px]" onClick={handlePrint}>
+                {isPaid ? (
+                  <CheckCircle2 className="mr-2 size-4" />
+                ) : (
+                  <Printer className="mr-2 size-4" />
+                )}
                 In hóa đơn
               </Button>
             </div>

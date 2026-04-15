@@ -40,6 +40,17 @@ function truthySetting(v: string | undefined): boolean {
   return v === "true" || v === "1";
 }
 
+async function consumeStockForOrderCompat(
+  supabase: PosSupabase,
+  orderId: number,
+) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC shape may evolve under the same function name during location-ledger rollout
+  const sb = supabase as any;
+  return sb.rpc("consume_stock_for_order", {
+    p_order_id: orderId,
+  });
+}
+
 async function resolveAllowedPaymentMethods(
   supabase: PosSupabase,
   tenantId: number,
@@ -250,9 +261,10 @@ export async function createPayment(
   // All stock errors are non-fatal for pilot: stock_levels may not be initialized yet,
   // and insufficient_stock_ingredient errors are expected until stock data is seeded.
   if (result.status === "completed") {
-    const { error: stockErr } = await supabase.rpc("consume_stock_for_order", {
-      p_order_id: parsedPayment.data.orderId,
-    });
+    const { error: stockErr } = await consumeStockForOrderCompat(
+      supabase,
+      parsedPayment.data.orderId,
+    );
     if (stockErr) {
       // Non-fatal: payment succeeded, stock reconciliation can be done manually.
       // See tasks/todo.md for payment-order desync recovery query.
@@ -352,9 +364,10 @@ export async function confirmPayment(
   // All stock errors are non-fatal for pilot: stock_levels may not be initialized yet.
   // TODO(M4-VietQR): when wiring real VietQR polling, validate confirmed amount
   // matches payment.amount before calling confirmPayment to prevent underpayment.
-  const { error: stockErr } = await supabase.rpc("consume_stock_for_order", {
-    p_order_id: payment.order_id,
-  });
+  const { error: stockErr } = await consumeStockForOrderCompat(
+    supabase,
+    payment.order_id,
+  );
   if (stockErr) {
     // Non-fatal: payment succeeded, stock reconciliation can be done manually.
     // See tasks/todo.md for payment-order desync recovery query.

@@ -10,6 +10,7 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
+import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -100,6 +101,14 @@ export function ItemTable({ items, categories }: ItemTableProps) {
                         {item.description}
                       </p>
                     )}
+                    <div className="mt-1 space-y-1 sm:hidden">
+                      <p className="text-xs text-muted-foreground">
+                        {item.category_name}
+                      </p>
+                      <p className="text-xs font-medium text-foreground">
+                        {formatVND(item.base_price)}
+                      </p>
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
@@ -110,13 +119,15 @@ export function ItemTable({ items, categories }: ItemTableProps) {
                 </TableCell>
                 <TableCell>
                   <Badge variant={item.is_active ? "default" : "outline"}>
-                    {item.is_active ? "Hoạt động" : "Ngừng"}
+                    {item.is_active
+                      ? ACTIVE_STATE_LABELS_VI.active
+                      : ACTIVE_STATE_LABELS_VI.inactive}
                   </Badge>
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-8">
+                      <Button variant="ghost" size="icon" className="size-9 rounded-full">
                         <MoreHorizontal className="size-4" />
                         <span className="sr-only">Menu</span>
                       </Button>

@@ -1,34 +1,40 @@
+import { createClient } from "@comtammatu/database/supabase/server";
+import { extractClaims } from "@comtammatu/shared/auth";
 import { fetchStocktakeSessions } from "../actions";
-import { formatDate } from "../_lib/format";
-import { StocktakeClient } from "./stocktake-client";
-import type { StocktakeSessionRow } from "./stocktake-client";
+import type {
+  BranchOption,
+  StocktakeSessionRow,
+} from "./stocktake-list-client";
+import { StocktakeListClient } from "./stocktake-list-client";
 
 export default async function StocktakePage() {
-  const res = await fetchStocktakeSessions();
-  const dbRows = res.success
-    ? (res.data as Array<Record<string, unknown>>)
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const claims = session?.user
+    ? extractClaims(session.user.app_metadata)
+    : null;
+
+  const [sessionsRes, branchesRes] = await Promise.all([
+    fetchStocktakeSessions(),
+    supabase.from("branches").select("id, name, is_active").order("name"),
+  ]);
+
+  const sessions: StocktakeSessionRow[] = sessionsRes.success
+    ? ((sessionsRes.data ?? []) as StocktakeSessionRow[])
     : [];
+  const branches: BranchOption[] = (branchesRes.data ?? []).filter(
+    (b) => b.is_active === true,
+  ) as BranchOption[];
 
-  const sessions: StocktakeSessionRow[] = dbRows.map((row) => {
-    const totalItems = Number(row.total_items ?? 0);
-    const countedItems = Number(row.counted_items ?? 0);
-    const progress =
-      totalItems > 0 ? Math.round((countedItems / totalItems) * 100) : 0;
-
-    return {
-      id: row.id as number,
-      code: (row.session_number as string) ?? "",
-      branchName:
-        ((row.branches as Record<string, unknown>)?.name as string) ?? "—",
-      manager: "—",
-      status: (row.status as string) ?? "in_progress",
-      startDate: row.started_at ? formatDate(row.started_at as string) : "—",
-      endDate: row.completed_at ? formatDate(row.completed_at as string) : null,
-      progress,
-      counted: countedItems,
-      total: totalItems,
-    };
-  });
-
-  return <StocktakeClient sessions={sessions} />;
+  return (
+    <StocktakeListClient
+      initial={sessions}
+      branches={branches}
+      userRole={claims?.user_role ?? "branch_manager"}
+      userBranchId={claims?.branch_id ?? null}
+      routeBase="/inventory/stocktake"
+    />
+  );
 }

@@ -1,4 +1,5 @@
 import type { StaffRole } from "./types";
+import { getModuleLabelVi } from "../labels";
 
 /**
  * Module ACL — SINGLE source of truth for route access control.
@@ -31,68 +32,68 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   dashboard: {
     path: "/admin/dashboard",
     allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
-    label: "Tổng quan",
+    label: getModuleLabelVi("dashboard"),
   },
   menu: {
     path: "/admin/menu",
     allowedRoles: ["super_manager", "area_manager", "branch_manager"],
-    label: "Thực đơn",
+    label: getModuleLabelVi("menu"),
   },
   inventory: {
     path: "/inventory",
-    allowedRoles: ["super_manager", "area_manager", "branch_manager"],
-    label: "Kho hàng",
+    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    label: getModuleLabelVi("inventory"),
   },
-  /** NCC, PO, GRN, HĐ NCC, công thức — chỉ super_manager (Trụ sở) */
+  /** NCC, PO, GRN, HĐ NCC, công thức — vai trò trụ sở */
   inventory_procurement: {
     path: "/inventory/suppliers",
-    allowedRoles: ["super_manager"],
-    label: "Kho — NCC & công thức",
+    allowedRoles: ["owner", "super_manager"],
+    label: getModuleLabelVi("inventory_procurement"),
   },
   orders: {
     path: "/admin/orders",
-    allowedRoles: ["super_manager", "area_manager", "branch_manager"],
-    label: "Đơn hàng",
+    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    label: getModuleLabelVi("orders"),
   },
   staff: {
     path: "/admin/staff",
     allowedRoles: ["super_manager", "area_manager", "branch_manager"],
-    label: "Nhân viên",
+    label: getModuleLabelVi("staff"),
   },
   hr: {
     path: "/hr",
     allowedRoles: ["owner", "super_manager"],
-    label: "Nhân sự & Lương",
+    label: getModuleLabelVi("hr"),
   },
   crm: {
     path: "/admin/crm",
     allowedRoles: ["super_manager", "area_manager"],
-    label: "Khách hàng",
+    label: getModuleLabelVi("crm"),
   },
   finance: {
     path: "/admin/finance",
     allowedRoles: ["owner", "super_manager"],
-    label: "Kế toán",
+    label: getModuleLabelVi("finance"),
   },
   reports: {
     path: "/admin/reports",
     allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
-    label: "Báo cáo",
+    label: getModuleLabelVi("reports"),
   },
   settings: {
     path: "/admin/settings",
     allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
-    label: "Cài đặt",
+    label: getModuleLabelVi("settings"),
   },
   pos: {
     path: "/br/*/pos",
     allowedRoles: ["cashier", "waiter", "branch_manager"],
-    label: "POS",
+    label: getModuleLabelVi("pos"),
   },
   kds: {
     path: "/br/*/kds",
     allowedRoles: ["chef", "branch_manager"],
-    label: "KDS",
+    label: getModuleLabelVi("kds"),
   },
   employee: {
     path: "/employee",
@@ -106,7 +107,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
       "chef",
       "office",
     ],
-    label: "Employee Portal",
+    label: getModuleLabelVi("employee"),
   },
 };
 

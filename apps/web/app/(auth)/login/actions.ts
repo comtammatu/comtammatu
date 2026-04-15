@@ -4,7 +4,10 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { headers } from "next/headers";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims, getDefaultRedirect } from "@comtammatu/shared/auth";
+import {
+  extractClaims,
+  resolvePostLoginRedirect,
+} from "@comtammatu/shared/auth";
 import { loginRateLimit } from "@comtammatu/security";
 
 const loginSchema = z.object({
@@ -30,6 +33,8 @@ export async function login(
   }
 
   const { email, password } = parsed.data;
+  const rawReturnTo = formData.get("returnTo");
+  const returnTo = typeof rawReturnTo === "string" ? rawReturnTo : null;
 
   // Rate limiting — 10 attempts per 5 min, keyed by IP
   // Bypass in dev via DISABLE_LOGIN_RATE_LIMIT=true
@@ -67,7 +72,7 @@ export async function login(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { error: "Không thể xác thực. Vui lòng thử lại." };
+    return { error: "Không thể đăng nhập. Vui lòng thử lại." };
   }
 
   const claims = extractClaims(user.app_metadata);
@@ -75,5 +80,5 @@ export async function login(
     return { error: "Tài khoản chưa được phân quyền. Liên hệ quản lý." };
   }
 
-  redirect(getDefaultRedirect(claims));
+  redirect(resolvePostLoginRedirect(claims, returnTo));
 }

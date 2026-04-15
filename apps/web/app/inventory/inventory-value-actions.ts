@@ -2,7 +2,7 @@
 
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "../admin/_lib/auth";
+import { getAuthContext } from "./_lib/auth";
 
 const SYSTEM_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 

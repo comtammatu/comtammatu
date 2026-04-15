@@ -1,0 +1,25 @@
+[
+  {
+    "scenario": "owner-fixed-restart",
+    "step": "login",
+    "url": "http://localhost:3000/admin/dashboard"
+  },
+  {
+    "scenario": "owner-fixed-restart",
+    "requested": "/admin/orders",
+    "url": "http://localhost:3000/admin/orders",
+    "shot": "owner-fixed-restart-admin-orders"
+  },
+  {
+    "scenario": "owner-fixed-restart",
+    "requested": "/inventory",
+    "url": "http://localhost:3000/inventory",
+    "shot": "owner-fixed-restart-inventory-dashboard"
+  },
+  {
+    "scenario": "owner-fixed-restart",
+    "requested": "/inventory/reports",
+    "url": "http://localhost:3000/inventory/reports",
+    "shot": "owner-fixed-restart-inventory-reports"
+  }
+]

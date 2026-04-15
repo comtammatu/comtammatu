@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
+import { SectionCard } from "@/components/foundation/ui-patterns";
 import {
   Table,
   TableBody,
@@ -145,7 +146,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
         </Button>
       </div>
 
-      <div className="rounded-lg border">
+      <SectionCard className="overflow-hidden" density="compact">
         <Table>
           <TableHeader>
             <TableRow>
@@ -191,7 +192,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
             )}
           </TableBody>
         </Table>
-      </div>
+      </SectionCard>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-2xl">

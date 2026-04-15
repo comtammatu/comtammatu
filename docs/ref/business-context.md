@@ -1,30 +1,31 @@
-# Business Context — Cơm Tấm Má Tư CTCP
+# Bối cảnh nghiệp vụ — Cơm Tấm Má Tư CTCP
 
 ## Sản phẩm
 
-**Hệ thống Quản lý Vận hành Nhà hàng** (Restaurant Operations Management System) cho chuỗi cơm tấm Cơm Tấm Má Tư CTCP.
+**ERP vận hành chuỗi nhà hàng** cho chuỗi cơm tấm Cơm Tấm Má Tư CTCP.
 
-Phạm vi sản phẩm: POS, KDS, Menu, Staff, Stock, Payment, Finance (HĐĐT/VAS), HR/Payroll.
-Không phải CRM, không phải ERP tổng hợp, không phải phần mềm bán hàng đa ngành.
+Phạm vi sản phẩm: POS, KDS, thực đơn, nhân sự, kho hàng, thanh toán, kế toán (HĐĐT/VAS), và nhân sự & tiền lương.
+Đây là ERP chuyên biệt cho vận hành chuỗi F&B: gom lớp nền, báo cáo, và các domain vận hành vào một kiến trúc thống nhất.
+Không phải CRM độc lập, không phải ERP đa ngành, không phải phần mềm bán hàng đại trà.
 
 ## Mô hình pháp lý
 
 Cơm Tấm Má Tư vận hành theo mô hình **Công ty Cổ Phần (CTCP)**. Nghĩa vụ pháp lý bắt buộc:
 
-### 1. HĐĐT — E-invoicing (v0.3.0)
+### 1. HĐĐT — hóa đơn điện tử (v0.3.0)
 
 - **NĐ 70/2025**: mọi giao dịch B2C phải có hóa đơn điện tử
-- Cần Edge Function `einvoice-submit`, multi-provider support
+- Cần Edge Function `einvoice-submit`, hỗ trợ nhiều provider
 - Bảng `tax_invoices` lưu trạng thái hóa đơn
 
-### 2. HR/Payroll CTCP (v0.5.0)
+### 2. Nhân sự & tiền lương CTCP (v0.5.0)
 
 - **BHXH bắt buộc**: NLĐ đóng 8%, NSDLĐ đóng 17.5%
 - **Thuế TNCN**: lũy tiến theo biểu thuế
 - Quyết toán cuối năm
 - Bảng lương hàng tháng
 
-### 3. Finance Reporting VAS (v0.5.0)
+### 3. Báo cáo tài chính VAS (v0.5.0)
 
 - BCTC theo chuẩn **VAS** (Vietnamese Accounting Standards):
   - Bảng cân đối kế toán
@@ -40,9 +41,9 @@ legal_address TEXT    — Địa chỉ đăng ký kinh doanh
 representative TEXT   — Người đại diện pháp luật
 ```
 
-## Domain: F&B Restaurant Chain
+## Domain: chuỗi nhà hàng F&B
 
-### Procurement Flow (v0.4.0)
+### Luồng mua hàng (v0.4.0)
 
 ```
 PO (intent) → GRN (actual received) → Supplier Invoice (VAT)
@@ -52,22 +53,22 @@ PO (intent) → GRN (actual received) → Supplier Invoice (VAT)
 
 - **PO** = Purchase Order (đặt hàng)
 - **GRN** = Goods Received Note (phiếu nhập kho — hàng thực nhận)
-- **Supplier Invoice** = HĐĐT đầu vào (cho khấu trừ VAT)
-- Actual food cost = từ GRN, KHÔNG từ PO
+- **Supplier Invoice** = hóa đơn đầu vào (cho khấu trừ VAT)
+- Giá vốn thực tế lấy từ GRN, KHÔNG lấy từ PO
 
-### Order Flow (v0.3.0)
+### Luồng bán hàng (v0.3.0)
 
 ```
 Waiter (POS) → KDS (realtime) → Chef bumps → Cashier pays → completed
 ```
 
-### Staff Roles (8 levels)
+### Vai trò nhân sự (8 cấp)
 
 ```
 owner > super_manager > area_manager > branch_manager > cashier > waiter > chef > office
 ```
 
-### Payment Methods (v0.3.0)
+### Phương thức thanh toán (v0.3.0)
 
 - Tiền mặt
 - VietQR (bank transfer)

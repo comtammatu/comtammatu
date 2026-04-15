@@ -8,6 +8,7 @@ import {
   ToggleRight,
   FolderOpen,
 } from "lucide-react";
+import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -81,7 +82,17 @@ export function CategoryTable({ categories }: CategoryTableProps) {
             {categories.map((cat) => (
               <TableRow key={cat.id} className={isPending ? "opacity-60" : ""}>
                 <TableCell>
-                  <span className="font-medium">{cat.name}</span>
+                  <div className="space-y-1">
+                    <span className="font-medium">{cat.name}</span>
+                    <div className="space-y-1 sm:hidden">
+                      <p className="text-xs text-muted-foreground">
+                        {CATEGORY_TYPE_LABELS[cat.type] ?? cat.type}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Thứ tự {cat.sort_order}
+                      </p>
+                    </div>
+                  </div>
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   <Badge variant="secondary">
@@ -93,13 +104,15 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                 </TableCell>
                 <TableCell>
                   <Badge variant={cat.is_active ? "default" : "outline"}>
-                    {cat.is_active ? "Hoạt động" : "Ngừng"}
+                    {cat.is_active
+                      ? ACTIVE_STATE_LABELS_VI.active
+                      : ACTIVE_STATE_LABELS_VI.inactive}
                   </Badge>
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-8">
+                      <Button variant="ghost" size="icon" className="size-9 rounded-full">
                         <MoreHorizontal className="size-4" />
                         <span className="sr-only">Menu</span>
                       </Button>

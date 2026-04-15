@@ -1,6 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import {
+  EmptyState,
+  SectionCard,
+  StatusBadge,
+} from "@/components/foundation/ui-patterns";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
@@ -12,7 +17,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Loader2, Plus, RefreshCw } from "lucide-react";
+import { CircleOff, Loader2, Plus, RefreshCw } from "lucide-react";
 import type { AccountRow } from "./page";
 import {
   seedChartOfAccounts,
@@ -28,12 +33,15 @@ const TYPE_LABELS: Record<string, string> = {
   expense: "Chi phí",
 };
 
-const TYPE_COLORS: Record<string, string> = {
-  asset: "bg-blue-100 text-blue-800",
-  liability: "bg-red-100 text-red-800",
-  equity: "bg-purple-100 text-purple-800",
-  revenue: "bg-green-100 text-green-800",
-  expense: "bg-orange-100 text-orange-800",
+const TYPE_COLORS: Record<
+  string,
+  "neutral" | "info" | "success" | "warning" | "danger"
+> = {
+  asset: "info",
+  liability: "danger",
+  equity: "info",
+  revenue: "success",
+  expense: "warning",
 };
 
 interface ChartOfAccountsClientProps {
@@ -86,28 +94,31 @@ export function ChartOfAccountsClient({
 
   if (accounts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">
-        <p className="mb-4 text-muted-foreground">
-          Chưa có hệ thống tài khoản. Khởi tạo theo chuẩn VAS?
-        </p>
-        <Button onClick={handleSeed} disabled={isPending}>
-          {isPending ? (
-            <Loader2 className="mr-2 size-4 animate-spin" />
-          ) : (
-            <Plus className="mr-2 size-4" />
-          )}
-          Khởi tạo hệ thống tài khoản VAS
-        </Button>
-      </div>
+      <EmptyState
+        icon={<CircleOff className="size-8" />}
+        title="Chưa có hệ thống tài khoản"
+        description="Khởi tạo VAS để bắt đầu hạch toán."
+        action={
+          <Button onClick={handleSeed} disabled={isPending}>
+            {isPending ? (
+              <Loader2 className="mr-2 size-4 animate-spin" />
+            ) : (
+              <Plus className="mr-2 size-4" />
+            )}
+            Khởi tạo hệ thống tài khoản VAS
+          </Button>
+        }
+      />
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {accounts.length} tài khoản
-        </p>
+      <div className="ui-flow-panel flex flex-wrap items-center justify-between gap-4 rounded-3xl p-4">
+        <div className="space-y-1.5">
+          <p className="app-section-label">Danh mục tài khoản</p>
+          <p className="text-sm text-muted-foreground">{accounts.length} tài khoản.</p>
+        </div>
         <Button
           variant="outline"
           size="sm"
@@ -119,7 +130,7 @@ export function ChartOfAccountsClient({
         </Button>
       </div>
 
-      <div className="rounded-md border">
+      <SectionCard className="overflow-hidden rounded-2xl" density="compact">
         <Table>
           <TableHeader>
             <TableRow>
@@ -151,11 +162,11 @@ export function ChartOfAccountsClient({
                   </span>
                 </TableCell>
                 <TableCell>
-                  <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${TYPE_COLORS[account.account_type] ?? ""}`}
+                  <StatusBadge
+                    tone={TYPE_COLORS[account.account_type] ?? "neutral"}
                   >
                     {TYPE_LABELS[account.account_type] ?? account.account_type}
-                  </span>
+                  </StatusBadge>
                 </TableCell>
                 <TableCell className="text-center">
                   <Badge variant={account.is_active ? "default" : "secondary"}>
@@ -176,7 +187,7 @@ export function ChartOfAccountsClient({
             ))}
           </TableBody>
         </Table>
-      </div>
+      </SectionCard>
     </div>
   );
 }

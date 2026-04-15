@@ -59,8 +59,21 @@ export class MoMoProvider implements PaymentProvider {
     const orderInfo =
       request.description ?? `Thanh toan don hang ${request.orderNumber}`;
 
-    // IPN (webhook) and redirect URLs
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    // IPN (webhook) and redirect URLs — validate origin to prevent SSRF via env misconfiguration
+    const rawBaseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    let baseUrl: string;
+    try {
+      const parsed = new URL(rawBaseUrl);
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        throw new Error(`Invalid protocol: ${parsed.protocol}`);
+      }
+      baseUrl = parsed.origin;
+    } catch {
+      throw new Error(
+        `NEXT_PUBLIC_APP_URL is not a valid HTTP(S) URL: ${rawBaseUrl}`,
+      );
+    }
     const ipnUrl = `${baseUrl}/api/webhooks/momo`;
     const redirectUrl = `${baseUrl}/br/pos/payment-result?orderId=${request.orderId}`;
 

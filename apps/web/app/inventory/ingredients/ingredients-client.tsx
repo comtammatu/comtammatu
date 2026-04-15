@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { Filter, Pencil, Search } from "lucide-react";
-import { PageHeader, SearchableSelect } from "../_components/shared";
+import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { FilterBar, PageHeader, SearchableSelect } from "../_components/shared";
+import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { formatVND } from "../_lib/format";
 import { fetchIngredients } from "../actions";
 import { IngredientDialog } from "./ingredient-dialog";
@@ -25,36 +27,24 @@ const preservationOptions = [
   { value: "ambient", label: "Khô" },
 ];
 
-// Left border color based on category
-const categoryBorderColor: Record<string, string> = {
-  Thịt: "var(--md-error)",
-  Gạo: "var(--md-primary)",
-  "Gia vị": "var(--md-outline-variant)",
-  "Rau củ": "var(--md-secondary)",
-  Trứng: "var(--md-primary)",
-  "Chế biến": "var(--md-tertiary)",
-  Dầu: "var(--md-outline-variant)",
+const categoryBorderClass: Record<string, string> = {
+  Thịt: "border-l-destructive",
+  Gạo: "border-l-primary",
+  "Gia vị": "border-l-muted-foreground",
+  "Rau củ": "border-l-success",
+  Trứng: "border-l-primary",
+  "Chế biến": "border-l-info",
+  Dầu: "border-l-muted-foreground",
 };
 
-const categoryIconBg: Record<string, string> = {
-  Thịt: "color-mix(in srgb, var(--md-error-container) 50%, transparent)",
-  Gạo: "color-mix(in srgb, var(--md-primary-fixed) 50%, transparent)",
-  "Gia vị": "var(--md-secondary-container)",
-  "Rau củ":
-    "color-mix(in srgb, var(--md-secondary-container) 50%, transparent)",
-  Trứng: "color-mix(in srgb, var(--md-primary-fixed) 50%, transparent)",
-  "Chế biến": "color-mix(in srgb, var(--md-tertiary) 10%, transparent)",
-  Dầu: "var(--md-surface-high)",
-};
-
-const categoryIconFg: Record<string, string> = {
-  Thịt: "var(--md-error)",
-  Gạo: "var(--md-primary)",
-  "Gia vị": "var(--md-secondary)",
-  "Rau củ": "var(--md-secondary)",
-  Trứng: "var(--md-primary)",
-  "Chế biến": "var(--md-tertiary)",
-  Dầu: "var(--md-on-surface-variant)",
+const categoryToneClass: Record<string, string> = {
+  Thịt: "bg-destructive/12 text-destructive",
+  Gạo: "bg-primary/10 text-primary",
+  "Gia vị": "bg-warning/12 text-warning",
+  "Rau củ": "bg-success/12 text-success",
+  Trứng: "bg-primary/10 text-primary",
+  "Chế biến": "bg-info/12 text-info",
+  Dầu: "bg-muted text-muted-foreground",
 };
 
 function storageLabel(type: string | null): string {
@@ -64,6 +54,10 @@ function storageLabel(type: string | null): string {
 }
 
 export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
+  const panelClassName = getSurfacePanelClassName(
+    "inventory",
+    "ambient-shadow",
+  );
   const [rows, setRows] = useState(initial);
   const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState("all");
@@ -110,24 +104,14 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
 
   return (
     <div className="space-y-6">
-      <style>{`
-        .toggle-track { background-color: var(--md-surface-high); }
-        .peer:checked + .toggle-track { background-color: var(--md-secondary); }
-      `}</style>
       <PageHeader
         title="Danh mục Nguyên liệu"
-        description="Quản lý định nghĩa cơ sở cho toàn bộ hệ thống kho và sản xuất của Cơm Tấm Má Tư."
+        description="Danh mục nguyên liệu cho kho và sản xuất."
         actions={
           <button
             type="button"
             onClick={openCreate}
-            className="flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:opacity-90"
-            style={{
-              background:
-                "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-              boxShadow:
-                "0 4px 14px color-mix(in srgb, var(--md-primary) 25%, transparent)",
-            }}
+            className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-xl shadow-primary/15 transition-all hover:opacity-90"
           >
             + Tạo nguyên liệu
           </button>
@@ -135,25 +119,18 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
       />
 
       {/* Search & Filter Bar */}
-      <div
-        className="flex flex-wrap items-center gap-4 rounded-2xl p-4"
-        style={{ backgroundColor: "var(--md-surface-low)" }}
+      <FilterBar
+        className={cn(panelClassName, "items-center bg-muted")}
+        surface="inventory"
       >
-        <div className="relative flex-1" style={{ minWidth: 300 }}>
-          <Search
-            className="absolute left-4 top-1/2 size-4 -translate-y-1/2"
-            style={{ color: "var(--md-outline)" }}
-          />
+        <div className="relative min-w-col-lg flex-1">
+          <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder="Tìm kiếm theo tên hoặc SKU..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl border-none py-3 pl-12 pr-4 text-sm focus:outline-none focus:ring-0"
-            style={{
-              backgroundColor: "var(--md-surface-highest)",
-              color: "var(--md-on-surface)",
-            }}
+            className="focus-ring-standard w-full rounded-xl border-none bg-card py-3 pl-12 pr-4 text-sm text-foreground outline-none placeholder:text-muted-foreground"
           />
         </div>
         <div className="flex items-center gap-3">
@@ -164,11 +141,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
             placeholder="Tất cả loại"
             searchPlaceholder="Tìm loại..."
             variant="default"
-            className="min-w-col-sm"
-            style={{
-              backgroundColor: "var(--md-surface-highest)",
-              color: "var(--md-on-surface-variant)",
-            }}
+            className="min-w-col-sm bg-card text-muted-foreground"
           />
           <SearchableSelect
             options={preservationOptions}
@@ -177,27 +150,24 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
             placeholder="Mọi bảo quản"
             searchPlaceholder="Tìm bảo quản..."
             variant="default"
-            className="min-w-col-sm"
-            style={{
-              backgroundColor: "var(--md-surface-highest)",
-              color: "var(--md-on-surface-variant)",
-            }}
+            className="min-w-col-sm bg-card text-muted-foreground"
           />
           <button
             type="button"
-            className="rounded-full p-3 transition-colors hover:opacity-80"
-            style={{ backgroundColor: "var(--md-surface-highest)" }}
+            className="focus-ring-standard rounded-full bg-card p-3 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
-            <Filter
-              className="size-4"
-              style={{ color: "var(--md-on-surface-variant)" }}
-            />
+            <Filter className="size-4" />
           </button>
         </div>
-      </div>
+      </FilterBar>
 
       {/* Asymmetric Table */}
-      <div className="overflow-x-auto">
+      <div
+        className={cn(
+          panelClassName,
+          "overflow-x-auto rounded-3xl bg-card p-1",
+        )}
+      >
         <table className="w-full border-separate border-spacing-y-3 text-left">
           <thead>
             <tr>
@@ -212,12 +182,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
               ].map((h) => (
                 <th
                   key={h || "actions"}
-                  className={`pb-4 ${h === "Thông tin nguyên liệu" ? "pl-6" : ""} ${!h ? "pr-6 text-right" : ""} whitespace-nowrap font-bold uppercase`}
-                  style={{
-                    fontSize: 10,
-                    letterSpacing: "0.05em",
-                    color: "var(--md-outline)",
-                  }}
+                  className={`pb-4 text-label whitespace-nowrap font-bold uppercase tracking-wider text-muted-foreground ${h === "Thông tin nguyên liệu" ? "pl-6" : ""} ${!h ? "pr-6 text-right" : ""}`}
                 >
                   {h || "Thao tác"}
                 </th>
@@ -226,25 +191,29 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="py-16 text-center text-sm"
-                  style={{ color: "var(--md-on-surface-variant)" }}
-                >
-                  {searchQuery
+              <TableEmptyStateRow
+                colSpan={7}
+                paddingClassName="py-16"
+                title={
+                  searchQuery
                     ? "Không tìm thấy nguyên liệu nào"
-                    : 'Chưa có nguyên liệu. Nhấn "Tạo nguyên liệu" để bắt đầu.'}
-                </td>
-              </tr>
+                    : "Chưa có nguyên liệu"
+                }
+                description={
+                  searchQuery
+                    ? "Thử từ khóa hoặc bộ lọc khác."
+                    : 'Nhấn "Tạo nguyên liệu" để bắt đầu.'
+                }
+              />
             )}
             {filtered.map((item) => {
               const cat = item.category ?? "";
-              const borderColor =
-                categoryBorderColor[cat] ?? "var(--md-outline-variant)";
-              const iconBg = categoryIconBg[cat] ?? "var(--md-surface-high)";
-              const iconFg =
-                categoryIconFg[cat] ?? "var(--md-on-surface-variant)";
+              const categoryTone =
+                categoryToneClass[cat] ?? "bg-muted text-muted-foreground";
+              const borderTone = categoryBorderClass[cat] ?? "border-l-border";
+              const isColdStorage =
+                item.storage_type === "refrigerated" ||
+                item.storage_type === "frozen";
 
               return (
                 <tr
@@ -253,102 +222,62 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
                 >
                   {/* Name + icon + left border */}
                   <td
-                    className="rounded-l-2xl py-5 pl-6"
-                    style={{
-                      backgroundColor: "var(--md-surface-lowest)",
-                      borderLeft: `4px solid ${borderColor}`,
-                    }}
+                    className={cn(
+                      "rounded-l-2xl border-l-4 bg-background py-5 pl-6",
+                      borderTone,
+                    )}
                   >
                     <div className="flex items-center gap-4">
                       <div
-                        className="flex size-12 items-center justify-center rounded-xl text-xs font-bold"
-                        style={{
-                          backgroundColor: iconBg,
-                          color: iconFg,
-                        }}
+                        className={cn(
+                          "flex size-12 items-center justify-center rounded-xl text-xs font-bold",
+                          categoryTone,
+                        )}
                       >
                         {item.name.charAt(0)}
                       </div>
                       <div>
-                        <p
-                          className="font-bold leading-tight"
-                          style={{ color: "var(--md-on-surface)" }}
-                        >
-                          {item.name}
-                        </p>
-                        <p
-                          className="font-medium"
-                          style={{ fontSize: 11, color: "var(--md-outline)" }}
-                        >
+                        <p className="font-bold leading-tight">{item.name}</p>
+                        <p className="text-label font-medium text-muted-foreground">
                           {item.is_active
                             ? "Đang hoạt động"
-                            : "Ngừng hoạt động"}
+                            : "Tạm ngưng hoạt động"}
                         </p>
                       </div>
                     </div>
                   </td>
 
                   {/* SKU + category badge */}
-                  <td
-                    className="py-5"
-                    style={{ backgroundColor: "var(--md-surface-lowest)" }}
-                  >
-                    <p
-                      className="text-xs font-mono font-bold"
-                      style={{ color: "var(--md-primary)" }}
-                    >
+                  <td className="bg-background py-5">
+                    <p className="text-xs font-mono font-bold text-primary">
                       {item.sku || "—"}
                     </p>
                     {cat && (
-                      <span
-                        className="mt-1 inline-block rounded px-2 py-0.5 font-bold uppercase"
-                        style={{
-                          fontSize: 10,
-                          backgroundColor: "var(--md-surface-high)",
-                          color: "var(--md-on-surface-variant)",
-                        }}
-                      >
+                      <span className="mt-1 inline-block rounded bg-muted px-2 py-0.5 text-label font-bold uppercase text-muted-foreground">
                         {cat}
                       </span>
                     )}
                   </td>
 
                   {/* Unit */}
-                  <td
-                    className="py-5 text-sm font-semibold"
-                    style={{
-                      backgroundColor: "var(--md-surface-lowest)",
-                      color: "var(--md-on-surface)",
-                    }}
-                  >
+                  <td className="bg-background py-5 text-sm font-semibold">
                     {item.unit}
                   </td>
 
                   {/* Preservation */}
-                  <td
-                    className="py-5"
-                    style={{ backgroundColor: "var(--md-surface-lowest)" }}
-                  >
+                  <td className="bg-background py-5">
                     <div className="flex items-center gap-2">
                       <div
-                        className="size-2 rounded-full"
-                        style={{
-                          backgroundColor:
-                            item.storage_type === "refrigerated" ||
-                            item.storage_type === "frozen"
-                              ? "var(--md-tertiary)"
-                              : "var(--md-outline)",
-                        }}
+                        className={cn(
+                          "size-2 rounded-full",
+                          isColdStorage ? "bg-info" : "bg-muted-foreground",
+                        )}
                       />
                       <span
-                        className="text-sm font-medium"
-                        style={{
-                          color:
-                            item.storage_type === "refrigerated" ||
-                            item.storage_type === "frozen"
-                              ? "var(--md-tertiary)"
-                              : "var(--md-on-surface-variant)",
-                        }}
+                        className={cn(
+                          "text-sm font-medium",
+                          isColdStorage ? "text-info" : "text-muted-foreground",
+                        )}
                       >
                         {storageLabel(item.storage_type)}
                       </span>
@@ -356,65 +285,31 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
                   </td>
 
                   {/* Reference price */}
-                  <td
-                    className="py-5 text-sm font-bold"
-                    style={{
-                      backgroundColor: "var(--md-surface-lowest)",
-                      color: "var(--md-on-surface)",
-                    }}
-                  >
+                  <td className="bg-background py-5 text-sm font-bold">
                     {item.unit_cost ? `${formatVND(item.unit_cost)}đ` : "—"}
                   </td>
 
                   {/* Min / Max / Reorder badges */}
-                  <td
-                    className="py-5"
-                    style={{ backgroundColor: "var(--md-surface-lowest)" }}
-                  >
+                  <td className="bg-background py-5">
                     <div className="flex items-center gap-2">
-                      <span
-                        className="rounded px-2 py-0.5 font-bold"
-                        style={{
-                          fontSize: 10,
-                          backgroundColor: "var(--md-error-container)",
-                          color: "var(--md-on-error-container)",
-                        }}
-                      >
+                      <span className="rounded bg-destructive/12 px-2 py-0.5 text-label font-bold text-destructive">
                         {item.min_stock_level ?? 0}
                       </span>
-                      <span
-                        className="rounded px-2 py-0.5 font-bold"
-                        style={{
-                          fontSize: 10,
-                          backgroundColor: "var(--md-surface-high)",
-                          color: "var(--md-on-surface-variant)",
-                        }}
-                      >
+                      <span className="rounded bg-muted px-2 py-0.5 text-label font-bold text-muted-foreground">
                         {item.max_stock_level ?? 0}
                       </span>
-                      <span
-                        className="rounded px-2 py-0.5 font-bold"
-                        style={{
-                          fontSize: 10,
-                          backgroundColor: "var(--md-secondary-container)",
-                          color: "var(--md-on-secondary-container)",
-                        }}
-                      >
+                      <span className="rounded bg-success/12 px-2 py-0.5 text-label font-bold text-success">
                         {item.reorder_point ?? 0}
                       </span>
                     </div>
                   </td>
 
                   {/* Edit button */}
-                  <td
-                    className="rounded-r-2xl py-5 pr-6 text-right"
-                    style={{ backgroundColor: "var(--md-surface-lowest)" }}
-                  >
+                  <td className="rounded-r-2xl bg-background py-5 pr-6 text-right">
                     <button
                       type="button"
                       onClick={() => openEdit(item)}
-                      className="rounded-full p-2 opacity-0 transition-opacity group-hover:opacity-100"
-                      style={{ color: "var(--md-on-surface-variant)" }}
+                      className="focus-ring-standard rounded-full p-2 text-muted-foreground opacity-0 transition-all group-hover:opacity-100 hover:bg-muted hover:text-foreground group-focus-within:opacity-100"
                       aria-label={`Sửa ${item.name}`}
                     >
                       <Pencil className="size-4" />
@@ -428,19 +323,12 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
       </div>
 
       {/* Footer pagination info */}
-      <p
-        className="text-center text-sm font-medium"
-        style={{ color: "var(--md-outline)" }}
-      >
+      <p className="text-center text-sm font-medium text-muted-foreground">
         Hiển thị{" "}
-        <span className="font-bold" style={{ color: "var(--md-on-surface)" }}>
-          {filtered.length}
-        </span>{" "}
+        <span className="font-bold text-foreground">{filtered.length}</span>{" "}
         trên tổng{" "}
-        <span className="font-bold" style={{ color: "var(--md-on-surface)" }}>
-          {rows.length}
-        </span>{" "}
-        nguyên liệu
+        <span className="font-bold text-foreground">{rows.length}</span> nguyên
+        liệu
       </p>
 
       {/* Create / Edit Dialog */}

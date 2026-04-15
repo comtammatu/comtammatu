@@ -1,4 +1,6 @@
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
+import { Loader2, MonitorSpeaker, TriangleAlert } from "lucide-react";
+import { FlowStatePanel } from "@/components/foundation/ui-patterns";
 import {
   fetchMenuForPos,
   fetchTablesForBranch,
@@ -9,6 +11,38 @@ import { PosMenu } from "./pos-menu";
 import type { MenuCategory } from "./pos-menu";
 import { SessionGate } from "./session-gate";
 import type { OrderType } from "./types";
+
+function PosRouteState({
+  title,
+  description,
+  status,
+  statusTone,
+  steps,
+}: {
+  title: string;
+  description: string;
+  status: ReactNode;
+  statusTone: "info" | "warning" | "danger";
+  steps: Array<{
+    label: string;
+    description: string;
+    state: "todo" | "current" | "done";
+  }>;
+}) {
+  return (
+    <FlowStatePanel
+      surface="pos"
+      icon={<MonitorSpeaker className="size-5" />}
+      title={title}
+      description={description}
+      status={status}
+      statusTone={statusTone}
+      steps={steps}
+      wrapperClassName="bg-background/40"
+      className="max-w-5xl"
+    />
+  );
+}
 
 export default async function PosPage({
   params,
@@ -34,19 +68,80 @@ export default async function PosPage({
 
   if (!sessionResult.success) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg font-medium text-destructive">
-            {sessionResult.error ?? "Không thể tải thông tin ca"}
-          </p>
-        </div>
-      </div>
+      <PosRouteState
+        title="Không thể dựng phiên POS"
+        description={
+          sessionResult.error ??
+          "Chưa lấy được ca làm hiện tại."
+        }
+        status={
+          <>
+            <TriangleAlert className="size-3.5" />
+            <span>Sự cố tải ca làm</span>
+          </>
+        }
+        statusTone="danger"
+        steps={[
+          {
+            label: "Kiểm tra phiên",
+            description: "Đang xác minh ca làm.",
+            state: "current",
+          },
+          {
+            label: "Đồng bộ thiết bị",
+            description: "Đang tải máy POS.",
+            state: "todo",
+          },
+          {
+            label: "Khởi tạo bán hàng",
+            description: "Mở quầy bán hàng.",
+            state: "todo",
+          },
+        ]}
+      />
     );
   }
 
   // No open session → show session gate
   if (!sessionResult.data) {
     const terminalsResult = await fetchPosTerminals(branchIdNum);
+
+    if (!terminalsResult.success) {
+      return (
+        <PosRouteState
+          title="Không thể tải máy POS"
+          description={
+            terminalsResult.error ??
+            "Chưa đồng bộ được danh sách thiết bị."
+          }
+          status={
+            <>
+              <TriangleAlert className="size-3.5" />
+              <span>Gián đoạn đồng bộ thiết bị</span>
+            </>
+          }
+          statusTone="warning"
+          steps={[
+            {
+              label: "Kiểm tra phiên",
+              description: "Chưa có ca mở.",
+              state: "done",
+            },
+            {
+              label: "Đồng bộ thiết bị",
+              description: "Đang tải terminal.",
+              state: "current",
+            },
+            {
+              label: "Mở ca",
+              description: "Sẵn sàng mở ca.",
+              state: "todo",
+            },
+          ]}
+        />
+      );
+    }
+
     return (
       <SessionGate
         branchId={branchIdNum}
@@ -55,6 +150,7 @@ export default async function PosPage({
             id: number;
             name: string;
             device_id: string | null;
+            has_open_session: boolean;
           }[]
         }
       />
@@ -81,25 +177,71 @@ export default async function PosPage({
 
   if (!menuResult.success || !menuResult.data) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg font-medium text-destructive">
-            {menuResult.error ?? "Không thể tải menu"}
-          </p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Vui lòng tải lại trang hoặc liên hệ quản lý.
-          </p>
-        </div>
-      </div>
+        <PosRouteState
+          title="Không thể tải menu bán hàng"
+          description={
+            menuResult.error ??
+            "Ca đã mở nhưng chưa tải được menu."
+          }
+        status={
+          <>
+            <TriangleAlert className="size-3.5" />
+            <span>Gián đoạn dữ liệu bán hàng</span>
+          </>
+        }
+          statusTone="warning"
+        steps={[
+          {
+            label: "Ca đang mở",
+            description: "Phiên bán hàng đã sẵn sàng.",
+            state: "done",
+          },
+          {
+            label: "Đồng bộ menu",
+            description: "Đang nạp món và bàn.",
+            state: "current",
+          },
+          {
+            label: "Sẵn sàng tạo đơn",
+            description: "Sẵn sàng phục vụ khách.",
+            state: "todo",
+          },
+        ]}
+      />
     );
   }
 
   return (
     <Suspense
       fallback={
-        <div className="flex flex-1 items-center justify-center p-8">
-          <p className="text-sm text-muted-foreground">Đang tải POS…</p>
-        </div>
+        <PosRouteState
+          title="Đang chuẩn bị quầy POS"
+          description="Đang nạp ca làm, bàn và menu."
+          status={
+            <>
+              <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
+              <span>Đồng bộ quầy bán</span>
+            </>
+          }
+          statusTone="info"
+        steps={[
+            {
+              label: "Phiên hợp lệ",
+              description: "Ca làm và thiết bị đã sẵn sàng.",
+              state: "done",
+            },
+            {
+              label: "Dựng mặt bàn",
+              description: "Đang nạp bàn và món.",
+              state: "current",
+            },
+            {
+              label: "Sẵn sàng nhận order",
+              description: "Mở giao diện POS.",
+              state: "todo",
+            },
+          ]}
+        />
       }
     >
       <PosMenu

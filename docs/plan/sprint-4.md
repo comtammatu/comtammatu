@@ -1,7 +1,7 @@
 # Sprint 4: Loyalty + Vouchers (Post-v1.0)
 
 > **Module mapping:** Post-v1.0 (Loyalty/Vouchers) — see `roadmap.md`
-> **Note:** CRM đã loại khỏi scope. Đây là module Loyalty thuần túy.
+> **Note:** CRM core được tách sang Sprint 8. Sprint này chỉ giữ Loyalty/Vouchers thuần túy.
 > Depends on: M2 (POS/orders data cho loyalty earn)
 > Sessions: 6 | Estimate: 5-6 ngày
 

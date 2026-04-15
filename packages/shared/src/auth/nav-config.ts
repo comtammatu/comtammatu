@@ -1,4 +1,5 @@
 import type { ModuleKey } from "./module-acl";
+import { APP_COPY_VI, NAV_GROUP_LABELS_VI } from "../labels";
 
 /**
  * Sidebar navigation configuration — derived from MODULE_ACL.
@@ -9,6 +10,7 @@ import type { ModuleKey } from "./module-acl";
 export interface NavItemConfig {
   moduleKey: ModuleKey;
   icon: string;
+  label?: string;
 }
 
 export interface NavGroupConfig {
@@ -16,35 +18,66 @@ export interface NavGroupConfig {
   items: NavItemConfig[];
 }
 
+export interface WorkspaceNavItemConfig extends NavItemConfig {
+  label?: string;
+}
+
+export interface BranchOperationNavItemConfig extends NavItemConfig {
+  hrefTemplate: string;
+  label?: string;
+}
+
 /** Admin sidebar nav groups — only admin-scoped modules */
 export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
   {
-    title: "Tổng quan",
-    items: [{ moduleKey: "dashboard", icon: "LayoutDashboard" }],
-  },
-  {
-    title: "Vận hành",
+    title: NAV_GROUP_LABELS_VI.operations,
     items: [
-      { moduleKey: "menu", icon: "UtensilsCrossed" },
-      { moduleKey: "orders", icon: "Receipt" },
+      {
+        moduleKey: "dashboard",
+        icon: "LayoutDashboard",
+        label: APP_COPY_VI.erpCockpit,
+      },
+      {
+        moduleKey: "reports",
+        icon: "BarChart3",
+        label: APP_COPY_VI.executiveReporting,
+      },
     ],
   },
   {
-    title: "Quản lý",
+    title: NAV_GROUP_LABELS_VI.foundation,
     items: [
-      { moduleKey: "staff", icon: "Users" },
-      { moduleKey: "crm", icon: "Heart" },
+      {
+        moduleKey: "staff",
+        icon: "Users",
+        label: APP_COPY_VI.foundationalStaff,
+      },
+      {
+        moduleKey: "settings",
+        icon: "Settings",
+        label: APP_COPY_VI.systemSetup,
+      },
     ],
   },
+];
+
+/** Adjacent product surfaces accessible from the admin workspace */
+export const DOMAIN_WORKSPACE_ITEMS: WorkspaceNavItemConfig[] = [
+  { moduleKey: "inventory", icon: "Package", label: "Kho hàng" },
+  { moduleKey: "hr", icon: "Briefcase", label: APP_COPY_VI.hrWorkspace },
+];
+
+/** Branch-scoped operational entry points */
+export const BRANCH_OPERATION_ITEMS: BranchOperationNavItemConfig[] = [
   {
-    title: "Tài chính",
-    items: [
-      { moduleKey: "finance", icon: "Wallet" },
-      { moduleKey: "reports", icon: "BarChart3" },
-    ],
+    moduleKey: "pos",
+    icon: "Monitor",
+    hrefTemplate: "/br/{branchId}/pos",
   },
   {
-    title: "Hệ thống",
-    items: [{ moduleKey: "settings", icon: "Settings" }],
+    moduleKey: "kds",
+    icon: "ChefHat",
+    hrefTemplate: "/br/{branchId}/kds",
+    label: APP_COPY_VI.branchOperationsKds,
   },
 ];

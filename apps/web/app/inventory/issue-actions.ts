@@ -4,7 +4,11 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "../admin/_lib/auth";
+import { getAuthContext } from "./_lib/auth";
+import {
+  resolveDefaultInventoryLocation,
+  withInventoryLocationCompatFallback,
+} from "./_lib/inventory-location-compat";
 
 const ROLES = INVENTORY_OPS_ROLES;
 
@@ -43,26 +47,37 @@ export async function fetchStockIssues(opts?: {
 
   const { supabase, claims } = ctx;
 
-  let query = supabase
-    .from("stock_issues")
-    .select(
-      "id, issue_number, issue_type, status, notes, issued_at, branch_id, branches ( id, name )",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .order("issued_at", { ascending: false });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- location columns are compatibility-prep before db:types regenerate
+  const sb = supabase as any;
+  const buildQuery = (selectClause: string) => {
+    let query = sb
+      .from("stock_issues")
+      .select(selectClause)
+      .eq("tenant_id", claims.tenant_id)
+      .order("issued_at", { ascending: false });
 
-  if (opts?.branchId) {
-    query = query.eq("branch_id", opts.branchId);
-  }
-  if (opts?.status) {
-    query = query.eq("status", opts.status);
-  }
-  // branch_manager sees only their own branch
-  if (claims.branch_id) {
-    query = query.eq("branch_id", claims.branch_id);
-  }
+    if (opts?.branchId) {
+      query = query.eq("branch_id", opts.branchId);
+    }
+    if (opts?.status) {
+      query = query.eq("status", opts.status);
+    }
+    if (claims.branch_id) {
+      query = query.eq("branch_id", claims.branch_id);
+    }
+    return query;
+  };
 
-  const { data, error } = await query;
+  const { data, error } = await withInventoryLocationCompatFallback(
+    () =>
+      buildQuery(
+        "id, issue_number, issue_type, status, notes, issued_at, branch_id, source_location_id, target_location_id, branches ( id, name )",
+      ),
+    () =>
+      buildQuery(
+        "id, issue_number, issue_type, status, notes, issued_at, branch_id, branches ( id, name )",
+      ),
+  );
   if (error) {
     return { success: false, error: "Không thể tải danh sách phiếu xuất." };
   }
@@ -97,19 +112,46 @@ export async function createStockIssueDraft(
   }
 
   const issueNumber = `PXK-${randomUUID().slice(0, 8)}`;
+  const sourceLocationId = await resolveDefaultInventoryLocation(
+    supabase,
+    claims.tenant_id,
+    d.branchId,
+    "issue",
+  );
+  const targetLocationId =
+    d.issueType === "kitchen_use"
+      ? await resolveDefaultInventoryLocation(
+          supabase,
+          claims.tenant_id,
+          d.branchId,
+          "consumption",
+        )
+      : null;
 
-  const { data, error } = await supabase
-    .from("stock_issues")
-    .insert({
-      tenant_id: claims.tenant_id,
-      branch_id: d.branchId,
-      issue_number: issueNumber,
-      issue_type: d.issueType,
-      notes: d.notes ?? null,
-      created_by: user.id,
-    })
-    .select("id")
-    .single();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- location columns are compatibility-prep before db:types regenerate
+  const sb = supabase as any;
+  const basePayload = {
+    tenant_id: claims.tenant_id,
+    branch_id: d.branchId,
+    issue_number: issueNumber,
+    issue_type: d.issueType,
+    notes: d.notes ?? null,
+    created_by: user.id,
+  };
+
+  const { data, error } = await withInventoryLocationCompatFallback(
+    () =>
+      sb
+        .from("stock_issues")
+        .insert({
+          ...basePayload,
+          source_location_id: sourceLocationId,
+          target_location_id: targetLocationId,
+        })
+        .select("id, source_location_id, target_location_id")
+        .single(),
+    () => sb.from("stock_issues").insert(basePayload).select("id").single(),
+  );
 
   if (error) {
     return { success: false, error: "Không thể tạo phiếu xuất." };
@@ -129,16 +171,30 @@ export async function fetchStockIssueDetail(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- location columns are compatibility-prep before db:types regenerate
+  const sb = supabase as any;
 
   const [issueRes, linesRes] = await Promise.all([
-    supabase
-      .from("stock_issues")
-      .select(
-        "id, issue_number, issue_type, status, notes, issued_at, branch_id, branches ( id, name )",
-      )
-      .eq("id", id.data)
-      .eq("tenant_id", claims.tenant_id)
-      .single(),
+    withInventoryLocationCompatFallback(
+      () =>
+        sb
+          .from("stock_issues")
+          .select(
+            "id, issue_number, issue_type, status, notes, issued_at, branch_id, source_location_id, target_location_id, branches ( id, name )",
+          )
+          .eq("id", id.data)
+          .eq("tenant_id", claims.tenant_id)
+          .single(),
+      () =>
+        sb
+          .from("stock_issues")
+          .select(
+            "id, issue_number, issue_type, status, notes, issued_at, branch_id, branches ( id, name )",
+          )
+          .eq("id", id.data)
+          .eq("tenant_id", claims.tenant_id)
+          .single(),
+    ),
     supabase
       .from("stock_issue_items")
       .select(

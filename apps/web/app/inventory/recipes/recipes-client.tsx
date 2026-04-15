@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, UtensilsCrossed } from "lucide-react";
+import {
+  EmptyState,
+  SectionCard,
+} from "@/components/foundation/ui-patterns";
+import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { Button } from "@comtammatu/ui/components/button";
 import { PageHeader } from "../_components/shared";
 import { formatVND } from "../_lib/format";
 import { RecipeLineDialog } from "./recipe-line-dialog";
@@ -32,22 +38,18 @@ export type RecipeRow = {
 };
 
 function YieldBadge({ value }: { value: number }) {
-  const bg =
+  const className =
     value >= 95
-      ? "var(--md-secondary-container)"
+      ? "bg-success/12 text-success"
       : value >= 80
-        ? "color-mix(in srgb, var(--md-tertiary) 15%, transparent)"
-        : "var(--md-error-container)";
-  const fg =
-    value >= 95
-      ? "var(--md-on-secondary-container)"
-      : value >= 80
-        ? "var(--md-tertiary)"
-        : "var(--md-on-error-container)";
+        ? "bg-warning/12 text-warning"
+        : "bg-destructive/12 text-destructive";
   return (
     <span
-      className="inline-flex items-center rounded px-2 py-1 text-xs font-bold"
-      style={{ backgroundColor: bg, color: fg }}
+      className={cn(
+        "inline-flex items-center rounded px-2 py-1 text-xs font-bold",
+        className,
+      )}
     >
       {value}%
     </span>
@@ -64,6 +66,7 @@ export function RecipesClient({
   ingredients: IngredientOption[];
 }) {
   const router = useRouter();
+  const panelClassName = getSurfacePanelClassName("inventory", "ambient-shadow");
   const [lineDialogOpen, setLineDialogOpen] = useState(false);
   const [lineDialogMenuItemId, setLineDialogMenuItemId] = useState<
     number | undefined
@@ -97,116 +100,73 @@ export function RecipesClient({
     <div className="space-y-6">
       <PageHeader
         title="Công thức món ăn"
-        description="Thiết lập định mức nguyên vật liệu chi tiết cho từng món ăn trong menu để tối ưu hóa chi phí và quản lý kho chính xác."
+        description="Định mức nguyên liệu cho từng món."
         actions={
-          <button
+          <Button
             type="button"
             onClick={() => openAddLine()}
-            className="flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:opacity-90"
-            style={{
-              background:
-                "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-              boxShadow:
-                "0 4px 14px color-mix(in srgb, var(--md-primary) 25%, transparent)",
-            }}
+            className="shadow-lg shadow-primary/25"
           >
             + Tạo món mới
-          </button>
+          </Button>
         }
       />
 
       {recipes.length === 0 && (
-        <div
-          className="rounded-2xl py-16 text-center ambient-shadow"
-          style={{ backgroundColor: "var(--md-surface-lowest)" }}
-        >
-          <p
-            className="text-sm font-medium"
-            style={{ color: "var(--md-on-surface-variant)" }}
-          >
-            Chưa có công thức nào. Nhấn &quot;Tạo món mới&quot; để bắt đầu.
-          </p>
-        </div>
+        <EmptyState
+          className={cn(panelClassName, "rounded-2xl bg-card")}
+          title="Chưa có công thức nào"
+          description='Nhấn "Tạo món mới" để bắt đầu dựng định mức nguyên liệu.'
+        />
       )}
 
       <div className="space-y-10">
         {recipes.map((recipe) => (
-          <div
+          <SectionCard
             key={recipe.id}
-            className="overflow-hidden rounded-2xl ambient-shadow"
-            style={{
-              backgroundColor: "var(--md-surface-lowest)",
-              border:
-                "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-            }}
+            className={cn(panelClassName, "overflow-hidden rounded-2xl bg-card")}
+            density="compact"
           >
             {/* Recipe header */}
             <div
-              className="flex flex-wrap items-center justify-between gap-4 px-6 py-5"
-              style={{ backgroundColor: "var(--md-surface-high)" }}
+              className="-m-5 flex flex-wrap items-center justify-between gap-4 bg-muted px-5 py-5 md:-m-6 md:px-6"
             >
               <div className="min-w-0 flex items-center gap-4">
-                <div
-                  className="flex size-12 items-center justify-center rounded-xl"
-                  style={{
-                    backgroundColor:
-                      "color-mix(in srgb, var(--md-primary) 10%, transparent)",
-                  }}
-                >
-                  <UtensilsCrossed
-                    className="size-5"
-                    style={{ color: "var(--md-primary)" }}
-                  />
+                <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10">
+                  <UtensilsCrossed className="size-5 text-primary" />
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3
-                      className="text-lg font-bold sm:text-xl"
-                      style={{ color: "var(--md-on-surface)" }}
-                    >
+                    <h3 className="text-lg font-bold sm:text-xl">
                       {recipe.name}
                     </h3>
-                    <span
-                      className="shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 font-bold uppercase tracking-wide"
-                      style={{
-                        fontSize: 10,
-                        backgroundColor: "var(--md-secondary-container)",
-                        color: "var(--md-on-secondary-container)",
-                      }}
-                    >
+                    <span className="shrink-0 whitespace-nowrap rounded-full bg-success/12 px-2 py-0.5 text-label font-bold uppercase tracking-wide text-success">
                       {recipe.category}
                     </span>
                   </div>
-                  <p
-                    className="mt-0.5 text-xs"
-                    style={{ color: "var(--md-on-surface-variant)" }}
-                  >
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     Cập nhật {recipe.updatedAt}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => openAddLine(recipe.menuItemId)}
-                  className="rounded-lg p-2 transition-colors hover:opacity-80"
-                  style={{ color: "var(--md-outline)" }}
                   aria-label={`Sửa ${recipe.name}`}
                 >
                   <Pencil className="size-4" />
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={() => openAddLine(recipe.menuItemId)}
-                  className="flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition-colors hover:opacity-80"
-                  style={{
-                    backgroundColor:
-                      "color-mix(in srgb, var(--md-primary) 10%, transparent)",
-                    color: "var(--md-primary)",
-                  }}
+                  variant="outline"
+                  className="text-primary"
                 >
                   + Thêm dòng công thức
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -214,12 +174,7 @@ export function RecipesClient({
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left">
                 <thead>
-                  <tr
-                    style={{
-                      backgroundColor:
-                        "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
-                    }}
-                  >
+                  <tr className="bg-muted/40">
                     {[
                       "Nguyên liệu",
                       "Số lượng",
@@ -230,7 +185,7 @@ export function RecipesClient({
                       <th
                         key={h}
                         className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wide ${h === "Yield Factor (%)" ? "text-center" : ""}`}
-                        style={{ color: "var(--md-on-surface-variant)" }}
+                        
                       >
                         {h}
                       </th>
@@ -241,49 +196,27 @@ export function RecipesClient({
                   {recipe.items.map((item) => (
                     <tr
                       key={item.ingredientId}
-                      className="cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--md-primary)_3%,transparent)]"
+                      className="cursor-pointer border-b border-border/60 transition-colors hover:bg-primary/3"
                       onClick={() => openEditLine(recipe.menuItemId, item)}
-                      style={{
-                        borderBottom:
-                          "1px solid color-mix(in srgb, var(--md-surface-low) 80%, transparent)",
-                      }}
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div
-                            className="size-2 rounded-full"
-                            style={{
-                              backgroundColor:
-                                "color-mix(in srgb, var(--md-primary) 40%, transparent)",
-                            }}
-                          />
-                          <span
-                            className="font-semibold"
-                            style={{ color: "var(--md-on-surface)" }}
-                          >
+                          <div className="size-2 rounded-full bg-primary/40" />
+                          <span className="font-semibold">
                             {item.ingredientName}
                           </span>
                         </div>
                       </td>
-                      <td
-                        className="px-6 py-4 font-mono"
-                        style={{ color: "var(--md-on-surface)" }}
-                      >
+                      <td className="px-6 py-4 font-mono">
                         {item.qty}
                       </td>
-                      <td
-                        className="px-6 py-4"
-                        style={{ color: "var(--md-on-surface-variant)" }}
-                      >
+                      <td className="px-6 py-4 text-muted-foreground">
                         {item.unit}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <YieldBadge value={item.yieldFactor} />
                       </td>
-                      <td
-                        className="px-6 py-4 text-xs italic"
-                        style={{ color: "var(--md-on-surface-variant)" }}
-                      >
+                      <td className="px-6 py-4 text-xs italic text-muted-foreground">
                         {item.note ?? "—"}
                       </td>
                     </tr>
@@ -292,8 +225,7 @@ export function RecipesClient({
                     <tr>
                       <td
                         colSpan={5}
-                        className="px-6 py-8 text-center text-sm"
-                        style={{ color: "var(--md-on-surface-variant)" }}
+                        className="px-6 py-8 text-center text-sm text-muted-foreground"
                       >
                         Chưa có nguyên liệu. Nhấn &quot;Thêm dòng công
                         thức&quot; để bắt đầu.
@@ -306,27 +238,17 @@ export function RecipesClient({
 
             {/* Cost estimate footer */}
             <div
-              className="flex items-center justify-between px-6 py-4"
-              style={{
-                borderTop:
-                  "1px solid color-mix(in srgb, var(--md-surface-low) 80%, transparent)",
-              }}
+              className="flex items-center justify-between border-t border-border/60 px-6 py-4"
             >
-              <span
-                className="text-xs font-medium uppercase tracking-tight"
-                style={{ color: "var(--md-on-surface-variant)" }}
-              >
+              <span className="text-xs font-medium uppercase tracking-tight text-muted-foreground">
                 Giá vốn tạm tính:{" "}
-                <span
-                  className="font-bold"
-                  style={{ color: "var(--md-primary)" }}
-                >
+                <span className="font-bold text-primary">
                   {formatVND(recipe.estimatedCost)} đ
                 </span>{" "}
                 / phần
               </span>
             </div>
-          </div>
+          </SectionCard>
         ))}
       </div>
 

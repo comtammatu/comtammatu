@@ -42,6 +42,23 @@ export default tseslint.config(
     },
     rules: {
       "design-system/no-arbitrary-tailwind-value": "error",
+      "design-system/no-surface-theme-import": "error",
+    },
+  },
+  {
+    files: [
+      "app/components/foundation/**/*.tsx",
+      "app/**/components/*shell.tsx",
+      "app/**/layout.tsx",
+      "app/employee/components/**/*.tsx",
+      "app/inventory/_components/inventory-*.tsx",
+      "app/(auth)/**/*.tsx",
+    ],
+    plugins: {
+      "design-system": designSystem,
+    },
+    rules: {
+      "design-system/no-static-ui-inline-style": "error",
     },
   },
   {

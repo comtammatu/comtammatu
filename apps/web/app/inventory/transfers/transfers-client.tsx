@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  ActionIconButton,
+  SectionCard,
+} from "@/components/foundation/ui-patterns";
 import {
   CheckCircle,
   Clock,
@@ -13,6 +17,8 @@ import {
   Search,
   Truck,
 } from "lucide-react";
+import { Button } from "@comtammatu/ui/components/button";
+import { Input } from "@comtammatu/ui/components/input";
 import {
   Table,
   TableBody,
@@ -21,7 +27,14 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { StatusBadge, SearchableSelect } from "../_components/shared";
+import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import {
+  FilterBar,
+  PageHeader,
+  SearchableSelect,
+  StatusBadge,
+} from "../_components/shared";
+import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 
 export type TransferRow = {
   id: number;
@@ -33,115 +46,116 @@ export type TransferRow = {
 };
 
 export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
+  const panelClassName = getSurfacePanelClassName(
+    "inventory",
+    "ambient-shadow",
+  );
   const [statusFilter, setStatusFilter] = useState("all");
   const [branchFilter, setBranchFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const inTransit = transfers.filter((t) => t.status === "in_transit").length;
   const awaiting = transfers.filter((t) => t.status === "confirmed").length;
-  const completedToday = transfers.filter(
-    (t) => t.status === "received",
-  ).length;
+  const receivedCount = transfers.filter((t) => t.status === "received").length;
+
+  const branchOptions = useMemo(() => {
+    return [...new Set(transfers.map((t) => t.toBranch).filter(Boolean))].sort(
+      (a, b) => a.localeCompare(b, "vi"),
+    );
+  }, [transfers]);
+
+  const filteredTransfers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return transfers.filter((t) => {
+      if (statusFilter !== "all" && t.status !== statusFilter) return false;
+      if (branchFilter !== "all" && t.toBranch !== branchFilter) return false;
+      if (!q) return true;
+      return (
+        t.code.toLowerCase().includes(q) ||
+        t.fromBranch.toLowerCase().includes(q) ||
+        t.toBranch.toLowerCase().includes(q)
+      );
+    });
+  }, [transfers, statusFilter, branchFilter, searchQuery]);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h2
-            className="text-2xl font-bold tracking-tight"
-            style={{ color: "var(--md-on-surface)" }}
+      <PageHeader
+        title="Luân chuyển nội bộ"
+        actions={
+          <Button
+            type="button"
+            className="min-h-11 rounded-full px-6 font-bold shadow-xl shadow-primary/15 transition-shadow hover:shadow-lg"
           >
-            Luân chuyển nội bộ
-          </h2>
-          <p
-            className="mt-1 text-sm"
-            style={{ color: "var(--md-on-surface-variant)" }}
-          >
-            Quản lý dòng luân chuyển nguyên liệu giữa các chi nhánh.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-full px-6 py-2.5 font-bold text-white shadow-md transition-shadow hover:shadow-lg"
-          style={{
-            background:
-              "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-          }}
-        >
-          <PlusCircle className="size-4" />
-          Tạo phiếu mới
-        </button>
-      </div>
+            <PlusCircle className="size-4" />
+            Tạo phiếu mới
+          </Button>
+        }
+      />
 
       {/* Bento Summary Cards */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {[
           {
             icon: <Truck className="size-7" />,
-            iconBg: "color-mix(in srgb, var(--md-tertiary) 10%, transparent)",
-            iconColor: "var(--md-tertiary)",
+            iconBg: "bg-info/12",
+            iconColor: "text-info",
             label: "Đang vận chuyển",
             value: String(inTransit).padStart(2, "0"),
           },
           {
             icon: <Clock className="size-7" />,
-            iconBg: "color-mix(in srgb, var(--md-secondary) 10%, transparent)",
-            iconColor: "var(--md-secondary)",
+            iconBg: "bg-warning/12",
+            iconColor: "text-warning",
             label: "Chờ nhận",
             value: String(awaiting).padStart(2, "0"),
           },
           {
             icon: <CheckCircle className="size-7" />,
-            iconBg: "color-mix(in srgb, var(--md-primary) 10%, transparent)",
-            iconColor: "var(--md-primary)",
-            label: "Hoàn thành hôm nay",
-            value: String(completedToday).padStart(2, "0"),
+            iconBg: "bg-success/12",
+            iconColor: "text-success",
+            label: "Đã nhận",
+            value: String(receivedCount).padStart(2, "0"),
           },
         ].map((card) => (
-          <div
+          <SectionCard
             key={card.label}
-            className="flex items-center gap-5 rounded-2xl p-6"
-            style={{ backgroundColor: "var(--md-surface-low)" }}
+            className={cn(
+              panelClassName,
+              "flex items-center gap-5 rounded-2xl bg-card",
+            )}
+            density="comfortable"
           >
             <div
-              className="flex size-14 items-center justify-center rounded-full"
-              style={{ backgroundColor: card.iconBg, color: card.iconColor }}
+              className={cn(
+                "flex size-14 items-center justify-center rounded-full",
+                card.iconBg,
+                card.iconColor,
+              )}
             >
               {card.icon}
             </div>
             <div>
-              <p
-                className="whitespace-nowrap text-sm font-semibold uppercase tracking-wide"
-                style={{ color: "var(--md-on-surface-variant)" }}
-              >
+              <p className="whitespace-nowrap text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 {card.label}
               </p>
               <p className="text-3xl font-black">{card.value}</p>
             </div>
-          </div>
+          </SectionCard>
         ))}
       </div>
 
-      {/* Filter Bar */}
-      <div
-        className="flex flex-wrap items-center gap-4 rounded-xl p-4"
-        style={{ backgroundColor: "var(--md-surface-low)" }}
+      <FilterBar
+        className={cn(panelClassName, "items-center bg-muted px-4 py-4")}
+        surface="inventory"
       >
         <div className="relative min-w-col-lg flex-1">
-          <Search
-            className="absolute left-3 top-2.5 size-4"
-            style={{ color: "var(--md-outline)" }}
-          />
-          <input
+          <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+          <Input
             type="text"
             placeholder="Tìm mã phiếu, kho gửi..."
-            className="w-full rounded-lg border-none py-2 pl-10 pr-4 text-sm outline-none focus:ring-2"
-            style={{
-              backgroundColor: "var(--md-surface-lowest)",
-              // @ts-expect-error -- CSS custom property for focus ring
-              "--tw-ring-color":
-                "color-mix(in srgb, var(--md-primary) 20%, transparent)",
-            }}
-            readOnly
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-9 w-full border-none bg-card pl-10 pr-4 text-sm shadow-none"
           />
         </div>
         <div className="flex items-center gap-3">
@@ -157,154 +171,134 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
             placeholder="Trạng thái"
             searchPlaceholder="Tìm trạng thái..."
             variant="pill"
-            className="min-w-col-sm"
-            style={{ backgroundColor: "var(--md-surface-lowest)" }}
+            className="min-w-col-sm bg-card"
           />
           <SearchableSelect
             options={[
               { value: "all", label: "Chi nhánh đến" },
-              { value: "q1", label: "CN Quận 1" },
-              { value: "q3", label: "CN Quận 3" },
-              { value: "bt", label: "CN Bình Thạnh" },
+              ...branchOptions.map((branch) => ({
+                value: branch,
+                label: branch,
+              })),
             ]}
             value={branchFilter}
             onValueChange={setBranchFilter}
             placeholder="Chi nhánh đến"
             searchPlaceholder="Tìm chi nhánh..."
             variant="pill"
-            className="min-w-col-sm"
-            style={{ backgroundColor: "var(--md-surface-lowest)" }}
+            className="min-w-col-sm bg-card"
           />
-          <button
+          <Button
             type="button"
-            className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors"
-            style={{
-              backgroundColor: "var(--md-surface-highest)",
-              color: "var(--md-on-surface-variant)",
-            }}
+            variant="outline"
+            size="sm"
+            className="rounded-full bg-card text-muted-foreground"
           >
             <Filter className="size-4" />
             Lọc thêm
-          </button>
+          </Button>
         </div>
-      </div>
+      </FilterBar>
 
       {/* Data Table */}
-      <div
-        className="overflow-hidden rounded-2xl ambient-shadow"
-        style={{ backgroundColor: "var(--md-surface-lowest)" }}
+      <SectionCard
+        className={cn(panelClassName, "overflow-hidden rounded-3xl bg-card")}
+        density="compact"
       >
-        <Table>
-          <TableHeader>
-            <TableRow
-              style={{
-                backgroundColor:
-                  "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
-              }}
-            >
-              {[
-                "Mã phiếu",
-                "Kho gửi",
-                "Kho nhận",
-                "Trạng thái",
-                "Ngày tạo",
-                "Thao tác",
-              ].map((h) => (
-                <TableHead
-                  key={h}
-                  className="px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider"
-                  style={{ color: "var(--md-outline)" }}
-                >
-                  {h}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {transfers.map((t) => (
-              <TableRow
-                key={t.id}
-                className="group transition-colors"
-                style={{
-                  borderColor:
-                    "color-mix(in srgb, var(--md-surface-container) 100%, transparent)",
-                }}
-              >
-                <TableCell className="px-6 py-5">
-                  <Link
-                    href={`/inventory/transfers/${t.code}`}
-                    className="font-bold tracking-tight hover:underline"
-                    style={{ color: "var(--md-primary)" }}
+        <div className="-m-4 md:-m-5">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/40">
+                {[
+                  "Mã phiếu",
+                  "Kho gửi",
+                  "Kho nhận",
+                  "Trạng thái",
+                  "Ngày tạo",
+                  "Thao tác",
+                ].map((h) => (
+                  <TableHead
+                    key={h}
+                    className="px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground"
                   >
-                    {t.code}
-                  </Link>
-                </TableCell>
-                <TableCell className="px-6 py-5 text-sm font-medium">
-                  {t.fromBranch}
-                </TableCell>
-                <TableCell className="px-6 py-5 text-sm font-medium">
-                  {t.toBranch}
-                </TableCell>
-                <TableCell className="px-6 py-5">
-                  <StatusBadge status={t.status} />
-                </TableCell>
-                <TableCell
-                  className="px-6 py-5 text-sm"
-                  style={{ color: "var(--md-on-surface-variant)" }}
-                >
-                  {t.date}
-                </TableCell>
-                <TableCell className="px-6 py-5">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="rounded-md p-1.5 transition-colors"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      <Eye className="size-4" />
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-md p-1.5 transition-colors"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      <Printer className="size-4" />
-                    </button>
-                  </div>
-                </TableCell>
+                    {h}
+                  </TableHead>
+                ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Optimization tip */}
-      <div
-        className="flex items-start gap-3 rounded-xl border p-4"
-        style={{
-          borderColor:
-            "color-mix(in srgb, var(--md-secondary) 20%, transparent)",
-          backgroundColor:
-            "color-mix(in srgb, var(--md-secondary) 5%, transparent)",
-        }}
-      >
-        <Lightbulb
-          className="mt-0.5 size-5 shrink-0"
-          style={{ color: "var(--md-secondary)" }}
-        />
-        <div>
-          <p className="text-sm font-semibold">Gợi ý tối ưu vận chuyển</p>
-          <p
-            className="mt-0.5 text-xs"
-            style={{ color: "var(--md-on-surface-variant)" }}
-          >
-            Có 3 mặt hàng sắp hết hạn tại{" "}
-            <span className="font-medium">CN Quận 3</span>. Bạn có thể kết hợp
-            vận chuyển 50kg gạo ST25 từ Kho Thủ Đức để tiết kiệm chi phí
-            Logistics 15%.
-          </p>
+            </TableHeader>
+            <TableBody>
+              {filteredTransfers.length === 0 && (
+                <TableEmptyStateRow
+                  colSpan={6}
+                  title="Không có phiếu luân chuyển phù hợp"
+                  description="Thử điều chỉnh trạng thái, chi nhánh đến hoặc từ khóa tìm kiếm."
+                />
+              )}
+              {filteredTransfers.map((t) => (
+                <TableRow
+                  key={t.id}
+                  className="group border-border/40 transition-colors"
+                >
+                  <TableCell className="px-6 py-5">
+                    <Link
+                      href={`/inventory/transfers/${t.id}`}
+                      className="focus-ring-standard rounded-sm font-bold tracking-tight text-primary hover:underline"
+                    >
+                      {t.code}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="px-6 py-5 text-sm font-medium">
+                    {t.fromBranch}
+                  </TableCell>
+                  <TableCell className="px-6 py-5 text-sm font-medium">
+                    {t.toBranch}
+                  </TableCell>
+                  <TableCell className="px-6 py-5">
+                    <StatusBadge status={t.status} />
+                  </TableCell>
+                  <TableCell className="px-6 py-5 text-sm text-muted-foreground">
+                    {t.date}
+                  </TableCell>
+                  <TableCell className="px-6 py-5">
+                    <div className="flex items-center gap-2">
+                      <ActionIconButton
+                        icon={<Eye className="size-4" />}
+                        label="Xem phiếu"
+                        className="size-8 border-none bg-transparent text-muted-foreground shadow-none hover:bg-muted hover:text-foreground"
+                      />
+                      <ActionIconButton
+                        icon={<Printer className="size-4" />}
+                        label="In phiếu"
+                        className="size-8 border-none bg-transparent text-muted-foreground shadow-none hover:bg-muted hover:text-foreground"
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
-      </div>
+      </SectionCard>
+
+      {/* Operational insight */}
+      <SectionCard
+        className="rounded-2xl border-info/20 bg-info/8"
+        density="compact"
+      >
+        <div className="flex items-start gap-3">
+          <Lightbulb className="mt-0.5 size-5 shrink-0 text-info" />
+          <div>
+            <p className="text-sm font-semibold">Gợi ý vận hành</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {transfers.length > 0
+                ? inTransit > 0
+                  ? `Có ${inTransit} phiếu đang vận chuyển và ${awaiting} phiếu chờ nhận. Ưu tiên xác nhận hàng đến để giảm ùn tắc luân chuyển.`
+                  : `Đã ghi nhận ${receivedCount} phiếu luân chuyển hoàn tất. Dữ liệu đang bám theo chứng từ thực tế của kho.`
+                : "Chưa có phiếu luân chuyển nào. Khi phát sinh chứng từ thực, hệ thống sẽ tự hiển thị trạng thái ưu tiên."}
+            </p>
+          </div>
+        </div>
+      </SectionCard>
     </div>
   );
 }

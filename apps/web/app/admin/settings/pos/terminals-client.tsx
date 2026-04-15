@@ -58,7 +58,7 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
     return (
       <EmptyStatePanel
         title="Chưa có chi nhánh nào"
-        description="Vui lòng tạo chi nhánh trước."
+        description="Tạo chi nhánh trước."
       />
     );
   }

@@ -14,13 +14,16 @@ Authentication and authorization for the entire system. Every request passes thr
 | `packages/shared/src/auth/module-acl.ts`           | Module → allowed roles mapping, `canAccess()`, `getAccessibleModules()`                        | ACL single source of truth |
 | `packages/shared/src/auth/scope.ts`                | `extractClaims()` (reads `user_role` or `role` fallback), `getScope()`, `getDefaultRedirect()` | JWT claim extraction       |
 | `packages/shared/src/auth/nav-config.ts`           | Admin sidebar navigation groups filtered by role                                               | UI navigation              |
+| `packages/shared/src/auth/app-discovery.ts`        | Shared app discovery metadata derived from ACL + nav config                                    | Shell discovery contract   |
+| `packages/shared/src/auth/blocked-state.ts`        | Canonical blocked-state reasons and user-facing copy                                           | Access-state contract      |
+| `apps/web/app/components/foundation/blocked-state-flash.tsx` | Shared auth-adjacent UI helper for `forbidden` copy/toast                              | Access-state presentation  |
 | `apps/web/proxy.ts`                                | Next.js middleware — auth check + ACL enforcement                                              | Request gateway            |
 | `supabase/migrations/*_jwt_custom_claims_hook.sql` | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth              |
 
 ## Role Hierarchy
 
 ```
-owner                          ← governance: dashboard, reports, finance, hr, settings (no day-to-day ops)
+owner                          ← governance + tenant-wide oversight, including orders and inventory
 ├── super_manager              ← Trụ sở: vận hành + catalog NL, procurement
 ├── area_manager               ← tenant-wide (no area scoping yet)
 ├── branch_manager             ← single branch operations
@@ -49,9 +52,9 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 | ------------------------------------------------------- | ----- | --------- | -------- | ---------- | ------- | ------ | ---- | ------ |
 | dashboard                                               | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
 | menu                                                    |       | ✓         | ✓        | ✓          |         |        |      |        |
-| inventory                                               |       | ✓         | ✓        | ✓          |         |        |      |        |
-| inventory_procurement (NCC, PO, GRN, HĐ NCC, công thức) |       | ✓         |          |            |         |        |      |        |
-| orders                                                  |       | ✓         | ✓        | ✓          |         |        |      |        |
+| inventory                                               | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
+| inventory_procurement (NCC, PO, GRN, HĐ NCC, công thức) | ✓     | ✓         |          |            |         |        |      |        |
+| orders                                                  | ✓     | ✓         | ✓        | ✓          |         |        |      |        |
 | staff                                                   |       | ✓         | ✓        | ✓          |         |        |      |        |
 | hr                                                      | ✓     | ✓         |          |            |         |        |      |        |
 | crm                                                     |       | ✓         | ✓        |            |         |        |      |        |
@@ -62,9 +65,9 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 | kds                                                     |       |           |          | ✓          |         |        | ✓    |        |
 | employee                                                | ✓     | ✓         | ✓        | ✓          | ✓       | ✓      | ✓    | ✓      |
 
-**Owner (chủ sở hữu):** chỉ các module quản trị / giám sát — `dashboard`, `reports`, `finance`, `hr`, `settings`. Không vào vận hành (`menu`, `orders`, `inventory`, `staff`, `crm`). Giá trị tồn kho xem tại `/admin/reports/inventory-value`.
+**Owner (chủ sở hữu):** ngoài các module quản trị / giám sát còn có thể vào `orders` và `inventory` để kiểm tra trực tiếp vận hành tenant-level. Các phân hệ vận hành chi tiết khác như `menu`, `staff`, `crm` vẫn không mở cho owner trong ACL hiện tại.
 
-**Inventory sub-route ACL:** `inventory` allows `super_manager`, `area_manager`, `branch_manager` for tồn kho, luân chuyển; CRUD danh mục nguyên liệu và mở NL theo chi nhánh là Trụ sở (`super_manager`) — RLS khớp. Paths under NCC/PO/GRN/HĐ NCC/công thức use `inventory_procurement` (`super_manager` only) — see `proxy.ts` and `module-acl.ts`.
+**Inventory sub-route ACL:** `inventory` allows `owner`, `super_manager`, `area_manager`, `branch_manager` for tồn kho, luân chuyển, stocktake, và production tại bếp trung tâm. Inventory route ownership now lives only at `/inventory`. `inventory_procurement` remains narrower ở cấp trụ sở: `owner` và `super_manager` vào NCC/PO/GRN/HĐ NCC/công thức, trong khi production actions còn bị ràng buộc thêm bởi `branch_kind = central_kitchen` ở RLS/RPC. See `proxy.ts`, `module-acl.ts`, and inventory production migrations.
 
 **Settings sub-page ACL:** The settings module allows area_manager and branch_manager, but sub-pages have additional guards:
 
@@ -79,7 +82,8 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 1. **Public paths bypass auth:** `/api/health`, `/api/webhooks` (`proxy.ts:isPublic()`)
 2. **Login page:** authenticated users redirect to role default; unauthenticated see login
 3. **Protected routes:** `resolveModule(pathname)` maps URL → `ModuleKey`, then `canAccess(role, moduleKey)` checks ACL
-4. **Forbidden:** redirects to role default with `?forbidden=1`
+4. **No inventory aliasing:** `/inventory*` is the only live inventory route space; `/admin/inventory*` is no longer rewritten or redirected
+5. **Forbidden:** redirects to role default with `?forbidden=1`, optionally kèm `reason=<code>` để shell map copy nhất quán
 
 ## Failure Modes
 
@@ -89,6 +93,28 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 | RLS blocks silently         | `{ data: null, error: null }` — no error thrown | Check GRANT + RLS policy for the table                                          |
 | Role not in MODULE_ACL      | `canAccess()` returns false, user redirected    | Add role to MODULE_ACL for the module                                           |
 | Stale JWT after role change | Old role persists until token refresh           | Call `supabase.auth.refreshSession()` or wait for proxy `updateSession()`       |
+
+## Blocked-State Reasons
+
+`packages/shared/src/auth/blocked-state.ts` chốt reason codes tối thiểu cho flow `forbidden` hiện tại:
+
+- `insufficient-permission` — role hiện tại không vào được module/route đó
+- `missing-auth-context` — session có user nhưng không resolve được claims cần thiết để authorize
+- `headquarters-branch-restricted` — POS/KDS bị chặn trên chi nhánh trụ sở
+
+Nếu reason code bị thiếu hoặc lạ, shell phải fallback về copy generic thay vì crash hoặc lộ raw error.
+
+`buildLoginBlockedStatePath()` chuẩn hóa fallback `/login?forbidden=1&reason=missing-auth-context` cho các host/layout-level entry points khi session còn tồn tại nhưng claims/context không resolve được. Case `unauthenticated` vẫn dùng `/login` trơn.
+
+`blocked-state-flash.tsx` là presentation helper dùng lại contract này cho các surface auth-adjacent. Helper chỉ đọc `forbidden/reason` và render hoặc toast copy tương ứng; nó không được phép tự quyết định auth policy hay redirect target.
+
+`tone` trong shared blocked-state contract giờ cũng được helper này consume trực tiếp để phân biệt visual severity, toast severity, và accessibility semantics (`role` / `aria-live`) giữa `neutral`, `warning`, và `danger`, nhưng vẫn chỉ ở tầng presentation.
+
+Current blocked-state hosts:
+
+- `/admin/dashboard` via `AdminShell` toast flow cho admin-level fallback redirects
+- `/login` via inline helper, render copy rồi auto-clear `forbidden/reason`
+- `/employee` via inline helper cho non-admin default redirects, cũng auto-clear `forbidden/reason` sau render đầu tiên
 
 ## Blast Radius
 

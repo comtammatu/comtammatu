@@ -29,11 +29,11 @@ import { EmptyStatePanel } from "../../components/empty-state-panel";
 import {
   fetchStockMovementReport,
   fetchBranchMovementSummary,
-} from "../../inventory/report-actions";
+} from "../../../inventory/report-actions";
 import type {
   MovementReportRow,
   BranchMovementSummaryRow,
-} from "../../inventory/report-actions";
+} from "../../../inventory/report-actions";
 
 interface StockMovementClientProps {
   branches: { id: number; name: string }[];
@@ -102,31 +102,31 @@ export function StockMovementClient({
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-3">
-        <div className="space-y-1.5">
+        <div className="w-full space-y-1.5 sm:w-44 sm:flex-none">
           <Label htmlFor="startDate">Từ ngày</Label>
           <Input
             id="startDate"
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="w-40"
+            className="w-full sm:w-40"
           />
         </div>
-        <div className="space-y-1.5">
+        <div className="w-full space-y-1.5 sm:w-44 sm:flex-none">
           <Label htmlFor="endDate">Đến ngày</Label>
           <Input
             id="endDate"
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="w-40"
+            className="w-full sm:w-40"
           />
         </div>
         {!userBranchId && (
-          <div className="space-y-1.5">
+          <div className="w-full space-y-1.5 sm:w-48 sm:flex-none">
             <Label>Chi nhánh</Label>
             <Select value={branchId} onValueChange={setBranchId}>
-              <SelectTrigger className="w-44">
+              <SelectTrigger className="w-full sm:w-44">
                 <SelectValue placeholder="Tất cả" />
               </SelectTrigger>
               <SelectContent>
@@ -140,12 +140,12 @@ export function StockMovementClient({
             </Select>
           </div>
         )}
-        <div className="flex gap-1.5">
+        <div className="flex w-full gap-1.5 sm:w-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setPreset(7)}
-            className="text-xs"
+            className="flex-1 text-xs sm:flex-none"
           >
             7 ngày
           </Button>
@@ -153,7 +153,7 @@ export function StockMovementClient({
             variant="outline"
             size="sm"
             onClick={() => setPreset(14)}
-            className="text-xs"
+            className="flex-1 text-xs sm:flex-none"
           >
             14 ngày
           </Button>
@@ -161,12 +161,12 @@ export function StockMovementClient({
             variant="outline"
             size="sm"
             onClick={() => setPreset(30)}
-            className="text-xs"
+            className="flex-1 text-xs sm:flex-none"
           >
             30 ngày
           </Button>
         </div>
-        <Button onClick={load} disabled={isPending}>
+        <Button onClick={load} disabled={isPending} className="w-full sm:w-auto">
           {isPending ? "Đang tải..." : "Xem báo cáo"}
         </Button>
       </div>
@@ -183,7 +183,7 @@ export function StockMovementClient({
 
       {loaded && (
         <Tabs defaultValue="detail">
-          <TabsList>
+          <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto rounded-2xl border border-border/70 bg-muted/40 p-2">
             <TabsTrigger value="detail">
               Chi tiết ({movementRows.length})
             </TabsTrigger>
@@ -200,7 +200,41 @@ export function StockMovementClient({
                 description="Không có biến động tồn kho trong kỳ đã chọn."
               />
             ) : (
-              <div className="overflow-x-auto rounded-md border">
+              <>
+                <div className="space-y-3 md:hidden">
+                  {movementRows.map((row) => (
+                    <div
+                      key={row.ingredient_id}
+                      className="rounded-2xl border border-border/70 bg-background p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium">{row.ingredient_name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {row.unit}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">Tồn cuối</p>
+                          <p className="font-mono font-semibold">
+                            {fmt(row.closing)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <div><p className="text-muted-foreground">Tồn đầu</p><p className="mt-1 font-mono">{fmt(row.opening)}</p></div>
+                        <div><p className="text-muted-foreground">Nhập (GRN)</p><p className="mt-1 font-mono text-success">{fmt(row.grn_receipt)}</p></div>
+                        <div><p className="text-muted-foreground">SX tiêu hao</p><p className="mt-1 font-mono text-destructive">{fmt(row.production_consumption)}</p></div>
+                        <div><p className="text-muted-foreground">SX nhập</p><p className="mt-1 font-mono text-success">{fmt(row.production_output)}</p></div>
+                        <div><p className="text-muted-foreground">Chuyển vào</p><p className="mt-1 font-mono text-success">{fmt(row.transfer_in)}</p></div>
+                        <div><p className="text-muted-foreground">Chuyển ra</p><p className="mt-1 font-mono text-destructive">{fmt(row.transfer_out)}</p></div>
+                        <div><p className="text-muted-foreground">Tiêu thụ</p><p className="mt-1 font-mono text-destructive">{fmt(row.consumption)}</p></div>
+                        <div><p className="text-muted-foreground">Điều chỉnh</p><p className="mt-1 font-mono">{fmt(row.adjustment)}</p></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="hidden overflow-x-auto rounded-md border md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -211,6 +245,12 @@ export function StockMovementClient({
                       </TableHead>
                       <TableHead className="w-24 text-right">
                         Nhập (GRN)
+                      </TableHead>
+                      <TableHead className="w-24 text-right">
+                        SX tiêu hao
+                      </TableHead>
+                      <TableHead className="w-24 text-right">
+                        SX nhập
                       </TableHead>
                       <TableHead className="w-24 text-right">
                         Chuyển vào
@@ -241,16 +281,22 @@ export function StockMovementClient({
                         <TableCell className="text-right font-mono">
                           {fmt(row.opening)}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-emerald-600">
+                        <TableCell className="text-right font-mono text-success">
                           {fmt(row.grn_receipt)}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-emerald-600">
+                        <TableCell className="text-right font-mono text-destructive">
+                          {fmt(row.production_consumption)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-success">
+                          {fmt(row.production_output)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-success">
                           {fmt(row.transfer_in)}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-red-600">
+                        <TableCell className="text-right font-mono text-destructive">
                           {fmt(row.transfer_out)}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-red-600">
+                        <TableCell className="text-right font-mono text-destructive">
                           {fmt(row.consumption)}
                         </TableCell>
                         <TableCell className="text-right font-mono">
@@ -263,7 +309,8 @@ export function StockMovementClient({
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+                </div>
+              </>
             )}
           </TabsContent>
 
@@ -275,13 +322,39 @@ export function StockMovementClient({
                 description="Không có biến động tồn kho theo chi nhánh trong kỳ đã chọn."
               />
             ) : (
-              <div className="overflow-x-auto rounded-md border">
+              <>
+                <div className="space-y-3 md:hidden">
+                  {branchRows.map((row) => (
+                    <div
+                      key={row.branch_id}
+                      className="rounded-2xl border border-border/70 bg-background p-4"
+                    >
+                      <p className="font-medium">{row.branch_name}</p>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <div><p className="text-muted-foreground">Nhập (GRN)</p><p className="mt-1 font-mono text-success">{fmt(row.grn_receipt)}</p></div>
+                        <div><p className="text-muted-foreground">SX tiêu hao</p><p className="mt-1 font-mono text-destructive">{fmt(row.production_consumption)}</p></div>
+                        <div><p className="text-muted-foreground">SX nhập</p><p className="mt-1 font-mono text-success">{fmt(row.production_output)}</p></div>
+                        <div><p className="text-muted-foreground">Chuyển vào</p><p className="mt-1 font-mono text-success">{fmt(row.transfer_in)}</p></div>
+                        <div><p className="text-muted-foreground">Chuyển ra</p><p className="mt-1 font-mono text-destructive">{fmt(row.transfer_out)}</p></div>
+                        <div><p className="text-muted-foreground">Tiêu thụ</p><p className="mt-1 font-mono text-destructive">{fmt(row.consumption)}</p></div>
+                        <div><p className="text-muted-foreground">Điều chỉnh</p><p className="mt-1 font-mono">{fmt(row.adjustment)}</p></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="hidden overflow-x-auto rounded-md border md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="min-w-44">Chi nhánh</TableHead>
                       <TableHead className="w-24 text-right">
                         Nhập (GRN)
+                      </TableHead>
+                      <TableHead className="w-24 text-right">
+                        SX tiêu hao
+                      </TableHead>
+                      <TableHead className="w-24 text-right">
+                        SX nhập
                       </TableHead>
                       <TableHead className="w-24 text-right">
                         Chuyển vào
@@ -303,16 +376,22 @@ export function StockMovementClient({
                         <TableCell className="font-medium">
                           {row.branch_name}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-emerald-600">
+                        <TableCell className="text-right font-mono text-success">
                           {fmt(row.grn_receipt)}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-emerald-600">
+                        <TableCell className="text-right font-mono text-destructive">
+                          {fmt(row.production_consumption)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-success">
+                          {fmt(row.production_output)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-success">
                           {fmt(row.transfer_in)}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-red-600">
+                        <TableCell className="text-right font-mono text-destructive">
                           {fmt(row.transfer_out)}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-red-600">
+                        <TableCell className="text-right font-mono text-destructive">
                           {fmt(row.consumption)}
                         </TableCell>
                         <TableCell className="text-right font-mono">
@@ -322,7 +401,8 @@ export function StockMovementClient({
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+                </div>
+              </>
             )}
           </TabsContent>
         </Tabs>

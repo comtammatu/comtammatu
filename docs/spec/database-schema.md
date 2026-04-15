@@ -30,8 +30,33 @@ Single row — Cơm Tấm Má Tư CTCP.
 | phone           | TEXT               |                             |
 | is_active       | BOOLEAN            | default true                |
 | is_headquarters | BOOLEAN            | default false               |
+| branch_kind     | TEXT               | branch, headquarters, central_kitchen |
 | created_at      | TIMESTAMPTZ        | default now()               |
 | updated_at      | TIMESTAMPTZ        | default now(), auto-trigger |
+
+### inventory_locations
+
+> Phase 1 migration drafted in `20260417040000_inventory_locations_phase1.sql`; owner must apply after merge before this is live in DB.
+
+| Column                   | Type               | Notes                                                                |
+| ------------------------ | ------------------ | -------------------------------------------------------------------- |
+| id                       | BIGINT PK          | GENERATED ALWAYS AS IDENTITY                                         |
+| tenant_id                | BIGINT FK(tenants) | ON DELETE CASCADE                                                    |
+| branch_id                | BIGINT FK(branches) | ON DELETE CASCADE                                                   |
+| code                     | TEXT               | UNIQUE(code, branch_id, tenant_id)                                   |
+| name                     | TEXT               | display label                                                        |
+| location_kind            | TEXT               | warehouse, kitchen, receiving, production_storage                    |
+| is_active                | BOOLEAN            | default true                                                         |
+| is_default_receive       | BOOLEAN            | partial unique per active branch location                            |
+| is_default_issue         | BOOLEAN            | partial unique per active branch location                            |
+| is_default_consumption   | BOOLEAN            | partial unique per active branch location                            |
+| sort_order               | INT                | default 0                                                            |
+| created_at               | TIMESTAMPTZ        | default now()                                                        |
+| updated_at               | TIMESTAMPTZ        | default now(), auto-trigger                                          |
+
+Phase 1 seeds one default location per branch only, to avoid changing inventory behavior before the location-ledger cutover.
+
+> Phase 2A compatibility-columns migration drafted in `20260417050000_inventory_location_compat_columns.sql`. It adds nullable `location_*` columns to `stock_levels`, `stock_movements`, `stock_transfers`, `stock_issues`, and `stocktake_sessions`, but does not backfill or cut over behavior yet.
 
 ### profiles (staff)
 
@@ -665,12 +690,24 @@ pending → preparing → ready → served
 | ----------------- | --------------------- | ------------- | ------------------------------------------------------------------------------------------ |
 | grn_items         | receiving_temperature | NUMERIC(5,1)  | Nullable; receiving temp for cold/frozen items                                             |
 | recipes           | yield_factor          | NUMERIC(5,3)  | NOT NULL DEFAULT 1.000; CHECK > 0. Cooking yield multiplier (e.g. 0.85 = 15% loss)         |
+| ingredients       | item_kind             | TEXT          | raw_material or finished_good                                                               |
+| stock_movements   | production_order_id   | BIGINT        | Nullable FK to production_orders for production audit trail                                 |
 | suppliers         | payment_terms_days    | INT           | Nullable; standard payment terms in days (e.g. 30 = Net 30)                                |
 | suppliers         | payment_terms_note    | TEXT          | Nullable; free-text payment terms description                                              |
 | supplier_invoices | due_date              | DATE          | Nullable; payment due date (can auto-calc from invoice_date + supplier.payment_terms_days) |
 | supplier_invoices | payment_status        | TEXT          | NOT NULL DEFAULT 'unpaid'; CHECK IN (unpaid, partial, paid)                                |
 | supplier_invoices | paid_amount           | NUMERIC(15,2) | NOT NULL DEFAULT 0; CHECK >= 0. Total amount paid toward this invoice                      |
 | supplier_invoices | paid_at               | TIMESTAMPTZ   | Nullable; timestamp of last/final payment                                                  |
+| production_recipes | finished_good_id      | BIGINT        | FK(ingredients), finished_good BOM target                                                   |
+| production_recipes | ingredient_id         | BIGINT        | FK(ingredients), raw material input                                                         |
+| production_recipes | quantity              | NUMERIC(15,3) | Required raw quantity per output unit                                                       |
+| production_recipes | yield_factor          | NUMERIC(5,3)  | Default 1.000; optional yield loss/gain                                                     |
+| production_orders  | branch_id             | BIGINT        | FK(branches); must reference central_kitchen                                                |
+| production_orders  | production_number     | TEXT          | UNIQUE per tenant                                                                            |
+| production_orders  | status                | TEXT          | draft, completed, cancelled                                                                  |
+| production_order_items | finished_good_id  | BIGINT        | FK(ingredients), finished_good SKU                                                           |
+| production_order_items | quantity           | NUMERIC(15,3) | Produced quantity                                                                            |
+| production_order_items | unit_cost_at_production | NUMERIC(15,2) | Snapshot of unit cost at completion                                                         |
 
 ### Additional M5-Ext indexes
 
@@ -701,12 +738,13 @@ need_qty = SUM(order_item.quantity * recipe.quantity / recipe.yield_factor)
 
 ### M5 — Stock (SHIPPED)
 
-- ingredients, recipes, stock_levels, stock_movements, suppliers, purchase_orders, purchase_order_items, goods_received_notes, grn_items, supplier_invoices, stock_transfers, stock_transfer_items, stocktake_sessions, stocktake_lines
+- ingredients, recipes, stock_levels, stock_movements, suppliers, purchase_orders, purchase_order_items, goods_received_notes, grn_items, supplier_invoices, stock_transfers, stock_transfer_items, stocktake_sessions, stocktake_lines, production_recipes, production_orders, production_order_items
+- future split when needed: `inventory_locations` + location-level ledger per `docs/plan/inventory-location-ledger.md`
 
 ### M6 — Finance
 
 - tax_invoices, chart_of_accounts, journal_entries, mv_daily_revenue, mv_top_items, mv_food_cost
 
-### M7 — HR/Payroll
+### M7 — Nhân sự & tiền lương
 
 - employees, shifts, attendance_records, payroll_periods, payroll_entries

@@ -1,27 +1,30 @@
-import { fetchPurchaseOrders } from "../procurement-actions";
-import { formatDate } from "../_lib/format";
-import { PurchaseOrdersClient } from "./purchase-orders-client";
-import type { PurchaseOrderRow } from "./purchase-orders-client";
+import { fetchPurchaseOrders, fetchSuppliers } from "../procurement-actions";
+import {
+  PurchaseOrdersClient,
+  type PurchaseOrderRow,
+} from "./purchase-orders-client";
+import type { SupplierRow } from "../suppliers/suppliers-client";
 
 export default async function PurchaseOrdersPage() {
-  const res = await fetchPurchaseOrders();
-  const dbRows = res.success
-    ? (res.data as Array<Record<string, unknown>>)
+  const [poRes, supRes] = await Promise.all([
+    fetchPurchaseOrders(),
+    fetchSuppliers(),
+  ]);
+
+  const rows: PurchaseOrderRow[] = poRes.success
+    ? ((poRes.data ?? []) as PurchaseOrderRow[])
     : [];
 
-  const orders: PurchaseOrderRow[] = dbRows.map((row) => ({
-    id: row.id as number,
-    code: (row.po_number as string) ?? "",
-    supplierName:
-      ((row.suppliers as Record<string, unknown>)?.name as string) ?? "—",
-    status: (row.status as string) ?? "draft",
-    date: row.order_date ? formatDate(row.order_date as string) : "—",
-    expectedDelivery: row.expected_delivery
-      ? formatDate(row.expected_delivery as string)
-      : null,
-    total: Number(row.total_amount ?? 0),
-    createdBy: "—",
-  }));
+  const suppliers: SupplierRow[] = supRes.success
+    ? ((supRes.data ?? []) as SupplierRow[])
+    : [];
 
-  return <PurchaseOrdersClient orders={orders} />;
+  return (
+    <PurchaseOrdersClient
+      initial={rows}
+      suppliers={suppliers}
+      purchaseOrdersBasePath="/inventory/purchase-orders"
+      suppliersPath="/inventory/suppliers"
+    />
+  );
 }

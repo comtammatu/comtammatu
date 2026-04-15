@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
+import {
+  buildLoginBlockedStatePath,
+  extractClaims,
+} from "@comtammatu/shared/auth";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -11,7 +14,7 @@ export default async function SettingsPage() {
   if (!session?.user) redirect("/login");
 
   const claims = extractClaims(session.user.app_metadata);
-  if (!claims) redirect("/login");
+  if (!claims) redirect(buildLoginBlockedStatePath());
 
   if (
     claims.user_role === "branch_manager" ||

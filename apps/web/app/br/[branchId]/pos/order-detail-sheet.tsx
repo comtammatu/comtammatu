@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState, useTransition } from "react";
+import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import { Separator } from "@comtammatu/ui/components/separator";
 import {
   Sheet,
   SheetContent,
@@ -284,6 +284,72 @@ export function OrderDetailSheet({
   const orderStatusLabel = data
     ? (ORDER_STATUS_LABEL[data.status] ?? data.status)
     : "";
+  const orderProgressPercent = !data
+    ? 0
+    : data.status === "completed"
+      ? 100
+      : data.status === "served"
+        ? 84
+        : data.status === "ready"
+          ? 70
+          : data.status === "preparing"
+            ? 52
+            : data.status === "confirmed"
+              ? 38
+              : data.status === "cancelled"
+                ? 100
+                : 22;
+
+  const orderSteps = !data
+    ? []
+    : [
+        {
+          label: "Ghi nhận",
+          meta: `Đơn #${data.order_number}`,
+          state: "done",
+        },
+        {
+          label: "Đang bếp xử lý",
+          meta:
+            ["preparing", "ready", "served", "completed"].includes(data.status)
+              ? "Món đang hoặc đã qua bếp"
+              : "Chờ bếp nhận xử lý",
+          state:
+            ["preparing", "ready", "served", "completed"].includes(data.status)
+              ? "done"
+              : data.status === "confirmed" || data.status === "new"
+                ? "current"
+                : "todo",
+        },
+        {
+          label: "Phục vụ",
+          meta:
+            data.status === "served" || data.status === "completed"
+              ? "Đã phục vụ"
+              : data.status === "ready"
+                ? "Sẵn sàng phục vụ"
+                : "Chưa phục vụ",
+          state:
+            data.status === "served" || data.status === "completed"
+              ? "done"
+              : data.status === "ready"
+                ? "current"
+                : "todo",
+        },
+        {
+          label: "Hoàn tất",
+          meta:
+            data.status === "completed"
+              ? "Đơn đã kết thúc"
+              : data.status === "cancelled"
+                ? "Đơn đã hủy"
+                : "Chưa hoàn tất",
+          state:
+            data.status === "completed" || data.status === "cancelled"
+              ? "done"
+              : "todo",
+        },
+      ] as const;
 
   const availableTables = tables.filter(
     (t) => t.status === "available" || t.id === data?.table_id,
@@ -332,21 +398,84 @@ export function OrderDetailSheet({
 
           {data && !error && (
             <>
-              <div className="flex flex-wrap items-center gap-2 border-b pb-3">
-                <Badge variant="secondary">{orderStatusLabel}</Badge>
-                {data.order_type === "dine_in" && (
-                  <span className="text-sm text-muted-foreground">
-                    Bàn {data.tables?.number ?? "—"}
-                  </span>
-                )}
-                {data.order_type === "takeaway" && (
-                  <span className="text-sm text-muted-foreground">Mang về</span>
-                )}
+              <div className="border-b pb-3">
+                <div className="ui-flow-panel p-4">
+                  <div className="relative space-y-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="secondary">{orderStatusLabel}</Badge>
+                          {data.order_type === "dine_in" && (
+                            <span className="text-sm text-muted-foreground">
+                              Bàn {data.tables?.number ?? "—"}
+                            </span>
+                          )}
+                          {data.order_type === "takeaway" && (
+                            <span className="text-sm text-muted-foreground">
+                              Mang về
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-lg font-semibold tracking-tight">
+                          Điều phối đơn theo đúng bước phục vụ.
+                        </p>
+                        <p className="text-sm leading-6 text-muted-foreground">
+                          Theo dõi trạng thái, thêm món hoặc cập nhật phục vụ mà không bị rối thao tác.
+                        </p>
+                      </div>
+                      <div
+                        className={cn(
+                          "rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm",
+                          data.status === "completed"
+                            ? "border-success/15 bg-success/10 text-success"
+                            : data.status === "cancelled"
+                              ? "border-destructive/15 bg-destructive/10 text-destructive"
+                              : "border-primary/15 bg-white/82 text-primary",
+                        )}
+                      >
+                        {String(Math.round(orderProgressPercent))}%
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="ui-flow-progress">
+                        <div
+                          className="ui-flow-progress-bar"
+                          style={{ width: `${orderProgressPercent}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {orderSteps.map((step, index) => (
+                        <div
+                          key={step.label}
+                          data-state={step.state}
+                          className="ui-flow-step"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="ui-flow-stage-index">
+                              {index + 1}
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-sm font-semibold">
+                                {step.label}
+                              </p>
+                              <p className="text-xs leading-5 text-muted-foreground">
+                                {step.meta}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <ScrollArea className="min-h-0 flex-1 pr-2">
                 <ul
-                  className="flex flex-col gap-2 py-2"
+                  className="ui-content-auto flex flex-col gap-2 py-2"
                   aria-label="Danh sách món"
                 >
                   {data.order_items.map((row) => {
@@ -356,11 +485,12 @@ export function OrderDetailSheet({
                     return (
                       <li
                         key={row.id}
-                        className={
+                        className={cn(
+                          "ui-surface-lift rounded-xl border p-3",
                           cancelled
-                            ? "rounded-md border border-dashed bg-muted/40 p-2"
-                            : "rounded-md border bg-card p-2"
-                        }
+                            ? "border-dashed bg-muted/40"
+                            : "border-border/70 bg-card/92 shadow-sm",
+                        )}
                       >
                         <div className="flex items-start gap-2">
                           <span
@@ -422,18 +552,20 @@ export function OrderDetailSheet({
                 )}
               </ScrollArea>
 
-              <Separator />
-
-              <div className="space-y-1 pb-2">
-                <div className="flex justify-between text-sm">
-                  <span>Tạm tính</span>
-                  <span>{formatVND(data.subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-base font-bold">
-                  <span>Tổng cộng</span>
-                  <span className="text-primary">
-                    {formatVND(data.total_amount)}
-                  </span>
+              <div className="pb-2">
+                <div className="ui-flow-panel p-4">
+                  <div className="relative space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Tạm tính</span>
+                      <span>{formatVND(data.subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between text-base font-bold">
+                      <span>Tổng cộng</span>
+                      <span className="text-primary">
+                        {formatVND(data.total_amount)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -442,7 +574,7 @@ export function OrderDetailSheet({
                   <Button
                     type="button"
                     size="lg"
-                    className="min-h-11 w-full"
+                    className="min-h-11 w-full rounded-2xl shadow-sm transition-transform hover:translate-y-[-1px]"
                     onClick={() => {
                       onStartAppend(data.id, data.order_number);
                     }}
@@ -458,7 +590,7 @@ export function OrderDetailSheet({
                     <Button
                       type="button"
                       variant="secondary"
-                      className="min-h-11 flex-1"
+                      className="min-h-11 flex-1 rounded-2xl"
                       disabled={isPending}
                       onClick={() => void handleStatus("served")}
                     >
@@ -469,7 +601,7 @@ export function OrderDetailSheet({
                     <Button
                       type="button"
                       variant="secondary"
-                      className="min-h-11 flex-1"
+                      className="min-h-11 flex-1 rounded-2xl"
                       disabled={isPending}
                       onClick={() => void handleStatus("completed")}
                     >
@@ -483,7 +615,7 @@ export function OrderDetailSheet({
                     <Button
                       type="button"
                       variant="outline"
-                      className="min-h-11 w-full"
+                      className="min-h-11 w-full rounded-2xl"
                     >
                       <MoreHorizontal className="mr-2 size-4" />
                       Khác…

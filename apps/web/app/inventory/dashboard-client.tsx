@@ -1,20 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
+  ArrowRight,
   BarChart3,
   Calendar,
   CheckSquare,
   ClipboardList,
   Clock,
   Hourglass,
+  Lightbulb,
   ShoppingCart,
   Truck,
 } from "lucide-react";
+import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
+import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
 import { StatCard, StatusBadge } from "./_components/shared";
 import { formatVND } from "./_lib/format";
+import { getInventoryPaths, type InventoryRouteBase } from "./_lib/paths";
 
 function useCurrentTime() {
   const [now, setNow] = useState(() => new Date());
@@ -61,12 +67,276 @@ function formatTime(d: Date) {
   return `${String(h12).padStart(2, "0")}:${m} ${period}`;
 }
 
+type DashboardSiteKind = "headquarters" | "central_kitchen" | "branch";
+
+type QuickAction = {
+  icon: ReactNode;
+  label: string;
+  description: string;
+  href: string;
+  hoverClassName: string;
+  iconClassName: string;
+};
+
+type PriorityItem = {
+  key: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  href: string;
+  cta: string;
+  icon: ReactNode;
+  panelClassName: string;
+  iconClassName: string;
+};
+
+function buildQuickActions(
+  siteKind: DashboardSiteKind,
+  routeBase: InventoryRouteBase,
+): QuickAction[] {
+  const paths = getInventoryPaths(routeBase);
+
+  if (siteKind === "headquarters") {
+    return [
+      {
+        icon: <ShoppingCart className="size-7" />,
+        label: "Nhập nguyên liệu",
+        description: "Ghi nhận hàng từ nhà cung cấp về kho trụ sở.",
+        href: paths.receiving,
+        hoverClassName: "hover:bg-primary/10",
+        iconClassName: "text-primary",
+      },
+      {
+        icon: <Truck className="size-7" />,
+        label: "Điều chuyển",
+        description: "Theo dõi luồng xuất, nhận và hàng đang trên đường.",
+        href: paths.transfers,
+        hoverClassName: "hover:bg-info/10",
+        iconClassName: "text-info",
+      },
+      {
+        icon: <CheckSquare className="size-7" />,
+        label: "Kiểm kê",
+        description: "Mở hoặc tiếp tục các phiên kiểm kê đang thực hiện.",
+        href: paths.stocktake,
+        hoverClassName: "hover:bg-success/10",
+        iconClassName: "text-success",
+      },
+      {
+        icon: <BarChart3 className="size-7" />,
+        label: "Báo cáo",
+        description: "Xem biến động tồn, hạn dùng và giá trị tồn kho.",
+        href: paths.reports,
+        hoverClassName: "hover:bg-muted",
+        iconClassName: "text-muted-foreground",
+      },
+    ];
+  }
+
+  if (siteKind === "central_kitchen") {
+    return [
+      {
+        icon: <Lightbulb className="size-7" />,
+        label: "Tạo lệnh sản xuất",
+        description: "Mở nhanh lệnh mới cho bếp trung tâm.",
+        href: paths.production,
+        hoverClassName: "hover:bg-primary/10",
+        iconClassName: "text-primary",
+      },
+      {
+        icon: <Truck className="size-7" />,
+        label: "Xuất thành phẩm",
+        description: "Điều phối hàng giữa bếp trung tâm và chi nhánh.",
+        href: paths.transfers,
+        hoverClassName: "hover:bg-info/10",
+        iconClassName: "text-info",
+      },
+      {
+        icon: <CheckSquare className="size-7" />,
+        label: "Kiểm kê",
+        description: "Kiểm tra chênh lệch tồn nguyên liệu và thành phẩm.",
+        href: paths.stocktake,
+        hoverClassName: "hover:bg-success/10",
+        iconClassName: "text-success",
+      },
+      {
+        icon: <BarChart3 className="size-7" />,
+        label: "Báo cáo",
+        description: "Tổng hợp sản xuất, chuyển kho và cảnh báo phát sinh.",
+        href: paths.reports,
+        hoverClassName: "hover:bg-muted",
+        iconClassName: "text-muted-foreground",
+      },
+    ];
+  }
+
+  return [
+    {
+      icon: <ShoppingCart className="size-7" />,
+      label: "Nhận hàng",
+      description: "Cập nhật hàng nhận từ trụ sở hoặc nguồn nội bộ.",
+      href: paths.receiving,
+      hoverClassName: "hover:bg-primary/10",
+      iconClassName: "text-primary",
+    },
+    {
+      icon: <CheckSquare className="size-7" />,
+      label: "Kiểm kê chi nhánh",
+      description: "Đối chiếu tồn thực tế trước khi chốt ca vận hành.",
+      href: paths.stocktake,
+      hoverClassName: "hover:bg-success/10",
+      iconClassName: "text-success",
+    },
+    {
+      icon: <Truck className="size-7" />,
+      label: "Điều chuyển",
+      description: "Theo dõi hàng đi, hàng đến và các bước xác nhận.",
+      href: paths.transfers,
+      hoverClassName: "hover:bg-info/10",
+      iconClassName: "text-info",
+    },
+    {
+      icon: <BarChart3 className="size-7" />,
+      label: "Báo cáo",
+      description: "Xem nhanh mức tồn, cảnh báo và giá trị kho.",
+      href: paths.reports,
+      hoverClassName: "hover:bg-muted",
+      iconClassName: "text-muted-foreground",
+    },
+  ];
+}
+
+function getPressureLabel(operationalPressure: number) {
+  if (operationalPressure >= 70) return "Cần ưu tiên";
+  if (operationalPressure >= 35) return "Đang theo dõi";
+  return "Ổn định";
+}
+
+function buildPriorityItems({
+  showProcurement,
+  reorderAlerts,
+  expiryAlerts,
+  activeTransfers,
+  activeStocktakes,
+  paths,
+}: {
+  showProcurement: boolean;
+  reorderAlerts: DashboardProps["reorderAlerts"];
+  expiryAlerts: DashboardProps["expiryAlerts"];
+  activeTransfers: number;
+  activeStocktakes: number;
+  paths: ReturnType<typeof getInventoryPaths>;
+}): PriorityItem[] {
+  const items: PriorityItem[] = [];
+
+  const topReorder = reorderAlerts[0];
+  if (topReorder) {
+    const reorderName = topReorder.name;
+    const reorderCurrent = topReorder.current;
+    const reorderUnit = topReorder.unit;
+    const reorderPoint = topReorder.reorder;
+
+    items.push({
+      key: "reorder",
+      eyebrow: "Tái đặt hàng",
+      title:
+        reorderAlerts.length === 1
+          ? reorderName
+          : `${reorderAlerts.length} nguyên liệu dưới ngưỡng`,
+      description:
+        reorderAlerts.length === 1
+          ? `Tồn hiện tại ${reorderCurrent}${reorderUnit}, ngưỡng ${reorderPoint}${reorderUnit}.`
+          : `Kiểm tra và xử lý các nguyên liệu đang chạm mức tái đặt hàng.`,
+      href: showProcurement ? paths.purchaseOrders : paths.stock,
+      cta: showProcurement ? "Mở đơn mua" : "Xem tồn kho",
+      icon: <ShoppingCart className="size-5" />,
+      panelClassName:
+        "border-destructive/20 bg-gradient-to-br from-destructive/10 via-white to-destructive/5",
+      iconClassName: "bg-destructive/10 text-destructive",
+    });
+  }
+
+  const topExpiry = expiryAlerts[0];
+  if (topExpiry) {
+    const expiryName = topExpiry.ingredientName;
+    const expiryLot = topExpiry.lot || "không mã";
+    const expiryDaysLeft = topExpiry.daysLeft;
+
+    items.push({
+      key: "expiry",
+      eyebrow: "Hạn dùng",
+      title:
+        expiryAlerts.length === 1
+          ? expiryName
+          : `${expiryAlerts.length} lô cần theo dõi hạn dùng`,
+      description:
+        expiryAlerts.length === 1
+          ? expiryDaysLeft <= 0
+            ? `Lô ${expiryLot} đã quá hạn ${Math.abs(expiryDaysLeft)} ngày.`
+            : `Lô ${expiryLot} còn ${expiryDaysLeft} ngày trước hạn dùng.`
+          : `Ưu tiên xuất hoặc xử lý các lô sắp hết hạn trong kho.`,
+      href: paths.expiry,
+      cta: "Mở hạn dùng",
+      icon: <Hourglass className="size-5" />,
+      panelClassName:
+        "border-warning/20 bg-gradient-to-br from-warning/10 via-white to-primary/5",
+      iconClassName: "bg-warning/10 text-warning",
+    });
+  }
+
+  if (activeTransfers > 0) {
+    items.push({
+      key: "transfers",
+      eyebrow: "Điều chuyển",
+      title:
+        activeTransfers === 1
+          ? "1 phiếu đang mở"
+          : `${activeTransfers} phiếu đang mở`,
+      description:
+        "Theo dõi tiến độ xuất, nhận và các bước xác nhận liên quan.",
+      href: paths.transfers,
+      cta: "Mở điều chuyển",
+      icon: <Truck className="size-5" />,
+      panelClassName:
+        "border-info/20 bg-gradient-to-br from-info/10 via-white to-success/5",
+      iconClassName: "bg-info/10 text-info",
+    });
+  }
+
+  if (activeStocktakes > 0) {
+    items.push({
+      key: "stocktake",
+      eyebrow: "Kiểm kê",
+      title:
+        activeStocktakes === 1
+          ? "1 phiên đang thực hiện"
+          : `${activeStocktakes} phiên đang thực hiện`,
+      description:
+        "Hoàn tất các phiên kiểm kê để khóa chênh lệch và cập nhật tồn.",
+      href: paths.stocktake,
+      cta: "Mở kiểm kê",
+      icon: <ClipboardList className="size-5" />,
+      panelClassName:
+        "border-success/20 bg-gradient-to-br from-success/10 via-white to-info/5",
+      iconClassName: "bg-success/10 text-success",
+    });
+  }
+
+  return items.slice(0, 4);
+}
+
 export type DashboardProps = {
+  routeBase: InventoryRouteBase;
+  siteName: string;
+  siteKind: DashboardSiteKind;
+  showProcurement: boolean;
   totalStockValue: number;
   pendingPO: number;
   activeTransfers: number;
   activeStocktakes: number;
   reorderAlerts: Array<{
+    ingredientId: number;
+    branchId: number;
     name: string;
     current: number;
     reorder: number;
@@ -97,6 +367,10 @@ export type DashboardProps = {
 };
 
 export function DashboardClient({
+  routeBase,
+  siteName,
+  siteKind,
+  showProcurement,
   totalStockValue,
   pendingPO,
   activeTransfers,
@@ -107,31 +381,185 @@ export function DashboardClient({
   stocktakeSessions,
 }: DashboardProps) {
   const now = useCurrentTime();
+  const panelClassName = getSurfacePanelClassName(
+    "inventory",
+    "ambient-shadow",
+  );
+  const siteKindLabel = getInventorySiteKindLabelVi(siteKind);
+  const paths = getInventoryPaths(routeBase);
+  const quickActions = buildQuickActions(siteKind, routeBase);
+  const alertCount = reorderAlerts.length + expiryAlerts.length;
+  const activeFlowCount = pendingPO + activeTransfers + activeStocktakes;
+  const operationalPressure = Math.min(
+    100,
+    alertCount * 14 + activeFlowCount * 8,
+  );
+  const pressureLabel = getPressureLabel(operationalPressure);
+  const priorityItems = buildPriorityItems({
+    showProcurement,
+    reorderAlerts,
+    expiryAlerts,
+    activeTransfers,
+    activeStocktakes,
+    paths,
+  });
+  const activeTransferList = transfers
+    .filter((t) => t.status === "in_transit" || t.status === "confirmed")
+    .slice(0, 3);
+  const activeStocktakeList = stocktakeSessions.filter(
+    (s) => s.status === "in_progress",
+  );
+  const criticalExpiryCount = expiryAlerts.filter(
+    (item) => item.daysLeft <= 0 || item.urgency === "critical",
+  ).length;
+  const reorderActionHref = showProcurement
+    ? paths.purchaseOrders
+    : paths.stock;
+  const reorderActionLabel = showProcurement ? "Mở đơn mua" : "Xem tồn kho";
 
   return (
-    <div className="space-y-6">
-      {/* Dashboard Header */}
-      <div>
-        <h2
-          className="text-2xl font-bold tracking-tight mb-1"
-          style={{ color: "var(--md-on-surface)" }}
-        >
-          Xin chào, Quản trị viên
-        </h2>
+    <div className="ui-stagger-children space-y-6">
+      <div
+        className={cn(
+          panelClassName,
+          "ui-flow-panel overflow-hidden rounded-4xl border-primary/15 bg-gradient-to-br from-primary/10 via-white to-success/10 px-6 py-6 sm:px-7 lg:px-8",
+        )}
+      >
         <div
-          className="flex flex-wrap items-center gap-2 text-sm"
-          style={{ color: "var(--md-on-surface-variant)", opacity: 0.7 }}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 overflow-hidden"
         >
-          <Calendar className="size-3.5 shrink-0" />
-          <span className="text-sm">{formatDate(now)}</span>
-          <span className="mx-1">•</span>
-          <Clock className="size-3.5 shrink-0" />
-          <span className="text-sm">{formatTime(now)}</span>
+          <div className="absolute -right-20 top-0 h-56 w-56 rounded-full bg-primary/10 blur-3xl" />
+          <div className="absolute -left-12 bottom-0 h-48 w-48 rounded-full bg-info/10 blur-3xl" />
+          <div className="absolute bottom-0 left-1/2 h-48 w-48 -translate-x-1/2 rounded-full bg-success/10 blur-3xl" />
+        </div>
+        <div className="grid gap-6 xl:grid-cols-3 xl:items-start">
+          <div className="space-y-5 xl:col-span-2">
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                Tổng quan ca vận hành
+              </p>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                  Theo dõi kho tại {siteName}
+                </h2>
+                <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
+                  Giữ nhịp tồn kho, điều chuyển và các cảnh báo phát sinh cho{" "}
+                  <span className="font-semibold text-foreground">
+                    {siteName}
+                  </span>
+                  .
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-white/80 px-3 py-2 text-sm font-medium shadow-sm">
+                <Calendar className="size-3.5 shrink-0" />
+                {formatDate(now)}
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-white/80 px-3 py-2 text-sm font-medium shadow-sm">
+                <Clock className="size-3.5 shrink-0" />
+                {formatTime(now)}
+              </span>
+              <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary shadow-sm">
+                {siteKindLabel}
+              </span>
+              <span className="inline-flex items-center rounded-full border border-success/15 bg-success/10 px-3 py-2 text-sm font-semibold text-success shadow-sm">
+                {showProcurement ? "Procurement mở" : "Core kho vận"}
+              </span>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="ui-surface-lift rounded-3xl border border-border/40 bg-white/75 p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                  Cảnh báo đang mở
+                </p>
+                <p className="mt-2 text-3xl font-semibold">{alertCount}</p>
+                <p className="mt-1 text-xs text-muted-foreground/80">
+                  {reorderAlerts.length} tái đặt hàng, {expiryAlerts.length} hạn
+                  dùng.
+                </p>
+              </div>
+              <div className="ui-surface-lift rounded-3xl border border-border/40 bg-white/75 p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                  Luồng đang mở
+                </p>
+                <p className="mt-2 text-3xl font-semibold">{activeFlowCount}</p>
+                <p className="mt-1 text-xs text-muted-foreground/80">
+                  {pendingPO} PO, {activeTransfers} điều chuyển,{" "}
+                  {activeStocktakes} kiểm kê.
+                </p>
+              </div>
+              <div className="ui-surface-lift rounded-3xl border border-border/40 bg-white/75 p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                  Điểm cần ưu tiên
+                </p>
+                <p className="mt-2 text-3xl font-semibold">
+                  {reorderAlerts.length + criticalExpiryCount}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground/80">
+                  Tái đặt hàng và các lô sắp quá hạn cần xử lý sớm.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="ui-flow-panel rounded-4xl border border-border/50 bg-white/80 p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                  Mức áp lực vận hành
+                </p>
+                <p className="mt-2 text-4xl font-semibold tracking-tight">
+                  {operationalPressure}%
+                </p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  Tính theo số cảnh báo đang mở và các luồng chưa hoàn tất trong
+                  kho.
+                </p>
+              </div>
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                {pressureLabel}
+              </span>
+            </div>
+
+            <div className="ui-flow-progress mt-5">
+              <div
+                className="ui-flow-progress-bar"
+                style={{ width: `${operationalPressure}%` }}
+              />
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+              <div className="rounded-3xl border border-border/50 bg-background/90 p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                  Giá trị tồn kho
+                </p>
+                <p className="mt-2 text-xl font-semibold">
+                  {formatVND(totalStockValue)}đ
+                </p>
+              </div>
+              <div className="rounded-3xl border border-border/50 bg-background/90 p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                  Trạng thái theo dõi
+                </p>
+                <p className="mt-2 text-xl font-semibold">
+                  {alertCount === 0 && activeFlowCount === 0
+                    ? "Yên nhịp"
+                    : "Đang vận hành"}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground/80">
+                  {alertCount === 0 && activeFlowCount === 0
+                    ? "Hiện chưa có cảnh báo hoặc luồng chờ xử lý."
+                    : "Giữ nhịp xử lý để tránh dồn việc cuối ca."}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* KPI Row */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+      <div className="ui-stagger-children grid grid-cols-1 gap-6 md:grid-cols-4">
         <StatCard
           label="Tổng giá trị tồn kho"
           value={`${formatVND(totalStockValue)}đ`}
@@ -141,371 +569,352 @@ export function DashboardClient({
         <StatCard label="Phiếu kiểm kê" value={String(activeStocktakes)} />
       </div>
 
-      {/* Bento Grid */}
-      <div className="grid grid-cols-12 gap-6">
-        {/* Left: Alerts — 7 cols */}
-        <div className="col-span-12 space-y-6 lg:col-span-7">
-          {/* Reorder Alerts */}
-          <div
-            className="ambient-shadow overflow-hidden rounded-xl"
-            style={{ backgroundColor: "var(--md-surface-lowest)" }}
-          >
-            <div
-              className="flex items-center justify-between border-b px-6 py-4"
-              style={{
-                backgroundColor:
-                  "color-mix(in srgb, var(--md-error-container) 30%, transparent)",
-                borderColor:
-                  "color-mix(in srgb, var(--md-error-container) 20%, transparent)",
-              }}
-            >
-              <div
-                className="flex items-center gap-2 text-sm font-semibold"
-                style={{ color: "var(--md-on-error-container)" }}
-              >
-                <AlertTriangle className="size-4" />
-                <span>Cảnh báo tái đặt hàng</span>
+      <div className="grid gap-6 xl:grid-cols-3">
+        <div className="space-y-6 xl:col-span-2">
+          <div className={cn(panelClassName, "rounded-4xl bg-card p-6")}>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                  Việc cần xử lý trong ca
+                </p>
+                <h3 className="text-2xl font-semibold tracking-tight">
+                  Bảng ưu tiên kho vận
+                </h3>
+                <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+                  Gom các tín hiệu quan trọng nhất để vào đúng luồng xử lý, thay
+                  vì đi từng màn hình riêng lẻ.
+                </p>
               </div>
-              <span
-                className="rounded-full px-2 py-0.5 text-xs font-bold uppercase"
-                style={{
-                  backgroundColor: "var(--md-error-container)",
-                  color: "var(--md-on-error-container)",
-                }}
+              <Link
+                href={paths.reports}
+                className="focus-ring-standard inline-flex items-center gap-2 rounded-full border border-border/70 bg-white px-4 py-2 text-sm font-semibold text-primary shadow-sm transition-transform hover:-translate-y-0.5"
               >
-                Ưu tiên cao
-              </span>
+                Mở báo cáo
+                <ArrowRight className="size-4" />
+              </Link>
             </div>
-            <div className="space-y-4 p-6">
-              {reorderAlerts.length === 0 && (
-                <p
-                  className="py-4 text-center text-sm"
-                  style={{
-                    color: "var(--md-on-surface-variant)",
-                    opacity: 0.5,
-                  }}
-                >
-                  Không có cảnh báo tái đặt hàng
-                </p>
-              )}
-              {reorderAlerts.map((item) => (
-                <div
-                  key={item.name}
-                  className="flex items-center justify-between rounded-lg p-3"
-                  style={{ backgroundColor: "var(--md-surface)" }}
-                >
-                  <div className="min-w-0 flex items-center gap-3">
-                    <div
-                      className="flex size-10 shrink-0 items-center justify-center rounded text-sm font-semibold"
-                      style={{
-                        backgroundColor:
-                          "color-mix(in srgb, var(--md-error-container) 20%, transparent)",
-                        color: "var(--md-error)",
-                      }}
-                    >
-                      {item.name.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{item.name}</p>
-                      <p
-                        className="text-xs"
-                        style={{
-                          color: "var(--md-on-surface-variant)",
-                          opacity: 0.6,
-                        }}
-                      >
-                        Tồn kho: {item.current}
-                        {item.unit} | Ngưỡng: {item.reorder}
-                        {item.unit}
-                      </p>
-                    </div>
-                  </div>
-                  <Link
-                    href="/inventory/purchase-orders"
-                    className="text-xs font-medium hover:underline"
-                    style={{ color: "var(--md-primary)" }}
-                  >
-                    Tạo PO ngay
-                  </Link>
-                </div>
-              ))}
-            </div>
-          </div>
 
-          {/* Expiry Alerts */}
-          <div
-            className="ambient-shadow overflow-hidden rounded-xl"
-            style={{ backgroundColor: "var(--md-surface-lowest)" }}
-          >
-            <div
-              className="flex items-center justify-between border-b px-6 py-4"
-              style={{
-                backgroundColor:
-                  "color-mix(in srgb, var(--md-primary-fixed) 30%, transparent)",
-                borderColor:
-                  "color-mix(in srgb, var(--md-primary-fixed) 20%, transparent)",
-              }}
-            >
-              <div
-                className="flex items-center gap-2 text-sm font-semibold"
-                style={{ color: "var(--md-primary)" }}
-              >
-                <Hourglass className="size-4" />
-                <span>Cảnh báo sắp hết hạn</span>
+            {priorityItems.length === 0 ? (
+              <div className="ui-flow-panel mt-5 rounded-3xl border border-success/15 bg-gradient-to-br from-success/10 via-white to-primary/5 p-5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-success">
+                  Nhịp kho ổn định
+                </p>
+                <p className="mt-2 text-lg font-semibold">
+                  Hiện chưa có đầu việc gấp cần đẩy lên đầu hàng đợi.
+                </p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  Có thể chuyển sang kiểm tra báo cáo, tồn kho hoặc chuẩn bị cho
+                  ca tiếp theo.
+                </p>
               </div>
-              <span
-                className="text-xs font-medium italic"
-                style={{ color: "var(--md-on-surface-variant)", opacity: 0.6 }}
-              >
-                Trong 7 ngày tới
-              </span>
-            </div>
-            <div className="p-6">
-              {expiryAlerts.length === 0 && (
-                <p
-                  className="py-4 text-center text-sm"
-                  style={{
-                    color: "var(--md-on-surface-variant)",
-                    opacity: 0.5,
-                  }}
-                >
-                  Không có hàng sắp hết hạn trong 7 ngày tới
-                </p>
-              )}
-              {expiryAlerts.slice(0, 2).map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-4 rounded-xl border p-4"
-                  style={{
-                    backgroundColor:
-                      "color-mix(in srgb, var(--md-primary-fixed) 10%, transparent)",
-                    borderColor:
-                      "color-mix(in srgb, var(--md-primary-fixed) 20%, transparent)",
-                  }}
-                >
-                  <div className="flex-grow">
-                    <h4 className="text-sm font-semibold">
-                      {item.ingredientName} – {item.lot}
-                    </h4>
-                    <div className="mt-1 flex items-center gap-3">
-                      <span
-                        className="text-xs font-medium"
-                        style={{ color: "var(--md-on-surface-variant)" }}
-                      >
-                        Hạn dùng: {item.expiryDate}
-                      </span>
-                      <StatusBadge
-                        status={item.urgency}
-                        label={
-                          item.daysLeft <= 0
-                            ? `Quá ${Math.abs(item.daysLeft)} ngày`
-                            : `Còn ${item.daysLeft} ngày`
-                        }
-                      />
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="rounded-full border px-3 py-1.5 text-xs font-bold shadow-sm"
-                    style={{
-                      backgroundColor: "white",
-                      borderColor:
-                        "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-                    }}
-                  >
-                    Sử dụng trước
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Operations — 5 cols */}
-        <div className="col-span-12 space-y-6 lg:col-span-5">
-          {/* Transfers — vertical timeline */}
-          <div
-            className="ambient-shadow rounded-xl p-6"
-            style={{ backgroundColor: "var(--md-surface-lowest)" }}
-          >
-            <h3 className="mb-6 flex items-center gap-2 text-sm font-semibold">
-              <Truck
-                className="size-4"
-                style={{ color: "var(--md-secondary)" }}
-              />
-              Điều chuyển
-            </h3>
-            <div
-              className="relative space-y-6 pl-6"
-              style={{ borderLeft: `2px solid var(--md-secondary-container)` }}
-            >
-              {transfers.filter(
-                (t) => t.status === "in_transit" || t.status === "confirmed",
-              ).length === 0 && (
-                <p
-                  className="py-4 text-center text-sm"
-                  style={{
-                    color: "var(--md-on-surface-variant)",
-                    opacity: 0.5,
-                  }}
-                >
-                  Không có phiếu điều chuyển đang vận chuyển
-                </p>
-              )}
-              {transfers
-                .filter(
-                  (t) => t.status === "in_transit" || t.status === "confirmed",
-                )
-                .slice(0, 3)
-                .map((t, i) => (
+            ) : (
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                {priorityItems.map((item) => (
                   <Link
-                    href={`/inventory/transfers/${t.code}`}
-                    key={t.id}
-                    className="relative block"
+                    key={item.key}
+                    href={item.href}
+                    className={cn(
+                      "ui-surface-lift group flex h-full flex-col justify-between rounded-3xl border p-5 transition-transform hover:-translate-y-1",
+                      item.panelClassName,
+                    )}
                   >
-                    <div
-                      className="absolute -left-8 top-0 size-3 rounded-full border-4"
-                      style={{
-                        backgroundColor:
-                          i === 0
-                            ? "var(--md-secondary)"
-                            : "var(--md-secondary-container)",
-                        borderColor: "var(--md-surface-lowest)",
-                      }}
-                    />
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-xs font-semibold">{t.code}</p>
-                        <p
-                          className="text-xs"
-                          style={{
-                            color: "var(--md-on-surface-variant)",
-                            opacity: 0.6,
-                          }}
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div
+                          className={cn(
+                            "flex size-11 items-center justify-center rounded-2xl shadow-sm",
+                            item.iconClassName,
+                          )}
                         >
-                          {t.fromBranch} → {t.toBranch}
+                          {item.icon}
+                        </div>
+                        <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                          {item.eyebrow}
+                        </p>
+                        <h4 className="text-lg font-semibold tracking-tight">
+                          {item.title}
+                        </h4>
+                        <p className="text-sm leading-6 text-muted-foreground">
+                          {item.description}
                         </p>
                       </div>
-                      <StatusBadge status={t.status} />
                     </div>
+                    <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary">
+                      {item.cta}
+                    </span>
                   </Link>
                 ))}
-            </div>
+              </div>
+            )}
           </div>
 
-          {/* Stocktake Status */}
-          <div
-            className="ambient-shadow rounded-xl p-6"
-            style={{ backgroundColor: "var(--md-surface-lowest)" }}
-          >
-            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold">
-              <ClipboardList
-                className="size-4"
-                style={{ color: "var(--md-tertiary)" }}
-              />
-              Kiểm kê
-            </h3>
-            <div className="space-y-4">
-              {stocktakeSessions.filter((s) => s.status === "in_progress")
-                .length === 0 && (
-                <p
-                  className="py-4 text-center text-sm"
-                  style={{
-                    color: "var(--md-on-surface-variant)",
-                    opacity: 0.5,
-                  }}
-                >
-                  Không có phiếu kiểm kê đang thực hiện
-                </p>
-              )}
-              {stocktakeSessions
-                .filter((s) => s.status === "in_progress")
-                .map((s) => (
-                  <Link
-                    href={`/inventory/stocktake/${s.code}`}
-                    key={s.id}
-                    className="block"
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className={cn(panelClassName, "rounded-4xl bg-card p-6")}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-destructive">
+                    <AlertTriangle className="size-4" />
+                    <span>Cảnh báo tái đặt hàng</span>
+                  </div>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    Theo dõi nhanh các nguyên liệu đã chạm ngưỡng để tránh đứt
+                    hàng trong ca.
+                  </p>
+                </div>
+                <span className="rounded-full bg-destructive/10 px-3 py-1 text-xs font-semibold text-destructive">
+                  {reorderAlerts.length} mục
+                </span>
+              </div>
+              <div className="mt-5 space-y-3">
+                {reorderAlerts.length === 0 && (
+                  <p className="rounded-3xl border border-border/60 bg-background/90 px-4 py-8 text-center text-sm text-muted-foreground/70">
+                    Không có cảnh báo tái đặt hàng.
+                  </p>
+                )}
+                {reorderAlerts.slice(0, 4).map((item) => (
+                  <div
+                    key={`${item.branchId}:${item.ingredientId}`}
+                    className="ui-surface-lift flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-border/60 bg-background/95 p-4"
                   >
-                    <div className="mb-1.5 flex items-end justify-between">
-                      <span className="text-xs font-medium">
-                        {s.branchName}
-                      </span>
-                      <span
-                        className="text-xs font-bold"
-                        style={{ color: "var(--md-tertiary)" }}
-                      >
-                        {s.progress}%
-                      </span>
+                    <div className="min-w-0 flex flex-1 items-start gap-3">
+                      <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-sm font-semibold text-destructive shadow-sm">
+                        {item.name.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">
+                          {item.name}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground/80">
+                          Tồn kho {item.current}
+                          {item.unit} • Ngưỡng {item.reorder}
+                          {item.unit}
+                        </p>
+                      </div>
                     </div>
-                    <div
-                      className="h-1.5 w-full overflow-hidden rounded-full"
-                      style={{ backgroundColor: "var(--md-surface-container)" }}
+                    <Link
+                      href={reorderActionHref}
+                      className="focus-ring-standard inline-flex items-center gap-2 rounded-full border border-border/70 bg-white px-3 py-2 text-xs font-semibold text-primary shadow-sm transition-transform hover:-translate-y-0.5"
                     >
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          width: `${s.progress}%`,
-                          backgroundColor: "var(--md-tertiary)",
-                        }}
-                      />
+                      {reorderActionLabel}
+                      <ArrowRight className="size-3.5" />
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className={cn(panelClassName, "rounded-4xl bg-card p-6")}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-warning">
+                    <Hourglass className="size-4" />
+                    <span>Cảnh báo sắp hết hạn</span>
+                  </div>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    Ưu tiên xử lý các lô cận hạn để giảm hao hụt và tránh hủy
+                    hàng.
+                  </p>
+                </div>
+                <span className="rounded-full bg-warning/10 px-3 py-1 text-xs font-semibold text-warning">
+                  7 ngày tới
+                </span>
+              </div>
+
+              <div className="mt-5 space-y-3">
+                {expiryAlerts.length === 0 && (
+                  <p className="rounded-3xl border border-border/60 bg-background/90 px-4 py-8 text-center text-sm text-muted-foreground/70">
+                    Không có hàng sắp hết hạn.
+                  </p>
+                )}
+                {expiryAlerts.slice(0, 4).map((item) => (
+                  <Link
+                    href={paths.expiry}
+                    key={item.id}
+                    className="ui-surface-lift flex items-center gap-4 rounded-3xl border border-border/60 bg-background/95 p-4"
+                  >
+                    <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-warning/10 text-warning shadow-sm">
+                      <Hourglass className="size-5" />
                     </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="truncate text-sm font-semibold">
+                        {item.ingredientName}
+                        {item.lot ? ` • ${item.lot}` : ""}
+                      </h4>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <span>Hạn dùng {item.expiryDate}</span>
+                        <StatusBadge
+                          status={item.urgency}
+                          label={
+                            item.daysLeft <= 0
+                              ? `Quá ${Math.abs(item.daysLeft)} ngày`
+                              : `Còn ${item.daysLeft} ngày`
+                          }
+                        />
+                      </div>
+                    </div>
+                    <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
                   </Link>
                 ))}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Quick Navigation */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        {[
-          {
-            icon: <ShoppingCart className="size-7" />,
-            label: "Nhập kho",
-            href: "/inventory/receiving",
-            hoverBg: "var(--md-primary-fixed)",
-          },
-          {
-            icon: <CheckSquare className="size-7" />,
-            label: "Kiểm kê",
-            href: "/inventory/stocktake",
-            hoverBg: "var(--md-secondary-container)",
-          },
-          {
-            icon: <Truck className="size-7" />,
-            label: "Điều chuyển",
-            href: "/inventory/transfers",
-            hoverBg: "var(--md-tertiary-container)",
-          },
-          {
-            icon: <BarChart3 className="size-7" />,
-            label: "Báo cáo",
-            href: "/inventory/reports",
-            hoverBg: "var(--md-surface-highest)",
-          },
-        ].map((action) => (
-          <Link
-            key={action.label}
-            href={action.href}
-            className="group relative flex h-32 flex-col justify-between overflow-hidden rounded-2xl p-6 ambient-shadow transition-colors duration-300"
-            style={{ backgroundColor: "var(--md-surface-lowest)" }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = action.hoverBg;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor =
-                "var(--md-surface-lowest)";
-            }}
-          >
-            <span
-              className="transition-transform group-hover:scale-110"
-              style={{ color: "var(--md-on-surface-variant)" }}
-            >
-              {action.icon}
-            </span>
-            <span className="text-sm font-semibold">{action.label}</span>
-          </Link>
-        ))}
+        <div className="space-y-6">
+          <div className={cn(panelClassName, "rounded-4xl bg-card p-6")}>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                Thao tác nhanh
+              </p>
+              <h3 className="text-2xl font-semibold tracking-tight">
+                Đi thẳng vào quy trình
+              </h3>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Lối tắt theo đúng vai trò và mô hình site bạn đang vận hành.
+              </p>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+              {quickActions.map((action) => (
+                <Link
+                  key={action.label}
+                  href={action.href}
+                  className={cn(
+                    "ui-surface-lift group flex h-full flex-col gap-4 rounded-3xl border border-border/60 bg-background/95 p-4 transition-transform hover:-translate-y-1",
+                    action.hoverClassName,
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span
+                      className={cn(
+                        "transition-transform group-hover:scale-110",
+                        action.iconClassName,
+                      )}
+                    >
+                      {action.icon}
+                    </span>
+                    <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="block text-sm font-semibold">
+                      {action.label}
+                    </span>
+                    <span className="block text-xs leading-5 text-muted-foreground/80">
+                      {action.description}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className={cn(panelClassName, "rounded-4xl bg-card p-6")}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                  Luồng đang mở
+                </p>
+                <h3 className="text-2xl font-semibold tracking-tight">
+                  Theo dõi trực tiếp
+                </h3>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  Giữ mắt ở những bước còn dang dở để tránh tồn việc cuối ca.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-5">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <Truck className="size-4 text-info" />
+                    <span>Điều chuyển</span>
+                  </div>
+                  <Link
+                    href={paths.transfers}
+                    className="text-xs font-semibold text-primary hover:underline"
+                  >
+                    Danh sách
+                  </Link>
+                </div>
+                {activeTransferList.length === 0 ? (
+                  <p className="rounded-3xl border border-border/60 bg-background/90 px-4 py-5 text-sm text-muted-foreground/70">
+                    Không có phiếu điều chuyển đang vận chuyển.
+                  </p>
+                ) : (
+                  activeTransferList.map((t) => (
+                    <Link
+                      href={paths.transferDetail(t.id)}
+                      key={t.id}
+                      className="ui-surface-lift block rounded-3xl border border-border/60 bg-background/95 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold">{t.code}</p>
+                          <p className="mt-1 text-xs text-muted-foreground/80">
+                            {t.fromBranch} → {t.toBranch}
+                          </p>
+                        </div>
+                        <StatusBadge status={t.status} />
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <ClipboardList className="size-4 text-warning" />
+                    <span>Kiểm kê</span>
+                  </div>
+                  <Link
+                    href={paths.stocktake}
+                    className="text-xs font-semibold text-primary hover:underline"
+                  >
+                    Danh sách
+                  </Link>
+                </div>
+                {activeStocktakeList.length === 0 ? (
+                  <p className="rounded-3xl border border-border/60 bg-background/90 px-4 py-5 text-sm text-muted-foreground/70">
+                    Không có phiếu kiểm kê đang thực hiện.
+                  </p>
+                ) : (
+                  activeStocktakeList.map((s) => (
+                    <Link
+                      href={paths.stocktakeDetail(s.id)}
+                      key={s.id}
+                      className="ui-surface-lift block rounded-3xl border border-border/60 bg-background/95 p-4"
+                    >
+                      <div className="flex items-end justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold">
+                            {s.branchName}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground/80">
+                            {s.code}
+                          </p>
+                        </div>
+                        <span className="text-sm font-semibold text-warning">
+                          {s.progress}%
+                        </span>
+                      </div>
+                      <div className="ui-flow-progress mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-warning"
+                          style={{ width: `${s.progress}%` }}
+                        />
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

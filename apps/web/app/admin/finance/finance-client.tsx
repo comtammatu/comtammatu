@@ -22,19 +22,19 @@ export function FinanceClient({
   invoices,
 }: FinanceClientProps) {
   return (
-    <Tabs defaultValue="revenue">
-      <TabsList>
+    <Tabs defaultValue="revenue" className="space-y-4">
+      <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto rounded-2xl border border-border/70 bg-muted/40 p-2">
         <TabsTrigger value="revenue">Doanh thu</TabsTrigger>
         <TabsTrigger value="invoices">
           Hóa đơn điện tử ({invoices.length})
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="revenue" className="mt-4">
+      <TabsContent value="revenue" className="mt-0">
         <RevenueOverview dailyRevenue={dailyRevenue} topItems={topItems} />
       </TabsContent>
 
-      <TabsContent value="invoices" className="mt-4">
+      <TabsContent value="invoices" className="mt-0">
         <InvoiceList initialInvoices={invoices} />
       </TabsContent>
     </Tabs>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { SectionCard } from "@/components/foundation/ui-patterns";
 import {
   AlertOctagon,
   AlertTriangle,
@@ -9,6 +10,7 @@ import {
   Lightbulb,
   Trash2,
 } from "lucide-react";
+import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { tStatus } from "../_lib/dictionary";
 import {
@@ -19,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { PageHeader } from "../_components/shared";
 
 export type ExpiryAlertRow = {
   id: number;
@@ -33,8 +36,22 @@ export type ExpiryAlertRow = {
 
 const tabs = ["Tất cả", "expired", "critical", "warning"] as const;
 
+function getUrgencyBadgeClassName(urgency: string) {
+  if (urgency === "expired") {
+    return "bg-destructive/10 text-destructive";
+  }
+  if (urgency === "critical") {
+    return "bg-primary/10 text-primary";
+  }
+  return "bg-warning/12 text-warning";
+}
+
 export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
   const [activeTab, setActiveTab] = useState<string>("Tất cả");
+  const panelClassName = getSurfacePanelClassName(
+    "inventory",
+    "ambient-shadow",
+  );
   const filtered =
     activeTab === "Tất cả"
       ? alerts
@@ -45,164 +62,84 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h2
-            className="text-2xl font-bold tracking-tight"
-            style={{ color: "var(--md-on-surface)" }}
-          >
-            Cảnh báo Hạn sử dụng
-          </h2>
-          <p
-            className="mt-2 max-w-lg text-sm"
-            style={{ color: "var(--md-on-surface-variant)" }}
-          >
-            Theo dõi và quản lý các mặt hàng sắp hết hạn hoặc đã quá hạn để đảm
-            bảo chất lượng nguyên liệu.
-          </p>
-        </div>
-        <button
+        <PageHeader
+          title="Hạn sử dụng"
+          description="Theo dõi lô gần quá hạn, quá hạn và ưu tiên xử lý trong kho."
+        />
+        <Button
           type="button"
-          className="flex shrink-0 whitespace-nowrap items-center gap-2 rounded-full px-5 py-2.5 font-bold text-white"
-          style={{ backgroundColor: "var(--md-error)" }}
+          variant="destructive"
+          className="min-h-11 shrink-0 whitespace-nowrap rounded-full px-5 py-2.5 font-bold"
         >
           <Trash2 className="size-4 shrink-0" />
           Hủy tất cả hàng đã hết hạn
-        </button>
+        </Button>
       </div>
 
-      {/* Stats Grid with Icon Badges */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        {/* Expired */}
-        <div
-          className="rounded-2xl p-6 ambient-shadow"
-          style={{
-            backgroundColor: "var(--md-surface-lowest)",
-            border:
-              "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-          }}
+        <SectionCard
+          className={cn(panelClassName, "rounded-2xl bg-card")}
+          density="comfortable"
         >
           <div className="mb-4 flex items-start justify-between">
-            <div
-              className="flex size-10 items-center justify-center rounded-xl"
-              style={{ backgroundColor: "var(--md-error-container)" }}
-            >
-              <AlertOctagon
-                className="size-5"
-                style={{ color: "var(--md-on-error-container)" }}
-              />
+            <div className="flex size-10 items-center justify-center rounded-xl bg-destructive/12">
+              <AlertOctagon className="size-5 text-destructive" />
             </div>
-            <span
-              className="whitespace-nowrap text-label font-semibold uppercase tracking-wide"
-              style={{ color: "var(--md-outline-variant)" }}
-            >
+            <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
               Quá hạn
             </span>
           </div>
-          <h3
-            className="text-3xl font-black tracking-tight"
-            style={{ color: "var(--md-error)" }}
-          >
+          <h3 className="text-3xl font-black tracking-tight text-destructive">
             {String(expiredCount).padStart(2, "0")}
           </h3>
-          <p
-            className="mt-1 text-sm"
-            style={{ color: "var(--md-on-surface-variant)" }}
-          >
+          <p className="mt-1 text-sm text-muted-foreground">
             Mặt hàng đã hết hạn
           </p>
-        </div>
+        </SectionCard>
 
-        {/* Critical */}
-        <div
-          className="rounded-2xl p-6 ambient-shadow"
-          style={{
-            backgroundColor: "var(--md-surface-lowest)",
-            border:
-              "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-          }}
+        <SectionCard
+          className={cn(panelClassName, "rounded-2xl bg-card")}
+          density="comfortable"
         >
           <div className="mb-4 flex items-start justify-between">
-            <div
-              className="flex size-10 items-center justify-center rounded-xl"
-              style={{ backgroundColor: "var(--md-primary-fixed)" }}
-            >
-              <AlertTriangle
-                className="size-5"
-                style={{ color: "var(--md-primary)" }}
-              />
+            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/12">
+              <AlertTriangle className="size-5 text-primary" />
             </div>
-            <span
-              className="whitespace-nowrap text-label font-semibold uppercase tracking-wide"
-              style={{ color: "var(--md-outline-variant)" }}
-            >
+            <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
               3 ngày tới
             </span>
           </div>
-          <h3
-            className="text-3xl font-black tracking-tight"
-            style={{ color: "var(--md-primary)" }}
-          >
+          <h3 className="text-3xl font-black tracking-tight text-primary">
             {String(criticalCount).padStart(2, "0")}
           </h3>
-          <p
-            className="mt-1 text-sm"
-            style={{ color: "var(--md-on-surface-variant)" }}
-          >
+          <p className="mt-1 text-sm text-muted-foreground">
             Hết hạn trong 3 ngày tới
           </p>
-        </div>
+        </SectionCard>
 
-        {/* Warning */}
-        <div
-          className="rounded-2xl p-6 ambient-shadow"
-          style={{
-            backgroundColor: "var(--md-surface-lowest)",
-            border:
-              "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-          }}
+        <SectionCard
+          className={cn(panelClassName, "rounded-2xl bg-card")}
+          density="comfortable"
         >
           <div className="mb-4 flex items-start justify-between">
-            <div
-              className="flex size-10 items-center justify-center rounded-xl"
-              style={{
-                backgroundColor:
-                  "color-mix(in srgb, var(--md-tertiary) 15%, transparent)",
-              }}
-            >
-              <Clock
-                className="size-5"
-                style={{ color: "var(--md-tertiary)" }}
-              />
+            <div className="flex size-10 items-center justify-center rounded-xl bg-warning/12">
+              <Clock className="size-5 text-warning" />
             </div>
-            <span
-              className="whitespace-nowrap text-label font-semibold uppercase tracking-wide"
-              style={{ color: "var(--md-outline-variant)" }}
-            >
+            <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
               7 ngày tới
             </span>
           </div>
-          <h3
-            className="text-3xl font-black tracking-tight"
-            style={{ color: "var(--md-tertiary)" }}
-          >
+          <h3 className="text-3xl font-black tracking-tight text-warning">
             {String(warningCount).padStart(2, "0")}
           </h3>
-          <p
-            className="mt-1 text-sm"
-            style={{ color: "var(--md-on-surface-variant)" }}
-          >
+          <p className="mt-1 text-sm text-muted-foreground">
             Hết hạn trong 7 ngày tới
           </p>
-        </div>
+        </SectionCard>
       </div>
 
-      {/* Segmented Tabs */}
-      <div
-        className="flex gap-1 rounded-2xl p-1"
-        style={{ backgroundColor: "var(--md-surface-low)" }}
-      >
+      <div className="flex gap-1 rounded-2xl bg-muted p-1">
         {tabs.map((tab) => {
           const isActive = activeTab === tab;
           return (
@@ -210,17 +147,12 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
               key={tab}
               type="button"
               onClick={() => setActiveTab(tab)}
-              className="ui-tab-pill flex-1 px-3 py-2 text-sm font-medium transition-colors"
-              style={
+              className={cn(
+                "focus-ring-standard ui-tab-pill flex-1 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
                 isActive
-                  ? {
-                      backgroundColor: "white",
-                      color: "var(--md-primary)",
-                      fontWeight: 700,
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                    }
-                  : { color: "var(--md-on-surface-variant)" }
-              }
+                  ? "bg-white font-bold text-primary shadow-sm"
+                  : "text-muted-foreground",
+              )}
             >
               {tab === "Tất cả" ? "Tất cả" : tStatus(tab, "tab")}
             </button>
@@ -228,23 +160,12 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
         })}
       </div>
 
-      {/* Data Table */}
       <div
-        className="overflow-hidden rounded-3xl ambient-shadow"
-        style={{
-          backgroundColor: "var(--md-surface-lowest)",
-          border:
-            "1px solid color-mix(in srgb, var(--md-outline-variant) 5%, transparent)",
-        }}
+        className={cn(panelClassName, "overflow-hidden rounded-3xl bg-card")}
       >
         <Table>
           <TableHeader>
-            <TableRow
-              style={{
-                backgroundColor:
-                  "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
-              }}
-            >
+            <TableRow className="bg-muted/40">
               {[
                 "Nguyên liệu",
                 "Số lô",
@@ -256,8 +177,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
               ].map((h) => (
                 <TableHead
                   key={h}
-                  className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${h === "Ngày còn lại" ? "text-center" : ""} ${h === "Thao tác" ? "text-right" : ""}`}
-                  style={{ color: "var(--md-outline)" }}
+                  className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground ${h === "Ngày còn lại" ? "text-center" : ""} ${h === "Thao tác" ? "text-right" : ""}`}
                 >
                   {h}
                 </TableHead>
@@ -266,21 +186,11 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
           </TableHeader>
           <TableBody>
             {filtered.map((item) => (
-              <TableRow
-                key={item.id}
-                className="transition-colors"
-                style={{
-                  borderColor:
-                    "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-                }}
-              >
+              <TableRow key={item.id} className="transition-colors">
                 <TableCell className="px-6 py-5 text-sm font-semibold">
                   {item.ingredientName}
                 </TableCell>
-                <TableCell
-                  className="px-6 py-5 font-mono text-sm"
-                  style={{ color: "var(--md-on-surface-variant)" }}
-                >
+                <TableCell className="px-6 py-5 font-mono text-sm text-muted-foreground">
                   {item.lot}
                 </TableCell>
                 <TableCell className="px-6 py-5 text-sm">
@@ -288,35 +198,17 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
                 </TableCell>
                 <TableCell className="px-6 py-5 text-center">
                   <span
-                    className="inline-flex whitespace-nowrap items-center rounded-full px-2.5 py-1 text-xs font-bold"
-                    style={
-                      item.urgency === "expired"
-                        ? {
-                            backgroundColor:
-                              "color-mix(in srgb, var(--md-error) 15%, transparent)",
-                            color: "var(--md-error)",
-                          }
-                        : item.urgency === "critical"
-                          ? {
-                              backgroundColor: "var(--md-primary-fixed)",
-                              color: "var(--md-primary)",
-                            }
-                          : {
-                              backgroundColor:
-                                "color-mix(in srgb, var(--md-tertiary) 15%, transparent)",
-                              color: "var(--md-tertiary)",
-                            }
-                    }
+                    className={cn(
+                      "inline-flex whitespace-nowrap items-center rounded-full px-2.5 py-1 text-xs font-bold",
+                      getUrgencyBadgeClassName(item.urgency),
+                    )}
                   >
                     {item.daysLeft <= 0
                       ? `Đã hết hạn ${Math.abs(item.daysLeft)} ngày`
                       : `Còn ${item.daysLeft} ngày`}
                   </span>
                 </TableCell>
-                <TableCell
-                  className="px-6 py-5 font-mono text-sm"
-                  style={{ color: "var(--md-primary)" }}
-                >
+                <TableCell className="px-6 py-5 font-mono text-sm text-primary">
                   {item.grnCode}
                 </TableCell>
                 <TableCell className="px-6 py-5 text-sm">
@@ -339,56 +231,27 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
         </Table>
       </div>
 
-      {/* Tips */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <div
-          className="flex items-start gap-3 rounded-xl border p-4"
-          style={{
-            borderColor:
-              "color-mix(in srgb, var(--md-primary) 20%, transparent)",
-            backgroundColor:
-              "color-mix(in srgb, var(--md-primary) 5%, transparent)",
-          }}
-        >
-          <Lightbulb
-            className="mt-0.5 size-5 shrink-0"
-            style={{ color: "var(--md-primary)" }}
-          />
+        <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <Lightbulb className="mt-0.5 size-5 shrink-0 text-primary" />
           <div>
             <p className="text-sm font-semibold">Gợi ý tối ưu hóa</p>
-            <p
-              className="mt-1 text-xs"
-              style={{ color: "var(--md-on-surface-variant)" }}
-            >
+            <p className="mt-1 text-xs text-muted-foreground">
               Dựa trên dữ liệu 30 ngày qua, tỷ lệ hàng quá hạn tại CN Quận 1 cao
               hơn 15% so với trung bình. Hệ thống đề xuất điều chuyển nguyên
               liệu sớm sang các chi nhánh có lượng tiêu thụ cao hơn.
             </p>
           </div>
         </div>
-        <div
-          className="rounded-xl border p-4"
-          style={{
-            borderColor:
-              "color-mix(in srgb, var(--md-outline-variant) 30%, transparent)",
-            backgroundColor:
-              "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
-          }}
-        >
+        <div className="rounded-xl border border-border/50 bg-muted/50 p-4">
           <p className="text-sm font-semibold">Thông báo tự động</p>
-          <p
-            className="mt-1 text-xs"
-            style={{ color: "var(--md-on-surface-variant)" }}
-          >
+          <p className="mt-1 text-xs text-muted-foreground">
             Cài đặt nhắc báo qua Email hoặc Zalo cho quản lý kho khi hàng hóa
             còn dưới 5 ngày sử dụng.
           </p>
           <div className="mt-2 flex items-center gap-2">
-            <Bell className="size-4" style={{ color: "var(--md-secondary)" }} />
-            <span
-              className="text-xs font-medium"
-              style={{ color: "var(--md-secondary)" }}
-            >
+            <Bell className="size-4 text-success" />
+            <span className="text-xs font-medium text-success">
               Đã bật Email
             </span>
           </div>

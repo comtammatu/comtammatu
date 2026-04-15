@@ -28,6 +28,7 @@ export interface IngredientRow {
   sku: string | null;
   unit: string;
   category: string | null;
+  item_kind: string;
   unit_cost: number | null;
   min_stock_level: number | null;
   max_stock_level: number | null;
@@ -60,9 +61,13 @@ function IngredientFormContent({
   const [storageType, setStorageType] = useState<string>(
     ingredient?.storage_type ?? "ambient",
   );
+  const [itemKind, setItemKind] = useState<string>(
+    ingredient?.item_kind ?? "raw_material",
+  );
 
   useEffect(() => {
     setStorageType(ingredient?.storage_type ?? "ambient");
+    setItemKind(ingredient?.item_kind ?? "raw_material");
     setError(null);
   }, [ingredient]);
 
@@ -76,6 +81,7 @@ function IngredientFormContent({
       sku: (fd.get("sku") as string) || undefined,
       unit_cost: fd.get("unit_cost") ? Number(fd.get("unit_cost")) : undefined,
       category: (fd.get("category") as string) || undefined,
+      item_kind: itemKind as "raw_material" | "finished_good",
       storage_type: storageType as "ambient" | "refrigerated" | "frozen",
       min_stock_level: fd.get("min_stock_level")
         ? Number(fd.get("min_stock_level"))
@@ -107,6 +113,7 @@ function IngredientFormContent({
           sku: raw.sku,
           unit_cost: raw.unit_cost,
           category: raw.category,
+          item_kind: raw.item_kind,
           storage_type: raw.storage_type,
           min_stock_level: raw.min_stock_level ?? 0,
           max_stock_level: raw.max_stock_level,
@@ -219,11 +226,26 @@ function IngredientFormContent({
               <SelectContent>
                 <SelectItem value="ambient">Thường</SelectItem>
                 <SelectItem value="refrigerated">Lạnh</SelectItem>
-                <SelectItem value="frozen">Đông lạnh</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+              <SelectItem value="frozen">Đông lạnh</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="ing-kind" className="text-sm font-medium">
+          Loại hàng
+        </Label>
+        <Select value={itemKind} onValueChange={setItemKind}>
+          <SelectTrigger id="ing-kind" className="h-10">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="raw_material">Nguyên liệu</SelectItem>
+            <SelectItem value="finished_good">Thành phẩm</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
         {/* Row 4: min / max / reorder */}
         <div className="grid grid-cols-3 gap-4">

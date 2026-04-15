@@ -1,3 +1,5 @@
+import { canAccess } from "./module-acl";
+import { resolveModuleFromPath } from "./route-resolution";
 import type { JwtClaims, ScopeIds, StaffRole } from "./types";
 import { ADMIN_ROLES, BRANCH_ROLES } from "./types";
 
@@ -40,9 +42,56 @@ export function getDefaultRedirect(claims: JwtClaims): string {
     return "/admin/dashboard";
   }
 
-  // All non-admin staff land on Employee Portal
+  // All non-admin staff land on the employee workspace
   // (cashier, waiter, chef, office)
   return "/employee";
+}
+
+/** Validate and normalize an internal return path. */
+export function getSafeInternalReturnTo(
+  returnTo: string | null | undefined,
+): string | null {
+  if (!returnTo || !returnTo.startsWith("/") || returnTo.startsWith("//")) {
+    return null;
+  }
+
+  try {
+    const url = new URL(returnTo, "http://localhost");
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return null;
+  }
+}
+
+/** Prefer returning users to their original workspace when it is still valid. */
+export function resolvePostLoginRedirect(
+  claims: JwtClaims,
+  returnTo: string | null | undefined,
+): string {
+  const fallback = getDefaultRedirect(claims);
+  const safeReturnTo = getSafeInternalReturnTo(returnTo);
+
+  if (!safeReturnTo) {
+    return fallback;
+  }
+
+  const url = new URL(safeReturnTo, "http://localhost");
+  const moduleKey = resolveModuleFromPath(url.pathname);
+
+  if (!moduleKey || !canAccess(claims.user_role, moduleKey)) {
+    return fallback;
+  }
+
+  if (moduleKey === "pos" || moduleKey === "kds") {
+    const branchMatch = url.pathname.match(/^\/br\/(\d+)\//);
+    const routeBranchId = branchMatch ? Number(branchMatch[1]) : null;
+
+    if (routeBranchId === null || claims.branch_id !== routeBranchId) {
+      return fallback;
+    }
+  }
+
+  return `${url.pathname}${url.search}${url.hash}`;
 }
 
 /** Check if a role is admin-level */

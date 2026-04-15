@@ -1,0 +1,30 @@
+# Reference Docs
+
+Tài liệu tham chiếu dài hạn cho repo này.
+
+- Dùng khi cần hiểu business context, boundary, và canonical rules.
+- Không dùng thư mục này cho session notes hay checklist vận hành ngắn hạn.
+
+## Đọc trước nếu mới vào dự án
+
+- [glossary.md](glossary.md)
+- [business-context.md](business-context.md)
+- [setup.md](setup.md)
+- [inventory.md](inventory.md)
+
+## Inventory
+
+- [inventory.md](inventory.md): canonical reference cho Inventory
+- [../spec/inventory-overview-diagrams.md](../spec/inventory-overview-diagrams.md): sơ đồ tổng quan business flow + data flow
+- [inventory-sop.md](inventory-sop.md): SOP vận hành pilot
+- [inventory-role-handoff.md](inventory-role-handoff.md): training 1 trang
+- [inventory-rbac-matrix.md](inventory-rbac-matrix.md): ma trận quyền Inventory
+- [inventory-erp-gap-matrix.md](inventory-erp-gap-matrix.md): mapping với bộ ERP tham chiếu
+
+## Các tài liệu khác
+
+- [einvoice-tax.md](einvoice-tax.md)
+- [labor-contracts.md](labor-contracts.md)
+- [payroll-pit.md](payroll-pit.md)
+- [third-party-integrations.md](third-party-integrations.md)
+- [competitive-analysis.md](competitive-analysis.md)

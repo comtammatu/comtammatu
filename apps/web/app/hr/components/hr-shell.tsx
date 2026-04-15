@@ -17,7 +17,13 @@ import {
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
-import { cn } from "@comtammatu/ui";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import {
+  cn,
+  getSurfaceHeaderClassName,
+  getSurfaceShellClassName,
+  getSurfaceSidebarClassName,
+} from "@comtammatu/ui";
 
 interface NavItem {
   href: string;
@@ -100,10 +106,10 @@ function NavContent({
           </div>
           <div>
             <p className="text-base font-bold tracking-tight text-foreground">
-              Nhân sự & Lương
+              {APP_COPY_VI.hrWorkspace}
             </p>
             <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground/60">
-              HR & Payroll
+              {APP_COPY_VI.hrWorkspaceSubtitle}
             </p>
           </div>
         </div>
@@ -181,16 +187,26 @@ export function HRShell({ children, user, role }: HRShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-background">
+    <div className={getSurfaceShellClassName("admin", "flex h-dvh overflow-hidden")}>
       {/* Desktop sidebar */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex">
+      <aside
+        className={getSurfaceSidebarClassName(
+          "admin",
+          "hidden w-64 shrink-0 flex-col md:flex",
+        )}
+      >
         <NavContent pathname={pathname} role={role} user={user} />
       </aside>
 
       {/* Main area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border/60 bg-background/80 px-4 backdrop-blur-xl sm:px-6">
+        <header
+          className={getSurfaceHeaderClassName(
+            "admin",
+            "flex h-14 items-center gap-3 px-4 sm:px-6",
+          )}
+        >
           {/* Mobile toggle */}
           <button
             type="button"
@@ -227,7 +243,12 @@ export function HRShell({ children, user, role }: HRShellProps) {
             onKeyDown={(e) => e.key === "Escape" && setMobileOpen(false)}
             aria-label="Đóng menu"
           />
-          <aside className="fixed inset-y-0 left-0 z-50 w-72 bg-sidebar shadow-2xl md:hidden">
+          <aside
+            className={getSurfaceSidebarClassName(
+              "admin",
+              "fixed inset-y-0 left-0 z-50 w-72 shadow-2xl md:hidden",
+            )}
+          >
             <button
               type="button"
               onClick={() => setMobileOpen(false)}

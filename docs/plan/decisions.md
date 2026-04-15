@@ -50,7 +50,7 @@
 
 **Consequences:** Không có Prisma migration system. Dùng Supabase CLI migrations. Type generation qua `supabase gen types`.
 
-## D006: system_settings key/value thay vì JSONB column (2026-04-02)
+## D006b: system_settings key/value thay vì JSONB column (2026-04-02)
 
 **Context:** Cần lưu tenant-level config (VAT rate, service charge, currency, phone, email). Hai lựa chọn: JSONB column trên `tenants.settings` hoặc separate `system_settings` table.
 

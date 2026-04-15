@@ -1,15 +1,17 @@
-import { fetchIngredients } from "@/admin/inventory/actions";
+import { fetchIngredients } from "@/inventory/actions";
 import {
   fetchMenuItemsForRecipes,
   fetchRecipes,
-} from "@/admin/inventory/procurement-actions";
-import {
-  RecipesClient,
-  type RecipeRow,
-  type MenuItemOpt,
-} from "@/admin/inventory/recipes/recipes-client";
+} from "@/inventory/procurement-actions";
 import { PageHeader } from "../../_components/shared";
-import type { IngredientRow } from "@/admin/inventory/page";
+import { tRoute } from "../../_lib/dictionary";
+import { formatDate } from "../../_lib/format";
+import { RecipesClient } from "../../recipes/recipes-client";
+import type { RecipeRow, RecipeItem } from "../../recipes/recipes-client";
+import type {
+  MenuItemOption,
+  IngredientOption,
+} from "../../recipes/recipe-line-dialog";
 
 export default async function RecipesSettingsPage() {
   const [recRes, menuRes, ingRes] = await Promise.all([
@@ -17,24 +19,60 @@ export default async function RecipesSettingsPage() {
     fetchMenuItemsForRecipes(),
     fetchIngredients(),
   ]);
-  const initial: RecipeRow[] = recRes.success
-    ? ((recRes.data ?? []) as RecipeRow[])
+  const dbRows = recRes.success
+    ? (recRes.data as Array<Record<string, unknown>>)
     : [];
-  const menuItems: MenuItemOpt[] = menuRes.success
-    ? ((menuRes.data ?? []) as MenuItemOpt[])
+
+  const recipes: RecipeRow[] = dbRows.map((row) => {
+    const lineItems =
+      (row.recipe_items as Array<Record<string, unknown>>) ?? [];
+
+    const items: RecipeItem[] = lineItems.map((li) => ({
+      ingredientId:
+        ((li.ingredients as Record<string, unknown>)?.id as number) ?? 0,
+      ingredientName:
+        ((li.ingredients as Record<string, unknown>)?.name as string) ?? "—",
+      qty: Number(li.quantity ?? 0),
+      unit: (li.unit as string) ?? "",
+      yieldFactor: Number(li.yield_factor ?? 100),
+      note: (li.note as string) ?? null,
+    }));
+
+    return {
+      id: row.id as number,
+      menuItemId: (row.menu_item_id as number) ?? 0,
+      name: (row.name as string) ?? "",
+      category: (row.category as string) ?? "",
+      updatedAt: row.updated_at ? formatDate(row.updated_at as string) : "—",
+      estimatedCost: Number(row.estimated_cost ?? 0),
+      items,
+    };
+  });
+
+  const menuItems: MenuItemOption[] = menuRes.success
+    ? (menuRes.data as Array<{ id: number; name: string }>).map((mi) => ({
+        id: mi.id,
+        name: mi.name,
+      }))
     : [];
-  const ingredients: IngredientRow[] = ingRes.success
-    ? ((ingRes.data ?? []) as IngredientRow[])
+
+  const ingredients: IngredientOption[] = ingRes.success
+    ? (
+        ingRes.data as Array<{ id: number; name: string; unit: string }>
+      ).map((ingredient) => ({
+        id: ingredient.id,
+        name: ingredient.name,
+        unit: ingredient.unit,
+      }))
     : [];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Công thức"
-        description="Quản lý định mức nguyên liệu cho từng món"
+        title={tRoute("/inventory/settings/recipes", "heading")}
       />
       <RecipesClient
-        initial={initial}
+        recipes={recipes}
         menuItems={menuItems}
         ingredients={ingredients}
       />

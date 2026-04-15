@@ -5,7 +5,18 @@
 
 ## Module Status (updated 2026-04-10 CEO review)
 
-M0-M3, M5 SHIPPED. M4/M6/M7 PARTIAL (stubs — blocked on credentials or incomplete calc).
+M0-M3, M5 SHIPPED. M5-Ext central kitchen production is live. M4/M6/M7 PARTIAL where blocked on credentials or incomplete accounting/payroll calc.
+
+## Documentation Status
+
+- [x] Inventory docs now have canonical reference + SOP + role handoff + RBAC matrix + ERP gap matrix + pre-release QA runbook + adoption matrix
+- [ ] When Inventory behavior changes materially, update `docs/ref/inventory.md`, `docs/ref/inventory-sop.md`, and `docs/worklog/inventory/adoption-matrix.md` together
+- [ ] Khi cần tách tồn riêng `Kho chi nhánh` / `Bếp chi nhánh`, triển khai project location-ledger theo `docs/plan/inventory-branch-kitchen-model.md`
+- [ ] Khi mở phase tách tồn thật, triển khai theo `docs/plan/inventory-location-ledger.md` với rollout `seed -> compatibility -> dual-write -> cutover`
+- [ ] Owner apply migration `20260417040000_inventory_locations_phase1.sql`, rồi mới bắt đầu Phase 2 compatibility columns
+- [ ] Khi Phase 1 đã apply xong, owner tiếp tục apply Migration A `20260417050000_inventory_location_compat_columns.sql`, rồi mới backfill / siết constraint cho Phase 2
+- [ ] Khi Phase 1 đã apply xong, triển khai Phase 2 theo `docs/plan/inventory-location-ledger-phase2.md`
+- [ ] Khi Phase 2 bắt đầu, đi theo app patch map ở `docs/plan/inventory-location-ledger-phase2-app-patch.md`
 
 ### Shipped & Working
 
@@ -14,7 +25,7 @@ M0-M3, M5 SHIPPED. M4/M6/M7 PARTIAL (stubs — blocked on credentials or incompl
 - [x] M2: POS — cart, table/zone, order submit, bill printing
 - [x] M3: KDS — realtime queue, bump/complete, station config
 - [x] M4: Cash payment ✅ — VietQR/Momo blocked on merchant credentials
-- [x] M5: Stock — ingredients, recipes, stock levels, procurement, GRN
+- [x] M5: Stock — ingredients, recipes, stock levels, procurement, GRN, stocktake, transfers, central kitchen production hub
 - [x] M6: Revenue dashboard ✅ — HĐĐT blocked on MISA credentials, VAS stubs
 - [x] M7: Attendance GPS/QR ✅ — payroll calc incomplete
 
@@ -62,6 +73,7 @@ M0-M3, M5 SHIPPED. M4/M6/M7 PARTIAL (stubs — blocked on credentials or incompl
 - [ ] Local-First Branch (mini PC + SQLite, offline POS/KDS)
 - [ ] QR Self-Order (khách scan QR tại bàn)
 - [ ] Loyalty / Vouchers (tích điểm, khuyến mãi)
+- [ ] CMS / CRM Foundation (customer registry, loyalty ledger, content publishing)
 - [ ] Advanced Analytics
 - [ ] VNPay integration
 - [ ] Employee portal full features (currently placeholder)

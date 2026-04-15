@@ -333,7 +333,7 @@ function IncomeStatementView({ data }: { data: Record<string, unknown> }) {
           <TableRow className="bg-primary/5 text-lg font-bold">
             <TableCell colSpan={2}>LỢI NHUẬN THUẦN</TableCell>
             <TableCell
-              className={`text-right font-mono ${netProfit >= 0 ? "text-green-600" : "text-red-600"}`}
+              className={`text-right font-mono ${netProfit >= 0 ? "text-success" : "text-destructive"}`}
             >
               {fmt(netProfit)}
             </TableCell>
@@ -396,7 +396,7 @@ function VatSummaryView({ data }: { data: Record<string, unknown> }) {
           <TableRow className="bg-primary/5 text-lg font-bold">
             <TableCell colSpan={3}>THUẾ GTGT PHẢI NỘP</TableCell>
             <TableCell
-              className={`text-right font-mono ${vatPayable >= 0 ? "text-red-600" : "text-green-600"}`}
+              className={`text-right font-mono ${vatPayable >= 0 ? "text-destructive" : "text-success"}`}
             >
               {fmt(vatPayable)}
             </TableCell>

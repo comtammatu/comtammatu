@@ -2,6 +2,10 @@
 
 import React, { useState, useTransition } from "react";
 import {
+  FilterBar,
+  SectionCard,
+} from "@/components/foundation/ui-patterns";
+import {
   Table,
   TableBody,
   TableCell,
@@ -63,15 +67,14 @@ export function FoodCostClient({
     const cost = r.food_cost ?? 0;
     if (rev === 0) return "";
     const pct = ((rev - cost) / rev) * 100;
-    if (pct >= 60) return "text-green-600";
-    if (pct >= 40) return "text-yellow-600";
-    return "text-red-600";
+    if (pct >= 60) return "text-success";
+    if (pct >= 40) return "text-warning";
+    return "text-destructive";
   };
 
   return (
     <div className="space-y-4">
-      {/* Filter bar */}
-      <div className="flex flex-wrap items-end gap-4">
+      <FilterBar>
         <div className="grid gap-1.5">
           <Label className="text-xs">Từ ngày</Label>
           <Input
@@ -98,30 +101,28 @@ export function FoodCostClient({
           {isPending ? "Đang tải..." : "Lọc"}
         </Button>
         {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      </FilterBar>
 
-      {/* Summary cards */}
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-lg border bg-card p-4">
+        <SectionCard density="compact">
           <p className="text-xs text-muted-foreground">Tổng doanh thu</p>
           <p className="mt-1 text-xl font-bold tabular-nums">
             {totalRevenue.toLocaleString("vi-VN")} ₫
           </p>
-        </div>
-        <div className="rounded-lg border bg-card p-4">
+        </SectionCard>
+        <SectionCard density="compact">
           <p className="text-xs text-muted-foreground">Tổng food cost</p>
           <p className="mt-1 text-xl font-bold tabular-nums">
             {totalCost.toLocaleString("vi-VN")} ₫
           </p>
-        </div>
-        <div className="rounded-lg border bg-card p-4">
+        </SectionCard>
+        <SectionCard density="compact">
           <p className="text-xs text-muted-foreground">Biên lợi nhuận TB</p>
           <p className="mt-1 text-xl font-bold">{avgMargin}%</p>
-        </div>
+        </SectionCard>
       </div>
 
-      {/* Table */}
-      <div className="rounded-lg border">
+      <SectionCard className="overflow-hidden" density="compact">
         <Table>
           <TableHeader>
             <TableRow>
@@ -165,7 +166,7 @@ export function FoodCostClient({
             )}
           </TableBody>
         </Table>
-      </div>
+      </SectionCard>
     </div>
   );
 }

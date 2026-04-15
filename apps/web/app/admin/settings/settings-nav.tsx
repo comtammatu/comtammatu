@@ -63,24 +63,27 @@ export function SettingsNav({ role }: { role: StaffRole }) {
   const visibleTabs = TABS.filter((tab) => tab.allowedRoles.includes(role));
 
   return (
-    <nav className="flex gap-0.5 border-b">
-      {visibleTabs.map((tab) => {
-        const isActive = pathname.startsWith(tab.href);
-        return (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className={cn(
-              "relative -mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors duration-150",
-              isActive
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
-            )}
-          >
-            {tab.label}
-          </Link>
-        );
-      })}
+    <nav className="overflow-x-auto pb-1" aria-label="Mục cài đặt quản trị">
+      <div className="flex min-w-max items-center gap-2 border-b border-border/40 pb-2">
+        {visibleTabs.map((tab) => {
+          const isActive = pathname.startsWith(tab.href);
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={cn(
+                "ui-tab-pill focus-ring-standard relative -mb-2 inline-flex min-h-11 items-center rounded-full border px-4 py-2.5 text-sm font-semibold transition-all duration-150",
+                isActive
+                  ? "border-primary/20 bg-primary/10 text-primary shadow-sm"
+                  : "border-transparent bg-transparent text-muted-foreground hover:border-border/60 hover:bg-muted/70 hover:text-foreground",
+              )}
+              aria-current={isActive ? "page" : undefined}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 }

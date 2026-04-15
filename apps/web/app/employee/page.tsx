@@ -1,15 +1,109 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
+  ArrowRight,
+  BarChart3,
+  Briefcase,
+  CalendarDays,
   ChefHat,
   CreditCard,
   DoorOpen,
-  Home,
+  LayoutDashboard,
   LogOut,
   Monitor,
+  UserRound,
+  Warehouse,
 } from "lucide-react";
+import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims, canAccess } from "@comtammatu/shared/auth";
+import {
+  buildLoginBlockedStatePath,
+  ROLE_LABEL_VI,
+  extractClaims,
+  canAccess,
+} from "@comtammatu/shared/auth";
+import { Button } from "@comtammatu/ui/components/button";
+import {
+  PageContainer,
+  PageHeader,
+  SectionCard,
+  StatusBadge,
+} from "@/components/foundation/ui-patterns";
+
+function ActionLink({
+  href,
+  title,
+  description,
+  icon,
+  badge,
+}: {
+  href: string;
+  title: string;
+  description?: string;
+  icon: React.ReactNode;
+  badge?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={getSurfacePanelClassName(
+        "employee",
+        "group touch-target-lg focus-ring-standard flex items-center gap-4 rounded-3xl p-4 transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:bg-white/92",
+      )}
+    >
+      <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold text-foreground">{title}</p>
+          {badge ? (
+            <span className="rounded-full border border-primary/15 bg-primary/8 px-2.5 py-0.5 text-xs font-semibold text-primary">
+              {badge}
+            </span>
+          ) : null}
+        </div>
+        {description ? (
+          <p className="text-sm leading-6 text-muted-foreground">
+            {description}
+          </p>
+        ) : null}
+      </div>
+      <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+    </Link>
+  );
+}
+
+function DisabledPanel({
+  title,
+  description,
+  icon,
+}: {
+  title: string;
+  description?: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        getSurfacePanelClassName("employee"),
+        "flex items-center gap-4 rounded-3xl border-dashed bg-muted/30 p-4 shadow-none",
+      )}
+    >
+      <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-foreground">{title}</p>
+        {description ? (
+          <p className="text-sm leading-6 text-muted-foreground">
+            {description}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 export default async function EmployeePage() {
   const supabase = await createClient();
@@ -20,20 +114,22 @@ export default async function EmployeePage() {
   if (!session?.user) redirect("/login");
 
   const claims = extractClaims(session.user.app_metadata);
-  if (!claims) redirect("/login");
+  if (!claims) redirect(buildLoginBlockedStatePath());
 
   const canPos = canAccess(claims.user_role, "pos");
   const canKds = canAccess(claims.user_role, "kds");
   const branchId = claims.branch_id;
 
   let branchIsHq = false;
+  let branchName: string | null = null;
   if (branchId) {
     const { data } = await supabase
       .from("branches")
-      .select("is_headquarters")
+      .select("name, is_headquarters")
       .eq("id", branchId)
       .eq("tenant_id", claims.tenant_id)
       .maybeSingle();
+    branchName = data?.name ?? null;
     branchIsHq = data?.is_headquarters === true;
   }
 
@@ -41,141 +137,204 @@ export default async function EmployeePage() {
   const kdsHref = branchId ? `/br/${branchId}/kds` : "/employee";
   const posDisabled = !canPos || !branchId || branchIsHq;
   const kdsDisabled = !canKds || !branchId || branchIsHq;
+  const canDashboard = canAccess(claims.user_role, "dashboard");
+  const canInventory = canAccess(claims.user_role, "inventory");
+  const canReports = canAccess(claims.user_role, "reports");
+  const canHr = canAccess(claims.user_role, "hr");
+  const managementLinks = [
+    canDashboard
+      ? {
+          href: "/admin/dashboard",
+          title: "Quản trị",
+          icon: <LayoutDashboard className="size-5" />,
+        }
+      : null,
+    canInventory
+      ? {
+          href: "/inventory",
+          title: "Kho hàng",
+          icon: <Warehouse className="size-5" />,
+        }
+      : null,
+    canReports
+      ? {
+          href: "/admin/reports",
+          title: "Báo cáo",
+          icon: <BarChart3 className="size-5" />,
+        }
+      : null,
+    canHr
+      ? {
+          href: "/hr",
+          title: "Nhân sự & tiền lương",
+          icon: <Briefcase className="size-5" />,
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    href: string;
+    title: string;
+    icon: React.ReactNode;
+  }>;
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Quick actions */}
-      <div>
-        <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Truy cập nhanh
-        </p>
-        <div className="flex flex-col gap-3">
-          {posDisabled ? (
-            <button
-              disabled
-              className="touch-target-lg flex h-16 cursor-not-allowed items-center gap-4 rounded-xl border border-border bg-muted/40 px-5 opacity-50"
-            >
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-                <Monitor className="size-5 text-primary" />
-              </div>
-              <div className="text-left">
-                <p className="text-sm font-semibold">Vào POS</p>
-                <p className="text-xs text-muted-foreground">
-                  Màn hình bán hàng
-                </p>
-              </div>
-            </button>
-          ) : (
-            <Link
-              href={posHref}
-              className="touch-target-lg focus-ring-standard flex h-16 items-center gap-4 rounded-xl border border-border bg-card px-5 shadow-sm transition-colors hover:bg-muted/40"
-            >
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-                <Monitor className="size-5 text-primary" />
-              </div>
-              <div className="text-left">
-                <p className="text-sm font-semibold">Vào POS</p>
-                <p className="text-xs text-muted-foreground">
-                  Màn hình bán hàng
-                </p>
-              </div>
-            </Link>
-          )}
-
-          {kdsDisabled ? (
-            <button
-              disabled
-              className="touch-target-lg flex h-16 cursor-not-allowed items-center gap-4 rounded-xl border border-border bg-muted/40 px-5 opacity-50"
-            >
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-                <ChefHat className="size-5 text-primary" />
-              </div>
-              <div className="text-left">
-                <p className="text-sm font-semibold">Vào KDS</p>
-                <p className="text-xs text-muted-foreground">Màn hình bếp</p>
-              </div>
-            </button>
-          ) : (
-            <Link
-              href={kdsHref}
-              className="touch-target-lg focus-ring-standard flex h-16 items-center gap-4 rounded-xl border border-border bg-card px-5 shadow-sm transition-colors hover:bg-muted/40"
-            >
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-                <ChefHat className="size-5 text-primary" />
-              </div>
-              <div className="text-left">
-                <p className="text-sm font-semibold">Vào KDS</p>
-                <p className="text-xs text-muted-foreground">Màn hình bếp</p>
-              </div>
-            </Link>
-          )}
-        </div>
-
-        {!branchId && (canPos || canKds) && (
-          <p className="mt-3 text-xs text-muted-foreground">
-            Tài khoản chưa gắn chi nhánh — liên hệ quản lý để được phân công.
-          </p>
-        )}
-        {branchId && branchIsHq && (canPos || canKds) && (
-          <p className="mt-3 text-xs text-muted-foreground">
-            Trụ sở không có sàn POS/KDS. Vui lòng dùng trang quản trị.
-          </p>
-        )}
-      </div>
-
-      {/* HR Portal */}
-      <div>
-        <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Nhân sự
-        </p>
-        <div className="flex flex-col gap-3">
-          <Link
-            href="/employee/clock"
-            className="touch-target-lg focus-ring-standard flex h-16 items-center gap-4 rounded-xl border border-border bg-card px-5 shadow-sm transition-colors hover:bg-muted/40"
-          >
-            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-              <DoorOpen className="size-5 text-primary" />
+    <PageContainer className="space-y-6" density="compact">
+      <SectionCard className="overflow-hidden" surface="employee">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <div className="space-y-4">
+            <PageHeader
+              eyebrow="Trang chủ nhân viên"
+              title="Bắt đầu ca làm việc"
+              surface="employee"
+              density="compact"
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge tone="info">
+                {branchName ?? "Chưa gắn chi nhánh"}
+              </StatusBadge>
+              <StatusBadge tone={branchIsHq ? "warning" : "success"}>
+                {branchIsHq ? "Đang ở trụ sở" : "Chi nhánh vận hành"}
+              </StatusBadge>
             </div>
-            <div className="text-left">
-              <p className="text-sm font-semibold">Chấm công</p>
-              <p className="text-xs text-muted-foreground">
-                Chấm công vào/ra ca làm việc
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <div className="app-kpi">
+              <p className="app-section-label">Vai trò</p>
+              <p className="mt-2 text-lg font-semibold text-foreground">
+                {ROLE_LABEL_VI[claims.user_role]}
               </p>
             </div>
-          </Link>
-
-          <Link
-            href="/employee/payslip"
-            className="touch-target-lg focus-ring-standard flex h-16 items-center gap-4 rounded-xl border border-border bg-card px-5 shadow-sm transition-colors hover:bg-muted/40"
-          >
-            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-              <CreditCard className="size-5 text-primary" />
-            </div>
-            <div className="text-left">
-              <p className="text-sm font-semibold">Phiếu lương</p>
-              <p className="text-xs text-muted-foreground">
-                Xem lương & thuế TNCN
+            <div className="app-kpi">
+              <p className="app-section-label">Ca làm</p>
+              <p className="mt-2 text-lg font-semibold text-foreground">
+                Sẵn sàng vào ca
               </p>
             </div>
-          </Link>
-
-          <div className="flex h-12 items-center gap-3 rounded-lg border border-dashed border-border px-4 text-sm text-muted-foreground">
-            <Home className="size-4 shrink-0" />
-            Hồ sơ cá nhân (sắp có)
           </div>
         </div>
+      </SectionCard>
+
+      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        <SectionCard surface="employee">
+          <div className="space-y-4">
+            <div>
+              <p className="app-section-label">Việc trong ngày</p>
+              <h2 className="mt-2 text-xl font-semibold text-foreground">
+                Bắt đầu ca
+              </h2>
+            </div>
+            <div className="grid gap-3">
+              <ActionLink
+                href="/employee/clock"
+                title="Chấm công"
+                icon={<DoorOpen className="size-5" />}
+                badge="Hôm nay"
+              />
+              <ActionLink
+                href="/employee/schedule"
+                title="Lịch ca"
+                icon={<CalendarDays className="size-5" />}
+              />
+              <ActionLink
+                href="/employee/payslip"
+                title="Phiếu lương"
+                icon={<CreditCard className="size-5" />}
+              />
+              <ActionLink
+                href="/employee/profile"
+                title="Cá nhân"
+                icon={<UserRound className="size-5" />}
+              />
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard surface="employee">
+          <div className="space-y-4">
+            <div>
+              <p className="app-section-label">Không gian làm việc</p>
+              <h2 className="mt-2 text-xl font-semibold text-foreground">
+                Theo vai trò hiện tại
+              </h2>
+            </div>
+            <div className="grid gap-3">
+              {posDisabled ? (
+                <DisabledPanel
+                  title="POS chưa sẵn sàng"
+                  description={
+                    !branchId
+                      ? "Tài khoản chưa được gắn chi nhánh làm việc."
+                      : branchIsHq
+                        ? "Trụ sở không dùng quầy POS."
+                        : "Vai trò hiện tại không dùng POS."
+                  }
+                  icon={<Monitor className="size-5" />}
+                />
+              ) : (
+                <ActionLink
+                  href={posHref}
+                  title="Vào POS"
+                  icon={<Monitor className="size-5" />}
+                  badge="Vận hành"
+                />
+              )}
+
+              {kdsDisabled ? (
+                <DisabledPanel
+                  title="KDS chưa sẵn sàng"
+                  description={
+                    !branchId
+                      ? "Tài khoản chưa được gắn chi nhánh làm việc."
+                      : branchIsHq
+                        ? "Trụ sở không có line bếp để thao tác."
+                        : "Vai trò hiện tại không dùng KDS."
+                  }
+                  icon={<ChefHat className="size-5" />}
+                />
+              ) : (
+                <ActionLink
+                  href={kdsHref}
+                  title="Vào KDS"
+                  icon={<ChefHat className="size-5" />}
+                  badge="Bếp"
+                />
+              )}
+
+              {managementLinks.map((link) => (
+                <ActionLink
+                  key={link.href}
+                  href={link.href}
+                  title={link.title}
+                  icon={link.icon}
+                  badge="Quản lý"
+                />
+              ))}
+
+              {!branchId && (canPos || canKds) && (
+                <p className="rounded-2xl border border-warning/20 bg-warning/10 px-4 py-3 text-sm leading-6 text-warning">
+                  Chưa gắn chi nhánh. Liên hệ quản lý.
+                </p>
+              )}
+              {branchId && branchIsHq && (canPos || canKds) && (
+                <p className="rounded-2xl border border-warning/20 bg-warning/10 px-4 py-3 text-sm leading-6 text-warning">
+                  Trụ sở không dùng POS/KDS.
+                </p>
+              )}
+
+            </div>
+          </div>
+        </SectionCard>
       </div>
 
-      {/* Logout */}
-      <form action="/api/auth/signout" method="post" className="mt-2">
-        <button
+      <form action="/api/auth/signout" method="post">
+        <Button
           type="submit"
-          className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          variant="outline"
+          className="focus-ring-standard inline-flex items-center gap-2 rounded-full border-border/70 bg-white/72 px-4 text-muted-foreground hover:bg-white hover:text-foreground"
         >
-          <LogOut className="size-3.5" />
+          <LogOut className="size-4" />
           Đăng xuất
-        </button>
+        </Button>
       </form>
-    </div>
+    </PageContainer>
   );
 }

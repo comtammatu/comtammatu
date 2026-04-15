@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
+import {
+  buildLoginBlockedStatePath,
+  extractClaims,
+} from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Table,
@@ -10,6 +13,13 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import {
+  EmptyState,
+  PageContainer,
+  PageHeader,
+  SectionCard,
+  StatusBadge,
+} from "@/components/foundation/ui-patterns";
 
 const STATUS_LABELS: Record<string, string> = {
   present: "Có mặt",
@@ -37,7 +47,7 @@ export default async function EmployeeAttendancePage() {
   if (!session?.user) redirect("/login");
 
   const claims = extractClaims(session.user.app_metadata);
-  if (!claims) redirect("/login");
+  if (!claims) redirect(buildLoginBlockedStatePath());
 
   // Find employee
   const { data: employee } = await supabase
@@ -49,9 +59,13 @@ export default async function EmployeeAttendancePage() {
 
   if (!employee) {
     return (
-      <div className="p-8 text-center text-muted-foreground">
-        Không tìm thấy hồ sơ nhân viên. Liên hệ quản lý.
-      </div>
+      <PageContainer density="compact">
+        <EmptyState
+          title="Không tìm thấy hồ sơ nhân viên"
+          surface="employee"
+          density="compact"
+        />
+      </PageContainer>
     );
   }
 
@@ -78,84 +92,144 @@ export default async function EmployeeAttendancePage() {
   const halfDay = attendance.filter((r) => r.status === "half_day").length;
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 px-4 py-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Chấm công</h1>
-        <p className="mt-1 text-sm text-muted-foreground">30 ngày gần nhất</p>
-      </div>
+    <PageContainer className="mx-auto max-w-lg" density="compact">
+      <PageHeader
+        title="Chấm công"
+        surface="employee"
+        density="compact"
+      />
 
-      {/* Summary */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-lg border p-3 text-center">
-          <p className="text-2xl font-bold text-green-600">{present}</p>
+        <SectionCard className="text-center" surface="employee" density="compact">
+          <p className="text-2xl font-bold text-success">{present}</p>
           <p className="text-xs text-muted-foreground">Có mặt</p>
-        </div>
-        <div className="rounded-lg border p-3 text-center">
-          <p className="text-2xl font-bold text-red-600">{absent}</p>
+        </SectionCard>
+        <SectionCard className="text-center" surface="employee" density="compact">
+          <p className="text-2xl font-bold text-destructive">{absent}</p>
           <p className="text-xs text-muted-foreground">Vắng</p>
-        </div>
-        <div className="rounded-lg border p-3 text-center">
-          <p className="text-2xl font-bold text-blue-600">{halfDay}</p>
+        </SectionCard>
+        <SectionCard className="text-center" surface="employee" density="compact">
+          <p className="text-2xl font-bold text-info">{halfDay}</p>
           <p className="text-xs text-muted-foreground">Nửa ngày</p>
-        </div>
+        </SectionCard>
       </div>
 
-      {/* Detail */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Ngày</TableHead>
-              <TableHead>Ca</TableHead>
-              <TableHead>Vào</TableHead>
-              <TableHead>Ra</TableHead>
-              <TableHead>TT</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {attendance.length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="py-8 text-center text-muted-foreground"
+      <SectionCard className="overflow-hidden" surface="employee" density="compact">
+        {attendance.length === 0 ? (
+          <div className="py-8 text-center text-muted-foreground">
+            Chưa có dữ liệu chấm công.
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-3 md:hidden">
+              {attendance.map((r) => (
+                <div
+                  key={r.id}
+                  className="rounded-2xl border border-border/70 bg-white/82 p-4"
                 >
-                  Chưa có dữ liệu chấm công.
-                </TableCell>
-              </TableRow>
-            )}
-            {attendance.map((r) => (
-              <TableRow key={r.id}>
-                <TableCell className="font-mono text-sm">{r.date}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {r.shifts?.name ?? "—"}
-                </TableCell>
-                <TableCell className="font-mono text-sm">
-                  {r.check_in
-                    ? new Date(r.check_in).toLocaleTimeString("vi-VN", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "—"}
-                </TableCell>
-                <TableCell className="font-mono text-sm">
-                  {r.check_out
-                    ? new Date(r.check_out).toLocaleTimeString("vi-VN", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "—"}
-                </TableCell>
-                <TableCell>
-                  <Badge variant={STATUS_VARIANTS[r.status] ?? "secondary"}>
-                    {STATUS_LABELS[r.status] ?? r.status}
-                  </Badge>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-mono text-sm font-semibold text-foreground">
+                        {r.date}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {r.shifts?.name ?? "Không có ca"}
+                      </p>
+                    </div>
+                    <StatusBadge
+                      tone={
+                        r.status === "present"
+                          ? "success"
+                          : r.status === "late"
+                            ? "warning"
+                            : r.status === "absent"
+                              ? "danger"
+                              : "info"
+                      }
+                    >
+                      {STATUS_LABELS[r.status] ?? r.status}
+                    </StatusBadge>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Vào ca
+                      </p>
+                      <p className="mt-1 font-mono text-foreground">
+                        {r.check_in
+                          ? new Date(r.check_in).toLocaleTimeString("vi-VN", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Ra ca
+                      </p>
+                      <p className="mt-1 font-mono text-foreground">
+                        {r.check_out
+                          ? new Date(r.check_out).toLocaleTimeString("vi-VN", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Ngày</TableHead>
+                    <TableHead>Ca</TableHead>
+                    <TableHead>Vào</TableHead>
+                    <TableHead>Ra</TableHead>
+                    <TableHead>TT</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {attendance.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-mono text-sm">{r.date}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {r.shifts?.name ?? "—"}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {r.check_in
+                          ? new Date(r.check_in).toLocaleTimeString("vi-VN", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {r.check_out
+                          ? new Date(r.check_out).toLocaleTimeString("vi-VN", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={STATUS_VARIANTS[r.status] ?? "secondary"}>
+                          {STATUS_LABELS[r.status] ?? r.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        )}
+      </SectionCard>
+    </PageContainer>
   );
 }
 

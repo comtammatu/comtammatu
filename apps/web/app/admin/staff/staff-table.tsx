@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { toggleStaffActive } from "./actions";
 import { StaffFormDialog } from "./staff-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -66,7 +67,83 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
 
   return (
     <>
-      <div className="rounded-md border">
+      {staff.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border px-6 py-16 text-center">
+          <Users className="mx-auto size-8 text-muted-foreground" />
+          <p className="mt-3 text-sm font-medium">Chưa có nhân viên nào</p>
+        </div>
+      ) : null}
+
+      <div className="space-y-3 md:hidden">
+        {staff.map((member) => (
+          <div
+            key={member.id}
+            className={`rounded-2xl border border-border/70 bg-background p-4 transition-colors ${isPending ? "opacity-60" : ""}`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-medium">{member.full_name}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {member.branch_name ?? "—"}
+                </p>
+              </div>
+              <Badge
+                variant={member.is_active !== false ? "default" : "outline"}
+              >
+                {member.is_active !== false
+                  ? ACTIVE_STATE_LABELS_VI.active
+                  : ACTIVE_STATE_LABELS_VI.inactive}
+              </Badge>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-muted-foreground">Vai trò</p>
+                <p className="mt-1">
+                  {ROLE_LABELS[member.role as keyof typeof ROLE_LABELS] ??
+                    member.role}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">SĐT</p>
+                <p className="mt-1">{member.phone ?? "—"}</p>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center justify-end">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="rounded-full">
+                    <MoreHorizontal className="size-4" />
+                    Tác vụ
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setEditStaff(member)}>
+                    <Pencil className="mr-2 size-4" />
+                    Chỉnh sửa
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => handleToggleActive(member.id)}
+                  >
+                    {member.is_active !== false ? (
+                      <>
+                        <ToggleLeft className="mr-2 size-4" />
+                        Vô hiệu hóa
+                      </>
+                    ) : (
+                      <>
+                        <ToggleRight className="mr-2 size-4" />
+                        Kích hoạt
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden rounded-md border md:block">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50 hover:bg-muted/50">
@@ -122,7 +199,9 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
                   <Badge
                     variant={member.is_active !== false ? "default" : "outline"}
                   >
-                    {member.is_active !== false ? "Hoạt động" : "Ngừng"}
+                    {member.is_active !== false
+                      ? ACTIVE_STATE_LABELS_VI.active
+                      : ACTIVE_STATE_LABELS_VI.inactive}
                   </Badge>
                 </TableCell>
                 <TableCell>

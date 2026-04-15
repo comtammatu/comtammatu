@@ -1,4 +1,9 @@
 import { fetchPayrollEntries } from "../../payroll-actions";
+import {
+  EmptyState,
+  PageContainer,
+  PageHeader,
+} from "@/components/foundation/ui-patterns";
 import { PayrollDetailClient } from "./payroll-detail-client";
 
 export default async function PayrollDetailPage({
@@ -11,7 +16,12 @@ export default async function PayrollDetailPage({
 
   if (!id || id <= 0) {
     return (
-      <p className="p-8 text-center text-muted-foreground">ID không hợp lệ</p>
+      <PageContainer>
+        <EmptyState
+          title="ID không hợp lệ"
+          description="Không thể mở chi tiết bảng lương vì mã kỳ lương không đúng."
+        />
+      </PageContainer>
     );
   }
 
@@ -21,18 +31,14 @@ export default async function PayrollDetailPage({
     : [];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          Chi tiết bảng lương
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Kỳ lương #{periodId}
-        </p>
-      </div>
-
+    <PageContainer>
+      <PageHeader
+        eyebrow="Nhân sự & lương"
+        title="Chi tiết bảng lương"
+        description={`Kỳ lương #${periodId}`}
+      />
       <PayrollDetailClient periodId={id} initialEntries={entries} />
-    </div>
+    </PageContainer>
   );
 }
 

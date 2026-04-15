@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
+import { getSurfacePanelClassName } from "@comtammatu/ui";
 import { SettingsSectionNav } from "./settings-section-nav";
 
 export default async function InventorySettingsLayout({
@@ -19,7 +20,14 @@ export default async function InventorySettingsLayout({
 
   return (
     <div className="space-y-6">
-      <SettingsSectionNav role={role} />
+      <div
+        className={getSurfacePanelClassName(
+          "inventory",
+          "rounded-3xl bg-card/95 px-4 py-4 sm:px-5",
+        )}
+      >
+        <SettingsSectionNav role={role} />
+      </div>
       <div>{children}</div>
     </div>
   );

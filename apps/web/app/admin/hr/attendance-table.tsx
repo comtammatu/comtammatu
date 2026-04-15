@@ -241,16 +241,16 @@ function SummaryView({ data }: { data: AttendanceSummaryRow[] }) {
             <TableRow key={row.employee_id}>
               <TableCell className="font-mono">{row.employee_code}</TableCell>
               <TableCell>{row.full_name}</TableCell>
-              <TableCell className="text-center font-medium text-green-600">
+              <TableCell className="text-center font-medium text-success">
                 {row.present}
               </TableCell>
-              <TableCell className="text-center font-medium text-yellow-600">
+              <TableCell className="text-center font-medium text-warning">
                 {row.late}
               </TableCell>
-              <TableCell className="text-center font-medium text-red-600">
+              <TableCell className="text-center font-medium text-destructive">
                 {row.absent}
               </TableCell>
-              <TableCell className="text-center font-medium text-blue-600">
+              <TableCell className="text-center font-medium text-info">
                 {row.half_day}
               </TableCell>
               <TableCell className="text-center font-bold">

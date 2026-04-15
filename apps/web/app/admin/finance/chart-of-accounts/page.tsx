@@ -1,4 +1,8 @@
 import { fetchChartOfAccounts } from "../chart-of-accounts-actions";
+import {
+  PageContainer,
+  PageHeader,
+} from "@/components/foundation/ui-patterns";
 import { ChartOfAccountsClient } from "./coa-client";
 
 export default async function ChartOfAccountsPage() {
@@ -6,18 +10,13 @@ export default async function ChartOfAccountsPage() {
   const accounts = result.success ? ((result.data ?? []) as AccountRow[]) : [];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          Hệ thống tài khoản
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Hệ thống tài khoản kế toán theo chuẩn VAS
-        </p>
-      </div>
-
+    <PageContainer>
+      <PageHeader
+        eyebrow="Tài chính"
+        title="Hệ thống tài khoản"
+      />
       <ChartOfAccountsClient initialAccounts={accounts} />
-    </div>
+    </PageContainer>
   );
 }
 

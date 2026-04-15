@@ -1,9 +1,10 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
-import { fetchExpiryAlerts } from "@/admin/inventory/actions";
-import { ExpiryListClient } from "@/admin/inventory/expiry/expiry-list-client";
+import { fetchExpiryAlerts } from "@/inventory/actions";
+import { ExpiryListClient } from "@/inventory/expiry/expiry-list-client";
 import { PageHeader } from "../../_components/shared";
-import type { BranchOption, ExpiryAlertRow } from "@/admin/inventory/page";
+import type { BranchOption, ExpiryAlertRow } from "@/inventory/page";
+import { tRoute } from "../../_lib/dictionary";
 
 export default async function ExpirySettingsPage() {
   const supabase = await createClient();
@@ -29,8 +30,7 @@ export default async function ExpirySettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Hạn sử dụng"
-        description="Theo dõi và xử lý hàng hết hạn"
+        title={tRoute("/inventory/settings/expiry", "heading")}
       />
       <ExpiryListClient
         initial={alerts}

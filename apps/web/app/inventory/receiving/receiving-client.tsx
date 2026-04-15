@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SectionCard } from "@/components/foundation/ui-patterns";
 import {
   ArrowRight,
   ClipboardCheck,
@@ -17,7 +18,10 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { StatusBadge } from "../_components/shared";
+import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { PageHeader, StatusBadge } from "../_components/shared";
+import { TableEmptyStateRow } from "../_components/table-empty-state-row";
+import { tNav } from "../_lib/dictionary";
 import { formatVND } from "../_lib/format";
 import type { RecentActivityItem } from "../procurement-actions";
 
@@ -58,66 +62,68 @@ export function ReceivingClient({
   invoiceCount,
   recentActivity,
 }: ReceivingProps) {
+  const panelClassName = getSurfacePanelClassName(
+    "inventory",
+    "ambient-shadow",
+  );
   const steps = [
     {
       step: 1,
       icon: ShoppingCart,
-      label: "Đơn đặt hàng (PO)",
+      label: tNav("purchaseOrders", "heading"),
       count: poCount,
       sub: "Đơn đang chờ duyệt/gửi",
       href: "/inventory/purchase-orders",
-      btnLabel: "Quản lý Đơn đặt hàng",
-      color: "var(--md-primary)",
+      btnLabel: "Quản lý đơn đặt hàng NCC",
+      toneClassName: "text-primary",
+      stepClassName: "bg-primary text-primary-foreground",
+      ctaClassName: "border-primary/15 bg-primary/8 text-primary",
     },
     {
       step: 2,
       icon: ClipboardCheck,
-      label: "Nhận hàng (GRN)",
+      label: tNav("grn", "heading"),
       count: grnCount,
       sub: "Phiếu đang chờ xác nhận",
       href: "/inventory/grn",
-      btnLabel: "Quản lý Nhận hàng",
-      color: "var(--md-secondary)",
+      btnLabel: "Quản lý phiếu nhập kho",
+      toneClassName: "text-success",
+      stepClassName: "bg-success text-success-foreground",
+      ctaClassName: "border-success/20 bg-success/10 text-success",
     },
     {
       step: 3,
       icon: FileText,
-      label: "Hóa đơn (Invoice)",
+      label: tNav("supplierInvoices", "heading"),
       count: invoiceCount,
       sub: "Hóa đơn cần đối soát 3-way",
       href: "/inventory/supplier-invoices",
-      btnLabel: "Quản lý Hóa đơn",
-      color: "var(--md-tertiary)",
+      btnLabel: "Quản lý hóa đơn NCC",
+      toneClassName: "text-info",
+      stepClassName: "bg-info text-info-foreground",
+      ctaClassName: "border-info/20 bg-info/10 text-info",
     },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2
-          className="text-2xl font-bold tracking-tight"
-          style={{ color: "var(--md-on-surface)" }}
-        >
-          Trung tâm Nhập kho
-        </h2>
-        <p
-          className="mt-1 text-sm"
-          style={{ color: "var(--md-on-surface-variant)", opacity: 0.8 }}
-        >
-          Quản lý quy trình cung ứng từ đặt hàng đến đối soát hóa đơn.
-        </p>
-      </div>
+      <PageHeader
+        title={tNav("receiving", "heading")}
+        description="Theo dõi chuỗi PO, GRN và hóa đơn nhà cung cấp."
+      />
 
       {/* Workflow Stepper Bento Grid */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {steps.map((item) => {
           const Icon = item.icon;
           return (
-            <div
+            <SectionCard
               key={item.step}
-              className="group relative overflow-hidden rounded-xl p-8 shadow-sm transition-shadow hover:shadow-md ambient-shadow"
-              style={{ backgroundColor: "var(--md-surface-lowest)" }}
+              className={cn(
+                panelClassName,
+                "group relative overflow-hidden rounded-3xl bg-card shadow-sm transition-shadow hover:shadow-md",
+              )}
+              density="touch"
             >
               {/* Watermark icon */}
               <div className="absolute right-4 top-4 opacity-5 transition-opacity group-hover:opacity-10">
@@ -127,8 +133,10 @@ export function ReceivingClient({
               {/* Step number + label */}
               <div className="mb-6 flex items-center gap-3">
                 <span
-                  className="flex size-8 items-center justify-center rounded-full font-bold text-white"
-                  style={{ backgroundColor: "var(--md-primary)" }}
+                  className={cn(
+                    "flex size-8 items-center justify-center rounded-full font-bold",
+                    item.stepClassName,
+                  )}
                 >
                   {item.step}
                 </span>
@@ -140,33 +148,28 @@ export function ReceivingClient({
               {/* Count */}
               <div className="mb-8">
                 <span
-                  className="text-4xl font-black tracking-tighter"
-                  style={{ color: item.color }}
+                  className={cn(
+                    "text-4xl font-black tracking-tighter",
+                    item.toneClassName,
+                  )}
                 >
                   {String(item.count).padStart(2, "0")}
                 </span>
-                <p
-                  className="mt-1 text-sm"
-                  style={{ color: "var(--md-on-surface-variant)" }}
-                >
-                  {item.sub}
-                </p>
+                <p className="mt-1 text-sm text-muted-foreground">{item.sub}</p>
               </div>
 
               {/* CTA button */}
               <Link
                 href={item.href}
-                className="flex w-full whitespace-nowrap items-center justify-center gap-2 rounded-full border-b-2 py-3 text-sm font-bold transition-all"
-                style={{
-                  backgroundColor: "var(--md-surface-low)",
-                  color: item.color,
-                  borderColor: `color-mix(in srgb, ${item.color} 10%, transparent)`,
-                }}
+                className={cn(
+                  "focus-ring-standard flex w-full whitespace-nowrap items-center justify-center gap-2 rounded-full border py-3 text-sm font-bold transition-all",
+                  item.ctaClassName,
+                )}
               >
                 {item.btnLabel}
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
               </Link>
-            </div>
+            </SectionCard>
           );
         })}
       </div>
@@ -179,26 +182,20 @@ export function ReceivingClient({
             <h3 className="text-lg font-bold">Hoạt động gần đây</h3>
             <button
               type="button"
-              className="text-sm font-semibold hover:underline"
-              style={{ color: "var(--md-primary)" }}
+              className="focus-ring-standard rounded-sm text-sm font-semibold text-primary hover:underline"
             >
               Xem tất cả
             </button>
           </div>
           <div
-            className="overflow-hidden rounded-xl ambient-shadow"
-            style={{ backgroundColor: "var(--md-surface-lowest)" }}
+            className={cn(
+              panelClassName,
+              "overflow-hidden rounded-3xl bg-card",
+            )}
           >
             <Table>
               <TableHeader>
-                <TableRow
-                  style={{
-                    backgroundColor:
-                      "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
-                    borderColor:
-                      "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-                  }}
-                >
+                <TableRow className="bg-muted/40">
                   {[
                     "Mã Phiếu",
                     "Nhà Cung Cấp",
@@ -208,11 +205,7 @@ export function ReceivingClient({
                   ].map((h) => (
                     <TableHead
                       key={h}
-                      className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wide ${h === "Tổng Tiền" ? "text-right" : ""}`}
-                      style={{
-                        color: "var(--md-on-surface-variant)",
-                        opacity: 0.6,
-                      }}
+                      className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wide text-muted-foreground ${h === "Tổng Tiền" ? "text-right" : ""}`}
                     >
                       {h}
                     </TableHead>
@@ -221,30 +214,21 @@ export function ReceivingClient({
               </TableHeader>
               <TableBody>
                 {recentActivity.length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={5}
-                      className="px-6 py-8 text-center text-sm"
-                      style={{ color: "var(--md-on-surface-variant)" }}
-                    >
-                      Chưa có hoạt động nào
-                    </TableCell>
-                  </TableRow>
+                  <TableEmptyStateRow
+                    colSpan={5}
+                    title="Chưa có hoạt động nào"
+                    description="PO, GRN và hóa đơn mới sẽ xuất hiện ở đây khi phát sinh."
+                  />
                 )}
                 {recentActivity.map((item) => (
                   <TableRow
                     key={item.code}
-                    className="transition-colors"
-                    style={{
-                      borderColor:
-                        "color-mix(in srgb, var(--md-surface-low) 100%, transparent)",
-                    }}
+                    className="border-border/40 transition-colors"
                   >
                     <TableCell className="px-6 py-4 font-mono text-sm font-medium">
                       <Link
                         href={activityHref(item)}
-                        className="hover:underline"
-                        style={{ color: "var(--md-primary)" }}
+                        className="focus-ring-standard rounded-sm text-primary hover:underline"
                       >
                         {item.code}
                       </Link>
@@ -252,19 +236,13 @@ export function ReceivingClient({
                     <TableCell className="px-6 py-4 text-sm font-semibold">
                       {item.supplier}
                     </TableCell>
-                    <TableCell
-                      className="px-6 py-4 text-sm"
-                      style={{ color: "var(--md-on-surface-variant)" }}
-                    >
+                    <TableCell className="px-6 py-4 text-sm text-muted-foreground">
                       {formatActivityDate(item.date)}
                     </TableCell>
                     <TableCell className="px-6 py-4">
                       <StatusBadge status={item.status} />
                     </TableCell>
-                    <TableCell
-                      className="px-6 py-4 text-right text-sm font-bold"
-                      style={{ color: "var(--md-primary)" }}
-                    >
+                    <TableCell className="px-6 py-4 text-right text-sm font-bold text-primary">
                       {item.total != null ? `${formatVND(item.total)}đ` : "—"}
                     </TableCell>
                   </TableRow>
@@ -277,38 +255,19 @@ export function ReceivingClient({
         {/* Sidebar */}
         <div className="space-y-4">
           {/* Quick Actions */}
-          <div
-            className="rounded-xl p-5 ambient-shadow"
-            style={{ backgroundColor: "var(--md-surface-lowest)" }}
-          >
-            <h4
-              className="mb-3 text-sm font-semibold"
-              style={{ color: "var(--md-on-surface)" }}
-            >
-              Thao tác nhanh
-            </h4>
+          <div className={cn(panelClassName, "rounded-3xl bg-card p-5")}>
+            <h4 className="mb-3 text-sm font-semibold">Thao tác nhanh</h4>
             <div className="space-y-2">
               <Link
                 href="/inventory/purchase-orders/new"
-                className="flex w-full items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors"
-                style={{
-                  borderColor:
-                    "color-mix(in srgb, var(--md-outline-variant) 30%, transparent)",
-                }}
+                className="focus-ring-standard flex w-full items-center gap-2 rounded-full border border-border/60 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
               >
-                <Zap
-                  className="size-4"
-                  style={{ color: "var(--md-primary)" }}
-                />
+                <Zap className="size-4 text-primary" />
                 Tạo PO nhanh
               </Link>
               <button
                 type="button"
-                className="flex w-full items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors"
-                style={{
-                  borderColor:
-                    "color-mix(in srgb, var(--md-outline-variant) 30%, transparent)",
-                }}
+                className="focus-ring-standard flex w-full items-center gap-2 rounded-full border border-border/60 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
               >
                 Nhập hàng không qua PO
               </button>
@@ -316,29 +275,14 @@ export function ReceivingClient({
           </div>
 
           {/* Tip Card */}
-          <div
-            className="rounded-xl p-5"
-            style={{
-              backgroundColor:
-                "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
-            }}
-          >
+          <div className="rounded-3xl border border-primary/10 bg-primary/5 p-5">
             <div className="flex items-center gap-2">
-              <Lightbulb
-                className="size-4"
-                style={{ color: "var(--md-primary)" }}
-              />
-              <p
-                className="text-xs font-semibold"
-                style={{ color: "var(--md-on-surface-variant)" }}
-              >
+              <Lightbulb className="size-4 text-primary" />
+              <p className="text-xs font-semibold text-muted-foreground">
                 Mẹo quản lý
               </p>
             </div>
-            <p
-              className="mt-2 text-sm"
-              style={{ color: "var(--md-on-surface-variant)" }}
-            >
+            <p className="mt-2 text-sm text-muted-foreground">
               Sử dụng quy trình 3-way matching để đảm bảo số lượng nhận thực tế
               khớp với đơn đặt và hóa đơn nhà cung cấp.
             </p>

@@ -17,7 +17,13 @@ import {
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Loader2 } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  CircleDollarSign,
+  Loader2,
+  ShieldCheck,
+} from "lucide-react";
 import { closePosSession } from "./actions";
 
 interface CloseSummary {
@@ -92,10 +98,17 @@ export function CloseSessionDialog({
   );
 
   const diffColor = (diff: number) => {
-    if (diff === 0) return "text-green-600";
-    if (Math.abs(diff) <= 50000) return "text-yellow-600";
-    return "text-red-600";
+    if (diff === 0) return "text-success";
+    if (Math.abs(diff) <= 50000) return "text-warning";
+    return "text-destructive";
   };
+  const closeProgressPercent = summary
+    ? 100
+    : isPending
+      ? 72
+      : closingCash !== ""
+        ? 46
+        : 18;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -113,8 +126,30 @@ export function CloseSessionDialog({
 
         {summary ? (
           <div className="flex flex-col gap-3">
-            <div className="rounded-lg border p-3">
-              <div className="flex flex-col gap-2 text-sm">
+            <div className="ui-flow-panel p-4">
+              <div className="relative space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="app-section-label">Tổng kết ca</p>
+                    <p className="mt-1 text-base font-semibold">
+                      Ca đã được đối soát, chỉ còn bước xác nhận cuối.
+                    </p>
+                  </div>
+                  <div className="rounded-full border border-success/15 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success shadow-sm">
+                    100%
+                  </div>
+                </div>
+                <div className="ui-flow-progress">
+                  <div
+                    className="ui-flow-progress-bar"
+                    style={{ width: "100%" }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="ui-flow-panel p-4">
+              <div className="relative flex flex-col gap-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Tiền đầu ca</span>
                   <span className="font-medium">
@@ -153,17 +188,111 @@ export function CloseSessionDialog({
                   <span className="text-muted-foreground">Số đơn hàng</span>
                   <span className="font-medium">{summary.order_count}</span>
                 </div>
+                <div
+                  className={cn(
+                    "rounded-2xl border px-3 py-2 text-xs font-medium",
+                    summary.cash_difference === 0
+                      ? "border-success/20 bg-success/10 text-success"
+                      : Math.abs(summary.cash_difference) <= 50000
+                        ? "border-warning/20 bg-warning/10 text-warning"
+                        : "border-destructive/20 bg-destructive/10 text-destructive",
+                  )}
+                >
+                  {summary.cash_difference === 0
+                    ? "Số dư khớp hoàn toàn, có thể chốt ca."
+                    : Math.abs(summary.cash_difference) <= 50000
+                      ? "Có chênh lệch nhỏ, nên xác nhận lại trước khi chốt."
+                      : "Chênh lệch lớn, cần kiểm tra kỹ tiền mặt trước khi xác nhận."}
+                </div>
               </div>
             </div>
 
             <DialogFooter>
-              <Button className="w-full" size="lg" onClick={handleConfirm}>
+              <Button
+                className="w-full rounded-2xl shadow-sm transition-transform hover:translate-y-[-1px]"
+                size="lg"
+                onClick={handleConfirm}
+              >
+                <CheckCircle2 className="mr-2 size-4" />
                 Xác nhận
               </Button>
             </DialogFooter>
           </div>
         ) : (
           <div className="flex flex-col gap-4">
+            <div className="ui-flow-panel p-4">
+              <div className="relative space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="app-section-label">Đóng ca</p>
+                    <p className="mt-1 text-base font-semibold">
+                      Nhập tiền mặt cuối ca để hệ thống đối chiếu và chốt phiên.
+                    </p>
+                  </div>
+                  <div className="rounded-full border border-primary/15 bg-white/82 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
+                    {String(Math.round(closeProgressPercent))}%
+                  </div>
+                </div>
+                <div className="ui-flow-progress">
+                  <div
+                    className="ui-flow-progress-bar"
+                    data-indeterminate={isPending ? "true" : undefined}
+                    style={isPending ? undefined : { width: `${closeProgressPercent}%` }}
+                  />
+                </div>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <div
+                    className="ui-flow-step"
+                    data-state={closingCash !== "" ? "done" : "current"}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="ui-flow-stage-index">
+                        <CircleDollarSign className="size-3.5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">Nhập tiền</p>
+                        <p className="text-xs leading-5 text-muted-foreground">
+                          Ghi nhận số dư quầy cuối ca
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    className="ui-flow-step"
+                    data-state={isPending ? "current" : closingCash !== "" ? "done" : "todo"}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="ui-flow-stage-index">
+                        <ShieldCheck className="size-3.5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">Đối chiếu</p>
+                        <p className="text-xs leading-5 text-muted-foreground">
+                          Hệ thống tính số dự kiến và chênh lệch
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    className="ui-flow-step"
+                    data-state={summary ? "done" : "todo"}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="ui-flow-stage-index">
+                        <AlertTriangle className="size-3.5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">Xác nhận</p>
+                        <p className="text-xs leading-5 text-muted-foreground">
+                          Chốt phiên sau khi kiểm tra đủ
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="flex flex-col gap-2">
               <Label htmlFor="closing-cash">Tiền mặt cuối ca (VNĐ)</Label>
               <Input
@@ -191,12 +320,14 @@ export function CloseSessionDialog({
             <DialogFooter>
               <Button
                 variant="outline"
+                className="rounded-2xl"
                 onClick={() => onOpenChange(false)}
                 disabled={isPending}
               >
                 Hủy
               </Button>
               <Button
+                className="rounded-2xl"
                 onClick={handleClose}
                 disabled={isPending || closingCash === ""}
               >

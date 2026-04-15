@@ -9,6 +9,8 @@ import {
   Search,
   Wallet,
 } from "lucide-react";
+import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Table,
   TableBody,
@@ -17,7 +19,8 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { StatusBadge } from "../_components/shared";
+import { PageHeader, StatusBadge } from "../_components/shared";
+import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { formatVND, formatQty } from "../_lib/format";
 import { AdjustStockDialog } from "./adjust-stock-dialog";
 
@@ -39,15 +42,14 @@ export type StockIngredient = {
 
 type StockFilter = "all" | "in_stock" | "low" | "out";
 
-// Category → icon bg color mapping
-const categoryColors: Record<string, string> = {
-  Thịt: "var(--md-error-container)",
-  Gạo: "var(--md-primary-fixed)",
-  "Gia vị": "var(--md-secondary-container)",
-  "Rau củ": "var(--md-secondary-container)",
-  Trứng: "var(--md-primary-fixed)",
-  "Chế biến": "var(--md-surface-high)",
-  Dầu: "var(--md-surface-high)",
+const categoryClasses: Record<string, string> = {
+  Thịt: "bg-destructive/12 text-destructive",
+  Gạo: "bg-primary/10 text-primary",
+  "Gia vị": "bg-success/12 text-success",
+  "Rau củ": "bg-success/12 text-success",
+  Trứng: "bg-primary/10 text-primary",
+  "Chế biến": "bg-muted text-muted-foreground",
+  Dầu: "bg-muted text-muted-foreground",
 };
 
 const stockFilterOptions: { value: StockFilter; label: string }[] = [
@@ -65,6 +67,10 @@ export function StockClient({
   branchId: number;
 }) {
   const router = useRouter();
+  const panelClassName = getSurfacePanelClassName(
+    "inventory",
+    "ambient-shadow",
+  );
   const [activeCategory, setActiveCategory] = useState("Tất cả");
   const [viewMode, setViewMode] = useState<"stats" | "detail">("stats");
   const [searchQuery, setSearchQuery] = useState("");
@@ -117,67 +123,64 @@ export function StockClient({
   const lowCount = ingredients.filter(
     (i) => i.status === "low" || i.status === "out",
   ).length;
+  const inStockCount = ingredients.filter(
+    (i) => i.status === "normal" || i.status === "over",
+  ).length;
+  const updatedAtLabel = new Intl.DateTimeFormat("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+  }).format(new Date());
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-end justify-between">
-        <div>
-          <h2
-            className="text-2xl font-bold tracking-tight"
-            style={{ color: "var(--md-on-surface)" }}
-          >
-            Quản lý Tồn kho
-          </h2>
-        </div>
-        <div
-          className="flex rounded-xl p-1"
-          style={{ backgroundColor: "var(--md-surface-low)" }}
-        >
-          <button
-            type="button"
-            onClick={() => setViewMode("stats")}
-            className="rounded-full px-4 py-2 text-xs font-semibold transition-colors"
-            style={
-              viewMode === "stats"
-                ? {
-                    backgroundColor: "white",
-                    color: "var(--md-primary)",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                  }
-                : { color: "var(--md-outline)" }
-            }
-          >
-            Thống kê
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("detail")}
-            className="rounded-full px-4 py-2 text-xs font-semibold transition-colors"
-            style={
-              viewMode === "detail"
-                ? {
-                    backgroundColor: "white",
-                    color: "var(--md-primary)",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                  }
-                : { color: "var(--md-outline)" }
-            }
-          >
-            Chi tiết
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Kho hàng"
+        title="Quản lý tồn kho"
+        description="Giá trị tồn, cảnh báo thiếu, điều chỉnh nhanh."
+        actions={
+          <div className="flex rounded-xl bg-muted p-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode("stats")}
+              className={cn(
+                "rounded-full px-4",
+                viewMode === "stats"
+                  ? "bg-background text-primary shadow-sm hover:bg-background"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Thống kê
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode("detail")}
+              className={cn(
+                "rounded-full px-4",
+                viewMode === "detail"
+                  ? "bg-background text-primary shadow-sm hover:bg-background"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Chi tiết
+            </Button>
+          </div>
+        }
+      />
 
       {/* Bento Grid: Hero + Filters/Alerts */}
       <div className="grid grid-cols-12 gap-6">
         {/* Inventory Value Hero Card */}
         <div
-          className="group relative col-span-12 flex flex-col justify-between overflow-hidden rounded-3xl p-6 text-white shadow-xl lg:col-span-4"
-          style={{
-            background:
-              "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-          }}
+          className={cn(
+            panelClassName,
+            "group relative col-span-12 flex flex-col justify-between overflow-hidden rounded-3xl border-primary/15 bg-gradient-to-br from-primary to-primary/70 p-6 text-primary-foreground shadow-xl lg:col-span-4",
+          )}
         >
           <div className="absolute -right-10 -top-10 size-40 rounded-full bg-white/10 blur-3xl transition-all duration-500 group-hover:bg-white/20" />
           <div>
@@ -192,21 +195,21 @@ export function StockClient({
               <span className="ml-1 text-lg font-medium opacity-80">₫</span>
             </div>
             <div className="text-xs font-medium opacity-60">
-              Cập nhật: 10:24 AM Hôm nay
+              Cập nhật: {updatedAtLabel}
             </div>
           </div>
           <div className="mt-8 flex gap-3">
             <div className="flex-1 rounded-2xl bg-white/10 p-3 backdrop-blur-md">
               <div className="text-label font-semibold uppercase opacity-60">
-                Tháng này
+                Mặt hàng
               </div>
-              <div className="text-lg font-bold">+12%</div>
+              <div className="text-lg font-bold">{ingredients.length}</div>
             </div>
             <div className="flex-1 rounded-2xl bg-white/10 p-3 backdrop-blur-md">
               <div className="text-label font-semibold uppercase opacity-60">
-                Lượt nhập
+                Còn hàng
               </div>
-              <div className="text-lg font-bold">24</div>
+              <div className="text-lg font-bold">{inStockCount}</div>
             </div>
           </div>
         </div>
@@ -215,13 +218,12 @@ export function StockClient({
         <div className="col-span-12 grid grid-cols-2 gap-4 lg:col-span-8">
           {/* Category Filter Pills */}
           <div
-            className="flex flex-col justify-center rounded-3xl p-6"
-            style={{ backgroundColor: "var(--md-surface-low)" }}
+            className={cn(
+              panelClassName,
+              "flex flex-col justify-center rounded-3xl bg-muted p-6",
+            )}
           >
-            <div
-              className="mb-4 text-xs font-semibold uppercase"
-              style={{ color: "var(--md-outline)" }}
-            >
+            <div className="mb-4 text-xs font-semibold uppercase text-muted-foreground">
               Phân loại nhanh
             </div>
             <div className="flex flex-wrap gap-2">
@@ -230,19 +232,12 @@ export function StockClient({
                   key={cat}
                   type="button"
                   onClick={() => setActiveCategory(cat)}
-                  className="rounded-full px-4 py-2 text-xs font-semibold transition-colors"
-                  style={
+                  className={cn(
+                    "focus-ring-standard rounded-full px-4 py-2 text-xs font-semibold transition-colors",
                     activeCategory === cat
-                      ? {
-                          backgroundColor: "var(--md-primary)",
-                          color: "var(--md-on-primary)",
-                        }
-                      : {
-                          backgroundColor: "white",
-                          color: "var(--md-on-surface)",
-                          boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-                        }
-                  }
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-white text-foreground shadow-sm",
+                  )}
                 >
                   {cat}
                 </button>
@@ -252,30 +247,19 @@ export function StockClient({
 
           {/* Low Stock Alert */}
           <div
-            className="relative flex flex-col justify-center overflow-hidden rounded-3xl p-6"
-            style={{ backgroundColor: "var(--md-surface-low)" }}
+            className={cn(
+              panelClassName,
+              "relative flex flex-col justify-center overflow-hidden rounded-3xl bg-muted p-6",
+            )}
           >
-            <div
-              className="mb-2 text-xs font-semibold uppercase"
-              style={{ color: "var(--md-outline)" }}
-            >
+            <div className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
               Cảnh báo tồn kho
             </div>
             <div className="flex items-end gap-2">
-              <span
-                className="text-3xl font-extrabold"
-                style={{ color: "var(--md-error)" }}
-              >
+              <span className="text-3xl font-extrabold text-destructive">
                 {String(lowCount).padStart(2, "0")}
               </span>
-              <span
-                className="mb-1.5 border-b pb-0.5 text-xs font-medium"
-                style={{
-                  color: "var(--md-on-surface-variant)",
-                  borderColor:
-                    "color-mix(in srgb, var(--md-error) 20%, transparent)",
-                }}
-              >
+              <span className="mb-1.5 border-b border-destructive/20 pb-0.5 text-xs font-medium text-muted-foreground">
                 Mặt hàng cần mua gấp
               </span>
             </div>
@@ -288,64 +272,32 @@ export function StockClient({
 
       {/* Main Data Table */}
       <div
-        className="overflow-hidden rounded-3xl ambient-shadow"
-        style={{
-          backgroundColor: "var(--md-surface-lowest)",
-          border:
-            "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-        }}
+        className={cn(panelClassName, "overflow-hidden rounded-3xl bg-card")}
       >
         {/* Table Header Bar */}
-        <div
-          className="flex items-center justify-between border-b px-8 py-6"
-          style={{
-            borderColor:
-              "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-          }}
-        >
+        <div className="flex items-center justify-between border-b border-border/40 px-8 py-6">
           <h3 className="text-lg font-bold">Danh sách nguyên vật liệu</h3>
           <div className="flex items-center gap-4">
-            <div
-              className="flex items-center gap-2 text-xs font-semibold"
-              style={{ color: "var(--md-outline)" }}
-            >
-              <span
-                className="size-3 rounded-full"
-                style={{ backgroundColor: "var(--md-error)" }}
-              />
+            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+              <span className="size-3 rounded-full bg-destructive" />
               Hết/Sắp hết
             </div>
-            <div
-              className="flex items-center gap-2 text-xs font-semibold"
-              style={{ color: "var(--md-outline)" }}
-            >
-              <span
-                className="size-3 rounded-full"
-                style={{ backgroundColor: "var(--md-tertiary)" }}
-              />
+            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+              <span className="size-3 rounded-full bg-warning" />
               Reorder
             </div>
           </div>
         </div>
 
         {/* Search + Stock Filter Bar */}
-        <div
-          className="flex flex-wrap items-center gap-3 border-b px-8 py-3"
-          style={{
-            borderColor:
-              "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-          }}
-        >
-          <Search
-            className="size-4 shrink-0"
-            style={{ color: "var(--md-outline)" }}
-          />
+        <div className="flex flex-wrap items-center gap-3 border-b border-border/40 px-8 py-3">
+          <Search className="size-4 shrink-0 text-muted-foreground" />
           <input
             type="text"
             placeholder="Tìm kiếm tên/SKU..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="min-w-0 flex-1 border-none bg-transparent text-sm outline-none placeholder:text-[var(--md-outline)]"
+            className="min-w-0 flex-1 border-none bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           <div className="flex items-center gap-1">
             {stockFilterOptions.map((opt) => (
@@ -353,27 +305,18 @@ export function StockClient({
                 key={opt.value}
                 type="button"
                 onClick={() => setStockFilter(opt.value)}
-                className="rounded-full px-3 py-1 text-xs font-semibold transition-colors"
-                style={
+                className={cn(
+                  "focus-ring-standard rounded-full px-3 py-1 text-xs font-semibold transition-colors",
                   stockFilter === opt.value
-                    ? {
-                        backgroundColor: "var(--md-primary)",
-                        color: "var(--md-on-primary)",
-                      }
-                    : {
-                        backgroundColor: "var(--md-surface-low)",
-                        color: "var(--md-on-surface-variant)",
-                      }
-                }
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground",
+                )}
               >
                 {opt.label}
               </button>
             ))}
           </div>
-          <span
-            className="text-xs font-medium"
-            style={{ color: "var(--md-outline)" }}
-          >
+          <span className="text-xs font-medium text-muted-foreground">
             {filtered.length} nguyên liệu
           </span>
         </div>
@@ -382,98 +325,76 @@ export function StockClient({
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow
-                style={{
-                  backgroundColor:
-                    "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
-                }}
-              >
-                <TableHead
-                  className="px-8 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider"
-                  style={{ color: "var(--md-outline)" }}
-                >
+              <TableRow className="bg-muted/40">
+                <TableHead className="px-8 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Nguyên liệu
                 </TableHead>
-                <TableHead
-                  className="px-4 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider"
-                  style={{ color: "var(--md-outline)" }}
-                >
+                <TableHead className="px-4 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   SKU
                 </TableHead>
-                <TableHead
-                  className="px-4 py-4 text-center whitespace-nowrap text-xs font-bold uppercase tracking-wider"
-                  style={{ color: "var(--md-outline)" }}
-                >
+                <TableHead className="px-4 py-4 text-center whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Đơn vị
                 </TableHead>
-                <TableHead
-                  className="px-4 py-4 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider"
-                  style={{ color: "var(--md-outline)" }}
-                >
+                <TableHead className="px-4 py-4 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Tồn hiện tại
                 </TableHead>
-                <TableHead
-                  className="px-4 py-4 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider"
-                  style={{ color: "var(--md-outline)" }}
-                >
+                <TableHead className="px-4 py-4 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Giá TB (WAC)
                 </TableHead>
-                <TableHead
-                  className="px-4 py-4 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider"
-                  style={{ color: "var(--md-outline)" }}
-                >
+                <TableHead className="px-4 py-4 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Giá trị
                 </TableHead>
-                <TableHead
-                  className="px-4 py-4 text-center whitespace-nowrap text-xs font-bold uppercase tracking-wider"
-                  style={{ color: "var(--md-outline)" }}
-                >
+                <TableHead className="px-4 py-4 text-center whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Min / Max
                 </TableHead>
-                <TableHead
-                  className="px-4 py-4 text-center whitespace-nowrap text-xs font-bold uppercase tracking-wider"
-                  style={{ color: "var(--md-outline)" }}
-                >
+                <TableHead className="px-4 py-4 text-center whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Kiểm kê cuối
                 </TableHead>
-                <TableHead
-                  className="px-8 py-4 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider"
-                  style={{ color: "var(--md-outline)" }}
-                >
+                <TableHead className="px-8 py-4 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Thao tác
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
+              {filtered.length === 0 && (
+                <TableEmptyStateRow
+                  colSpan={9}
+                  paddingClassName="py-16"
+                  title={
+                    searchQuery.trim()
+                      ? "Không tìm thấy nguyên liệu phù hợp"
+                      : "Chưa có dữ liệu tồn kho"
+                  }
+                  description={
+                    searchQuery.trim()
+                      ? "Thử từ khóa hoặc bộ lọc khác."
+                      : "Dữ liệu tồn kho sẽ xuất hiện khi có nguyên liệu và giao dịch phát sinh."
+                  }
+                />
+              )}
               {filtered.map((item) => (
                 <TableRow
                   key={item.id}
-                  className="group transition-colors"
-                  style={{
-                    borderColor:
-                      "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-                  }}
+                  className="group border-border/40 transition-colors"
                 >
                   <TableCell className="px-8 py-5">
                     <div className="flex items-center gap-3">
                       <div
-                        className="flex size-10 items-center justify-center rounded-xl"
-                        style={{
-                          backgroundColor:
-                            item.status === "low" || item.status === "out"
-                              ? "color-mix(in srgb, var(--md-error-container) 30%, transparent)"
-                              : (categoryColors[item.category] ??
-                                "var(--md-surface-high)"),
-                        }}
+                        className={cn(
+                          "flex size-10 items-center justify-center rounded-xl",
+                          item.status === "low" || item.status === "out"
+                            ? "bg-destructive/12"
+                            : (categoryClasses[item.category] ??
+                                "bg-muted text-muted-foreground"),
+                        )}
                       >
                         <span
-                          className="text-sm font-bold"
-                          style={{
-                            color:
-                              item.status === "low" || item.status === "out"
-                                ? "var(--md-error)"
-                                : "var(--md-on-surface-variant)",
-                          }}
+                          className={cn(
+                            "text-sm font-bold",
+                            item.status === "low" || item.status === "out"
+                              ? "text-destructive"
+                              : "text-current",
+                          )}
                         >
                           {item.name.charAt(0)}
                         </span>
@@ -484,37 +405,23 @@ export function StockClient({
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell
-                    className="px-4 py-5 font-mono text-xs"
-                    style={{ color: "var(--md-outline)" }}
-                  >
+                  <TableCell className="px-4 py-5 font-mono text-xs text-muted-foreground">
                     {item.sku}
                   </TableCell>
-                  <TableCell
-                    className="px-4 py-5 text-center text-sm font-medium"
-                    style={{ color: "var(--md-on-surface-variant)" }}
-                  >
+                  <TableCell className="px-4 py-5 text-center text-sm font-medium text-muted-foreground">
                     {item.unit}
                   </TableCell>
                   <TableCell
-                    className="px-4 py-5 text-right font-mono text-sm tabular-nums"
-                    style={{
-                      color:
-                        item.status === "low" || item.status === "out"
-                          ? "var(--md-error)"
-                          : undefined,
-                      fontWeight:
-                        item.status === "low" || item.status === "out"
-                          ? 900
-                          : 600,
-                    }}
+                    className={cn(
+                      "px-4 py-5 text-right font-mono text-sm tabular-nums",
+                      item.status === "low" || item.status === "out"
+                        ? "font-black text-destructive"
+                        : "font-semibold",
+                    )}
                   >
                     {formatQty(item.qty)}
                   </TableCell>
-                  <TableCell
-                    className="px-4 py-5 text-right font-mono text-sm tabular-nums"
-                    style={{ color: "var(--md-on-surface-variant)" }}
-                  >
+                  <TableCell className="px-4 py-5 text-right font-mono text-sm tabular-nums text-muted-foreground">
                     {formatVND(item.cost)}
                   </TableCell>
                   <TableCell className="px-4 py-5 text-right font-mono text-sm font-semibold tabular-nums">
@@ -522,38 +429,16 @@ export function StockClient({
                   </TableCell>
                   <TableCell className="px-4 py-5 text-center">
                     <div className="flex items-center justify-center gap-1.5">
-                      <span
-                        className="rounded px-1.5 py-0.5 text-label font-bold"
-                        style={{
-                          backgroundColor:
-                            "color-mix(in srgb, var(--md-error) 10%, transparent)",
-                          color: "var(--md-error)",
-                        }}
-                      >
+                      <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-label font-bold text-destructive">
                         {item.min}
                       </span>
-                      <span
-                        className="text-xs"
-                        style={{ color: "var(--md-outline)" }}
-                      >
-                        /
-                      </span>
-                      <span
-                        className="rounded px-1.5 py-0.5 text-label font-bold"
-                        style={{
-                          backgroundColor:
-                            "color-mix(in srgb, var(--md-secondary) 10%, transparent)",
-                          color: "var(--md-secondary)",
-                        }}
-                      >
+                      <span className="text-xs text-muted-foreground">/</span>
+                      <span className="rounded bg-success/10 px-1.5 py-0.5 text-label font-bold text-success">
                         {item.max}
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell
-                    className="px-4 py-5 text-center text-sm"
-                    style={{ color: "var(--md-on-surface-variant)" }}
-                  >
+                  <TableCell className="px-4 py-5 text-center text-sm text-muted-foreground">
                     {item.lastCount}
                   </TableCell>
                   <TableCell className="px-8 py-5 text-right">
@@ -561,8 +446,7 @@ export function StockClient({
                       <button
                         type="button"
                         onClick={() => setAdjustTarget(item)}
-                        className="rounded-full p-1.5 transition-colors hover:opacity-80"
-                        style={{ color: "var(--md-on-surface-variant)" }}
+                        className="focus-ring-standard rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         aria-label={`Điều chỉnh ${item.name}`}
                       >
                         <Pencil className="size-4" />
@@ -570,8 +454,7 @@ export function StockClient({
                       <button
                         type="button"
                         onClick={() => setAdjustTarget(item)}
-                        className="rounded-full p-1.5 transition-colors hover:opacity-80"
-                        style={{ color: "var(--md-on-surface-variant)" }}
+                        className="focus-ring-standard rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         aria-label={`Thêm thao tác ${item.name}`}
                       >
                         <MoreHorizontal className="size-4" />
@@ -585,50 +468,29 @@ export function StockClient({
         </div>
 
         {/* Pagination */}
-        <div
-          className="flex items-center justify-between border-t px-8 py-4"
-          style={{
-            borderColor:
-              "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-          }}
-        >
-          <span
-            className="text-xs font-medium"
-            style={{ color: "var(--md-outline)" }}
-          >
+        <div className="flex items-center justify-between border-t border-border/40 px-8 py-4">
+          <span className="text-xs font-medium text-muted-foreground">
             Hiển thị {filtered.length} / {ingredients.length} nguyên liệu
           </span>
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="rounded-full border px-3 py-1.5 text-xs font-medium"
-              style={{
-                borderColor: "var(--md-outline-variant)",
-                color: "var(--md-outline)",
-              }}
+              className="focus-ring-standard rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
             >
               ← Trước
             </button>
-            <span
-              className="flex size-8 items-center justify-center rounded-full text-xs font-bold text-white"
-              style={{ backgroundColor: "var(--md-primary)" }}
-            >
+            <span className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
               1
             </span>
             <button
               type="button"
-              className="flex size-8 items-center justify-center rounded-full text-xs font-medium transition-colors"
-              style={{ color: "var(--md-outline)" }}
+              className="focus-ring-standard flex size-8 items-center justify-center rounded-full text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               2
             </button>
             <button
               type="button"
-              className="rounded-full border px-3 py-1.5 text-xs font-medium"
-              style={{
-                borderColor: "var(--md-outline-variant)",
-                color: "var(--md-outline)",
-              }}
+              className="focus-ring-standard rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
             >
               Sau →
             </button>

@@ -64,13 +64,13 @@
 
 - `leave_requests` table — xin nghỉ phép
 - Approval workflow (employee → manager)
-- **Depends on:** M7 (HR/Payroll)
+- **Depends on:** M7 (Nhân sự & tiền lương)
 
 ### Shift Assignments
 
 - `shift_assignments` table — phân ca tự động/thủ công
 - Calendar view
-- **Depends on:** M7 (HR/Payroll)
+- **Depends on:** M7 (Nhân sự & tiền lương)
 
 ## Explicitly Excluded (from greenfield)
 

@@ -3,6 +3,7 @@
 "use client";
 
 import { type ChangeEvent, useState, useTransition } from "react";
+import { SectionCard } from "@/components/foundation/ui-patterns";
 import {
   Table,
   TableBody,
@@ -29,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Plus } from "lucide-react";
 import { createAccount, updateAccount } from "../accounting-actions";
 import type { AccountRow } from "./page";
@@ -102,7 +104,7 @@ export function ChartOfAccountsClient({ accounts: initial }: Props) {
         </Button>
       </div>
 
-      <div className="rounded-lg border">
+      <SectionCard className="overflow-hidden" density="compact">
         <Table>
           <TableHeader>
             <TableRow>
@@ -135,9 +137,13 @@ export function ChartOfAccountsClient({ accounts: initial }: Props) {
                   </TableCell>
                   <TableCell>
                     {a.is_active ? (
-                      <Badge variant="default">Hoạt động</Badge>
+                      <Badge variant="default">
+                        {ACTIVE_STATE_LABELS_VI.active}
+                      </Badge>
                     ) : (
-                      <Badge variant="secondary">Ngừng</Badge>
+                      <Badge variant="secondary">
+                        {ACTIVE_STATE_LABELS_VI.inactive}
+                      </Badge>
                     )}
                   </TableCell>
                   <TableCell>
@@ -147,7 +153,9 @@ export function ChartOfAccountsClient({ accounts: initial }: Props) {
                       disabled={isPending}
                       onClick={() => handleToggleActive(a.id, a.is_active)}
                     >
-                      {a.is_active ? "Ngừng" : "Kích hoạt"}
+                      {a.is_active
+                        ? ACTIVE_STATE_LABELS_VI.inactive
+                        : "Kích hoạt"}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -155,7 +163,7 @@ export function ChartOfAccountsClient({ accounts: initial }: Props) {
             )}
           </TableBody>
         </Table>
-      </div>
+      </SectionCard>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">

@@ -1,5 +1,9 @@
 import { fetchJournalEntries } from "../accounting-actions";
 import { fetchChartOfAccounts } from "../accounting-actions";
+import {
+  PageContainer,
+  PageHeader,
+} from "@/components/foundation/ui-patterns";
 import { JournalClient } from "./journal-client";
 
 export default async function JournalPage() {
@@ -16,15 +20,13 @@ export default async function JournalPage() {
     : [];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Nhật ký kế toán</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Bút toán ghi sổ nhật ký chung
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        eyebrow="Tài chính"
+        title="Nhật ký kế toán"
+      />
       <JournalClient entries={entries} accounts={accounts} />
-    </div>
+    </PageContainer>
   );
 }
 

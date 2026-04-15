@@ -62,7 +62,7 @@ GIÁ THẤP / ĐƠN GIẢN
 | Kết nối Baemin                  | ❌            | ✅   | ❌       | ❌          | ❌       | 🟡    |
 | Offline mode                    | ❌            | 🟡   | ✅       | 🟡          | 🟡       | ✅    |
 
-### 2.2 KDS (Kitchen Display System)
+### 2.2 KDS (KDS)
 
 | Tính năng                         | Cơm Tấm Má Tư | iPOS | KiotViet | MISA CukCuk | Sapo FnB | bePOS |
 | --------------------------------- | ------------- | ---- | -------- | ----------- | -------- | ----- |

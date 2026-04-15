@@ -1,6 +1,7 @@
 "use client";
 
 import { Users } from "lucide-react";
+import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Table,
@@ -77,7 +78,9 @@ export function EmployeeTable({ employees }: EmployeeTableProps) {
               </TableCell>
               <TableCell>
                 <Badge variant={emp.is_active ? "default" : "outline"}>
-                  {emp.is_active ? "Hoạt động" : "Ngừng"}
+                  {emp.is_active
+                    ? ACTIVE_STATE_LABELS_VI.active
+                    : ACTIVE_STATE_LABELS_VI.inactive}
                 </Badge>
               </TableCell>
             </TableRow>

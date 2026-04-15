@@ -1,13 +1,35 @@
+import { createClient } from "@comtammatu/database/supabase/server";
+import { extractClaims } from "@comtammatu/shared/auth";
 import { fetchStockIssues } from "../issue-actions";
 import { formatDate } from "../_lib/format";
 import { IssuesClient } from "./issues-client";
-import type { IssueRow } from "./issues-client";
+import type { IssueBranchOption, IssueRow } from "./issues-client";
 
 export default async function IssuesPage() {
-  const res = await fetchStockIssues();
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const claims = session?.user
+    ? extractClaims(session.user.app_metadata)
+    : null;
+
+  const [res, branchesRes] = await Promise.all([
+    fetchStockIssues(),
+    supabase
+      .from("branches")
+      .select("id, name")
+      .order("is_headquarters", { ascending: false })
+      .order("name"),
+  ]);
   const dbRows = res.success
     ? (res.data as Array<Record<string, unknown>>)
     : [];
+  const allBranches = (branchesRes.data ?? []) as IssueBranchOption[];
+  const branches =
+    claims?.branch_id != null
+      ? allBranches.filter((branch) => branch.id === claims.branch_id)
+      : allBranches;
 
   const issues: IssueRow[] = dbRows.map((row) => ({
     id: row.id as number,
@@ -20,5 +42,11 @@ export default async function IssuesPage() {
     status: (row.status as string) ?? "draft",
   }));
 
-  return <IssuesClient issues={issues} />;
+  return (
+    <IssuesClient
+      issues={issues}
+      branches={branches}
+      defaultBranchId={claims?.branch_id ?? branches[0]?.id ?? null}
+    />
+  );
 }

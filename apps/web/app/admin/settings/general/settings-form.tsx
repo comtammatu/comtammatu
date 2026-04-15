@@ -36,7 +36,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
         <CardHeader>
           <CardTitle>Thuế & Phí</CardTitle>
           <CardDescription>
-            Cấu hình thuế GTGT và phí dịch vụ áp dụng cho tất cả chi nhánh
+            Áp dụng cho toàn hệ thống
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -81,9 +81,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
       <Card>
         <CardHeader>
           <CardTitle>Thông tin liên hệ</CardTitle>
-          <CardDescription>
-            Hiển thị trên hóa đơn và trang liên hệ
-          </CardDescription>
+          <CardDescription>Hiển thị trên hóa đơn</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">

@@ -186,7 +186,6 @@ export async function clockIn(input: {
   }
 
   // 5. INSERT attendance record (lat/lng/method/code_verified pending migration)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: insertError } = await supabase
     .from("attendance_records")
     .insert({

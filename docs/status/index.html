@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cơm Tấm Má Tư — Project Status</title>
+    <title>Cơm Tấm Má Tư — Trạng thái dự án</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -638,7 +638,7 @@
         background: var(--border);
       }
 
-      /* ─── Dependency Graph ──────────────────────────────────────────── */
+      /* ─── Sơ đồ phụ thuộc ──────────────────────────────────────────── */
       .dep-graph-wrap {
         background: var(--bg-card);
         border: 1px solid var(--border);
@@ -800,7 +800,7 @@
         color: var(--amber-700);
       }
 
-      /* ─── Shipped / Next sections ───────────────────────────────────── */
+      /* ─── Hoàn thành / Next sections ───────────────────────────────────── */
       .two-col {
         display: grid;
         grid-template-columns: 1fr;
@@ -1018,16 +1018,16 @@
       <div class="container topbar-inner">
         <div class="topbar-brand">Cơm Tấm Má Tư</div>
         <div class="topbar-nav">
-          <a href="#modules">Modules</a>
-          <a href="#shipped">Shipped</a>
-          <a href="#next">Roadmap</a>
+          <a href="#modules">Phân hệ</a>
+          <a href="#shipped">Hoàn thành</a>
+          <a href="#next">Lộ trình</a>
           <button
             class="theme-toggle"
             onclick="toggleTheme()"
-            aria-label="Toggle dark mode"
+            aria-label="Chuyển giao diện sáng/tối"
           >
             <span id="theme-icon">☽</span>
-            <span id="theme-label">Dark</span>
+            <span id="theme-label">Tối</span>
           </button>
         </div>
       </div>
@@ -1039,15 +1039,14 @@
         <div class="animate-fade-up">
           <div class="hero-eyebrow">
             <div class="hero-eyebrow-dot"></div>
-            v1.0.0 · All Modules Shipped
+            v1.0.0 · Toàn bộ phân hệ đã hoàn thành
           </div>
         </div>
         <h1 class="hero-title animate-fade-up delay-1">
           <span>Cơm Tấm Má Tư</span>
         </h1>
         <p class="hero-subtitle animate-fade-up delay-2">
-          Hệ thống Quản lý Vận hành Nhà hàng &mdash; Restaurant Management
-          System
+          Hệ thống quản lý vận hành nhà hàng
         </p>
         <div class="stack-badges animate-fade-up delay-3">
           <span class="badge"><span class="badge-dot"></span>Next.js 16.2</span>
@@ -1072,19 +1071,19 @@
         <div class="stats-grid">
           <div class="stat-card animate-fade-up delay-1">
             <div class="stat-number">19</div>
-            <div class="stat-label">Database Tables</div>
+            <div class="stat-label">Bảng dữ liệu</div>
           </div>
           <div class="stat-card animate-fade-up delay-2">
             <div class="stat-number">6</div>
-            <div class="stat-label">RPC Functions</div>
+            <div class="stat-label">Hàm RPC</div>
           </div>
           <div class="stat-card animate-fade-up delay-3">
             <div class="stat-number">8</div>
-            <div class="stat-label">Staff Roles</div>
+            <div class="stat-label">Vai trò nhân sự</div>
           </div>
           <div class="stat-card animate-fade-up delay-4">
             <div class="stat-number">13</div>
-            <div class="stat-label">ACL-Protected Modules</div>
+            <div class="stat-label">Phân hệ có ACL</div>
           </div>
         </div>
       </div>
@@ -1092,13 +1091,13 @@
 
     <div class="divider"></div>
 
-    <!-- Module Progress -->
+    <!-- Tiến độ phân hệ -->
     <section id="modules">
       <div class="container">
         <div class="section-header animate-fade-up">
-          <div class="section-label">Module Progress</div>
+          <div class="section-label">Tiến độ phân hệ</div>
           <h2 class="section-title">Tiến độ phát triển</h2>
-          <p class="section-desc">8 modules · 8 shipped · v1.0.0 ready</p>
+          <p class="section-desc">8 phân hệ · 8 đã hoàn thành · sẵn sàng v1.0.0</p>
         </div>
         <div class="modules-grid">
           <!-- M0 -->
@@ -1107,12 +1106,11 @@
               <div>
                 <div class="module-id">M0</div>
                 <div class="module-name">
-                  Admin Shell
-                  <span class="module-name-vn">· Khung quản trị</span>
+                  Khung quản trị
                 </div>
               </div>
               <div class="status-badge shipped">
-                <span class="status-dot"></span>Shipped
+                <span class="status-dot"></span>Hoàn thành
               </div>
             </div>
             <div class="progress-wrap">
@@ -1132,11 +1130,11 @@
               <div>
                 <div class="module-id">M1</div>
                 <div class="module-name">
-                  Thực đơn <span class="module-name-vn">· Menu</span>
+                  Thực đơn
                 </div>
               </div>
               <div class="status-badge shipped">
-                <span class="status-dot"></span>Shipped
+                <span class="status-dot"></span>Hoàn thành
               </div>
             </div>
             <div class="progress-wrap">
@@ -1156,11 +1154,11 @@
               <div>
                 <div class="module-id">M2</div>
                 <div class="module-name">
-                  POS <span class="module-name-vn">· Point of Sale</span>
+                  POS
                 </div>
               </div>
               <div class="status-badge shipped">
-                <span class="status-dot"></span>Shipped
+                <span class="status-dot"></span>Hoàn thành
               </div>
             </div>
             <div class="progress-wrap">
@@ -1180,11 +1178,11 @@
               <div>
                 <div class="module-id">M3</div>
                 <div class="module-name">
-                  KDS <span class="module-name-vn">· Kitchen Display</span>
+                  KDS
                 </div>
               </div>
               <div class="status-badge shipped">
-                <span class="status-dot"></span>Shipped
+                <span class="status-dot"></span>Hoàn thành
               </div>
             </div>
             <div class="progress-wrap">
@@ -1204,11 +1202,11 @@
               <div>
                 <div class="module-id">M4</div>
                 <div class="module-name">
-                  Thanh toán <span class="module-name-vn">· Payment</span>
+                  Thanh toán
                 </div>
               </div>
               <div class="status-badge shipped">
-                <span class="status-dot"></span>Shipped
+                <span class="status-dot"></span>Hoàn thành
               </div>
             </div>
             <div class="progress-wrap">
@@ -1228,11 +1226,11 @@
               <div>
                 <div class="module-id">M5</div>
                 <div class="module-name">
-                  Kho hàng <span class="module-name-vn">· Stock</span>
+                  Kho hàng
                 </div>
               </div>
               <div class="status-badge shipped">
-                <span class="status-dot"></span>Shipped
+                <span class="status-dot"></span>Hoàn thành
               </div>
             </div>
             <div class="progress-wrap">
@@ -1252,11 +1250,11 @@
               <div>
                 <div class="module-id">M6</div>
                 <div class="module-name">
-                  Kế toán <span class="module-name-vn">· Finance</span>
+                  Kế toán
                 </div>
               </div>
               <div class="status-badge shipped">
-                <span class="status-dot"></span>Shipped
+                <span class="status-dot"></span>Hoàn thành
               </div>
             </div>
             <div class="progress-wrap">
@@ -1276,11 +1274,11 @@
               <div>
                 <div class="module-id">M7</div>
                 <div class="module-name">
-                  Nhân sự <span class="module-name-vn">· HR / Payroll</span>
+                  Nhân sự &amp; tiền lương
                 </div>
               </div>
               <div class="status-badge shipped">
-                <span class="status-dot"></span>Shipped
+                <span class="status-dot"></span>Hoàn thành
               </div>
             </div>
             <div class="progress-wrap">
@@ -1299,14 +1297,14 @@
 
     <div class="divider"></div>
 
-    <!-- Dependency Graph -->
+    <!-- Sơ đồ phụ thuộc -->
     <section>
       <div class="container">
         <div class="section-header animate-fade-up">
-          <div class="section-label">Dependency Graph</div>
+          <div class="section-label">Sơ đồ phụ thuộc</div>
           <h2 class="section-title">Sơ đồ phụ thuộc</h2>
           <p class="section-desc">
-            Each module builds on the foundation of the previous
+            Mỗi phân hệ kế thừa lớp nền của phân hệ trước
           </p>
         </div>
         <div class="dep-graph-wrap animate-fade-up delay-2">
@@ -1382,7 +1380,7 @@
                 font-weight="700"
                 fill="#15803d"
               >
-                Admin
+                Quản trị
               </text>
               <text
                 x="40"
@@ -1391,7 +1389,7 @@
                 font-size="10"
                 fill="#16a34a"
               >
-                ✅ Shipped
+                ✅ Hoàn thành
               </text>
             </g>
 
@@ -1444,7 +1442,7 @@
                 font-size="10"
                 fill="#16a34a"
               >
-                ✅ Shipped
+                ✅ Hoàn thành
               </text>
             </g>
 
@@ -1497,7 +1495,7 @@
                 font-size="10"
                 fill="#16a34a"
               >
-                ✅ Shipped
+                ✅ Hoàn thành
               </text>
             </g>
 
@@ -1561,7 +1559,7 @@
                 font-size="10"
                 fill="#2563eb"
               >
-                🔜 Next
+                🔜 Tiếp theo
               </text>
             </g>
 
@@ -1595,7 +1593,7 @@
                 font-weight="700"
                 fill="#166534"
               >
-                Payment
+                Thanh toán
               </text>
               <text
                 x="40"
@@ -1604,7 +1602,7 @@
                 font-size="10"
                 fill="#16a34a"
               >
-                ✅ Shipped
+                ✅ Hoàn thành
               </text>
             </g>
 
@@ -1658,7 +1656,7 @@
                 font-size="10"
                 fill="#16a34a"
               >
-                ✅ Shipped
+                ✅ Hoàn thành
               </text>
             </g>
 
@@ -1712,7 +1710,7 @@
                 font-size="10"
                 fill="#16a34a"
               >
-                ✅ Shipped
+                ✅ Hoàn thành
               </text>
             </g>
 
@@ -1766,7 +1764,7 @@
                 font-size="10"
                 fill="#16a34a"
               >
-                ✅ Shipped
+                ✅ Hoàn thành
               </text>
             </g>
 
@@ -1780,7 +1778,7 @@
                 stroke="#22c55e"
                 stroke-width="1.5"
               />
-              <text x="15" y="9" font-size="9" fill="#166534">Shipped</text>
+              <text x="15" y="9" font-size="9" fill="#166534">Hoàn thành</text>
               <rect
                 x="70"
                 width="10"
@@ -1790,7 +1788,7 @@
                 stroke="#3b82f6"
                 stroke-width="1.5"
               />
-              <text x="85" y="9" font-size="9" fill="#166534">Next</text>
+              <text x="85" y="9" font-size="9" fill="#166534">Tiếp theo</text>
               <rect
                 x="120"
                 width="10"
@@ -1873,18 +1871,18 @@
 
     <div class="divider"></div>
 
-    <!-- Shipped + Next -->
+    <!-- Hoàn thành + Next -->
     <section id="shipped">
       <div class="container">
         <div class="section-header animate-fade-up">
-          <div class="section-label">Features</div>
+          <div class="section-label">Tính năng</div>
           <h2 class="section-title">Đã làm &amp; Sắp đến</h2>
           <p class="section-desc">
-            Breakdown of shipped features and upcoming work
+            Tổng hợp phần đã làm và phần tiếp theo
           </p>
         </div>
         <div class="two-col">
-          <!-- Shipped -->
+          <!-- Hoàn thành -->
           <div class="info-card animate-fade-up delay-1">
             <div class="info-card-title">
               <div class="info-card-icon icon-green">✅</div>
@@ -1892,32 +1890,32 @@
             </div>
 
             <div class="module-section">
-              <div class="module-section-name">M0 · Admin Shell</div>
+              <div class="module-section-name">M0 · Khung quản trị</div>
               <ul class="bullet-list">
-                <li>Admin layout &amp; sidebar navigation</li>
-                <li>Branch management (multi-branch)</li>
-                <li>Staff CRUD with role assignment</li>
-                <li>System settings &amp; ACL module</li>
+                <li>Bố cục quản trị &amp; điều hướng thanh bên</li>
+                <li>Quản lý chi nhánh (nhiều chi nhánh)</li>
+                <li>CRUD nhân sự kèm phân vai</li>
+                <li>Cấu hình hệ thống &amp; phân hệ ACL</li>
               </ul>
             </div>
 
             <div class="module-section">
-              <div class="module-section-name">M1 · Thực đơn (Menu)</div>
+              <div class="module-section-name">M1 · Thực đơn</div>
               <ul class="bullet-list">
-                <li>Categories &amp; menu items</li>
-                <li>Variants: size / portion / combo</li>
-                <li>Modifiers (add-ons, toppings)</li>
-                <li>Side dishes management</li>
+                <li>Danh mục &amp; món bán</li>
+                <li>Biến thể: size / khẩu phần / combo</li>
+                <li>Tùy chọn thêm (add-on, topping)</li>
+                <li>Quản lý món phụ</li>
               </ul>
             </div>
 
             <div class="module-section">
-              <div class="module-section-name">M2 · POS Terminal</div>
+              <div class="module-section-name">M2 · POS</div>
               <ul class="bullet-list">
-                <li>POS terminal with cart &amp; search</li>
-                <li>Table / zone selection</li>
-                <li>Order submit &amp; bill printing</li>
-                <li>Cash register session management</li>
+                <li>POS với giỏ hàng &amp; tìm kiếm</li>
+                <li>Chọn bàn / khu vực</li>
+                <li>Gửi đơn &amp; in hóa đơn</li>
+                <li>Quản lý ca quầy thu ngân</li>
               </ul>
             </div>
           </div>
@@ -1927,69 +1925,69 @@
             <div class="info-card animate-fade-up delay-2">
               <div class="info-card-title">
                 <div class="info-card-icon icon-blue">✅</div>
-                Shipped (M3 – M7)
+                Hoàn thành (M3 – M7)
               </div>
 
               <div class="module-section">
                 <div class="module-section-name">
-                  M3 · KDS — Kitchen Display System ✅
+                  M3 · KDS ✅
                 </div>
                 <ul class="bullet-list">
                   <li>
-                    ✅ Realtime kitchen order queue (derived from order_items)
+                    ✅ Hàng đợi món bếp realtime (suy ra từ order_items)
                   </li>
-                  <li>✅ Bump workflow per station with optimistic locking</li>
-                  <li>✅ Station + category configuration</li>
-                  <li>✅ Order age indicators &amp; alerts</li>
+                  <li>✅ Quy trình bump theo trạm với optimistic locking</li>
+                  <li>✅ Cấu hình trạm + danh mục</li>
+                  <li>✅ Chỉ báo tuổi đơn &amp; cảnh báo</li>
                 </ul>
               </div>
 
               <div class="module-section">
                 <div class="module-section-name">
-                  M4 · Thanh toán (Payment) ✅ MVP
+                  M4 · Thanh toán ✅ MVP
                 </div>
                 <ul class="bullet-list">
-                  <li>✅ Cash, VietQR, MoMo provider interfaces (SOLID)</li>
-                  <li>✅ Atomic payment RPC (race-condition safe)</li>
-                  <li>✅ MoMo webhook with HMAC + amount validation</li>
-                  <li>✅ End-of-day reconciliation</li>
-                  <li>⏳ Real VietQR/MoMo API integration (mock)</li>
-                  <li>⏳ Refund flows</li>
+                  <li>✅ Giao diện provider cho tiền mặt, VietQR, MoMo (SOLID)</li>
+                  <li>✅ RPC thanh toán nguyên tử (an toàn race condition)</li>
+                  <li>✅ Webhook MoMo với HMAC + kiểm tra số tiền</li>
+                  <li>✅ Đối soát cuối ngày</li>
+                  <li>⏳ Tích hợp API VietQR/MoMo thật (mock)</li>
+                  <li>⏳ Luồng hoàn tiền</li>
                 </ul>
               </div>
 
               <div class="module-section">
                 <div class="module-section-name">
-                  M5 · Kho hàng (Stock) ✅ MVP
+                  M5 · Kho hàng ✅ MVP
                 </div>
                 <ul class="bullet-list">
-                  <li>✅ Ingredients CRUD + stock levels per branch</li>
-                  <li>✅ Stock movements with auto-update trigger</li>
-                  <li>✅ Min/max stock alerts</li>
-                  <li>⏳ PO/GRN/3-way matching (post-pilot)</li>
+                  <li>✅ CRUD nguyên liệu + tồn kho theo chi nhánh</li>
+                  <li>✅ Biến động tồn kho với trigger tự cập nhật</li>
+                  <li>✅ Cảnh báo tồn min/max</li>
+                  <li>⏳ PO/GRN/đối soát 3 chứng từ (sau pilot)</li>
                 </ul>
               </div>
 
               <div class="module-section">
                 <div class="module-section-name">
-                  M6 · Kế toán (Finance) ✅ MVP
+                  M6 · Kế toán ✅ MVP
                 </div>
                 <ul class="bullet-list">
-                  <li>✅ HĐĐT invoice provider interface (MISA ready)</li>
-                  <li>✅ Revenue dashboard (materialized views)</li>
-                  <li>✅ VAT rate from system settings</li>
-                  <li>⏳ Real MISA API integration (mock)</li>
-                  <li>⏳ VAS accounting / financial statements</li>
+                  <li>✅ Giao diện provider HĐĐT (MISA sẵn sàng)</li>
+                  <li>✅ Tổng quan doanh thu (materialized view)</li>
+                  <li>✅ Thuế suất VAT từ cấu hình hệ thống</li>
+                  <li>⏳ Tích hợp MISA API thật (mock)</li>
+                  <li>⏳ Kế toán VAS / báo cáo tài chính</li>
                 </ul>
               </div>
 
               <div class="module-section">
-                <div class="module-section-name">M7 · Nhân sự (HR) ✅ MVP</div>
+                <div class="module-section-name">M7 · Nhân sự &amp; tiền lương ✅ MVP</div>
                 <ul class="bullet-list">
-                  <li>✅ Employee records (extends profiles)</li>
-                  <li>✅ Shifts + shift assignments</li>
-                  <li>✅ Attendance check-in/check-out</li>
-                  <li>⏳ Payroll calculation (manual for pilot)</li>
+                  <li>✅ Hồ sơ nhân sự (mở rộng từ profiles)</li>
+                  <li>✅ Ca làm việc + phân ca</li>
+                  <li>✅ Chấm công vào ca/ra ca</li>
+                  <li>⏳ Tính lương (thủ công cho pilot)</li>
                 </ul>
               </div>
             </div>
@@ -2004,32 +2002,29 @@
     <section>
       <div class="container">
         <div class="section-header animate-fade-up">
-          <div class="section-label">Scope Management</div>
-          <h2 class="section-title">Deferred Items</h2>
+          <div class="section-label">Quản lý phạm vi</div>
+          <h2 class="section-title">Hạng mục hoãn lại</h2>
           <p class="section-desc">
-            Known items intentionally deferred to a future sprint
+            Các hạng mục đã biết và chủ động dời sang sprint sau
           </p>
         </div>
         <div class="deferred-card animate-fade-up delay-2">
           <div class="deferred-item">
             <div class="deferred-tag">M4</div>
             <div>
-              <div class="deferred-text">Server-side price validation</div>
+              <div class="deferred-text">Đối soát giá phía máy chủ</div>
               <div class="deferred-sub">
-                Cart total must be re-validated at checkout server action —
-                deferred to Payment module where refund/reconciliation logic
-                lives
+                Tổng tiền giỏ hàng cần được kiểm tra lại ở server action checkout — dời sang phân hệ Thanh toán, nơi giữ logic hoàn tiền và đối soát
               </div>
             </div>
           </div>
 
           <div class="deferred-item">
-            <div class="deferred-tag">Future</div>
+            <div class="deferred-tag">Tương lai</div>
             <div>
-              <div class="deferred-text">Area manager branch scoping</div>
+              <div class="deferred-text">Phạm vi chi nhánh cho area manager</div>
               <div class="deferred-sub">
-                Role allowing a manager to oversee multiple but not all branches
-                — requires additional JWT claims design; deferred to post-v1.0
+                Vai trò cho phép quản lý giám sát nhiều nhưng không phải mọi chi nhánh — cần thiết kế thêm JWT claims; dời sang sau v1.0
               </div>
             </div>
           </div>
@@ -2044,7 +2039,7 @@
       <div class="container">
         <div class="footer-inner">
           <p class="footer-tech">
-            Built with Next.js 16 + Supabase · Turborepo monorepo
+            Xây dựng với Next.js 16 + Supabase · monorepo Turborepo
           </p>
           <p class="footer-meta">
             Last updated: 2026-04-08 &nbsp;·&nbsp; Single-tenant multi-branch
@@ -2085,10 +2080,10 @@
         const label = document.getElementById("theme-label");
         if (theme === "dark") {
           icon.textContent = "☀";
-          label.textContent = "Light";
+          label.textContent = "Sáng";
         } else {
           icon.textContent = "☽";
-          label.textContent = "Dark";
+          label.textContent = "Tối";
         }
         localStorage.setItem("ctmt-theme", theme);
       }

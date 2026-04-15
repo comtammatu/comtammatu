@@ -48,7 +48,6 @@ export function RevenueOverview({
 
   return (
     <div className="space-y-6">
-      {/* Summary stat cards */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -94,13 +93,43 @@ export function RevenueOverview({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Top 5 items */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Top 5 món bán chạy</CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="rounded-md border-0">
+          <CardContent className="space-y-4 p-4 sm:p-6">
+            {topItems.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+                Chưa có dữ liệu
+              </div>
+            ) : null}
+
+            <div className="space-y-3 md:hidden">
+              {topItems.slice(0, 5).map((item) => (
+                <div
+                  key={item.menu_item_id}
+                  className="rounded-2xl border border-border/70 bg-muted/25 p-4"
+                >
+                  <p className="font-medium">{item.item_name}</p>
+                  <div className="mt-3 flex items-center justify-between gap-3 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Số lượng</p>
+                      <p className="font-semibold tabular-nums">
+                        {item.quantity_sold.toLocaleString("vi-VN")}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-muted-foreground">Doanh thu</p>
+                      <p className="font-semibold tabular-nums">
+                        {formatVND(item.revenue)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden rounded-md border-0 md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -139,15 +168,39 @@ export function RevenueOverview({
           </CardContent>
         </Card>
 
-        {/* Last 7 days daily revenue */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
               Doanh thu 7 ngày gần nhất
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="rounded-md border-0">
+          <CardContent className="space-y-4 p-4 sm:p-6">
+            {last7.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+                Chưa có dữ liệu
+              </div>
+            ) : null}
+
+            <div className="space-y-3 md:hidden">
+              {last7.map((row) => (
+                <div
+                  key={row.date}
+                  className="rounded-2xl border border-border/70 bg-muted/25 p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-medium">{formatDay(row.date)}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {row.order_count.toLocaleString("vi-VN")} đơn
+                    </p>
+                  </div>
+                  <p className="mt-3 text-lg font-semibold tabular-nums">
+                    {formatVND(row.total_revenue ?? 0)}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden rounded-md border-0 md:block">
               <Table>
                 <TableHeader>
                   <TableRow>

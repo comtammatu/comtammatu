@@ -1,5 +1,8 @@
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
+import {
+  buildLoginBlockedStatePath,
+  extractClaims,
+} from "@comtammatu/shared/auth";
 import { redirect } from "next/navigation";
 import { fetchIngredients } from "../actions";
 import { fetchHeadquartersBranchId } from "../_lib/headquarters";
@@ -33,7 +36,7 @@ export default async function StockPage() {
 
   if (!session?.user) redirect("/login");
   const claims = extractClaims(session.user.app_metadata);
-  if (!claims) redirect("/login");
+  if (!claims) redirect(buildLoginBlockedStatePath());
 
   // Resolve branch: use user's branch if set, otherwise HQ
   const branchId =

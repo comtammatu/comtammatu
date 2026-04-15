@@ -3,51 +3,12 @@ import { updateSession } from "@comtammatu/database/supabase/middleware";
 import {
   extractClaims,
   canAccess,
-  getDefaultRedirect,
+  isPublicAppPath,
+  resolvePostLoginRedirect,
+  type BlockedStateReasonCode,
+  resolveModuleFromPath,
 } from "@comtammatu/shared/auth";
 import type { ModuleKey } from "@comtammatu/shared/auth";
-
-const PUBLIC_PATHS = ["/api/health", "/api/webhooks", "/sw.js"];
-
-function isPublic(pathname: string) {
-  if (pathname.startsWith("/swe-worker-")) return true;
-  if (pathname.startsWith("/demo/")) return true;
-  return PUBLIC_PATHS.some(
-    (p) => pathname === p || pathname.startsWith(p + "/"),
-  );
-}
-
-/** Sub-routes under /inventory restricted to super_manager only */
-const INVENTORY_PROCUREMENT_PREFIXES = [
-  "/inventory/suppliers",
-  "/inventory/purchase-orders",
-  "/inventory/grn",
-  "/inventory/supplier-invoices",
-  "/inventory/recipes",
-] as const;
-
-/** Map pathname to ModuleKey for ACL check */
-function resolveModule(pathname: string): ModuleKey | null {
-  if (pathname.startsWith("/admin/dashboard")) return "dashboard";
-  if (pathname.startsWith("/admin/menu")) return "menu";
-  if (pathname.startsWith("/admin/orders")) return "orders";
-  if (pathname.startsWith("/admin/staff")) return "staff";
-  if (pathname.startsWith("/admin/crm")) return "crm";
-  if (pathname.startsWith("/admin/finance")) return "finance";
-  if (pathname.startsWith("/admin/reports")) return "reports";
-  if (pathname.startsWith("/admin/settings")) return "settings";
-  for (const prefix of INVENTORY_PROCUREMENT_PREFIXES) {
-    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
-      return "inventory_procurement";
-    }
-  }
-  if (pathname.startsWith("/inventory")) return "inventory";
-  if (pathname.startsWith("/hr")) return "hr";
-  if (pathname.match(/^\/br\/\d+\/pos/)) return "pos";
-  if (pathname.match(/^\/br\/\d+\/kds/)) return "kds";
-  if (pathname.startsWith("/employee")) return "employee";
-  return null;
-}
 
 /** Create a redirect that preserves Set-Cookie from updateSession response */
 function redirectWithCookies(
@@ -61,11 +22,24 @@ function redirectWithCookies(
   return redirect;
 }
 
+function redirectToBlockedDefault(
+  request: NextRequest,
+  sessionResponse: NextResponse,
+  pathname: string,
+  reason: BlockedStateReasonCode,
+): NextResponse {
+  const url = request.nextUrl.clone();
+  url.pathname = pathname;
+  url.searchParams.set("forbidden", "1");
+  url.searchParams.set("reason", reason);
+  return redirectWithCookies(url, sessionResponse);
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public paths — skip auth
-  if (isPublic(pathname)) {
+  if (isPublicAppPath(pathname)) {
     return NextResponse.next();
   }
 
@@ -78,8 +52,11 @@ export async function proxy(request: NextRequest) {
     // authenticated → redirect away from login to role's default
     const claims = extractClaims(user.app_metadata);
     if (claims) {
-      const url = request.nextUrl.clone();
-      url.pathname = getDefaultRedirect(claims);
+      const returnTo = request.nextUrl.searchParams.get("returnTo");
+      const url = new URL(
+        resolvePostLoginRedirect(claims, returnTo),
+        request.nextUrl.origin,
+      );
       return redirectWithCookies(url, response);
     }
     return response;
@@ -89,24 +66,31 @@ export async function proxy(request: NextRequest) {
   if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.search = "";
+    url.searchParams.set(
+      "returnTo",
+      `${request.nextUrl.pathname}${request.nextUrl.search}`,
+    );
     return redirectWithCookies(url, response);
   }
 
   // Module ACL check
-  const moduleKey = resolveModule(pathname);
+  const moduleKey: ModuleKey | null = resolveModuleFromPath(pathname);
   if (moduleKey) {
     const claims = extractClaims(user.app_metadata);
     if (!claims || !canAccess(claims.user_role, moduleKey)) {
-      const url = request.nextUrl.clone();
       const fallbackClaims = claims ?? {
         tenant_id: 0,
         branch_id: null,
         area_id: null,
         user_role: "office" as const,
       };
-      url.pathname = getDefaultRedirect(fallbackClaims);
-      url.searchParams.set("forbidden", "1");
-      return redirectWithCookies(url, response);
+      return redirectToBlockedDefault(
+        request,
+        response,
+        resolvePostLoginRedirect(fallbackClaims, null),
+        claims ? "insufficient-permission" : "missing-auth-context",
+      );
     }
 
     // POS/KDS are not available on headquarters (office-only branch)
@@ -122,10 +106,12 @@ export async function proxy(request: NextRequest) {
           .eq("is_headquarters", true)
           .maybeSingle();
         if (hqRow) {
-          const url = request.nextUrl.clone();
-          url.pathname = getDefaultRedirect(claims);
-          url.searchParams.set("forbidden", "1");
-          return redirectWithCookies(url, response);
+          return redirectToBlockedDefault(
+            request,
+            response,
+            resolvePostLoginRedirect(claims, null),
+            "headquarters-branch-restricted",
+          );
         }
       }
     }

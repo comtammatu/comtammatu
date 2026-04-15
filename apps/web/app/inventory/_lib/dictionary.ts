@@ -12,6 +12,7 @@ interface InventoryDictionary {
   navigation: Record<string, LabelVariants>;
   routes: Record<string, LabelVariants>;
   status: Record<string, LabelVariants>;
+  terms: Record<string, LabelVariants>;
 }
 
 const VI_DICTIONARY: InventoryDictionary = {
@@ -22,14 +23,15 @@ const VI_DICTIONARY: InventoryDictionary = {
     home: { long: "Tổng quan" },
     stock: { long: "Tồn kho" },
     receiving: { short: "Nhập kho", long: "Trung tâm nhập kho" },
-    purchaseOrders: { short: "Đơn hàng", long: "Đơn đặt hàng" },
+    purchaseOrders: { short: "Đơn đặt hàng", long: "Đơn đặt hàng NCC" },
     grn: { short: "Phiếu nhập", long: "Phiếu nhập kho" },
-    supplierInvoices: { short: "Hóa đơn", long: "Hóa đơn NCC" },
-    transfers: { long: "Điều chuyển" },
+    supplierInvoices: { long: "Hóa đơn NCC" },
+    transfers: { short: "Điều chuyển", long: "Điều chuyển nội bộ" },
     stocktake: { long: "Kiểm kê" },
     issues: { long: "Xuất kho" },
     expiry: { short: "Hạn dùng", long: "Hạn sử dụng" },
     reports: { long: "Báo cáo" },
+    production: { long: "Bếp trung tâm" },
     ingredients: { long: "Nguyên liệu" },
     suppliers: { long: "Nhà cung cấp" },
     recipes: { short: "Công thức", long: "Công thức món" },
@@ -45,29 +47,37 @@ const VI_DICTIONARY: InventoryDictionary = {
     "/inventory/receiving": { short: "Nhập kho", long: "Trung tâm nhập kho" },
     "/inventory/receiving/po": {
       short: "Đơn đặt hàng",
-      long: "Danh sách đơn đặt hàng",
+      long: "Danh sách đơn đặt hàng NCC",
     },
     "/inventory/receiving/po/create": {
       short: "Tạo mới",
-      long: "Tạo đơn đặt hàng mới",
+      long: "Tạo đơn đặt hàng NCC mới",
     },
     "/inventory/receiving/grn": { short: "Phiếu nhập", long: "Phiếu nhập kho" },
     "/inventory/receiving/invoices": {
-      short: "Hóa đơn",
-      long: "Hóa đơn nhà cung cấp",
+      long: "Hóa đơn NCC",
     },
     "/inventory/purchase-orders": {
       short: "Đơn đặt hàng",
-      long: "Danh sách đơn đặt hàng",
+      long: "Danh sách đơn đặt hàng NCC",
     },
+    "/inventory/grn": { short: "Phiếu nhập", long: "Phiếu nhập kho" },
+    "/inventory/supplier-invoices": { long: "Hóa đơn NCC" },
     "/inventory/issues": { short: "Phiếu xuất", long: "Phiếu xuất kho" },
-    "/inventory/transfers": { long: "Điều chuyển" },
+    "/inventory/transfers": {
+      short: "Điều chuyển",
+      long: "Điều chuyển nội bộ",
+    },
     "/inventory/stocktake": { long: "Kiểm kê" },
     "/inventory/expiry": {
       short: "Cảnh báo hạn",
       long: "Cảnh báo hạn sử dụng",
     },
+    "/inventory/production": { long: "Bếp trung tâm" },
     "/inventory/reports": { long: "Báo cáo" },
+    "/inventory/ingredients": { long: "Nguyên liệu" },
+    "/inventory/recipes": { short: "Công thức", long: "Công thức món" },
+    "/inventory/suppliers": { long: "Nhà cung cấp" },
     "/inventory/settings": { long: "Cài đặt" },
     "/inventory/settings/ingredients": {
       short: "Nguyên liệu",
@@ -78,6 +88,10 @@ const VI_DICTIONARY: InventoryDictionary = {
       long: "Công thức món",
     },
     "/inventory/settings/suppliers": { long: "Nhà cung cấp" },
+    "/inventory/settings/expiry": {
+      short: "Hạn dùng",
+      long: "Hạn sử dụng",
+    },
   },
 
   // ------------------------------------------------------------------
@@ -100,7 +114,7 @@ const VI_DICTIONARY: InventoryDictionary = {
     expired: { short: "Hết hạn", long: "Đã hết hạn" },
     critical: { short: "Sắp hết hạn", long: "Sắp hết hạn" },
     warning: { long: "Theo dõi" },
-    kitchen_use: { short: "Dùng bếp", long: "Sử dụng bếp" },
+    kitchen_use: { short: "Cấp bếp", long: "Cấp phát bếp chi nhánh" },
     write_off: { short: "Ghi giảm", long: "Ghi giảm" },
     consumption: { long: "Tiêu hao" },
     normal: { long: "Bình thường" },
@@ -109,6 +123,30 @@ const VI_DICTIONARY: InventoryDictionary = {
     over: { short: "Sắp hết", long: "Sắp hết hàng" },
     active: { short: "Hoạt động", long: "Đang hoạt động" },
     suspended: { long: "Tạm ngưng" },
+  },
+
+  // ------------------------------------------------------------------
+  // Reusable terms for tables, forms, and detail views
+  // ------------------------------------------------------------------
+  terms: {
+    inventoryModule: { long: "Kho hàng" },
+    ingredient: { long: "Nguyên liệu" },
+    ingredientsList: { long: "Danh sách nguyên liệu" },
+    issueReason: { short: "Lý do xuất", long: "Lý do xuất" },
+    adjustmentReason: {
+      short: "Lý do điều chỉnh",
+      long: "Lý do điều chỉnh",
+    },
+    systemQuantity: {
+      short: "SL hệ thống",
+      long: "Số lượng hệ thống",
+    },
+    countedQuantity: {
+      short: "SL thực đếm",
+      long: "Số lượng thực đếm",
+    },
+    fromWarehouse: { short: "Kho gửi", long: "Kho gửi" },
+    toWarehouse: { short: "Kho nhận", long: "Kho nhận" },
   },
 };
 
@@ -140,5 +178,14 @@ export function tRoute(
 ): string {
   const variants = VI_DICTIONARY.routes[path];
   if (!variants) return path;
+  return resolveLabelByContext(variants, context);
+}
+
+export function tTerm(
+  key: string,
+  context: LabelContext = "table",
+): string {
+  const variants = VI_DICTIONARY.terms[key];
+  if (!variants) return key;
   return resolveLabelByContext(variants, context);
 }

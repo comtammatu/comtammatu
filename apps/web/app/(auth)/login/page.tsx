@@ -1,158 +1,156 @@
-import { UtensilsCrossed } from "lucide-react";
+import { Suspense } from "react";
+import { Building2, ShieldCheck, UtensilsCrossed } from "lucide-react";
+import {
+  getSurfacePanelClassName,
+  getSurfaceShellClassName,
+} from "@comtammatu/ui";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
+import { Badge } from "@comtammatu/ui/components/badge";
+import { SearchParamBlockedStateFlash } from "@/components/foundation/blocked-state-flash";
 import { LoginForm } from "./login-form";
 
 function BrandPanel() {
   return (
-    <div className="hidden lg:flex relative flex-col items-center justify-center overflow-hidden bg-zinc-950 p-12 text-white">
-      {/* Decorative circles */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-24 -left-24 size-96 rounded-full bg-white/5" />
-        <div className="absolute -bottom-32 -right-32 size-112 rounded-full bg-white/5" />
-        <div className="absolute top-1/3 right-12 size-48 rounded-full bg-white/[0.03]" />
-      </div>
-
-      {/* Dot pattern overlay */}
-      <svg
-        className="pointer-events-none absolute inset-0 size-full opacity-[0.04]"
-        aria-hidden="true"
-      >
-        <defs>
-          <pattern
-            id="dot-grid"
-            x="0"
-            y="0"
-            width="24"
-            height="24"
-            patternUnits="userSpaceOnUse"
+    <section className="ui-login-brand-panel order-2 lg:order-1">
+      <div className="relative flex h-full flex-col justify-between gap-6 ui-stagger-children">
+        <div className="space-y-5">
+          <Badge
+            variant="outline"
+            className="w-fit border-white/15 bg-white/8 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white/78"
           >
-            <circle cx="2" cy="2" r="1" fill="currentColor" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#dot-grid)" />
-      </svg>
+            Cổng nhân viên
+          </Badge>
+          <div className="flex size-14 items-center justify-center rounded-3xl bg-white/10 ring-1 ring-white/10 shadow-xl shadow-black/10">
+            <UtensilsCrossed className="size-7 text-white" />
+          </div>
+          <div className="space-y-3">
+            <h2 className="max-w-lg text-3xl font-semibold leading-tight tracking-tight text-balance xl:text-5xl">
+              Vào đúng nơi làm việc, thật nhanh.
+            </h2>
+          </div>
+        </div>
 
-      {/* Content */}
-      <div className="relative z-10 flex max-w-md flex-col items-center text-center">
-        {/* Rice bowl icon */}
-        <svg
-          className="mb-8 size-28 text-primary-foreground/80"
-          viewBox="0 0 120 120"
-          fill="none"
-          aria-hidden="true"
-        >
-          {/* Bowl */}
-          <path
-            d="M20 60 C20 60 20 95 60 95 C100 95 100 60 100 60Z"
-            fill="currentColor"
-            fillOpacity="0.15"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          />
-          {/* Bowl rim */}
-          <path
-            d="M15 60 H105"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          />
-          {/* Steam lines */}
-          <path
-            d="M42 48 C42 42 48 42 48 36"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            opacity="0.6"
-          />
-          <path
-            d="M58 44 C58 38 64 38 64 32"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            opacity="0.6"
-          />
-          <path
-            d="M74 48 C74 42 80 42 80 36"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            opacity="0.6"
-          />
-          {/* Chopsticks */}
-          <path
-            d="M85 25 L55 70"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          />
-          <path
-            d="M92 28 L62 73"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          />
-        </svg>
-
-        <h2 className="mb-3 text-3xl font-bold tracking-tight">
-          Cơm Tấm Má Tư
-        </h2>
-        <p className="text-lg font-light leading-relaxed text-primary-foreground/80">
-          Hệ thống quản lý nhà hàng thông minh
-        </p>
-
-        <div className="mt-12 flex items-center gap-8 text-sm font-medium text-primary-foreground/60">
-          <span>Quản lý</span>
-          <span className="size-1 rounded-full bg-primary-foreground/40" />
-          <span>Đơn giản</span>
-          <span className="size-1 rounded-full bg-primary-foreground/40" />
-          <span>Hiệu quả</span>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-white/10 bg-white/8 p-4 shadow-lg shadow-black/10 backdrop-blur-sm">
+            <p className="text-xs font-semibold uppercase tracking-widest text-white/55">
+              Bán hàng
+            </p>
+            <p className="mt-1.5 text-lg font-semibold">POS và KDS</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/8 p-4 shadow-lg shadow-black/10 backdrop-blur-sm">
+            <p className="text-xs font-semibold uppercase tracking-widest text-white/55">
+              Kho hàng
+            </p>
+            <p className="mt-1.5 text-lg font-semibold">Nhập, xuất, tồn</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/8 p-4 shadow-lg shadow-black/10 backdrop-blur-sm">
+            <p className="text-xs font-semibold uppercase tracking-widest text-white/55">
+              Nhân sự
+            </p>
+            <p className="mt-1.5 text-lg font-semibold">Ca làm và lương</p>
+          </div>
         </div>
       </div>
+    </section>
+  );
+}
+
+function TrustRow() {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 lg:gap-3">
+          <div className="rounded-2xl border border-border/70 bg-white/78 p-3.5">
+            <div className="flex items-start gap-3">
+              <div className="flex size-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <ShieldCheck className="size-4" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold">Đăng nhập an toàn</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-border/70 bg-white/78 p-3.5">
+            <div className="flex items-start gap-3">
+              <div className="flex size-9 items-center justify-center rounded-2xl bg-success/10 text-success">
+                <Building2 className="size-4" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold">Đúng chi nhánh</p>
+              </div>
+            </div>
+          </div>
     </div>
   );
 }
 
-export default function LoginPage() {
-  return (
-    <main id="main-content" className="grid min-h-screen lg:grid-cols-2">
-      <BrandPanel />
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ returnTo?: string }>;
+}) {
+  const sp = await searchParams;
 
-      {/* Form panel */}
-      <div className="flex flex-col items-center justify-center bg-background px-4 py-12">
-        <div className="w-full max-w-sm space-y-8">
-          <div className="flex flex-col items-center space-y-3 text-center">
-            <div className="flex size-16 items-center justify-center rounded-2xl bg-primary shadow-sm shadow-black/10">
-              <UtensilsCrossed className="size-8 text-primary-foreground" />
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight">Đăng nhập</h1>
-            <p className="text-sm text-muted-foreground">
-              Nhập thông tin để truy cập hệ thống
+  return (
+    <main
+      id="main-content"
+      className={getSurfaceShellClassName(
+        "auth",
+        "relative overflow-hidden min-h-dvh px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-5",
+      )}
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(211,84,0,0.12),transparent_28%),radial-gradient(circle_at_top_right,rgba(44,105,78,0.08),transparent_22%)]"
+      />
+      <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-5 lg:grid lg:min-h-[calc(100dvh-2.5rem)] lg:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)] lg:items-center xl:min-h-[calc(100dvh-3rem)]">
+        <BrandPanel />
+
+        <section className="order-1 flex lg:order-2 lg:items-center lg:justify-end">
+          <div className="w-full space-y-3 lg:max-w-2xl">
+            <Card
+              className={getSurfacePanelClassName(
+                "auth",
+                "ui-surface-lift shadow-lg shadow-primary/10",
+              )}
+            >
+              <CardHeader className="space-y-3 pb-4 md:pb-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex size-12 items-center justify-center rounded-3xl bg-primary text-primary-foreground shadow-sm shadow-primary/20">
+                    <UtensilsCrossed className="size-6" />
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className="border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary"
+                  >
+                    Cổng nhân viên
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  <p className="app-section-label">Đăng nhập cổng nhân viên</p>
+                  <CardTitle className="text-[clamp(1.85rem,2.8vw,2.35rem)] font-semibold tracking-tight">
+                    Vào ca nhanh, đúng vai trò
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <Suspense fallback={null}>
+                  <SearchParamBlockedStateFlash autoClear mode="inline" />
+                </Suspense>
+                <LoginForm returnTo={sp.returnTo} />
+              </CardContent>
+            </Card>
+
+            <TrustRow />
+
+            <p className="px-1 text-xs text-muted-foreground">
+              2026 Cơm Tấm Má Tư CTCP
             </p>
           </div>
-
-          <Card className="shadow-xl shadow-black/5">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Tài khoản</CardTitle>
-              <CardDescription>
-                Sử dụng email và mật khẩu được cấp
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <LoginForm />
-            </CardContent>
-          </Card>
-
-          <p className="text-center text-xs text-muted-foreground">
-            &copy; 2026 Cơm Tấm Má Tư CTCP
-          </p>
-        </div>
+        </section>
       </div>
     </main>
   );

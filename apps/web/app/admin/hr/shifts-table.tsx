@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CalendarClock, Plus } from "lucide-react";
+import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -82,20 +83,32 @@ export function ShiftsTable({
                   className={isPending ? "opacity-60" : ""}
                 >
                   <TableCell>
-                    <span className="font-medium">{shift.name}</span>
+                    <div className="space-y-1">
+                      <span className="font-medium">{shift.name}</span>
+                      <div className="space-y-1 md:hidden">
+                        <p className="text-xs text-muted-foreground">
+                          {branchName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {shift.start_time} - {shift.end_time}
+                        </p>
+                      </div>
+                    </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
                     {branchName}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
                     {shift.start_time}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
                     {shift.end_time}
                   </TableCell>
                   <TableCell>
                     <Badge variant={shift.is_active ? "default" : "outline"}>
-                      {shift.is_active ? "Hoạt động" : "Ngừng"}
+                      {shift.is_active
+                        ? ACTIVE_STATE_LABELS_VI.active
+                        : ACTIVE_STATE_LABELS_VI.inactive}
                     </Badge>
                   </TableCell>
                 </TableRow>

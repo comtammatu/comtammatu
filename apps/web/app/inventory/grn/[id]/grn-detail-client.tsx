@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { Button } from "@comtammatu/ui/components/button";
+import { SectionCard } from "@/components/foundation/ui-patterns";
 import {
   ArrowLeft,
   CheckCircle,
@@ -8,6 +10,7 @@ import {
   AlertTriangle,
   X,
 } from "lucide-react";
+import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
 import {
   Table,
   TableBody,
@@ -18,6 +21,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { StatusBadge } from "../../_components/shared";
 import { formatVND } from "../../_lib/format";
+import { tRoute } from "../../_lib/dictionary";
 
 export type GRNDetail = {
   code: string;
@@ -45,115 +49,80 @@ export type GRNDetail = {
 export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
   const qcPassed = grn.items.filter((i) => i.status === "pass").length;
   const qcWarning = grn.items.filter((i) => i.status === "warning").length;
+  const panelClassName = getSurfacePanelClassName("inventory", "ambient-shadow");
 
   return (
     <div className="space-y-6">
       <Link
         href="/inventory/grn"
-        className="inline-flex items-center gap-1 text-sm hover:underline"
-        style={{ color: "var(--md-on-surface-variant)" }}
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
       >
-        <ArrowLeft className="size-4" /> Chi tiết Phiếu nhập kho
+        <ArrowLeft className="size-4" /> {tRoute("/inventory/grn", "heading")}
       </Link>
 
       {/* Header Identity Card */}
       <section
-        className="relative overflow-hidden rounded-2xl p-8 shadow-sm"
-        style={{ backgroundColor: "var(--md-surface-low)" }}
+        className={cn(
+          panelClassName,
+          "relative overflow-hidden rounded-2xl bg-muted p-5 shadow-sm sm:p-6 lg:p-8",
+        )}
       >
-        <div className="absolute right-8 top-8">
+        <div className="absolute right-5 top-5 sm:right-6 sm:top-6 lg:right-8 lg:top-8">
           <StatusBadge status={grn.status} />
         </div>
 
-        <div className="grid grid-cols-1 gap-12 md:grid-cols-3">
-          {/* Column 1: Code + PO */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8 lg:gap-12">
           <div className="space-y-4">
             <div>
-              <p
-                className="mb-1 text-label uppercase tracking-wider"
-                style={{ color: "var(--md-outline)" }}
-              >
+              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
                 Mã phiếu nhập
               </p>
               <h3 className="text-3xl font-black tracking-tight">{grn.code}</h3>
             </div>
             <div>
-              <p
-                className="mb-1 text-label uppercase tracking-wider"
-                style={{ color: "var(--md-outline)" }}
-              >
+              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
                 Mã PO
               </p>
               {grn.poCode && grn.poId ? (
                 <Link
                   href={`/inventory/purchase-orders/${grn.poId}`}
-                  className="font-semibold hover:underline"
-                  style={{ color: "var(--md-primary)" }}
+                  className="focus-ring-standard rounded-sm font-semibold text-primary hover:underline"
                 >
                   {grn.poCode}
                 </Link>
               ) : (
-                <span style={{ color: "var(--md-outline)" }}>—</span>
+                <span className="text-muted-foreground">—</span>
               )}
             </div>
           </div>
 
-          {/* Column 2: Supplier + Date */}
-          <div
-            className="space-y-4 border-l pl-12"
-            style={{
-              borderColor:
-                "color-mix(in srgb, var(--md-outline-variant) 30%, transparent)",
-            }}
-          >
+          <div className="space-y-4 border-border/40 md:border-l md:pl-8 lg:pl-12">
             <div>
-              <p
-                className="mb-1 text-label uppercase tracking-wider"
-                style={{ color: "var(--md-outline)" }}
-              >
+              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
                 Nhà cung cấp
               </p>
               <p className="font-semibold">{grn.supplier}</p>
             </div>
             <div>
-              <p
-                className="mb-1 text-label uppercase tracking-wider"
-                style={{ color: "var(--md-outline)" }}
-              >
+              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
                 Ngày nhập
               </p>
               <p className="font-semibold">{grn.date}</p>
             </div>
           </div>
 
-          {/* Column 3: Total */}
-          <div
-            className="space-y-4 border-l pl-12"
-            style={{
-              borderColor:
-                "color-mix(in srgb, var(--md-outline-variant) 30%, transparent)",
-            }}
-          >
+          <div className="space-y-4 border-border/40 md:border-l md:pl-8 lg:pl-12">
             <div>
-              <p
-                className="mb-1 text-label uppercase tracking-wider"
-                style={{ color: "var(--md-outline)" }}
-              >
+              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
                 Tổng giá trị nhập
               </p>
-              <p
-                className="text-2xl font-black"
-                style={{ color: "var(--md-primary)" }}
-              >
+              <p className="text-2xl font-black text-primary">
                 {formatVND(grn.total)}{" "}
                 <span className="text-xs font-normal">VNĐ</span>
               </p>
             </div>
             <div>
-              <p
-                className="mb-1 text-label uppercase tracking-wider"
-                style={{ color: "var(--md-outline)" }}
-              >
+              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
                 Thuế (VAT)
               </p>
               <p className="font-semibold">{formatVND(grn.tax)} VNĐ</p>
@@ -163,216 +132,183 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Items -- 2/3 */}
         <div className="lg:col-span-2">
           <section
-            className="overflow-hidden rounded-2xl ambient-shadow"
-            style={{
-              backgroundColor: "var(--md-surface-lowest)",
-              border:
-                "1px solid color-mix(in srgb, var(--md-outline-variant) 20%, transparent)",
-            }}
+            className={cn(panelClassName, "overflow-hidden rounded-2xl bg-card")}
           >
-            <div
-              className="flex items-center justify-between border-b p-6"
-              style={{
-                borderColor:
-                  "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-              }}
-            >
+            <div className="flex flex-col gap-3 border-b border-border/50 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <h4 className="text-lg font-bold">Danh sách mặt hàng nhập</h4>
-              <span
-                className="text-xs font-medium"
-                style={{ color: "var(--md-outline)" }}
-              >
+              <span className="text-xs font-medium text-muted-foreground">
                 {grn.items.length} mặt hàng
               </span>
             </div>
 
-            <Table>
-              <TableHeader>
-                <TableRow
-                  style={{
-                    backgroundColor:
-                      "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
-                  }}
+            <div className="space-y-3 p-4 md:hidden">
+              {grn.items.map((item) => (
+                <div
+                  key={item.sku || item.name}
+                  className="rounded-2xl border border-border/70 bg-muted/20 p-4"
                 >
-                  {[
-                    { label: "Sản phẩm", align: "" },
-                    { label: "Yêu cầu", align: "text-right" },
-                    { label: "Thực nhận", align: "text-right" },
-                    { label: "Đơn giá", align: "text-right" },
-                    { label: "Số lô / HSD", align: "" },
-                    { label: "Nhiệt độ", align: "" },
-                    { label: "QC", align: "text-center" },
-                  ].map((h) => (
-                    <TableHead
-                      key={h.label}
-                      className={`px-6 py-4 whitespace-nowrap text-label font-bold uppercase tracking-wider ${h.align}`}
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      {h.label}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {grn.items.map((item) => (
-                  <TableRow
-                    key={item.sku || item.name}
-                    className="group transition-colors"
-                    style={{
-                      borderColor:
-                        "color-mix(in srgb, var(--md-outline-variant) 5%, transparent)",
-                    }}
-                  >
-                    <TableCell className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-bold">{item.name}</span>
-                        <span
-                          className="text-label"
-                          style={{ color: "var(--md-outline)" }}
-                        >
-                          {item.sku}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
-                      {item.required} {item.unit}
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
-                      <span
-                        className={
-                          item.actual < item.required ? "font-semibold" : ""
-                        }
-                        style={
-                          item.actual < item.required
-                            ? { color: "var(--md-primary)" }
-                            : undefined
-                        }
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-bold">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">{item.sku}</p>
+                    </div>
+                    {item.status === "pass" ? (
+                      <CheckCircle2 className="size-4 text-success" />
+                    ) : (
+                      <AlertTriangle className="size-4 text-primary" />
+                    )}
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Yêu cầu</p>
+                      <p className="mt-1 font-medium">{item.required} {item.unit}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Thực nhận</p>
+                      <p className="mt-1 font-medium">{item.actual}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Đơn giá</p>
+                      <p className="mt-1 font-mono">{formatVND(item.cost)}đ</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Nhiệt độ</p>
+                      <p className="mt-1">{item.temp ?? "—"}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground">Số lô / HSD</p>
+                      <p className="mt-1 font-mono">{item.lot}</p>
+                      <p className="text-xs text-muted-foreground">{item.expiry}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40">
+                    {[
+                      { label: "Sản phẩm", align: "" },
+                      { label: "Yêu cầu", align: "text-right" },
+                      { label: "Thực nhận", align: "text-right" },
+                      { label: "Đơn giá", align: "text-right" },
+                      { label: "Số lô / HSD", align: "" },
+                      { label: "Nhiệt độ", align: "" },
+                      { label: "QC", align: "text-center" },
+                    ].map((h) => (
+                      <TableHead
+                        key={h.label}
+                        className={`px-6 py-4 whitespace-nowrap text-label font-bold uppercase tracking-wider ${h.align}`}
                       >
-                        {item.actual}
-                      </span>
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
-                      {formatVND(item.cost)}đ
-                    </TableCell>
-                    <TableCell className="px-6 py-4">
-                      <p className="font-mono font-medium">{item.lot}</p>
-                      <p
-                        className="text-xs"
-                        style={{ color: "var(--md-outline)" }}
-                      >
-                        {item.expiry}
-                      </p>
-                    </TableCell>
-                    <TableCell className="px-6 py-4">
-                      {item.temp ? (
-                        <span className="font-mono">{item.temp}</span>
-                      ) : (
-                        <span style={{ color: "var(--md-outline)" }}>—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-center">
-                      {item.status === "pass" ? (
-                        <CheckCircle2
-                          className="mx-auto size-4"
-                          style={{ color: "var(--md-secondary)" }}
-                        />
-                      ) : (
-                        <AlertTriangle
-                          className="mx-auto size-4"
-                          style={{ color: "var(--md-primary)" }}
-                        />
-                      )}
-                    </TableCell>
+                        {h.label}
+                      </TableHead>
+                    ))}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {grn.items.map((item) => (
+                    <TableRow
+                      key={item.sku || item.name}
+                      className="group transition-colors"
+                    >
+                      <TableCell className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-bold">{item.name}</span>
+                          <span className="text-label text-muted-foreground">
+                            {item.sku}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
+                        {item.required} {item.unit}
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
+                        <span
+                          className={
+                            item.actual < item.required
+                              ? "font-semibold text-primary"
+                              : undefined
+                          }
+                        >
+                          {item.actual}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
+                        {formatVND(item.cost)}đ
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
+                        <p className="font-mono font-medium">{item.lot}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.expiry}
+                        </p>
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
+                        {item.temp ? (
+                          <span className="font-mono">{item.temp}</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-center">
+                        {item.status === "pass" ? (
+                          <CheckCircle2 className="mx-auto size-4 text-success" />
+                        ) : (
+                          <AlertTriangle className="mx-auto size-4 text-primary" />
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </section>
         </div>
 
         {/* Sidebar -- 1/3 */}
         <div className="space-y-4">
           {/* Quality Summary */}
-          <div
-            className="rounded-2xl ambient-shadow"
-            style={{
-              backgroundColor: "var(--md-surface-lowest)",
-              border:
-                "1px solid color-mix(in srgb, var(--md-outline-variant) 20%, transparent)",
-            }}
-          >
-            <div
-              className="border-b p-6"
-              style={{
-                borderColor:
-                  "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-              }}
-            >
+          <SectionCard className={cn(panelClassName, "rounded-2xl bg-card")} density="compact">
+            <div className="-m-5 border-b border-border/50 px-5 py-5 md:-m-6 md:px-6 md:py-6">
               <h4 className="text-sm font-bold">Tổng hợp chất lượng</h4>
             </div>
-            <div className="space-y-3 p-6">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span
-                  className="text-sm"
-                  style={{ color: "var(--md-on-surface-variant)" }}
-                >
+                <span className="text-sm text-muted-foreground">
                   Hàng đạt chuẩn (QC)
                 </span>
-                <span
-                  className="text-lg font-bold"
-                  style={{ color: "var(--md-secondary)" }}
-                >
+                <span className="text-lg font-bold text-success">
                   {qcPassed}/{grn.items.length}
                 </span>
               </div>
               {qcWarning > 0 && (
                 <div className="flex items-center justify-between">
-                  <span
-                    className="text-sm"
-                    style={{ color: "var(--md-on-surface-variant)" }}
-                  >
+                  <span className="text-sm text-muted-foreground">
                     Hàng lưu/thiếu
                   </span>
-                  <span
-                    className="text-lg font-bold"
-                    style={{ color: "var(--md-primary)" }}
-                  >
+                  <span className="text-lg font-bold text-primary">
                     {qcWarning}
                   </span>
                 </div>
               )}
             </div>
-          </div>
+          </SectionCard>
 
           {/* Total value card */}
-          <div
-            className="rounded-2xl p-6"
-            style={{
-              backgroundColor:
-                "color-mix(in srgb, var(--md-primary) 5%, var(--md-surface-lowest))",
-              border:
-                "1px solid color-mix(in srgb, var(--md-primary) 20%, transparent)",
-            }}
+          <SectionCard
+            className="rounded-2xl border-primary/20 bg-primary/5"
+            density="compact"
           >
-            <p
-              className="text-label uppercase tracking-wider"
-              style={{ color: "var(--md-outline)" }}
-            >
+            <p className="text-label uppercase tracking-wider text-muted-foreground">
               Tổng giá trị nhập
             </p>
-            <p
-              className="mt-2 text-2xl font-black tabular-nums"
-              style={{ color: "var(--md-primary)" }}
-            >
+            <p className="mt-2 text-2xl font-black tabular-nums text-primary">
               {formatVND(grn.total)} VNĐ
             </p>
-            <div
-              className="mt-3 space-y-1 text-xs"
-              style={{ color: "var(--md-on-surface-variant)" }}
-            >
+            <div className="mt-3 space-y-1 text-xs text-muted-foreground">
               <div className="flex justify-between">
                 <span>Tổng thuế (VAT)</span>
                 <span className="font-mono tabular-nums">
@@ -384,38 +320,27 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
                 <span className="font-mono tabular-nums">0</span>
               </div>
             </div>
-          </div>
+          </SectionCard>
         </div>
       </div>
 
       {/* Footer Action Bar */}
-      <footer
-        className="flex items-center justify-between border-t py-6"
-        style={{
-          borderColor:
-            "color-mix(in srgb, var(--md-outline-variant) 50%, transparent)",
-        }}
-      >
-        <button
+      <footer className="flex flex-col gap-3 border-t border-border/50 py-6 sm:flex-row sm:items-center sm:justify-between">
+        <Button
           type="button"
-          className="flex items-center gap-2 rounded-full px-6 py-3 font-bold transition-all"
-          style={{ color: "var(--md-error)" }}
+          variant="ghost"
+          className="justify-center text-destructive hover:bg-destructive/8 hover:text-destructive"
         >
           <X className="size-5" />
           Hủy bỏ
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="flex items-center gap-2 rounded-full px-10 py-3 font-bold text-white shadow-lg transition-all hover:scale-[0.98]"
-          style={{
-            background:
-              "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-            boxShadow: "0 4px 14px rgba(211,84,0,0.2)",
-          }}
+          className="justify-center shadow-lg shadow-primary/20 transition-transform hover:scale-[0.98]"
         >
           <CheckCircle className="size-5" />
           Xác nhận nhập kho
-        </button>
+        </Button>
       </footer>
     </div>
   );

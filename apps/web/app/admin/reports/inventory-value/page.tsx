@@ -3,7 +3,12 @@ import {
   extractClaims,
   getInventoryValueVisibility,
 } from "@comtammatu/shared/auth";
-import { InventoryValuePanel } from "../../inventory/inventory-value-panel";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import {
+  PageContainer,
+  PageHeader,
+} from "@/components/foundation/ui-patterns";
+import { InventoryValuePanel } from "@/inventory/inventory-value-panel";
 
 export default async function InventoryValueReportPage() {
   const supabase = await createClient();
@@ -18,15 +23,12 @@ export default async function InventoryValueReportPage() {
     : { system: false, area: false, branch: false };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Giá trị tồn kho</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Tổng hợp giá trị tồn theo phạm vi được phân quyền xem (giám sát / báo
-          cáo).
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        eyebrow={APP_COPY_VI.executiveReporting}
+        title="Giá trị tồn kho"
+      />
       <InventoryValuePanel visibility={inventoryValueVisibility} />
-    </div>
+    </PageContainer>
   );
 }

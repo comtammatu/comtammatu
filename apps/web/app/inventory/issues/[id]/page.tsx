@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
+import { fetchIngredients } from "../../actions";
 import { fetchStockIssueDetail } from "../../issue-actions";
-import { formatDate } from "../../_lib/format";
 import { IssueDetailClient } from "./issue-detail-client";
-import type { IssueDetail } from "./issue-detail-client";
+import type { IngredientRow } from "../../page";
 
 export default async function IssueDetailPage({
   params,
@@ -10,7 +10,14 @@ export default async function IssueDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const res = await fetchStockIssueDetail(Number(id));
+  const issueId = Number(id);
+  if (!Number.isFinite(issueId) || issueId <= 0) notFound();
+
+  const [res, ingredientsRes] = await Promise.all([
+    fetchStockIssueDetail(issueId),
+    fetchIngredients(),
+  ]);
+
   if (!res.success || !res.data) notFound();
 
   const d = res.data as {
@@ -35,38 +42,16 @@ export default async function IssueDetailPage({
       ingredients: { id: number; name: string; unit: string } | null;
     }>;
   };
+  const ingredients: IngredientRow[] = ingredientsRes.success
+    ? ((ingredientsRes.data ?? []) as IngredientRow[])
+    : [];
 
-  const branch = d.issue.branches as { id: number; name: string } | null;
-
-  const items: IssueDetail["items"] = (d.lines ?? []).map((l) => {
-    const ing = l.ingredients as {
-      id: number;
-      name: string;
-      unit: string;
-    } | null;
-    return {
-      name: ing?.name ?? "—",
-      sku: "",
-      qty: Number(l.quantity ?? 0),
-      unit: l.unit ?? ing?.unit ?? "",
-      cost: Number(l.unit_cost ?? 0),
-      total: Number(l.total_cost ?? 0),
-      note: l.reason ?? "",
-    };
-  });
-
-  const totalAmount = items.reduce((sum, i) => sum + i.total, 0);
-
-  const issueDetail: IssueDetail = {
-    code: d.issue.issue_number ?? "",
-    status: d.issue.status ?? "draft",
-    branch: branch?.name ?? `Chi nhánh #${d.issue.branch_id}`,
-    date: d.issue.issued_at ? formatDate(d.issue.issued_at) : "—",
-    type: d.issue.issue_type ?? "consumption",
-    createdBy: "—",
-    total: totalAmount,
-    items,
-  };
-
-  return <IssueDetailClient issueDetail={issueDetail} />;
+  return (
+    <IssueDetailClient
+      issueId={issueId}
+      initialIssue={d.issue}
+      initialLines={d.lines}
+      ingredients={ingredients}
+    />
+  );
 }

@@ -1,32 +1,53 @@
 # Codebase Map — Cơm Tấm Má Tư
 
-> **Audience:** New engineers onboarding, feature owners planning Sprint 1+
-> **Primary tasks:** (1) Understand system structure and auth flow, (2) Know where to add new features, (3) Identify blast radius of changes
-> **Decision horizon:** Sprint planning, onboarding, architecture review
-> **Out of scope:** Business requirements (see `docs/ref/`), sprint details and feature specs (see `docs/plan/`, e.g. [`m2-order-lifecycle.md`](plan/m2-order-lifecycle.md))
+> **Đối tượng:** Kỹ sư mới onboard, người phụ trách feature, người lập kế hoạch sprint
+> **Mục tiêu chính:** (1) Hiểu cấu trúc hệ thống và luồng auth, (2) biết nơi thêm tính năng mới, (3) ước lượng blast radius của thay đổi
+> **Mốc quyết định:** Lập kế hoạch sprint, onboarding, rà soát kiến trúc
+> **Ngoài phạm vi:** Yêu cầu nghiệp vụ (xem `docs/ref/`), chi tiết sprint và đặc tả tính năng (xem `docs/plan/`, ví dụ [`m2-order-lifecycle.md`](plan/m2-order-lifecycle.md))
 
-## Status
+## Trạng thái
 
-- **Current version:** v1.0.0 — All modules shipped (M0–M7)
-- **Next milestone:** v1.0.0 Pilot Launch at 1 branch
+- **Phiên bản hiện tại:** v1.0.0 — M0–M3, M5 SHIPPED. M4/M6/M7 PARTIAL (blocked on external credentials). M5-Ext Phase 0+1 live, S8 (yield + AP) deferred post-pilot.
+- **Mốc tiếp theo:** Pilot Launch v1.0.0 cho mô hình vận hành `HQ -> Bếp trung tâm -> Chi nhánh` — cần wire VietQR/Momo/MISA credentials trước pilot
 - **Tech stack:** Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Supabase | Turborepo 2.9
 
-## Module Index
+## Chỉ mục phân hệ
 
 | Module         | Doc                                            | Purpose                                              | Risk Level                  |
 | -------------- | ---------------------------------------------- | ---------------------------------------------------- | --------------------------- |
 | Auth & ACL     | [auth.md](modules/auth.md)                     | JWT claims, role hierarchy, RLS, proxy routing       | **High** — gates all access |
 | Database       | [database.md](modules/database.md)             | Supabase clients, types, migrations, RLS policies    | **High** — data integrity   |
-| Web App        | [web-app.md](modules/web-app.md)               | Next.js routes, layouts, server actions, admin shell | Medium                      |
+| Web App        | [web-app.md](modules/web-app.md)               | Next.js routes, layouts, server actions, surface shells | Medium                    |
 | UI             | [ui.md](modules/ui.md)                         | shadcn components, design tokens                     | Low                         |
 | Security       | [security.md](modules/security.md)             | Rate limiting (Upstash Redis)                        | Medium                      |
 | Infrastructure | [infrastructure.md](modules/infrastructure.md) | Monorepo, build, deploy, environment                 | Medium                      |
 
-## Architecture Overview
+## Documentation Index
+
+Khi cần đi sâu hơn theo loại tài liệu:
+
+- [docs/README.md](README.md) — cổng vào chung cho toàn bộ docs
+- [docs/ref/glossary.md](ref/glossary.md) — glossary chuẩn duy nhất cho toàn repo
+- [docs/architecture/README.md](architecture/README.md) — kiến trúc hệ thống và cross-cutting docs
+- [ref/README.md](ref/README.md) — canonical reference docs
+- [runbooks/README.md](runbooks/README.md) — readiness và smoke gates
+- [worklog/README.md](worklog/README.md) — adoption/progress tracking
+
+## Tổng quan kiến trúc
 
 ```
 Browser ──► proxy.ts (auth + ACL) ──► Next.js App Router ──► Supabase (PostgREST + Auth)
                                                          ──► Upstash Redis (rate limit)
+```
+
+### Pilot Operating Model
+
+```mermaid
+flowchart LR
+    supplier["Nhà cung cấp"] --> hq["HQ / Trụ sở"]
+    hq -->|raw transfers| ck["Bếp trung tâm"]
+    ck -->|finished-good transfers| br["Chi nhánh"]
+    br --> pos["POS / KDS / completed orders"]
 ```
 
 ### C4 Context Diagram
@@ -45,7 +66,7 @@ graph TB
     vercel -->|Rate limit check| redis
 ```
 
-### Module Dependency Graph
+### Sơ đồ phụ thuộc phân hệ
 
 ```mermaid
 graph LR
@@ -62,7 +83,7 @@ graph LR
     shared -.->|types only| db
 ```
 
-### Data Flow — Login to Dashboard
+### Luồng dữ liệu — Đăng nhập vào trang tổng quan
 
 ```mermaid
 sequenceDiagram
@@ -87,7 +108,7 @@ sequenceDiagram
 
 ## Hub Files (High Blast Radius)
 
-These files have the most dependents. Changes here affect many parts of the system.
+Đây là các file có nhiều chỗ phụ thuộc nhất. Mọi thay đổi ở đây sẽ tác động rộng trong hệ thống.
 
 | File                                            | Importers                          | Impact                                                |
 | ----------------------------------------------- | ---------------------------------- | ----------------------------------------------------- |
@@ -106,12 +127,16 @@ These files have the most dependents. Changes here affect many parts of the syst
 
 ## Priority Recommendations
 
-1. **v1.0.0 Pilot Launch:** All modules M0–M7 shipped. Focus on QA, security review, and pilot at 1 branch.
+1. **v1.0.0 Pilot Launch:** M0–M3, M5 shipped. M4/M6/M7 partial (blocked on credentials). Focus on wiring real payment/invoice APIs, QA, security review, and validating the `HQ -> Bếp trung tâm -> Chi nhánh` operating path.
 2. **Watch hub files:** Any change to `module-acl.ts` or `types.ts` requires proxy + layout + nav verification.
 3. **RLS pattern:** Every new table must follow the tenant-scoped RLS pattern with explicit GRANTs. See [database.md](modules/database.md).
 
+Inventory route ownership note:
+- `/inventory` is the canonical Inventory surface.
+- `/admin/inventory*` has been removed and is no longer a supported route space.
+
 <!-- ORACLE-META
-Updated: 2026-04-08 (all modules M0–M7 shipped, v1.0.0)
+Updated: 2026-04-15 (status sync: M4/M6/M7 PARTIAL, S8 deferred, H3 deferred)
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 95%
 Unknowns: 2 items pending verification

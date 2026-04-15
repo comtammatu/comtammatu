@@ -1,0 +1,71 @@
+[
+  {
+    "scenario": "owner",
+    "step": "login",
+    "url": "http://localhost:3000/admin/dashboard"
+  },
+  {
+    "scenario": "owner",
+    "step": "owner-admin-dashboard",
+    "url": "http://localhost:3000/admin/dashboard",
+    "requested": "/admin/dashboard"
+  },
+  {
+    "scenario": "owner",
+    "step": "owner-admin-orders",
+    "url": "http://localhost:3000/admin/dashboard",
+    "requested": "/admin/orders"
+  },
+  {
+    "scenario": "owner",
+    "step": "owner-admin-reports",
+    "url": "http://localhost:3000/admin/reports",
+    "requested": "/admin/reports"
+  },
+  {
+    "scenario": "owner",
+    "step": "owner-inventory-dashboard",
+    "url": "http://localhost:3000/admin/dashboard",
+    "requested": "/inventory"
+  },
+  {
+    "scenario": "owner",
+    "step": "owner-inventory-reports",
+    "url": "http://localhost:3000/admin/dashboard",
+    "requested": "/inventory/reports"
+  },
+  {
+    "scenario": "chef-datdo",
+    "step": "login",
+    "url": "http://localhost:3000/employee"
+  },
+  {
+    "scenario": "chef-datdo",
+    "step": "chef-kds",
+    "url": "http://localhost:3000/br/2/kds",
+    "requested": "/br/2/kds"
+  },
+  {
+    "scenario": "chef-datdo",
+    "step": "chef-employee",
+    "url": "http://localhost:3000/employee",
+    "requested": "/employee"
+  },
+  {
+    "scenario": "cashier-datdo",
+    "step": "login",
+    "url": "http://localhost:3000/employee"
+  },
+  {
+    "scenario": "cashier-datdo",
+    "step": "cashier-pos",
+    "url": "http://localhost:3000/br/2/pos",
+    "requested": "/br/2/pos"
+  },
+  {
+    "scenario": "cashier-datdo",
+    "step": "cashier-employee",
+    "url": "http://localhost:3000/employee",
+    "requested": "/employee"
+  }
+]

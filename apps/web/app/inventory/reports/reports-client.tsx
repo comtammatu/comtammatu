@@ -10,11 +10,18 @@ import {
   Store,
   ChevronDown,
 } from "lucide-react";
+import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import {
+  Button,
+} from "@comtammatu/ui/components/button";
 import {
   SimpleBarChart,
   TrendSparkline,
   PageHeader,
+  resolveInventoryColorValue,
+  type InventorySemanticColor,
 } from "../_components/shared";
+import { EmptyState } from "@/components/foundation/ui-patterns";
 import { formatVND } from "../_lib/format";
 
 export type ApAgingItem = { range: string; amount: number };
@@ -25,175 +32,165 @@ export type VarianceItem = {
 };
 
 export type ReportsProps = {
+  movementSummary: Array<{
+    label: string;
+    values: { value: number; color: InventorySemanticColor }[];
+  }>;
   apAging: ApAgingItem[];
   consumptionVariance: VarianceItem[];
+  foodCostTrend: number[];
+  foodCostTrendAvailable: boolean;
+  foodCostTrendDeltaPct: number | null;
 };
 
-// Static demo data — chart time-series not yet backed by DB
-const movementSummary = [
-  { month: "Th01", inbound: 85, outbound: 62, transfer: 28 },
-  { month: "Th02", inbound: 92, outbound: 78, transfer: 34 },
-  { month: "Th03", inbound: 78, outbound: 71, transfer: 31 },
-  { month: "Th04", inbound: 45, outbound: 38, transfer: 18 },
-];
-const foodCostTrend = [65, 62, 68, 64, 61, 58, 63, 60, 57, 55, 59, 56];
-const foodCostTarget = 60;
-
-export function ReportsClient({ apAging, consumptionVariance }: ReportsProps) {
-  const barChartData = movementSummary.map((m) => ({
-    label: m.month,
-    values: [
-      { value: m.inbound, color: "var(--md-primary)" },
-      { value: m.outbound, color: "var(--md-secondary)" },
-      { value: m.transfer, color: "var(--md-tertiary)" },
-    ],
-  }));
-
+export function ReportsClient({
+  movementSummary,
+  apAging,
+  consumptionVariance,
+  foodCostTrend,
+  foodCostTrendAvailable,
+  foodCostTrendDeltaPct,
+}: ReportsProps) {
   const maxAP = Math.max(...apAging.map((a) => a.amount), 1);
+  const trendLabel =
+    foodCostTrendDeltaPct == null
+      ? "Chưa đủ dữ liệu để so sánh tháng trước"
+      : foodCostTrendDeltaPct > 0
+        ? `Tăng ${foodCostTrendDeltaPct}% so với tháng trước`
+        : foodCostTrendDeltaPct < 0
+          ? `Giảm ${Math.abs(foodCostTrendDeltaPct)}% so với tháng trước`
+          : "Ổn định so với tháng trước";
+  const overdueAmount = apAging[apAging.length - 1]?.amount ?? 0;
+  const varianceCount = consumptionVariance.length;
+  const panelClassName = getSurfacePanelClassName("inventory", "ambient-shadow");
+  const glassPanelClassName =
+    "border-border/30 bg-white/85 supports-[backdrop-filter]:backdrop-blur-sm";
+  const pillClassName = cn(
+    getSurfacePanelClassName("inventory"),
+    "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium",
+  );
 
   return (
-    <div className="space-y-6">
+    <div className="ui-stagger-children space-y-6">
       <PageHeader
         title="Hệ thống Báo cáo"
-        description="Phân tích biến động kho, tiêu hao và hiệu quả vận hành chuỗi Cơm Tấm Má Tư."
       />
 
       {/* Filter bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div
-            className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ambient-shadow"
-            style={{
-              backgroundColor: "var(--md-surface-lowest)",
-              border:
-                "1px solid color-mix(in srgb, var(--md-outline-variant) 30%, transparent)",
-            }}
-          >
-            <Calendar
-              className="size-4"
-              style={{ color: "var(--md-primary)" }}
-            />
-            <span style={{ color: "var(--md-on-surface)" }}>Tháng này</span>
-            <ChevronDown
-              className="size-3.5"
-              style={{ color: "var(--md-outline)" }}
-            />
+      <div
+        className={cn(
+          panelClassName,
+          glassPanelClassName,
+          "ui-flow-panel relative overflow-hidden bg-gradient-to-br from-success/12 via-white to-primary/10 px-5 py-5 sm:px-6",
+        )}
+      >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+        >
+          <div className="absolute -right-16 top-0 h-44 w-44 rounded-full bg-primary/10 blur-3xl" />
+          <div className="absolute bottom-0 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full bg-success/10 blur-3xl" />
+        </div>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)] lg:items-center">
+          <div className="space-y-4">
+            <div className="ui-stagger-children flex flex-wrap items-center gap-3">
+              <div className={cn(pillClassName, "ui-surface-lift")}>
+                <Calendar className="size-4 text-primary" />
+                <span className="text-foreground">Tháng này</span>
+                <ChevronDown className="size-3.5 text-muted-foreground" />
+              </div>
+              <div className={cn(pillClassName, "ui-surface-lift")}>
+                <Store className="size-4 text-primary" />
+                <span className="text-foreground">Tất cả chi nhánh</span>
+                <ChevronDown className="size-3.5 text-muted-foreground" />
+              </div>
+            </div>
           </div>
-          <div
-            className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ambient-shadow"
-            style={{
-              backgroundColor: "var(--md-surface-lowest)",
-              border:
-                "1px solid color-mix(in srgb, var(--md-outline-variant) 30%, transparent)",
-            }}
-          >
-            <Store className="size-4" style={{ color: "var(--md-primary)" }} />
-            <span style={{ color: "var(--md-on-surface)" }}>
-              Tất cả chi nhánh
-            </span>
-            <ChevronDown
-              className="size-3.5"
-              style={{ color: "var(--md-outline)" }}
-            />
+          <div className="ui-stagger-children grid gap-3 sm:grid-cols-2">
+            <div
+              className={cn(
+                panelClassName,
+                glassPanelClassName,
+                "ui-surface-lift px-4 py-4",
+              )}
+            >
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                Công nợ quá hạn
+              </p>
+              <p className="mt-2 text-2xl font-semibold">
+                {formatVND(overdueAmount)}đ
+              </p>
+            </div>
+            <div
+              className={cn(
+                panelClassName,
+                glassPanelClassName,
+                "ui-surface-lift px-4 py-4",
+              )}
+            >
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                Mã lệch định mức
+              </p>
+              <p className="mt-2 text-2xl font-semibold">{varianceCount}</p>
+            </div>
           </div>
         </div>
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold transition-all hover:opacity-90"
-          style={{
-            border: "2px solid var(--md-primary)",
-            color: "var(--md-primary)",
-            backgroundColor: "transparent",
-          }}
-        >
-          <FileDown className="size-4" />
-          Xuất CSV/Excel
-        </button>
+        <div className="mt-4 flex justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full border-primary/30 bg-white/60 px-5 font-bold text-primary hover:bg-white"
+          >
+            <FileDown className="size-4" />
+            Xuất CSV/Excel
+          </Button>
+        </div>
       </div>
 
       {/* Dashboard Grid — 12 col asymmetric */}
       <div className="grid grid-cols-12 gap-6">
         {/* Stock Movement Summary — col-span-8 */}
         <div
-          className="col-span-12 lg:col-span-8 flex flex-col rounded-2xl p-6 ambient-shadow"
-          style={{
-            backgroundColor: "var(--md-surface-lowest)",
-            border:
-              "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-          }}
+          className={cn(
+            panelClassName,
+            glassPanelClassName,
+            "ui-flow-panel col-span-12 flex flex-col p-6 lg:col-span-8",
+          )}
         >
           <div className="mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div
-                className="flex size-10 items-center justify-center rounded-full"
-                style={{
-                  backgroundColor:
-                    "color-mix(in srgb, var(--md-primary) 10%, transparent)",
-                }}
-              >
-                <BarChart3
-                  className="size-5"
-                  style={{ color: "var(--md-primary)" }}
-                />
-              </div>
-              <h3
-                className="text-lg font-bold"
-                style={{ color: "var(--md-on-surface)" }}
-              >
-                Stock Movement Summary
-              </h3>
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
+              <BarChart3 className="size-5 text-primary" />
             </div>
-            <div className="flex items-center gap-4 text-xs font-medium">
-              <span className="flex items-center gap-1.5">
-                <span
-                  className="size-3 rounded-full"
-                  style={{ backgroundColor: "var(--md-primary)" }}
-                />
-                <span style={{ color: "var(--md-on-surface-variant)" }}>
-                  Nhập kho
-                </span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span
-                  className="size-3 rounded-full"
-                  style={{ backgroundColor: "var(--md-secondary)" }}
-                />
-                <span style={{ color: "var(--md-on-surface-variant)" }}>
-                  Xuất kho
-                </span>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span
-                  className="size-3 rounded-full"
-                  style={{ backgroundColor: "var(--md-tertiary)" }}
-                />
-                <span style={{ color: "var(--md-on-surface-variant)" }}>
-                  Luân chuyển
-                </span>
-              </span>
-            </div>
+            <h3 className="text-lg font-bold text-foreground">Biến động kho theo nhóm</h3>
           </div>
-          <div className="flex-1">
-            <SimpleBarChart data={barChartData} height={220} />
+          <div className="flex items-center gap-4 text-xs font-medium">
+            <span className="flex items-center gap-1.5">
+              <span className="size-3 rounded-full bg-primary" />
+              <span className="text-muted-foreground">Nhập kho</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="size-3 rounded-full bg-success" />
+              <span className="text-muted-foreground">Chuyển vào</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="size-3 rounded-full bg-destructive" />
+              <span className="text-muted-foreground">Xuất / tiêu hao</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="size-3 rounded-full bg-info" />
+              <span className="text-muted-foreground">Sản xuất</span>
+            </span>
           </div>
+        </div>
+        <div className="flex-1">
+          <SimpleBarChart data={movementSummary} height={220} />
+        </div>
           <div className="mt-4 flex items-center justify-between">
-            <p
-              className="text-sm"
-              style={{ color: "var(--md-on-surface-variant)" }}
-            >
-              Tăng{" "}
-              <span
-                className="font-bold"
-                style={{ color: "var(--md-secondary)" }}
-              >
-                +12.5%
-              </span>{" "}
-              so với tháng trước
-            </p>
+            <p className="text-sm text-muted-foreground">{trendLabel}</p>
             <button
               type="button"
-              className="flex items-center gap-1 text-sm font-bold hover:underline"
-              style={{ color: "var(--md-primary)" }}
+              className="flex items-center gap-1 text-sm font-bold text-primary hover:underline"
             >
               Chi tiết
             </button>
@@ -202,71 +199,47 @@ export function ReportsClient({ apAging, consumptionVariance }: ReportsProps) {
 
         {/* Supplier AP Aging — col-span-4 */}
         <div
-          className="col-span-12 lg:col-span-4 rounded-2xl p-6 ambient-shadow"
-          style={{
-            backgroundColor: "var(--md-surface-lowest)",
-            border:
-              "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-          }}
+          className={cn(
+            panelClassName,
+            glassPanelClassName,
+            "ui-flow-panel col-span-12 p-6 lg:col-span-4",
+          )}
         >
-          <h3
-            className="mb-4 text-lg font-bold"
-            style={{ color: "var(--md-on-surface)" }}
-          >
-            Supplier AP Aging
-          </h3>
+          <h3 className="mb-4 text-lg font-bold text-foreground">Công nợ nhà cung cấp</h3>
           <div className="space-y-4">
             {apAging.map((item, idx) => {
               const isOverdue = idx === apAging.length - 1;
               const barColor =
                 idx === 0
-                  ? "var(--md-secondary)"
+                  ? resolveInventoryColorValue("success")
                   : idx === 1
-                    ? "var(--md-primary)"
+                    ? resolveInventoryColorValue("primary")
                     : idx === 2
-                      ? "var(--md-on-warning-container)"
-                      : "var(--md-error)";
+                      ? resolveInventoryColorValue("warning")
+                      : resolveInventoryColorValue("danger");
               return (
                 <div
                   key={item.range}
-                  className="rounded-xl p-3"
-                  style={{
-                    backgroundColor: isOverdue
-                      ? "var(--md-error-container)"
-                      : "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
-                    border: isOverdue
-                      ? "1px solid color-mix(in srgb, var(--md-error) 20%, transparent)"
-                      : "none",
-                  }}
+                  className={cn(
+                    "ui-surface-lift rounded-2xl p-3",
+                    isOverdue
+                      ? "border border-destructive/20 bg-destructive/12"
+                      : "bg-muted/35",
+                  )}
                 >
                   <div className="mb-1 flex justify-between text-xs">
-                    <span
-                      style={{
-                        color: isOverdue
-                          ? "var(--md-error)"
-                          : "var(--md-on-surface-variant)",
-                      }}
-                    >
+                    <span className={cn(isOverdue ? "text-destructive" : "text-muted-foreground")}>
                       {item.range}
                     </span>
-                    <span
-                      className="font-bold"
-                      style={{
-                        color: isOverdue
-                          ? "var(--md-on-error-container)"
-                          : "var(--md-on-surface)",
-                      }}
-                    >
+                    <span className={cn("font-bold", isOverdue ? "text-destructive" : "text-foreground")}>
                       {formatVND(item.amount)}đ
                     </span>
                   </div>
                   <div
-                    className="h-2 w-full overflow-hidden rounded-full"
-                    style={{
-                      backgroundColor: isOverdue
-                        ? "color-mix(in srgb, var(--md-error) 20%, transparent)"
-                        : "var(--md-surface-high)",
-                    }}
+                    className={cn(
+                      "h-2 w-full overflow-hidden rounded-full",
+                      isOverdue ? "bg-destructive/20" : "bg-muted",
+                    )}
                   >
                     <div
                       className="h-full rounded-full transition-all"
@@ -280,38 +253,27 @@ export function ReportsClient({ apAging, consumptionVariance }: ReportsProps) {
               );
             })}
           </div>
-          <button
+          <Button
             type="button"
-            className="mt-6 w-full rounded-full py-2 text-sm font-semibold transition-colors hover:opacity-80"
-            style={{
-              border: "1px solid var(--md-outline-variant)",
-              color: "var(--md-on-surface-variant)",
-              backgroundColor: "transparent",
-            }}
+            variant="outline"
+            className="mt-6 w-full rounded-full text-muted-foreground"
           >
             Xem danh sách NCC
-          </button>
+          </Button>
         </div>
 
         {/* Consumption Variance — col-span-6 */}
         <div
-          className="col-span-12 md:col-span-6 rounded-2xl p-6 ambient-shadow"
-          style={{
-            backgroundColor: "var(--md-surface-lowest)",
-            border:
-              "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-          }}
+          className={cn(
+            panelClassName,
+            glassPanelClassName,
+            "ui-flow-panel col-span-12 p-6 md:col-span-6",
+          )}
         >
-          <h3
-            className="mb-2 text-lg font-bold"
-            style={{ color: "var(--md-on-surface)" }}
-          >
-            Consumption Variance
+          <h3 className="mb-2 text-lg font-bold text-foreground">
+            Chênh lệch tiêu hao
           </h3>
-          <p
-            className="mb-6 text-sm"
-            style={{ color: "var(--md-on-surface-variant)" }}
-          >
+          <p className="mb-6 text-sm text-muted-foreground">
             Thực tế vs Định mức Recipe
           </p>
           <div className="space-y-4">
@@ -320,59 +282,35 @@ export function ReportsClient({ apAging, consumptionVariance }: ReportsProps) {
               return (
                 <div
                   key={item.name}
-                  className="flex items-center justify-between rounded-2xl p-4"
-                  style={{
-                    backgroundColor:
-                      "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
-                    border:
-                      "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-                  }}
+                  className="ui-surface-lift flex items-center justify-between rounded-2xl border border-border/50 bg-muted/35 p-4"
                 >
                   <div className="flex items-center gap-3">
-                    <div
-                      className="flex size-10 items-center justify-center rounded-full"
-                      style={{ backgroundColor: "var(--md-surface-lowest)" }}
-                    >
-                      <Package
-                        className="size-5"
-                        style={{ color: "var(--md-on-surface-variant)" }}
-                      />
+                    <div className="flex size-10 items-center justify-center rounded-full bg-card">
+                      <Package className="size-5 text-muted-foreground" />
                     </div>
                     <div>
-                      <p
-                        className="text-sm font-bold"
-                        style={{ color: "var(--md-on-surface)" }}
-                      >
+                      <p className="text-sm font-bold text-foreground">
                         {item.name}
                       </p>
-                      <p
-                        className="text-xs"
-                        style={{ color: "var(--md-outline)" }}
-                      >
-                        Đơn vị: kg
-                      </p>
+                      <p className="text-xs text-muted-foreground">Đơn vị: kg</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p
-                      className="text-sm font-bold"
-                      style={{
-                        color: isUp ? "var(--md-error)" : "var(--md-secondary)",
-                      }}
+                      className={cn(
+                        "text-sm font-bold",
+                        isUp ? "text-destructive" : "text-success",
+                      )}
                     >
                       {item.actual}
                     </p>
                     <span
-                      className="inline-flex whitespace-nowrap rounded-full px-2 py-0.5 font-bold"
-                      style={{
-                        fontSize: 10,
-                        backgroundColor: isUp
-                          ? "var(--md-error-container)"
-                          : "var(--md-secondary-container)",
-                        color: isUp
-                          ? "var(--md-on-error-container)"
-                          : "var(--md-on-secondary-container)",
-                      }}
+                      className={cn(
+                        "inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-label font-bold",
+                        isUp
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-success/10 text-success",
+                      )}
                     >
                       {isUp ? "Vượt định mức" : "Tiết kiệm"}
                     </span>
@@ -385,122 +323,85 @@ export function ReportsClient({ apAging, consumptionVariance }: ReportsProps) {
 
         {/* Food Cost by Period — col-span-6 */}
         <div
-          className="col-span-12 md:col-span-6 rounded-2xl p-6 ambient-shadow"
-          style={{
-            backgroundColor: "var(--md-surface-lowest)",
-            border:
-              "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-          }}
+          className={cn(
+            panelClassName,
+            glassPanelClassName,
+            "ui-flow-panel col-span-12 p-6 md:col-span-6",
+          )}
         >
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <h3
-                className="text-lg font-bold"
-                style={{ color: "var(--md-on-surface)" }}
-              >
-                Food Cost by Period
+              <h3 className="text-lg font-bold text-foreground">
+                Xu hướng food cost
               </h3>
-              <p
-                className="text-sm"
-                style={{ color: "var(--md-on-surface-variant)" }}
-              >
-                Trung bình: 32.4%
-              </p>
-            </div>
-            <div
-              className="flex rounded-full p-1 font-bold"
-              style={{ fontSize: 10, backgroundColor: "var(--md-surface-low)" }}
-            >
-              <button
-                type="button"
-                className="rounded-full px-3 py-1 ambient-shadow"
-                style={{
-                  backgroundColor: "var(--md-surface-lowest)",
-                  color: "var(--md-on-surface)",
-                }}
-              >
-                Tuần
-              </button>
-              <button
-                type="button"
-                className="rounded-full px-3 py-1"
-                style={{ color: "var(--md-on-surface-variant)" }}
-              >
-                Tháng
-              </button>
+              <p className="text-sm text-muted-foreground">Mục tiêu 30%</p>
             </div>
           </div>
-          <TrendSparkline
-            data={foodCostTrend}
-            width={400}
-            height={120}
-            color="var(--md-primary)"
-            target={foodCostTarget}
-          />
-          <p
-            className="mt-2 text-xs"
-            style={{ color: "var(--md-on-surface-variant)" }}
-          >
-            <span style={{ color: "var(--md-error)" }}>— —</span> Mục tiêu 30%
-          </p>
+          {foodCostTrendAvailable ? (
+            <>
+              <TrendSparkline
+                data={foodCostTrend}
+                width={400}
+                height={120}
+                color="primary"
+                target={30}
+              />
+              <p
+                className="mt-2 text-xs text-muted-foreground"
+              >
+                Food cost theo tháng.
+              </p>
+            </>
+          ) : (
+            <EmptyState
+              title="Chưa có đủ dữ liệu food cost"
+              description="Cần thêm dữ liệu thực tế."
+              className="min-h-40 border-dashed bg-muted/20"
+            />
+          )}
         </div>
       </div>
 
       {/* Report catalog */}
-      <p
-        className="text-xl font-bold"
-        style={{ color: "var(--md-on-surface)" }}
-      >
-        Danh sách các báo cáo chi tiết
-      </p>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <p className="text-xl font-bold text-foreground">Báo cáo chi tiết</p>
+      <div className="ui-stagger-children grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
             icon: BarChart3,
             title: "Biến động kho chi tiết",
-            desc: "Tra cứu lịch sử nhập/xuất từng mã hàng.",
+            desc: "Lịch sử nhập, xuất từng mã.",
           },
           {
             icon: TrendingUp,
             title: "Chênh lệch định mức",
-            desc: "Phân tích hao hụt nguyên liệu theo Recipe.",
+            desc: "Hao hụt theo định mức.",
           },
           {
             icon: ArrowLeftRight,
             title: "Luân chuyển đang vận chuyển",
-            desc: "Theo dõi hàng hóa đang trên đường nội bộ.",
+            desc: "Hàng đang đi nội bộ.",
           },
           {
             icon: Package,
             title: "Tồn kho cuối kỳ",
-            desc: "Báo cáo giá trị tồn kho tại thời điểm chốt.",
+            desc: "Giá trị tồn khi chốt.",
           },
         ].map((report) => (
           <div
             key={report.title}
-            className="group cursor-pointer rounded-xl p-5 transition-all hover:shadow-md ambient-shadow"
-            style={{
-              backgroundColor: "var(--md-surface-lowest)",
-              border:
-                "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-            }}
+            className={cn(
+              panelClassName,
+              glassPanelClassName,
+              "ui-surface-lift group cursor-pointer p-5 transition-all hover:-translate-y-0.5 hover:shadow-md",
+            )}
           >
             <div
-              className="mb-4 flex size-12 items-center justify-center rounded-full transition-colors"
-              style={{ backgroundColor: "var(--md-surface-low)" }}
+              className="mb-4 flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-muted to-white transition-colors"
             >
-              <report.icon
-                className="size-5"
-                style={{ color: "var(--md-on-surface-variant)" }}
-              />
+              <report.icon className="size-5 text-muted-foreground" />
             </div>
-            <p className="font-bold" style={{ color: "var(--md-on-surface)" }}>
-              {report.title}
-            </p>
-            <p
-              className="mt-0.5 text-xs"
-              style={{ color: "var(--md-on-surface-variant)" }}
-            >
+            <p className="font-bold text-foreground">{report.title}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
               {report.desc}
             </p>
           </div>

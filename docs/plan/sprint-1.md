@@ -1,8 +1,8 @@
-# Sprint 1: Admin Shell + Menu + Tables + Staff ✅ SHIPPED
+# Sprint 1: Khung quản trị + Menu + Tables + Staff ✅ SHIPPED
 
-> **Module mapping:** M0 (Admin Shell) + M1 (Menu) — see `roadmap.md`
+> **Module mapping:** M0 (Khung quản trị) + M1 (Menu) — see `roadmap.md`
 > Depends on: v0.1.0 Foundation (done)
-> Sessions: 6 | Shipped: 2026-04-03
+> Sessions: 6 | Hoàn thành: 2026-04-03
 
 ---
 

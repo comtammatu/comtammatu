@@ -4,10 +4,9 @@ import Link from "next/link";
 import {
   ArrowLeft,
   XCircle,
-  TrendingUp,
-  TrendingDown,
   CheckCircle,
 } from "lucide-react";
+import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
 import {
   Table,
   TableBody,
@@ -20,9 +19,9 @@ import {
 import {
   StatusBadge,
   TimelineStepper,
-  TrendSparkline,
 } from "../../_components/shared";
 import { formatVND } from "../../_lib/format";
+import { tRoute } from "../../_lib/dictionary";
 
 export type PODetail = {
   code: string;
@@ -46,109 +45,78 @@ export type PODetail = {
   }>;
 };
 
-const priceHistory = [
-  175, 178, 180, 182, 179, 183, 185, 188, 190, 192, 189, 185,
-];
-
 export function PODetailClient({ po }: { po: PODetail }) {
+  const panelClassName = getSurfacePanelClassName("inventory", "ambient-shadow");
+  const supplierInfoAvailable = [
+    po.supplierInfo.address,
+    po.supplierInfo.contact,
+    po.supplierInfo.payment,
+  ].some((value) => value && value !== "—");
+
   return (
     <div className="space-y-6">
       <Link
         href="/inventory/purchase-orders"
-        className="inline-flex items-center gap-1 text-sm hover:underline"
-        style={{ color: "var(--md-on-surface-variant)" }}
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
       >
-        <ArrowLeft className="size-4" /> Đơn đặt hàng
+        <ArrowLeft className="size-4" />{" "}
+        {tRoute("/inventory/purchase-orders", "heading")}
       </Link>
 
       {/* Header Identity Card */}
       <section
-        className="relative overflow-hidden rounded-2xl p-8 shadow-sm"
-        style={{ backgroundColor: "var(--md-surface-low)" }}
+        className={cn(
+          panelClassName,
+          "relative overflow-hidden rounded-2xl bg-muted p-5 shadow-sm sm:p-6 lg:p-8",
+        )}
       >
-        <div className="absolute right-8 top-8">
+        <div className="absolute right-5 top-5 sm:right-6 sm:top-6 lg:right-8 lg:top-8">
           <StatusBadge status={po.status} />
         </div>
 
-        <div className="grid grid-cols-1 gap-12 md:grid-cols-3">
-          {/* Column 1: Code + Supplier */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8 lg:gap-12">
           <div className="space-y-4">
             <div>
-              <p
-                className="mb-1 text-label uppercase tracking-wider"
-                style={{ color: "var(--md-outline)" }}
-              >
+              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
                 Mã PO
               </p>
               <h3 className="text-3xl font-black tracking-tight">{po.code}</h3>
             </div>
             <div>
-              <p
-                className="mb-1 text-label uppercase tracking-wider"
-                style={{ color: "var(--md-outline)" }}
-              >
+              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
                 Nhà cung cấp
               </p>
               <p className="font-semibold">{po.supplier}</p>
             </div>
           </div>
 
-          {/* Column 2: Date + Sent */}
-          <div
-            className="space-y-4 border-l pl-12"
-            style={{
-              borderColor:
-                "color-mix(in srgb, var(--md-outline-variant) 30%, transparent)",
-            }}
-          >
+          <div className="space-y-4 border-border/40 md:border-l md:pl-8 lg:pl-12">
             <div>
-              <p
-                className="mb-1 text-label uppercase tracking-wider"
-                style={{ color: "var(--md-outline)" }}
-              >
+              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
                 Ngày tạo
               </p>
               <p className="font-semibold">{po.date}</p>
             </div>
             <div>
-              <p
-                className="mb-1 text-label uppercase tracking-wider"
-                style={{ color: "var(--md-outline)" }}
-              >
+              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
                 Ngày gửi
               </p>
               <p className="font-semibold">{po.sentAt}</p>
             </div>
           </div>
 
-          {/* Column 3: Total */}
-          <div
-            className="space-y-4 border-l pl-12"
-            style={{
-              borderColor:
-                "color-mix(in srgb, var(--md-outline-variant) 30%, transparent)",
-            }}
-          >
+          <div className="space-y-4 border-border/40 md:border-l md:pl-8 lg:pl-12">
             <div>
-              <p
-                className="mb-1 text-label uppercase tracking-wider"
-                style={{ color: "var(--md-outline)" }}
-              >
+              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
                 Tổng tiền hàng
               </p>
               <p className="text-sm font-semibold">{formatVND(po.total)} VNĐ</p>
             </div>
             <div>
-              <p
-                className="mb-1 text-label uppercase tracking-wider"
-                style={{ color: "var(--md-outline)" }}
-              >
+              <p className="mb-1 text-label uppercase tracking-wider text-muted-foreground">
                 Tổng cộng (incl. VAT)
               </p>
-              <p
-                className="text-2xl font-black"
-                style={{ color: "var(--md-primary)" }}
-              >
+              <p className="text-2xl font-black text-primary">
                 {formatVND(po.grandTotal)}{" "}
                 <span className="text-xs font-normal">VNĐ</span>
               </p>
@@ -157,353 +125,261 @@ export function PODetailClient({ po }: { po: PODetail }) {
         </div>
       </section>
 
-      {/* Timeline */}
       <section
-        className="flex justify-center overflow-hidden rounded-2xl py-6 ambient-shadow"
-        style={{
-          backgroundColor: "var(--md-surface-lowest)",
-          border:
-            "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-        }}
+        className={cn(
+          panelClassName,
+          "flex justify-center overflow-hidden rounded-2xl bg-card py-6",
+        )}
       >
         <TimelineStepper
           steps={[
-            { label: "Draft", date: po.date, completed: true },
+            { label: "Nháp", date: po.date, completed: true },
             {
-              label: "Sent",
+              label: "Đã gửi",
               date: po.sentAt,
               completed: po.status !== "draft",
             },
             { label: "Đang vận chuyển", active: po.status === "sent" },
-            { label: "Received" },
+            { label: "Đã nhận" },
           ]}
         />
       </section>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Items table -- 2/3 */}
         <div className="lg:col-span-2">
           <section
-            className="overflow-hidden rounded-2xl ambient-shadow"
-            style={{
-              backgroundColor: "var(--md-surface-lowest)",
-              border:
-                "1px solid color-mix(in srgb, var(--md-outline-variant) 20%, transparent)",
-            }}
+            className={cn(panelClassName, "overflow-hidden rounded-2xl bg-card")}
           >
-            <div
-              className="flex items-center justify-between border-b p-6"
-              style={{
-                borderColor:
-                  "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-              }}
-            >
+            <div className="flex flex-col gap-3 border-b border-border/50 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <h4 className="text-lg font-bold">Chi tiết danh mục hàng</h4>
-              <span
-                className="text-xs font-medium"
-                style={{ color: "var(--md-outline)" }}
-              >
-                {po.items.length} items
+              <span className="text-xs font-medium text-muted-foreground">
+                {po.items.length} mặt hàng
               </span>
             </div>
 
-            <Table>
-              <TableHeader>
-                <TableRow
-                  style={{
-                    backgroundColor:
-                      "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
-                  }}
+            <div className="space-y-3 p-4 md:hidden">
+              {po.items.map((item) => (
+                <div
+                  key={item.sku}
+                  className="rounded-2xl border border-border/70 bg-muted/20 p-4"
                 >
-                  {[
-                    { label: "Mặt hàng", align: "" },
-                    { label: "Số lượng", align: "text-right" },
-                    { label: "Đơn giá", align: "text-right" },
-                    { label: "Thành tiền", align: "text-right" },
-                    { label: "Biến động giá", align: "text-right" },
-                  ].map((h) => (
-                    <TableHead
-                      key={h.label}
-                      className={`px-6 py-4 whitespace-nowrap text-label font-bold uppercase tracking-wider ${h.align}`}
-                      style={{ color: "var(--md-outline)" }}
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-bold">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">{item.sku}</p>
+                    </div>
+                    <div
+                      className={cn(
+                        "rounded-full px-2.5 py-1 text-xs font-semibold",
+                        item.variance > 0
+                          ? "bg-destructive/10 text-destructive"
+                          : item.variance < 0
+                            ? "bg-success/10 text-success"
+                            : "bg-muted text-muted-foreground",
+                      )}
                     >
-                      {h.label}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {po.items.map((item) => (
-                  <TableRow
-                    key={item.sku}
-                    className="group transition-colors"
-                    style={{
-                      borderColor:
-                        "color-mix(in srgb, var(--md-outline-variant) 5%, transparent)",
-                    }}
-                  >
-                    <TableCell className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-bold">{item.name}</span>
+                      {item.variance > 0 ? "+" : ""}
+                      {item.variance}%
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Số lượng</p>
+                      <p className="font-semibold">
+                        {item.qty} {item.unit}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Đơn giá</p>
+                      <p className="font-semibold">{formatVND(item.price)}đ</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground">Thành tiền</p>
+                      <p className="font-semibold text-primary">
+                        {formatVND(item.total)}đ
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40">
+                    {[
+                      { label: "Mặt hàng", align: "" },
+                      { label: "Số lượng", align: "text-right" },
+                      { label: "Đơn giá", align: "text-right" },
+                      { label: "Thành tiền", align: "text-right" },
+                      { label: "Biến động giá", align: "text-right" },
+                    ].map((h) => (
+                      <TableHead
+                        key={h.label}
+                        className={`px-6 py-4 whitespace-nowrap text-label font-bold uppercase tracking-wider ${h.align}`}
+                      >
+                        {h.label}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {po.items.map((item) => (
+                    <TableRow
+                      key={item.sku}
+                      className="group transition-colors"
+                    >
+                      <TableCell className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-bold">{item.name}</span>
+                          <span className="text-label text-muted-foreground">
+                            {item.sku}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
+                        {item.qty}
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
+                        {formatVND(item.price)}đ
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-right font-mono tabular-nums font-semibold">
+                        {formatVND(item.total)}đ
+                      </TableCell>
+                      <TableCell className="px-6 py-4 text-right">
                         <span
-                          className="text-label"
-                          style={{ color: "var(--md-outline)" }}
-                        >
-                          {item.sku}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
-                      {formatVND(item.qty)}
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
-                      {formatVND(item.price)}đ
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-right font-mono tabular-nums font-semibold">
-                      {formatVND(item.total)}đ
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-right">
-                      {item.variance !== 0 ? (
-                        <span
-                          className="inline-flex items-center gap-1 text-xs font-semibold"
-                          style={{
-                            color:
-                              item.variance > 0
-                                ? "var(--md-error)"
-                                : "var(--md-secondary)",
-                          }}
-                        >
-                          {item.variance > 0 ? (
-                            <TrendingUp className="size-3" />
-                          ) : (
-                            <TrendingDown className="size-3" />
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
+                            item.variance > 0
+                              ? "bg-destructive/10 text-destructive"
+                              : item.variance < 0
+                                ? "bg-success/10 text-success"
+                                : "bg-muted text-muted-foreground",
                           )}
+                        >
                           {item.variance > 0 ? "+" : ""}
                           {item.variance}%
                         </span>
-                      ) : (
-                        <span
-                          className="text-xs"
-                          style={{ color: "var(--md-outline)" }}
-                        >
-                          → 0.0
-                        </span>
-                      )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                <TableFooter>
+                  <TableRow className="border-border/50">
+                    <TableCell
+                      colSpan={3}
+                      className="px-6 py-3 text-right text-sm text-muted-foreground"
+                    >
+                      Tổng tiền hàng
                     </TableCell>
+                    <TableCell className="px-6 py-3 text-right font-mono tabular-nums font-semibold">
+                      {formatVND(po.total)}đ
+                    </TableCell>
+                    <TableCell />
                   </TableRow>
-                ))}
-              </TableBody>
-              <TableFooter>
-                <TableRow
-                  style={{
-                    borderColor:
-                      "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-                  }}
-                >
-                  <TableCell
-                    colSpan={3}
-                    className="px-6 py-3 text-right text-sm"
-                    style={{ color: "var(--md-on-surface-variant)" }}
-                  >
-                    Tổng tiền hàng
-                  </TableCell>
-                  <TableCell className="px-6 py-3 text-right font-mono tabular-nums font-semibold">
-                    {formatVND(po.total)}đ
-                  </TableCell>
-                  <TableCell />
-                </TableRow>
-                <TableRow
-                  style={{
-                    borderColor:
-                      "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-                  }}
-                >
-                  <TableCell
-                    colSpan={3}
-                    className="px-6 py-3 text-right text-sm"
-                    style={{ color: "var(--md-on-surface-variant)" }}
-                  >
-                    Thuế (VAT 8%)
-                  </TableCell>
-                  <TableCell className="px-6 py-3 text-right font-mono tabular-nums">
-                    {formatVND(po.tax)}đ
-                  </TableCell>
-                  <TableCell />
-                </TableRow>
-                <TableRow
-                  style={{
-                    borderColor:
-                      "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-                  }}
-                >
-                  <TableCell
-                    colSpan={3}
-                    className="px-6 py-3 text-right text-sm font-bold"
-                  >
-                    Tổng cộng
-                  </TableCell>
-                  <TableCell
-                    className="px-6 py-3 text-right font-mono tabular-nums font-bold"
-                    style={{ color: "var(--md-primary)" }}
-                  >
-                    {formatVND(po.grandTotal)}đ
-                  </TableCell>
-                  <TableCell />
-                </TableRow>
-              </TableFooter>
-            </Table>
+                  <TableRow className="border-border/50">
+                    <TableCell
+                      colSpan={3}
+                      className="px-6 py-3 text-right text-sm text-muted-foreground"
+                    >
+                      Thuế (VAT 8%)
+                    </TableCell>
+                    <TableCell className="px-6 py-3 text-right font-mono tabular-nums">
+                      {formatVND(po.tax)}đ
+                    </TableCell>
+                    <TableCell />
+                  </TableRow>
+                  <TableRow className="border-border/50">
+                    <TableCell
+                      colSpan={3}
+                      className="px-6 py-3 text-right text-sm font-bold"
+                    >
+                      Tổng cộng
+                    </TableCell>
+                    <TableCell className="px-6 py-3 text-right font-mono tabular-nums font-bold text-primary">
+                      {formatVND(po.grandTotal)}đ
+                    </TableCell>
+                    <TableCell />
+                  </TableRow>
+                </TableFooter>
+              </Table>
+            </div>
           </section>
         </div>
 
-        {/* Sidebar -- 1/3 */}
         <div className="space-y-4">
-          {/* Price Intelligence */}
-          <div
-            className="rounded-2xl ambient-shadow"
-            style={{
-              backgroundColor: "var(--md-surface-lowest)",
-              border:
-                "1px solid color-mix(in srgb, var(--md-outline-variant) 20%, transparent)",
-            }}
-          >
-            <div
-              className="border-b p-6"
-              style={{
-                borderColor:
-                  "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-              }}
-            >
-              <h4 className="text-sm font-bold">Price Intelligence</h4>
+          <div className={cn(panelClassName, "rounded-2xl bg-card")}>
+            <div className="border-b border-border/50 p-6">
+              <h4 className="text-sm font-bold">Tóm tắt đơn mua</h4>
             </div>
-            <div className="space-y-4 p-6">
-              <div>
-                <p
-                  className="text-xs"
-                  style={{ color: "var(--md-on-surface-variant)" }}
-                >
-                  Đang chọn: {po.items[0]?.name ?? "—"}
-                </p>
-                <p
-                  className="mt-1 text-xs font-medium"
-                  style={{ color: "var(--md-primary)" }}
-                >
-                  Cảnh báo: Cao hơn mức trung bình 12 tháng (+14.000đ/kg)
-                </p>
+            <div className="space-y-3 p-6 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Số mặt hàng</span>
+                <span className="font-semibold">{po.items.length}</span>
               </div>
-              <TrendSparkline
-                data={priceHistory}
-                width={220}
-                height={60}
-                color="var(--md-primary)"
-              />
-              <div
-                className="space-y-2 border-t pt-3"
-                style={{
-                  borderColor:
-                    "color-mix(in srgb, var(--md-outline-variant) 20%, transparent)",
-                }}
-              >
-                <div className="flex items-start gap-2">
-                  <div
-                    className="mt-0.5 size-2 rounded-full"
-                    style={{ backgroundColor: "var(--md-secondary)" }}
-                  />
-                  <p className="text-xs">
-                    <span className="font-medium">Gợi ý tối ưu:</span> Giá sườn
-                    non thường giảm 15% vào cuối quý. Cân nhắc mua số lượng lớn
-                    vào tháng 11.
-                  </p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <div
-                    className="mt-0.5 size-2 rounded-full"
-                    style={{ backgroundColor: "var(--md-tertiary)" }}
-                  />
-                  <p className="text-xs">
-                    <span className="font-medium">Đối chiếu NCC khác:</span> An
-                    Bình Food đang chào giá 178.000đ (-4%) cho cùng quy cách
-                    phẩm chất.
-                  </p>
-                </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Tổng tiền hàng</span>
+                <span className="font-semibold">{formatVND(po.total)}đ</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Thuế</span>
+                <span className="font-semibold">{formatVND(po.tax)}đ</span>
+              </div>
+              <div className="border-t border-border/50 pt-3">
+                <p className="text-muted-foreground">Tổng cộng</p>
+                <p className="mt-1 text-2xl font-black text-primary">
+                  {formatVND(po.grandTotal)}đ
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Supplier info */}
-          <div
-            className="rounded-2xl ambient-shadow"
-            style={{
-              backgroundColor: "var(--md-surface-lowest)",
-              border:
-                "1px solid color-mix(in srgb, var(--md-outline-variant) 20%, transparent)",
-            }}
-          >
-            <div
-              className="border-b p-6"
-              style={{
-                borderColor:
-                  "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-              }}
-            >
+          <div className={cn(panelClassName, "rounded-2xl bg-card")}>
+            <div className="border-b border-border/50 p-6">
               <h4 className="text-sm font-bold">Thông tin NCC</h4>
             </div>
-            <div className="space-y-3 p-6 text-sm">
-              <div>
-                <p
-                  className="text-label uppercase tracking-wider"
-                  style={{ color: "var(--md-outline)" }}
-                >
-                  Địa chỉ xuất hóa đơn
-                </p>
-                <p className="mt-1 font-medium">{po.supplierInfo.address}</p>
+            {supplierInfoAvailable ? (
+              <div className="space-y-3 p-6 text-sm">
+                <div>
+                  <p className="text-label uppercase tracking-wider text-muted-foreground">
+                    Địa chỉ xuất hóa đơn
+                  </p>
+                  <p className="mt-1 font-medium">{po.supplierInfo.address}</p>
+                </div>
+                <div>
+                  <p className="text-label uppercase tracking-wider text-muted-foreground">
+                    Người liên hệ
+                  </p>
+                  <p className="mt-1 font-medium">{po.supplierInfo.contact}</p>
+                </div>
+                <div>
+                  <p className="text-label uppercase tracking-wider text-muted-foreground">
+                    Hạn thanh toán
+                  </p>
+                  <p className="mt-1 font-medium">{po.supplierInfo.payment}</p>
+                </div>
               </div>
-              <div>
-                <p
-                  className="text-label uppercase tracking-wider"
-                  style={{ color: "var(--md-outline)" }}
-                >
-                  Người liên hệ
-                </p>
-                <p className="mt-1 font-medium">{po.supplierInfo.contact}</p>
+            ) : (
+              <div className="p-6 text-sm text-muted-foreground">
+                Chưa có thêm thông tin nhà cung cấp trong đơn mua này.
               </div>
-              <div>
-                <p
-                  className="text-label uppercase tracking-wider"
-                  style={{ color: "var(--md-outline)" }}
-                >
-                  Hạn thanh toán
-                </p>
-                <p className="mt-1 font-medium">{po.supplierInfo.payment}</p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Footer Action Bar */}
-      <footer
-        className="flex items-center justify-between border-t py-6"
-        style={{
-          borderColor:
-            "color-mix(in srgb, var(--md-outline-variant) 50%, transparent)",
-        }}
-      >
+      <footer className="flex flex-col gap-3 border-t border-border/50 py-6 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"
-          className="flex items-center gap-2 rounded-full px-6 py-3 font-bold transition-all"
-          style={{ color: "var(--md-error)" }}
+          className="focus-ring-standard flex min-h-11 items-center justify-center gap-2 rounded-full px-6 py-3 font-bold text-destructive transition-colors hover:bg-destructive/8"
         >
           <XCircle className="size-5" />
           Hủy PO
         </button>
         <button
           type="button"
-          className="flex items-center gap-2 rounded-full px-10 py-3 font-bold text-white shadow-lg transition-all hover:scale-[0.98]"
-          style={{
-            background:
-              "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-            boxShadow: "0 4px 14px rgba(211,84,0,0.2)",
-          }}
+          className="focus-ring-standard flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-10 py-3 font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-transform hover:scale-[0.98]"
         >
           <CheckCircle className="size-5" />
           Tạo Phiếu Nhập kho (GRN)

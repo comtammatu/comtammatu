@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
-    "lint": "turbo lint",
+    "lint": "pnpm lint:copy && turbo lint",
+    "lint:copy": "node scripts/lint-copy.mjs",
     "typecheck": "turbo typecheck",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > packages/database/src/types/database.types.ts"

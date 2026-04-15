@@ -19,8 +19,8 @@
 | **Email**             | Resend.com         | —                    | M6 Finance    |
 | **Delivery dispatch** | Ahamove            | —                    | Post-v1.0     |
 | **Delivery platform** | GrabFood           | ShopeeFood (partner) | Post-v1.0     |
-| **BHXH**              | iBHXH / VNPT-BHXH  | Manual portal        | M7 HR/Payroll |
-| **eTax / GTGT**       | Manual eTax portal | HTKK desktop         | M7 HR/Payroll |
+| **BHXH**              | iBHXH / VNPT-BHXH  | Manual portal        | M7 Nhân sự & tiền lương |
+| **eTax / GTGT**       | Manual eTax portal | HTKK desktop         | M7 Nhân sự & tiền lương |
 
 ---
 
@@ -414,7 +414,7 @@ Giả định: 500 order/ngày, 5 chi nhánh, ~15,000 order/tháng
 | ----------------- | ----------------------------------------------------- |
 | **M4 Payment**    | VietQR + MoMo                                         |
 | **M6 Finance**    | MISA meInvoice + Resend email                         |
-| **M7 HR/Payroll** | Xuất data BHXH / thuế TNCN (no API, just export)      |
+| **M7 Nhân sự & tiền lương** | Xuất data BHXH / thuế TNCN (no API, just export)      |
 | **Post-v1.0**     | Zalo ZNS, SpeedSMS, ZaloPay, VNPay, GrabFood, Ahamove |
 
 ---

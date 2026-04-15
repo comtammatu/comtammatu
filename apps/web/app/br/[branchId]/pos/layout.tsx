@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims, canAccess } from "@comtammatu/shared/auth";
+import {
+  buildLoginBlockedStatePath,
+  canAccess,
+  extractClaims,
+} from "@comtammatu/shared/auth";
+import { getSurfaceShellClassName } from "@comtammatu/ui";
 
 export default async function PosLayout({
   children,
@@ -18,7 +23,11 @@ export default async function PosLayout({
   if (!session?.user) redirect("/login");
 
   const claims = extractClaims(session.user.app_metadata);
-  if (!claims || !canAccess(claims.user_role, "pos")) {
+  if (!claims) {
+    redirect(buildLoginBlockedStatePath());
+  }
+
+  if (!canAccess(claims.user_role, "pos")) {
     redirect("/login");
   }
 
@@ -32,7 +41,10 @@ export default async function PosLayout({
   return (
     <main
       id="main-content"
-      className="flex h-dvh touch-manipulation overflow-hidden pt-[max(0px,env(safe-area-inset-top,0px))]"
+      className={getSurfaceShellClassName(
+        "pos",
+        "ui-safe-top flex h-dvh touch-manipulation overflow-hidden",
+      )}
     >
       {children}
     </main>

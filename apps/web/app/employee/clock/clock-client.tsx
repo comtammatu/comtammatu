@@ -58,6 +58,38 @@ interface ClockClientProps {
   defaultBranchId: number | null;
 }
 
+function getStateRingClassName(state: ClockState) {
+  if (state === "checking_gps" || state === "verifying") return "bg-warning/12";
+  if (state === "gps_passed" || state === "success") return "bg-success/12";
+  if (
+    state === "gps_failed" ||
+    state === "code_invalid" ||
+    state === "error"
+  ) {
+    return "bg-destructive/12";
+  }
+  if (state === "scanning_code" || state === "entering_code") {
+    return "bg-info/12";
+  }
+  return "bg-muted";
+}
+
+function getStateIconClassName(state: ClockState) {
+  if (state === "checking_gps" || state === "verifying") return "text-warning";
+  if (state === "gps_passed" || state === "success") return "text-success";
+  if (
+    state === "gps_failed" ||
+    state === "code_invalid" ||
+    state === "error"
+  ) {
+    return "text-destructive";
+  }
+  if (state === "scanning_code" || state === "entering_code") {
+    return "text-info";
+  }
+  return "text-muted-foreground";
+}
+
 /* ─── Helpers ─── */
 
 function haversineMeters(
@@ -269,8 +301,8 @@ export function ClockClient({
   if (status.clockedOut) {
     return (
       <div className="flex flex-col items-center gap-6 py-8">
-        <div className="flex size-24 items-center justify-center rounded-full bg-green-100">
-          <CheckCircle2 className="size-12 text-green-600" />
+        <div className="flex size-24 items-center justify-center rounded-full bg-success/12">
+          <CheckCircle2 className="size-12 text-success" />
         </div>
         <div className="text-center">
           <h2 className="text-lg font-semibold">Đã hoàn thành chấm công</h2>
@@ -310,8 +342,8 @@ export function ClockClient({
   if (status.clockedIn) {
     return (
       <div className="flex flex-col items-center gap-6 py-8">
-        <div className="flex size-24 items-center justify-center rounded-full bg-blue-100">
-          <Clock className="size-12 text-blue-600" />
+        <div className="flex size-24 items-center justify-center rounded-full bg-info/12">
+          <Clock className="size-12 text-info" />
         </div>
         <div className="text-center">
           <h2 className="text-lg font-semibold">Đang làm việc</h2>
@@ -356,38 +388,32 @@ export function ClockClient({
       <div
         className={cn(
           "flex size-24 items-center justify-center rounded-full transition-colors",
-          state === "idle" && "bg-muted",
-          state === "checking_gps" && "bg-yellow-100",
-          state === "gps_passed" && "bg-green-100",
-          state === "gps_failed" && "bg-red-100",
-          (state === "scanning_code" || state === "entering_code") &&
-            "bg-blue-100",
-          state === "verifying" && "bg-yellow-100",
-          state === "success" && "bg-green-100",
-          (state === "code_invalid" || state === "error") && "bg-red-100",
+          getStateRingClassName(state),
         )}
       >
         {state === "idle" && (
           <MapPin className="size-10 text-muted-foreground" />
         )}
         {state === "checking_gps" && (
-          <Loader2 className="size-10 animate-spin text-yellow-600" />
+          <Loader2 className={cn("size-10 animate-spin", getStateIconClassName(state))} />
         )}
         {state === "gps_passed" && (
-          <CheckCircle2 className="size-10 text-green-600" />
+          <CheckCircle2 className={cn("size-10", getStateIconClassName(state))} />
         )}
-        {state === "gps_failed" && <XCircle className="size-10 text-red-600" />}
+        {state === "gps_failed" && (
+          <XCircle className={cn("size-10", getStateIconClassName(state))} />
+        )}
         {(state === "scanning_code" || state === "entering_code") && (
-          <Camera className="size-10 text-blue-600" />
+          <Camera className={cn("size-10", getStateIconClassName(state))} />
         )}
         {state === "verifying" && (
-          <Loader2 className="size-10 animate-spin text-yellow-600" />
+          <Loader2 className={cn("size-10 animate-spin", getStateIconClassName(state))} />
         )}
         {state === "success" && (
-          <CheckCircle2 className="size-10 text-green-600" />
+          <CheckCircle2 className={cn("size-10", getStateIconClassName(state))} />
         )}
         {(state === "code_invalid" || state === "error") && (
-          <XCircle className="size-10 text-red-600" />
+          <XCircle className={cn("size-10", getStateIconClassName(state))} />
         )}
       </div>
 
@@ -397,8 +423,8 @@ export function ClockClient({
           className={cn(
             "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium",
             gpsDistance <= 200
-              ? "bg-green-100 text-green-700"
-              : "bg-red-100 text-red-700",
+              ? "bg-success/12 text-success"
+              : "bg-destructive/12 text-destructive",
           )}
         >
           <MapPin className="size-4" />
@@ -553,7 +579,7 @@ export function ClockClient({
 
       {state === "success" && (
         <div className="text-center">
-          <h2 className="text-lg font-semibold text-green-600">
+          <h2 className="text-lg font-semibold text-success">
             Chấm công thành công!
           </h2>
           {status.checkInTime && (

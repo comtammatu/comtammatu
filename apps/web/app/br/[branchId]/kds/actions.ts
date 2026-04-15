@@ -80,7 +80,8 @@ export async function fetchKdsTickets(
     .eq("branch_id", parsedBranchId.data)
     .eq("tenant_id", claims.tenant_id)
     .neq("status", "served")
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(500);
 
   // Optionally filter by station
   if (stationId !== undefined) {

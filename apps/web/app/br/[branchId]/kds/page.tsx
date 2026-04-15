@@ -1,7 +1,9 @@
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
+import { ChefHat, Loader2, TriangleAlert } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims, canAccess } from "@comtammatu/shared/auth";
 import { redirect } from "next/navigation";
+import { FlowStatePanel } from "@/components/foundation/ui-patterns";
 import { KdsBoard } from "./kds-board";
 
 // KDS tables (kds_stations, kds_tickets) and RPCs (bump_kds_ticket, recall_kds_ticket)
@@ -45,6 +47,38 @@ export interface KdsOrderItem {
   status: string;
 }
 
+function KdsRouteState({
+  title,
+  description,
+  status,
+  statusTone,
+  steps,
+}: {
+  title: string;
+  description: string;
+  status: ReactNode;
+  statusTone: "info" | "warning" | "danger";
+  steps: Array<{
+    label: string;
+    description: string;
+    state: "todo" | "current" | "done";
+  }>;
+}) {
+  return (
+    <FlowStatePanel
+      surface="kds"
+      icon={<ChefHat className="size-5" />}
+      title={title}
+      description={description}
+      status={status}
+      statusTone={statusTone}
+      steps={steps}
+      wrapperClassName="bg-background/30"
+      className="max-w-5xl"
+    />
+  );
+}
+
 export default async function KdsPage({
   params,
 }: {
@@ -78,11 +112,34 @@ export default async function KdsPage({
 
   if (stationsError) {
     return (
-      <div className="flex min-h-0 flex-1 items-center justify-center px-4">
-        <p className="text-lg text-destructive">
-          Không thể tải trạm KDS. Vui lòng thử lại.
-        </p>
-      </div>
+      <KdsRouteState
+        title="Không thể dựng bảng điều phối bếp"
+        description="Không tải được trạm KDS."
+        status={
+          <>
+            <TriangleAlert className="size-3.5" />
+            <span>Lỗi tải trạm KDS</span>
+          </>
+        }
+        statusTone="danger"
+        steps={[
+          {
+            label: "Xác minh quyền bếp",
+            description: "Đã xác minh quyền truy cập.",
+            state: "done",
+          },
+          {
+            label: "Nạp trạm chế biến",
+            description: "Đang tải trạm hoạt động.",
+            state: "current",
+          },
+          {
+            label: "Hiển thị đơn đang chạy",
+            description: "Mở bảng điều phối.",
+            state: "todo",
+          },
+        ]}
+      />
     );
   }
 
@@ -128,9 +185,34 @@ export default async function KdsPage({
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-0 flex-1 items-center justify-center p-8">
-          <p className="text-sm text-muted-foreground">Đang tải KDS…</p>
-        </div>
+        <KdsRouteState
+          title="Đang dựng bảng điều phối bếp"
+          description="Đang nạp trạm và đơn."
+          status={
+            <>
+              <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
+              <span>Đồng bộ ticket nhà bếp</span>
+            </>
+          }
+          statusTone="info"
+        steps={[
+            {
+              label: "Station sẵn sàng",
+              description: "Danh sách trạm đã sẵn sàng.",
+              state: "done",
+            },
+            {
+              label: "Ghép ticket và đơn",
+              description: "Đang ghép món và trạng thái.",
+              state: "current",
+            },
+            {
+              label: "Mở board thao tác",
+              description: "Mở board thao tác.",
+              state: "todo",
+            },
+          ]}
+        />
       }
     >
       <KdsBoard

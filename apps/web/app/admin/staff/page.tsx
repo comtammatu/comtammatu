@@ -2,6 +2,10 @@ import { Suspense } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import {
+  PageContainer,
+  PageHeader,
+} from "@/components/foundation/ui-patterns";
 import { StaffTable } from "./staff-table";
 import { StaffFilters } from "./staff-filters";
 import { AddStaffButton } from "./add-staff-button";
@@ -61,22 +65,16 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   const branchOptions = branches ?? [];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Nhân viên</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {staff.length} nhân viên
-          </p>
-        </div>
-        <AddStaffButton branches={branchOptions} />
-      </div>
-
+    <PageContainer>
+      <PageHeader
+        eyebrow="Nền tảng ERP"
+        title="Nhân viên"
+        actions={<AddStaffButton branches={branchOptions} />}
+      />
       <Suspense>
         <StaffFilters branches={branchOptions} />
       </Suspense>
-
       <StaffTable staff={staff} branches={branchOptions} />
-    </div>
+    </PageContainer>
   );
 }

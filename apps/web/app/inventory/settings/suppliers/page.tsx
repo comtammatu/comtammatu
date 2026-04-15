@@ -1,9 +1,10 @@
-import { fetchSuppliers } from "@/admin/inventory/procurement-actions";
+import { fetchSuppliers } from "@/inventory/procurement-actions";
 import {
   SuppliersClient,
   type SupplierRow,
-} from "@/admin/inventory/suppliers/suppliers-client";
+} from "@/inventory/suppliers/suppliers-client";
 import { PageHeader } from "../../_components/shared";
+import { tRoute } from "../../_lib/dictionary";
 
 export default async function SuppliersSettingsPage() {
   const res = await fetchSuppliers();
@@ -14,8 +15,7 @@ export default async function SuppliersSettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Nhà cung cấp"
-        description="Quản lý danh sách nhà cung cấp"
+        title={tRoute("/inventory/settings/suppliers", "heading")}
       />
       <SuppliersClient initial={rows} />
     </div>

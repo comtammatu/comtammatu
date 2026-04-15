@@ -27,6 +27,10 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import {
+  ACTIVE_STATE_LABELS_VI,
+  getSiteKindLabelVi,
+} from "@comtammatu/shared/labels";
 import { toggleBranchActive, setHeadquarters } from "./actions";
 import { BranchFormDialog } from "./branch-form-dialog";
 import { AttendanceConfigDialog } from "./attendance-config-dialog";
@@ -40,6 +44,7 @@ export interface BranchRow {
   phone: string | null;
   is_active: boolean | null;
   is_headquarters: boolean | null;
+  branch_kind: string | null;
   latitude: number | null;
   longitude: number | null;
   hasAttendanceSecret: boolean;
@@ -47,9 +52,13 @@ export interface BranchRow {
 
 interface BranchTableProps {
   branches: BranchRow[];
+  branchKindSchemaAvailable: boolean;
 }
 
-export function BranchTable({ branches }: BranchTableProps) {
+export function BranchTable({
+  branches,
+  branchKindSchemaAvailable,
+}: BranchTableProps) {
   const [editBranch, setEditBranch] = useState<BranchRow | null>(null);
   const [attendanceBranch, setAttendanceBranch] = useState<BranchRow | null>(
     null,
@@ -79,19 +88,20 @@ export function BranchTable({ branches }: BranchTableProps) {
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Chi nhánh</TableHead>
-              <TableHead className="hidden sm:table-cell">Địa chỉ</TableHead>
-              <TableHead className="hidden md:table-cell">Điện thoại</TableHead>
-              <TableHead>Trạng thái</TableHead>
-              <TableHead className="w-12" />
-            </TableRow>
+              <TableRow>
+                <TableHead>Điểm vận hành</TableHead>
+                <TableHead className="hidden sm:table-cell">Loại</TableHead>
+                <TableHead className="hidden sm:table-cell">Địa chỉ</TableHead>
+                <TableHead className="hidden md:table-cell">Điện thoại</TableHead>
+                <TableHead>Trạng thái</TableHead>
+                <TableHead className="w-12" />
+              </TableRow>
           </TableHeader>
           <TableBody>
             {branches.length === 0 && (
               <TableEmptyStateRow
-                colSpan={5}
-                title="Chưa có chi nhánh nào"
+                colSpan={6}
+                title="Chưa có điểm vận hành nào"
                 icon={
                   <Building2 className="mx-auto size-8 text-muted-foreground" />
                 }
@@ -113,6 +123,11 @@ export function BranchTable({ branches }: BranchTableProps) {
                     )}
                   </div>
                 </TableCell>
+                <TableCell className="hidden sm:table-cell">
+                  <Badge variant="outline" className="text-xs">
+                    {getSiteKindLabelVi(branch.branch_kind ?? "branch")}
+                  </Badge>
+                </TableCell>
                 <TableCell className="hidden text-muted-foreground sm:table-cell">
                   {branch.address || "—"}
                 </TableCell>
@@ -123,7 +138,9 @@ export function BranchTable({ branches }: BranchTableProps) {
                   <Badge
                     variant={branch.is_active !== false ? "default" : "outline"}
                   >
-                    {branch.is_active !== false ? "Hoạt động" : "Ngừng"}
+                    {branch.is_active !== false
+                      ? ACTIVE_STATE_LABELS_VI.active
+                      : ACTIVE_STATE_LABELS_VI.inactive}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -185,6 +202,7 @@ export function BranchTable({ branches }: BranchTableProps) {
         open={!!editBranch}
         onOpenChange={(open) => !open && setEditBranch(null)}
         branch={editBranch}
+        branchKindSchemaAvailable={branchKindSchemaAvailable}
       />
 
       {attendanceBranch && (

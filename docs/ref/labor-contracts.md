@@ -228,7 +228,7 @@ payroll_entries.insurance_base (immutable snapshot)
 2. Sửa `employees` trực tiếp không qua HĐ → mất audit trail, cơ quan BHXH kiểm tra không khớp
 3. Payroll lấy từ `employees` thay vì HĐ hiện hành → HĐ mới có hiệu lực giữa tháng sẽ lấy sai mức
 
-> ⚠️ **Dev note**: Khi implement M7 (HR/Payroll), `employees.insurance_base_salary` PHẢI được sync tự động từ `employment_contracts` active. KHÔNG cho phép update trực tiếp. `payroll_entries.insurance_base` là snapshot — KHÔNG bao giờ thay đổi sau khi payroll approved.
+> ⚠️ **Dev note**: Khi implement M7 (Nhân sự & tiền lương), `employees.insurance_base_salary` PHẢI được sync tự động từ `employment_contracts` active. KHÔNG cho phép update trực tiếp. `payroll_entries.insurance_base` là snapshot — KHÔNG bao giờ thay đổi sau khi payroll approved.
 
 ---
 
@@ -290,4 +290,4 @@ Nếu ngày nghỉ trùng Thứ 7 hoặc CN → được nghỉ bù ngày làm v
 ## Tài liệu liên quan
 
 - `docs/ref/payroll-pit.md` — Tính lương & thuế TNCN
-- `docs/plan/sprint-6.md` — Sprint HR/Payroll
+- `docs/plan/sprint-6.md` — Sprint Nhân sự & tiền lương

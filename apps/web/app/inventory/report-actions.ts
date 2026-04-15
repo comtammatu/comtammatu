@@ -1,18 +1,27 @@
 "use server";
 
 import { z } from "zod";
+import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   INVENTORY_OPS_ROLES,
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
-import { getAuthContext } from "../admin/_lib/auth";
+import { getAuthContext } from "./_lib/auth";
+
+const REPORT_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 
 /* ─── Schemas ─── */
 
 const stockMovementReportSchema = z.object({
   startDate: z.string().min(1, { error: "Ngày bắt đầu không hợp lệ" }),
   endDate: z.string().min(1, { error: "Ngày kết thúc không hợp lệ" }),
+  branchId: z.coerce.number().int().positive().optional(),
+});
+
+const fetchFoodCostSchema = z.object({
+  startDate: z.string().date().optional(),
+  endDate: z.string().date().optional(),
   branchId: z.coerce.number().int().positive().optional(),
 });
 
@@ -27,6 +36,8 @@ export interface MovementReportRow {
   transfer_in: number;
   transfer_out: number;
   consumption: number;
+  production_consumption: number;
+  production_output: number;
   adjustment: number;
   closing: number;
 }
@@ -38,6 +49,8 @@ export interface BranchMovementSummaryRow {
   transfer_in: number;
   transfer_out: number;
   consumption: number;
+  production_consumption: number;
+  production_output: number;
   adjustment: number;
 }
 
@@ -49,6 +62,47 @@ export interface InTransitTransfer {
   to_branch_name: string;
   shipped_at: string | null;
   item_count: number;
+}
+
+export async function fetchFoodCost(
+  input?: z.infer<typeof fetchFoodCostSchema>,
+): Promise<ActionResult> {
+  const parsed = fetchFoodCostSchema.safeParse(input ?? {});
+  if (!parsed.success) {
+    return { success: false, error: "Tham số không hợp lệ" };
+  }
+
+  const ctx = await getAuthContext(REPORT_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  let query = supabase
+    .from("mv_food_cost")
+    .select(
+      "date, branch_id, menu_item_id, item_name, qty_sold, revenue, food_cost",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .order("date", { ascending: false })
+    .order("revenue", { ascending: false });
+
+  if (parsed.data.startDate) {
+    query = query.gte("date", parsed.data.startDate);
+  }
+  if (parsed.data.endDate) {
+    query = query.lte("date", parsed.data.endDate);
+  }
+  if (parsed.data.branchId) {
+    query = query.eq("branch_id", parsed.data.branchId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return { success: false, error: "Không thể tải dữ liệu food cost." };
+  }
+
+  return { success: true, data: data ?? [] };
 }
 
 /* ─── fetchStockMovementReport ─── */
@@ -152,6 +206,8 @@ export async function fetchStockMovementReport(
     | "transfer_in"
     | "transfer_out"
     | "consumption"
+    | "production_consumption"
+    | "production_output"
     | "adjustment"
     | "count_adjustment";
 
@@ -165,6 +221,8 @@ export async function fetchStockMovementReport(
         transfer_in: 0,
         transfer_out: 0,
         consumption: 0,
+        production_consumption: 0,
+        production_output: 0,
         adjustment: 0,
         count_adjustment: 0,
       };
@@ -190,6 +248,8 @@ export async function fetchStockMovementReport(
         sums.transfer_in +
         sums.transfer_out +
         sums.consumption +
+        sums.production_consumption +
+        sums.production_output +
         sums.adjustment +
         sums.count_adjustment
       : 0;
@@ -206,6 +266,8 @@ export async function fetchStockMovementReport(
         transfer_in: sums?.transfer_in ?? 0,
         transfer_out: sums?.transfer_out ?? 0,
         consumption: sums?.consumption ?? 0,
+        production_consumption: sums?.production_consumption ?? 0,
+        production_output: sums?.production_output ?? 0,
         adjustment: (sums?.adjustment ?? 0) + (sums?.count_adjustment ?? 0),
         closing,
       });
@@ -272,6 +334,8 @@ export async function fetchBranchMovementSummary(
     | "transfer_in"
     | "transfer_out"
     | "consumption"
+    | "production_consumption"
+    | "production_output"
     | "adjustment"
     | "count_adjustment";
 
@@ -285,6 +349,8 @@ export async function fetchBranchMovementSummary(
         transfer_in: 0,
         transfer_out: 0,
         consumption: 0,
+        production_consumption: 0,
+        production_output: 0,
         adjustment: 0,
         count_adjustment: 0,
       };
@@ -305,6 +371,8 @@ export async function fetchBranchMovementSummary(
       transfer_in: sums.transfer_in,
       transfer_out: sums.transfer_out,
       consumption: sums.consumption,
+      production_consumption: sums.production_consumption,
+      production_output: sums.production_output,
       adjustment: sums.adjustment + sums.count_adjustment,
     });
   }

@@ -1,8 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle, PlusCircle, Trash2, X } from "lucide-react";
+import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@comtammatu/ui/components/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@comtammatu/ui/components/dialog";
+import { Button } from "@comtammatu/ui/components/button";
+import { Input } from "@comtammatu/ui/components/input";
+import { Label } from "@comtammatu/ui/components/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
 import {
   Table,
   TableBody,
@@ -11,399 +40,747 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { StatusBadge, SearchableSelect } from "../../_components/shared";
-import { formatVND } from "../../_lib/format";
+import { toast } from "@comtammatu/ui/components/sonner";
+import { SectionCard } from "@/components/foundation/ui-patterns";
+import { PageHeader, StatusBadge } from "../../_components/shared";
+import { EmptyStatePanel } from "../../_components/empty-state-panel";
+import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
+import { tRoute, tTerm } from "../../_lib/dictionary";
+import { formatDateTime, formatQty, formatVND } from "../../_lib/format";
+import {
+  cancelStockIssue,
+  confirmStockIssue,
+  deleteStockIssueLine,
+  fetchStockIssueDetail,
+  upsertStockIssueLine,
+} from "../../issue-actions";
+import type { IngredientRow } from "../../page";
 
-export type IssueDetail = {
-  code: string;
+type IssueRecord = {
+  id: number;
+  issue_number: string;
+  issue_type: string;
   status: string;
-  branch: string;
-  date: string;
-  type: string;
-  createdBy: string;
-  total: number;
-  items: Array<{
-    name: string;
-    sku: string;
-    qty: number;
-    unit: string;
-    cost: number;
-    total: number;
-    note: string;
-  }>;
+  notes: string | null;
+  issued_at: string;
+  branch_id: number;
+  branches: { id: number; name: string } | null;
 };
 
-const reasonOptions = [
-  { value: "Nấu cơm hàng ngày", label: "Nấu cơm hàng ngày" },
-  { value: "Sơ chế món nướng", label: "Sơ chế món nướng" },
-  { value: "Tẩm ướp gia vị", label: "Tẩm ướp gia vị" },
-  { value: "Bù hao hụt", label: "Bù hao hụt" },
-  { value: "Hủy hàng lỗi", label: "Hủy hàng lỗi" },
-];
+type IssueLine = {
+  id: number;
+  ingredient_id: number;
+  quantity: number;
+  unit: string;
+  unit_cost: number;
+  total_cost: number;
+  reason: string | null;
+  ingredients: { id: number; name: string; unit: string } | null;
+};
+
+type AddIssueLineDialogProps = {
+  ingredients: IngredientRow[];
+  isOpen: boolean;
+  isPending: boolean;
+  issueId: number;
+  onOpenChange: (open: boolean) => void;
+  onSaved: () => Promise<void>;
+  startTransition: React.TransitionStartFunction;
+};
 
 export function IssueDetailClient({
-  issueDetail,
+  issueId,
+  initialIssue,
+  initialLines,
+  ingredients,
 }: {
-  issueDetail: IssueDetail;
+  issueId: number;
+  initialIssue: IssueRecord;
+  initialLines: IssueLine[];
+  ingredients: IngredientRow[];
 }) {
-  const [notes, setNotes] = useState<Record<string, string>>(
-    Object.fromEntries(issueDetail.items.map((item) => [item.name, item.note])),
+  const router = useRouter();
+  const panelClassName = getSurfacePanelClassName(
+    "inventory",
+    "ambient-shadow",
   );
+  const [issue, setIssue] = useState(initialIssue);
+  const [lines, setLines] = useState(initialLines);
+  const [isPending, startTransition] = useTransition();
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
+  const [confirmIssueOpen, setConfirmIssueOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const isDraft = issue.status === "draft";
+
+  const totalAmount = useMemo(
+    () => lines.reduce((sum, line) => sum + Number(line.total_cost ?? 0), 0),
+    [lines],
+  );
+
+  async function reload() {
+    const res = await fetchStockIssueDetail(issueId);
+    if (!res.success || !res.data) {
+      toast.error("Không thể tải lại phiếu xuất.");
+      return;
+    }
+
+    const data = res.data as { issue: IssueRecord; lines: IssueLine[] };
+    setIssue(data.issue);
+    setLines(data.lines);
+    router.refresh();
+  }
+
+  function handleDeleteLine() {
+    if (pendingDeleteId == null) return;
+
+    startTransition(async () => {
+      const res = await deleteStockIssueLine({
+        issueId,
+        itemId: pendingDeleteId,
+      });
+      if (!res.success) {
+        toast.error(res.error ?? "Không thể xóa dòng khỏi phiếu.");
+        return;
+      }
+
+      toast.success("Đã xóa dòng nguyên liệu.");
+      setPendingDeleteId(null);
+      await reload();
+    });
+  }
+
+  function handleConfirmIssue() {
+    startTransition(async () => {
+      const res = await confirmStockIssue(issueId);
+      if (!res.success) {
+        toast.error(res.error ?? "Không thể xác nhận phiếu xuất.");
+        return;
+      }
+
+      toast.success("Đã xác nhận xuất kho và trừ tồn.");
+      setConfirmIssueOpen(false);
+      await reload();
+    });
+  }
+
+  function handleCancelIssue() {
+    startTransition(async () => {
+      const res = await cancelStockIssue(issueId);
+      if (!res.success) {
+        toast.error(res.error ?? "Không thể hủy phiếu xuất.");
+        return;
+      }
+
+      toast.success("Đã hủy phiếu xuất.");
+      setConfirmCancelOpen(false);
+      await reload();
+    });
+  }
+
   return (
-    <div className="space-y-6">
-      <Link
-        href="/inventory/issues"
-        className="inline-flex items-center gap-1 text-sm hover:underline"
-        style={{ color: "var(--md-on-surface-variant)" }}
-      >
-        <ArrowLeft className="size-4" /> Chi tiết Phiếu xuất
-      </Link>
-
-      {/* Header Identity Card */}
-      <section
-        className="relative overflow-hidden rounded-2xl p-8 shadow-sm"
-        style={{ backgroundColor: "var(--md-surface-low)" }}
-      >
-        {/* Status badge top-right */}
-        <div className="absolute right-8 top-8">
-          <StatusBadge status={issueDetail.status} />
-        </div>
-
-        <div className="grid grid-cols-1 gap-12 md:grid-cols-3">
-          {/* Column 1: Code + Type */}
-          <div className="space-y-4">
-            <div>
-              <p
-                className="mb-1 text-label uppercase tracking-wider"
-                style={{ color: "var(--md-outline)" }}
-              >
-                Mã phiếu
-              </p>
-              <h3 className="text-3xl font-black tracking-tight">
-                {issueDetail.code}
-              </h3>
-            </div>
-            <div>
-              <p
-                className="mb-1 text-label uppercase tracking-wider"
-                style={{ color: "var(--md-outline)" }}
-              >
-                Loại phiếu
-              </p>
-              <p className="flex items-center gap-2 font-semibold">
-                <StatusBadge status={issueDetail.type} />
-              </p>
-            </div>
-          </div>
-
-          {/* Column 2: Branch + Date */}
-          <div
-            className="space-y-4 border-l pl-12"
-            style={{
-              borderColor:
-                "color-mix(in srgb, var(--md-outline-variant) 30%, transparent)",
-            }}
-          >
-            <div>
-              <p
-                className="mb-1 text-label uppercase tracking-wider"
-                style={{ color: "var(--md-outline)" }}
-              >
-                Chi nhánh
-              </p>
-              <p className="font-semibold">{issueDetail.branch}</p>
-            </div>
-            <div>
-              <p
-                className="mb-1 text-label uppercase tracking-wider"
-                style={{ color: "var(--md-outline)" }}
-              >
-                Ngày tạo
-              </p>
-              <p className="font-semibold">{issueDetail.date}</p>
-            </div>
-          </div>
-
-          {/* Column 3: Creator + Total */}
-          <div
-            className="space-y-4 border-l pl-12"
-            style={{
-              borderColor:
-                "color-mix(in srgb, var(--md-outline-variant) 30%, transparent)",
-            }}
-          >
-            <div>
-              <p
-                className="mb-1 text-label uppercase tracking-wider"
-                style={{ color: "var(--md-outline)" }}
-              >
-                Người lập phiếu
-              </p>
-              <div className="mt-1 flex items-center gap-2">
-                <span
-                  className="flex size-6 items-center justify-center rounded-full text-label font-bold"
-                  style={{
-                    backgroundColor: "var(--md-primary-fixed)",
-                    color: "var(--md-primary)",
-                  }}
-                >
-                  {issueDetail.createdBy
-                    .split(" ")
-                    .map((w) => w[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase()}
-                </span>
-                <p className="font-semibold">{issueDetail.createdBy}</p>
-              </div>
-            </div>
-            <div>
-              <p
-                className="mb-1 text-label uppercase tracking-wider"
-                style={{ color: "var(--md-outline)" }}
-              >
-                Tổng giá trị
-              </p>
-              <p
-                className="text-2xl font-black"
-                style={{ color: "var(--md-primary)" }}
-              >
-                {formatVND(issueDetail.total)}{" "}
-                <span className="text-xs font-normal">VNĐ</span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Line Items Table */}
-      <section
-        className="overflow-hidden rounded-2xl ambient-shadow"
-        style={{
-          backgroundColor: "var(--md-surface-lowest)",
-          border:
-            "1px solid color-mix(in srgb, var(--md-outline-variant) 20%, transparent)",
-        }}
-      >
-        {/* Table header bar */}
-        <div
-          className="flex items-center justify-between border-b bg-white p-6"
-          style={{
-            borderColor:
-              "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-          }}
+    <>
+      <div className="space-y-6">
+        <Link
+          href="/inventory/issues"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
         >
-          <h4 className="text-lg font-bold">Danh sách nguyên liệu</h4>
-          <button
-            type="button"
-            className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-all"
-            style={{
-              backgroundColor: "var(--md-secondary-container)",
-              color: "var(--md-on-secondary-container)",
-            }}
-          >
-            <PlusCircle className="size-4" />
-            Thêm nguyên liệu
-          </button>
-        </div>
+          <ArrowLeft className="size-4" /> {tRoute("/inventory/issues")}
+        </Link>
 
-        <Table>
-          <TableHeader>
-            <TableRow
-              style={{
-                backgroundColor:
-                  "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
-              }}
-            >
-              {[
-                { label: "Nguyên liệu", align: "" },
-                { label: "Số lượng", align: "text-right" },
-                { label: "Đơn vị", align: "" },
-                { label: "Đơn giá (WAC)", align: "text-right" },
-                { label: "Thành tiền", align: "text-right" },
-                { label: "Lý do xuất", align: "" },
-                { label: "", align: "text-center" },
-              ].map((h) => (
-                <TableHead
-                  key={h.label || "del"}
-                  className={`px-6 py-4 whitespace-nowrap text-label font-bold uppercase tracking-wider ${h.align}`}
-                  style={{ color: "var(--md-outline)" }}
-                >
-                  {h.label}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {issueDetail.items.map((item) => (
-              <TableRow
-                key={item.name}
-                className="transition-colors"
-                style={{
-                  borderColor:
-                    "color-mix(in srgb, var(--md-outline-variant) 5%, transparent)",
-                }}
-              >
-                <TableCell className="px-6 py-4">
-                  <div className="flex flex-col">
-                    <span className="font-bold">{item.name}</span>
-                    <span
-                      className="text-label"
-                      style={{ color: "var(--md-outline)" }}
-                    >
-                      SKU: {item.sku}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell className="px-6 py-4 text-right">
-                  <input
-                    type="number"
-                    defaultValue={item.qty}
-                    className="w-full rounded-lg border-0 px-3 py-1.5 text-right text-sm font-semibold focus:ring-2"
-                    style={{
-                      backgroundColor: "var(--md-surface-low)",
-                      // @ts-expect-error -- CSS custom property
-                      "--tw-ring-color":
-                        "color-mix(in srgb, var(--md-primary) 30%, transparent)",
-                    }}
-                    readOnly
-                  />
-                </TableCell>
-                <TableCell className="px-6 py-4">
-                  <span
-                    className="rounded px-2 py-1 text-xs font-medium"
-                    style={{ backgroundColor: "var(--md-surface-container)" }}
-                  >
-                    {item.unit}
-                  </span>
-                </TableCell>
-                <TableCell className="px-6 py-4 text-right font-medium">
-                  {formatVND(item.cost)}
-                </TableCell>
-                <TableCell className="px-6 py-4 text-right font-bold">
-                  {formatVND(item.total)}
-                </TableCell>
-                <TableCell className="px-6 py-4">
-                  <SearchableSelect
-                    options={reasonOptions}
-                    value={notes[item.name] ?? item.note}
-                    onValueChange={(v) =>
-                      setNotes((prev) => ({ ...prev, [item.name]: v }))
-                    }
-                    placeholder="Chọn lý do..."
-                    searchPlaceholder="Tìm lý do..."
-                    variant="ghost"
-                    style={{
-                      color: "var(--md-on-surface)",
-                      borderBottom:
-                        "1px solid color-mix(in srgb, var(--md-outline-variant) 50%, transparent)",
-                      paddingBottom: 4,
-                    }}
-                  />
-                </TableCell>
-                <TableCell className="px-6 py-4 text-center">
-                  <button
-                    type="button"
-                    className="transition-colors"
-                    style={{ color: "var(--md-outline-variant)" }}
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <PageHeader
+          eyebrow="Phiếu xuất"
+          title={issue.issue_number}
+          description={`${issue.branches?.name ?? `Chi nhánh #${issue.branch_id}`} • ${issue.issued_at ? formatDateTime(issue.issued_at) : "—"}`}
+          actions={<StatusBadge status={issue.status} />}
+        />
 
-        {/* Totals footer */}
-        <div
-          className="flex justify-end p-8"
-          style={{
-            backgroundColor:
-              "color-mix(in srgb, var(--md-surface-low) 30%, transparent)",
-          }}
-        >
-          <div className="w-72 space-y-3">
-            <div className="flex items-center justify-between text-sm">
-              <span style={{ color: "var(--md-outline)" }}>Tổng số dòng:</span>
-              <span className="font-bold">
-                {String(issueDetail.items.length).padStart(2, "0")}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span style={{ color: "var(--md-outline)" }}>
-                Cộng tiền hàng:
-              </span>
-              <span className="font-bold">{formatVND(issueDetail.total)}</span>
-            </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            {
+              label: "Loại phiếu",
+              value: issue.issue_type,
+            },
+            {
+              label: "Chi nhánh",
+              value: issue.branches?.name ?? `Chi nhánh #${issue.branch_id}`,
+            },
+            {
+              label: "Tổng số dòng",
+              value: String(lines.length).padStart(2, "0"),
+            },
+            {
+              label: "Tổng giá trị",
+              value: `${formatVND(totalAmount)}đ`,
+            },
+          ].map((item) => (
             <div
-              className="flex items-end justify-between border-t pt-3"
-              style={{
-                borderColor:
-                  "color-mix(in srgb, var(--md-outline-variant) 30%, transparent)",
-              }}
+              key={item.label}
+              className={cn(panelClassName, "rounded-2xl bg-card p-4")}
             >
-              <span className="text-sm font-bold">TỔNG CỘNG</span>
-              <div className="text-right">
-                <span
-                  className="block text-2xl font-black leading-none"
-                  style={{ color: "var(--md-primary)" }}
-                >
-                  {formatVND(issueDetail.total)}
+              <p className="text-label uppercase tracking-wider text-muted-foreground">
+                {item.label}
+              </p>
+              <p className="mt-1 text-sm font-semibold">{item.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {issue.notes ? (
+          <SectionCard
+            className="rounded-2xl border border-border/50 bg-gradient-to-br from-white via-background to-muted/30"
+            density="compact"
+          >
+            <p className="text-label font-medium uppercase tracking-wider text-muted-foreground">
+              Ghi chú phiếu xuất
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{issue.notes}</p>
+          </SectionCard>
+        ) : null}
+
+        <section
+          className={cn(panelClassName, "overflow-hidden rounded-2xl bg-card")}
+        >
+          <div className="flex flex-col gap-4 border-b border-border/50 bg-white p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div>
+              <h4 className="text-lg font-bold">{tTerm("ingredientsList")}</h4>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {isDraft
+                  ? "Phiếu nháp tự lưu khi thêm hoặc xóa dòng."
+                  : "Phiếu đã chốt, dữ liệu chỉ còn ở chế độ xem."}
+              </p>
+            </div>
+            {isDraft ? (
+              <Button
+                onClick={() => setAddDialogOpen(true)}
+                className="bg-success/10 text-success hover:bg-success/15 hover:text-success"
+              >
+                <PlusCircle className="size-4" />
+                Thêm {tTerm("ingredient", "button").toLowerCase()}
+              </Button>
+            ) : null}
+          </div>
+
+          {lines.length === 0 ? (
+            <div className="px-6 py-10">
+              <EmptyStatePanel
+                title={
+                  isDraft
+                    ? "Chưa có dòng nguyên liệu"
+                    : "Phiếu xuất không có dòng nguyên liệu"
+                }
+                description={
+                  isDraft
+                    ? "Thêm ít nhất một dòng để xác nhận xuất kho."
+                    : "Danh sách nguyên liệu sẽ hiển thị ở đây nếu phiếu có dữ liệu."
+                }
+              />
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3 p-4 md:hidden">
+                {lines.map((line) => (
+                  <div
+                    key={line.id}
+                    className="rounded-2xl border border-border/70 bg-muted/20 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-bold">
+                          {line.ingredients?.name ?? `#${line.ingredient_id}`}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          ID: {line.ingredient_id}
+                        </p>
+                      </div>
+                      {isDraft ? (
+                        <button
+                          type="button"
+                          onClick={() => setPendingDeleteId(line.id)}
+                          disabled={isPending}
+                          className="focus-ring-standard rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:opacity-60"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      ) : null}
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Số lượng</p>
+                        <p className="font-semibold">
+                          {formatQty(Number(line.quantity ?? 0))}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Đơn vị</p>
+                        <p className="font-semibold">
+                          {line.unit ?? line.ingredients?.unit ?? "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Đơn giá (WAC)</p>
+                        <p className="font-semibold">
+                          {formatVND(Number(line.unit_cost ?? 0))}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Thành tiền</p>
+                        <p className="font-semibold text-primary">
+                          {formatVND(Number(line.total_cost ?? 0))}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-4 rounded-xl bg-background px-3 py-2 text-sm">
+                      <p className="text-muted-foreground">
+                        {tTerm("issueReason")}
+                      </p>
+                      <p className="mt-1">{line.reason ?? "—"}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40">
+                      {[
+                        { label: tTerm("ingredient"), align: "" },
+                        { label: "Số lượng", align: "text-right" },
+                        { label: "Đơn vị", align: "" },
+                        { label: "Đơn giá (WAC)", align: "text-right" },
+                        { label: "Thành tiền", align: "text-right" },
+                        { label: tTerm("issueReason"), align: "" },
+                        { label: "", align: "text-center" },
+                      ].map((header) => (
+                        <TableHead
+                          key={header.label || "delete"}
+                          className={`px-6 py-4 whitespace-nowrap text-label font-bold uppercase tracking-wider ${header.align}`}
+                        >
+                          {header.label}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {lines.length === 0 && (
+                      <TableEmptyStateRow
+                        colSpan={7}
+                        title="Phiếu xuất chưa có dữ liệu"
+                        description="Danh sách nguyên liệu sẽ hiển thị tại đây khi phiếu có dòng hàng."
+                      />
+                    )}
+                    {lines.map((line) => (
+                      <TableRow key={line.id} className="transition-colors">
+                        <TableCell className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="font-bold">
+                              {line.ingredients?.name ??
+                                `#${line.ingredient_id}`}
+                            </span>
+                            <span className="text-label text-muted-foreground">
+                              ID: {line.ingredient_id}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4 text-right font-semibold">
+                          {formatQty(Number(line.quantity ?? 0))}
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <span className="rounded bg-muted px-2 py-1 text-xs font-medium">
+                            {line.unit ?? line.ingredients?.unit ?? ""}
+                          </span>
+                        </TableCell>
+                        <TableCell className="px-6 py-4 text-right font-medium">
+                          {formatVND(Number(line.unit_cost ?? 0))}
+                        </TableCell>
+                        <TableCell className="px-6 py-4 text-right font-bold">
+                          {formatVND(Number(line.total_cost ?? 0))}
+                        </TableCell>
+                        <TableCell className="px-6 py-4 text-sm text-muted-foreground">
+                          {line.reason ?? "—"}
+                        </TableCell>
+                        <TableCell className="px-6 py-4 text-center">
+                          {isDraft ? (
+                            <button
+                              type="button"
+                              onClick={() => setPendingDeleteId(line.id)}
+                              disabled={isPending}
+                              className="focus-ring-standard rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:opacity-60"
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              —
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
+
+          <div className="flex justify-end bg-muted/30 p-5 sm:p-6 lg:p-8">
+            <div className="w-full max-w-sm space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Tổng số dòng:</span>
+                <span className="font-bold">
+                  {String(lines.length).padStart(2, "0")}
                 </span>
-                <span
-                  className="text-label font-semibold"
-                  style={{ color: "var(--md-outline)" }}
-                >
-                  VNĐ (Bao gồm thuế)
-                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Cộng tiền hàng:</span>
+                <span className="font-bold">{formatVND(totalAmount)}</span>
+              </div>
+              <div className="flex items-end justify-between border-t border-border/40 pt-3">
+                <span className="text-sm font-bold">TỔNG CỘNG</span>
+                <div className="text-right">
+                  <span className="block text-2xl font-black leading-none text-primary">
+                    {formatVND(totalAmount)}
+                  </span>
+                  <span className="text-label font-semibold text-muted-foreground">
+                    VNĐ
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Footer Action Bar */}
-      <footer
-        className="flex items-center justify-between border-t py-6"
-        style={{
-          borderColor:
-            "color-mix(in srgb, var(--md-outline-variant) 50%, transparent)",
-        }}
+        {isDraft ? (
+          <footer className="flex flex-col gap-4 border-t border-border/50 py-6 md:flex-row md:items-center md:justify-between">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setConfirmCancelOpen(true)}
+              className="text-destructive hover:bg-destructive/8 hover:text-destructive disabled:opacity-60"
+              disabled={isPending}
+            >
+              <X className="size-5" />
+              Hủy phiếu
+            </Button>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+              <Button type="button" variant="secondary" disabled>
+                Nháp tự lưu
+              </Button>
+              <Button
+                type="button"
+                onClick={() => setConfirmIssueOpen(true)}
+                disabled={isPending || lines.length === 0}
+                className="shadow-lg transition-all hover:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <CheckCircle className="size-5" />
+                Xác nhận xuất kho
+              </Button>
+            </div>
+          </footer>
+        ) : null}
+      </div>
+
+      <AddIssueLineDialog
+        ingredients={ingredients}
+        isOpen={addDialogOpen}
+        isPending={isPending}
+        issueId={issueId}
+        onOpenChange={setAddDialogOpen}
+        onSaved={reload}
+        startTransition={startTransition}
+      />
+
+      <AlertDialog open={confirmIssueOpen} onOpenChange={setConfirmIssueOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xuất kho?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>Thao tác này sẽ trừ tồn kho và không thể hoàn tác.</p>
+                {lines.length > 0 ? (
+                  <SectionCard
+                    className="rounded-2xl bg-muted/30 text-left"
+                    density="compact"
+                  >
+                    {lines.map((line) => (
+                      <p key={line.id}>
+                        Sẽ trừ{" "}
+                        <strong>
+                          {formatQty(Number(line.quantity ?? 0))} {line.unit}
+                        </strong>{" "}
+                        <strong>
+                          {line.ingredients?.name ?? `#${line.ingredient_id}`}
+                        </strong>{" "}
+                        khỏi kho <strong>{issue.branches?.name ?? "—"}</strong>.
+                      </p>
+                    ))}
+                  </SectionCard>
+                ) : null}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Quay lại</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmIssue}
+              disabled={isPending}
+            >
+              {isPending ? "Đang xử lý..." : "Xác nhận xuất kho"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmCancelOpen} onOpenChange={setConfirmCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hủy phiếu xuất?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Phiếu xuất sẽ chuyển sang trạng thái hủy và không thể xác nhận
+              nữa.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Không hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelIssue}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isPending ? "Đang xử lý..." : "Xác nhận hủy"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => !open && setPendingDeleteId(null)}
       >
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-full px-6 py-3 font-bold transition-all"
-          style={{ color: "var(--md-error)" }}
-        >
-          <X className="size-5" />
-          Hủy phiếu
-        </button>
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            className="rounded-full px-8 py-3 font-bold transition-all"
-            style={{
-              backgroundColor: "var(--md-surface-high)",
-              color: "var(--md-on-surface-variant)",
-            }}
-          >
-            Lưu nháp
-          </button>
-          <button
-            type="button"
-            className="flex items-center gap-2 rounded-full px-10 py-3 font-bold text-white shadow-lg transition-all hover:scale-[0.98]"
-            style={{
-              background:
-                "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-              boxShadow: "0 4px 14px rgba(211,84,0,0.2)",
-            }}
-          >
-            <CheckCircle className="size-5" />
-            Xác nhận xuất kho
-          </button>
-        </div>
-      </footer>
-    </div>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xóa dòng nguyên liệu?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dòng này sẽ bị xóa khỏi phiếu xuất nháp.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Quay lại</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteLine}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isPending ? "Đang xử lý..." : "Xóa dòng"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+function AddIssueLineDialog({
+  ingredients,
+  isOpen,
+  isPending,
+  issueId,
+  onOpenChange,
+  onSaved,
+  startTransition,
+}: AddIssueLineDialogProps) {
+  const [ingredientId, setIngredientId] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [unit, setUnit] = useState("");
+  const [unitCostOverride, setUnitCostOverride] = useState("");
+  const [reason, setReason] = useState("");
+
+  const selectedIngredient = useMemo(
+    () =>
+      ingredients.find((ingredient) => ingredient.id === Number(ingredientId)),
+    [ingredientId, ingredients],
+  );
+  const autoFilledCost = selectedIngredient?.unit_cost ?? 0;
+
+  function resetForm() {
+    setIngredientId("");
+    setQuantity("");
+    setUnit("");
+    setUnitCostOverride("");
+    setReason("");
+  }
+
+  function handleIngredientChange(value: string) {
+    setIngredientId(value);
+    const ingredient = ingredients.find((item) => item.id === Number(value));
+    setUnit(ingredient?.unit ?? "");
+    setUnitCostOverride("");
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    const parsedIngredientId = Number(ingredientId);
+    const parsedQuantity = Number(quantity);
+    const parsedUnitCost =
+      unitCostOverride.trim().length > 0
+        ? Number(unitCostOverride)
+        : autoFilledCost;
+
+    if (!parsedIngredientId) {
+      toast.error("Chọn nguyên liệu cần xuất.");
+      return;
+    }
+
+    if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
+      toast.error("Số lượng xuất phải lớn hơn 0.");
+      return;
+    }
+
+    if (!unit.trim()) {
+      toast.error("Đơn vị không được để trống.");
+      return;
+    }
+
+    if (!Number.isFinite(parsedUnitCost) || parsedUnitCost < 0) {
+      toast.error("Đơn giá không hợp lệ.");
+      return;
+    }
+
+    if (!reason.trim()) {
+      toast.error("Lý do xuất là bắt buộc để lưu vết.");
+      return;
+    }
+
+    startTransition(async () => {
+      const res = await upsertStockIssueLine({
+        issueId,
+        ingredientId: parsedIngredientId,
+        quantity: parsedQuantity,
+        unit: unit.trim(),
+        unitCost: parsedUnitCost,
+        reason: reason.trim(),
+      });
+
+      if (!res.success) {
+        toast.error(res.error ?? "Không thể lưu dòng nguyên liệu.");
+        return;
+      }
+
+      toast.success("Đã lưu dòng nguyên liệu.");
+      onOpenChange(false);
+      resetForm();
+      await onSaved();
+    });
+  }
+
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        onOpenChange(open);
+        if (!open) resetForm();
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Thêm dòng nguyên liệu</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Nguyên liệu *</Label>
+            <Select value={ingredientId} onValueChange={handleIngredientChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Chọn nguyên liệu" />
+              </SelectTrigger>
+              <SelectContent>
+                {ingredients
+                  .filter((ingredient) => ingredient.is_active)
+                  .map((ingredient) => (
+                    <SelectItem
+                      key={ingredient.id}
+                      value={String(ingredient.id)}
+                    >
+                      {ingredient.name} ({ingredient.unit})
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="issue-line-qty">Số lượng xuất *</Label>
+              <Input
+                id="issue-line-qty"
+                type="number"
+                step="any"
+                min="0.001"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="issue-line-unit">Đơn vị *</Label>
+              <Input
+                id="issue-line-unit"
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
+                placeholder="kg"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="issue-line-cost">
+              Đơn giá (VNĐ)
+              {selectedIngredient?.unit_cost != null &&
+              unitCostOverride.trim().length === 0 ? (
+                <span className="ml-1 text-xs font-normal text-muted-foreground">
+                  mặc định {formatVND(autoFilledCost)}
+                </span>
+              ) : null}
+            </Label>
+            <Input
+              id="issue-line-cost"
+              type="number"
+              step="any"
+              min="0"
+              value={unitCostOverride}
+              onChange={(e) => setUnitCostOverride(e.target.value)}
+              placeholder={autoFilledCost > 0 ? formatVND(autoFilledCost) : "0"}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="issue-line-reason">Lý do xuất *</Label>
+            <Input
+              id="issue-line-reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Ví dụ: cấp phát cho bếp chuẩn bị ca chiều"
+            />
+          </div>
+
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="focus-ring-standard rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="focus-ring-standard rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+            >
+              {isPending ? "Đang lưu..." : "Lưu dòng"}
+            </button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -2,8 +2,9 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
+  ChevronDown,
   BarChart3,
   Briefcase,
   Check,
@@ -25,16 +26,22 @@ import {
   UtensilsCrossed,
   Wallet,
 } from "lucide-react";
-import { toast } from "sonner";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import {
-  MODULE_ACL,
-  canAccess,
-  ADMIN_NAV_GROUPS,
   ROLE_LABEL_VI,
+  resolveAdminNavGroups,
+  resolveQuickLaunchGroups,
+  type ResolvedNavGroup as SharedResolvedNavGroup,
+  type ResolvedNavLink,
 } from "@comtammatu/shared/auth";
 import type { ModuleKey } from "@comtammatu/shared/auth";
-import { cn } from "@comtammatu/ui";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import {
+  cn,
+  getSurfaceHeaderClassName,
+  getSurfaceShellClassName,
+  getSurfaceSidebarClassName,
+} from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { Separator } from "@comtammatu/ui/components/separator";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
@@ -57,6 +64,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
+import { SearchParamBlockedStateFlash } from "@/components/foundation/blocked-state-flash";
+import { StatusBadge } from "@/components/foundation/ui-patterns";
 
 /* ─── Icon registry (Lucide name → component) ─── */
 
@@ -69,6 +78,10 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Wallet,
   BarChart3,
   Settings,
+  Package,
+  Briefcase,
+  Monitor,
+  ChefHat,
 };
 
 /* ─── Helpers ─── */
@@ -92,31 +105,35 @@ interface ResolvedNavItem {
   moduleKey: ModuleKey;
 }
 
-interface ResolvedNavGroup {
+type ResolvedNavGroup = {
+  title: SharedResolvedNavGroup["title"];
+  items: ResolvedNavItem[];
+};
+
+type UiQuickLaunchGroup = {
   title: string;
   items: ResolvedNavItem[];
-}
+};
 
 interface BreadcrumbItem {
   label: string;
   href?: string;
 }
 
-function resolveNavGroups(role: StaffRole): ResolvedNavGroup[] {
-  return ADMIN_NAV_GROUPS.map((group) => ({
+function mapResolvedNavLink(item: ResolvedNavLink): ResolvedNavItem {
+  return {
+    label: item.label,
+    href: item.href,
+    icon: ICON_MAP[item.icon] ?? LayoutDashboard,
+    moduleKey: item.moduleKey,
+  };
+}
+
+function mapResolvedNavGroups(groups: SharedResolvedNavGroup[]): ResolvedNavGroup[] {
+  return groups.map((group) => ({
     title: group.title,
-    items: group.items
-      .filter((item) => canAccess(role, item.moduleKey))
-      .map((item) => {
-        const acl = MODULE_ACL[item.moduleKey];
-        return {
-          label: acl.label,
-          href: acl.path,
-          icon: ICON_MAP[item.icon] ?? LayoutDashboard,
-          moduleKey: item.moduleKey,
-        };
-      }),
-  })).filter((group) => group.items.length > 0);
+    items: group.items.map((item) => mapResolvedNavLink(item)),
+  }));
 }
 
 const SEGMENT_LABEL_VI: Record<string, string> = {
@@ -152,8 +169,8 @@ function buildBreadcrumb(
 
   if (!matchedItem) {
     return {
-      title: "Admin",
-      items: [{ label: "Admin", href: "/admin/dashboard" }],
+      title: APP_COPY_VI.adminSurface,
+      items: [{ label: APP_COPY_VI.adminSurface, href: "/admin/dashboard" }],
     };
   }
 
@@ -172,7 +189,7 @@ function buildBreadcrumb(
   });
 
   const items: BreadcrumbItem[] = [
-    { label: "Admin", href: "/admin/dashboard" },
+    { label: APP_COPY_VI.adminSurface, href: "/admin/dashboard" },
     {
       label: matchedItem.label,
       href: pathTail.length > 0 ? matchedItem.href : undefined,
@@ -186,205 +203,63 @@ function buildBreadcrumb(
   };
 }
 
-/* ─── Forbidden toast (Suspense boundary required for useSearchParams) ─── */
+/* ─── Quick launch menu for adjacent workspaces and branch tools ─── */
 
-function ForbiddenToastInner() {
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const router = useRouter();
-  const shown = useRef(false);
-
-  useEffect(() => {
-    if (!shown.current && searchParams.get("forbidden") === "1") {
-      shown.current = true;
-      toast.error("Bạn không có quyền truy cập trang đó");
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete("forbidden");
-      const qs = params.toString();
-      router.replace(pathname + (qs ? `?${qs}` : ""), { scroll: false });
-    }
-  }, []); // intentional: check forbidden param only on mount
-
-  return null;
-}
-
-/* ─── Portal launchers (Inventory + HR) ─── */
-
-function PortalLaunchersNav({
-  role,
-  collapsed = false,
+function QuickLaunchMenu({
+  groups,
+  compact = false,
 }: {
-  role: StaffRole;
-  collapsed?: boolean;
+  groups: UiQuickLaunchGroup[];
+  compact?: boolean;
 }) {
-  const portals = [
-    {
-      href: "/inventory",
-      label: "Kho hàng",
-      icon: Package,
-      roles: [
-        "owner",
-        "super_manager",
-        "area_manager",
-        "branch_manager",
-      ] as StaffRole[],
-    },
-    {
-      href: "/hr",
-      label: "Nhân sự & Lương",
-      icon: Briefcase,
-      roles: ["owner", "super_manager"] as StaffRole[],
-    },
-  ].filter((p) => p.roles.includes(role));
-
-  if (portals.length === 0) return null;
+  if (groups.length === 0) return null;
 
   return (
-    <div
-      className={cn(
-        "mt-2 border-t border-sidebar-border",
-        collapsed ? "pt-3" : "pt-4",
-      )}
-    >
-      {!collapsed && (
-        <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/40">
-          Portals
-        </p>
-      )}
-      <div className="space-y-0.5">
-        {portals.map((portal) => {
-          const Icon = portal.icon;
-          if (collapsed) {
-            return (
-              <Tooltip key={portal.href}>
-                <TooltipTrigger asChild>
-                  <Link
-                    href={portal.href}
-                    className="touch-target group flex items-center justify-center rounded-lg py-2.5 text-sidebar-foreground/65 transition-all hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                  >
-                    <Icon className="size-4.5 shrink-0 text-sidebar-foreground/50 group-hover:text-sidebar-foreground/70 transition-colors" />
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant={compact ? "ghost" : "outline"}
+          size={compact ? "icon" : "sm"}
+          className={cn(
+            compact
+              ? "touch-target size-8 text-muted-foreground hover:text-foreground"
+              : "touch-target h-9 gap-2 rounded-full border-border/70 bg-background/90 px-3 text-foreground shadow-sm hover:bg-muted/80",
+          )}
+          aria-label={APP_COPY_VI.quickAccessAria}
+        >
+          <ExternalLink className="size-4" />
+          {!compact && (
+            <>
+              <span className="font-medium">{APP_COPY_VI.quickAccess}</span>
+              <ChevronDown className="size-3.5 text-muted-foreground" />
+            </>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        {groups.map((group, groupIndex) => (
+          <div key={group.title}>
+            {groupIndex > 0 && <DropdownMenuSeparator />}
+            <div className="px-2 py-1.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+              {group.title}
+            </div>
+            {group.items.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <DropdownMenuItem key={item.href} asChild>
+                  <Link href={item.href} className="flex items-center gap-2">
+                    <Icon className="size-4" />
+                    <span>{item.label}</span>
+                    <ExternalLink className="ml-auto size-3 opacity-60" />
                   </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  {portal.label}
-                  <ExternalLink className="ml-1.5 inline size-3 opacity-60" />
-                </TooltipContent>
-              </Tooltip>
-            );
-          }
-          return (
-            <Link
-              key={portal.href}
-              href={portal.href}
-              className="touch-target group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/65 transition-all hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-            >
-              <Icon className="size-4.5 shrink-0 text-sidebar-foreground/50 group-hover:text-sidebar-foreground/70 transition-colors" />
-              {portal.label}
-              <ExternalLink className="ml-auto size-3 opacity-40 group-hover:opacity-70 transition-opacity" />
-            </Link>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/* ─── Branch operational shortcuts (POS + KDS) for branch_manager ─── */
-
-function BranchOperationsNav({
-  branchId,
-  pathname,
-  collapsed = false,
-  onNavigate,
-}: {
-  branchId: number;
-  pathname: string;
-  collapsed?: boolean;
-  onNavigate?: () => void;
-}) {
-  const items = [
-    { href: `/br/${branchId}/pos`, label: "POS", icon: Monitor },
-    { href: `/br/${branchId}/kds`, label: "Bếp (KDS)", icon: ChefHat },
-  ];
-
-  return (
-    <div
-      className={cn(
-        "mt-2 border-t border-sidebar-border",
-        collapsed ? "pt-3" : "pt-4",
-      )}
-    >
-      {!collapsed && (
-        <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/40">
-          Vận hành ca
-        </p>
-      )}
-      <div className="space-y-0.5">
-        {items.map((item) => {
-          const isActive = pathname.startsWith(item.href);
-          const Icon = item.icon;
-
-          if (collapsed) {
-            return (
-              <Tooltip key={item.href}>
-                <TooltipTrigger asChild>
-                  <Link
-                    href={item.href}
-                    onClick={onNavigate}
-                    className={cn(
-                      "touch-target group relative flex items-center justify-center rounded-lg py-2.5 transition-all",
-                      isActive
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                        : "text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
-                    )}
-                  >
-                    {isActive && (
-                      <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-sidebar-primary" />
-                    )}
-                    <Icon
-                      className={cn(
-                        "size-4.5 shrink-0 transition-colors",
-                        isActive
-                          ? "text-sidebar-primary"
-                          : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/70",
-                      )}
-                    />
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right">{item.label}</TooltipContent>
-              </Tooltip>
-            );
-          }
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={cn(
-                "touch-target group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                  : "text-sidebar-foreground/65 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
-              )}
-            >
-              {isActive && (
-                <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-sidebar-primary" />
-              )}
-              <Icon
-                className={cn(
-                  "size-4.5 shrink-0 transition-colors",
-                  isActive
-                    ? "text-sidebar-primary"
-                    : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/70",
-                )}
-              />
-              {item.label}
-            </Link>
-          );
-        })}
-      </div>
-    </div>
+                </DropdownMenuItem>
+              );
+            })}
+          </div>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -571,7 +446,7 @@ function SidebarUserFooter({
   );
 }
 
-/* ─── Admin Shell ─── */
+/* ─── Admin Workspace Shell ─── */
 
 interface AdminShellProps {
   children: React.ReactNode;
@@ -630,21 +505,37 @@ export function AdminShell({
     hoverTimerRef.current = setTimeout(() => setIsHoverOpen(false), 300);
   };
 
-  const filteredGroups = resolveNavGroups(role);
+  const filteredGroups = useMemo(
+    () => mapResolvedNavGroups(resolveAdminNavGroups(role)),
+    [role],
+  );
+  const quickLaunchGroups = useMemo(
+    () =>
+      resolveQuickLaunchGroups(role, branchId).map((group) => ({
+        title: group.title,
+        items: group.items.map((item) => mapResolvedNavLink(item)),
+      })),
+    [branchId, role],
+  );
   const navItems = useMemo(
     () => filteredGroups.flatMap((group) => group.items),
     [filteredGroups],
   );
+  const quickLaunchCount = useMemo(
+    () => quickLaunchGroups.reduce((total, group) => total + group.items.length, 0),
+    [quickLaunchGroups],
+  );
+  const workspaceLabel = branchId
+    ? `Chi nhánh #${branchId}`
+    : "Toàn hệ thống";
   const headerBreadcrumb = useMemo(
     () => buildBreadcrumb(pathname, navItems),
     [pathname, navItems],
   );
 
-  const showBranchOps = role === "branch_manager" && branchId != null;
-
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex h-screen overflow-hidden">
+      <div className={getSurfaceShellClassName("admin", "flex min-h-screen overflow-hidden")}>
         {/* ── Desktop Sidebar spacer (hover mode: keeps layout stable) ── */}
         {sidebarMode === "hover" && (
           <div className="hidden w-16 shrink-0 md:block" />
@@ -653,7 +544,8 @@ export function AdminShell({
         {/* ── Desktop Sidebar (hidden on mobile) ── */}
         <aside
           className={cn(
-            "hidden flex-col border-r bg-sidebar transition-all duration-200 md:flex",
+            getSurfaceSidebarClassName("admin"),
+            "hidden flex-col transition-all duration-200 md:flex",
             sidebarMode === "hover"
               ? cn(
                   "fixed inset-y-0 left-0 z-40",
@@ -669,21 +561,21 @@ export function AdminShell({
           {/* Brand */}
           <div
             className={cn(
-              "flex h-14 items-center border-b border-sidebar-border",
+              "flex h-16 items-center border-b border-sidebar-border/80",
               isCollapsed ? "justify-center px-2" : "gap-3 px-4",
             )}
           >
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary shadow-sm">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-sidebar-primary shadow-sm shadow-sidebar-primary/15">
               <UtensilsCrossed className="size-5 text-sidebar-primary-foreground" />
             </div>
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/45">
+                  {APP_COPY_VI.erpCockpit}
+                </p>
                 <span className="text-base font-bold tracking-tight text-sidebar-foreground">
                   Cơm Tấm Má Tư
                 </span>
-                <p className="text-xs font-medium uppercase tracking-widest text-sidebar-foreground/40">
-                  Quản lý
-                </p>
               </div>
             )}
           </div>
@@ -697,14 +589,6 @@ export function AdminShell({
               pathname={pathname}
               collapsed={isCollapsed}
             />
-            <PortalLaunchersNav role={role} collapsed={isCollapsed} />
-            {showBranchOps && (
-              <BranchOperationsNav
-                branchId={branchId}
-                pathname={pathname}
-                collapsed={isCollapsed}
-              />
-            )}
           </ScrollArea>
 
           {/* Sidebar mode control */}
@@ -777,7 +661,12 @@ export function AdminShell({
         {/* ── Main Area ── */}
         <div className="flex flex-1 flex-col">
           {/* Header */}
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-border/60 bg-background/80 px-4 backdrop-blur-xl sm:px-6">
+          <header
+            className={getSurfaceHeaderClassName(
+              "admin",
+              "flex min-h-16 items-center gap-4 px-4 py-3 sm:px-6",
+            )}
+          >
             {/* Mobile: sidebar toggle */}
             <Button
               variant="ghost"
@@ -791,9 +680,12 @@ export function AdminShell({
 
             {/* Breadcrumb + page title */}
             <div className="min-w-0 flex-1">
+              <p className="app-section-label hidden md:block">
+                {APP_COPY_VI.adminFoundation}
+              </p>
               <nav
                 aria-label="Breadcrumb"
-                className="hidden items-center gap-1 text-xs text-muted-foreground md:flex"
+                className="hidden items-center gap-1 pt-1 text-xs text-muted-foreground md:flex"
               >
                 {headerBreadcrumb.items.map((item, index) => {
                   const isLast = index === headerBreadcrumb.items.length - 1;
@@ -840,8 +732,13 @@ export function AdminShell({
               </p>
             </div>
 
+            <div className="hidden md:block">
+              <QuickLaunchMenu groups={quickLaunchGroups} />
+            </div>
+
             {/* Mobile only: user avatar with dropdown */}
-            <div className="md:hidden">
+            <div className="flex items-center gap-1 md:hidden">
+              <QuickLaunchMenu groups={quickLaunchGroups} compact />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -879,28 +776,63 @@ export function AdminShell({
           </header>
 
           {/* Content */}
-          <main id="main-content" className="flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <main id="main-content" className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8">
+            <div className="mx-auto flex max-w-screen-2xl flex-col">
+              <div className="mb-5 hidden md:block">
+                <div className="ui-flow-panel flex flex-wrap items-center justify-between gap-4 rounded-3xl p-4 md:p-5">
+                  <div className="min-w-0 space-y-1.5">
+                    <p className="app-section-label">Quản trị</p>
+                    <h2 className="text-lg font-semibold tracking-tight">
+                      {ROLE_LABEL_VI[role]}
+                    </h2>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <StatusBadge
+                      tone="info"
+                      className="rounded-full px-3 py-1.5 text-xs font-semibold"
+                    >
+                      Vai trò {ROLE_LABEL_VI[role]}
+                    </StatusBadge>
+                    <StatusBadge
+                      tone="neutral"
+                      className="rounded-full px-3 py-1.5 text-xs font-semibold"
+                    >
+                      {workspaceLabel}
+                    </StatusBadge>
+                    <StatusBadge
+                      tone={quickLaunchCount > 0 ? "success" : "warning"}
+                      className="rounded-full px-3 py-1.5 text-xs font-semibold"
+                    >
+                      {navItems.length} mục chính · {quickLaunchCount} truy cập nhanh
+                    </StatusBadge>
+                  </div>
+                </div>
+              </div>
+              <div>
               {children}
+              </div>
             </div>
           </main>
         </div>
 
         {/* ── Mobile Sheet Sidebar ── */}
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-          <SheetContent side="left" className="w-72 bg-sidebar p-0">
+          <SheetContent
+            side="left"
+            className={getSurfaceSidebarClassName("admin", "w-72 p-0")}
+          >
             <SheetTitle className="sr-only">Menu điều hướng</SheetTitle>
-            <div className="flex h-14 items-center gap-3 border-b border-sidebar-border px-4">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary shadow-sm">
+            <div className="flex h-16 items-center gap-3 border-b border-sidebar-border/80 px-4">
+              <div className="flex size-10 items-center justify-center rounded-2xl bg-sidebar-primary shadow-sm shadow-sidebar-primary/15">
                 <UtensilsCrossed className="size-5 text-sidebar-primary-foreground" />
               </div>
               <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/45">
+                  {APP_COPY_VI.erpCockpit}
+                </p>
                 <span className="text-base font-bold tracking-tight text-sidebar-foreground">
                   Cơm Tấm Má Tư
                 </span>
-                <p className="text-xs font-medium uppercase tracking-widest text-sidebar-foreground/40">
-                  Quản lý
-                </p>
               </div>
             </div>
             <ScrollArea className="flex-1 px-3 py-4">
@@ -909,14 +841,6 @@ export function AdminShell({
                 pathname={pathname}
                 onNavigate={() => setSheetOpen(false)}
               />
-              <PortalLaunchersNav role={role} />
-              {showBranchOps && (
-                <BranchOperationsNav
-                  branchId={branchId}
-                  pathname={pathname}
-                  onNavigate={() => setSheetOpen(false)}
-                />
-              )}
             </ScrollArea>
             <SidebarUserFooter user={user} role={role} />
           </SheetContent>
@@ -933,7 +857,7 @@ export function AdminShell({
 
       {/* Forbidden access notification — Suspense required for useSearchParams */}
       <Suspense fallback={null}>
-        <ForbiddenToastInner />
+        <SearchParamBlockedStateFlash mode="toast" autoClear />
       </Suspense>
     </TooltipProvider>
   );

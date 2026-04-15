@@ -1,172 +1,236 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   ArrowLeftRight,
   BookOpen,
-  CreditCard,
-  FileText,
+  Briefcase,
+  ClipboardList,
   Package,
   Receipt,
-  Shield,
+  ShieldCheck,
   TrendingUp,
-  UtensilsCrossed,
+  Wallet,
 } from "lucide-react";
+import { createClient } from "@comtammatu/database/supabase/server";
+import { Button } from "@comtammatu/ui/components/button";
+import {
+  buildLoginBlockedStatePath,
+  canAccess,
+  extractClaims,
+} from "@comtammatu/shared/auth";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import {
+  PageContainer,
+  PageHeader,
+  SectionCard,
+  StatusBadge,
+} from "@/components/foundation/ui-patterns";
 
-const REPORT_LINK_CLASS =
-  "group flex items-center gap-4 rounded-lg border bg-card p-4 shadow-sm transition-colors hover:border-primary/40 hover:bg-muted/30";
+interface ReportCardProps {
+  title: string;
+  description?: string;
+  href: string;
+  icon: React.ElementType;
+  tone: "primary" | "success" | "info";
+  badge: string;
+}
 
-export default function ReportsPage() {
+function ReportCard({
+  title,
+  description,
+  href,
+  icon: Icon,
+  tone,
+  badge,
+}: ReportCardProps) {
+  const toneClassName =
+    tone === "success"
+      ? "bg-success/12 text-success"
+      : tone === "info"
+        ? "bg-info/12 text-info"
+        : "bg-primary/10 text-primary";
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Báo cáo</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Kho, tài chính, nhân sự
-        </p>
+    <Link
+      href={href}
+      className="group flex h-full flex-col justify-between rounded-3xl border border-border/70 bg-background/85 p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:bg-white hover:shadow-md ui-surface-lift"
+    >
+      <div className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div
+            className={`flex size-11 items-center justify-center rounded-2xl ${toneClassName}`}
+          >
+            <Icon className="size-5" />
+          </div>
+          <StatusBadge tone="neutral" className="rounded-full px-3 py-1">
+            {badge}
+          </StatusBadge>
+        </div>
+        <div>
+          <p className="text-base font-semibold tracking-tight">{title}</p>
+          {description ? (
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              {description}
+            </p>
+          ) : null}
+        </div>
       </div>
+      <span className="mt-5 text-sm font-medium text-primary transition-transform group-hover:translate-x-1">
+        Mở báo cáo
+      </span>
+    </Link>
+  );
+}
 
-      {/* ─── Kho ─── */}
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Kho hàng
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Link
-            href="/admin/reports/inventory-value"
-            className={REPORT_LINK_CLASS}
-          >
-            <div className="rounded-lg bg-primary/10 p-2.5">
-              <Package className="size-5 text-primary" />
-            </div>
-            <div>
-              <p className="font-medium leading-tight">Giá trị tồn kho</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Theo hệ thống, khu vực, chi nhánh
-              </p>
-            </div>
-          </Link>
+export default async function ReportsPage() {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-          <Link
-            href="/admin/reports/stock-movement"
-            className={REPORT_LINK_CLASS}
-          >
-            <div className="rounded-lg bg-primary/10 p-2.5">
-              <TrendingUp className="size-5 text-primary" />
-            </div>
-            <div>
-              <p className="font-medium leading-tight">Biến động tồn kho</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Nhập, xuất, tiêu thụ, điều chỉnh
-              </p>
-            </div>
-          </Link>
+  if (!session?.user) {
+    redirect("/login");
+  }
 
-          <Link
-            href="/admin/reports/stock-movement"
-            className={REPORT_LINK_CLASS}
-          >
-            <div className="rounded-lg bg-primary/10 p-2.5">
-              <ArrowLeftRight className="size-5 text-primary" />
-            </div>
+  const claims = extractClaims(session.user.app_metadata);
+  if (!claims) {
+    redirect(buildLoginBlockedStatePath());
+  }
+
+  const executiveCards: ReportCardProps[] = [
+    {
+      title: "Cockpit doanh thu",
+      href: "/admin/reports/revenue",
+      icon: TrendingUp,
+      tone: "primary" as const,
+      badge: "Điều hành lõi",
+    },
+    {
+      title: "Giá trị tồn kho",
+      href: "/admin/reports/inventory-value",
+      icon: Package,
+      tone: "info" as const,
+      badge: "Điều hành lõi",
+    },
+  ];
+  if (canAccess(claims.user_role, "finance")) {
+    executiveCards.push({
+      title: "Báo cáo tài chính",
+      href: "/admin/finance/statements",
+      icon: Wallet,
+      tone: "success",
+      badge: "Điều hành lõi",
+    });
+  }
+  if (canAccess(claims.user_role, "hr")) {
+    executiveCards.push({
+      title: "Toàn cảnh bảng lương",
+      href: "/hr/payroll",
+      icon: Briefcase,
+      tone: "info",
+      badge: "Điều hành lõi",
+    });
+  }
+
+  const deepDiveCards: ReportCardProps[] = [
+    {
+      title: "Biến động tồn kho",
+      href: "/admin/reports/stock-movement",
+      icon: ArrowLeftRight,
+      tone: "info" as const,
+      badge: "Tín hiệu ops",
+    },
+  ];
+  if (canAccess(claims.user_role, "finance")) {
+    deepDiveCards.push({
+      title: "Hệ thống tài khoản",
+      href: "/admin/finance/chart-of-accounts",
+      icon: BookOpen,
+      tone: "success",
+      badge: "Tuân thủ",
+    });
+    deepDiveCards.push({
+      title: "Tài chính",
+      href: "/admin/finance",
+      icon: Receipt,
+      tone: "success",
+      badge: "Phân hệ",
+    });
+  }
+  if (canAccess(claims.user_role, "inventory")) {
+    deepDiveCards.push({
+      title: "Kho",
+      href: "/inventory/reports",
+      icon: ClipboardList,
+      tone: "info",
+      badge: "Phân hệ",
+    });
+  }
+  if (canAccess(claims.user_role, "hr")) {
+    deepDiveCards.push({
+      title: "Nhân sự",
+      href: "/hr",
+      icon: ShieldCheck,
+      tone: "info",
+      badge: "Phân hệ",
+    });
+  }
+
+  return (
+    <PageContainer>
+      <PageHeader
+        eyebrow={APP_COPY_VI.executiveReporting}
+        title="Báo cáo điều hành"
+        actions={
+          <>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/dashboard">Về Admin</Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href="/admin/settings">Mở nền tảng</Link>
+            </Button>
+          </>
+        }
+      />
+
+      <SectionCard>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="font-medium leading-tight">Tổng hợp chi nhánh</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Biến động kho gom theo chi nhánh
-              </p>
+              <h2 className="text-lg font-semibold tracking-tight">
+                Báo cáo lõi
+              </h2>
             </div>
-          </Link>
+          <StatusBadge tone="neutral" className="rounded-full px-3 py-1.5">
+            Điều hành
+          </StatusBadge>
         </div>
-      </section>
-
-      {/* ─── Tài chính ─── */}
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Tài chính
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Link href="/admin/finance/statements" className={REPORT_LINK_CLASS}>
-            <div className="rounded-lg bg-green-100 p-2.5">
-              <FileText className="size-5 text-green-700" />
-            </div>
-            <div>
-              <p className="font-medium leading-tight">BCTC (VAS)</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Bảng CĐKT, KQKD, tổng hợp VAT
-              </p>
-            </div>
-          </Link>
-
-          <Link
-            href="/admin/finance/chart-of-accounts"
-            className={REPORT_LINK_CLASS}
-          >
-            <div className="rounded-lg bg-green-100 p-2.5">
-              <BookOpen className="size-5 text-green-700" />
-            </div>
-            <div>
-              <p className="font-medium leading-tight">Hệ thống tài khoản</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Tài khoản kế toán chuẩn VAS
-              </p>
-            </div>
-          </Link>
-
-          <Link href="/admin/finance" className={REPORT_LINK_CLASS}>
-            <div className="rounded-lg bg-green-100 p-2.5">
-              <UtensilsCrossed className="size-5 text-green-700" />
-            </div>
-            <div>
-              <p className="font-medium leading-tight">Food cost</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Chi phí nguyên liệu theo món
-              </p>
-            </div>
-          </Link>
-
-          <Link href="/admin/finance" className={REPORT_LINK_CLASS}>
-            <div className="rounded-lg bg-green-100 p-2.5">
-              <Receipt className="size-5 text-green-700" />
-            </div>
-            <div>
-              <p className="font-medium leading-tight">Hóa đơn điện tử</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                HĐĐT đầu ra + doanh thu
-              </p>
-            </div>
-          </Link>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {executiveCards.map((card) => (
+            <ReportCard key={card.href} {...card} />
+          ))}
         </div>
-      </section>
+      </SectionCard>
 
-      {/* ─── Nhân sự ─── */}
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Nhân sự & Lương
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Link href="/admin/hr/payroll" className={REPORT_LINK_CLASS}>
-            <div className="rounded-lg bg-blue-100 p-2.5">
-              <CreditCard className="size-5 text-blue-700" />
-            </div>
+      {deepDiveCards.length > 0 ? (
+        <SectionCard>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="font-medium leading-tight">Bảng lương</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Tính lương, duyệt, thanh toán
-              </p>
+              <h2 className="text-lg font-semibold tracking-tight">
+                Phân hệ nguồn
+              </h2>
             </div>
-          </Link>
+            <StatusBadge tone="info" className="rounded-full px-3 py-1.5">
+              Phân hệ
+            </StatusBadge>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {deepDiveCards.map((card) => (
+              <ReportCard key={card.href} {...card} />
+            ))}
+          </div>
+        </SectionCard>
+      ) : null}
 
-          <Link href="/admin/hr" className={REPORT_LINK_CLASS}>
-            <div className="rounded-lg bg-blue-100 p-2.5">
-              <Shield className="size-5 text-blue-700" />
-            </div>
-            <div>
-              <p className="font-medium leading-tight">Bảo hiểm</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                BHXH, BHYT, BHTN theo tháng
-              </p>
-            </div>
-          </Link>
-        </div>
-      </section>
-    </div>
+    </PageContainer>
   );
 }

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
+  buildLoginBlockedStatePath,
   canManageBranchFloorSettings,
   extractClaims,
 } from "@comtammatu/shared/auth";
@@ -18,7 +19,7 @@ export default async function KdsSettingsPage() {
   if (!session?.user) redirect("/login");
 
   const claims = extractClaims(session.user.app_metadata);
-  if (!claims) redirect("/login");
+  if (!claims) redirect(buildLoginBlockedStatePath());
 
   if (!canManageBranchFloorSettings(claims.user_role)) {
     redirect("/admin/settings");

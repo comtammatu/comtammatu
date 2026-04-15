@@ -26,7 +26,11 @@ import { fetchOrders } from "./actions";
 import { OrderDetailSheet } from "./order-detail-sheet";
 import type { OrderRow, FetchOrdersFilters } from "./actions";
 import { TableEmptyStateRow } from "../components/table-empty-state-row";
-import { FilterBar, StatusBadge } from "@/components/foundation/ui-patterns";
+import {
+  FilterBar,
+  StatusBadge,
+  SectionCard,
+} from "@/components/foundation/ui-patterns";
 
 /* ─── Status config ─── */
 
@@ -125,12 +129,55 @@ export function OrdersClient({
   const hasFilters = !!(dateFrom || dateTo || status || branchId);
 
   const displayOrders = useMemo(() => orders, [orders]);
+  const orderSummary = useMemo(() => {
+    const pending = displayOrders.filter(
+      (order) => order.status === "pending" || order.status === "in_progress",
+    ).length;
+    const completed = displayOrders.filter(
+      (order) => order.status === "completed",
+    ).length;
+    const revenue = displayOrders
+      .filter((order) => order.status !== "cancelled")
+      .reduce((sum, order) => sum + Number(order.total_amount), 0);
+
+    return { pending, completed, revenue };
+  }, [displayOrders]);
 
   return (
     <>
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="app-kpi ui-surface-lift">
+          <p className="app-section-label">Đang xử lý</p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums">
+            {orderSummary.pending}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Đơn đang chờ hoặc đang làm cần theo dõi.
+          </p>
+        </div>
+        <div className="app-kpi ui-surface-lift">
+          <p className="app-section-label">Hoàn thành</p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums">
+            {orderSummary.completed}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Đơn đã hoàn tất trong tập kết quả hiện tại.
+          </p>
+        </div>
+        <div className="app-kpi ui-surface-lift">
+          <p className="app-section-label">Giá trị đơn</p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums">
+            {formatVND(orderSummary.revenue)}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Tổng doanh thu hiển thị sau khi áp bộ lọc.
+          </p>
+        </div>
+      </div>
+
       {/* ─── Filter bar ─── */}
       <FilterBar>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
           <Label htmlFor="date-from" className="text-xs">
             Từ ngày
           </Label>
@@ -139,11 +186,11 @@ export function OrdersClient({
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="w-36"
+            className="w-full sm:w-36"
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
           <Label htmlFor="date-to" className="text-xs">
             Đến ngày
           </Label>
@@ -152,16 +199,16 @@ export function OrdersClient({
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="w-36"
+            className="w-full sm:w-36"
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
           <Label htmlFor="status-filter" className="text-xs">
             Trạng thái
           </Label>
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger id="status-filter" className="w-40">
+            <SelectTrigger id="status-filter" className="w-full sm:w-40">
               <SelectValue placeholder="Tất cả" />
             </SelectTrigger>
             <SelectContent>
@@ -175,12 +222,12 @@ export function OrdersClient({
         </div>
 
         {showBranchFilter && branches.length > 0 && (
-          <div className="flex flex-col gap-1.5">
+          <div className="flex w-full flex-col gap-1.5 sm:w-48 sm:flex-none">
             <Label htmlFor="branch-filter" className="text-xs">
               Chi nhánh
             </Label>
             <Select value={branchId} onValueChange={setBranchId}>
-              <SelectTrigger id="branch-filter" className="w-44">
+              <SelectTrigger id="branch-filter" className="w-full sm:w-44">
                 <SelectValue placeholder="Tất cả chi nhánh" />
               </SelectTrigger>
               <SelectContent>
@@ -194,8 +241,13 @@ export function OrdersClient({
           </div>
         )}
 
-        <div className="flex items-end gap-2">
-          <Button onClick={handleFilter} disabled={isPending} size="sm">
+        <div className="flex w-full items-end gap-2 sm:w-auto">
+          <Button
+            onClick={handleFilter}
+            disabled={isPending}
+            size="sm"
+            className="flex-1 sm:flex-none"
+          >
             {isPending && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
             Lọc
           </Button>
@@ -205,6 +257,7 @@ export function OrdersClient({
               disabled={isPending}
               variant="outline"
               size="sm"
+              className="flex-1 sm:flex-none"
             >
               Xóa bộ lọc
             </Button>
@@ -213,13 +266,89 @@ export function OrdersClient({
       </FilterBar>
 
       {/* ─── Summary ─── */}
-      <p className="text-sm text-muted-foreground">
-        {displayOrders.length} đơn hàng
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          {displayOrders.length} đơn hàng
+        </p>
+        {hasFilters && (
+          <StatusBadge tone="info" className="rounded-full px-3 py-1.5">
+            Bộ lọc đang áp dụng
+          </StatusBadge>
+        )}
+      </div>
 
       {/* ─── Table ─── */}
-      <div className="rounded-md border">
-        <Table>
+      <SectionCard className="rounded-2xl">
+        {displayOrders.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border px-6 py-16 text-center">
+            <ShoppingBag className="mx-auto size-8 text-muted-foreground" />
+            <p className="mt-3 text-sm font-medium">Không có đơn hàng nào</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {hasFilters
+                ? "Thử xóa bộ lọc hoặc đổi mốc thời gian để mở rộng kết quả."
+                : "Hệ thống chưa có đơn nào trong phạm vi đang xem."}
+            </p>
+          </div>
+        ) : null}
+
+        <div className="space-y-3 md:hidden">
+          {displayOrders.map((order) => (
+            <button
+              key={order.id}
+              type="button"
+              onClick={() => setSelectedOrder(order)}
+              className="w-full rounded-2xl border border-border/70 bg-background p-4 text-left transition-colors hover:bg-muted/20"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-mono text-sm font-medium">
+                    {order.order_number}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {order.branch_name}
+                  </p>
+                </div>
+                <StatusBadge tone={statusBadgeVariant(order.status)}>
+                  {statusLabel(order.status)}
+                </StatusBadge>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Nhân viên</p>
+                  <p className="mt-1 font-medium">{order.created_by_name}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-muted-foreground">Tổng tiền</p>
+                  <p className="mt-1 font-mono font-medium">
+                    {formatVND(order.total_amount)}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <p className="text-xs text-muted-foreground">
+                  {new Date(order.created_at).toLocaleString("vi-VN", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+                {order.payment_method ? (
+                  <Badge variant="outline" className="text-xs">
+                    {PAYMENT_METHOD_LABELS[order.payment_method] ??
+                      order.payment_method}
+                  </Badge>
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <div className="hidden overflow-hidden rounded-2xl border border-border/70 md:block">
+          <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Mã đơn</TableHead>
@@ -237,6 +366,11 @@ export function OrdersClient({
                 colSpan={7}
                 paddingClassName="py-16"
                 title="Không có đơn hàng nào"
+                description={
+                  hasFilters
+                    ? "Thử xóa bộ lọc hoặc đổi mốc thời gian để mở rộng kết quả."
+                    : "Hệ thống chưa có đơn nào trong phạm vi đang xem."
+                }
                 icon={
                   <ShoppingBag className="mx-auto size-8 text-muted-foreground" />
                 }
@@ -245,7 +379,7 @@ export function OrdersClient({
             {displayOrders.map((order) => (
               <TableRow
                 key={order.id}
-                className="cursor-pointer hover:bg-muted/50"
+                className="cursor-pointer hover:bg-muted/45"
                 onClick={() => setSelectedOrder(order)}
               >
                 <TableCell>
@@ -289,8 +423,9 @@ export function OrdersClient({
               </TableRow>
             ))}
           </TableBody>
-        </Table>
-      </div>
+          </Table>
+        </div>
+      </SectionCard>
 
       {/* ─── Detail sheet ─── */}
       <OrderDetailSheet

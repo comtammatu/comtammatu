@@ -22,13 +22,19 @@ export function TableEmptyStateRow({
         colSpan={colSpan}
         className={`${paddingClassName} text-center`}
       >
-        {icon}
-        <p className="mt-2 text-sm font-medium text-muted-foreground">
-          {title}
-        </p>
-        {description ? (
-          <p className="mt-1 text-xs text-muted-foreground/70">{description}</p>
-        ) : null}
+        <div className="mx-auto flex max-w-sm flex-col items-center gap-2 rounded-3xl border border-dashed border-border/70 bg-muted/20 px-4 py-6 shadow-sm">
+          {icon ? (
+            <div className="flex size-11 items-center justify-center rounded-2xl border border-border/70 bg-background/85 text-muted-foreground shadow-sm">
+              {icon}
+            </div>
+          ) : null}
+          <p className="text-sm font-semibold text-foreground">{title}</p>
+          {description ? (
+            <p className="text-xs leading-5 text-muted-foreground/80">
+              {description}
+            </p>
+          ) : null}
+        </div>
       </TableCell>
     </TableRow>
   );

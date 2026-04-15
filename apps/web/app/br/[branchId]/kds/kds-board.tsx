@@ -13,7 +13,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { ChefHat, Filter } from "lucide-react";
+import { ChefHat, Filter, Flame, PackageCheck } from "lucide-react";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { OrderCard } from "./order-card";
 import type { KdsStation, KdsTicket, KdsOrderInfo, KdsOrderItem } from "./page";
@@ -84,6 +84,13 @@ function orderMatchesTicketStatus(
   if (filter === "pending") return statuses.some((s) => s === "pending");
   if (filter === "preparing") return statuses.some((s) => s === "preparing");
   return statuses.some((s) => s === "ready");
+}
+
+function getElapsedMinutes(createdAt: string): number {
+  return Math.max(
+    0,
+    Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000),
+  );
 }
 
 /* ─── Audio beep helper (reuses single AudioContext) ─── */
@@ -418,29 +425,252 @@ export function KdsBoard({
     () => tickets.filter((t) => t.status !== "ready").length,
     [tickets],
   );
+  const pendingCount = useMemo(
+    () => tickets.filter((t) => t.status === "pending").length,
+    [tickets],
+  );
+  const preparingCount = useMemo(
+    () => tickets.filter((t) => t.status === "preparing").length,
+    [tickets],
+  );
+  const readyCount = useMemo(
+    () => tickets.filter((t) => t.status === "ready").length,
+    [tickets],
+  );
+  const oldestActiveOrderMinutes = useMemo(() => {
+    if (displayOrders.length === 0) return 0;
+    return Math.max(...displayOrders.map((order) => getElapsedMinutes(order.createdAt)));
+  }, [displayOrders]);
+  const hotOrders = useMemo(
+    () =>
+      displayOrders
+        .filter(
+          (order) =>
+            order.tickets.some((ticket) => ticket.status === "pending") ||
+            getElapsedMinutes(order.createdAt) >= 8,
+        )
+        .slice(0, 4),
+    [displayOrders],
+  );
+  const stationSummary = useMemo(
+    () =>
+      stations.map((station) => {
+        const stationTickets = tickets.filter((ticket) => ticket.station_id === station.id);
+        return {
+          stationId: station.id,
+          stationName: station.name,
+          active: stationTickets.filter((ticket) => ticket.status !== "ready").length,
+          pending: stationTickets.filter((ticket) => ticket.status === "pending").length,
+          preparing: stationTickets.filter((ticket) => ticket.status === "preparing").length,
+          ready: stationTickets.filter((ticket) => ticket.status === "ready").length,
+        };
+      }),
+    [stations, tickets],
+  );
 
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
-      {/* ── Station tabs bar ── */}
-      <div
-        className={cn(
-          "flex shrink-0 items-stretch border-b border-border/40 bg-background",
-          "pt-[max(0px,env(safe-area-inset-top,0px))]",
-        )}
-      >
-        {/* Back button */}
-        <div className="flex shrink-0 items-center border-r border-border/40 px-1">
-          <EmployeePortalBackControl className="min-h-10 justify-center rounded-none md:min-h-14" />
-        </div>
+      <div className="border-b border-border/60 bg-background/90 px-3 py-3 backdrop-blur-xl md:px-4">
+        <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <EmployeePortalBackControl className="h-8 rounded-full px-2 text-xs" />
+            <span className="app-section-label">KDS chi nhánh #{branchId}</span>
+          </div>
 
-        {/* Station tabs — horizontally scrollable, 56px tall */}
+          <div className="grid gap-4 xl:grid-cols-4">
+            <div className="ui-flow-panel rounded-4xl p-5 xl:col-span-3">
+              <div className="relative space-y-4">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="space-y-2">
+                    <p className="app-section-label">Điều phối line bếp</p>
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                      Món cần nhận, đang làm, đã xong.
+                    </h1>
+                    <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+                      Ưu tiên món chờ và món đang chạy.
+                    </p>
+                  </div>
+                  <div className="rounded-full border border-warning/15 bg-warning/10 px-3 py-1.5 text-xs font-semibold text-warning shadow-sm">
+                    {pendingCount > 0
+                      ? `${pendingCount} món cần vào bếp ngay`
+                      : "Không có món chờ"}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
+                  <span className="rounded-full border border-border/70 bg-white/70 px-3 py-1.5">
+                    {readyCount} món đã xong
+                  </span>
+                  <span className="rounded-full border border-border/70 bg-white/70 px-3 py-1.5">
+                    {preparingCount} món đang chạy
+                  </span>
+                  <span className="rounded-full border border-border/70 bg-white/70 px-3 py-1.5">
+                    {pendingCount} món đang chờ nhận
+                  </span>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="ui-surface-lift rounded-3xl border border-warning/20 bg-warning/10 p-4 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-warning">
+                      Hàng chờ
+                    </p>
+                    <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">
+                      {pendingCount}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      Chưa vào line.
+                    </p>
+                  </div>
+                  <div className="ui-surface-lift rounded-3xl border border-primary/15 bg-primary/8 p-4 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                      Đang chế biến
+                    </p>
+                    <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">
+                      {preparingCount}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      Đang xử lý.
+                    </p>
+                  </div>
+                  <div className="ui-surface-lift rounded-3xl border border-success/15 bg-success/10 p-4 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-success">
+                      Khu pass
+                    </p>
+                    <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">
+                      {readyCount}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      Chờ ra món.
+                    </p>
+                  </div>
+                </div>
+
+                {hotOrders.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-foreground">Đơn chờ</p>
+                      <span className="text-xs text-muted-foreground">
+                        Ưu tiên đơn chờ lâu
+                      </span>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                      {hotOrders.map((order) => (
+                        <div
+                          key={`hot-${order.orderId}`}
+                          className="ui-surface-lift rounded-3xl border border-warning/20 bg-warning/10 p-4 shadow-sm"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">
+                                {order.orderNumber}
+                              </p>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {order.tableNumber != null
+                                  ? `Bàn ${order.tableNumber}`
+                                  : "Mang đi"}
+                              </p>
+                            </div>
+                            <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-warning">
+                              {getElapsedMinutes(order.createdAt)} phút
+                            </span>
+                          </div>
+                          <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                            {order.tickets.filter((ticket) => ticket.status === "pending").length}{" "}
+                            chờ · {order.tickets.filter((ticket) => ticket.status === "preparing").length}{" "}
+                            đang làm
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+              <div className="app-kpi p-4">
+                <p className="app-section-label">Đơn hiển thị</p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums">
+                  {displayOrders.length}
+                </p>
+              </div>
+              <div className="app-kpi p-4">
+                <p className="app-section-label">Món còn việc</p>
+                <p className="mt-2 flex items-center gap-2 text-2xl font-semibold tabular-nums">
+                  <Flame className="size-5 text-warning" />
+                  {totalActiveCount}
+                </p>
+              </div>
+              <div className="app-kpi p-4">
+                    <p className="app-section-label">Order lâu nhất</p>
+                    <p className="mt-2 flex items-center gap-2 text-2xl font-semibold tabular-nums">
+                      <PackageCheck className="size-5 text-info" />
+                      {oldestActiveOrderMinutes}m
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-b border-border/40 bg-background/75 px-3 py-3 md:px-4">
+        <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {stationSummary.map((station) => (
+              <button
+                key={`summary-${station.stationId}`}
+                type="button"
+                className={cn(
+                  "ui-surface-lift rounded-3xl border p-4 text-left shadow-sm transition-all",
+                  activeStationId === station.stationId
+                    ? "border-primary/30 bg-primary/10"
+                    : "border-border/60 bg-white/82",
+                )}
+                onClick={() =>
+                  replaceQuery({
+                    station:
+                      activeStationId === station.stationId
+                        ? null
+                        : String(station.stationId),
+                  })
+                }
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {station.stationName}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {station.active} món còn việc
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                    {station.ready} xong
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full bg-warning/12 px-2.5 py-1 font-semibold text-warning">
+                    {station.pending} chờ
+                  </span>
+                  <span className="rounded-full bg-primary/10 px-2.5 py-1 font-semibold text-primary">
+                    {station.preparing} đang làm
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div
+            className={cn(
+              "flex shrink-0 items-stretch border-t border-border/40 pt-3",
+            )}
+          >
         <ScrollArea className="min-w-0 flex-1">
-          <div className="flex gap-1.5 p-2">
-            {/* "All" tab */}
+          <div className="flex gap-1.5">
             <button
               type="button"
               className={cn(
-                "flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-xl px-3 text-sm font-bold transition-colors duration-150 md:min-h-14 md:px-5 md:text-base",
+                "ui-surface-lift flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-2xl px-3 text-sm font-bold transition-colors duration-150 md:min-h-14 md:px-5 md:text-base",
                 activeStationId === null
                   ? "bg-accent text-accent-foreground shadow-sm"
                   : "bg-secondary text-secondary-foreground hover:bg-muted",
@@ -469,7 +699,7 @@ export function KdsBoard({
                   key={station.id}
                   type="button"
                   className={cn(
-                    "flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-xl px-3 text-sm font-bold transition-colors duration-150 md:min-h-14 md:px-5 md:text-base",
+                    "ui-surface-lift flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-2xl px-3 text-sm font-bold transition-colors duration-150 md:min-h-14 md:px-5 md:text-base",
                     isActive
                       ? "bg-accent text-accent-foreground shadow-sm"
                       : "bg-secondary text-secondary-foreground hover:bg-muted",
@@ -494,69 +724,74 @@ export function KdsBoard({
             })}
           </div>
         </ScrollArea>
-      </div>
-
-      {/* ── Filter bar ── */}
-      <div className="flex shrink-0 flex-nowrap items-center gap-2 overflow-x-auto border-b border-border/30 bg-secondary/70 px-2 py-1.5 md:flex-wrap md:px-3 md:py-2">
-        <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
-          <Filter className="size-4 shrink-0" aria-hidden />
-          <span className="hidden text-sm font-medium sm:inline">Lọc</span>
+          </div>
         </div>
-        <Select
-          value={ticketStatusFilter}
-          onValueChange={(v) => {
-            if (v === "all") replaceQuery({ status: null });
-            else replaceQuery({ status: v });
-          }}
-        >
-          <SelectTrigger
-            className="h-10 min-h-10 w-auto min-w-32 shrink-0 text-sm md:h-11 md:min-h-11 md:min-w-40"
-            aria-label="Lọc theo trạng thái món"
-          >
-            <SelectValue placeholder="Trạng thái" />
-          </SelectTrigger>
-          <SelectContent>
-            {TICKET_STATUS_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value} className="text-sm">
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={orderTypeFilter}
-          onValueChange={(v) => {
-            if (v === "all") replaceQuery({ orderType: null });
-            else replaceQuery({ orderType: v });
-          }}
-        >
-          <SelectTrigger
-            className="h-10 min-h-10 w-auto min-w-28 shrink-0 text-sm md:h-11 md:min-h-11 md:min-w-36"
-            aria-label="Lọc theo loại đơn"
-          >
-            <SelectValue placeholder="Loại đơn" />
-          </SelectTrigger>
-          <SelectContent>
-            {ORDER_TYPE_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value} className="text-sm">
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Live order count indicator */}
-        {displayOrders.length > 0 && (
-          <span className="ml-auto text-sm font-semibold tabular-nums text-muted-foreground">
-            {displayOrders.length} đơn
-          </span>
-        )}
       </div>
 
-      {/* ── Order cards grid ── */}
+      <div className="border-b border-border/30 bg-secondary/45 px-3 py-2 md:px-4">
+        <div className="mx-auto w-full max-w-screen-2xl">
+          <div className="ui-flow-panel rounded-3xl px-3 py-2.5">
+          <div className="relative flex shrink-0 flex-nowrap items-center gap-2 overflow-x-auto md:flex-wrap">
+            <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+              <Filter className="size-4 shrink-0" aria-hidden />
+              <span className="hidden text-sm font-medium sm:inline">Bộ lọc</span>
+            </div>
+            <Select
+              value={ticketStatusFilter}
+              onValueChange={(v) => {
+                if (v === "all") replaceQuery({ status: null });
+                else replaceQuery({ status: v });
+              }}
+            >
+              <SelectTrigger
+                className="h-10 min-h-10 w-auto min-w-32 shrink-0 rounded-2xl text-sm md:h-11 md:min-h-11 md:min-w-40"
+                aria-label="Lọc theo trạng thái món"
+              >
+                <SelectValue placeholder="Trạng thái" />
+              </SelectTrigger>
+              <SelectContent>
+                {TICKET_STATUS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value} className="text-sm">
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={orderTypeFilter}
+              onValueChange={(v) => {
+                if (v === "all") replaceQuery({ orderType: null });
+                else replaceQuery({ orderType: v });
+              }}
+            >
+              <SelectTrigger
+                className="h-10 min-h-10 w-auto min-w-28 shrink-0 rounded-2xl text-sm md:h-11 md:min-h-11 md:min-w-36"
+                aria-label="Lọc theo loại đơn"
+              >
+                <SelectValue placeholder="Loại đơn" />
+              </SelectTrigger>
+              <SelectContent>
+                {ORDER_TYPE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value} className="text-sm">
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {displayOrders.length > 0 && (
+              <span className="ml-auto text-sm font-semibold tabular-nums text-muted-foreground">
+                {displayOrders.length} đơn
+              </span>
+            )}
+          </div>
+        </div>
+        </div>
+      </div>
+
       <ScrollArea className="flex-1">
         {displayOrders.length === 0 ? (
-          <div className="p-3">
+          <div className="mx-auto w-full max-w-screen-2xl p-3 md:p-4">
             <EmptyState
               icon={<ChefHat className="size-12" />}
               title={
@@ -573,7 +808,7 @@ export function KdsBoard({
             />
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-2.5 p-2.5 md:grid-cols-2 md:gap-3 md:p-3 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="ui-content-auto mx-auto grid w-full max-w-screen-2xl grid-cols-1 gap-3 p-3 md:grid-cols-2 md:p-4 xl:grid-cols-3 2xl:grid-cols-4">
             {displayOrders.map((order) => (
               <OrderCard
                 key={order.orderId}

@@ -1,4 +1,8 @@
 import { fetchFoodCost } from "../accounting-actions";
+import {
+  PageContainer,
+  PageHeader,
+} from "@/components/foundation/ui-patterns";
 import { FoodCostClient } from "./food-cost-client";
 
 export default async function FoodCostPage() {
@@ -11,21 +15,17 @@ export default async function FoodCostPage() {
   const rows = result.success ? ((result.data ?? []) as FoodCostRow[]) : [];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          Chi phí nguyên liệu
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Food cost theo món — doanh thu, chi phí, biên lợi nhuận
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        eyebrow="Tài chính"
+        title="Chi phí nguyên liệu"
+      />
       <FoodCostClient
         initialRows={rows}
         initialStart={startDate}
         initialEnd={endDate}
       />
-    </div>
+    </PageContainer>
   );
 }
 

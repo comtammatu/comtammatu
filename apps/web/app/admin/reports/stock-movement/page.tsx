@@ -1,5 +1,10 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import {
+  PageContainer,
+  PageHeader,
+} from "@/components/foundation/ui-patterns";
 import { StockMovementClient } from "./stock-movement-client";
 
 export default async function StockMovementReportPage() {
@@ -24,17 +29,15 @@ export default async function StockMovementReportPage() {
     claims?.user_role === "branch_manager" ? claims.branch_id : null;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Biến động tồn kho</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Tồn đầu kỳ, nhập, xuất, tiêu thụ, điều chỉnh, tồn cuối kỳ theo kỳ
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        eyebrow={APP_COPY_VI.executiveReporting}
+        title="Biến động tồn kho"
+      />
       <StockMovementClient
         branches={activeBranches}
         userBranchId={userBranchId}
       />
-    </div>
+    </PageContainer>
   );
 }

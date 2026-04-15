@@ -188,7 +188,42 @@ export function OrderDetailSheet({
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Món gọi ({order.items.length})
             </p>
-            <div className="rounded-md border">
+            <div className="space-y-3 md:hidden">
+              {order.items.length === 0 ? (
+                <div className="rounded-md border px-4 py-6 text-center text-sm text-muted-foreground">
+                  Không có món nào
+                </div>
+              ) : (
+                order.items.map((item) => (
+                  <div key={item.id} className="rounded-md border p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <span className="text-sm font-medium">
+                          {item.item_name}
+                        </span>
+                        {item.variant_name && (
+                          <p className="text-xs text-muted-foreground">
+                            {item.variant_name}
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-sm font-medium">
+                        x{item.quantity}
+                      </span>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {formatVND(item.unit_price)}
+                      </span>
+                      <span className="font-mono font-medium">
+                        {formatVND(item.subtotal)}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="hidden rounded-md border md:block">
               <Table>
                 <TableHeader>
                   <TableRow>

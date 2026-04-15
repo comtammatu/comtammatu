@@ -156,9 +156,84 @@ const rule = {
   },
 };
 
+/** @type {import('eslint').Rule.RuleModule} */
+const noStaticUiInlineStyleRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow static inline styles in shared UI and shell files. Move static presentation into globals.css or shared recipes instead.",
+    },
+    messages: {
+      noStaticInlineStyle:
+        "Static inline styles drift from the design system. Move this styling into shared recipes or globals.css utilities.",
+    },
+    schema: [],
+  },
+
+  create(context) {
+    return {
+      JSXAttribute(node) {
+        if (node.name?.name !== "style") return;
+        if (
+          node.value?.type !== "JSXExpressionContainer" ||
+          node.value.expression.type !== "ObjectExpression"
+        ) {
+          return;
+        }
+
+        context.report({
+          node,
+          messageId: "noStaticInlineStyle",
+        });
+      },
+    };
+  },
+};
+
+/** @type {import('eslint').Rule.RuleModule} */
+const noSurfaceThemeImportRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow per-domain theme CSS imports. Surface styling must go through shared tokens and recipes.",
+    },
+    messages: {
+      noSurfaceThemeImport:
+        "Do not import '{{ value }}'. Use shared design-system tokens and surface recipes instead of per-domain theme overrides.",
+    },
+    schema: [],
+  },
+
+  create(context) {
+    return {
+      ImportDeclaration(node) {
+        const value = node.source.value;
+
+        if (
+          typeof value === "string" &&
+          value.endsWith("theme.css") &&
+          value !== "./globals.css"
+        ) {
+          context.report({
+            node: node.source,
+            messageId: "noSurfaceThemeImport",
+            data: { value },
+          });
+        }
+      },
+    };
+  },
+};
+
 const plugin = {
   meta: { name: "eslint-plugin-design-system", version: "1.0.0" },
-  rules: { "no-arbitrary-tailwind-value": rule },
+  rules: {
+    "no-arbitrary-tailwind-value": rule,
+    "no-static-ui-inline-style": noStaticUiInlineStyleRule,
+    "no-surface-theme-import": noSurfaceThemeImportRule,
+  },
 };
 
 export default plugin;

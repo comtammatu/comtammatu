@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { MANAGEABLE_ROLES } from "./role-labels";
 import type { BranchOption } from "./staff-table";
 
@@ -74,8 +75,10 @@ export function StaffFilters({ branches }: StaffFiltersProps) {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Tất cả trạng thái</SelectItem>
-          <SelectItem value="active">Hoạt động</SelectItem>
-          <SelectItem value="inactive">Ngừng</SelectItem>
+          <SelectItem value="active">{ACTIVE_STATE_LABELS_VI.active}</SelectItem>
+          <SelectItem value="inactive">
+            {ACTIVE_STATE_LABELS_VI.inactive}
+          </SelectItem>
         </SelectContent>
       </Select>
     </div>

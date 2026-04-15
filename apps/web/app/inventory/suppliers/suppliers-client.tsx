@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { SectionCard } from "@/components/foundation/ui-patterns";
 import {
   CheckCircle,
   Pause,
@@ -29,24 +30,29 @@ import {
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { StatusBadge } from "../_components/shared";
+import { cn, getSurfacePanelClassName } from "@comtammatu/ui";
+import { FilterBar, PageHeader, StatusBadge } from "../_components/shared";
+import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { deleteSupplier, fetchSuppliers } from "../procurement-actions";
 import { SupplierDialog } from "./supplier-dialog";
 import type { SupplierRow } from "./supplier-dialog";
 
+export type { SupplierRow } from "./supplier-dialog";
+
 // Color palette for supplier avatars
 const avatarColors = [
-  { bg: "var(--md-primary-fixed)", fg: "var(--md-primary)" },
-  { bg: "var(--md-secondary-container)", fg: "var(--md-secondary)" },
-  {
-    bg: "color-mix(in srgb, var(--md-tertiary) 15%, transparent)",
-    fg: "var(--md-tertiary)",
-  },
-  { bg: "var(--md-error-container)", fg: "var(--md-error)" },
-  { bg: "var(--md-surface-high)", fg: "var(--md-on-surface-variant)" },
+  { bg: "bg-primary/10", fg: "text-primary" },
+  { bg: "bg-success/12", fg: "text-success" },
+  { bg: "bg-info/12", fg: "text-info" },
+  { bg: "bg-destructive/12", fg: "text-destructive" },
+  { bg: "bg-muted", fg: "text-muted-foreground" },
 ];
 
 export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
+  const panelClassName = getSurfacePanelClassName(
+    "inventory",
+    "ambient-shadow",
+  );
   const [rows, setRows] = useState(initial);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -102,32 +108,15 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h2
-            className="text-2xl font-bold tracking-tight"
-            style={{ color: "var(--md-on-surface)" }}
-          >
-            Danh sách Nhà cung cấp
-          </h2>
-          <p
-            className="mt-2 max-w-lg text-sm"
-            style={{ color: "var(--md-on-surface-variant)" }}
-          >
-            Quản lý thông tin liên hệ và điều khoản thanh toán của các đối tác
-            cung ứng trong hệ thống.
-          </p>
-        </div>
+        <PageHeader
+          title="Danh sách Nhà cung cấp"
+          description="Đối tác cung ứng."
+        />
         <button
           type="button"
           onClick={openCreate}
-          className="flex items-center gap-2 rounded-full px-6 py-2.5 font-bold text-white shadow-xl transition-transform hover:scale-[1.02]"
-          style={{
-            background:
-              "linear-gradient(135deg, var(--md-primary), var(--md-primary-container))",
-            boxShadow: "0 4px 14px rgba(211,84,0,0.15)",
-          }}
+          className="focus-ring-standard flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-xl shadow-primary/15 transition-transform hover:scale-[1.02]"
         >
           <Plus className="size-4" />
           Thêm nhà cung cấp
@@ -139,114 +128,84 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
         {[
           {
             icon: <Users className="size-5" />,
-            iconBg: "color-mix(in srgb, var(--md-tertiary) 15%, transparent)",
-            iconColor: "var(--md-tertiary)",
+            iconBg: "bg-info/12",
+            iconColor: "text-info",
             label: "Tổng đối tác",
             value: String(rows.length).padStart(2, "0"),
           },
           {
             icon: <CheckCircle className="size-5" />,
-            iconBg: "var(--md-secondary-container)",
-            iconColor: "var(--md-secondary)",
+            iconBg: "bg-success/12",
+            iconColor: "text-success",
             label: "Đang hoạt động",
             value: String(active).padStart(2, "0"),
-            valueColor: "var(--md-secondary)",
+            valueClassName: "text-success",
           },
           {
             icon: <Pause className="size-5" />,
-            iconBg: "var(--md-surface-highest)",
-            iconColor: "var(--md-on-surface-variant)",
+            iconBg: "bg-muted",
+            iconColor: "text-muted-foreground",
             label: "Tạm ngưng",
             value: String(suspended).padStart(2, "0"),
           },
         ].map((card) => (
-          <div
+          <SectionCard
             key={card.label}
-            className="rounded-2xl p-6 ambient-shadow"
-            style={{
-              backgroundColor: "var(--md-surface-lowest)",
-              border:
-                "1px solid color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-            }}
+            className={cn(panelClassName, "rounded-2xl bg-card")}
+            density="comfortable"
           >
             <div className="mb-4 flex items-start justify-between">
               <div
-                className="flex size-10 items-center justify-center rounded-xl"
-                style={{
-                  backgroundColor: card.iconBg,
-                  color: card.iconColor,
-                }}
+                className={cn(
+                  "flex size-10 items-center justify-center rounded-xl",
+                  card.iconBg,
+                  card.iconColor,
+                )}
               >
                 {card.icon}
               </div>
-              <span
-                className="whitespace-nowrap text-label font-semibold uppercase tracking-wide"
-                style={{ color: "var(--md-outline-variant)" }}
-              >
+              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
                 Hệ thống
               </span>
             </div>
             <h3
-              className="text-3xl font-black tracking-tight"
-              style={{ color: card.valueColor }}
+              className={cn(
+                "text-3xl font-black tracking-tight",
+                card.valueClassName,
+              )}
             >
               {card.value}
             </h3>
-            <p
-              className="mt-1 text-sm"
-              style={{ color: "var(--md-on-surface-variant)" }}
-            >
-              {card.label}
-            </p>
-          </div>
+            <p className="mt-1 text-sm text-muted-foreground">{card.label}</p>
+          </SectionCard>
         ))}
       </div>
 
       {/* Data Table */}
       <div
-        className="overflow-hidden rounded-3xl ambient-shadow"
-        style={{
-          backgroundColor: "var(--md-surface-lowest)",
-          border:
-            "1px solid color-mix(in srgb, var(--md-outline-variant) 5%, transparent)",
-        }}
+        className={cn(panelClassName, "overflow-hidden rounded-3xl bg-card")}
       >
         {/* Search bar */}
-        <div
-          className="flex items-center gap-3 border-b px-6 py-4"
-          style={{
-            borderColor:
-              "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-          }}
+        <FilterBar
+          className="rounded-none border-0 border-b border-border/40 px-6 py-4 shadow-none"
+          surface="inventory"
         >
-          <Search
-            className="size-4 shrink-0"
-            style={{ color: "var(--md-outline)" }}
-          />
+          <Search className="size-4 shrink-0 text-muted-foreground" />
           <input
             type="text"
             placeholder="Tìm tên, mã số thuế, điện thoại…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="min-w-0 flex-1 border-none bg-transparent text-sm outline-none"
-            style={{ color: "var(--md-on-surface)" }}
+            className="min-w-0 flex-1 border-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
           />
-          <span
-            className="shrink-0 text-xs font-medium"
-            style={{ color: "var(--md-outline)" }}
-          >
+          <span className="shrink-0 text-xs font-medium text-muted-foreground">
             {filtered.length} / {rows.length}
           </span>
-        </div>
+        </FilterBar>
 
         <Table>
           <TableHeader>
-            <TableRow
-              style={{
-                backgroundColor:
-                  "color-mix(in srgb, var(--md-surface-low) 50%, transparent)",
-              }}
-            >
+            <TableRow className="bg-muted/40">
               {[
                 "Nhà cung cấp",
                 "Mã số thuế",
@@ -257,8 +216,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
               ].map((h) => (
                 <TableHead
                   key={h}
-                  className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${h === "Trạng thái" ? "text-center" : ""} ${h === "Thao tác" ? "text-right" : ""}`}
-                  style={{ color: "var(--md-outline)" }}
+                  className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground ${h === "Trạng thái" ? "text-center" : ""} ${h === "Thao tác" ? "text-right" : ""}`}
                 >
                   {h}
                 </TableHead>
@@ -267,37 +225,36 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
           </TableHeader>
           <TableBody>
             {filtered.length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="py-16 text-center text-sm"
-                  style={{ color: "var(--md-on-surface-variant)" }}
-                >
-                  {search
+              <TableEmptyStateRow
+                colSpan={6}
+                paddingClassName="py-16"
+                title={
+                  search
                     ? "Không tìm thấy nhà cung cấp nào"
-                    : 'Chưa có nhà cung cấp. Nhấn "Thêm nhà cung cấp" để bắt đầu.'}
-                </TableCell>
-              </TableRow>
+                    : "Chưa có nhà cung cấp"
+                }
+                description={
+                  search
+                    ? "Thử tên, mã số thuế hoặc số điện thoại khác."
+                    : 'Nhấn "Thêm nhà cung cấp" để bắt đầu.'
+                }
+              />
             )}
             {filtered.map((s, i) => {
               const color = avatarColors[i % avatarColors.length]!;
               return (
                 <TableRow
                   key={s.id}
-                  className="group transition-colors"
-                  style={{
-                    borderColor:
-                      "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-                  }}
+                  className="group border-border/50 transition-colors"
                 >
                   <TableCell className="px-6 py-5">
                     <div className="flex items-center gap-3">
                       <div
-                        className="flex size-9 items-center justify-center rounded-full text-xs font-bold"
-                        style={{
-                          backgroundColor: color.bg,
-                          color: color.fg,
-                        }}
+                        className={cn(
+                          "flex size-9 items-center justify-center rounded-full text-xs font-bold",
+                          color.bg,
+                          color.fg,
+                        )}
                       >
                         {s.name
                           .split(" ")
@@ -310,19 +267,13 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell
-                    className="px-6 py-5 font-mono text-sm"
-                    style={{ color: "var(--md-on-surface-variant)" }}
-                  >
+                  <TableCell className="px-6 py-5 font-mono text-sm text-muted-foreground">
                     {s.tax_code ?? "—"}
                   </TableCell>
                   <TableCell className="px-6 py-5 font-mono text-sm">
                     {s.phone ?? "—"}
                   </TableCell>
-                  <TableCell
-                    className="max-w-44 truncate px-6 py-5 text-sm"
-                    style={{ color: "var(--md-on-surface-variant)" }}
-                  >
+                  <TableCell className="max-w-44 truncate px-6 py-5 text-sm text-muted-foreground">
                     {s.address ?? "—"}
                   </TableCell>
                   <TableCell className="px-6 py-5 text-center">
@@ -335,8 +286,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
                       <button
                         type="button"
                         onClick={() => openEdit(s)}
-                        className="rounded-full p-1.5 transition-colors hover:opacity-80"
-                        style={{ color: "var(--md-on-surface-variant)" }}
+                        className="focus-ring-standard rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         aria-label={`Sửa ${s.name}`}
                       >
                         <Pencil className="size-4" />
@@ -344,8 +294,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
                       <button
                         type="button"
                         onClick={() => setDeleteConfirmId(s.id)}
-                        className="rounded-full p-1.5 transition-colors hover:opacity-80"
-                        style={{ color: "var(--md-error)" }}
+                        className="focus-ring-standard rounded-full p-1.5 text-destructive transition-colors hover:bg-destructive/10"
                         aria-label={`Xóa ${s.name}`}
                       >
                         <Trash2 className="size-4" />
@@ -359,24 +308,12 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
         </Table>
 
         {/* Pagination */}
-        <div
-          className="flex items-center justify-between border-t px-6 py-4"
-          style={{
-            borderColor:
-              "color-mix(in srgb, var(--md-outline-variant) 10%, transparent)",
-          }}
-        >
-          <span
-            className="text-xs font-medium"
-            style={{ color: "var(--md-outline)" }}
-          >
+        <div className="flex items-center justify-between border-t border-border/40 px-6 py-4">
+          <span className="text-xs font-medium text-muted-foreground">
             Hiển thị {filtered.length} nhà cung cấp
           </span>
           <div className="flex items-center gap-2">
-            <span
-              className="flex size-8 items-center justify-center rounded-full text-xs font-bold text-white"
-              style={{ backgroundColor: "var(--md-primary)" }}
-            >
+            <span className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
               1
             </span>
           </div>

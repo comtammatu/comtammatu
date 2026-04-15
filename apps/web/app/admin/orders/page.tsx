@@ -1,10 +1,18 @@
+import Link from "next/link";
 import { getAuthContext } from "../_lib/auth";
 import { fetchOrders } from "./actions";
 import { fetchRefunds } from "./refund-actions";
 import { OrdersClient } from "./orders-client";
 import { RefundsClient } from "./refunds-client";
+import { CircleAlert } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
-import { PageContainer, PageHeader } from "@/components/foundation/ui-patterns";
+import { Button } from "@comtammatu/ui/components/button";
+import {
+  EmptyState,
+  PageContainer,
+  PageHeader,
+  SectionCard,
+} from "@/components/foundation/ui-patterns";
 import {
   Tabs,
   TabsContent,
@@ -24,9 +32,18 @@ export default async function OrdersPage() {
   const ctx = await getAuthContext(ALLOWED_ROLES);
   if (!ctx) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <p className="text-sm text-muted-foreground">Không có quyền truy cập</p>
-      </div>
+      <PageContainer>
+        <PageHeader
+          eyebrow="Điều phối giao dịch"
+          title="Đơn hàng"
+        />
+        <EmptyState
+          icon={<CircleAlert className="size-5" />}
+          title="Không có quyền truy cập"
+          description="Vai trò hiện tại chưa được phép vào khu vực đơn hàng."
+          density="touch"
+        />
+      </PageContainer>
     );
   }
 
@@ -40,7 +57,6 @@ export default async function OrdersPage() {
       <PageContainer>
         <PageHeader
           title="Đơn hàng"
-          description="Lịch sử và quản lý đơn hàng"
         />
         <p className="text-sm text-destructive">
           {ordersResult.error ?? "Không thể tải đơn hàng"}
@@ -64,36 +80,53 @@ export default async function OrdersPage() {
   const pendingRefundCount = refunds.filter(
     (r) => r.status === "pending",
   ).length;
-
   return (
     <PageContainer>
-      <PageHeader title="Đơn hàng" description="Lịch sử và quản lý đơn hàng" />
-      <Tabs defaultValue="orders">
-        <TabsList>
-          <TabsTrigger value="orders">Danh sách đơn</TabsTrigger>
-          <TabsTrigger value="refunds">
-            Hoàn tiền
-            {pendingRefundCount > 0 && (
-              <span className="ml-1.5 rounded-full bg-destructive px-1.5 py-0.5 text-xs font-medium text-destructive-foreground">
-                {pendingRefundCount}
-              </span>
-            )}
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="orders" className="mt-4 space-y-4">
-          <OrdersClient
-            initialOrders={orders}
-            branches={branches}
-            showBranchFilter={isManagerOrAbove}
-          />
-        </TabsContent>
-        <TabsContent value="refunds" className="mt-4 space-y-4">
-          <RefundsClient
-            initialRefunds={refunds}
-            canApprove={canApproveRefund}
-          />
-        </TabsContent>
-      </Tabs>
+      <PageHeader
+        eyebrow="Điều phối giao dịch"
+        title="Đơn hàng"
+        actions={
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/reports">Báo cáo</Link>
+          </Button>
+        }
+      />
+      <SectionCard>
+        <Tabs defaultValue="orders">
+          <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto rounded-2xl bg-muted/60 p-2 shadow-sm">
+            <TabsTrigger
+              value="orders"
+              className="rounded-full px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              Danh sách đơn
+            </TabsTrigger>
+            <TabsTrigger
+              value="refunds"
+              className="rounded-full px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              Hoàn tiền
+              {pendingRefundCount > 0 && (
+                <span className="ml-1.5 rounded-full bg-destructive px-1.5 py-0.5 text-xs font-medium text-destructive-foreground">
+                  {pendingRefundCount}
+                </span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="orders" className="mt-5 space-y-4">
+            <OrdersClient
+              initialOrders={orders}
+              branches={branches}
+              showBranchFilter={isManagerOrAbove}
+            />
+          </TabsContent>
+          <TabsContent value="refunds" className="mt-5 space-y-4">
+            <RefundsClient
+              initialRefunds={refunds}
+              canApprove={canApproveRefund}
+            />
+          </TabsContent>
+        </Tabs>
+      </SectionCard>
     </PageContainer>
   );
 }

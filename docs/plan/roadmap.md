@@ -1,25 +1,26 @@
 # Roadmap — Cơm Tấm Má Tư
 
 > Hệ thống Quản lý Vận hành Nhà hàng (Restaurant Operations Management System)
-> Updated: 2026-04-10 | Structure: Module-based
+> Updated: 2026-04-15 | Structure: Module-based
 
 ## Product Identity
 
-Cơm Tấm Má Tư là **phần mềm quản lý vận hành nhà hàng** cho chuỗi cơm tấm.
-Không phải CRM, không phải ERP tổng hợp. Mỗi module giải quyết một bài toán cụ thể trong vận hành nhà hàng.
+Cơm Tấm Má Tư là **ERP vận hành chuỗi nhà hàng** cho chuỗi cơm tấm.
+Định hướng là gom foundation, executive reporting, và các workspace chuyên môn vào cùng một kiến trúc ERP theo chiều sâu F&B.
+Không đi theo hướng CRM độc lập hay ERP đa ngành.
 
 ## Module Map
 
 | #   | Module      | Scope                                                | Status  |
 | --- | ----------- | ---------------------------------------------------- | ------- |
-| M0  | Admin Shell | Layout, sidebar, branches, staff, settings           | SHIPPED |
+| M0  | Khung quản trị | ERP cockpit, foundation, executive reporting shell   | SHIPPED |
 | M1  | Menu        | Categories, items, variants, modifiers, sides        | SHIPPED |
 | M2  | POS         | Cart, table/zone, order submit, bill printing        | SHIPPED |
 | M3  | KDS         | Realtime queue, bump/complete, station config        | SHIPPED |
 | M4  | Payment     | Cash ✅, VietQR/Momo blocked on credentials          | PARTIAL |
 | M5  | Stock       | Ingredients, recipes, stock levels, procurement, GRN | SHIPPED |
 | M6  | Finance     | Dashboard ✅, HĐĐT blocked on credentials, VAS stubs | PARTIAL |
-| M7  | HR/Payroll  | Attendance ✅, payroll calc incomplete               | PARTIAL |
+| M7  | Nhân sự & tiền lương  | Attendance ✅, payroll calc incomplete               | PARTIAL |
 
 **Feature specs (beyond module rows):**
 
@@ -51,19 +52,41 @@ Post-v1.0 (lên kế hoạch riêng):
 - Local-First per Branch (mini PC + SQLite, offline-capable POS/KDS)
 - QR Self-Order (khách tự order qua QR)
 - Loyalty / Vouchers (tích điểm, khuyến mãi)
+- CMS / CRM Foundation (nội dung marketing + hồ sơ khách + loyalty core)
 - Advanced Analytics (phân tích nâng cao)
 
-## Dependency Graph
+- [Sprint 8: CMS / CRM Foundation](sprint-8.md)
+
+### Sprint 8: CMS / CRM Foundation
+
+> Planned post-v1.0. Focus on customer retention and content operations without turning the product into a generic CRM/CMS platform.
+
+**Scope:** customer profile registry, purchase history view, loyalty ledger, member tiers, vouchers, CMS content blocks, branch promos, media library, and publish workflow.
+
+**Depends on:** M2 (POS/orders), M4 (payments/refunds), M6 (finance/revenue context for campaign analysis)
+
+**Not included:** omnichannel inbox, marketing automation, arbitrary page builder, lead scoring, enterprise CRM workflows.
+
+**Exit criteria:**
+
+- [ ] CRM can attach a customer to a completed order
+- [ ] Loyalty points are recorded in an append-only ledger
+- [ ] Voucher issue/redeem flow works with audit trail
+- [ ] CMS content can be drafted, previewed, published, and archived
+- [ ] Branch-level marketing content can be targeted without cross-tenant leakage
+- [ ] `/verify` + `/review` passes
+
+## Sơ đồ phụ thuộc
 
 ```
-M0 (Admin Shell) ✅
+M0 (Khung quản trị) ✅
 M1 (Menu) ✅
   └── M2 (POS) ✅
       ├── M3 (KDS) ✅
-      └── M4 (Payment) ✅
+      └── M4 (Payment) ⏳ Cash ✅, VietQR/Momo blocked
           ├── M5 (Stock) ✅
-          ├── M6 (Finance) ✅
-          └── M7 (HR/Payroll) ✅
+          ├── M6 (Finance) ⏳ Dashboard ✅, HĐĐT blocked
+          └── M7 (Nhân sự & tiền lương) ⏳ Attendance ✅, payroll incomplete
 ```
 
 ## "Ready to Ship" — Định nghĩa chung
@@ -80,13 +103,13 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 
 ---
 
-## M0: Admin Shell ✅ SHIPPED
+## M0: Khung quản trị ✅ SHIPPED
 
-> Shipped: 2026-04-03
+> Hoàn thành: 2026-04-03
 
-**Scope:** Layout admin, sidebar navigation, quản lý chi nhánh, quản lý nhân sự, cài đặt hệ thống.
+**Scope:** ERP cockpit cấp HQ, sidebar navigation, foundation hệ thống, quản lý chi nhánh, quản lý nhân sự, executive reporting shell.
 
-**Không bao gồm:** Business logic (đặt hàng, thanh toán, kho...).
+**Không bao gồm:** Thao tác nghiệp vụ chi tiết theo domain (đặt hàng, thanh toán, kho...). Các phần đó nằm ở workspace chuyên trách.
 
 **Tables owned:** tenants, branches, profiles, system_settings
 
@@ -100,7 +123,7 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 
 ## M1: Menu ✅ SHIPPED
 
-> Shipped: 2026-04-03
+> Hoàn thành: 2026-04-03
 
 **Scope:** Quản lý thực đơn — danh mục, món ăn, biến thể (size/loại), modifier (thêm trứng...), sides (canh, nước...).
 
@@ -124,9 +147,11 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 | --- | ------------------------------------------------------------------------------------------------------ | ------ |
 | H1  | Settings ACL: thêm branch_manager + area_manager                                                       | ✅     |
 | H2  | Tables page: branch_manager chỉ thấy branch mình                                                       | ✅     |
-| H3  | area_manager scope: tạo `areas` + `area_branches` mapping, area_manager chỉ thấy branches mình quản lý | TODO   |
+| H3  | area_manager scope: tạo `areas` + `area_branches` mapping, area_manager chỉ thấy branches mình quản lý | DEFERRED post-pilot |
 
 ### H3: area_manager branch scope
+
+> **Deferred to post-pilot.** Pilot chạy 1 tenant, 1-2 chi nhánh — area_manager tenant-wide access chấp nhận được. Trigger triển khai: khi mở rộng > 3 chi nhánh với nhiều area_manager, hoặc khi owner yêu cầu phân quyền vùng.
 
 Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn bộ tenant (spec ghi "tenant-wide temporary").
 
@@ -142,9 +167,9 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 ---
 
-## M2: POS — Point of Sale
+## M2: POS — POS
 
-> Status: DONE | Depends: M0, M1 | Shipped: 2026-04-06
+> Status: DONE | Depends: M0, M1 | Hoàn thành: 2026-04-06
 > North Star: "Order → gửi bếp — dưới 30 giây"
 > **M2-Ext (planned):** [POS Order Lifecycle](m2-order-lifecycle.md) — lifecycle sau khi đã gửi đơn (thêm món, hủy, chuyển bàn…)
 
@@ -175,9 +200,9 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 ---
 
-## M3: KDS — Kitchen Display System
+## M3: KDS — KDS
 
-> Status: SHIPPED | Depends: M2 | Shipped: 2026-04-06
+> Status: SHIPPED | Depends: M2 | Hoàn thành: 2026-04-06
 > North Star: "Bếp thấy order realtime, bump xong → waiter biết ngay"
 
 **Scope:** Màn hình bếp hiển thị order realtime. Chef bump từng món khi xong. Waiter thấy trạng thái.
@@ -206,7 +231,8 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 ## M4: Payment — Thanh toán
 
-> Status: SHIPPED | Depends: M2 | Shipped: 2026-04-06
+> Status: PARTIAL | Depends: M2 | Cash shipped: 2026-04-06
+> VietQR/Momo blocked on merchant credentials
 > Ref: `docs/ref/third-party-integrations.md`
 
 **Scope:** Các phương thức thanh toán: tiền mặt, VietQR (chuyển khoản), Momo. Xử lý hoàn tiền. Đối soát cuối ngày.
@@ -225,7 +251,9 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 **Ship criteria:**
 
-- [x] Thanh toán tiền mặt + VietQR + Momo
+- [x] Thanh toán tiền mặt
+- [ ] VietQR real bank API (blocked on merchant credentials)
+- [ ] Momo real API + webhook (blocked on merchant credentials)
 - [x] Hoàn tiền (partial + full)
 - [x] Đối soát cuối ngày chính xác
 - [x] `/cso` passes (sensitive: payments)
@@ -235,14 +263,16 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 ## M5: Stock — Kho & Mua hàng
 
-> Status: SHIPPED | Depends: M4 | Shipped: 2026-04-06
+> Status: SHIPPED | Depends: M4 | Hoàn thành: 2026-04-06
 > Ref: `docs/ref/inventory.md`
 
-**Scope:** Quản lý nguyên liệu, công thức (recipe), tồn kho, nhập kho (GRN), đặt hàng nhà cung cấp (PO), đối chiếu hóa đơn nhà cung cấp (3-way matching).
+**Scope:** Quản lý nguyên liệu, công thức (recipe), tồn kho, nhập kho (GRN), đặt hàng nhà cung cấp (PO), đối chiếu hóa đơn nhà cung cấp (3-way matching), stocktake, stock transfers, và production hub cho bếp trung tâm.
 
-**Không bao gồm:** Quản lý kho thành phẩm, multi-warehouse.
+**M5-Ext đang vận hành:** `branch_kind` (`headquarters` / `branch` / `central_kitchen`), `item_kind` (`raw_material` / `finished_good`), `production_recipes`, `production_orders`, và luồng pilot `HQ -> Bếp trung tâm -> Chi nhánh`.
 
-**Tables owned:** ingredients, recipes, stock_levels, stock_movements, suppliers, purchase_orders, purchase_order_items, goods_received_notes, grn_items, supplier_invoices
+**Không bao gồm:** generalized multi-warehouse, nhiều bếp trung tâm, hoặc mạng kho đa tầng tổng quát.
+
+**Tables owned:** ingredients, recipes, stock_levels, stock_movements, suppliers, purchase_orders, purchase_order_items, goods_received_notes, grn_items, supplier_invoices, stock_transfers, stock_transfer_items, stocktake_sessions, stocktake_lines, production_recipes, production_orders, production_order_items
 
 | Session | Task                            | Tables                                           | Status |
 | ------- | ------------------------------- | ------------------------------------------------ | ------ |
@@ -251,6 +281,9 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 | S3      | Suppliers + Purchase Orders     | suppliers, purchase_orders, purchase_order_items | ✅     |
 | S4      | GRN + auto stock update         | goods_received_notes, grn_items                  | ✅     |
 | S5      | Supplier invoices + 3-way match | supplier_invoices                                | ✅     |
+| S6      | Transfers + stocktake           | stock_transfers, stock_transfer_items, stocktake_sessions, stocktake_lines | ✅ |
+| S7      | Inventory reports + AP tracking | stock_movements, supplier_invoices               | ✅     |
+| S8      | Central kitchen production hub  | production_recipes, production_orders, production_order_items | ✅ |
 
 **Ship criteria:**
 
@@ -258,13 +291,16 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 - [x] Tồn kho tự động cập nhật khi GRN
 - [x] PO → GRN → Supplier Invoice flow hoàn chỉnh
 - [x] 3-way matching hoạt động
+- [x] HQ -> Bếp trung tâm -> Chi nhánh chạy thật bằng transfer + production order
+- [x] Finished goods + central kitchen production đang hoạt động trong pilot
 - [x] `/verify` + `/review` passes
 
 ---
 
 ## M6: Finance — Tài chính & HĐĐT
 
-> Status: DONE | Depends: M4, M5
+> Status: PARTIAL | Depends: M4, M5
+> Dashboard ✅, HĐĐT blocked on MISA credentials, VAS journal stubs only
 > Ref: `docs/ref/einvoice-tax.md`
 > North Star: "Sổ sách đúng chuẩn VAS, HĐĐT tự động, kế toán không cần Excel."
 
@@ -287,7 +323,7 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 **Ship criteria:**
 
-- [x] HĐĐT xuất/hủy hoạt động với provider
+- [ ] HĐĐT xuất/hủy hoạt động với MISA real API (blocked on credentials)
 - [x] Dashboard doanh thu chính xác
 - [x] Food cost report đúng
 - [x] Hệ thống tài khoản VAS
@@ -299,9 +335,10 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 
 ---
 
-## M7: HR/Payroll — Nhân sự & Lương
+## M7: Nhân sự & tiền lương — Nhân sự & Lương
 
-> Status: DONE | Depends: M6
+> Status: PARTIAL | Depends: M6
+> Attendance ✅, payroll calc incomplete (BHXH/PIT deferred to post-pilot)
 > Ref: `docs/ref/labor-contracts.md`, `docs/ref/payroll-pit.md`
 > North Star: "Tính lương chính xác, BHXH đúng luật, nhân viên tự xem payslip."
 
@@ -327,7 +364,7 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 - [x] Lập ca, chấm công (tables)
 - [x] Hợp đồng lao động + auto-sync insurance_base
 - [x] UI chấm công (summary + detail view, status edit)
-- [x] Tính lương + BHXH + thuế TNCN chính xác
+- [ ] Tính lương + BHXH + thuế TNCN chính xác (deferred — use Excel for pilot)
 - [x] Bảng lương hàng tháng (approval flow)
 - [x] Employee portal (payslip + attendance)
 - [x] Payroll reports (annual PIT summary, insurance)
@@ -345,7 +382,7 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 - [x] M0–M4 SHIPPED (vận hành cơ bản)
 - [x] M5 SHIPPED (quản lý kho)
 - [ ] M6 COMPLETE (HĐĐT + VAS accounting — bắt buộc pháp lý)
-- [ ] M7 COMPLETE (HR/Payroll — BHXH + PIT)
+- [ ] M7 COMPLETE (Nhân sự & tiền lương — BHXH + PIT)
 - [ ] `/qa` — full QA test
 - [ ] `/cso` — sprint-level security review
 - [ ] `/retro` — retrospective
@@ -378,7 +415,7 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 | S5      | Auto-suggest PO quantities                            | —      | DONE (yield chưa có)                      |
 | S6      | Price intelligence (alerts + history)                 | —      | DONE (AP tracking chưa có)                |
 | S7      | Reports + in-transit                                  | —      | DONE (AP aging + consumption var chưa có) |
-| S8      | §8/§9 completion: yield + AP + reports page + RPC fix | —      | TODO                                      |
+| S8      | §8/§9 completion: yield + AP + reports page + RPC fix | —      | DEFERRED post-pilot                       |
 
 ### Phase 2: Scale When Needed (HOLD)
 
@@ -417,7 +454,9 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 - [x] Transfer note print template (@media print)
 - [x] `/verify` passes
 
-**Ship criteria (S8 — §8/§9 completion):** TODO
+**Ship criteria (S8 — §8/§9 completion):** DEFERRED post-pilot
+
+> **Why deferred:** Pilot chạy với 30-50 SKU, 1 bếp trung tâm. Yield factor và AP tracking chưa cần thiết ở quy mô này — pilot dùng manual tracking + Excel. Khi scale > 3 chi nhánh hoặc owner yêu cầu food cost % chính xác, bật S8.
 
 - [ ] Recipe yield_factor + consume_stock_for_order RPC fix (§9)
 - [ ] Supplier payment_terms + invoice due_date/payment_status (§8)
@@ -448,13 +487,13 @@ Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn b�
 | ------- | ---------- | ---------------------------------------------------------------- |
 | v0.1.0  | 2026-04-01 | Foundation (auth, proxy, RLS, monorepo)                          |
 | v0.1.1  | 2026-04-02 | Security hardening (RLS, DML lockdown)                           |
-| M0+M1   | 2026-04-03 | Admin Shell + Menu shipped (ex Sprint 1)                         |
+| M0+M1   | 2026-04-03 | Khung quản trị + Menu shipped (ex Sprint 1)                         |
 | M2      | 2026-04-06 | POS shipped — order, cart, bill, cash                            |
 | M3      | 2026-04-06 | KDS shipped — station config, realtime, bump/complete            |
 | M4      | 2026-04-06 | Payment — cash, VietQR, Momo, refunds                            |
 | M5      | 2026-04-06 | Stock — ingredients, recipes, stock levels                       |
 | M6      | 2026-04-06 | Finance — HĐĐT, revenue dashboard, VAS                           |
-| M7      | 2026-04-06 | HR/Payroll — employees, shifts, attendance, payroll              |
+| M7      | 2026-04-06 | Nhân sự & tiền lương — employees, shifts, attendance, payroll              |
 | v1.0.0  | 2026-04-07 | All modules shipped, QA verified, deployed to Vercel             |
 | UX-A    | 2026-04-09 | Inventory UX redesign Session A — PO + GRN + Invoice             |
 | UX-B    | 2026-04-09 | Inventory UX redesign Session B — Transfers + Stocktake + Issues |

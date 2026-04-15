@@ -1,6 +1,7 @@
 "use client";
 
 import { Users } from "lucide-react";
+import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Table,
@@ -50,9 +51,32 @@ export function EmployeeTable({ employees }: EmployeeTableProps) {
           {employees.map((emp) => (
             <TableRow key={emp.id}>
               <TableCell>
-                <span className="font-medium">
-                  {emp.profiles?.full_name ?? "—"}
-                </span>
+                <div className="space-y-1">
+                  <span className="font-medium">
+                    {emp.profiles?.full_name ?? "—"}
+                  </span>
+                  <div className="space-y-1 sm:hidden">
+                    <p className="text-xs text-muted-foreground">
+                      {emp.employee_code ?? "Chưa có mã NV"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {emp.profiles?.branches?.name ?? "Chưa gắn chi nhánh"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {emp.profiles?.role ?? "Chưa có vai trò"}
+                    </p>
+                  </div>
+                  <div className="space-y-1 md:hidden lg:hidden">
+                    <p className="text-xs text-muted-foreground">
+                      {emp.contract_type
+                        ? (CONTRACT_LABELS[emp.contract_type] ?? emp.contract_type)
+                        : "Chưa có hợp đồng"}
+                    </p>
+                    <p className="text-xs font-medium text-foreground">
+                      {emp.base_salary !== null ? formatVND(emp.base_salary) : "Chưa có lương cơ bản"}
+                    </p>
+                  </div>
+                </div>
               </TableCell>
               <TableCell className="hidden text-muted-foreground sm:table-cell">
                 {emp.employee_code ?? "—"}
@@ -77,7 +101,9 @@ export function EmployeeTable({ employees }: EmployeeTableProps) {
               </TableCell>
               <TableCell>
                 <Badge variant={emp.is_active ? "default" : "outline"}>
-                  {emp.is_active ? "Hoạt động" : "Ngừng"}
+                  {emp.is_active
+                    ? ACTIVE_STATE_LABELS_VI.active
+                    : ACTIVE_STATE_LABELS_VI.inactive}
                 </Badge>
               </TableCell>
             </TableRow>

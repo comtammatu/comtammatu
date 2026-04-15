@@ -1,0 +1,59 @@
+[
+  {
+    "scenario": "supermanager",
+    "step": "login",
+    "url": "http://localhost:3000/admin/dashboard"
+  },
+  {
+    "scenario": "supermanager",
+    "step": "supermanager-admin-orders",
+    "url": "http://localhost:3000/admin/orders",
+    "requested": "/admin/orders"
+  },
+  {
+    "scenario": "supermanager",
+    "step": "supermanager-admin-dashboard",
+    "url": "http://localhost:3000/admin/dashboard",
+    "requested": "/admin/dashboard"
+  },
+  {
+    "scenario": "office",
+    "step": "login",
+    "url": "http://localhost:3000/employee"
+  },
+  {
+    "scenario": "office",
+    "step": "office-inventory-dashboard",
+    "url": "http://localhost:3000/employee?forbidden=1",
+    "requested": "/inventory"
+  },
+  {
+    "scenario": "office",
+    "step": "office-inventory-reports",
+    "url": "http://localhost:3000/employee?forbidden=1",
+    "requested": "/inventory/reports"
+  },
+  {
+    "scenario": "manager-datdo",
+    "step": "login",
+    "url": "http://localhost:3000/admin/dashboard"
+  },
+  {
+    "scenario": "manager-datdo",
+    "step": "manager-inventory-dashboard",
+    "url": "http://localhost:3000/inventory",
+    "requested": "/inventory"
+  },
+  {
+    "scenario": "manager-datdo",
+    "step": "manager-inventory-reports",
+    "url": "http://localhost:3000/inventory/reports",
+    "requested": "/inventory/reports"
+  },
+  {
+    "scenario": "manager-datdo",
+    "step": "manager-admin-orders",
+    "url": "http://localhost:3000/admin/orders",
+    "requested": "/admin/orders"
+  }
+]

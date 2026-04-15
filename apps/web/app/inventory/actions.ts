@@ -6,7 +6,11 @@ import {
   INVENTORY_CATALOG_ROLES,
   INVENTORY_OPS_ROLES,
 } from "@comtammatu/shared/auth";
-import { getAuthContext } from "../admin/_lib/auth";
+import { getAuthContext } from "./_lib/auth";
+import {
+  resolveDefaultInventoryLocation,
+  withInventoryLocationCompatFallback,
+} from "./_lib/inventory-location-compat";
 
 /* ─── Schemas ─── */
 
@@ -16,6 +20,7 @@ const ingredientSchema = z.object({
   sku: z.string().optional(),
   unit_cost: z.coerce.number().min(0).optional(),
   category: z.string().optional(),
+  item_kind: z.enum(["raw_material", "finished_good"]).default("raw_material"),
   min_stock_level: z.coerce.number().min(0).default(0),
   max_stock_level: z.coerce.number().min(0).optional(),
   reorder_point: z.coerce.number().min(0).optional(),
@@ -27,17 +32,19 @@ const ingredientSchema = z.object({
 
 /* ─── fetchIngredients (full catalog — SM quản lý danh mục; ops xem theo nghiệp vụ) ─── */
 
-export async function fetchIngredients(): Promise<ActionResult> {
+export async function fetchIngredients(limit = 2000): Promise<ActionResult> {
   const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
+  const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 5000);
 
   const { data, error } = await supabase
     .from("ingredients")
     .select("*")
     .eq("tenant_id", claims.tenant_id)
-    .order("name");
+    .order("name")
+    .limit(safeLimit);
 
   if (error) {
     return { success: false, error: "Không thể tải danh sách nguyên liệu." };
@@ -197,7 +204,16 @@ export async function adjustStock(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  const { error } = await supabase.from("stock_movements").insert({
+  const defaultLocationId = await resolveDefaultInventoryLocation(
+    supabase,
+    claims.tenant_id,
+    parsed.data.branchId,
+    "issue",
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- location columns are compatibility-prep before db:types regenerate
+  const sb = supabase as any;
+  const basePayload = {
     tenant_id: claims.tenant_id,
     branch_id: parsed.data.branchId,
     ingredient_id: parsed.data.ingredientId,
@@ -205,7 +221,16 @@ export async function adjustStock(
     quantity_change: parsed.data.quantityChange,
     reason: parsed.data.reason ?? null,
     created_by: user.id,
-  });
+  };
+
+  const { error } = await withInventoryLocationCompatFallback(
+    () =>
+      sb.from("stock_movements").insert({
+        ...basePayload,
+        location_id: defaultLocationId,
+      }),
+    () => sb.from("stock_movements").insert(basePayload),
+  );
 
   if (error) {
     if (error.code === "23514") {
@@ -290,7 +315,7 @@ export async function createStocktakeSession(
   const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims, user } = ctx;
+  const { supabase, claims } = ctx;
 
   if (
     claims.user_role === "branch_manager" &&
@@ -299,56 +324,45 @@ export async function createStocktakeSession(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  const { data: session, error: sessionError } = await supabase
-    .from("stocktake_sessions")
-    .insert({
-      tenant_id: claims.tenant_id,
-      branch_id: parsedBranch.data,
-      created_by: user.id,
-    })
-    .select("id")
-    .single();
+  const defaultLocationId = await resolveDefaultInventoryLocation(
+    supabase,
+    claims.tenant_id,
+    parsedBranch.data,
+    "receive",
+  );
 
-  if (sessionError) {
-    if (sessionError.code === "23505") {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- compatibility RPC payload before db:types regenerate
+  const sb = supabase as any;
+  const { data, error } = await withInventoryLocationCompatFallback(
+    () =>
+      sb.rpc("create_stocktake_session", {
+        p_branch_id: parsedBranch.data,
+        p_location_id: defaultLocationId,
+      }),
+    () =>
+      sb.rpc("create_stocktake_session", {
+        p_branch_id: parsedBranch.data,
+      }),
+  );
+
+  if (error) {
+    if (error.code === "23505") {
       return {
         success: false,
         error: "Chi nhánh này đang có phiên kiểm kê chưa hoàn tất.",
       };
     }
-    return { success: false, error: "Không thể tạo phiên kiểm kê." };
-  }
-
-  // Fetch current stock levels for this branch
-  const { data: stockLevels, error: slError } = await supabase
-    .from("stock_levels")
-    .select("ingredient_id, current_quantity")
-    .eq("branch_id", parsedBranch.data)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (slError) {
-    return { success: false, error: "Không thể tạo phiên kiểm kê." };
-  }
-
-  // Create stocktake lines for each stock level
-  if (stockLevels && stockLevels.length > 0) {
-    const lines = stockLevels.map((sl) => ({
-      tenant_id: claims.tenant_id,
-      session_id: session.id,
-      ingredient_id: sl.ingredient_id,
-      system_quantity: sl.current_quantity,
-    }));
-
-    const { error: linesError } = await supabase
-      .from("stocktake_lines")
-      .insert(lines);
-
-    if (linesError) {
-      return { success: false, error: "Không thể tạo phiên kiểm kê." };
+    if (error.code === "42501") {
+      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
+    return { success: false, error: "Không thể tạo phiên kiểm kê." };
   }
 
-  return { success: true, data: { id: session.id } };
+  const result = data as unknown as { id?: number } | null;
+  if (!result?.id) {
+    return { success: false, error: "Không thể tạo phiên kiểm kê." };
+  }
+  return { success: true, data: { id: result.id } };
 }
 
 /* ─── fetchStocktakeSessions ─── */
@@ -361,27 +375,80 @@ export async function fetchStocktakeSessions(
 
   const { supabase, claims } = ctx;
 
-  let query = supabase
-    .from("stocktake_sessions")
-    .select(
-      "id, branch_id, started_at, completed_at, status, notes, created_at, created_by, branches(id, name)",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .order("created_at", { ascending: false });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- location columns are compatibility-prep before db:types regenerate
+  const sb = supabase as any;
+  const buildQuery = (selectClause: string) => {
+    let query = sb
+      .from("stocktake_sessions")
+      .select(selectClause)
+      .eq("tenant_id", claims.tenant_id)
+      .order("created_at", { ascending: false });
 
-  if (claims.user_role === "branch_manager" && claims.branch_id != null) {
-    query = query.eq("branch_id", claims.branch_id);
-  } else if (branchId) {
-    query = query.eq("branch_id", branchId);
-  }
+    if (claims.user_role === "branch_manager" && claims.branch_id != null) {
+      query = query.eq("branch_id", claims.branch_id);
+    } else if (branchId) {
+      query = query.eq("branch_id", branchId);
+    }
+    return query;
+  };
 
-  const { data, error } = await query;
+  const { data, error } = await withInventoryLocationCompatFallback(
+    () =>
+      buildQuery(
+        "id, branch_id, location_id, started_at, completed_at, status, notes, created_at, created_by, branches(id, name)",
+      ),
+    () =>
+      buildQuery(
+        "id, branch_id, started_at, completed_at, status, notes, created_at, created_by, branches(id, name)",
+      ),
+  );
 
   if (error) {
     return { success: false, error: "Không thể tải danh sách kiểm kê." };
   }
 
-  return { success: true, data: data ?? [] };
+  const sessions = (data ?? []) as Array<Record<string, unknown>>;
+  if (sessions.length === 0) {
+    return { success: true, data: [] };
+  }
+
+  const sessionIds = sessions.map((s) => Number(s.id)).filter(Number.isFinite);
+  const { data: lines, error: linesError } = await supabase
+    .from("stocktake_lines")
+    .select("session_id, counted_quantity")
+    .eq("tenant_id", claims.tenant_id)
+    .in("session_id", sessionIds);
+
+  if (linesError) {
+    return { success: false, error: "Không thể tải danh sách kiểm kê." };
+  }
+
+  const bySession = new Map<number, { total: number; counted: number }>();
+  for (const id of sessionIds) {
+    bySession.set(id, { total: 0, counted: 0 });
+  }
+
+  for (const row of lines ?? []) {
+    const sid = Number(row.session_id);
+    const agg = bySession.get(sid);
+    if (!agg) continue;
+    agg.total += 1;
+    if (row.counted_quantity != null) {
+      agg.counted += 1;
+    }
+  }
+
+  const enriched = sessions.map((s) => {
+    const sid = Number(s.id);
+    const agg = bySession.get(sid) ?? { total: 0, counted: 0 };
+    return {
+      ...s,
+      total_items: agg.total,
+      counted_items: agg.counted,
+    };
+  });
+
+  return { success: true, data: enriched };
 }
 
 /* ─── fetchStocktakeDetail ─── */

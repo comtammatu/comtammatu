@@ -117,9 +117,18 @@ export async function POST(request: Request) {
     );
   }
 
-  // Note: consume_stock_for_order requires auth.uid() and cannot be called via
-  // service role. Stock deduction for Momo payments is deferred until M4 wiring
-  // — implement via complete_payment_and_consume_stock RPC (service-role safe).
+  // Deduct ingredients consumed by this order from stock (service-role safe).
+  // Non-fatal: payment already completed — reconciliation can be done manually.
+  const { error: stockErr } = await supabase.rpc(
+    "consume_stock_for_order_service",
+    { p_order_id: payment.order_id },
+  );
+  if (stockErr) {
+    console.error(
+      `[momo-webhook] consume_stock failed: payment=${payment.id} order=${payment.order_id}`,
+      stockErr.message,
+    );
+  }
 
   return NextResponse.json({ received: true });
 }

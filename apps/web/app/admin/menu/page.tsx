@@ -5,6 +5,11 @@ import {
   TabsList,
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
+import {
+  PageContainer,
+  PageHeader,
+  SectionCard,
+} from "@/components/foundation/ui-patterns";
 import { CategoryTable } from "./category-table";
 import { AddCategoryButton } from "./add-category-button";
 import { ItemTable } from "./item-table";
@@ -45,16 +50,15 @@ export default async function MenuPage() {
   }));
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Thực đơn</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Quản lý danh mục và món ăn
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        eyebrow="Danh mục kinh doanh"
+        title="Thực đơn"
+      />
 
-      <Tabs defaultValue="items">
-        <TabsList className="h-10">
+      <SectionCard>
+        <Tabs defaultValue="items">
+          <TabsList className="h-11 rounded-2xl bg-muted/60">
           <TabsTrigger value="items" className="px-5">
             Món ăn
             <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
@@ -67,26 +71,27 @@ export default async function MenuPage() {
               {categories.length}
             </span>
           </TabsTrigger>
-        </TabsList>
+          </TabsList>
 
-        <TabsContent value="items" className="mt-6 space-y-4">
-          <div className="flex justify-end">
-            <AddItemButton categories={categories} />
-          </div>
-          <div className="rounded-lg border shadow-sm">
-            <ItemTable items={items} categories={categories} />
-          </div>
-        </TabsContent>
+          <TabsContent value="items" className="mt-6 space-y-4">
+            <div className="flex justify-end">
+              <AddItemButton categories={categories} />
+            </div>
+            <div className="rounded-2xl border border-border/70 shadow-sm">
+              <ItemTable items={items} categories={categories} />
+            </div>
+          </TabsContent>
 
-        <TabsContent value="categories" className="mt-6 space-y-4">
-          <div className="flex justify-end">
-            <AddCategoryButton />
-          </div>
-          <div className="rounded-lg border shadow-sm">
-            <CategoryTable categories={categories} />
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
+          <TabsContent value="categories" className="mt-6 space-y-4">
+            <div className="flex justify-end">
+              <AddCategoryButton />
+            </div>
+            <div className="rounded-2xl border border-border/70 shadow-sm">
+              <CategoryTable categories={categories} />
+            </div>
+          </TabsContent>
+        </Tabs>
+      </SectionCard>
+    </PageContainer>
   );
 }

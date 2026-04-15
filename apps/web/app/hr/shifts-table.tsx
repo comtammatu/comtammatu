@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CalendarClock, Plus } from "lucide-react";
+import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -95,7 +96,9 @@ export function ShiftsTable({
                   </TableCell>
                   <TableCell>
                     <Badge variant={shift.is_active ? "default" : "outline"}>
-                      {shift.is_active ? "Hoạt động" : "Ngừng"}
+                      {shift.is_active
+                        ? ACTIVE_STATE_LABELS_VI.active
+                        : ACTIVE_STATE_LABELS_VI.inactive}
                     </Badge>
                   </TableCell>
                 </TableRow>

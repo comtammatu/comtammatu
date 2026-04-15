@@ -135,6 +135,8 @@ interface PosMenuProps {
   initialOrderType: OrderType;
 }
 
+type PosFlowStepState = "done" | "current" | "todo";
+
 export function PosMenu({
   branchId,
   categories,
@@ -266,6 +268,84 @@ export function PosMenu({
   const canSubmit =
     cartItems.length > 0 &&
     (orderType === "takeaway" || selectedTableId !== null);
+  const selectedTableNumber =
+    selectedTableId != null
+      ? localTables.find((table) => table.id === selectedTableId)?.number
+      : undefined;
+  const orderContextComplete =
+    orderType === "takeaway" || selectedTableId !== null;
+
+  const flowSteps = useMemo<
+    ReadonlyArray<{
+      label: string;
+      meta: string;
+      state: PosFlowStepState;
+    }>
+  >(
+    () => [
+      {
+        label: "Loại đơn",
+        meta: orderType === "takeaway" ? "Mang về" : "Tại bàn",
+        state: "done",
+      },
+      {
+        label: "Ngữ cảnh bàn",
+        meta:
+          orderType === "takeaway"
+            ? "Đơn mang về"
+            : selectedTableNumber != null
+              ? `Bàn ${selectedTableNumber}`
+              : "Chọn bàn",
+        state: orderContextComplete ? "done" : "current",
+      },
+      {
+        label: "Chọn món",
+        meta:
+          cartItems.length > 0
+            ? `${cartQuantity} món trong giỏ`
+            : "Thêm món",
+        state:
+          cartItems.length > 0
+            ? "done"
+            : orderContextComplete
+              ? "current"
+              : "todo",
+      },
+      {
+        label: "Gửi xuống bếp",
+        meta: canSubmit ? "Sẵn sàng" : "Chưa sẵn sàng",
+        state: canSubmit ? "current" : "todo",
+      },
+    ],
+    [
+      cartItems.length,
+      cartQuantity,
+      canSubmit,
+      orderContextComplete,
+      orderType,
+      selectedTableNumber,
+    ],
+  );
+
+  const flowProgressPercent = useMemo(() => {
+    let progress = 22;
+    if (orderContextComplete) progress += 24;
+    if (cartItems.length > 0) progress += 28;
+    if (canSubmit) progress += 26;
+    return progress;
+  }, [canSubmit, cartItems.length, orderContextComplete]);
+
+  const flowHeadline = canSubmit
+    ? "Có thể gửi bếp."
+    : orderContextComplete
+      ? "Thêm món để hoàn tất."
+      : "Chọn ngữ cảnh trước.";
+
+  const flowHint = canSubmit
+      ? "Kiểm tra giỏ và gửi bếp."
+      : orderContextComplete
+      ? "Thêm món vào giỏ."
+      : "Gán bàn cho đơn tại chỗ.";
 
   const addToCart = useCallback(
     (
@@ -502,483 +582,751 @@ export function PosMenu({
     [addToCart, appendTarget, branchId, loadSessionOrders],
   );
 
+  const activeSessionOrders = useMemo(
+    () =>
+      sessionOrders.filter((order) =>
+        ["new", "confirmed", "preparing", "ready", "served"].includes(
+          order.status,
+        ),
+      ),
+    [sessionOrders],
+  );
+  const completedSessionOrders = useMemo(
+    () =>
+      sessionOrders.filter(
+        (order) => !activeSessionOrders.some((active) => active.id === order.id),
+      ),
+    [activeSessionOrders, sessionOrders],
+  );
+  const readySessionOrders = useMemo(
+    () => sessionOrders.filter((order) => order.status === "ready"),
+    [sessionOrders],
+  );
+  const sessionRevenue = useMemo(
+    () =>
+      sessionOrders.reduce((sum, order) => sum + Number(order.total_amount), 0),
+    [sessionOrders],
+  );
+  const activeZoneLabel = CATEGORY_TYPE_LABELS[effectiveMenuZone] ?? effectiveMenuZone;
+  const activeMenuItemCount = activeCategory?.menu_items.length ?? 0;
+
   const sessionHeader = (
-    <div className="flex items-center justify-between gap-2 border-b bg-background px-3 py-2.5">
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <EmployeePortalBackControl />
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5 font-medium text-foreground">
-            <Monitor className="size-3.5 shrink-0 text-primary" />
-            <span className="truncate">
-              {session.pos_terminals?.name ?? "POS"}
-            </span>
-          </span>
-          <span className="flex min-w-0 items-center gap-1.5">
-            <Clock className="size-3.5 shrink-0" />
-            <span className="truncate">
-              <span className="hidden sm:inline">Ca mở lúc </span>
-              {formatTime(session.opened_at)}
-            </span>
-          </span>
+    <div className="border-b border-border/60 bg-background/92 px-3 py-3 backdrop-blur-xl md:px-4">
+      <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <EmployeePortalBackControl />
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5 font-medium text-foreground">
+                <Monitor className="size-3.5 shrink-0 text-primary" />
+                <span className="truncate">
+                  {session.pos_terminals?.name ?? "POS"}
+                </span>
+              </span>
+              <span className="flex min-w-0 items-center gap-1.5">
+                <Clock className="size-3.5 shrink-0" />
+                <span className="truncate">
+                  <span className="hidden sm:inline">Ca mở lúc </span>
+                  {formatTime(session.opened_at)}
+                </span>
+              </span>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="touch-target h-9 shrink-0 gap-1.5 rounded-full px-4 text-xs text-muted-foreground hover:text-destructive"
+            onClick={() => setShowCloseSession(true)}
+          >
+            <LogOut className="size-3.5" />
+            Đóng ca
+          </Button>
+        </div>
+
+                <div className="ui-flow-panel rounded-4xl p-4 md:p-5">
+          <div className="relative space-y-4">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+              <div className="space-y-2">
+                <p className="app-section-label">Ca POS</p>
+                <h1 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
+                  {flowHeadline}
+                </h1>
+                <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+                  {flowHint}
+                </p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 xl:min-w-88">
+                <div className="ui-surface-lift rounded-3xl border border-border/60 bg-white/84 p-3 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Ngữ cảnh hiện tại
+                  </p>
+                  <p className="mt-2 text-base font-semibold text-foreground">
+                    {orderType === "takeaway"
+                      ? "Mang về"
+                      : selectedTableNumber != null
+                        ? `Bàn ${selectedTableNumber}`
+                        : "Chưa gán bàn"}
+                  </p>
+                </div>
+                <div className="ui-surface-lift rounded-3xl border border-border/60 bg-white/84 p-3 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Đơn đang chạy
+                  </p>
+                  <p className="mt-2 text-base font-semibold text-foreground">
+                    {activeSessionOrders.length} đơn đang chạy
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span className="rounded-full border border-border/70 bg-white/70 px-3 py-1.5">
+                {isPending
+                  ? "Đang xử lý thay đổi đơn"
+                  : `${String(Math.round(flowProgressPercent))}% mạch tạo đơn đã sẵn`}
+              </span>
+              <span className="rounded-full border border-border/70 bg-white/70 px-3 py-1.5">
+                {canSubmit ? "Có thể gửi bếp" : "Chưa đủ điều kiện gửi bếp"}
+              </span>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {flowSteps.map((step, index) => (
+                <div key={step.label} className="ui-flow-step" data-state={step.state}>
+                  <div className="flex items-start gap-3">
+                    <div className="ui-flow-stage-index">{index + 1}</div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold">{step.label}</p>
+                      <p className="text-xs leading-5 text-muted-foreground">
+                        {step.meta}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="ui-surface-lift rounded-3xl border border-primary/15 bg-primary/8 p-3 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                  Giỏ hiện tại
+                </p>
+                <p className="mt-2 text-lg font-semibold text-foreground">
+                  {cartQuantity > 0 ? `${cartQuantity} món` : "Chưa có món trong giỏ"}
+                </p>
+              </div>
+              <div className="ui-surface-lift rounded-3xl border border-success/15 bg-success/10 p-3 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-success">
+                  Đơn sẵn sàng
+                </p>
+                <p className="mt-2 text-lg font-semibold text-foreground">
+                  {readySessionOrders.length} đơn
+                </p>
+              </div>
+              <div className="ui-surface-lift rounded-3xl border border-border/60 bg-white/84 p-3 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Đã hoàn tất
+                </p>
+                <p className="mt-2 text-lg font-semibold text-foreground">
+                  {completedSessionOrders.length} đơn
+                </p>
+              </div>
+              <div className="ui-surface-lift rounded-3xl border border-warning/15 bg-warning/10 p-3 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-warning">
+                  Doanh thu ca
+                </p>
+                <p className="mt-2 text-lg font-semibold text-foreground">
+                  {formatVND(sessionRevenue)}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="touch-target h-9 shrink-0 gap-1.5 px-3 text-xs text-muted-foreground hover:text-destructive"
-        onClick={() => setShowCloseSession(true)}
-      >
-        <LogOut className="size-3.5" />
-        Đóng ca
-      </Button>
     </div>
   );
 
   const appendBannerRow =
     appendTarget != null ? (
-      <div
-        className="flex items-center justify-between gap-2 border-b bg-warning/15 px-3 py-2"
-        role="status"
-      >
-        <p className="min-w-0 text-xs leading-snug text-foreground">
-          <span className="font-semibold">
-            Thêm món vào đơn #{appendTarget.orderNumber}
-          </span>
-          <span className="text-muted-foreground">
-            {" "}
-            — chọn món trên lưới bên dưới
-          </span>
-        </p>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="touch-target h-8 shrink-0 gap-1 px-2 text-xs text-foreground hover:bg-warning/25"
-          onClick={() => setAppendTarget(null)}
-        >
-          <X className="size-3.5" />
-          Hủy
-        </Button>
+      <div className="border-b border-warning/15 bg-warning/10 px-3 py-3 md:px-4" role="status">
+        <div className="mx-auto w-full max-w-screen-2xl">
+          <div className="ui-flow-panel rounded-3xl border-warning/20 bg-warning/10 p-3">
+            <div className="relative flex items-center justify-between gap-2">
+              <p className="min-w-0 text-sm leading-6 text-foreground">
+                <span className="font-semibold">
+                  Thêm món vào đơn #{appendTarget.orderNumber}
+                </span>
+                <span className="text-muted-foreground">
+                  {" "}
+                  Chọn món trên lưới bên dưới để tiếp tục cùng một flow.
+                </span>
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="touch-target h-9 shrink-0 gap-1 rounded-full px-3 text-xs text-foreground hover:bg-warning/25"
+                onClick={() => setAppendTarget(null)}
+              >
+                <X className="size-3.5" />
+                Hủy
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
     ) : null;
 
-  const orderTypeRow = (
-    <div className="border-b bg-background px-3 py-2">
-      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Loại đơn
-      </p>
+  const serviceModeSelector = (
+    <div className="ui-flow-panel rounded-4xl p-3">
+          <div className="relative space-y-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Loại đơn
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Đổi nhanh giữa tại bàn và mang về trong cùng ca POS.
+              </p>
+            </div>
+        <div
+          role="radiogroup"
+          aria-label="Loại đơn hàng"
+          className="grid grid-cols-2 gap-2"
+        >
+          <button
+            type="button"
+            role="radio"
+            aria-checked={orderType === "dine_in"}
+            className={cn(
+              "touch-target flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              orderType === "dine_in"
+                ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
+                : "border-border/70 bg-background text-foreground hover:border-primary/20",
+            )}
+            onClick={() => handleOrderTypeChange("dine_in")}
+          >
+            <UtensilsCrossed className="size-4" />
+            Tại bàn
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={orderType === "takeaway"}
+            className={cn(
+              "touch-target flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              orderType === "takeaway"
+                ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
+                : "border-border/70 bg-background text-foreground hover:border-primary/20",
+            )}
+            onClick={() => handleOrderTypeChange("takeaway")}
+          >
+            <Package className="size-4" />
+            Mang về
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const workflowRail = (
+    <aside className="hidden xl:flex xl:w-80 xl:shrink-0 xl:flex-col xl:gap-4 xl:border-r xl:border-border/60 xl:bg-background/70 xl:p-4">
+      {serviceModeSelector}
+      <div className="ui-flow-panel rounded-4xl p-4">
+          <div className="relative space-y-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Điều phối đơn
+              </p>
+              <p className="mt-1 text-base font-semibold text-foreground">
+                {orderType === "takeaway"
+                ? "Đơn mang về"
+                : selectedTableNumber != null
+                  ? `Bàn ${selectedTableNumber}`
+                  : "Cần gán bàn"}
+            </p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                {orderType === "takeaway"
+                ? "Không cần gán bàn, có thể thêm món và tạo đơn ngay."
+                : selectedTableNumber != null
+                  ? "Ngữ cảnh bàn đã sẵn sàng cho tạo đơn mới hoặc thêm món."
+                  : "Chọn đúng bàn để tránh sai luồng phục vụ."}
+              </p>
+            </div>
+
+          <div className="space-y-2">
+            {flowSteps.map((step, index) => (
+              <div
+                key={step.label}
+                className="ui-surface-lift rounded-3xl border border-border/60 bg-white/82 px-3 py-3 shadow-sm"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="ui-flow-stage-index">{index + 1}</div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {step.label}
+                    </p>
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      {step.meta}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+        <div className="ui-surface-lift rounded-3xl border border-border/60 bg-white/82 p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Đơn đang chạy
+          </p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">
+            {activeSessionOrders.length}
+          </p>
+        </div>
+        <div className="ui-surface-lift rounded-3xl border border-success/15 bg-success/10 p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-success">
+            Sẵn sàng giao
+          </p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">
+            {readySessionOrders.length}
+          </p>
+        </div>
+      </div>
+    </aside>
+  );
+
+  const sidebarTabs = (
+    <div className="border-b border-border/60 px-3 py-3">
       <div
-        role="radiogroup"
-        aria-label="Loại đơn hàng"
-        className="flex gap-1 rounded-lg bg-muted p-1"
+        role="tablist"
+        aria-label="POS sidebar"
+        className="grid grid-cols-2 gap-2"
       >
         <button
           type="button"
-          role="radio"
-          aria-checked={orderType === "dine_in"}
+          role="tab"
+          aria-selected={!showOrders}
           className={cn(
-            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-            orderType === "dine_in"
-              ? "bg-background shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
+            "touch-target flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold transition-all",
+            !showOrders
+              ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
+              : "border-border/70 bg-background text-muted-foreground hover:text-foreground",
           )}
-          onClick={() => handleOrderTypeChange("dine_in")}
+          onClick={() => setShowOrders(false)}
         >
-          <UtensilsCrossed className="size-3.5" />
-          Tại bàn
+          Giỏ hàng
+          {cartItems.length > 0 && (
+            <span className="rounded-full bg-primary-foreground/15 px-2 py-0.5 text-xs font-semibold text-primary-foreground">
+              {cartQuantity}
+            </span>
+          )}
         </button>
         <button
           type="button"
-          role="radio"
-          aria-checked={orderType === "takeaway"}
+          role="tab"
+          aria-selected={showOrders}
           className={cn(
-            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-            orderType === "takeaway"
-              ? "bg-background shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
+            "touch-target flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold transition-all",
+            showOrders
+              ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
+              : "border-border/70 bg-background text-muted-foreground hover:text-foreground",
           )}
-          onClick={() => handleOrderTypeChange("takeaway")}
+          onClick={() => {
+            setShowOrders(true);
+            void loadSessionOrders();
+          }}
         >
-          <Package className="size-3.5" />
-          Mang về
+          Đơn hàng
         </button>
       </div>
     </div>
   );
 
+  const sidebarContent = showOrders ? (
+    <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold">Đơn hàng</span>
+          {sessionOrders.length > 0 && (
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+              {sessionOrders.length}
+            </span>
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-9 rounded-full px-3 text-xs"
+          onClick={() => void loadSessionOrders()}
+        >
+          <DoorOpen className="mr-1 size-3.5" />
+          Tải lại
+        </Button>
+      </div>
+      <OrderHistory
+        orders={sessionOrders}
+        onViewBill={(id) => setBillOrderId(id)}
+        onViewDetail={(id) => setOrderDetailId(id)}
+      />
+    </div>
+  ) : (
+    <CartSidebar
+      items={cartItems}
+      total={cartTotal}
+      orderType={orderType}
+      selectedTableId={selectedTableId}
+      tables={localTables}
+      progressPercent={flowProgressPercent}
+      progressHeadline={flowHeadline}
+      progressHint={flowHint}
+      steps={flowSteps}
+      canSubmit={canSubmit}
+      isSubmitting={isPending}
+      onUpdateQuantity={updateQuantity}
+      onRemoveItem={removeItem}
+      onClearCart={clearCart}
+      onOrderTypeChange={handleOrderTypeChange}
+      onRequestChangeTable={handleRequestChangeTable}
+      onSubmitOrder={handleSubmitOrder}
+      orderNote={orderNote}
+      onOrderNoteChange={setOrderNote}
+    />
+  );
+
   return (
     <>
+      {sessionHeader}
+
       {!orderContextReady ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {sessionHeader}
-          {appendBannerRow}
-          {orderTypeRow}
-          <PosTableGate
-            tables={localTables}
-            selectedTableId={selectedTableId}
-            onTableSelect={handleTableSelect}
-            className="min-h-0 flex-1"
-          />
+        <div className="flex min-h-0 flex-1 overflow-hidden bg-background/35">
+          {workflowRail}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            {appendBannerRow}
+            <div className="border-b border-border/60 bg-background/75 p-3 xl:hidden">
+              {serviceModeSelector}
+            </div>
+            <PosTableGate
+              tables={localTables}
+              selectedTableId={selectedTableId}
+              onTableSelect={handleTableSelect}
+              className="min-h-0 flex-1"
+            />
+          </div>
         </div>
       ) : (
         <>
-          <div className="flex flex-1 flex-col overflow-hidden">
-            {sessionHeader}
-            {appendBannerRow}
+          <div className="flex min-h-0 flex-1 overflow-hidden bg-background/35">
+            {workflowRail}
 
-            {availableMenuZones.length === 0 ? (
-              <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center text-muted-foreground">
-                <p className="text-sm font-medium">
-                  Chưa có món trong thực đơn
-                </p>
-                <p className="text-xs">
-                  Thêm danh mục và món trong quản trị để phục vụ tại POS.
-                </p>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              {appendBannerRow}
+
+              <div className="border-b border-border/60 bg-background/80 p-3 xl:hidden">
+                {serviceModeSelector}
               </div>
-            ) : (
-              <>
-                {/* Khu thực đơn (món chính / phụ / nước / tráng miệng) */}
-                <div className="border-b bg-background">
-                  <ScrollArea className="w-full">
-                    <div
-                      className="flex gap-1 px-2 py-1.5 md:px-3 md:py-2"
-                      role="tablist"
-                      aria-label="Khu thực đơn"
-                    >
-                      {availableMenuZones.map((z) => (
-                        <button
-                          key={z}
-                          type="button"
-                          role="tab"
-                          aria-selected={effectiveMenuZone === z}
-                          className={cn(
-                            "touch-target flex h-11 shrink-0 cursor-pointer items-center rounded-md px-3 text-sm font-semibold transition-colors md:px-4",
-                            effectiveMenuZone === z
-                              ? "bg-primary text-primary-foreground shadow-sm"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                          )}
-                          onClick={() => setActiveMenuZone(z)}
-                        >
-                          {CATEGORY_TYPE_LABELS[z] ?? z}
-                        </button>
-                      ))}
-                    </div>
-                  </ScrollArea>
+
+              {availableMenuZones.length === 0 ? (
+                <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center text-muted-foreground">
+                  <p className="text-sm font-medium">Chưa có món trong thực đơn</p>
+                  <p className="text-xs leading-5">
+                    Thêm danh mục và món trong quản trị để phục vụ tại POS.
+                  </p>
                 </div>
-
-                {/* Danh mục trong khu (nếu có nhiều danh mục) */}
-                {categoriesInActiveZone.length > 1 ? (
-                  <div className="border-b bg-muted/20">
-                    <ScrollArea className="w-full">
-                      <div
-                        className="flex gap-1 px-3 py-1.5"
-                        role="tablist"
-                        aria-label="Danh mục món"
-                      >
-                        {categoriesInActiveZone.map((cat) => (
-                          <button
-                            key={cat.id}
-                            type="button"
-                            role="tab"
-                            aria-selected={activeCategoryId === cat.id}
-                            className={cn(
-                              "touch-target flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors",
-                              activeCategoryId === cat.id
-                                ? "bg-primary/10 text-primary font-semibold"
-                                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                            )}
-                            onClick={() => setActiveCategoryId(cat.id)}
-                          >
-                            {cat.name}
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "text-xs",
-                                activeCategoryId === cat.id &&
-                                  "border-primary/30 bg-primary/10 text-primary",
-                              )}
-                            >
-                              {cat.menu_items.length}
-                            </Badge>
-                          </button>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                ) : (
-                  activeCategory && (
-                    <div className="border-b bg-muted/20 px-3 py-2">
-                      <p className="text-sm font-semibold text-foreground">
-                        {activeCategory.name}
-                      </p>
-                      <span className="text-xs text-muted-foreground">
-                        {CATEGORY_TYPE_LABELS[activeCategory.type] ??
-                          activeCategory.type}
-                      </span>
-                    </div>
-                  )
-                )}
-
-                {/* Lưới món */}
-                <ScrollArea className="flex-1">
-                  <div className="grid grid-cols-2 gap-2 p-2.5 md:grid-cols-3 md:gap-2.5 md:p-3 lg:grid-cols-4">
-                    {activeCategory?.menu_items.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className="touch-target-lg focus-ring-standard flex min-h-20 cursor-pointer flex-col rounded-xl border border-border bg-card p-3 text-left shadow-sm transition-all hover:border-primary/30 hover:shadow-md active:scale-[0.97] md:p-3.5"
-                        onClick={() => handleItemTap(item)}
-                      >
-                        <span className="line-clamp-2 text-base font-semibold leading-snug">
-                          {item.name}
-                        </span>
-                        {item.menu_item_variants.length > 0 && (
-                          <span className="mt-1 text-xs text-muted-foreground">
-                            {item.menu_item_variants.length} lựa chọn
-                          </span>
-                        )}
-                        <span className="mt-auto pt-2.5 text-base font-bold text-primary">
-                          {formatVND(item.base_price)}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                  {activeCategory?.menu_items.length === 0 && (
-                    <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-                      Không có món trong danh mục này
-                    </div>
-                  )}
-                </ScrollArea>
-              </>
-            )}
-          </div>
-
-          {/* Right Panel — Cart / Orders (hidden on mobile, shown inline on md+) */}
-          <div className="hidden w-80 shrink-0 flex-col border-l bg-background md:flex lg:w-90">
-            <div className="border-b px-2 py-2">
-              <div
-                role="tablist"
-                aria-label="POS sidebar"
-                className="flex gap-1 rounded-lg bg-muted p-1"
-              >
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={!showOrders}
-                  className={cn(
-                    "flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                    !showOrders
-                      ? "bg-background shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                  onClick={() => setShowOrders(false)}
-                >
-                  Giỏ hàng
-                  {cartItems.length > 0 && (
-                    <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
-                      {cartQuantity}
-                    </span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={showOrders}
-                  className={cn(
-                    "flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                    showOrders
-                      ? "bg-background shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                  onClick={() => {
-                    setShowOrders(true);
-                    void loadSessionOrders();
-                  }}
-                >
-                  Đơn hàng
-                </button>
-              </div>
-            </div>
-
-            {showOrders ? (
-              <div className="flex flex-1 flex-col overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">Đơn hàng</span>
-                    {sessionOrders.length > 0 && (
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                        {sessionOrders.length}
-                      </span>
-                    )}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => void loadSessionOrders()}
-                  >
-                    <DoorOpen className="mr-1 size-3" />
-                    Tải lại
-                  </Button>
-                </div>
-                <OrderHistory
-                  orders={sessionOrders}
-                  onViewBill={(id) => setBillOrderId(id)}
-                  onViewDetail={(id) => setOrderDetailId(id)}
-                />
-              </div>
-            ) : (
-              <CartSidebar
-                items={cartItems}
-                total={cartTotal}
-                orderType={orderType}
-                selectedTableId={selectedTableId}
-                tables={localTables}
-                canSubmit={canSubmit}
-                isSubmitting={isPending}
-                onUpdateQuantity={updateQuantity}
-                onRemoveItem={removeItem}
-                onClearCart={clearCart}
-                onOrderTypeChange={handleOrderTypeChange}
-                onRequestChangeTable={handleRequestChangeTable}
-                onSubmitOrder={handleSubmitOrder}
-                orderNote={orderNote}
-                onOrderNoteChange={setOrderNote}
-              />
-            )}
-          </div>
-
-          {/* Mobile FAB — opens cart drawer (visible only <md) */}
-          {isMobile && (
-            <button
-              type="button"
-              className="touch-target-lg fixed bottom-6 right-4 z-40 flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-lg transition-transform active:scale-95 md:hidden"
-              onClick={() => setCartDrawerOpen(true)}
-              aria-label="Mở giỏ hàng"
-            >
-              <ShoppingCart className="size-5" />
-              {cartQuantity > 0 && (
+              ) : (
                 <>
-                  <span className="tabular-nums">{cartQuantity}</span>
-                  <span aria-hidden>·</span>
-                  <span className="tabular-nums">{formatVND(cartTotal)}</span>
+                  <div className="border-b border-border/60 bg-background/75 px-3 py-3 md:px-4">
+                    <div className="space-y-3">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="space-y-1">
+                          <p className="app-section-label">Khu thực đơn</p>
+                          <h2 className="text-xl font-semibold tracking-tight text-foreground">
+                            {activeZoneLabel}
+                          </h2>
+                          <p className="text-sm text-muted-foreground">
+                            {activeCategory?.name ?? "Chọn danh mục để bắt đầu thêm món"} ·{" "}
+                            {activeMenuItemCount} món khả dụng
+                          </p>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-3">
+                          <div className="ui-surface-lift rounded-3xl border border-border/60 bg-white/82 px-4 py-3 shadow-sm">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              Danh mục
+                            </p>
+                            <p className="mt-1 text-base font-semibold text-foreground">
+                              {categoriesInActiveZone.length}
+                            </p>
+                          </div>
+                          <div className="ui-surface-lift rounded-3xl border border-primary/15 bg-primary/8 px-4 py-3 shadow-sm">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                              Giỏ hiện tại
+                            </p>
+                            <p className="mt-1 text-base font-semibold text-foreground">
+                              {cartQuantity} món
+                            </p>
+                          </div>
+                          <div className="ui-surface-lift rounded-3xl border border-success/15 bg-success/10 px-4 py-3 shadow-sm">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-success">
+                              Tạm tính
+                            </p>
+                            <p className="mt-1 text-base font-semibold text-foreground">
+                              {formatVND(cartTotal)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <ScrollArea className="w-full">
+                        <div
+                          className="flex gap-2 pb-1"
+                          role="tablist"
+                          aria-label="Khu thực đơn"
+                        >
+                          {availableMenuZones.map((z) => (
+                            <button
+                              key={z}
+                              type="button"
+                              role="tab"
+                              aria-selected={effectiveMenuZone === z}
+                              className={cn(
+                                "touch-target flex h-11 shrink-0 cursor-pointer items-center rounded-2xl border px-4 text-sm font-semibold transition-all",
+                                effectiveMenuZone === z
+                                  ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
+                                  : "border-border/70 bg-white/72 text-muted-foreground hover:bg-muted hover:text-foreground",
+                              )}
+                              onClick={() => setActiveMenuZone(z)}
+                            >
+                              {CATEGORY_TYPE_LABELS[z] ?? z}
+                            </button>
+                          ))}
+                        </div>
+                      </ScrollArea>
+
+                      {categoriesInActiveZone.length > 1 ? (
+                        <ScrollArea className="w-full">
+                          <div
+                            className="flex gap-2 pb-1"
+                            role="tablist"
+                            aria-label="Danh mục món"
+                          >
+                            {categoriesInActiveZone.map((cat) => (
+                              <button
+                                key={cat.id}
+                                type="button"
+                                role="tab"
+                                aria-selected={activeCategoryId === cat.id}
+                                className={cn(
+                                  "touch-target flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-2xl border px-3 text-sm font-medium transition-all",
+                                  activeCategoryId === cat.id
+                                    ? "border-primary/25 bg-primary/10 text-primary font-semibold shadow-sm"
+                                    : "border-border/70 bg-white/72 text-muted-foreground hover:bg-muted hover:text-foreground",
+                                )}
+                                onClick={() => setActiveCategoryId(cat.id)}
+                              >
+                                {cat.name}
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "text-xs",
+                                    activeCategoryId === cat.id &&
+                                      "border-primary/30 bg-primary/10 text-primary",
+                                  )}
+                                >
+                                  {cat.menu_items.length}
+                                </Badge>
+                              </button>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <ScrollArea className="flex-1">
+                    <div className="ui-content-auto grid grid-cols-1 gap-3 p-3 md:grid-cols-2 md:p-4 xl:grid-cols-3 2xl:grid-cols-4">
+                      {activeCategory?.menu_items.map((item) => {
+                        const hasCustomization =
+                          item.menu_item_variants.length > 0 ||
+                          item.menu_item_modifiers.length > 0 ||
+                          item.menu_item_available_sides.length > 0;
+
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className="ui-surface-lift touch-target-lg focus-ring-standard flex min-h-40 cursor-pointer flex-col rounded-4xl border border-border/70 bg-card/92 p-4 text-left shadow-sm transition-all hover:border-primary/25 hover:bg-white active:scale-[0.985]"
+                            onClick={() => handleItemTap(item)}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="space-y-2">
+                                <span className="inline-flex rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+                                  {activeCategory?.name ?? activeZoneLabel}
+                                </span>
+                                <div>
+                              <p className="line-clamp-2 text-lg font-semibold leading-snug text-foreground">
+                                {item.name}
+                              </p>
+                              <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">
+                                {item.description ??
+                                      "Chạm để thêm nhanh hoặc mở tuỳ chọn của món."}
+                              </p>
+                            </div>
+                          </div>
+                              <span
+                                className={cn(
+                                  "rounded-full px-3 py-1 text-xs font-semibold",
+                                  hasCustomization
+                                    ? "bg-warning/12 text-warning"
+                                    : "bg-success/10 text-success",
+                                )}
+                              >
+                                {hasCustomization ? "Tùy chỉnh" : "Thêm nhanh"}
+                              </span>
+                            </div>
+
+                            <div className="mt-auto space-y-3 pt-6">
+                              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                                {item.menu_item_variants.length > 0 && (
+                                  <span className="rounded-full bg-muted px-2.5 py-1">
+                                    {item.menu_item_variants.length} lựa chọn
+                                  </span>
+                                )}
+                                {item.menu_item_modifiers.length > 0 && (
+                                  <span className="rounded-full bg-muted px-2.5 py-1">
+                                    {item.menu_item_modifiers.length} topping
+                                  </span>
+                                )}
+                                {item.menu_item_available_sides.length > 0 && (
+                                  <span className="rounded-full bg-muted px-2.5 py-1">
+                                    {item.menu_item_available_sides.length} món kèm
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-end justify-between gap-3">
+                                <div>
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                    Giá bán
+                                  </p>
+                                  <p className="mt-1 text-xl font-bold text-primary">
+                                    {formatVND(item.base_price)}
+                                  </p>
+                                </div>
+                                <span className="text-sm font-semibold text-foreground">
+                                  Chạm để chọn
+                                </span>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {activeCategory?.menu_items.length === 0 && (
+                      <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+                        Không có món trong danh mục này
+                      </div>
+                    )}
+                  </ScrollArea>
                 </>
               )}
-            </button>
-          )}
+            </div>
 
-          {/* Mobile Cart Drawer (visible only <md) */}
-          {isMobile && (
-            <Drawer
-              open={cartDrawerOpen}
-              onOpenChange={setCartDrawerOpen}
-              shouldScaleBackground={false}
-            >
-              <DrawerContent className="max-h-drawer">
-                <DrawerTitle className="sr-only">Giỏ hàng</DrawerTitle>
-                <div className="max-h-drawer-inner flex flex-col overflow-hidden">
-                  <div className="border-b px-2 py-2">
-                    <div
-                      role="tablist"
-                      aria-label="POS sidebar"
-                      className="flex gap-1 rounded-lg bg-muted p-1"
-                    >
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={!showOrders}
-                        className={cn(
-                          "touch-target flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                          !showOrders
-                            ? "bg-background shadow-sm"
-                            : "text-muted-foreground hover:text-foreground",
-                        )}
-                        onClick={() => setShowOrders(false)}
-                      >
-                        Giỏ hàng
-                        {cartItems.length > 0 && (
-                          <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
-                            {cartQuantity}
-                          </span>
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={showOrders}
-                        className={cn(
-                          "touch-target flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                          showOrders
-                            ? "bg-background shadow-sm"
-                            : "text-muted-foreground hover:text-foreground",
-                        )}
-                        onClick={() => {
-                          setShowOrders(true);
-                          void loadSessionOrders();
-                        }}
-                      >
-                        Đơn hàng
-                      </button>
-                    </div>
-                  </div>
+            <div className="hidden w-80 shrink-0 flex-col border-l border-border/60 bg-background md:flex lg:w-96">
+              {sidebarTabs}
+              {sidebarContent}
+            </div>
 
-                  {showOrders ? (
-                    <div className="flex flex-1 flex-col overflow-hidden">
-                      <div className="flex items-center justify-between px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold">Đơn hàng</span>
-                          {sessionOrders.length > 0 && (
-                            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                              {sessionOrders.length}
-                            </span>
-                          )}
+            {isMobile && (
+              <button
+                type="button"
+                className="touch-target-lg fixed bottom-6 right-4 z-40 flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-lg transition-transform active:scale-95 md:hidden"
+                onClick={() => setCartDrawerOpen(true)}
+                aria-label="Mở giỏ hàng"
+              >
+                <ShoppingCart className="size-5" />
+                {cartQuantity > 0 ? (
+                  <>
+                    <span className="tabular-nums">{cartQuantity}</span>
+                    <span aria-hidden>·</span>
+                    <span className="tabular-nums">{formatVND(cartTotal)}</span>
+                  </>
+                ) : (
+                  <span>Mở điều phối</span>
+                )}
+              </button>
+            )}
+
+            {isMobile && (
+              <Drawer
+                open={cartDrawerOpen}
+                onOpenChange={setCartDrawerOpen}
+                shouldScaleBackground={false}
+              >
+                <DrawerContent className="max-h-drawer">
+                  <DrawerTitle className="sr-only">Giỏ hàng</DrawerTitle>
+                  <div className="max-h-drawer-inner flex flex-col overflow-hidden">
+                    {sidebarTabs}
+                    {showOrders ? (
+                      <div className="flex flex-1 flex-col overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">Đơn hàng</span>
+                            {sessionOrders.length > 0 && (
+                              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                {sessionOrders.length}
+                              </span>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-9 rounded-full px-3 text-xs"
+                            onClick={() => void loadSessionOrders()}
+                          >
+                            <DoorOpen className="mr-1 size-3.5" />
+                            Tải lại
+                          </Button>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => void loadSessionOrders()}
-                        >
-                          <DoorOpen className="mr-1 size-3" />
-                          Tải lại
-                        </Button>
+                        <OrderHistory
+                          orders={sessionOrders}
+                          onViewBill={(id) => setBillOrderId(id)}
+                          onViewDetail={(id) => setOrderDetailId(id)}
+                        />
                       </div>
-                      <OrderHistory
-                        orders={sessionOrders}
-                        onViewBill={(id) => setBillOrderId(id)}
-                        onViewDetail={(id) => setOrderDetailId(id)}
+                    ) : (
+                      <CartSidebar
+                        items={cartItems}
+                        total={cartTotal}
+                        orderType={orderType}
+                        selectedTableId={selectedTableId}
+                        tables={localTables}
+                        progressPercent={flowProgressPercent}
+                        progressHeadline={flowHeadline}
+                        progressHint={flowHint}
+                        steps={flowSteps}
+                        canSubmit={canSubmit}
+                        isSubmitting={isPending}
+                        onUpdateQuantity={updateQuantity}
+                        onRemoveItem={removeItem}
+                        onClearCart={clearCart}
+                        onOrderTypeChange={handleOrderTypeChange}
+                        onRequestChangeTable={handleRequestChangeTable}
+                        onSubmitOrder={() => {
+                          handleSubmitOrder();
+                          setCartDrawerOpen(false);
+                        }}
+                        orderNote={orderNote}
+                        onOrderNoteChange={setOrderNote}
                       />
-                    </div>
-                  ) : (
-                    <CartSidebar
-                      items={cartItems}
-                      total={cartTotal}
-                      orderType={orderType}
-                      selectedTableId={selectedTableId}
-                      tables={localTables}
-                      canSubmit={canSubmit}
-                      isSubmitting={isPending}
-                      onUpdateQuantity={updateQuantity}
-                      onRemoveItem={removeItem}
-                      onClearCart={clearCart}
-                      onOrderTypeChange={handleOrderTypeChange}
-                      onRequestChangeTable={handleRequestChangeTable}
-                      onSubmitOrder={() => {
-                        handleSubmitOrder();
-                        setCartDrawerOpen(false);
-                      }}
-                      orderNote={orderNote}
-                      onOrderNoteChange={setOrderNote}
-                    />
-                  )}
-                </div>
-              </DrawerContent>
-            </Drawer>
-          )}
+                    )}
+                  </div>
+                </DrawerContent>
+              </Drawer>
+            )}
+          </div>
         </>
       )}
 
-      {/* Item Customizer Sheet */}
       <ItemCustomizer
         item={customizerItem}
         onClose={() => setCustomizerItem(null)}
@@ -1015,14 +1363,12 @@ export function PosMenu({
         onTablesChange={setLocalTables}
       />
 
-      {/* Close Session Dialog */}
       <CloseSessionDialog
         sessionId={session.id}
         open={showCloseSession}
         onOpenChange={setShowCloseSession}
       />
 
-      {/* Bill Receipt Sheet */}
       <BillReceipt
         branchId={branchId}
         orderId={billOrderId}

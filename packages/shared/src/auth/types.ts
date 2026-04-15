@@ -30,6 +30,24 @@ export const BRANCH_ROLES: readonly StaffRole[] = [
   "chef",
 ] as const;
 
+/** Roles that do not require branch scope */
+export const TENANT_LEVEL_ROLES: readonly StaffRole[] = [
+  "owner",
+  "super_manager",
+  "area_manager",
+  "office",
+] as const;
+
+/** Roles that managers can create/edit from the current staff screen */
+export const MANAGEABLE_STAFF_ROLES: readonly StaffRole[] = [
+  "area_manager",
+  "branch_manager",
+  "cashier",
+  "waiter",
+  "chef",
+  "office",
+] as const;
+
 /**
  * Operational / floor roles that must belong to a store branch — not headquarters
  * (HQ is office-only: no POS/KDS).
@@ -59,12 +77,12 @@ export function canManageBranchFloorSettings(role: StaffRole): boolean {
 /** Vietnamese display labels for each role */
 export const ROLE_LABEL_VI: Record<StaffRole, string> = {
   owner: "Chủ sở hữu",
-  super_manager: "Trưởng phòng",
+  super_manager: "Quản lý tổng",
   area_manager: "Quản lý khu vực",
   branch_manager: "Quản lý chi nhánh",
   cashier: "Thu ngân",
   waiter: "Phục vụ",
-  chef: "Đầu bếp",
+  chef: "Bếp",
   office: "Văn phòng",
 };
 

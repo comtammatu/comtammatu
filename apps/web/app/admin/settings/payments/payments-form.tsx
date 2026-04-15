@@ -47,8 +47,7 @@ export function PaymentsForm({
         <CardHeader>
           <CardTitle>Phương thức thanh toán trên POS</CardTitle>
           <CardDescription>
-            Bật từng kênh khi đã cấu hình biến môi trường (credentials) trên
-            server. Tiền mặt luôn khả dụng trên POS.
+            Bật kênh đã cấu hình env. Tiền mặt luôn khả dụng.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

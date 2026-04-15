@@ -1,6 +1,6 @@
-# Sprint 6: Finance VAS + HR/Payroll CTCP
+# Sprint 6: Finance VAS + Nhân sự & tiền lương CTCP
 
-> **Module mapping:** M6 (Finance/VAS) + M7 (HR/Payroll) — see `roadmap.md`
+> **Module mapping:** M6 (Finance/VAS) + M7 (Nhân sự & tiền lương) — see `roadmap.md`
 > Depends on: M2 (POS/orders) + M5 (Stock/procurement)
 > Sessions: 7 | Estimate: 6-8 ngày
 > Legal: BHXH bắt buộc, thuế TNCN lũy tiến, BCTC theo VAS

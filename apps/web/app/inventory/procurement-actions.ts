@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 import { PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "../admin/_lib/auth";
+import { getAuthContext } from "./_lib/auth";
 import { fetchHeadquartersBranchId } from "./_lib/headquarters";
 
 const ROLES = PROCUREMENT_ROLES;
@@ -239,7 +239,7 @@ export async function fetchPurchaseOrders(): Promise<ActionResult> {
   const { data, error } = await supabase
     .from("purchase_orders")
     .select(
-      "id, po_number, status, ordered_at, notes, supplier_id, branch_id, suppliers ( id, name )",
+      "id, po_number, status, ordered_at, notes, supplier_id, branch_id, created_by, suppliers ( id, name ), purchase_order_items ( line_total )",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("ordered_at", { ascending: false });
@@ -594,39 +594,6 @@ export async function upsertGrnLine(
   return { success: true };
 }
 
-export async function deleteGrnLine(lineId: number): Promise<ActionResult> {
-  const id = z.coerce.number().int().positive().safeParse(lineId);
-  if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContext(ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-
-  // Verify GRN is still draft before allowing delete
-  const { data: line } = await supabase
-    .from("grn_items")
-    .select("grn_id, goods_received_notes!inner(status)")
-    .eq("id", id.data)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
-  if (!line) return { success: false, error: "Không tìm thấy dòng hàng" };
-  const grnStatus = (line.goods_received_notes as { status: string } | null)
-    ?.status;
-  if (grnStatus !== "draft") {
-    return {
-      success: false,
-      error: "Chỉ có thể xoá dòng hàng ở trạng thái nháp",
-    };
-  }
-
-  const { error } = await supabase
-    .from("grn_items")
-    .delete()
-    .eq("id", id.data)
-    .eq("tenant_id", claims.tenant_id);
-  if (error) return { success: false, error: "Không thể xoá dòng hàng." };
-  return { success: true };
-}
-
 export async function confirmGrn(grnId: number): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(grnId);
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
@@ -744,6 +711,21 @@ export async function createSupplierInvoice(
     }
     return { success: false, error: "Không thể tạo hóa đơn NCC." };
   }
+
+  // Auto-trigger 3-way matching (non-fatal — invoice creation still succeeds)
+  if (data?.id) {
+    const { error: matchErr } = await supabase.rpc(
+      "recompute_supplier_invoice_matching",
+      { p_invoice_id: data.id },
+    );
+    if (matchErr) {
+      console.error(
+        "[createSupplierInvoice] auto-matching failed:",
+        matchErr.message,
+      );
+    }
+  }
+
   return { success: true, data };
 }
 

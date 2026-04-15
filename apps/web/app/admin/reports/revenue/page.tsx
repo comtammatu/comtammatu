@@ -1,4 +1,9 @@
 import { createClient } from "@comtammatu/database/supabase/server";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import {
+  PageContainer,
+  PageHeader,
+} from "@/components/foundation/ui-patterns";
 import { fetchDailyRevenue } from "../../finance/actions";
 import { RevenueReportClient } from "./revenue-report-client";
 
@@ -26,20 +31,18 @@ export default async function RevenueReportPage() {
   const rows = result.success ? ((result.data ?? []) as DailyRevenueRow[]) : [];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Báo cáo doanh thu</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Doanh thu theo ngày — chi nhánh tổng hợp
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        eyebrow={APP_COPY_VI.executiveReporting}
+        title="Báo cáo doanh thu"
+      />
       <RevenueReportClient
         initialRows={rows}
         initialBranchId={branchId}
         initialStart={startDate}
         initialEnd={endDate}
       />
-    </div>
+    </PageContainer>
   );
 }
 
