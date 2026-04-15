@@ -47,7 +47,7 @@ BEGIN
   WHERE je.tenant_id = p_tenant_id
     AND je.status = 'posted'
     AND je.entry_date >= v_start_date
-    AND je.entry_date <= v_end_date;
+    AND je.entry_date < (v_end_date + INTERVAL '1 day');
 
   IF v_entry_ids IS NULL THEN
     v_entry_ids := ARRAY[]::BIGINT[];
@@ -255,8 +255,12 @@ BEGIN
   SET status = 'closed',
       closed_by = v_uid,
       closed_at = now(),
-      notes = COALESCE(p_notes, '') ||
-        CASE WHEN v_has_diff THEN ' [CẢNH BÁO: Có chênh lệch đối chiếu]' ELSE '' END,
+      notes = concat_ws(
+        ' ',
+        nullif(v_period.notes, ''),
+        nullif(p_notes, ''),
+        CASE WHEN v_has_diff THEN '[CẢNH BÁO: Có chênh lệch đối chiếu]' END
+      ),
       updated_at = now()
   WHERE id = v_period.id;
 

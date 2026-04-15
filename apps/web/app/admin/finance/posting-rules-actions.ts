@@ -79,12 +79,16 @@ export async function updatePostingRule(
   if (parsed.data.creditAccountCode) codesToValidate.push(parsed.data.creditAccountCode);
 
   if (codesToValidate.length > 0) {
-    const { data: validAccounts } = await supabase
+    const { data: validAccounts, error: accountsError } = await supabase
       .from("chart_of_accounts")
       .select("account_code")
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
       .in("account_code", codesToValidate);
+
+    if (accountsError) {
+      return { success: false, error: "Không thể xác minh mã tài khoản." };
+    }
 
     const validCodes = new Set(
       (validAccounts ?? []).map((a: { account_code: string }) => a.account_code),
