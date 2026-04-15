@@ -125,20 +125,25 @@ export function ProductionOrderForm({
 
   function handleCreate() {
     const parsedBranchId = Number(branchId);
-    const payloadLines = lines
-      .map((line) => ({
-        finishedGoodId: line.finishedGoodId,
-        quantity: Number(line.quantity),
-        unit: line.unit.trim(),
-      }))
-      .filter(
-        (line) =>
-          Number.isFinite(line.finishedGoodId) &&
-          line.finishedGoodId > 0 &&
-          Number.isFinite(line.quantity) &&
-          line.quantity > 0 &&
-          line.unit.length > 0,
-      );
+    const normalizedLines = lines.map((line) => ({
+      finishedGoodId: line.finishedGoodId,
+      quantity: Number(line.quantity),
+      unit: line.unit.trim(),
+    }));
+
+    const payloadLines = normalizedLines.filter(
+      (line) =>
+        Number.isFinite(line.finishedGoodId) &&
+        line.finishedGoodId > 0 &&
+        Number.isFinite(line.quantity) &&
+        line.quantity > 0 &&
+        line.unit.length > 0,
+    );
+
+    if (payloadLines.length !== normalizedLines.length) {
+      setCreateError("Có dòng thành phẩm không hợp lệ. Vui lòng kiểm tra lại.");
+      return;
+    }
 
     if (payloadLines.length === 0) {
       setCreateError("Cần ít nhất một thành phẩm hợp lệ.");
@@ -165,6 +170,7 @@ export function ProductionOrderForm({
   }
 
   function handleDialogOpenChange(open: boolean) {
+    if (isPending && !open) return; // block close while submitting
     setIsDialogOpen(open);
     if (!open) resetDialog();
   }
@@ -283,6 +289,8 @@ export function ProductionOrderForm({
                     type="button"
                     variant="ghost"
                     size="icon"
+                    aria-label={`Xóa dòng thành phẩm ${index + 1}`}
+                    title="Xóa dòng thành phẩm"
                     onClick={() => removeLine(index)}
                     disabled={lines.length === 1}
                     className="self-start"

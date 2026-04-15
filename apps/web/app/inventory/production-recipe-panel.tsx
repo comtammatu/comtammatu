@@ -546,11 +546,33 @@ export function ProductionRecipePanel({
     router.refresh();
   }
 
+  const canSubmitRecipe =
+    recipeFinishedGoodId !== "" &&
+    recipeIngredientId !== "" &&
+    Number(recipeQuantity) > 0 &&
+    recipeUnit.trim().length > 0 &&
+    Number(recipeYieldFactor) > 0;
+
   function handleRecipeSubmit() {
     const parsedFinishedGoodId = Number(recipeFinishedGoodId);
     const parsedIngredientId = Number(recipeIngredientId);
     const parsedQuantity = Number(recipeQuantity);
     const parsedYieldFactor = Number(recipeYieldFactor);
+
+    if (
+      !Number.isInteger(parsedFinishedGoodId) ||
+      parsedFinishedGoodId <= 0 ||
+      !Number.isInteger(parsedIngredientId) ||
+      parsedIngredientId <= 0 ||
+      !Number.isFinite(parsedQuantity) ||
+      parsedQuantity <= 0 ||
+      recipeUnit.trim().length === 0 ||
+      !Number.isFinite(parsedYieldFactor) ||
+      parsedYieldFactor <= 0
+    ) {
+      setRecipeError("Vui lòng nhập đầy đủ thông tin hợp lệ cho dòng BOM.");
+      return;
+    }
 
     startTransition(async () => {
       setRecipeError(null);
@@ -793,7 +815,7 @@ export function ProductionRecipePanel({
             <Button
               type="button"
               onClick={handleRecipeSubmit}
-              disabled={isPending}
+              disabled={isPending || !canSubmitRecipe}
             >
               {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
               Lưu dòng BOM
