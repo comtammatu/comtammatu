@@ -2,8 +2,7 @@
 
 import { z } from "zod";
 import type { StaffRole } from "@comtammatu/shared/auth";
-import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "../_lib/auth";
+import { withAction } from "@/_lib/with-action";
 
 const STATEMENT_ROLES: readonly StaffRole[] = [
   "owner",
@@ -11,318 +10,292 @@ const STATEMENT_ROLES: readonly StaffRole[] = [
   "area_manager",
 ];
 
+/* ─── Schemas ─── */
+
+const balanceSheetSchema = z.object({
+  asOfDate: z.string().date("Ngày không hợp lệ (YYYY-MM-DD)"),
+});
+
+const incomeStatementSchema = z.object({
+  startDate: z.string().date("Ngày không hợp lệ (YYYY-MM-DD)"),
+  endDate: z.string().date("Ngày không hợp lệ (YYYY-MM-DD)"),
+});
+
+const vatSummarySchema = z.object({
+  period: z.string().regex(/^\d{4}-\d{2}$/, "Kỳ không hợp lệ (YYYY-MM)"),
+});
+
 /* ─── Balance Sheet — Bảng Cân Đối Kế Toán ─── */
 
-export async function generateBalanceSheet(
-  asOfDate: string,
-): Promise<ActionResult> {
-  const parsed = z.string().date().safeParse(asOfDate);
-  if (!parsed.success) {
-    return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
-  }
+export const generateBalanceSheet = withAction(
+  { roles: STATEMENT_ROLES, schema: balanceSheetSchema },
+  async (data, { supabase, claims }) => {
+    const { data: postedEntries } = await supabase
+      .from("journal_entries")
+      .select("id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("status", "posted")
+      .lte("entry_date", data.asOfDate);
 
-  const ctx = await getAuthContext(STATEMENT_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    const postedIds = new Set((postedEntries ?? []).map((e) => e.id));
 
-  const { supabase, claims } = ctx;
+    const { data: allLines, error: linesErr } = await supabase
+      .from("journal_entry_lines")
+      .select(
+        `
+        journal_entry_id,
+        account_id,
+        debit_amount,
+        credit_amount,
+        chart_of_accounts ( account_code, account_name, account_type )
+      `,
+      )
+      .eq("tenant_id", claims.tenant_id);
 
-  // Fetch posted journal entry IDs up to asOfDate
-  const { data: postedEntries } = await supabase
-    .from("journal_entries")
-    .select("id")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("status", "posted")
-    .lte("entry_date", parsed.data);
-
-  const postedIds = new Set((postedEntries ?? []).map((e) => e.id));
-
-  // We need the full lines with entry_id to filter
-  const { data: allLines, error: linesErr } = await supabase
-    .from("journal_entry_lines")
-    .select(
-      `
-      journal_entry_id,
-      account_id,
-      debit_amount,
-      credit_amount,
-      chart_of_accounts ( account_code, account_name, account_type )
-    `,
-    )
-    .eq("tenant_id", claims.tenant_id);
-
-  if (linesErr) {
-    return { success: false, error: "Không thể tải dữ liệu chi tiết." };
-  }
-
-  // Aggregate by account
-  const accountMap = new Map<
-    number,
-    {
-      account_code: string;
-      account_name: string;
-      account_type: string;
-      debit_total: number;
-      credit_total: number;
+    if (linesErr) {
+      return { success: false, error: "Không thể tải dữ liệu chi tiết." };
     }
-  >();
 
-  for (const line of allLines ?? []) {
-    if (!postedIds.has(line.journal_entry_id)) continue;
+    const accountMap = new Map<
+      number,
+      {
+        account_code: string;
+        account_name: string;
+        account_type: string;
+        debit_total: number;
+        credit_total: number;
+      }
+    >();
 
-    const acct = line.chart_of_accounts as {
-      account_code: string;
-      account_name: string;
-      account_type: string;
-    } | null;
-    if (!acct) continue;
+    for (const line of allLines ?? []) {
+      if (!postedIds.has(line.journal_entry_id)) continue;
 
-    const cur = accountMap.get(line.account_id) ?? {
-      account_code: acct.account_code,
-      account_name: acct.account_name,
-      account_type: acct.account_type,
-      debit_total: 0,
-      credit_total: 0,
-    };
-    cur.debit_total += Number(line.debit_amount);
-    cur.credit_total += Number(line.credit_amount);
-    accountMap.set(line.account_id, cur);
-  }
+      const acct = line.chart_of_accounts as {
+        account_code: string;
+        account_name: string;
+        account_type: string;
+      } | null;
+      if (!acct) continue;
 
-  const accounts = Array.from(accountMap.values());
+      const cur = accountMap.get(line.account_id) ?? {
+        account_code: acct.account_code,
+        account_name: acct.account_name,
+        account_type: acct.account_type,
+        debit_total: 0,
+        credit_total: 0,
+      };
+      cur.debit_total += Number(line.debit_amount);
+      cur.credit_total += Number(line.credit_amount);
+      accountMap.set(line.account_id, cur);
+    }
 
-  // Group by type
-  const assets = accounts
-    .filter((a) => a.account_type === "asset")
-    .map((a) => ({ ...a, balance: a.debit_total - a.credit_total }));
-  const liabilities = accounts
-    .filter((a) => a.account_type === "liability")
-    .map((a) => ({ ...a, balance: a.credit_total - a.debit_total }));
-  const equity = accounts
-    .filter((a) => a.account_type === "equity")
-    .map((a) => ({ ...a, balance: a.credit_total - a.debit_total }));
+    const accounts = Array.from(accountMap.values());
 
-  const totalAssets = assets.reduce((s, a) => s + a.balance, 0);
-  const totalLiabilities = liabilities.reduce((s, a) => s + a.balance, 0);
-  const totalEquity = equity.reduce((s, a) => s + a.balance, 0);
+    const assets = accounts
+      .filter((a) => a.account_type === "asset")
+      .map((a) => ({ ...a, balance: a.debit_total - a.credit_total }));
+    const liabilities = accounts
+      .filter((a) => a.account_type === "liability")
+      .map((a) => ({ ...a, balance: a.credit_total - a.debit_total }));
+    const equity = accounts
+      .filter((a) => a.account_type === "equity")
+      .map((a) => ({ ...a, balance: a.credit_total - a.debit_total }));
 
-  // Revenue - Expenses = retained earnings (add to equity)
-  const revenue = accounts
-    .filter((a) => a.account_type === "revenue")
-    .reduce((s, a) => s + (a.credit_total - a.debit_total), 0);
-  const expenses = accounts
-    .filter((a) => a.account_type === "expense")
-    .reduce((s, a) => s + (a.debit_total - a.credit_total), 0);
-  const retainedEarnings = revenue - expenses;
+    const totalAssets = assets.reduce((s, a) => s + a.balance, 0);
+    const totalLiabilities = liabilities.reduce((s, a) => s + a.balance, 0);
+    const totalEquity = equity.reduce((s, a) => s + a.balance, 0);
 
-  return {
-    success: true,
-    data: {
-      asOfDate: parsed.data,
-      assets,
-      liabilities,
-      equity,
-      totalAssets,
-      totalLiabilities,
-      totalEquity: totalEquity + retainedEarnings,
-      retainedEarnings,
-      isBalanced:
-        Math.abs(
-          totalAssets - (totalLiabilities + totalEquity + retainedEarnings),
-        ) < 1,
-    },
-  };
-}
+    const revenue = accounts
+      .filter((a) => a.account_type === "revenue")
+      .reduce((s, a) => s + (a.credit_total - a.debit_total), 0);
+    const expenses = accounts
+      .filter((a) => a.account_type === "expense")
+      .reduce((s, a) => s + (a.debit_total - a.credit_total), 0);
+    const retainedEarnings = revenue - expenses;
 
-/* ─── Income Statement — Kết Quả Kinh Doanh ─── */
-
-export async function generateIncomeStatement(
-  startDate: string,
-  endDate: string,
-): Promise<ActionResult> {
-  const parsedStart = z.string().date().safeParse(startDate);
-  const parsedEnd = z.string().date().safeParse(endDate);
-  if (!parsedStart.success || !parsedEnd.success) {
-    return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
-  }
-
-  const ctx = await getAuthContext(STATEMENT_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  // Get posted journal IDs in date range
-  const { data: entries } = await supabase
-    .from("journal_entries")
-    .select("id")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("status", "posted")
-    .gte("entry_date", parsedStart.data)
-    .lte("entry_date", parsedEnd.data);
-
-  const entryIds = (entries ?? []).map((e) => e.id);
-
-  if (entryIds.length === 0) {
     return {
       success: true,
       data: {
-        startDate: parsedStart.data,
-        endDate: parsedEnd.data,
-        revenue: [],
-        expenses: [],
-        totalRevenue: 0,
-        totalExpenses: 0,
-        netProfit: 0,
+        asOfDate: data.asOfDate,
+        assets,
+        liabilities,
+        equity,
+        totalAssets,
+        totalLiabilities,
+        totalEquity: totalEquity + retainedEarnings,
+        retainedEarnings,
+        isBalanced:
+          Math.abs(
+            totalAssets - (totalLiabilities + totalEquity + retainedEarnings),
+          ) < 1,
       },
     };
-  }
+  },
+);
 
-  const { data: lines, error } = await supabase
-    .from("journal_entry_lines")
-    .select(
-      `
-      journal_entry_id,
-      account_id,
-      debit_amount,
-      credit_amount,
-      chart_of_accounts ( account_code, account_name, account_type )
-    `,
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .in("journal_entry_id", entryIds);
+/* ─── Income Statement — Kết Quả Kinh Doanh ─── */
 
-  if (error) {
-    return { success: false, error: "Không thể tải dữ liệu bút toán." };
-  }
+export const generateIncomeStatement = withAction(
+  { roles: STATEMENT_ROLES, schema: incomeStatementSchema },
+  async (data, { supabase, claims }) => {
+    const { data: entries } = await supabase
+      .from("journal_entries")
+      .select("id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("status", "posted")
+      .gte("entry_date", data.startDate)
+      .lte("entry_date", data.endDate);
 
-  // Aggregate revenue and expense accounts
-  const accountMap = new Map<
-    number,
-    {
-      account_code: string;
-      account_name: string;
-      account_type: string;
-      amount: number;
+    const entryIds = (entries ?? []).map((e) => e.id);
+
+    if (entryIds.length === 0) {
+      return {
+        success: true,
+        data: {
+          startDate: data.startDate,
+          endDate: data.endDate,
+          revenue: [],
+          expenses: [],
+          totalRevenue: 0,
+          totalExpenses: 0,
+          netProfit: 0,
+        },
+      };
     }
-  >();
 
-  for (const line of lines ?? []) {
-    const acct = line.chart_of_accounts as {
-      account_code: string;
-      account_name: string;
-      account_type: string;
-    } | null;
-    if (!acct) continue;
-    if (acct.account_type !== "revenue" && acct.account_type !== "expense")
-      continue;
+    const { data: lines, error } = await supabase
+      .from("journal_entry_lines")
+      .select(
+        `
+        journal_entry_id,
+        account_id,
+        debit_amount,
+        credit_amount,
+        chart_of_accounts ( account_code, account_name, account_type )
+      `,
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .in("journal_entry_id", entryIds);
 
-    const cur = accountMap.get(line.account_id) ?? {
-      account_code: acct.account_code,
-      account_name: acct.account_name,
-      account_type: acct.account_type,
-      amount: 0,
+    if (error) {
+      return { success: false, error: "Không thể tải dữ liệu bút toán." };
+    }
+
+    const accountMap = new Map<
+      number,
+      {
+        account_code: string;
+        account_name: string;
+        account_type: string;
+        amount: number;
+      }
+    >();
+
+    for (const line of lines ?? []) {
+      const acct = line.chart_of_accounts as {
+        account_code: string;
+        account_name: string;
+        account_type: string;
+      } | null;
+      if (!acct) continue;
+      if (acct.account_type !== "revenue" && acct.account_type !== "expense")
+        continue;
+
+      const cur = accountMap.get(line.account_id) ?? {
+        account_code: acct.account_code,
+        account_name: acct.account_name,
+        account_type: acct.account_type,
+        amount: 0,
+      };
+
+      if (acct.account_type === "revenue") {
+        cur.amount += Number(line.credit_amount) - Number(line.debit_amount);
+      } else {
+        cur.amount += Number(line.debit_amount) - Number(line.credit_amount);
+      }
+      accountMap.set(line.account_id, cur);
+    }
+
+    const all = Array.from(accountMap.values());
+    const revenueItems = all.filter((a) => a.account_type === "revenue");
+    const expenseItems = all.filter((a) => a.account_type === "expense");
+    const totalRevenue = revenueItems.reduce((s, a) => s + a.amount, 0);
+    const totalExpenses = expenseItems.reduce((s, a) => s + a.amount, 0);
+
+    return {
+      success: true,
+      data: {
+        startDate: data.startDate,
+        endDate: data.endDate,
+        revenue: revenueItems,
+        expenses: expenseItems,
+        totalRevenue,
+        totalExpenses,
+        netProfit: totalRevenue - totalExpenses,
+      },
     };
-
-    if (acct.account_type === "revenue") {
-      cur.amount += Number(line.credit_amount) - Number(line.debit_amount);
-    } else {
-      cur.amount += Number(line.debit_amount) - Number(line.credit_amount);
-    }
-    accountMap.set(line.account_id, cur);
-  }
-
-  const all = Array.from(accountMap.values());
-  const revenueItems = all.filter((a) => a.account_type === "revenue");
-  const expenseItems = all.filter((a) => a.account_type === "expense");
-  const totalRevenue = revenueItems.reduce((s, a) => s + a.amount, 0);
-  const totalExpenses = expenseItems.reduce((s, a) => s + a.amount, 0);
-
-  return {
-    success: true,
-    data: {
-      startDate: parsedStart.data,
-      endDate: parsedEnd.data,
-      revenue: revenueItems,
-      expenses: expenseItems,
-      totalRevenue,
-      totalExpenses,
-      netProfit: totalRevenue - totalExpenses,
-    },
-  };
-}
+  },
+);
 
 /* ─── VAT Summary — Tổng hợp thuế GTGT ─── */
 
-export async function generateVatSummary(
-  period: string,
-): Promise<ActionResult> {
-  const parsedPeriod = z
-    .string()
-    .regex(/^\d{4}-\d{2}$/)
-    .safeParse(period);
-  if (!parsedPeriod.success) {
-    return { success: false, error: "Kỳ không hợp lệ (YYYY-MM)" };
-  }
+export const generateVatSummary = withAction(
+  { roles: STATEMENT_ROLES, schema: vatSummarySchema },
+  async (data, { supabase, claims }) => {
+    const [year, month] = data.period.split("-").map(Number);
+    const startDate = `${data.period}-01`;
+    const endDate = new Date(year!, month!, 0).toISOString().split("T")[0];
 
-  const ctx = await getAuthContext(STATEMENT_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    const { data: vatOut } = await supabase
+      .from("tax_invoices")
+      .select("vat_amount, subtotal, total_amount")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("status", "issued")
+      .gte("issued_at", startDate)
+      .lte("issued_at", `${endDate}T23:59:59`);
 
-  const { supabase, claims } = ctx;
+    const totalVatOut = (vatOut ?? []).reduce(
+      (s, r) => s + Number(r.vat_amount),
+      0,
+    );
+    const totalRevenueBeforeVat = (vatOut ?? []).reduce(
+      (s, r) => s + Number(r.subtotal),
+      0,
+    );
 
-  const [year, month] = parsedPeriod.data.split("-").map(Number);
-  const startDate = `${parsedPeriod.data}-01`;
-  const endDate = new Date(year!, month!, 0).toISOString().split("T")[0];
+    const { data: vatIn } = await supabase
+      .from("supplier_invoices")
+      .select("vat_amount, subtotal, invoice_date")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("matching_status", "matched")
+      .gte("invoice_date", startDate)
+      .lte("invoice_date", `${endDate}T23:59:59`);
 
-  // VAT output — from issued tax_invoices
-  const { data: vatOut } = await supabase
-    .from("tax_invoices")
-    .select("vat_amount, subtotal, total_amount")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("status", "issued")
-    .gte("issued_at", startDate)
-    .lte("issued_at", `${endDate}T23:59:59`);
+    const totalVatIn = (vatIn ?? []).reduce(
+      (s, r) => s + Number(r.vat_amount),
+      0,
+    );
+    const totalPurchaseBeforeVat = (vatIn ?? []).reduce(
+      (s, r) => s + Number(r.subtotal),
+      0,
+    );
 
-  const totalVatOut = (vatOut ?? []).reduce(
-    (s, r) => s + Number(r.vat_amount),
-    0,
-  );
-  const totalRevenueBeforeVat = (vatOut ?? []).reduce(
-    (s, r) => s + Number(r.subtotal),
-    0,
-  );
-
-  // VAT input — from matched supplier_invoices in the period
-  const { data: vatIn } = await supabase
-    .from("supplier_invoices")
-    .select("vat_amount, subtotal, invoice_date")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("matching_status", "matched")
-    .gte("invoice_date", startDate)
-    .lte("invoice_date", `${endDate}T23:59:59`);
-
-  const totalVatIn = (vatIn ?? []).reduce(
-    (s, r) => s + Number(r.vat_amount),
-    0,
-  );
-  const totalPurchaseBeforeVat = (vatIn ?? []).reduce(
-    (s, r) => s + Number(r.subtotal),
-    0,
-  );
-
-  return {
-    success: true,
-    data: {
-      period: parsedPeriod.data,
-      output: {
-        invoiceCount: (vatOut ?? []).length,
-        subtotal: totalRevenueBeforeVat,
-        vatAmount: totalVatOut,
+    return {
+      success: true,
+      data: {
+        period: data.period,
+        output: {
+          invoiceCount: (vatOut ?? []).length,
+          subtotal: totalRevenueBeforeVat,
+          vatAmount: totalVatOut,
+        },
+        input: {
+          invoiceCount: (vatIn ?? []).length,
+          subtotal: totalPurchaseBeforeVat,
+          vatAmount: totalVatIn,
+        },
+        vatPayable: totalVatOut - totalVatIn,
       },
-      input: {
-        invoiceCount: (vatIn ?? []).length,
-        subtotal: totalPurchaseBeforeVat,
-        vatAmount: totalVatIn,
-      },
-      vatPayable: totalVatOut - totalVatIn,
-    },
-  };
-}
+    };
+  },
+);

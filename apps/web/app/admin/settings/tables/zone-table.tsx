@@ -51,7 +51,7 @@ export function ZoneTable({ zones }: ZoneTableProps) {
 
   function handleDelete(id: number) {
     startTransition(async () => {
-      const result = await deleteZone(id);
+      const result = await deleteZone({ id });
       if (!result.success) {
         toast.error(result.error);
       } else {

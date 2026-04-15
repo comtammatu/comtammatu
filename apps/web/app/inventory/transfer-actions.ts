@@ -56,13 +56,23 @@ export async function fetchStockTransfers(): Promise<ActionResult> {
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
-  const { data: transfers, error } = await supabase
+  let transferQuery = supabase
     .from("stock_transfers")
     .select(
       "id, transfer_number, status, notes, vehicle_info, shipped_at, received_at, receive_started_at, from_branch_id, to_branch_id, from_location_id, to_location_id, created_at",
     )
-    .eq("tenant_id", claims.tenant_id)
-    .order("created_at", { ascending: false });
+    .eq("tenant_id", claims.tenant_id);
+
+  // Branch manager can only see transfers involving their branch
+  if (claims.branch_id) {
+    transferQuery = transferQuery.or(
+      `from_branch_id.eq.${claims.branch_id},to_branch_id.eq.${claims.branch_id}`,
+    );
+  }
+
+  const { data: transfers, error } = await transferQuery.order("created_at", {
+    ascending: false,
+  });
   if (error) return { success: false, error: "Không thể tải phiếu chuyển." };
   const { data: branches } = await supabase
     .from("branches")

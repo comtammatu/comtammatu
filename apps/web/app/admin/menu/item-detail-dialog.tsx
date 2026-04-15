@@ -162,7 +162,7 @@ export function ItemDetailDialog({
       .filter((v) => v.name.trim() !== "")
       .map((v, i) => ({ ...v, sort_order: i }));
     startTransition(async () => {
-      const result = await saveVariants(item.id, valid);
+      const result = await saveVariants({ itemId: item.id, variants: valid });
       if (result.success) {
         toast.success("Đã lưu biến thể");
       } else {
@@ -203,7 +203,7 @@ export function ItemDetailDialog({
       .filter((m) => m.name.trim() !== "")
       .map((m, i) => ({ ...m, sort_order: i }));
     startTransition(async () => {
-      const result = await saveModifiers(item.id, valid);
+      const result = await saveModifiers({ itemId: item.id, modifiers: valid });
       if (result.success) {
         toast.success("Đã lưu tùy chọn");
       } else {
@@ -242,10 +242,10 @@ export function ItemDetailDialog({
   function handleSaveSides() {
     if (!item) return;
     startTransition(async () => {
-      const result = await saveSides(
-        item.id,
-        sides.map((s) => ({ id: s.side_item_id, is_default: s.is_default })),
-      );
+      const result = await saveSides({
+        mainItemId: item.id,
+        sideItemIds: sides.map((s) => ({ id: s.side_item_id, is_default: s.is_default })),
+      });
       if (result.success) {
         toast.success("Đã lưu món ăn kèm");
       } else {

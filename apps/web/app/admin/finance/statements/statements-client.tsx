@@ -53,7 +53,7 @@ export function StatementsClient() {
 
   function handleBalanceSheet() {
     startTransition(async () => {
-      const result = await generateBalanceSheet(bsDate);
+      const result = await generateBalanceSheet({ asOfDate: bsDate });
       if (result.success) {
         setBsData(result.data as Record<string, unknown>);
       } else {
@@ -64,7 +64,7 @@ export function StatementsClient() {
 
   function handleIncomeStatement() {
     startTransition(async () => {
-      const result = await generateIncomeStatement(isStart, isEnd);
+      const result = await generateIncomeStatement({ startDate: isStart, endDate: isEnd });
       if (result.success) {
         setIsData(result.data as Record<string, unknown>);
       } else {
@@ -75,7 +75,7 @@ export function StatementsClient() {
 
   function handleVatSummary() {
     startTransition(async () => {
-      const result = await generateVatSummary(vatPeriod);
+      const result = await generateVatSummary({ period: vatPeriod });
       if (result.success) {
         setVatData(result.data as Record<string, unknown>);
       } else {

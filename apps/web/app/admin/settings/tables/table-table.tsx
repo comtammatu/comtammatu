@@ -60,7 +60,7 @@ export function TableTable({ tables, zones }: TableTableProps) {
   async function handleDelete(e: React.MouseEvent, id: number) {
     e.preventDefault();
     setPendingDeleteId(id);
-    const result = await deleteTable(id);
+    const result = await deleteTable({ id });
     setPendingDeleteId(null);
     if (!result.success) {
       toast.error(result.error);

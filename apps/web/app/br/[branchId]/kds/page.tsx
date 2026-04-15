@@ -138,7 +138,7 @@ export default async function KdsPage({
   }
 
   // Fetch active tickets for this branch
-  const { data: rawTickets } = await supabase
+  const { data: rawTickets, error: ticketsError } = await supabase
     .from("kds_tickets")
     .select(
       "id, station_id, order_id, order_item_id, status, bumped_at, created_at",
@@ -146,6 +146,39 @@ export default async function KdsPage({
     .eq("branch_id", branchIdNum)
     .in("status", ["pending", "preparing", "ready"])
     .order("created_at");
+
+  if (ticketsError) {
+    return (
+      <KdsRouteState
+        title="Không thể dựng bảng điều phối bếp"
+        description="Không tải được vé bếp."
+        status={
+          <>
+            <TriangleAlert className="size-3.5" />
+            <span>Lỗi tải vé bếp</span>
+          </>
+        }
+        statusTone="danger"
+        steps={[
+          {
+            label: "Xác minh quyền bếp",
+            description: "Đã xác minh quyền truy cập.",
+            state: "done",
+          },
+          {
+            label: "Nạp trạm chế biến",
+            description: "Đã tải trạm hoạt động.",
+            state: "done",
+          },
+          {
+            label: "Hiển thị đơn đang chạy",
+            description: "Không thể tải vé bếp.",
+            state: "current",
+          },
+        ]}
+      />
+    );
+  }
 
   const stations = (rawStations ?? []) as KdsStation[];
   const tickets = (rawTickets ?? []) as KdsTicket[];

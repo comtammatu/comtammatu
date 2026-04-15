@@ -35,10 +35,20 @@ const issueLineDeleteSchema = z.object({
 
 /* ─── fetchStockIssues ─── */
 
+const fetchStockIssuesSchema = z.object({
+  branchId: z.coerce.number().int().positive().optional(),
+  status: z.string().optional(),
+});
+
 export async function fetchStockIssues(opts?: {
   branchId?: number;
   status?: string;
 }): Promise<ActionResult> {
+  const parsed = fetchStockIssuesSchema.safeParse(opts ?? {});
+  if (!parsed.success) {
+    return { success: false, error: "Tham số không hợp lệ" };
+  }
+
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
@@ -52,11 +62,11 @@ export async function fetchStockIssues(opts?: {
     .eq("tenant_id", claims.tenant_id)
     .order("issued_at", { ascending: false });
 
-  if (opts?.branchId) {
-    query = query.eq("branch_id", opts.branchId);
+  if (parsed.data.branchId) {
+    query = query.eq("branch_id", parsed.data.branchId);
   }
-  if (opts?.status) {
-    query = query.eq("status", opts.status);
+  if (parsed.data.status) {
+    query = query.eq("status", parsed.data.status);
   }
   if (claims.branch_id) {
     query = query.eq("branch_id", claims.branch_id);
@@ -128,7 +138,8 @@ export async function createStockIssueDraft(
     .select("id, source_location_id, target_location_id")
     .single();
 
-  if (error) {
+  // RLS returns { data: null, error: null } on blocked writes
+  if (error || !data) {
     return { success: false, error: "Không thể tạo phiếu xuất." };
   }
   return { success: true, data };
@@ -147,15 +158,21 @@ export async function fetchStockIssueDetail(
 
   const { supabase, claims } = ctx;
 
+  let issueQuery = supabase
+    .from("stock_issues")
+    .select(
+      "id, issue_number, issue_type, status, notes, issued_at, branch_id, source_location_id, target_location_id, branches ( id, name )",
+    )
+    .eq("id", id.data)
+    .eq("tenant_id", claims.tenant_id);
+
+  // Branch manager can only view their own branch's issues
+  if (claims.branch_id) {
+    issueQuery = issueQuery.eq("branch_id", claims.branch_id);
+  }
+
   const [issueRes, linesRes] = await Promise.all([
-    supabase
-      .from("stock_issues")
-      .select(
-        "id, issue_number, issue_type, status, notes, issued_at, branch_id, source_location_id, target_location_id, branches ( id, name )",
-      )
-      .eq("id", id.data)
-      .eq("tenant_id", claims.tenant_id)
-      .single(),
+    issueQuery.single(),
     supabase
       .from("stock_issue_items")
       .select(

@@ -88,7 +88,12 @@ export async function resolveDefaultInventoryLocation(
     .maybeSingle();
 
   if (error) {
-    return null;
+    // Only swallow compat errors (table/column not yet migrated).
+    // Surface real failures so callers don't proceed with unscoped location_id.
+    if (isInventoryLocationCompatError(error)) {
+      return null;
+    }
+    throw error;
   }
 
   return data?.id ?? null;

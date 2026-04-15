@@ -67,7 +67,7 @@ export function BranchTable({
 
   function handleToggleActive(id: number) {
     startTransition(async () => {
-      const result = await toggleBranchActive(id);
+      const result = await toggleBranchActive({ id });
       if (!result.success) {
         toast.error(result.error);
       }
@@ -76,7 +76,7 @@ export function BranchTable({
 
   function handleSetHQ(id: number) {
     startTransition(async () => {
-      const result = await setHeadquarters(id);
+      const result = await setHeadquarters({ id });
       if (!result.success) {
         toast.error(result.error);
       }

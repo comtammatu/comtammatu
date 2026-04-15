@@ -49,7 +49,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
 
   function handleToggleActive(id: number) {
     startTransition(async () => {
-      const result = await toggleCategoryActive(id);
+      const result = await toggleCategoryActive({ id });
       if (!result.success) {
         toast.error(result.error);
       }

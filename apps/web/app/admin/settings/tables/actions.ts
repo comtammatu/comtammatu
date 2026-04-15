@@ -2,13 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient } from "@comtammatu/database/supabase/server";
 import {
   BRANCH_FLOOR_SETTINGS_ROLES,
   type StaffRole,
 } from "@comtammatu/shared/auth";
-import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "../../_lib/auth";
+import { withAction, withFormAction, type ActionContext } from "@/_lib/with-action";
 import { TABLE_STATUSES } from "./constants";
 
 /* ─── Helpers ─── */
@@ -16,7 +14,7 @@ import { TABLE_STATUSES } from "./constants";
 const SETTINGS_ROLES: readonly StaffRole[] = BRANCH_FLOOR_SETTINGS_ROLES;
 
 async function verifyBranchOwnership(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ActionContext["supabase"],
   branchId: number,
   tenantId: number,
 ): Promise<boolean> {
@@ -29,12 +27,11 @@ async function verifyBranchOwnership(
   return !!data;
 }
 
-/** Branch manager can only operate on their own branch */
 function canOperateBranch(
   claimsBranchId: number | null,
   targetBranchId: number,
 ): boolean {
-  if (claimsBranchId === null) return true; // owner/super_manager/area_manager
+  if (claimsBranchId === null) return true;
   return claimsBranchId === targetBranchId;
 }
 
@@ -65,6 +62,10 @@ const updateZoneSchema = z.object({
   sort_order: z.coerce.number().int().min(0).default(0),
 });
 
+const deleteIdSchema = z.object({
+  id: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
+});
+
 /* ─── Table Schemas ─── */
 
 const createTableSchema = z.object({
@@ -93,298 +94,231 @@ const updateTableSchema = z.object({
 
 /* ─── Zone Actions ─── */
 
-export async function createZone(
-  _prev: ActionResult | null,
-  formData: FormData,
-): Promise<ActionResult> {
-  const parsed = createZoneSchema.safeParse({
-    name: formData.get("name"),
-    branch_id: formData.get("branch_id"),
-    sort_order: formData.get("sort_order") || 0,
-  });
+export const createZone = withFormAction(
+  {
+    roles: SETTINGS_ROLES,
+    schema: createZoneSchema,
+    extract: (fd) => ({
+      name: fd.get("name"),
+      branch_id: fd.get("branch_id"),
+      sort_order: fd.get("sort_order") || 0,
+    }),
+  },
+  async (data, { supabase, claims }) => {
+    if (!canOperateBranch(claims.branch_id, data.branch_id)) {
+      return { success: false, error: "Không có quyền thao tác chi nhánh này" };
+    }
 
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
+    if (
+      !(await verifyBranchOwnership(supabase, data.branch_id, claims.tenant_id))
+    ) {
+      return { success: false, error: "Chi nhánh không hợp lệ" };
+    }
 
-  const ctx = await getAuthContext(SETTINGS_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    const { error } = await supabase.from("branch_zones").insert({
+      tenant_id: claims.tenant_id,
+      branch_id: data.branch_id,
+      name: data.name,
+      sort_order: data.sort_order,
+    });
 
-  const { supabase, claims } = ctx;
+    if (error) {
+      return { success: false, error: mapZoneDbError(error.code) };
+    }
 
-  if (!canOperateBranch(claims.branch_id, parsed.data.branch_id)) {
-    return { success: false, error: "Không có quyền thao tác chi nhánh này" };
-  }
+    revalidatePath("/admin/settings/tables");
+    return { success: true };
+  },
+);
 
-  if (
-    !(await verifyBranchOwnership(
-      supabase,
-      parsed.data.branch_id,
-      claims.tenant_id,
-    ))
-  ) {
-    return { success: false, error: "Chi nhánh không hợp lệ" };
-  }
+export const updateZone = withFormAction(
+  {
+    roles: SETTINGS_ROLES,
+    schema: updateZoneSchema,
+    extract: (fd) => ({
+      id: fd.get("id"),
+      name: fd.get("name"),
+      branch_id: fd.get("branch_id"),
+      sort_order: fd.get("sort_order") || 0,
+    }),
+  },
+  async (data, { supabase, claims }) => {
+    if (!canOperateBranch(claims.branch_id, data.branch_id)) {
+      return { success: false, error: "Không có quyền thao tác chi nhánh này" };
+    }
 
-  const { error } = await supabase.from("branch_zones").insert({
-    tenant_id: claims.tenant_id,
-    branch_id: parsed.data.branch_id,
-    name: parsed.data.name,
-    sort_order: parsed.data.sort_order,
-  });
+    if (
+      !(await verifyBranchOwnership(supabase, data.branch_id, claims.tenant_id))
+    ) {
+      return { success: false, error: "Chi nhánh không hợp lệ" };
+    }
 
-  if (error) {
-    return { success: false, error: mapZoneDbError(error.code) };
-  }
+    const { error } = await supabase
+      .from("branch_zones")
+      .update({
+        name: data.name,
+        branch_id: data.branch_id,
+        sort_order: data.sort_order,
+      })
+      .eq("id", data.id)
+      .eq("tenant_id", claims.tenant_id);
 
-  revalidatePath("/admin/settings/tables");
-  return { success: true };
-}
+    if (error) {
+      return { success: false, error: mapZoneDbError(error.code) };
+    }
 
-export async function updateZone(
-  _prev: ActionResult | null,
-  formData: FormData,
-): Promise<ActionResult> {
-  const parsed = updateZoneSchema.safeParse({
-    id: formData.get("id"),
-    name: formData.get("name"),
-    branch_id: formData.get("branch_id"),
-    sort_order: formData.get("sort_order") || 0,
-  });
+    revalidatePath("/admin/settings/tables");
+    return { success: true };
+  },
+);
 
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
+export const deleteZone = withAction(
+  { roles: SETTINGS_ROLES, schema: deleteIdSchema },
+  async (data, { supabase, claims }) => {
+    let deleteQuery = supabase
+      .from("branch_zones")
+      .delete()
+      .eq("id", data.id)
+      .eq("tenant_id", claims.tenant_id);
 
-  const ctx = await getAuthContext(SETTINGS_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    if (claims.branch_id) {
+      deleteQuery = deleteQuery.eq("branch_id", claims.branch_id);
+    }
 
-  const { supabase, claims } = ctx;
+    const { data: result, error } = await deleteQuery.select("id");
 
-  if (!canOperateBranch(claims.branch_id, parsed.data.branch_id)) {
-    return { success: false, error: "Không có quyền thao tác chi nhánh này" };
-  }
+    if (error) {
+      return { success: false, error: mapZoneDbError(error.code) };
+    }
 
-  if (
-    !(await verifyBranchOwnership(
-      supabase,
-      parsed.data.branch_id,
-      claims.tenant_id,
-    ))
-  ) {
-    return { success: false, error: "Chi nhánh không hợp lệ" };
-  }
+    if (!result || result.length === 0) {
+      return { success: false, error: "Không tìm thấy khu vực" };
+    }
 
-  const { error } = await supabase
-    .from("branch_zones")
-    .update({
-      name: parsed.data.name,
-      branch_id: parsed.data.branch_id,
-      sort_order: parsed.data.sort_order,
-    })
-    .eq("id", parsed.data.id)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (error) {
-    return { success: false, error: mapZoneDbError(error.code) };
-  }
-
-  revalidatePath("/admin/settings/tables");
-  return { success: true };
-}
-
-const deleteIdSchema = z.coerce.number().int().positive();
-
-export async function deleteZone(zoneId: number): Promise<ActionResult> {
-  const parsed = deleteIdSchema.safeParse(zoneId);
-  if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
-
-  const ctx = await getAuthContext(SETTINGS_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  let deleteQuery = supabase
-    .from("branch_zones")
-    .delete()
-    .eq("id", parsed.data)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (claims.branch_id) {
-    deleteQuery = deleteQuery.eq("branch_id", claims.branch_id);
-  }
-
-  const { data, error } = await deleteQuery.select("id");
-
-  if (error) {
-    return { success: false, error: mapZoneDbError(error.code) };
-  }
-
-  if (!data || data.length === 0) {
-    return { success: false, error: "Không tìm thấy khu vực" };
-  }
-
-  revalidatePath("/admin/settings/tables");
-  return { success: true };
-}
+    revalidatePath("/admin/settings/tables");
+    return { success: true };
+  },
+);
 
 /* ─── Table Actions ─── */
 
-export async function createTable(
-  _prev: ActionResult | null,
-  formData: FormData,
-): Promise<ActionResult> {
-  const rawZoneId = formData.get("zone_id");
-  const zoneId = rawZoneId && rawZoneId !== "none" ? rawZoneId : undefined;
+export const createTable = withFormAction(
+  {
+    roles: SETTINGS_ROLES,
+    schema: createTableSchema,
+    extract: (fd) => {
+      const rawZoneId = fd.get("zone_id");
+      const zoneId = rawZoneId && rawZoneId !== "none" ? rawZoneId : undefined;
+      return {
+        number: fd.get("number"),
+        branch_id: fd.get("branch_id"),
+        zone_id: zoneId,
+        capacity: fd.get("capacity") || 4,
+      };
+    },
+  },
+  async (data, { supabase, claims }) => {
+    if (!canOperateBranch(claims.branch_id, data.branch_id)) {
+      return { success: false, error: "Không có quyền thao tác chi nhánh này" };
+    }
 
-  const parsed = createTableSchema.safeParse({
-    number: formData.get("number"),
-    branch_id: formData.get("branch_id"),
-    zone_id: zoneId,
-    capacity: formData.get("capacity") || 4,
-  });
+    if (
+      !(await verifyBranchOwnership(supabase, data.branch_id, claims.tenant_id))
+    ) {
+      return { success: false, error: "Chi nhánh không hợp lệ" };
+    }
 
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
+    const { error } = await supabase.from("tables").insert({
+      tenant_id: claims.tenant_id,
+      branch_id: data.branch_id,
+      zone_id: data.zone_id ?? null,
+      number: data.number,
+      capacity: data.capacity,
+    });
 
-  const ctx = await getAuthContext(SETTINGS_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    if (error) {
+      return { success: false, error: mapTableDbError(error.code) };
+    }
 
-  const { supabase, claims } = ctx;
+    revalidatePath("/admin/settings/tables");
+    return { success: true };
+  },
+);
 
-  if (!canOperateBranch(claims.branch_id, parsed.data.branch_id)) {
-    return { success: false, error: "Không có quyền thao tác chi nhánh này" };
-  }
+export const updateTable = withFormAction(
+  {
+    roles: SETTINGS_ROLES,
+    schema: updateTableSchema,
+    extract: (fd) => {
+      const rawZoneId = fd.get("zone_id");
+      const zoneId = rawZoneId && rawZoneId !== "none" ? rawZoneId : undefined;
+      const rawStatus = fd.get("status");
+      return {
+        id: fd.get("id"),
+        number: fd.get("number"),
+        branch_id: fd.get("branch_id"),
+        zone_id: zoneId,
+        capacity: fd.get("capacity") || 4,
+        status: rawStatus ? rawStatus : undefined,
+      };
+    },
+  },
+  async (data, { supabase, claims }) => {
+    if (!canOperateBranch(claims.branch_id, data.branch_id)) {
+      return { success: false, error: "Không có quyền thao tác chi nhánh này" };
+    }
 
-  if (
-    !(await verifyBranchOwnership(
-      supabase,
-      parsed.data.branch_id,
-      claims.tenant_id,
-    ))
-  ) {
-    return { success: false, error: "Chi nhánh không hợp lệ" };
-  }
+    if (
+      !(await verifyBranchOwnership(supabase, data.branch_id, claims.tenant_id))
+    ) {
+      return { success: false, error: "Chi nhánh không hợp lệ" };
+    }
 
-  const { error } = await supabase.from("tables").insert({
-    tenant_id: claims.tenant_id,
-    branch_id: parsed.data.branch_id,
-    zone_id: parsed.data.zone_id ?? null,
-    number: parsed.data.number,
-    capacity: parsed.data.capacity,
-  });
+    const { error } = await supabase
+      .from("tables")
+      .update({
+        number: data.number,
+        branch_id: data.branch_id,
+        zone_id: data.zone_id ?? null,
+        capacity: data.capacity,
+        ...(data.status ? { status: data.status } : {}),
+      })
+      .eq("id", data.id)
+      .eq("tenant_id", claims.tenant_id);
 
-  if (error) {
-    return { success: false, error: mapTableDbError(error.code) };
-  }
+    if (error) {
+      return { success: false, error: mapTableDbError(error.code) };
+    }
 
-  revalidatePath("/admin/settings/tables");
-  return { success: true };
-}
+    revalidatePath("/admin/settings/tables");
+    return { success: true };
+  },
+);
 
-export async function updateTable(
-  _prev: ActionResult | null,
-  formData: FormData,
-): Promise<ActionResult> {
-  const rawZoneId = formData.get("zone_id");
-  const zoneId = rawZoneId && rawZoneId !== "none" ? rawZoneId : undefined;
+export const deleteTable = withAction(
+  { roles: SETTINGS_ROLES, schema: deleteIdSchema },
+  async (data, { supabase, claims }) => {
+    let deleteTableQuery = supabase
+      .from("tables")
+      .delete()
+      .eq("id", data.id)
+      .eq("tenant_id", claims.tenant_id);
 
-  const rawStatus = formData.get("status");
+    if (claims.branch_id) {
+      deleteTableQuery = deleteTableQuery.eq("branch_id", claims.branch_id);
+    }
 
-  const parsed = updateTableSchema.safeParse({
-    id: formData.get("id"),
-    number: formData.get("number"),
-    branch_id: formData.get("branch_id"),
-    zone_id: zoneId,
-    capacity: formData.get("capacity") || 4,
-    status: rawStatus ? rawStatus : undefined,
-  });
+    const { data: result, error } = await deleteTableQuery.select("id");
 
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
+    if (error) {
+      return { success: false, error: mapTableDbError(error.code) };
+    }
 
-  const ctx = await getAuthContext(SETTINGS_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    if (!result || result.length === 0) {
+      return { success: false, error: "Không tìm thấy bàn" };
+    }
 
-  const { supabase, claims } = ctx;
-
-  if (!canOperateBranch(claims.branch_id, parsed.data.branch_id)) {
-    return { success: false, error: "Không có quyền thao tác chi nhánh này" };
-  }
-
-  if (
-    !(await verifyBranchOwnership(
-      supabase,
-      parsed.data.branch_id,
-      claims.tenant_id,
-    ))
-  ) {
-    return { success: false, error: "Chi nhánh không hợp lệ" };
-  }
-
-  const { error } = await supabase
-    .from("tables")
-    .update({
-      number: parsed.data.number,
-      branch_id: parsed.data.branch_id,
-      zone_id: parsed.data.zone_id ?? null,
-      capacity: parsed.data.capacity,
-      ...(parsed.data.status ? { status: parsed.data.status } : {}),
-    })
-    .eq("id", parsed.data.id)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (error) {
-    return { success: false, error: mapTableDbError(error.code) };
-  }
-
-  revalidatePath("/admin/settings/tables");
-  return { success: true };
-}
-
-export async function deleteTable(tableId: number): Promise<ActionResult> {
-  const parsed = deleteIdSchema.safeParse(tableId);
-  if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
-
-  const ctx = await getAuthContext(SETTINGS_ROLES);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  let deleteTableQuery = supabase
-    .from("tables")
-    .delete()
-    .eq("id", parsed.data)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (claims.branch_id) {
-    deleteTableQuery = deleteTableQuery.eq("branch_id", claims.branch_id);
-  }
-
-  const { data, error } = await deleteTableQuery.select("id");
-
-  if (error) {
-    return { success: false, error: mapTableDbError(error.code) };
-  }
-
-  if (!data || data.length === 0) {
-    return { success: false, error: "Không tìm thấy bàn" };
-  }
-
-  revalidatePath("/admin/settings/tables");
-  return { success: true };
-}
+    revalidatePath("/admin/settings/tables");
+    return { success: true };
+  },
+);
