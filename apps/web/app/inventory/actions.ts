@@ -211,9 +211,7 @@ export async function adjustStock(
     "issue",
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- location columns are compatibility-prep before db:types regenerate
-  const sb = supabase as any;
-  const basePayload = {
+  const { error } = await supabase.from("stock_movements").insert({
     tenant_id: claims.tenant_id,
     branch_id: parsed.data.branchId,
     ingredient_id: parsed.data.ingredientId,
@@ -221,16 +219,8 @@ export async function adjustStock(
     quantity_change: parsed.data.quantityChange,
     reason: parsed.data.reason ?? null,
     created_by: user.id,
-  };
-
-  const { error } = await withInventoryLocationCompatFallback(
-    () =>
-      sb.from("stock_movements").insert({
-        ...basePayload,
-        location_id: defaultLocationId,
-      }),
-    () => sb.from("stock_movements").insert(basePayload),
-  );
+    location_id: defaultLocationId,
+  });
 
   if (error) {
     if (error.code === "23514") {
@@ -331,7 +321,7 @@ export async function createStocktakeSession(
     "receive",
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- compatibility RPC payload before db:types regenerate
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC create_stocktake_session missing p_location_id in generated types
   const sb = supabase as any;
   const { data, error } = await withInventoryLocationCompatFallback(
     () =>
@@ -375,44 +365,32 @@ export async function fetchStocktakeSessions(
 
   const { supabase, claims } = ctx;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- location columns are compatibility-prep before db:types regenerate
-  const sb = supabase as any;
-  const buildQuery = (selectClause: string) => {
-    let query = sb
-      .from("stocktake_sessions")
-      .select(selectClause)
-      .eq("tenant_id", claims.tenant_id)
-      .order("created_at", { ascending: false });
+  let query = supabase
+    .from("stocktake_sessions")
+    .select(
+      "id, branch_id, location_id, started_at, completed_at, status, notes, created_at, created_by, branches(id, name)",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .order("created_at", { ascending: false });
 
-    if (claims.user_role === "branch_manager" && claims.branch_id != null) {
-      query = query.eq("branch_id", claims.branch_id);
-    } else if (branchId) {
-      query = query.eq("branch_id", branchId);
-    }
-    return query;
-  };
+  if (claims.user_role === "branch_manager" && claims.branch_id != null) {
+    query = query.eq("branch_id", claims.branch_id);
+  } else if (branchId) {
+    query = query.eq("branch_id", branchId);
+  }
 
-  const { data, error } = await withInventoryLocationCompatFallback(
-    () =>
-      buildQuery(
-        "id, branch_id, location_id, started_at, completed_at, status, notes, created_at, created_by, branches(id, name)",
-      ),
-    () =>
-      buildQuery(
-        "id, branch_id, started_at, completed_at, status, notes, created_at, created_by, branches(id, name)",
-      ),
-  );
+  const { data, error } = await query;
 
   if (error) {
     return { success: false, error: "Không thể tải danh sách kiểm kê." };
   }
 
-  const sessions = (data ?? []) as Array<Record<string, unknown>>;
+  const sessions = data ?? [];
   if (sessions.length === 0) {
     return { success: true, data: [] };
   }
 
-  const sessionIds = sessions.map((s) => Number(s.id)).filter(Number.isFinite);
+  const sessionIds = sessions.map((s) => s.id);
   const { data: lines, error: linesError } = await supabase
     .from("stocktake_lines")
     .select("session_id, counted_quantity")
@@ -439,8 +417,7 @@ export async function fetchStocktakeSessions(
   }
 
   const enriched = sessions.map((s) => {
-    const sid = Number(s.id);
-    const agg = bySession.get(sid) ?? { total: 0, counted: 0 };
+    const agg = bySession.get(s.id) ?? { total: 0, counted: 0 };
     return {
       ...s,
       total_items: agg.total,

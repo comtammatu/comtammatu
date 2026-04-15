@@ -8,8 +8,6 @@ import {
 import { StationsClient } from "./stations-client";
 import type { StationRow, CategoryOption } from "./stations-client";
 
-// KDS tables not in generated types yet. Remove `as any` cast after `pnpm db:types`.
-
 export default async function KdsSettingsPage() {
   const supabase = await createClient();
 
@@ -34,9 +32,7 @@ export default async function KdsSettingsPage() {
     .eq("is_active", true)
     .order("name");
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- kds_stations not in generated types yet
-  const sb = supabase as any;
-  let stationsQuery = sb
+  let stationsQuery = supabase
     .from("kds_stations")
     .select(
       `
@@ -75,19 +71,15 @@ export default async function KdsSettingsPage() {
   if (categoriesRes.error) throw new Error("Không thể tải danh mục");
 
   const branches = branchesRes.data;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rawStations = (stationsRes.data ?? []) as any[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const stations: StationRow[] = rawStations.map((s: any) => ({
-    id: s.id as number,
-    name: s.name as string,
-    branch_id: s.branch_id as number,
-    position: s.position as number,
-    is_active: s.is_active as boolean,
+  const rawStations = stationsRes.data ?? [];
+  const stations: StationRow[] = rawStations.map((s) => ({
+    id: s.id,
+    name: s.name,
+    branch_id: s.branch_id,
+    position: s.position,
+    is_active: s.is_active,
     category_ids:
-      (
-        s.kds_station_categories as { id: number; category_id: number }[] | null
-      )?.map((sc: { category_id: number }) => sc.category_id) ?? [],
+      s.kds_station_categories?.map((sc) => sc.category_id) ?? [],
   }));
   const categories = categoriesRes.data as CategoryOption[];
 

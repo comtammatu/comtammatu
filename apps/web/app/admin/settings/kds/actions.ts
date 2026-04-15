@@ -92,7 +92,7 @@ export async function fetchStations(branchId?: number): Promise<ActionResult> {
     }
   }
 
-  // kds_stations not yet in generated types — remove cast after pnpm db:types
+
   let query = supabase
     .from("kds_stations")
     .select(
@@ -173,7 +173,7 @@ export async function createStation(
     return { success: false, error: "Chi nhánh không hợp lệ" };
   }
 
-  // kds_stations not yet in generated types — remove cast after pnpm db:types
+
   const { data, error } = await supabase
     .from("kds_stations")
     .insert({
@@ -197,8 +197,8 @@ export async function createStation(
   }
 
   revalidatePath("/admin/settings/kds");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { success: true, data: { id: (data as any[])[0].id as number } };
+  // data[0] is guaranteed non-null by the length check above
+  return { success: true, data: { id: data[0]!.id } };
 }
 
 /**
@@ -238,7 +238,7 @@ export async function updateStation(
     updatePayload.is_active = parsed.data.is_active;
   }
 
-  // kds_stations not yet in generated types — remove cast after pnpm db:types
+
   let query = supabase
     .from("kds_stations")
     .update(updatePayload)
@@ -317,8 +317,7 @@ export async function saveStationCategories(
   }
 
   // Use atomic RPC — DELETE + INSERT in single transaction
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.rpc as any)("save_station_categories", {
+  const { error } = await supabase.rpc("save_station_categories", {
     p_station_id: parsedStationId.data,
     p_category_ids: parsedCategoryIds.data,
   });

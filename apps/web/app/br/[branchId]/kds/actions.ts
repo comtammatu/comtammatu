@@ -47,7 +47,6 @@ export async function fetchKdsTickets(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  // kds_tickets not yet in generated types — remove cast after pnpm db:types
   let query = supabase
     .from("kds_tickets")
     .select(
@@ -131,7 +130,6 @@ export async function fetchKdsStations(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  // kds_stations not yet in generated types — remove cast after pnpm db:types
   const { data: stations, error } = await supabase
     .from("kds_stations")
     .select("id, name, position")

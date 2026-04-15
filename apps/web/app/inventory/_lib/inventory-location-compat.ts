@@ -77,11 +77,8 @@ export async function resolveDefaultInventoryLocation(
   branchId: number,
   mode: InventoryLocationMode,
 ): Promise<number | null> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- compatibility access before db:types regenerate
-  const sb = supabase as any;
-
   const defaultFlag = LOCATION_DEFAULT_FLAG[mode];
-  const { data, error } = await sb
+  const { data, error } = await supabase
     .from("inventory_locations")
     .select("id")
     .eq("tenant_id", tenantId)
@@ -90,10 +87,9 @@ export async function resolveDefaultInventoryLocation(
     .eq("is_active", true)
     .maybeSingle();
 
-  if (isInventoryLocationCompatError(error)) {
+  if (error) {
     return null;
   }
 
-  const row = data as { id?: unknown } | null;
-  return typeof row?.id === "number" ? row.id : null;
+  return data?.id ?? null;
 }

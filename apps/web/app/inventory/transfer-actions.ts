@@ -56,26 +56,13 @@ export async function fetchStockTransfers(): Promise<ActionResult> {
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- location columns are compatibility-prep before db:types regenerate
-  const sb = supabase as any;
-  const { data: transfers, error } = await withInventoryLocationCompatFallback(
-    () =>
-      sb
-        .from("stock_transfers")
-        .select(
-          "id, transfer_number, status, notes, vehicle_info, shipped_at, received_at, receive_started_at, from_branch_id, to_branch_id, from_location_id, to_location_id, created_at",
-        )
-        .eq("tenant_id", claims.tenant_id)
-        .order("created_at", { ascending: false }),
-    () =>
-      sb
-        .from("stock_transfers")
-        .select(
-          "id, transfer_number, status, notes, vehicle_info, shipped_at, received_at, receive_started_at, from_branch_id, to_branch_id, created_at",
-        )
-        .eq("tenant_id", claims.tenant_id)
-        .order("created_at", { ascending: false }),
-  );
+  const { data: transfers, error } = await supabase
+    .from("stock_transfers")
+    .select(
+      "id, transfer_number, status, notes, vehicle_info, shipped_at, received_at, receive_started_at, from_branch_id, to_branch_id, from_location_id, to_location_id, created_at",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .order("created_at", { ascending: false });
   if (error) return { success: false, error: "Không thể tải phiếu chuyển." };
   const { data: branches } = await supabase
     .from("branches")
@@ -84,11 +71,7 @@ export async function fetchStockTransfers(): Promise<ActionResult> {
   const nameById = new Map(
     (branches ?? []).map((b) => [b.id, b.name] as const),
   );
-  const transferRows = (transfers ?? []) as Array<{
-    from_branch_id: number;
-    to_branch_id: number;
-  } & Record<string, unknown>>;
-  const enriched = transferRows.map((t) => ({
+  const enriched = (transfers ?? []).map((t) => ({
     ...t,
     from_branch_name: nameById.get(t.from_branch_id) ?? "—",
     to_branch_name: nameById.get(t.to_branch_id) ?? "—",
@@ -262,7 +245,7 @@ export async function createStockTransfer(
     "receive",
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- compatibility RPC payload before db:types regenerate
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC create_stock_transfer_draft missing p_from/to_location_id in generated types
   const sb = supabase as any;
   const transferLines = (parsed.data.lines ?? []).map((line) => ({
     ingredientId: line.ingredientId,

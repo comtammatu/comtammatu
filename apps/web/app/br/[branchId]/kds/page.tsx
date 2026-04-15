@@ -6,9 +6,6 @@ import { redirect } from "next/navigation";
 import { FlowStatePanel } from "@/components/foundation/ui-patterns";
 import { KdsBoard } from "./kds-board";
 
-// KDS tables (kds_stations, kds_tickets) and RPCs (bump_kds_ticket, recall_kds_ticket)
-// are not in generated types yet. Remove `as any` casts after `pnpm db:types`.
-
 /* ─── Types shared with client ─── */
 
 export interface KdsStation {
@@ -99,11 +96,8 @@ export default async function KdsPage({
   const { branchId } = await params;
   const branchIdNum = Number(branchId);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- kds_stations not in generated types yet
-  const sb = supabase as any;
-
   // Fetch stations for this branch
-  const { data: rawStations, error: stationsError } = await sb
+  const { data: rawStations, error: stationsError } = await supabase
     .from("kds_stations")
     .select("id, name, position, is_active")
     .eq("branch_id", branchIdNum)
@@ -144,7 +138,7 @@ export default async function KdsPage({
   }
 
   // Fetch active tickets for this branch
-  const { data: rawTickets } = await sb
+  const { data: rawTickets } = await supabase
     .from("kds_tickets")
     .select(
       "id, station_id, order_id, order_item_id, status, bumped_at, created_at",
