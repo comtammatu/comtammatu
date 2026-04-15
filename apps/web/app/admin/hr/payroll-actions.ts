@@ -305,6 +305,18 @@ export async function approvePayroll(periodId: number): Promise<ActionResult> {
     return { success: false, error: "Không thể duyệt bảng lương." };
   }
 
+  // Auto-post GL journal for payroll (non-fatal — payroll approval still succeeds)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: glError } = await (supabase as any).rpc("post_payroll_journal", {
+    p_payroll_period_id: parsedId.data,
+  });
+  if (glError) {
+    console.error(
+      "[approvePayroll] post_payroll_journal failed:",
+      glError.message,
+    );
+  }
+
   logAudit(supabase, {
     tenantId: claims.tenant_id,
     userId: user.id,
