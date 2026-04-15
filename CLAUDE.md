@@ -74,6 +74,22 @@ Money: `NUMERIC(15,2)` | Time: `TIMESTAMPTZ` | PK: `BIGINT GENERATED ALWAYS AS I
 - TypeScript 6: packages using `process.env` need `"types": ["node"]` in tsconfig
 - Zod 4: `{ message: }` → `{ error: }`, `.email()` → `z.email()`
 
+## Code Navigation Graph
+
+**Read `.context-graph/NAV.md` before grepping.** It maps 931 nodes (functions, types, variables) across 296 files with file:line references. Use it for O(1) navigation instead of O(n) grep scans.
+
+```bash
+# Regenerate after code changes:
+context-graph analyze . --format claude-md
+context-graph index > .context-graph/NAV.md
+
+# Find dead/isolated code:
+context-graph dead
+
+# Interactive visualization:
+context-graph serve --port 3333
+```
+
 ## References
 
 ### System overview (read first for onboarding)

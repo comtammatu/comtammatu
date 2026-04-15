@@ -58,3 +58,6 @@ yarn-error.log*
 .vercel/
 .gstack/
 .omc/
+
+# context-graph (large JSON, regenerate with: context-graph analyze .)
+.context-graph/graph.json

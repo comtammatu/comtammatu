@@ -25,19 +25,30 @@ apps/web/app/
 │   │   └── admin-shell.tsx # Sidebar nav, executive shell, role-based filtering
 │   ├── dashboard/          # ERP cockpit landing
 │   ├── menu/               # Menu master data domain (reachable via domain map, not primary Admin nav)
-│   ├── inventory/          # Legacy compatibility route tree only; canonical Inventory lives at /inventory
 │   ├── orders/             # Legacy admin route; not part of primary Admin IA
 │   ├── staff/              # Staff CRUD with role hierarchy auth (S3), excludes owner/super_manager
 │   ├── hr/                 # Admin-side HR reporting entrypoints (deep links continue to /hr workspace)
+│   │   └── payroll/        # Payroll periods list + [periodId] detail
 │   ├── crm/                # Placeholder / deferred
-│   ├── finance/            # Finance workflows + HĐĐT / VAS reporting, entered through reports
+│   ├── finance/            # Finance workflows + HĐĐT / VAS reporting
+│   │   ├── chart-of-accounts/ # Chart of accounts management
+│   │   ├── journal/        # Journal entries
+│   │   ├── food-cost/      # Food cost analysis
+│   │   └── statements/     # Financial statements
 │   ├── reports/            # CEO/HQ reports hub
+│   │   ├── revenue/        # Revenue reports
+│   │   ├── inventory-value/ # Inventory valuation reports
+│   │   └── stock-movement/ # Stock movement reports
 │   └── settings/
 │       ├── layout.tsx      # Auth guard + role-aware SettingsNav for foundation controls
 │       ├── page.tsx        # Redirect: branch_manager/area_manager → tables, others → branches
 │       ├── general/        # System settings key/value — owner/super_manager only
 │       ├── branches/       # Branch CRUD + set_headquarters — owner/super_manager only
-│       └── tables/         # Tables & zones per branch — all settings roles (branch-scoped)
+│       ├── areas/          # Area management — owner/super_manager only
+│       ├── tables/         # Tables & zones per branch — all settings roles (branch-scoped)
+│       ├── pos/            # POS terminal settings
+│       ├── kds/            # KDS station settings
+│       └── payments/       # Payment method configuration
 │
 ├── br/[branchId]/
 │   ├── pos/                # POS (cashier, waiter, branch_manager) — M2 shipped
@@ -52,16 +63,43 @@ apps/web/app/
 │       └── order-card.tsx  # Individual order card with bump/recall buttons
 │
 ├── employee/               # Employee portal (all roles)
-│   └── page.tsx            # Limited surface; broader self-service remains M7 follow-up
+│   ├── layout.tsx          # Employee shell with auth guard
+│   ├── page.tsx            # Employee dashboard
+│   ├── profile/            # Personal profile
+│   ├── clock/              # Clock in/out
+│   ├── attendance/         # Attendance history
+│   ├── schedule/           # Work schedule
+│   └── payslip/            # Payslip viewer
 │
 ├── inventory/              # Inventory operations cockpit (HQ / central_kitchen / branch)
 │   ├── layout.tsx          # Inventory shell with site context + role-aware nav
-│   ├── page.tsx            # Operations dashboard
-│   ├── stock/              # Live stock levels by site
-│   ├── transfers/          # Internal transfers
-│   ├── stocktake/          # Stocktake list + detail
+│   ├── page.tsx            # Operations dashboard with recent activity timeline
+│   ├── ingredients/        # Ingredient master data
+│   ├── recipes/            # Recipe management (BOM)
+│   ├── stock/              # Live stock levels by site (search + status filter)
+│   ├── suppliers/          # Supplier directory
+│   ├── purchase-orders/    # PO list + new + [id] detail
+│   ├── receiving/          # Receiving hub with recent activity timeline (PO/GRN/invoice)
+│   ├── grn/                # Goods received notes list + [id] detail
+│   ├── supplier-invoices/  # Supplier invoice matching
+│   ├── transfers/          # Internal transfers list + [id] detail
+│   ├── production/         # Central kitchen production surface
+│   ├── stocktake/          # Stocktake list + [id] detail
+│   ├── issues/             # Stock issue list + [id] detail
+│   ├── expiry/             # Expiry tracking
 │   ├── reports/            # Inventory reporting with live data
-│   └── production/         # Central kitchen production surface
+│   └── settings/           # Inventory-specific settings
+│       ├── layout.tsx      # Settings nav
+│       ├── page.tsx        # Settings landing
+│       ├── ingredients/    # Ingredient categories & config
+│       ├── recipes/        # Recipe categories & config
+│       ├── suppliers/      # Supplier categories & config
+│       └── expiry/         # Expiry alert thresholds
+│
+├── hr/                     # HR workspace (manager+)
+│   ├── layout.tsx          # HR shell with auth guard
+│   ├── page.tsx            # HR dashboard
+│   └── payroll/            # Payroll periods list + [periodId] detail
 │
 └── api/
     ├── health/route.ts     # GET health check
@@ -133,12 +171,15 @@ Browser request
 - **RSC by default:** Pages are React Server Components. Only interactive elements (forms, dropdowns) use "use client".
 - **Admin is now narrower by design:** it keeps foundation controls and executive reporting, while deep domain workflows should live in dedicated workspaces.
 - **Inventory is a standalone surface:** `/inventory` is the only live Inventory domain and should not be mirrored under `/admin/*`.
-- **Remaining placeholders are narrower than before:** orders/hr/employee still have incomplete areas, while finance and reports now have live routes. CRM remains Post-v1.0.
+- **Employee portal is live:** profile, clock, attendance, schedule, payslip pages shipped. HR workspace has payroll management.
+- **Finance & reports expanded:** chart-of-accounts, journal, food-cost, statements, revenue, inventory-value, stock-movement all live.
+- **Inventory settings migrated:** dedicated `/inventory/settings` subtree with ingredient/recipe/supplier/expiry config (moved from admin).
+- **CRM remains Post-v1.0.**
 
 <!-- ORACLE-META
 Written by codebase-oracle (manual) | 2026-04-06
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 95%
-Updated: Inventory ops + central kitchen production live (2026-04-14)
+Updated: Full route tree sync — inventory settings, employee portal, HR, finance, reports (2026-04-15)
 Unknowns: 0
 -->
