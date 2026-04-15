@@ -62,12 +62,13 @@ export default async function ProductionPage() {
         .eq("is_active", true)
         .order("name");
 
-  const [branchesRes, ingredientsRes, ordersRes, recipesRes] = await Promise.all([
-    branchesQuery,
-    fetchIngredients(),
-    fetchProductionOrders(),
-    fetchProductionRecipes(),
-  ]);
+  const [branchesRes, ingredientsRes, ordersRes, recipesRes] =
+    await Promise.all([
+      branchesQuery,
+      fetchIngredients(),
+      fetchProductionOrders(),
+      fetchProductionRecipes(),
+    ]);
   const branches = (branchesRes.data ?? []) as BranchPreviewRow[];
 
   const centralKitchenBranches = branchKindSchemaAvailable
@@ -81,9 +82,10 @@ export default async function ProductionPage() {
 
   const visibleBranches = centralKitchenBranches;
 
-  const allIngredients = ingredientsRes.success && Array.isArray(ingredientsRes.data)
-    ? (ingredientsRes.data as InventoryIngredientRow[])
-    : [];
+  const allIngredients =
+    ingredientsRes.success && Array.isArray(ingredientsRes.data)
+      ? (ingredientsRes.data as InventoryIngredientRow[])
+      : [];
 
   const finishedGoods = allIngredients
     .filter((ingredient) => ingredient.item_kind === "finished_good")
@@ -113,8 +115,8 @@ export default async function ProductionPage() {
           <CardContent className="p-4">
             <p className="text-sm leading-6">
               Database hiện tại chưa có cột <code>branch_kind</code>. Màn Bếp
-              trung tâm đang ở chế độ chờ migration, nên các thao tác sản xuất tạm
-              thời bị khóa để tránh phát sinh lỗi mơ hồ.
+              trung tâm đang ở chế độ chờ migration, nên các thao tác sản xuất
+              tạm thời bị khóa để tránh phát sinh lỗi mơ hồ.
             </p>
           </CardContent>
         </Card>

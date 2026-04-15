@@ -2,10 +2,7 @@ import { Suspense } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
-import {
-  PageContainer,
-  PageHeader,
-} from "@comtammatu/ui/components/admin-patterns";
+import { PageContainer, PageHeader } from "@/components/v2/patterns";
 import { StaffTable } from "./staff-table";
 import { StaffFilters } from "./staff-filters";
 import { AddStaffButton } from "./add-staff-button";

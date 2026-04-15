@@ -1,8 +1,5 @@
 import { fetchFoodCost } from "../accounting-actions";
-import {
-  PageContainer,
-  PageHeader,
-} from "@comtammatu/ui/components/admin-patterns";
+import { PageContainer, PageHeader } from "@/components/v2/patterns";
 import { FoodCostClient } from "./food-cost-client";
 
 export default async function FoodCostPage() {
@@ -16,10 +13,7 @@ export default async function FoodCostPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        eyebrow="Tài chính"
-        title="Chi phí nguyên liệu"
-      />
+      <PageHeader eyebrow="Tài chính" title="Chi phí nguyên liệu" />
       <FoodCostClient
         initialRows={rows}
         initialStart={startDate}

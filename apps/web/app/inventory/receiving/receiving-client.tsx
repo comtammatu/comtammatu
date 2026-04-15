@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, ClipboardCheck, FileText, Lightbulb, ShoppingCart, Zap } from "lucide-react";
+import {
+  ArrowRight,
+  ClipboardCheck,
+  FileText,
+  Lightbulb,
+  ShoppingCart,
+  Zap,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -114,9 +121,12 @@ export function ReceivingClient({
               Nhập kho
             </p>
             <div className="space-y-1">
-              <CardTitle className="text-3xl">{tNav("receiving", "heading")}</CardTitle>
+              <CardTitle className="text-3xl">
+                {tNav("receiving", "heading")}
+              </CardTitle>
               <CardDescription className="max-w-3xl leading-6">
-                Điều phối xuyên suốt luồng đặt hàng, nhập kho và đối soát hóa đơn nhà cung cấp.
+                Điều phối xuyên suốt luồng đặt hàng, nhập kho và đối soát hóa
+                đơn nhà cung cấp.
               </CardDescription>
             </div>
           </div>
@@ -168,7 +178,12 @@ export function ReceivingClient({
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                       Đang mở
                     </p>
-                    <p className={cn("mt-2 text-4xl font-semibold", step.toneClassName)}>
+                    <p
+                      className={cn(
+                        "mt-2 text-4xl font-semibold",
+                        step.toneClassName,
+                      )}
+                    >
                       {String(countsByKey[step.key]).padStart(2, "0")}
                     </p>
                   </div>
@@ -177,7 +192,11 @@ export function ReceivingClient({
                   </p>
                 </div>
 
-                <Button asChild variant="outline" className="w-full justify-between">
+                <Button
+                  asChild
+                  variant="outline"
+                  className="w-full justify-between"
+                >
                   <Link href={step.href}>
                     {step.cta}
                     <ArrowRight className="size-4" />
@@ -195,7 +214,8 @@ export function ReceivingClient({
             <div>
               <CardTitle>Hoạt động gần đây</CardTitle>
               <CardDescription>
-                Theo dõi PO, GRN và hóa đơn mới nhất trong cùng một dòng thời gian.
+                Theo dõi PO, GRN và hóa đơn mới nhất trong cùng một dòng thời
+                gian.
               </CardDescription>
             </div>
             <Button asChild size="sm" variant="outline">
@@ -211,7 +231,9 @@ export function ReceivingClient({
                     <TableHead className="min-w-44">Nhà cung cấp</TableHead>
                     <TableHead className="min-w-32">Thời gian</TableHead>
                     <TableHead className="min-w-32">Trạng thái</TableHead>
-                    <TableHead className="min-w-28 text-right">Tổng tiền</TableHead>
+                    <TableHead className="min-w-28 text-right">
+                      Tổng tiền
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -223,9 +245,15 @@ export function ReceivingClient({
                     />
                   ) : null}
                   {recentActivity.map((item) => (
-                    <TableRow key={`${item.type}-${item.id}`} className="hover:bg-muted/20">
+                    <TableRow
+                      key={`${item.type}-${item.id}`}
+                      className="hover:bg-muted/20"
+                    >
                       <TableCell className="font-mono font-medium">
-                        <Link href={activityHref(item)} className="text-primary hover:underline">
+                        <Link
+                          href={activityHref(item)}
+                          className="text-primary hover:underline"
+                        >
                           {item.code}
                         </Link>
                       </TableCell>
@@ -234,7 +262,9 @@ export function ReceivingClient({
                         {formatActivityDate(item.date)}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getInventoryStatusBadgeVariant(item.status)}>
+                        <Badge
+                          variant={getInventoryStatusBadgeVariant(item.status)}
+                        >
                           {getInventoryStatusLabel(item.status)}
                         </Badge>
                       </TableCell>
@@ -253,7 +283,9 @@ export function ReceivingClient({
           <Card className="border-border/70">
             <CardHeader>
               <CardTitle className="text-base">Thao tác nhanh</CardTitle>
-              <CardDescription>Mở trực tiếp các tuyến công việc dùng thường xuyên.</CardDescription>
+              <CardDescription>
+                Mở trực tiếp các tuyến công việc dùng thường xuyên.
+              </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-2">
               <Button asChild className="justify-between">

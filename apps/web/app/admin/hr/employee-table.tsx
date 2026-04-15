@@ -69,11 +69,14 @@ export function EmployeeTable({ employees }: EmployeeTableProps) {
                   <div className="space-y-1 md:hidden lg:hidden">
                     <p className="text-xs text-muted-foreground">
                       {emp.contract_type
-                        ? (CONTRACT_LABELS[emp.contract_type] ?? emp.contract_type)
+                        ? (CONTRACT_LABELS[emp.contract_type] ??
+                          emp.contract_type)
                         : "Chưa có hợp đồng"}
                     </p>
                     <p className="text-xs font-medium text-foreground">
-                      {emp.base_salary !== null ? formatVND(emp.base_salary) : "Chưa có lương cơ bản"}
+                      {emp.base_salary !== null
+                        ? formatVND(emp.base_salary)
+                        : "Chưa có lương cơ bản"}
                     </p>
                   </div>
                 </div>

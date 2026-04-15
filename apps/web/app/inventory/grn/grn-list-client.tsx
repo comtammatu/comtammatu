@@ -85,18 +85,18 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
           )}
         >
           <CardContent className="p-6">
-          <div className="mb-4 flex items-center gap-4">
-            <div className="flex size-12 items-center justify-center rounded-lg bg-info/12">
-              <Clock className="size-5 text-info" />
+            <div className="mb-4 flex items-center gap-4">
+              <div className="flex size-12 items-center justify-center rounded-lg bg-info/12">
+                <Clock className="size-5 text-info" />
+              </div>
+              <span className="text-sm font-semibold text-muted-foreground">
+                Đang chờ xử lý
+              </span>
             </div>
-            <span className="text-sm font-semibold text-muted-foreground">
-              Đang chờ xử lý
-            </span>
-          </div>
-          <div className="mb-1 text-4xl font-black tracking-tight">
-            {String(pendingCount).padStart(2, "0")}
-          </div>
-          <div className="text-xs font-semibold text-info">+3 từ hôm qua</div>
+            <div className="mb-1 text-4xl font-black tracking-tight">
+              {String(pendingCount).padStart(2, "0")}
+            </div>
+            <div className="text-xs font-semibold text-info">+3 từ hôm qua</div>
           </CardContent>
         </Card>
 
@@ -127,9 +127,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
       </div>
 
       {/* Table Section */}
-      <div
-        className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}
-      >
+      <div className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}>
         {/* Table Toolbar */}
         <div className="flex items-center justify-between border-b border-border bg-muted/30 p-6">
           <div className="flex gap-4">

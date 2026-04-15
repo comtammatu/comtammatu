@@ -24,7 +24,7 @@ import {
   PageHeader,
   SectionCard,
   StatusBadge,
-} from "@comtammatu/ui/components/admin-patterns";
+} from "@/components/v2/patterns";
 
 interface ReportCardProps {
   title: string;
@@ -194,12 +194,12 @@ export default async function ReportsPage() {
       />
 
       <SectionCard>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight">
-                Báo cáo lõi
-              </h2>
-            </div>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">
+              Báo cáo lõi
+            </h2>
+          </div>
           <StatusBadge tone="neutral" className="rounded-full px-3 py-1.5">
             Điều hành
           </StatusBadge>
@@ -230,7 +230,6 @@ export default async function ReportsPage() {
           </div>
         </SectionCard>
       ) : null}
-
     </PageContainer>
   );
 }

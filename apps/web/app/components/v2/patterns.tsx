@@ -13,10 +13,9 @@ import {
 
 export type EmptyStateMode = "no-data" | "no-results" | "no-access";
 export type StatusTone = "success" | "warning" | "danger" | "info" | "neutral";
-type PatternDensity = "compact" | "comfortable" | "touch";
-type PatternSurface = "inventory";
+export type SurfaceDensity = "compact" | "comfortable" | "touch";
 
-const STATUS_TONE_VARIANTS: Record<StatusTone, BadgeProps["variant"]> = {
+const TONE_VARIANTS: Record<StatusTone, BadgeProps["variant"]> = {
   success: "success",
   warning: "warning",
   danger: "destructive",
@@ -54,13 +53,9 @@ const EMPTY_STATE_ICONS: Record<EmptyStateMode, ReactNode> = {
 export function PageContainer({
   children,
   className,
-  density: _density,
-  surface: _surface,
 }: {
   children: ReactNode;
   className?: string;
-  density?: PatternDensity;
-  surface?: PatternSurface;
 }) {
   return (
     <div
@@ -75,21 +70,17 @@ export function PageContainer({
 }
 
 export function PageHeader({
-  eyebrow = "Kho",
+  eyebrow,
   title,
   description,
   actions,
   className,
-  density: _density,
-  surface: _surface,
 }: {
   eyebrow?: string;
   title: string;
   description?: string;
   actions?: ReactNode;
   className?: string;
-  density?: PatternDensity;
-  surface?: PatternSurface;
 }) {
   return (
     <Card
@@ -99,11 +90,13 @@ export function PageHeader({
       )}
     >
       <CardHeader className="flex flex-col gap-4 p-6 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1.5">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            {eyebrow}
-          </p>
-          <div className="space-y-1">
+        <div className="min-w-0 space-y-2">
+          {eyebrow ? (
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              {eyebrow}
+            </p>
+          ) : null}
+          <div className="space-y-1.5">
             <CardTitle className="text-2xl tracking-tight md:text-4xl">
               {title}
             </CardTitle>
@@ -128,12 +121,10 @@ export function FilterBar({
   children,
   className,
   density: _density,
-  surface: _surface,
 }: {
   children: ReactNode;
   className?: string;
-  density?: PatternDensity;
-  surface?: PatternSurface;
+  density?: SurfaceDensity;
 }) {
   return (
     <Card
@@ -142,7 +133,7 @@ export function FilterBar({
         className,
       )}
     >
-      <CardContent className="flex flex-wrap items-end gap-3 p-4 md:p-5">
+      <CardContent className="flex flex-wrap items-end gap-3 p-5">
         {children}
       </CardContent>
     </Card>
@@ -152,14 +143,21 @@ export function FilterBar({
 export function SectionCard({
   children,
   className,
-  density: _density,
-  surface: _surface,
+  contentClassName,
+  density = "comfortable",
 }: {
   children: ReactNode;
   className?: string;
-  density?: PatternDensity;
-  surface?: PatternSurface;
+  contentClassName?: string;
+  density?: SurfaceDensity;
 }) {
+  const paddingClassName =
+    density === "compact"
+      ? "p-4 md:p-5"
+      : density === "touch"
+        ? "p-6 md:p-7"
+        : "p-5 md:p-6";
+
   return (
     <Card
       className={cn(
@@ -167,7 +165,9 @@ export function SectionCard({
         className,
       )}
     >
-      <CardContent className="p-5 md:p-6">{children}</CardContent>
+      <CardContent className={cn(paddingClassName, contentClassName)}>
+        {children}
+      </CardContent>
     </Card>
   );
 }
@@ -180,7 +180,6 @@ export function EmptyState({
   action,
   className,
   density: _density,
-  surface: _surface,
 }: {
   icon?: ReactNode;
   mode?: EmptyStateMode;
@@ -188,8 +187,7 @@ export function EmptyState({
   description?: string;
   action?: ReactNode;
   className?: string;
-  density?: PatternDensity;
-  surface?: PatternSurface;
+  density?: SurfaceDensity;
 }) {
   const resolvedTitle = title ?? EMPTY_STATE_COPY[mode].title;
   const resolvedDescription = description ?? EMPTY_STATE_COPY[mode].description;
@@ -221,26 +219,55 @@ export function EmptyState({
   );
 }
 
-export function StatusBadge({
-  status,
-  label,
-  tone,
+export function EmptyStatePanel({
+  title,
+  mode = "no-data",
+  description,
+  icon,
   className,
   children,
+  density,
 }: {
-  status?: string;
-  label?: string;
+  title?: string;
+  mode?: EmptyStateMode;
+  description?: string;
+  icon?: ReactNode;
+  className?: string;
+  children?: ReactNode;
+  density?: SurfaceDensity;
+}) {
+  return (
+    <EmptyState
+      mode={mode}
+      icon={icon}
+      title={title}
+      description={description}
+      action={children}
+      className={className}
+      density={density}
+    />
+  );
+}
+
+export function StatusBadge({
+  tone = "neutral",
+  className,
+  children,
+  label,
+  status,
+}: {
   tone?: StatusTone;
   className?: string;
   children?: ReactNode;
+  label?: string;
+  status?: string;
 }) {
-  const resolvedLabel = status ? (label ?? status) : (children ?? "");
   return (
     <Badge
-      variant={tone ? STATUS_TONE_VARIANTS[tone] : "secondary"}
-      className={cn("rounded-full px-3 py-1 font-medium", className)}
+      variant={TONE_VARIANTS[tone]}
+      className={cn("rounded-full px-3 py-1", className)}
     >
-      {resolvedLabel}
+      {status ? (label ?? status) : children}
     </Badge>
   );
 }
@@ -273,35 +300,3 @@ export function ActionIconButton({
     </Button>
   );
 }
-
-export const STATUS_TONE_MAP: Record<string, StatusTone> = {
-  draft: "neutral",
-  confirmed: "success",
-  sent: "info",
-  partially_received: "warning",
-  in_transit: "info",
-  received: "success",
-  completed: "success",
-  cancelled: "danger",
-  pending: "warning",
-  in_progress: "info",
-  matched: "success",
-  discrepancy: "danger",
-  approved: "success",
-  overdue: "danger",
-  unpaid: "warning",
-  partial: "info",
-  paid: "success",
-  expired: "danger",
-  critical: "warning",
-  warning: "warning",
-  kitchen_use: "info",
-  write_off: "danger",
-  consumption: "success",
-  normal: "success",
-  low: "danger",
-  out: "danger",
-  over: "warning",
-  active: "success",
-  suspended: "danger",
-};

@@ -40,7 +40,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { SectionCard } from "../_components/section-card";
+import { SectionCard } from "@/components/v2/patterns";
 import { tRoute } from "../_lib/dictionary";
 import { createStocktakeSession, fetchStocktakeSessions } from "../actions";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";

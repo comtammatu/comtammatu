@@ -84,10 +84,12 @@ export async function fetchStockTransfers(): Promise<ActionResult> {
   const nameById = new Map(
     (branches ?? []).map((b) => [b.id, b.name] as const),
   );
-  const transferRows = (transfers ?? []) as Array<{
-    from_branch_id: number;
-    to_branch_id: number;
-  } & Record<string, unknown>>;
+  const transferRows = (transfers ?? []) as Array<
+    {
+      from_branch_id: number;
+      to_branch_id: number;
+    } & Record<string, unknown>
+  >;
   const enriched = transferRows.map((t) => ({
     ...t,
     from_branch_name: nameById.get(t.from_branch_id) ?? "—",
@@ -297,7 +299,10 @@ export async function createStockTransfer(
       return { success: false, error: "Không có quyền tạo phiếu chuyển." };
     }
     if (error.code === "23514" || error.code === "22023") {
-      return { success: false, error: "Thông tin kho luân chuyển không hợp lệ." };
+      return {
+        success: false,
+        error: "Thông tin kho luân chuyển không hợp lệ.",
+      };
     }
     return { success: false, error: "Không thể tạo phiếu chuyển." };
   }

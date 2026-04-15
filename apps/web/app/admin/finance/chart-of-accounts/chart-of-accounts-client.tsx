@@ -3,7 +3,7 @@
 "use client";
 
 import { type ChangeEvent, useState, useTransition } from "react";
-import { SectionCard } from "@comtammatu/ui/components/admin-patterns";
+import { SectionCard } from "@/components/v2/patterns";
 import {
   Table,
   TableBody,

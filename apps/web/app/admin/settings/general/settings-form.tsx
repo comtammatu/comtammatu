@@ -35,9 +35,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
       <Card>
         <CardHeader>
           <CardTitle>Thuế & Phí</CardTitle>
-          <CardDescription>
-            Áp dụng cho toàn hệ thống
-          </CardDescription>
+          <CardDescription>Áp dụng cho toàn hệ thống</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">

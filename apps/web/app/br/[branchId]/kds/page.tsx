@@ -1,11 +1,10 @@
-import { Suspense, type ReactNode } from "react";
+import { Suspense } from "react";
 import { ChefHat, Loader2, TriangleAlert } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims, canAccess } from "@comtammatu/shared/auth";
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { KdsBoard } from "./kds-board";
+import { RouteStateCard } from "@/components/v2/route-state-card";
 
 // KDS tables (kds_stations, kds_tickets) and RPCs (bump_kds_ticket, recall_kds_ticket)
 // are not in generated types yet. Remove `as any` casts after `pnpm db:types`.
@@ -48,102 +47,6 @@ export interface KdsOrderItem {
   status: string;
 }
 
-const ROUTE_STATE_BADGE: Record<
-  "todo" | "current" | "done",
-  { badgeText: string; border: string; index: string }
-> = {
-  todo: {
-    badgeText: "text-muted-foreground border-border bg-muted text-muted-foreground",
-    border: "border-border",
-    index: "border-border text-muted-foreground",
-  },
-  current: {
-    badgeText: "bg-primary text-primary-foreground",
-    border: "border-primary",
-    index: "bg-primary text-primary-foreground border-primary",
-  },
-  done: {
-    badgeText: "bg-success text-success",
-    border: "border-success",
-    index: "bg-success text-success border-success",
-  },
-};
-
-const ROUTE_TONE_BADGE: Record<
-  "info" | "warning" | "danger",
-  "info" | "warning" | "destructive"
-> = {
-  info: "info",
-  warning: "warning",
-  danger: "destructive",
-};
-
-function KdsRouteState({
-  title,
-  description,
-  status,
-  statusTone,
-  steps,
-}: {
-  title: string;
-  description: string;
-  status: ReactNode;
-  statusTone: "info" | "warning" | "danger";
-  steps: Array<{
-    label: string;
-    description: string;
-    state: "todo" | "current" | "done";
-  }>;
-}) {
-  return (
-    <Card className="bg-background/30">
-      <CardHeader className="gap-3">
-        <div className="flex items-start gap-3">
-          <div className="flex size-9 items-center justify-center rounded-full border bg-muted text-muted-foreground">
-            <ChefHat className="size-5" />
-          </div>
-          <div className="min-w-0 space-y-1">
-            <CardTitle className="text-3xl">{title}</CardTitle>
-            <p className="text-sm text-muted-foreground">{description}</p>
-          </div>
-        </div>
-        <Badge
-          variant={ROUTE_TONE_BADGE[statusTone]}
-          className="inline-flex w-fit px-3 py-1 text-xs font-semibold"
-        >
-          <span className="inline-flex items-center gap-1">{status}</span>
-        </Badge>
-      </CardHeader>
-      <CardContent>
-        {steps?.length ? (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {steps.map((step, index) => {
-              const style = ROUTE_STATE_BADGE[step.state];
-              return (
-                <div key={`${step.label}-${index}`} className={`rounded-lg border p-3 ${style.border}`}>
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={`flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold ${style.index}`}
-                    >
-                      {index + 1}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold">{step.label}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {step.description}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
-  );
-}
-
 export default async function KdsPage({
   params,
 }: {
@@ -177,9 +80,10 @@ export default async function KdsPage({
 
   if (stationsError) {
     return (
-      <KdsRouteState
+      <RouteStateCard
         title="Không thể dựng bảng điều phối bếp"
         description="Không tải được trạm KDS."
+        icon={<ChefHat className="size-5" />}
         status={
           <>
             <TriangleAlert className="size-3.5" />
@@ -204,6 +108,7 @@ export default async function KdsPage({
             state: "todo",
           },
         ]}
+        surface="dark"
       />
     );
   }
@@ -250,9 +155,10 @@ export default async function KdsPage({
   return (
     <Suspense
       fallback={
-        <KdsRouteState
+        <RouteStateCard
           title="Đang dựng bảng điều phối bếp"
           description="Đang nạp trạm và đơn."
+          icon={<ChefHat className="size-5" />}
           status={
             <>
               <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
@@ -260,7 +166,7 @@ export default async function KdsPage({
             </>
           }
           statusTone="info"
-        steps={[
+          steps={[
             {
               label: "Station sẵn sàng",
               description: "Danh sách trạm đã sẵn sàng.",
@@ -277,6 +183,7 @@ export default async function KdsPage({
               state: "todo",
             },
           ]}
+          surface="dark"
         />
       }
     >

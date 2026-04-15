@@ -37,10 +37,10 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background pb-[max(0.5rem,env(safe-area-inset-bottom,0.5rem))]"
+      className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/70 bg-background/95 pb-[max(0.5rem,env(safe-area-inset-bottom,0.5rem))]"
       aria-label="Điều hướng chính"
     >
-      <div className="mx-auto flex max-w-6xl items-stretch px-2 py-2 sm:px-4 lg:px-6">
+      <div className="mx-auto flex max-w-6xl items-stretch gap-2 px-3 py-3 sm:px-4 lg:px-6">
         {NAV_ITEMS.map((item) => {
           const active = isActive(pathname, item.href, item.exact);
           const Icon = item.icon;
@@ -48,14 +48,11 @@ export function BottomNav() {
             <Button
               key={item.href}
               asChild
-              variant={active ? "default" : "ghost"}
+              variant={active ? "default" : "outline"}
               size="sm"
-              className="group flex h-auto flex-1 flex-col items-center justify-center gap-1 rounded-lg py-2 text-xs"
+              className="group flex h-auto flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2.5 text-xs shadow-app-sm"
             >
-              <Link
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-              >
+              <Link href={item.href} aria-current={active ? "page" : undefined}>
                 <Icon className="size-5" strokeWidth={active ? 2.4 : 2} />
                 <span>{item.label}</span>
               </Link>

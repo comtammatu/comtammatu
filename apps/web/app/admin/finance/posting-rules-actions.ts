@@ -75,8 +75,10 @@ export async function updatePostingRule(
 
   // Validate account codes exist for this tenant before persisting
   const codesToValidate: string[] = [];
-  if (parsed.data.debitAccountCode) codesToValidate.push(parsed.data.debitAccountCode);
-  if (parsed.data.creditAccountCode) codesToValidate.push(parsed.data.creditAccountCode);
+  if (parsed.data.debitAccountCode)
+    codesToValidate.push(parsed.data.debitAccountCode);
+  if (parsed.data.creditAccountCode)
+    codesToValidate.push(parsed.data.creditAccountCode);
 
   if (codesToValidate.length > 0) {
     const { data: validAccounts, error: accountsError } = await supabase
@@ -91,7 +93,9 @@ export async function updatePostingRule(
     }
 
     const validCodes = new Set(
-      (validAccounts ?? []).map((a: { account_code: string }) => a.account_code),
+      (validAccounts ?? []).map(
+        (a: { account_code: string }) => a.account_code,
+      ),
     );
     for (const code of codesToValidate) {
       if (!validCodes.has(code)) {
@@ -119,7 +123,10 @@ export async function updatePostingRule(
 
   // RLS returns { data: null, error: null } on blocked writes
   if (!data) {
-    return { success: false, error: "Không tìm thấy quy tắc hoặc không có quyền." };
+    return {
+      success: false,
+      error: "Không tìm thấy quy tắc hoặc không có quyền.",
+    };
   }
 
   return { success: true };

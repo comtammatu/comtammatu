@@ -66,7 +66,11 @@ export async function createSupplierPayment(
 export async function fetchSupplierPayments(
   supplierInvoiceId: number,
 ): Promise<ActionResult> {
-  const parsedId = z.coerce.number().int().positive().safeParse(supplierInvoiceId);
+  const parsedId = z.coerce
+    .number()
+    .int()
+    .positive()
+    .safeParse(supplierInvoiceId);
   if (!parsedId.success) {
     return { success: false, error: "ID không hợp lệ" };
   }
@@ -80,7 +84,9 @@ export async function fetchSupplierPayments(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
     .from("supplier_payments")
-    .select("id, payment_method, amount, payment_date, reference_note, journal_entry_id")
+    .select(
+      "id, payment_method, amount, payment_date, reference_note, journal_entry_id",
+    )
     .eq("tenant_id", claims.tenant_id)
     .eq("supplier_invoice_id", parsedId.data)
     .order("payment_date", { ascending: false });

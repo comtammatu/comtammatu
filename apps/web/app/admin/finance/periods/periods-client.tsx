@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { SectionCard } from "@comtammatu/ui/components/admin-patterns";
+import { SectionCard } from "@/components/v2/patterns";
 import {
   Table,
   TableBody,
@@ -163,9 +163,7 @@ export function PeriodsClient({ periods: initial }: Props) {
         </Button>
       </div>
 
-      {error && (
-        <p className="text-sm text-destructive">{error}</p>
-      )}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       <SectionCard className="overflow-hidden" density="compact">
         <Table>
@@ -185,7 +183,8 @@ export function PeriodsClient({ periods: initial }: Props) {
                   colSpan={5}
                   className="py-10 text-center text-muted-foreground"
                 >
-                  Chưa có kỳ kế toán nào. Nhấn &quot;Mở kỳ tháng hiện tại&quot; để bắt đầu.
+                  Chưa có kỳ kế toán nào. Nhấn &quot;Mở kỳ tháng hiện tại&quot;
+                  để bắt đầu.
                 </TableCell>
               </TableRow>
             ) : (
@@ -250,10 +249,7 @@ export function PeriodsClient({ periods: initial }: Props) {
             <DialogDescription>
               Đóng kỳ{" "}
               {closeTarget &&
-                formatPeriod(
-                  closeTarget.period_month,
-                  closeTarget.period_year,
-                )}
+                formatPeriod(closeTarget.period_month, closeTarget.period_year)}
               ? Sau khi đóng, không thể ghi sổ bút toán vào kỳ này.
             </DialogDescription>
           </DialogHeader>
@@ -283,8 +279,7 @@ export function PeriodsClient({ periods: initial }: Props) {
           <DialogHeader>
             <DialogTitle>
               Đối chiếu GL —{" "}
-              {reconTarget &&
-                formatPeriod(reconTarget.month, reconTarget.year)}
+              {reconTarget && formatPeriod(reconTarget.month, reconTarget.year)}
             </DialogTitle>
           </DialogHeader>
           {reconLoading ? (

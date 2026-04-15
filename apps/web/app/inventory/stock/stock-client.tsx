@@ -2,7 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, MoreHorizontal, Pencil, Search, Wallet } from "lucide-react";
+import {
+  AlertTriangle,
+  MoreHorizontal,
+  Pencil,
+  Search,
+  Wallet,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -84,7 +90,9 @@ export function StockClient({
 
   const categories = useMemo(() => {
     const values = [
-      ...new Set(ingredients.map((ingredient) => ingredient.category).filter(Boolean)),
+      ...new Set(
+        ingredients.map((ingredient) => ingredient.category).filter(Boolean),
+      ),
     ];
     values.sort((left, right) => left.localeCompare(right, "vi"));
     return ["Tất cả", ...values];
@@ -94,7 +102,9 @@ export function StockClient({
     let result = ingredients;
 
     if (activeCategory !== "Tất cả") {
-      result = result.filter((ingredient) => ingredient.category === activeCategory);
+      result = result.filter(
+        (ingredient) => ingredient.category === activeCategory,
+      );
     }
 
     if (stockFilter === "in_stock") {
@@ -149,7 +159,8 @@ export function StockClient({
             <div className="space-y-1">
               <CardTitle className="text-3xl">Quản lý tồn kho</CardTitle>
               <CardDescription className="max-w-3xl leading-6">
-                Xem nhanh giá trị tồn, ngưỡng cảnh báo và điều chỉnh số lượng ngay tại một mặt bàn vận hành.
+                Xem nhanh giá trị tồn, ngưỡng cảnh báo và điều chỉnh số lượng
+                ngay tại một mặt bàn vận hành.
               </CardDescription>
             </div>
           </div>
@@ -185,7 +196,9 @@ export function StockClient({
                 <p className="text-xs uppercase tracking-widest text-primary-foreground/70">
                   Mặt hàng
                 </p>
-                <p className="mt-2 text-2xl font-semibold">{ingredients.length}</p>
+                <p className="mt-2 text-2xl font-semibold">
+                  {ingredients.length}
+                </p>
               </div>
               <div className="rounded-lg bg-primary-foreground/10 p-4">
                 <p className="text-xs uppercase tracking-widest text-primary-foreground/70">
@@ -200,7 +213,9 @@ export function StockClient({
         <Card className="border-border/70">
           <CardHeader>
             <CardTitle className="text-base">Phân loại nhanh</CardTitle>
-            <CardDescription>Lọc tồn kho theo nhóm nguyên liệu đang vận hành.</CardDescription>
+            <CardDescription>
+              Lọc tồn kho theo nhóm nguyên liệu đang vận hành.
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             {categories.map((category) => (
@@ -223,7 +238,9 @@ export function StockClient({
               <AlertTriangle className="size-4" />
               <CardTitle className="text-base">Cảnh báo tồn kho</CardTitle>
             </div>
-            <CardDescription>Số nguyên liệu đang thấp hơn ngưỡng an toàn.</CardDescription>
+            <CardDescription>
+              Số nguyên liệu đang thấp hơn ngưỡng an toàn.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-4xl font-semibold tracking-tight text-destructive">
@@ -243,7 +260,8 @@ export function StockClient({
             <div>
               <CardTitle>Danh sách tồn kho</CardTitle>
               <CardDescription>
-                Kết hợp số lượng hiện tại, WAC, ngưỡng min/max và thời điểm kiểm kê gần nhất.
+                Kết hợp số lượng hiện tại, WAC, ngưỡng min/max và thời điểm kiểm
+                kê gần nhất.
               </CardDescription>
             </div>
             <div className="grid gap-3 xl:grid-cols-[minmax(0,320px)_auto]">
@@ -262,7 +280,9 @@ export function StockClient({
                     key={option.value}
                     type="button"
                     size="sm"
-                    variant={stockFilter === option.value ? "default" : "outline"}
+                    variant={
+                      stockFilter === option.value ? "default" : "outline"
+                    }
                     onClick={() => setStockFilter(option.value)}
                   >
                     {option.label}
@@ -288,7 +308,9 @@ export function StockClient({
                   <TableHead className="min-w-56">Nguyên liệu</TableHead>
                   <TableHead className="min-w-28">SKU</TableHead>
                   <TableHead className="min-w-24">Đơn vị</TableHead>
-                  <TableHead className="min-w-28 text-right">Tồn hiện tại</TableHead>
+                  <TableHead className="min-w-28 text-right">
+                    Tồn hiện tại
+                  </TableHead>
                   <TableHead className="min-w-28 text-right">WAC</TableHead>
                   <TableHead className="min-w-28 text-right">Giá trị</TableHead>
                   <TableHead className="min-w-40">Ngưỡng tồn</TableHead>
@@ -325,11 +347,15 @@ export function StockClient({
                               "bg-muted text-muted-foreground"
                             }
                           >
-                          {item.category}
+                            {item.category}
                           </Badge>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          <Badge variant={getInventoryStatusBadgeVariant(item.status)}>
+                          <Badge
+                            variant={getInventoryStatusBadgeVariant(
+                              item.status,
+                            )}
+                          >
                             {getInventoryStatusLabel(item.status)}
                           </Badge>
                           {item.qty <= item.reorder ? (

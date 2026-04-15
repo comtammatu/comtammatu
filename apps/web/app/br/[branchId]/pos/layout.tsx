@@ -46,7 +46,12 @@ export default async function PosLayout({
         "pt-[max(0px,env(safe-area-inset-top,0px))] flex h-dvh touch-manipulation overflow-hidden",
       )}
     >
-      {children}
+      <div className="relative flex min-h-full w-full flex-1">
+        <div className="ops-grid pointer-events-none absolute inset-0 opacity-50" />
+        <div className="relative z-10 flex min-h-full w-full flex-1">
+          {children}
+        </div>
+      </div>
     </main>
   );
 }

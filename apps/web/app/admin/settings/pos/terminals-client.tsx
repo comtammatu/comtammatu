@@ -21,7 +21,7 @@ import {
 import { ExternalLink, Pencil, Plus } from "lucide-react";
 import { TerminalFormDialog } from "./terminal-form-dialog";
 import { EmptyStatePanel } from "../../components/empty-state-panel";
-import { StatusBadge } from "@comtammatu/ui/components/admin-patterns";
+import { StatusBadge } from "@/components/v2/patterns";
 
 export interface TerminalRow {
   id: number;

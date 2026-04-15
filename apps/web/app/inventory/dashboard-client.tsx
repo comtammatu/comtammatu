@@ -255,8 +255,7 @@ function buildPriorityItems({
       href: showProcurement ? paths.purchaseOrders : paths.stock,
       cta: showProcurement ? "Mở đơn mua" : "Xem tồn kho",
       icon: <ShoppingCart className="size-5" />,
-      panelClassName:
-        "border-destructive/20 bg-destructive/5",
+      panelClassName: "border-destructive/20 bg-destructive/5",
       iconClassName: "bg-destructive/10 text-destructive",
     });
   }
@@ -283,8 +282,7 @@ function buildPriorityItems({
       href: paths.expiry,
       cta: "Mở hạn dùng",
       icon: <Hourglass className="size-5" />,
-      panelClassName:
-        "border-warning/20 bg-warning/5",
+      panelClassName: "border-warning/20 bg-warning/5",
       iconClassName: "bg-warning/10 text-warning",
     });
   }
@@ -302,8 +300,7 @@ function buildPriorityItems({
       href: paths.transfers,
       cta: "Mở điều chuyển",
       icon: <Truck className="size-5" />,
-      panelClassName:
-        "border-info/20 bg-info/5",
+      panelClassName: "border-info/20 bg-info/5",
       iconClassName: "bg-info/10 text-info",
     });
   }
@@ -321,8 +318,7 @@ function buildPriorityItems({
       href: paths.stocktake,
       cta: "Mở kiểm kê",
       icon: <ClipboardList className="size-5" />,
-      panelClassName:
-        "border-success/20 bg-success/5",
+      panelClassName: "border-success/20 bg-success/5",
       iconClassName: "bg-success/10 text-success",
     });
   }
@@ -866,7 +862,9 @@ export function DashboardClient({
                             {t.fromBranch} → {t.toBranch}
                           </p>
                         </div>
-                        <Badge variant={getInventoryStatusBadgeVariant(t.status)}>
+                        <Badge
+                          variant={getInventoryStatusBadgeVariant(t.status)}
+                        >
                           {getInventoryStatusLabel(t.status)}
                         </Badge>
                       </div>

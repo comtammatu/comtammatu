@@ -94,7 +94,8 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
             <div className="space-y-1">
               <CardTitle className="text-3xl">Luân chuyển nội bộ</CardTitle>
               <CardDescription className="max-w-3xl leading-6">
-                Theo dõi các phiếu chuyển kho giữa trụ sở, bếp trung tâm và chi nhánh.
+                Theo dõi các phiếu chuyển kho giữa trụ sở, bếp trung tâm và chi
+                nhánh.
               </CardDescription>
             </div>
           </div>
@@ -139,13 +140,13 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
           >
             <CardContent className="flex items-center gap-5 p-6">
               <div
-              className={cn(
-                "flex size-14 items-center justify-center rounded-full",
-                card.iconBg,
-                card.iconColor,
-              )}
-            >
-              {card.icon}
+                className={cn(
+                  "flex size-14 items-center justify-center rounded-full",
+                  card.iconBg,
+                  card.iconColor,
+                )}
+              >
+                {card.icon}
               </div>
               <div>
                 <p className="whitespace-nowrap text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -162,14 +163,14 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
         <CardContent className="p-4">
           <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_220px_220px_auto] xl:items-center">
             <div className="relative min-w-0">
-          <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Tìm mã phiếu, kho gửi..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-11 w-full pl-10 pr-4 text-sm"
-          />
+              <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Tìm mã phiếu, kho gửi..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-11 w-full pl-10 pr-4 text-sm"
+              />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="h-11">
@@ -206,7 +207,9 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
       </Card>
 
       {/* Data Table */}
-      <Card className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}>
+      <Card
+        className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}
+      >
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -265,10 +268,20 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
                   </TableCell>
                   <TableCell className="px-6 py-5">
                     <div className="flex items-center gap-2">
-                      <Button type="button" size="icon" variant="ghost" aria-label="Xem phiếu">
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        aria-label="Xem phiếu"
+                      >
                         <Eye className="size-4" />
                       </Button>
-                      <Button type="button" size="icon" variant="ghost" aria-label="In phiếu">
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        aria-label="In phiếu"
+                      >
                         <Printer className="size-4" />
                       </Button>
                     </div>
@@ -284,17 +297,17 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
       <Card className="rounded-lg border-info/20 bg-info/8">
         <CardContent className="p-5">
           <div className="flex items-start gap-3">
-          <Lightbulb className="mt-0.5 size-5 shrink-0 text-info" />
-          <div>
-            <p className="text-sm font-semibold">Gợi ý vận hành</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {transfers.length > 0
-                ? inTransit > 0
-                  ? `Có ${inTransit} phiếu đang vận chuyển và ${awaiting} phiếu chờ nhận. Ưu tiên xác nhận hàng đến để giảm ùn tắc luân chuyển.`
-                  : `Đã ghi nhận ${receivedCount} phiếu luân chuyển hoàn tất. Dữ liệu đang bám theo chứng từ thực tế của kho.`
-                : "Chưa có phiếu luân chuyển nào. Khi phát sinh chứng từ thực, hệ thống sẽ tự hiển thị trạng thái ưu tiên."}
-            </p>
-          </div>
+            <Lightbulb className="mt-0.5 size-5 shrink-0 text-info" />
+            <div>
+              <p className="text-sm font-semibold">Gợi ý vận hành</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {transfers.length > 0
+                  ? inTransit > 0
+                    ? `Có ${inTransit} phiếu đang vận chuyển và ${awaiting} phiếu chờ nhận. Ưu tiên xác nhận hàng đến để giảm ùn tắc luân chuyển.`
+                    : `Đã ghi nhận ${receivedCount} phiếu luân chuyển hoàn tất. Dữ liệu đang bám theo chứng từ thực tế của kho.`
+                  : "Chưa có phiếu luân chuyển nào. Khi phát sinh chứng từ thực, hệ thống sẽ tự hiển thị trạng thái ưu tiên."}
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

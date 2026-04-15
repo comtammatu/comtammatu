@@ -5,15 +5,14 @@
 @source "../../../packages/shared/src";
 
 /* ============================================================
-   Cơm Tấm Má Tư — Design Tokens
+   Cơm Tấm Má Tư — Web App V2 Tokens
    Tailwind CSS v4 — CSS-first configuration
-   Style: Minimalist B/W + Orange accent (shadcn/ui based)
-   Primary: Orange #d35400 | Surface: Pure white #ffffff
+   Style: Restaurant Ops OS
    Ref: docs/spec/design-system.md
    ============================================================ */
 
 @theme inline {
-  --font-sans: var(--font-be-vietnam-pro), system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
   /* Data-dense font sizes */
@@ -29,65 +28,51 @@
   --min-w-col-md: 10rem; /* 160px */
   --min-w-col-lg: 15rem; /* 240px */
 
-  /* Minimalist zinc palette + orange accent */
-  --color-background: #ffffff;
-  --color-foreground: #09090b;
+  /* Warm operational palette */
+  --color-background: #f3efe6;
+  --color-foreground: #15191d;
+  --color-primary: #c35a22;
+  --color-primary-foreground: #fff8f2;
+  --color-secondary: #e5ddcf;
+  --color-secondary-foreground: #23282d;
+  --color-accent: #d7cebf;
+  --color-accent-foreground: #171a1e;
+  --color-muted: #e6dfd3;
+  --color-muted-foreground: #6c6c67;
+  --color-card: #fbf8f1;
+  --color-card-foreground: #15191d;
+  --color-popover: #fdf9f2;
+  --color-popover-foreground: #15191d;
+  --color-border: #c9c1b4;
+  --color-input: #c9c1b4;
+  --color-ring: #c35a22;
+  --color-ring-offset: #f3efe6;
 
-  /* Primary: Orange — brand accent, CTA, active states */
-  --color-primary: #d35400;
-  --color-primary-foreground: #ffffff;
+  --color-destructive: #be3a2d;
+  --color-destructive-foreground: #fff7f5;
+  --color-success: #197355;
+  --color-warning: #ab7218;
+  --color-info: #285fc0;
 
-  /* Secondary: zinc-100 */
-  --color-secondary: #f4f4f5;
-  --color-secondary-foreground: #18181b;
+  --color-sidebar: #12161a;
+  --color-sidebar-foreground: #f6f2e9;
+  --color-sidebar-primary: #c35a22;
+  --color-sidebar-primary-foreground: #fff8f2;
+  --color-sidebar-accent: #1e2429;
+  --color-sidebar-accent-foreground: #f6f2e9;
+  --color-sidebar-border: #2a3238;
+  --color-sidebar-ring: #c35a22;
 
-  /* Accent: same as secondary for minimal look */
-  --color-accent: #f4f4f5;
-  --color-accent-foreground: #18181b;
-
-  /* Muted: zinc-100 */
-  --color-muted: #f4f4f5;
-  --color-muted-foreground: #71717a;
-
-  /* Card: white */
-  --color-card: #ffffff;
-  --color-card-foreground: #09090b;
-
-  --color-popover: #ffffff;
-  --color-popover-foreground: #09090b;
-
-  /* Border: zinc-200 */
-  --color-border: #e4e4e7;
-  --color-input: #e4e4e7;
-  --color-ring: #d35400;
-  --color-ring-offset: #ffffff;
-
-  /* Destructive */
-  --color-destructive: #dc2626;
-  --color-destructive-foreground: #ffffff;
-
-  /* Status colors */
-  --color-success: #16a34a;
-  --color-warning: #d97706;
-  --color-info: #2563eb;
-
-  /* Sidebar — shadcn sidebar tokens */
-  --color-sidebar: #fafafa;
-  --color-sidebar-foreground: #09090b;
-  --color-sidebar-primary: #d35400;
-  --color-sidebar-primary-foreground: #ffffff;
-  --color-sidebar-accent: #f4f4f5;
-  --color-sidebar-accent-foreground: #18181b;
-  --color-sidebar-border: #e4e4e7;
-  --color-sidebar-ring: #d35400;
-
-  /* Surface semantics */
-  --color-surface-raised: #ffffff;
-  --color-surface-sunken: #f4f4f5;
-  --color-state-pending: #d97706;
-  --color-state-processing: #ea580c;
-  --color-state-ready: #16a34a;
-  --color-state-cancelled: #71717a;
+  --color-surface-raised: #fbf8f1;
+  --color-surface-sunken: #e8e1d5;
+  --color-panel-subtle: #efe8dc;
+  --color-panel-strong: #ddd2c2;
+  --color-shell: #12161a;
+  --color-shell-foreground: #f6f2e9;
+  --color-state-pending: #ab7218;
+  --color-state-processing: #c35a22;
+  --color-state-ready: #197355;
+  --color-state-cancelled: #767069;
 
   /* Spacing and layout scales */
   --space-1: 0.25rem;
@@ -98,10 +83,10 @@
   --space-8: 2rem;
   --space-12: 3rem;
 
-  /* Elevation — neutral shadows */
-  --elevation-1: 0 1px 3px rgba(0, 0, 0, 0.06);
-  --elevation-2: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --elevation-3: 0 12px 32px rgba(0, 0, 0, 0.12);
+  /* Elevation — warmer, denser */
+  --elevation-1: 0 8px 20px rgba(21, 25, 29, 0.06);
+  --elevation-2: 0 16px 38px rgba(21, 25, 29, 0.1);
+  --elevation-3: 0 24px 56px rgba(21, 25, 29, 0.16);
   --z-overlay-1: 10;
   --z-overlay-2: 20;
   --z-overlay-3: 30;
@@ -234,6 +219,18 @@
     @apply bg-background text-foreground antialiased;
     min-height: 100vh;
     text-rendering: optimizeLegibility;
+    background-image:
+      linear-gradient(
+        to right,
+        color-mix(in srgb, var(--color-border) 18%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--color-border) 18%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 2rem 2rem;
   }
 
   h1,
@@ -285,4 +282,59 @@
 }
 
 @layer utilities {
+  .shadow-app-sm {
+    box-shadow: var(--elevation-1);
+  }
+
+  .shadow-app-md {
+    box-shadow: var(--elevation-2);
+  }
+
+  .shadow-app-lg {
+    box-shadow: var(--elevation-3);
+  }
+
+  .surface-panel {
+    @apply rounded-3xl border border-border/80 bg-card;
+    box-shadow: var(--elevation-1);
+  }
+
+  .surface-shell {
+    @apply rounded-4xl border border-sidebar-border bg-sidebar text-sidebar-foreground;
+    box-shadow: var(--elevation-3);
+  }
+
+  .surface-chip {
+    @apply inline-flex items-center gap-2 rounded-full border border-border/70 bg-panel-subtle px-3 py-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground;
+  }
+
+  .ops-grid {
+    background-image:
+      linear-gradient(
+        to right,
+        color-mix(in srgb, var(--color-border) 12%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--color-border) 12%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 1.75rem 1.75rem;
+  }
+
+  .ops-grid-dark {
+    background-image:
+      linear-gradient(
+        to right,
+        color-mix(in srgb, white 5%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, white 5%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 1.75rem 1.75rem;
+  }
 }

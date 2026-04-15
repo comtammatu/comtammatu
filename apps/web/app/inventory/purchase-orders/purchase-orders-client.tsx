@@ -31,7 +31,7 @@ import {
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import type { SupplierRow } from "../suppliers/suppliers-client";
-import { EmptyStatePanel } from "../_components/empty-state-panel";
+import { EmptyStatePanel } from "@/components/v2/patterns";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { tRoute, tStatus } from "../_lib/dictionary";
 import {
@@ -96,10 +96,7 @@ export function PurchaseOrdersClient({
     const query = search.trim().toLowerCase();
 
     return rows.filter((row) => {
-      if (
-        statusFilter !== ALL_FILTER_VALUE &&
-        row.status !== statusFilter
-      ) {
+      if (statusFilter !== ALL_FILTER_VALUE && row.status !== statusFilter) {
         return false;
       }
 
@@ -141,7 +138,8 @@ export function PurchaseOrdersClient({
                 {tRoute("/inventory/purchase-orders", "heading")}
               </CardTitle>
               <CardDescription className="max-w-3xl leading-6">
-                Theo dõi đơn mua theo nhà cung cấp, trạng thái xử lý và ngày đặt hàng.
+                Theo dõi đơn mua theo nhà cung cấp, trạng thái xử lý và ngày đặt
+                hàng.
               </CardDescription>
             </div>
           </div>
@@ -206,11 +204,13 @@ export function PurchaseOrdersClient({
                 <SelectValue placeholder="Trạng thái" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL_FILTER_VALUE}>Tất cả trạng thái</SelectItem>
-                {STATUS_KEYS.map((statusKey) => (
-                <SelectItem key={statusKey} value={statusKey}>
-                    {tStatus(statusKey, "table")}
+                <SelectItem value={ALL_FILTER_VALUE}>
+                  Tất cả trạng thái
                 </SelectItem>
+                {STATUS_KEYS.map((statusKey) => (
+                  <SelectItem key={statusKey} value={statusKey}>
+                    {tStatus(statusKey, "table")}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -265,7 +265,9 @@ export function PurchaseOrdersClient({
                           {row.suppliers?.name ?? "Chưa gắn nhà cung cấp"}
                         </p>
                       </div>
-                      <Badge variant={getInventoryStatusBadgeVariant(row.status)}>
+                      <Badge
+                        variant={getInventoryStatusBadgeVariant(row.status)}
+                      >
                         {getInventoryStatusLabel(row.status)}
                       </Badge>
                     </div>
@@ -325,10 +327,7 @@ export function PurchaseOrdersClient({
                   ) : null}
 
                   {filteredRows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      className="hover:bg-muted/20"
-                    >
+                    <TableRow key={row.id} className="hover:bg-muted/20">
                       <TableCell className="font-mono font-medium">
                         {row.po_number}
                       </TableCell>
@@ -336,7 +335,9 @@ export function PurchaseOrdersClient({
                         {row.suppliers?.name ?? "Chưa gắn nhà cung cấp"}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getInventoryStatusBadgeVariant(row.status)}>
+                        <Badge
+                          variant={getInventoryStatusBadgeVariant(row.status)}
+                        >
                           {getInventoryStatusLabel(row.status)}
                         </Badge>
                       </TableCell>

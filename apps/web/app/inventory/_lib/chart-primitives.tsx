@@ -132,7 +132,9 @@ export function TrendSparkline({
         .filter((_, index) => index % 3 === 0 || index === points.length - 1)
         .map((point) => {
           const [cx, cy] = point.split(",").map(Number);
-          return <circle key={point} cx={cx} cy={cy} r={4} fill={strokeColor} />;
+          return (
+            <circle key={point} cx={cx} cy={cy} r={4} fill={strokeColor} />
+          );
         })}
     </svg>
   );

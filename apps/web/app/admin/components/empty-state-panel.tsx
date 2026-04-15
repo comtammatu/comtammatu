@@ -1,8 +1,5 @@
 import type { ReactNode } from "react";
-import {
-  type EmptyStateMode,
-  EmptyState,
-} from "@comtammatu/ui/components/admin-patterns";
+import { type EmptyStateMode, EmptyState } from "@/components/v2/patterns";
 
 interface EmptyStatePanelProps {
   title?: string;

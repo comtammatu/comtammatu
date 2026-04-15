@@ -20,7 +20,9 @@ const branchSchema = z.object({
 
 const updateBranchSchema = branchSchema.extend({
   id: z.coerce.number().int().positive(),
-  branchKind: z.enum(["branch", "central_kitchen", "headquarters"]).default("branch"),
+  branchKind: z
+    .enum(["branch", "central_kitchen", "headquarters"])
+    .default("branch"),
 });
 
 type BranchWritePayload = {
@@ -126,7 +128,10 @@ export async function updateBranch(
     return { success: false, error: "Điểm vận hành không tồn tại" };
   }
 
-  if (!currentBranch.is_headquarters && parsed.data.branchKind === "headquarters") {
+  if (
+    !currentBranch.is_headquarters &&
+    parsed.data.branchKind === "headquarters"
+  ) {
     return {
       success: false,
       error: "Vui lòng dùng nút Đặt làm trụ sở chính để gán HQ.",

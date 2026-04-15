@@ -19,7 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
-import { EmptyStatePanel } from "../_components/empty-state-panel";
+import { EmptyStatePanel } from "@/components/v2/patterns";
 import { SimpleBarChart, TrendSparkline } from "../_lib/chart-primitives";
 import { formatVND } from "../_lib/format";
 import {
@@ -78,7 +78,8 @@ export function ReportsClient({
             <div className="space-y-1">
               <CardTitle className="text-3xl">Hệ thống báo cáo</CardTitle>
               <CardDescription className="max-w-3xl leading-6">
-                Tổng hợp biến động kho, công nợ và chênh lệch tiêu hao theo cùng một nhịp vận hành.
+                Tổng hợp biến động kho, công nợ và chênh lệch tiêu hao theo cùng
+                một nhịp vận hành.
               </CardDescription>
             </div>
           </div>
@@ -87,84 +88,91 @@ export function ReportsClient({
 
       <Card className="border-border/70">
         <CardContent className="space-y-4 p-5 sm:p-6">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)] lg:items-center">
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2 rounded-full border border-border/70 bg-card px-4 py-2 text-sm font-medium shadow-sm">
-                <Calendar className="size-4 text-primary" />
-                <span className="text-foreground">Tháng này</span>
-                <ChevronDown className="size-3.5 text-muted-foreground" />
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)] lg:items-center">
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 rounded-full border border-border/70 bg-card px-4 py-2 text-sm font-medium shadow-sm">
+                  <Calendar className="size-4 text-primary" />
+                  <span className="text-foreground">Tháng này</span>
+                  <ChevronDown className="size-3.5 text-muted-foreground" />
+                </div>
+                <div className="flex items-center gap-2 rounded-full border border-border/70 bg-card px-4 py-2 text-sm font-medium shadow-sm">
+                  <Store className="size-4 text-primary" />
+                  <span className="text-foreground">Tất cả chi nhánh</span>
+                  <ChevronDown className="size-3.5 text-muted-foreground" />
+                </div>
               </div>
-              <div className="flex items-center gap-2 rounded-full border border-border/70 bg-card px-4 py-2 text-sm font-medium shadow-sm">
-                <Store className="size-4 text-primary" />
-                <span className="text-foreground">Tất cả chi nhánh</span>
-                <ChevronDown className="size-3.5 text-muted-foreground" />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border border-border/70 bg-muted/20 px-4 py-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Công nợ quá hạn
+                </p>
+                <p className="mt-2 text-2xl font-semibold">
+                  {formatVND(overdueAmount)}đ
+                </p>
+              </div>
+              <div className="rounded-lg border border-border/70 bg-muted/20 px-4 py-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Mã lệch định mức
+                </p>
+                <p className="mt-2 text-2xl font-semibold">{varianceCount}</p>
               </div>
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg border border-border/70 bg-muted/20 px-4 py-4">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Công nợ quá hạn
-              </p>
-              <p className="mt-2 text-2xl font-semibold">
-                {formatVND(overdueAmount)}đ
-              </p>
-            </div>
-            <div className="rounded-lg border border-border/70 bg-muted/20 px-4 py-4">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Mã lệch định mức
-              </p>
-              <p className="mt-2 text-2xl font-semibold">{varianceCount}</p>
-            </div>
+          <div className="mt-4 flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full border-primary/30 bg-card px-5 font-bold text-primary hover:bg-muted"
+            >
+              <FileDown className="size-4" />
+              Xuất CSV/Excel
+            </Button>
           </div>
-        </div>
-        <div className="mt-4 flex justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-full border-primary/30 bg-card px-5 font-bold text-primary hover:bg-muted"
-          >
-            <FileDown className="size-4" />
-            Xuất CSV/Excel
-          </Button>
-        </div>
         </CardContent>
       </Card>
 
       {/* Dashboard Grid — 12 col asymmetric */}
       <div className="grid grid-cols-12 gap-6">
         {/* Stock Movement Summary — col-span-8 */}
-        <Card className={cn(panelClassName, "col-span-12 flex flex-col p-6 lg:col-span-8")}>
+        <Card
+          className={cn(
+            panelClassName,
+            "col-span-12 flex flex-col p-6 lg:col-span-8",
+          )}
+        >
           <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
-              <BarChart3 className="size-5 text-primary" />
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
+                <BarChart3 className="size-5 text-primary" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground">
+                Biến động kho theo nhóm
+              </h3>
             </div>
-            <h3 className="text-lg font-bold text-foreground">Biến động kho theo nhóm</h3>
+            <div className="flex items-center gap-4 text-xs font-medium">
+              <span className="flex items-center gap-1.5">
+                <span className="size-3 rounded-full bg-primary" />
+                <span className="text-muted-foreground">Nhập kho</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-3 rounded-full bg-success" />
+                <span className="text-muted-foreground">Chuyển vào</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-3 rounded-full bg-destructive" />
+                <span className="text-muted-foreground">Xuất / tiêu hao</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-3 rounded-full bg-info" />
+                <span className="text-muted-foreground">Sản xuất</span>
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-4 text-xs font-medium">
-            <span className="flex items-center gap-1.5">
-              <span className="size-3 rounded-full bg-primary" />
-              <span className="text-muted-foreground">Nhập kho</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-3 rounded-full bg-success" />
-              <span className="text-muted-foreground">Chuyển vào</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-3 rounded-full bg-destructive" />
-              <span className="text-muted-foreground">Xuất / tiêu hao</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-3 rounded-full bg-info" />
-              <span className="text-muted-foreground">Sản xuất</span>
-            </span>
+          <div className="flex-1">
+            <SimpleBarChart data={movementSummary} height={220} />
           </div>
-        </div>
-        <div className="flex-1">
-          <SimpleBarChart data={movementSummary} height={220} />
-        </div>
           <div className="mt-4 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">{trendLabel}</p>
             <button
@@ -177,7 +185,9 @@ export function ReportsClient({
         </Card>
 
         <Card className={cn(panelClassName, "col-span-12 p-6 lg:col-span-4")}>
-          <h3 className="mb-4 text-lg font-bold text-foreground">Công nợ nhà cung cấp</h3>
+          <h3 className="mb-4 text-lg font-bold text-foreground">
+            Công nợ nhà cung cấp
+          </h3>
           <div className="space-y-4">
             {apAging.map((item, idx) => {
               const isOverdue = idx === apAging.length - 1;
@@ -200,10 +210,21 @@ export function ReportsClient({
                   )}
                 >
                   <div className="mb-1 flex justify-between text-xs">
-                    <span className={cn(isOverdue ? "text-destructive" : "text-muted-foreground")}>
+                    <span
+                      className={cn(
+                        isOverdue
+                          ? "text-destructive"
+                          : "text-muted-foreground",
+                      )}
+                    >
                       {item.range}
                     </span>
-                    <span className={cn("font-bold", isOverdue ? "text-destructive" : "text-foreground")}>
+                    <span
+                      className={cn(
+                        "font-bold",
+                        isOverdue ? "text-destructive" : "text-foreground",
+                      )}
+                    >
                       {formatVND(item.amount)}đ
                     </span>
                   </div>
@@ -257,7 +278,9 @@ export function ReportsClient({
                       <p className="text-sm font-bold text-foreground">
                         {item.name}
                       </p>
-                      <p className="text-xs text-muted-foreground">Đơn vị: kg</p>
+                      <p className="text-xs text-muted-foreground">
+                        Đơn vị: kg
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -304,9 +327,7 @@ export function ReportsClient({
                 color="primary"
                 target={30}
               />
-              <p
-                className="mt-2 text-xs text-muted-foreground"
-              >
+              <p className="mt-2 text-xs text-muted-foreground">
                 Food cost theo tháng.
               </p>
             </>
@@ -352,9 +373,7 @@ export function ReportsClient({
               "group cursor-pointer p-5 transition-all hover:-translate-y-0.5 hover:shadow-md",
             )}
           >
-            <div
-              className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted transition-colors"
-            >
+            <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted transition-colors">
               <report.icon className="size-5 text-muted-foreground" />
             </div>
             <p className="font-bold text-foreground">{report.title}</p>

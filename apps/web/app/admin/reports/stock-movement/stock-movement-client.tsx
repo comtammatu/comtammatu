@@ -166,7 +166,11 @@ export function StockMovementClient({
             30 ngày
           </Button>
         </div>
-        <Button onClick={load} disabled={isPending} className="w-full sm:w-auto">
+        <Button
+          onClick={load}
+          disabled={isPending}
+          className="w-full sm:w-auto"
+        >
           {isPending ? "Đang tải..." : "Xem báo cáo"}
         </Button>
       </div>
@@ -215,100 +219,140 @@ export function StockMovementClient({
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs text-muted-foreground">Tồn cuối</p>
+                          <p className="text-xs text-muted-foreground">
+                            Tồn cuối
+                          </p>
                           <p className="font-mono font-semibold">
                             {fmt(row.closing)}
                           </p>
                         </div>
                       </div>
                       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                        <div><p className="text-muted-foreground">Tồn đầu</p><p className="mt-1 font-mono">{fmt(row.opening)}</p></div>
-                        <div><p className="text-muted-foreground">Nhập (GRN)</p><p className="mt-1 font-mono text-success">{fmt(row.grn_receipt)}</p></div>
-                        <div><p className="text-muted-foreground">SX tiêu hao</p><p className="mt-1 font-mono text-destructive">{fmt(row.production_consumption)}</p></div>
-                        <div><p className="text-muted-foreground">SX nhập</p><p className="mt-1 font-mono text-success">{fmt(row.production_output)}</p></div>
-                        <div><p className="text-muted-foreground">Chuyển vào</p><p className="mt-1 font-mono text-success">{fmt(row.transfer_in)}</p></div>
-                        <div><p className="text-muted-foreground">Chuyển ra</p><p className="mt-1 font-mono text-destructive">{fmt(row.transfer_out)}</p></div>
-                        <div><p className="text-muted-foreground">Tiêu thụ</p><p className="mt-1 font-mono text-destructive">{fmt(row.consumption)}</p></div>
-                        <div><p className="text-muted-foreground">Điều chỉnh</p><p className="mt-1 font-mono">{fmt(row.adjustment)}</p></div>
+                        <div>
+                          <p className="text-muted-foreground">Tồn đầu</p>
+                          <p className="mt-1 font-mono">{fmt(row.opening)}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Nhập (GRN)</p>
+                          <p className="mt-1 font-mono text-success">
+                            {fmt(row.grn_receipt)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">SX tiêu hao</p>
+                          <p className="mt-1 font-mono text-destructive">
+                            {fmt(row.production_consumption)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">SX nhập</p>
+                          <p className="mt-1 font-mono text-success">
+                            {fmt(row.production_output)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Chuyển vào</p>
+                          <p className="mt-1 font-mono text-success">
+                            {fmt(row.transfer_in)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Chuyển ra</p>
+                          <p className="mt-1 font-mono text-destructive">
+                            {fmt(row.transfer_out)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Tiêu thụ</p>
+                          <p className="mt-1 font-mono text-destructive">
+                            {fmt(row.consumption)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Điều chỉnh</p>
+                          <p className="mt-1 font-mono">
+                            {fmt(row.adjustment)}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
                 <div className="hidden overflow-x-auto rounded-md border md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-44">Nguyên liệu</TableHead>
-                      <TableHead className="w-16">ĐV</TableHead>
-                      <TableHead className="w-24 text-right">
-                        Tồn đầu kỳ
-                      </TableHead>
-                      <TableHead className="w-24 text-right">
-                        Nhập (GRN)
-                      </TableHead>
-                      <TableHead className="w-24 text-right">
-                        SX tiêu hao
-                      </TableHead>
-                      <TableHead className="w-24 text-right">
-                        SX nhập
-                      </TableHead>
-                      <TableHead className="w-24 text-right">
-                        Chuyển vào
-                      </TableHead>
-                      <TableHead className="w-24 text-right">
-                        Chuyển ra
-                      </TableHead>
-                      <TableHead className="w-24 text-right">
-                        Tiêu thụ
-                      </TableHead>
-                      <TableHead className="w-24 text-right">
-                        Điều chỉnh
-                      </TableHead>
-                      <TableHead className="w-24 text-right">
-                        Tồn cuối kỳ
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {movementRows.map((row) => (
-                      <TableRow key={row.ingredient_id}>
-                        <TableCell className="font-medium">
-                          {row.ingredient_name}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {row.unit}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {fmt(row.opening)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-success">
-                          {fmt(row.grn_receipt)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-destructive">
-                          {fmt(row.production_consumption)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-success">
-                          {fmt(row.production_output)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-success">
-                          {fmt(row.transfer_in)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-destructive">
-                          {fmt(row.transfer_out)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-destructive">
-                          {fmt(row.consumption)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {fmt(row.adjustment)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono font-semibold">
-                          {fmt(row.closing)}
-                        </TableCell>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-44">Nguyên liệu</TableHead>
+                        <TableHead className="w-16">ĐV</TableHead>
+                        <TableHead className="w-24 text-right">
+                          Tồn đầu kỳ
+                        </TableHead>
+                        <TableHead className="w-24 text-right">
+                          Nhập (GRN)
+                        </TableHead>
+                        <TableHead className="w-24 text-right">
+                          SX tiêu hao
+                        </TableHead>
+                        <TableHead className="w-24 text-right">
+                          SX nhập
+                        </TableHead>
+                        <TableHead className="w-24 text-right">
+                          Chuyển vào
+                        </TableHead>
+                        <TableHead className="w-24 text-right">
+                          Chuyển ra
+                        </TableHead>
+                        <TableHead className="w-24 text-right">
+                          Tiêu thụ
+                        </TableHead>
+                        <TableHead className="w-24 text-right">
+                          Điều chỉnh
+                        </TableHead>
+                        <TableHead className="w-24 text-right">
+                          Tồn cuối kỳ
+                        </TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {movementRows.map((row) => (
+                        <TableRow key={row.ingredient_id}>
+                          <TableCell className="font-medium">
+                            {row.ingredient_name}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {row.unit}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {fmt(row.opening)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-success">
+                            {fmt(row.grn_receipt)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-destructive">
+                            {fmt(row.production_consumption)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-success">
+                            {fmt(row.production_output)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-success">
+                            {fmt(row.transfer_in)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-destructive">
+                            {fmt(row.transfer_out)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-destructive">
+                            {fmt(row.consumption)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {fmt(row.adjustment)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono font-semibold">
+                            {fmt(row.closing)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </>
             )}
@@ -331,76 +375,111 @@ export function StockMovementClient({
                     >
                       <p className="font-medium">{row.branch_name}</p>
                       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                        <div><p className="text-muted-foreground">Nhập (GRN)</p><p className="mt-1 font-mono text-success">{fmt(row.grn_receipt)}</p></div>
-                        <div><p className="text-muted-foreground">SX tiêu hao</p><p className="mt-1 font-mono text-destructive">{fmt(row.production_consumption)}</p></div>
-                        <div><p className="text-muted-foreground">SX nhập</p><p className="mt-1 font-mono text-success">{fmt(row.production_output)}</p></div>
-                        <div><p className="text-muted-foreground">Chuyển vào</p><p className="mt-1 font-mono text-success">{fmt(row.transfer_in)}</p></div>
-                        <div><p className="text-muted-foreground">Chuyển ra</p><p className="mt-1 font-mono text-destructive">{fmt(row.transfer_out)}</p></div>
-                        <div><p className="text-muted-foreground">Tiêu thụ</p><p className="mt-1 font-mono text-destructive">{fmt(row.consumption)}</p></div>
-                        <div><p className="text-muted-foreground">Điều chỉnh</p><p className="mt-1 font-mono">{fmt(row.adjustment)}</p></div>
+                        <div>
+                          <p className="text-muted-foreground">Nhập (GRN)</p>
+                          <p className="mt-1 font-mono text-success">
+                            {fmt(row.grn_receipt)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">SX tiêu hao</p>
+                          <p className="mt-1 font-mono text-destructive">
+                            {fmt(row.production_consumption)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">SX nhập</p>
+                          <p className="mt-1 font-mono text-success">
+                            {fmt(row.production_output)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Chuyển vào</p>
+                          <p className="mt-1 font-mono text-success">
+                            {fmt(row.transfer_in)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Chuyển ra</p>
+                          <p className="mt-1 font-mono text-destructive">
+                            {fmt(row.transfer_out)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Tiêu thụ</p>
+                          <p className="mt-1 font-mono text-destructive">
+                            {fmt(row.consumption)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Điều chỉnh</p>
+                          <p className="mt-1 font-mono">
+                            {fmt(row.adjustment)}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
                 <div className="hidden overflow-x-auto rounded-md border md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-44">Chi nhánh</TableHead>
-                      <TableHead className="w-24 text-right">
-                        Nhập (GRN)
-                      </TableHead>
-                      <TableHead className="w-24 text-right">
-                        SX tiêu hao
-                      </TableHead>
-                      <TableHead className="w-24 text-right">
-                        SX nhập
-                      </TableHead>
-                      <TableHead className="w-24 text-right">
-                        Chuyển vào
-                      </TableHead>
-                      <TableHead className="w-24 text-right">
-                        Chuyển ra
-                      </TableHead>
-                      <TableHead className="w-24 text-right">
-                        Tiêu thụ
-                      </TableHead>
-                      <TableHead className="w-24 text-right">
-                        Điều chỉnh
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {branchRows.map((row) => (
-                      <TableRow key={row.branch_id}>
-                        <TableCell className="font-medium">
-                          {row.branch_name}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-success">
-                          {fmt(row.grn_receipt)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-destructive">
-                          {fmt(row.production_consumption)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-success">
-                          {fmt(row.production_output)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-success">
-                          {fmt(row.transfer_in)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-destructive">
-                          {fmt(row.transfer_out)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-destructive">
-                          {fmt(row.consumption)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {fmt(row.adjustment)}
-                        </TableCell>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-44">Chi nhánh</TableHead>
+                        <TableHead className="w-24 text-right">
+                          Nhập (GRN)
+                        </TableHead>
+                        <TableHead className="w-24 text-right">
+                          SX tiêu hao
+                        </TableHead>
+                        <TableHead className="w-24 text-right">
+                          SX nhập
+                        </TableHead>
+                        <TableHead className="w-24 text-right">
+                          Chuyển vào
+                        </TableHead>
+                        <TableHead className="w-24 text-right">
+                          Chuyển ra
+                        </TableHead>
+                        <TableHead className="w-24 text-right">
+                          Tiêu thụ
+                        </TableHead>
+                        <TableHead className="w-24 text-right">
+                          Điều chỉnh
+                        </TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {branchRows.map((row) => (
+                        <TableRow key={row.branch_id}>
+                          <TableCell className="font-medium">
+                            {row.branch_name}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-success">
+                            {fmt(row.grn_receipt)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-destructive">
+                            {fmt(row.production_consumption)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-success">
+                            {fmt(row.production_output)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-success">
+                            {fmt(row.transfer_in)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-destructive">
+                            {fmt(row.transfer_out)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-destructive">
+                            {fmt(row.consumption)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {fmt(row.adjustment)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </>
             )}

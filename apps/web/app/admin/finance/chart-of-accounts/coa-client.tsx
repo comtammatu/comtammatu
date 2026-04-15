@@ -1,11 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import {
-  EmptyState,
-  SectionCard,
-  StatusBadge,
-} from "@comtammatu/ui/components/admin-patterns";
+import { EmptyState, SectionCard, StatusBadge } from "@/components/v2/patterns";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
@@ -116,8 +112,12 @@ export function ChartOfAccountsClient({
     <div className="space-y-4">
       <div className="rounded-xl border bg-card shadow-sm flex flex-wrap items-center justify-between gap-4 p-4">
         <div className="space-y-1.5">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Danh mục tài khoản</p>
-          <p className="text-sm text-muted-foreground">{accounts.length} tài khoản.</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Danh mục tài khoản
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {accounts.length} tài khoản.
+          </p>
         </div>
         <Button
           variant="outline"

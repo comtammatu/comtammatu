@@ -28,7 +28,7 @@ import {
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { EmptyStatePanel } from "../_components/empty-state-panel";
+import { EmptyStatePanel } from "@/components/v2/patterns";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
 import { createStockTransfer } from "../transfer-actions";
 import type { IngredientRow } from "../page";
@@ -350,13 +350,13 @@ export function CreateTransferDialog({
                     <SelectTrigger>
                       <SelectValue placeholder="Chọn kho" />
                     </SelectTrigger>
-                      <SelectContent>
-                        {operational.map((b) => (
-                          <SelectItem key={b.id} value={String(b.id)}>
-                            {formatBranchSiteLabel(b)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                    <SelectContent>
+                      {operational.map((b) => (
+                        <SelectItem key={b.id} value={String(b.id)}>
+                          {formatBranchSiteLabel(b)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
               )}

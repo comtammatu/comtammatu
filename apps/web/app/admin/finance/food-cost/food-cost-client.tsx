@@ -1,10 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import {
-  FilterBar,
-  SectionCard,
-} from "@comtammatu/ui/components/admin-patterns";
+import { FilterBar, SectionCard } from "@/components/v2/patterns";
 import {
   Table,
   TableBody,

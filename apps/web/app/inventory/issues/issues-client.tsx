@@ -182,79 +182,79 @@ export function IssuesClient({
         <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
           <Card className={panelClassName}>
             <CardContent className="p-6">
-            <div className="mb-4 flex items-start justify-between">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-warning/12">
-                <ClipboardList className="size-5 text-warning" />
+              <div className="mb-4 flex items-start justify-between">
+                <div className="flex size-10 items-center justify-center rounded-xl bg-warning/12">
+                  <ClipboardList className="size-5 text-warning" />
+                </div>
+                <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                  Tháng này
+                </span>
               </div>
-              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-                Tháng này
-              </span>
-            </div>
-            <h3 className="text-3xl font-black tracking-tight">
-              {issues.length}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Tổng phiếu đã xuất
-            </p>
+              <h3 className="text-3xl font-black tracking-tight">
+                {issues.length}
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Tổng phiếu đã xuất
+              </p>
             </CardContent>
           </Card>
 
           <Card className={panelClassName}>
             <CardContent className="p-6">
-            <div className="mb-4 flex items-start justify-between">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-success/12">
-                <ChefHat className="size-5 text-success" />
+              <div className="mb-4 flex items-start justify-between">
+                <div className="flex size-10 items-center justify-center rounded-xl bg-success/12">
+                  <ChefHat className="size-5 text-success" />
+                </div>
+                <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                  Cấp phát bếp
+                </span>
               </div>
-              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-                Cấp phát bếp
-              </span>
-            </div>
-            <h3 className="text-3xl font-black tracking-tight text-success">
-              {kitchenUseCount}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {issues.length > 0
-                ? `Chiếm ${Math.round((kitchenUseCount / issues.length) * 100)}% tỉ lệ xuất`
-                : "Chưa có dữ liệu"}
-            </p>
+              <h3 className="text-3xl font-black tracking-tight text-success">
+                {kitchenUseCount}
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {issues.length > 0
+                  ? `Chiếm ${Math.round((kitchenUseCount / issues.length) * 100)}% tỉ lệ xuất`
+                  : "Chưa có dữ liệu"}
+              </p>
             </CardContent>
           </Card>
 
           <Card className={panelClassName}>
             <CardContent className="p-6">
-            <div className="mb-4 flex items-start justify-between">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-destructive/12">
-                <AlertTriangle className="size-5 text-destructive" />
+              <div className="mb-4 flex items-start justify-between">
+                <div className="flex size-10 items-center justify-center rounded-xl bg-destructive/12">
+                  <AlertTriangle className="size-5 text-destructive" />
+                </div>
+                <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                  Hư hỏng
+                </span>
               </div>
-              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-                Hư hỏng
-              </span>
-            </div>
-            <h3 className="text-3xl font-black tracking-tight text-destructive">
-              {writeOffCount}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Cần tối ưu quy trình
-            </p>
+              <h3 className="text-3xl font-black tracking-tight text-destructive">
+                {writeOffCount}
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Cần tối ưu quy trình
+              </p>
             </CardContent>
           </Card>
 
           <Card className={panelClassName}>
             <CardContent className="p-6">
-            <div className="mb-4 flex items-start justify-between">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-muted">
-                <Clock className="size-5 text-muted-foreground" />
+              <div className="mb-4 flex items-start justify-between">
+                <div className="flex size-10 items-center justify-center rounded-xl bg-muted">
+                  <Clock className="size-5 text-muted-foreground" />
+                </div>
+                <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                  Chờ duyệt
+                </span>
               </div>
-              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-                Chờ duyệt
-              </span>
-            </div>
-            <h3 className="text-3xl font-black tracking-tight">
-              {String(draftCount).padStart(2, "0")}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Phiếu nháp hiện có
-            </p>
+              <h3 className="text-3xl font-black tracking-tight">
+                {String(draftCount).padStart(2, "0")}
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Phiếu nháp hiện có
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -266,65 +266,63 @@ export function IssuesClient({
           )}
         >
           <CardContent className="flex items-center justify-between gap-4 p-0">
-          <div className="flex items-center gap-6">
-            <div className="flex flex-col gap-1">
-              <label className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-                Trạng thái
-              </label>
-              <SearchableSelect
-                options={[
-                  { value: "all", label: "Tất cả trạng thái" },
-                  { value: "draft", label: "Nháp" },
-                  { value: "confirmed", label: "Đã xác nhận" },
-                  { value: "cancelled", label: "Đã huỷ" },
-                ]}
-                value={activeStatus}
-                onValueChange={setActiveStatus}
-                placeholder="Tất cả trạng thái"
-                searchPlaceholder="Tìm trạng thái..."
-                variant="ghost"
-                className="text-foreground"
-              />
+            <div className="flex items-center gap-6">
+              <div className="flex flex-col gap-1">
+                <label className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                  Trạng thái
+                </label>
+                <SearchableSelect
+                  options={[
+                    { value: "all", label: "Tất cả trạng thái" },
+                    { value: "draft", label: "Nháp" },
+                    { value: "confirmed", label: "Đã xác nhận" },
+                    { value: "cancelled", label: "Đã huỷ" },
+                  ]}
+                  value={activeStatus}
+                  onValueChange={setActiveStatus}
+                  placeholder="Tất cả trạng thái"
+                  searchPlaceholder="Tìm trạng thái..."
+                  variant="ghost"
+                  className="text-foreground"
+                />
+              </div>
+              <div className="h-8 w-px bg-border/40" />
+              <div className="flex flex-col gap-1">
+                <label className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                  Loại xuất
+                </label>
+                <SearchableSelect
+                  options={[
+                    { value: "all", label: "Tất cả loại xuất" },
+                    ...ISSUE_TYPES.map((option) => ({
+                      value: option.value,
+                      label: option.label,
+                    })),
+                  ]}
+                  value={activeType}
+                  onValueChange={setActiveType}
+                  placeholder="Tất cả loại xuất"
+                  searchPlaceholder="Tìm loại xuất..."
+                  variant="ghost"
+                  className="text-foreground"
+                />
+              </div>
             </div>
-            <div className="h-8 w-px bg-border/40" />
-            <div className="flex flex-col gap-1">
-              <label className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-                Loại xuất
-              </label>
-              <SearchableSelect
-                options={[
-                  { value: "all", label: "Tất cả loại xuất" },
-                  ...ISSUE_TYPES.map((option) => ({
-                    value: option.value,
-                    label: option.label,
-                  })),
-                ]}
-                value={activeType}
-                onValueChange={setActiveType}
-                placeholder="Tất cả loại xuất"
-                searchPlaceholder="Tìm loại xuất..."
-                variant="ghost"
-                className="text-foreground"
-              />
-            </div>
-          </div>
-          <button
-            type="button"
-            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex items-center gap-1 rounded-full px-2 text-sm font-medium text-primary hover:underline"
-            onClick={() => {
-              setActiveStatus("all");
-              setActiveType("all");
-            }}
-          >
-            <FilterX className="size-4" />
-            Xoá bộ lọc
-          </button>
+            <button
+              type="button"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex items-center gap-1 rounded-full px-2 text-sm font-medium text-primary hover:underline"
+              onClick={() => {
+                setActiveStatus("all");
+                setActiveType("all");
+              }}
+            >
+              <FilterX className="size-4" />
+              Xoá bộ lọc
+            </button>
           </CardContent>
         </Card>
 
-        <div
-          className={cn(panelClassName, "overflow-hidden rounded-xl")}
-        >
+        <div className={cn(panelClassName, "overflow-hidden rounded-xl")}>
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40">
@@ -399,7 +397,9 @@ export function IssuesClient({
                     </div>
                   </TableCell>
                   <TableCell className="px-6 py-5">
-                    <Badge variant={getInventoryStatusBadgeVariant(item.status)}>
+                    <Badge
+                      variant={getInventoryStatusBadgeVariant(item.status)}
+                    >
                       {getInventoryStatusLabel(item.status)}
                     </Badge>
                   </TableCell>

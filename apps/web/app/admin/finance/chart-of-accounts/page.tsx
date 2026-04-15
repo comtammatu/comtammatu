@@ -1,8 +1,5 @@
 import { fetchChartOfAccounts } from "../chart-of-accounts-actions";
-import {
-  PageContainer,
-  PageHeader,
-} from "@comtammatu/ui/components/admin-patterns";
+import { PageContainer, PageHeader } from "@/components/v2/patterns";
 import { ChartOfAccountsClient } from "./coa-client";
 
 export default async function ChartOfAccountsPage() {
@@ -11,10 +8,7 @@ export default async function ChartOfAccountsPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        eyebrow="Tài chính"
-        title="Hệ thống tài khoản"
-      />
+      <PageHeader eyebrow="Tài chính" title="Hệ thống tài khoản" />
       <ChartOfAccountsClient initialAccounts={accounts} />
     </PageContainer>
   );

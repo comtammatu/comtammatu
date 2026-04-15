@@ -19,9 +19,7 @@ export default async function InventorySettingsLayout({
 
   return (
     <div className="space-y-6">
-      <div
-        className="rounded-lg border bg-card px-4 py-4 shadow-sm sm:px-5"
-      >
+      <div className="rounded-lg border bg-card px-4 py-4 shadow-sm sm:px-5">
         <SettingsSectionNav role={role} />
       </div>
       <div>{children}</div>

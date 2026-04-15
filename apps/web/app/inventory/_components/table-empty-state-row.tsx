@@ -1,7 +1,7 @@
 import { cn } from "@comtammatu/ui";
 import type { ReactNode } from "react";
 import { TableCell, TableRow } from "@comtammatu/ui/components/table";
-import type { EmptyStateMode } from "./empty-state-panel";
+import type { EmptyStateMode } from "@/components/v2/patterns";
 
 const TABLE_EMPTY_STATE_COPY: Record<EmptyStateMode, string> = {
   "no-data": "Chưa có dữ liệu",
@@ -33,15 +33,15 @@ export function TableEmptyStateRow({
         colSpan={colSpan}
         className={cn(paddingClassName, "text-center")}
       >
-        <div
-          className="mx-auto flex max-w-sm flex-col items-center gap-3 rounded-lg border bg-background px-4 py-6"
-        >
+        <div className="mx-auto flex max-w-sm flex-col items-center gap-3 rounded-lg border bg-background px-4 py-6">
           {icon ? (
             <div className="flex size-11 items-center justify-center rounded-full border bg-muted/40 text-muted-foreground">
               {icon}
             </div>
           ) : null}
-          <p className="text-sm font-semibold text-foreground">{resolvedTitle}</p>
+          <p className="text-sm font-semibold text-foreground">
+            {resolvedTitle}
+          </p>
           {description ? (
             <p className="text-xs leading-5 text-muted-foreground">
               {description}

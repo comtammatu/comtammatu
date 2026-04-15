@@ -3,11 +3,7 @@ import {
   SuppliersClient,
   type SupplierRow,
 } from "@/inventory/suppliers/suppliers-client";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import { Card, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
 import { tRoute } from "../../_lib/dictionary";
 
 export default async function SuppliersSettingsPage() {

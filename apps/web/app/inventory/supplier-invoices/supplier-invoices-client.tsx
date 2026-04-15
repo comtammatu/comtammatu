@@ -4,7 +4,12 @@ import { useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, Search } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   Select,
@@ -23,7 +28,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
-import { EmptyStatePanel } from "../_components/empty-state-panel";
+import { EmptyStatePanel } from "@/components/v2/patterns";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { tRoute } from "../_lib/dictionary";
 import { formatVND } from "../_lib/format";
@@ -211,7 +216,8 @@ export function SupplierInvoicesClient({
                 {tRoute("/inventory/supplier-invoices", "heading")}
               </CardTitle>
               <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-                Theo dõi đối soát 3-way, hạn thanh toán và công nợ phải trả cho từng hóa đơn NCC.
+                Theo dõi đối soát 3-way, hạn thanh toán và công nợ phải trả cho
+                từng hóa đơn NCC.
               </p>
             </div>
           </div>
@@ -226,7 +232,10 @@ export function SupplierInvoicesClient({
           { label: "Chờ đối soát", value: String(pendingMatchCount) },
           { label: "Quá hạn chưa trả", value: String(overdueCount) },
           { label: "Đã thanh toán đủ", value: String(paidCount) },
-          { label: "Công nợ còn lại", value: `${formatVND(totalOutstanding)}đ` },
+          {
+            label: "Công nợ còn lại",
+            value: `${formatVND(totalOutstanding)}đ`,
+          },
         ].map((item) => (
           <Card key={item.label} className="border-border/70">
             <CardContent className="space-y-3 p-5">
@@ -234,7 +243,9 @@ export function SupplierInvoicesClient({
                 {item.label}
               </p>
               <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-semibold tracking-tight">{item.value}</span>
+                <span className="text-2xl font-semibold tracking-tight">
+                  {item.value}
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -367,17 +378,29 @@ export function SupplierInvoicesClient({
                             </p>
                           </div>
                           {overdue ? (
-                            <Badge variant={getInventoryStatusBadgeVariant("overdue")}>
+                            <Badge
+                              variant={getInventoryStatusBadgeVariant(
+                                "overdue",
+                              )}
+                            >
                               {getInventoryStatusLabel("overdue")}
                             </Badge>
                           ) : null}
                         </div>
 
                         <div className="flex flex-wrap gap-2">
-                          <Badge variant={getInventoryStatusBadgeVariant(invoice.matchStatus)}>
+                          <Badge
+                            variant={getInventoryStatusBadgeVariant(
+                              invoice.matchStatus,
+                            )}
+                          >
                             {getInventoryStatusLabel(invoice.matchStatus)}
                           </Badge>
-                          <Badge variant={getInventoryStatusBadgeVariant(invoice.paymentStatus)}>
+                          <Badge
+                            variant={getInventoryStatusBadgeVariant(
+                              invoice.paymentStatus,
+                            )}
+                          >
                             {getInventoryStatusLabel(invoice.paymentStatus)}
                           </Badge>
                         </div>
@@ -431,7 +454,9 @@ export function SupplierInvoicesClient({
                       <TableHead className="min-w-32 text-right">
                         Còn lại
                       </TableHead>
-                      <TableHead className="w-28 text-right">Thao tác</TableHead>
+                      <TableHead className="w-28 text-right">
+                        Thao tác
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -493,17 +518,29 @@ export function SupplierInvoicesClient({
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={getInventoryStatusBadgeVariant(invoice.matchStatus)}>
+                            <Badge
+                              variant={getInventoryStatusBadgeVariant(
+                                invoice.matchStatus,
+                              )}
+                            >
                               {getInventoryStatusLabel(invoice.matchStatus)}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-2">
-                              <Badge variant={getInventoryStatusBadgeVariant(invoice.paymentStatus)}>
+                              <Badge
+                                variant={getInventoryStatusBadgeVariant(
+                                  invoice.paymentStatus,
+                                )}
+                              >
                                 {getInventoryStatusLabel(invoice.paymentStatus)}
                               </Badge>
                               {overdue ? (
-                                <Badge variant={getInventoryStatusBadgeVariant("overdue")}>
+                                <Badge
+                                  variant={getInventoryStatusBadgeVariant(
+                                    "overdue",
+                                  )}
+                                >
                                   {getInventoryStatusLabel("overdue")}
                                 </Badge>
                               ) : null}
@@ -546,10 +583,18 @@ export function SupplierInvoicesClient({
               </div>
               {selectedInvoice ? (
                 <div className="flex flex-wrap justify-end gap-2">
-                  <Badge variant={getInventoryStatusBadgeVariant(selectedInvoice.matchStatus)}>
+                  <Badge
+                    variant={getInventoryStatusBadgeVariant(
+                      selectedInvoice.matchStatus,
+                    )}
+                  >
                     {getInventoryStatusLabel(selectedInvoice.matchStatus)}
                   </Badge>
-                  <Badge variant={getInventoryStatusBadgeVariant(selectedInvoice.paymentStatus)}>
+                  <Badge
+                    variant={getInventoryStatusBadgeVariant(
+                      selectedInvoice.paymentStatus,
+                    )}
+                  >
                     {getInventoryStatusLabel(selectedInvoice.paymentStatus)}
                   </Badge>
                 </div>
@@ -643,7 +688,8 @@ export function SupplierInvoicesClient({
                           Hóa đơn đang ở ngưỡng an toàn để xử lý tiếp
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          Không có cảnh báo chênh lệch lớn trên dữ liệu hiện tại.
+                          Không có cảnh báo chênh lệch lớn trên dữ liệu hiện
+                          tại.
                         </p>
                       </div>
                     </div>

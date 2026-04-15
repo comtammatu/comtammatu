@@ -307,9 +307,12 @@ export async function approvePayroll(periodId: number): Promise<ActionResult> {
 
   // Auto-post GL journal for payroll (non-fatal — payroll approval still succeeds)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: glError } = await (supabase as any).rpc("post_payroll_journal", {
-    p_payroll_period_id: parsedId.data,
-  });
+  const { error: glError } = await (supabase as any).rpc(
+    "post_payroll_journal",
+    {
+      p_payroll_period_id: parsedId.data,
+    },
+  );
   if (glError) {
     console.error(
       "[approvePayroll] post_payroll_journal failed:",

@@ -26,11 +26,7 @@ import { fetchOrders } from "./actions";
 import { OrderDetailSheet } from "./order-detail-sheet";
 import type { OrderRow, FetchOrdersFilters } from "./actions";
 import { TableEmptyStateRow } from "../components/table-empty-state-row";
-import {
-  FilterBar,
-  StatusBadge,
-  SectionCard,
-} from "@comtammatu/ui/components/admin-patterns";
+import { FilterBar, StatusBadge, SectionCard } from "@/components/v2/patterns";
 
 /* ─── Status config ─── */
 
@@ -147,7 +143,9 @@ export function OrdersClient({
     <>
       <div className="grid gap-3 md:grid-cols-3">
         <div className="rounded-lg border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Đang xử lý</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Đang xử lý
+          </p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">
             {orderSummary.pending}
           </p>
@@ -156,7 +154,9 @@ export function OrdersClient({
           </p>
         </div>
         <div className="rounded-lg border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Hoàn thành</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Hoàn thành
+          </p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">
             {orderSummary.completed}
           </p>
@@ -165,7 +165,9 @@ export function OrdersClient({
           </p>
         </div>
         <div className="rounded-lg border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Giá trị đơn</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Giá trị đơn
+          </p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">
             {formatVND(orderSummary.revenue)}
           </p>
@@ -349,80 +351,88 @@ export function OrdersClient({
 
         <div className="hidden overflow-hidden rounded-lg border border-border/70 md:block">
           <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Mã đơn</TableHead>
-              <TableHead className="hidden sm:table-cell">Chi nhánh</TableHead>
-              <TableHead className="hidden md:table-cell">Nhân viên</TableHead>
-              <TableHead className="hidden lg:table-cell">Thời gian</TableHead>
-              <TableHead className="text-right">Tổng tiền</TableHead>
-              <TableHead className="hidden sm:table-cell">Thanh toán</TableHead>
-              <TableHead>Trạng thái</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {displayOrders.length === 0 && (
-              <TableEmptyStateRow
-                colSpan={7}
-                paddingClassName="py-16"
-                title="Không có đơn hàng nào"
-                description={
-                  hasFilters
-                    ? "Thử xóa bộ lọc hoặc đổi mốc thời gian để mở rộng kết quả."
-                    : "Hệ thống chưa có đơn nào trong phạm vi đang xem."
-                }
-                icon={
-                  <ShoppingBag className="mx-auto size-8 text-muted-foreground" />
-                }
-              />
-            )}
-            {displayOrders.map((order) => (
-              <TableRow
-                key={order.id}
-                className="cursor-pointer hover:bg-muted/45"
-                onClick={() => setSelectedOrder(order)}
-              >
-                <TableCell>
-                  <span className="font-mono text-sm font-medium">
-                    {order.order_number}
-                  </span>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell text-sm">
-                  {order.branch_name}
-                </TableCell>
-                <TableCell className="hidden md:table-cell text-sm">
-                  {order.created_by_name}
-                </TableCell>
-                <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                  {new Date(order.created_at).toLocaleString("vi-VN", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </TableCell>
-                <TableCell className="text-right font-mono font-medium">
-                  {formatVND(order.total_amount)}
-                </TableCell>
-                <TableCell className="hidden sm:table-cell">
-                  {order.payment_method ? (
-                    <Badge variant="outline" className="text-xs">
-                      {PAYMENT_METHOD_LABELS[order.payment_method] ??
-                        order.payment_method}
-                    </Badge>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <StatusBadge tone={statusBadgeVariant(order.status)}>
-                    {statusLabel(order.status)}
-                  </StatusBadge>
-                </TableCell>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Mã đơn</TableHead>
+                <TableHead className="hidden sm:table-cell">
+                  Chi nhánh
+                </TableHead>
+                <TableHead className="hidden md:table-cell">
+                  Nhân viên
+                </TableHead>
+                <TableHead className="hidden lg:table-cell">
+                  Thời gian
+                </TableHead>
+                <TableHead className="text-right">Tổng tiền</TableHead>
+                <TableHead className="hidden sm:table-cell">
+                  Thanh toán
+                </TableHead>
+                <TableHead>Trạng thái</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
+            </TableHeader>
+            <TableBody>
+              {displayOrders.length === 0 && (
+                <TableEmptyStateRow
+                  colSpan={7}
+                  paddingClassName="py-16"
+                  title="Không có đơn hàng nào"
+                  description={
+                    hasFilters
+                      ? "Thử xóa bộ lọc hoặc đổi mốc thời gian để mở rộng kết quả."
+                      : "Hệ thống chưa có đơn nào trong phạm vi đang xem."
+                  }
+                  icon={
+                    <ShoppingBag className="mx-auto size-8 text-muted-foreground" />
+                  }
+                />
+              )}
+              {displayOrders.map((order) => (
+                <TableRow
+                  key={order.id}
+                  className="cursor-pointer hover:bg-muted/45"
+                  onClick={() => setSelectedOrder(order)}
+                >
+                  <TableCell>
+                    <span className="font-mono text-sm font-medium">
+                      {order.order_number}
+                    </span>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell text-sm">
+                    {order.branch_name}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-sm">
+                    {order.created_by_name}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                    {new Date(order.created_at).toLocaleString("vi-VN", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </TableCell>
+                  <TableCell className="text-right font-mono font-medium">
+                    {formatVND(order.total_amount)}
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    {order.payment_method ? (
+                      <Badge variant="outline" className="text-xs">
+                        {PAYMENT_METHOD_LABELS[order.payment_method] ??
+                          order.payment_method}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge tone={statusBadgeVariant(order.status)}>
+                      {statusLabel(order.status)}
+                    </StatusBadge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
           </Table>
         </div>
       </SectionCard>

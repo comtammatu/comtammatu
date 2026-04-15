@@ -48,8 +48,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { EmptyStatePanel } from "../../_components/empty-state-panel";
-import { SectionCard } from "../../_components/section-card";
+import { EmptyStatePanel, SectionCard } from "@/components/v2/patterns";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatDateTime, formatQty, formatVND } from "../../_lib/format";
@@ -231,10 +230,7 @@ export function IssueDetailClient({
               value: `${formatVND(totalAmount)}đ`,
             },
           ].map((item) => (
-            <div
-              key={item.label}
-              className={cn(panelClassName, "p-4")}
-            >
+            <div key={item.label} className={cn(panelClassName, "p-4")}>
               <p className="text-label uppercase tracking-wider text-muted-foreground">
                 {item.label}
               </p>
@@ -255,9 +251,7 @@ export function IssueDetailClient({
           </SectionCard>
         ) : null}
 
-        <section
-          className={cn(panelClassName, "overflow-hidden")}
-        >
+        <section className={cn(panelClassName, "overflow-hidden")}>
           <div className="flex flex-col gap-4 border-b border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <div>
               <h4 className="text-lg font-bold">{tTerm("ingredientsList")}</h4>

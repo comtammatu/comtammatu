@@ -37,9 +37,11 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { ActionIconButton } from "../../_components/action-icon-button";
-import { EmptyStatePanel as EmptyState } from "../../_components/empty-state-panel";
-import { SectionCard } from "../../_components/section-card";
+import {
+  ActionIconButton,
+  EmptyStatePanel as EmptyState,
+  SectionCard,
+} from "@/components/v2/patterns";
 import {
   createPurchaseOrder,
   fetchPoSuggestions,

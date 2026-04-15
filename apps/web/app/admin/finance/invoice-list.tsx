@@ -116,9 +116,7 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
               <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                 <div>
                   <p className="text-muted-foreground">Người mua</p>
-                  <p className="mt-1">
-                    {inv.buyer_name ?? "—"}
-                  </p>
+                  <p className="mt-1">{inv.buyer_name ?? "—"}</p>
                   {inv.buyer_tax_code ? (
                     <p className="text-xs text-muted-foreground">
                       MST: {inv.buyer_tax_code}

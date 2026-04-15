@@ -75,7 +75,9 @@ export function StaffFilters({ branches }: StaffFiltersProps) {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Tất cả trạng thái</SelectItem>
-          <SelectItem value="active">{ACTIVE_STATE_LABELS_VI.active}</SelectItem>
+          <SelectItem value="active">
+            {ACTIVE_STATE_LABELS_VI.active}
+          </SelectItem>
           <SelectItem value="inactive">
             {ACTIVE_STATE_LABELS_VI.inactive}
           </SelectItem>

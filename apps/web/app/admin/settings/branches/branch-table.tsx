@@ -88,14 +88,14 @@ export function BranchTable({
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-              <TableRow>
-                <TableHead>Điểm vận hành</TableHead>
-                <TableHead className="hidden sm:table-cell">Loại</TableHead>
-                <TableHead className="hidden sm:table-cell">Địa chỉ</TableHead>
-                <TableHead className="hidden md:table-cell">Điện thoại</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead className="w-12" />
-              </TableRow>
+            <TableRow>
+              <TableHead>Điểm vận hành</TableHead>
+              <TableHead className="hidden sm:table-cell">Loại</TableHead>
+              <TableHead className="hidden sm:table-cell">Địa chỉ</TableHead>
+              <TableHead className="hidden md:table-cell">Điện thoại</TableHead>
+              <TableHead>Trạng thái</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
           </TableHeader>
           <TableBody>
             {branches.length === 0 && (

@@ -1,9 +1,6 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
-import {
-  PageContainer,
-  PageHeader,
-} from "@comtammatu/ui/components/admin-patterns";
+import { PageContainer, PageHeader } from "@/components/v2/patterns";
 import { fetchDailyRevenue } from "../../finance/actions";
 import { RevenueReportClient } from "./revenue-report-client";
 

@@ -29,7 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
-import { EmptyStatePanel as EmptyState } from "../../_components/empty-state-panel";
+import { EmptyStatePanel as EmptyState } from "@/components/v2/patterns";
 import {
   Table,
   TableBody,
@@ -41,7 +41,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { SectionCard } from "../../_components/section-card";
+import { SectionCard } from "@/components/v2/patterns";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import {
@@ -325,10 +325,7 @@ export function StocktakeDetailClient({
             value: String(varianceCount).padStart(2, "0"),
           },
         ].map((item) => (
-          <div
-            key={item.label}
-            className={cn(panelClassName, "p-4")}
-          >
+          <div key={item.label} className={cn(panelClassName, "p-4")}>
             <p className="text-label uppercase tracking-wider text-muted-foreground">
               {item.label}
             </p>

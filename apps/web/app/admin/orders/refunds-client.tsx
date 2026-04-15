@@ -15,10 +15,7 @@ import {
 import { approveRefund, fetchRefunds } from "./refund-actions";
 import type { RefundRow } from "./refund-actions";
 import { TableEmptyStateRow } from "../components/table-empty-state-row";
-import {
-  SectionCard,
-  StatusBadge,
-} from "@comtammatu/ui/components/admin-patterns";
+import { SectionCard, StatusBadge } from "@/components/v2/patterns";
 
 /* ─── Status helpers ─── */
 
@@ -60,8 +57,12 @@ export function RefundsClient({
   const [isPending, startTransition] = useTransition();
   const [actioningId, setActioningId] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const pendingCount = refunds.filter((refund) => refund.status === "pending").length;
-  const approvedCount = refunds.filter((refund) => refund.status === "approved").length;
+  const pendingCount = refunds.filter(
+    (refund) => refund.status === "pending",
+  ).length;
+  const approvedCount = refunds.filter(
+    (refund) => refund.status === "approved",
+  ).length;
   const totalRefundAmount = refunds.reduce(
     (sum, refund) => sum + Number(refund.amount),
     0,
@@ -94,7 +95,9 @@ export function RefundsClient({
     <>
       <div className="grid gap-3 md:grid-cols-3">
         <div className="rounded-lg border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Chờ duyệt</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Chờ duyệt
+          </p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">
             {pendingCount}
           </p>
@@ -103,7 +106,9 @@ export function RefundsClient({
           </p>
         </div>
         <div className="rounded-lg border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Đã duyệt</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Đã duyệt
+          </p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">
             {approvedCount}
           </p>
@@ -112,7 +117,9 @@ export function RefundsClient({
           </p>
         </div>
         <div className="rounded-lg border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tổng giá trị</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Tổng giá trị
+          </p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">
             {formatVND(totalRefundAmount)}
           </p>
@@ -124,7 +131,9 @@ export function RefundsClient({
 
       <div className="rounded-xl border bg-card shadow-sm flex flex-wrap items-center justify-between gap-4 p-4">
         <div className="space-y-1.5">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Điều phối hoàn tiền</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Điều phối hoàn tiền
+          </p>
           <p className="text-sm text-muted-foreground">
             {refunds.length} yêu cầu hoàn tiền trong danh sách hiện tại.
           </p>
@@ -255,108 +264,116 @@ export function RefundsClient({
 
         <div className="hidden overflow-hidden rounded-lg border border-border/70 md:block">
           <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Mã đơn</TableHead>
-              <TableHead className="hidden sm:table-cell">Chi nhánh</TableHead>
-              <TableHead className="text-right">Số tiền</TableHead>
-              <TableHead className="hidden md:table-cell">Lý do</TableHead>
-              <TableHead className="hidden lg:table-cell">Người tạo</TableHead>
-              <TableHead className="hidden lg:table-cell">Thời gian</TableHead>
-              <TableHead>Trạng thái</TableHead>
-              {canApprove && (
-                <TableHead className="text-right">Hành động</TableHead>
-              )}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {refunds.length === 0 && (
-              <TableEmptyStateRow
-                colSpan={canApprove ? 8 : 7}
-                paddingClassName="py-16"
-                title="Không có yêu cầu hoàn tiền nào"
-                description="Dữ liệu trống cho bộ lọc hiện tại."
-                icon={
-                  <RotateCcw className="mx-auto size-8 text-muted-foreground" />
-                }
-              />
-            )}
-            {refunds.map((refund) => (
-              <TableRow key={refund.id}>
-                <TableCell>
-                  <span className="font-mono text-sm font-medium">
-                    {refund.order_number}
-                  </span>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell text-sm">
-                  {refund.branch_name}
-                </TableCell>
-                <TableCell className="text-right font-mono font-medium">
-                  {formatVND(refund.amount)}
-                </TableCell>
-                <TableCell className="hidden md:table-cell text-sm max-w-xs truncate">
-                  {refund.reason}
-                </TableCell>
-                <TableCell className="hidden lg:table-cell text-sm">
-                  {refund.created_by_name}
-                </TableCell>
-                <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                  {new Date(refund.created_at).toLocaleString("vi-VN", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </TableCell>
-                <TableCell>
-                  <StatusBadge tone={refundStatusTone(refund.status)}>
-                    {REFUND_STATUS_LABELS[refund.status] ?? refund.status}
-                  </StatusBadge>
-                </TableCell>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Mã đơn</TableHead>
+                <TableHead className="hidden sm:table-cell">
+                  Chi nhánh
+                </TableHead>
+                <TableHead className="text-right">Số tiền</TableHead>
+                <TableHead className="hidden md:table-cell">Lý do</TableHead>
+                <TableHead className="hidden lg:table-cell">
+                  Người tạo
+                </TableHead>
+                <TableHead className="hidden lg:table-cell">
+                  Thời gian
+                </TableHead>
+                <TableHead>Trạng thái</TableHead>
                 {canApprove && (
-                  <TableCell className="text-right">
-                    {refund.status === "pending" ? (
-                      <div className="flex justify-end gap-1.5">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-success/20 text-success hover:bg-success/10 hover:text-success"
-                          disabled={isPending && actioningId === refund.id}
-                          onClick={() => handleApprove(refund.id, true)}
-                        >
-                          {isPending && actioningId === refund.id ? (
-                            <Loader2 className="size-3.5 animate-spin" />
-                          ) : (
-                            <CheckCircle className="size-3.5" />
-                          )}
-                          <span className="ml-1 hidden sm:inline">Duyệt</span>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          disabled={isPending && actioningId === refund.id}
-                          onClick={() => handleApprove(refund.id, false)}
-                        >
-                          {isPending && actioningId === refund.id ? (
-                            <Loader2 className="size-3.5 animate-spin" />
-                          ) : (
-                            <XCircle className="size-3.5" />
-                          )}
-                          <span className="ml-1 hidden sm:inline">Từ chối</span>
-                        </Button>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        {refund.approved_by_name ?? "—"}
-                      </span>
-                    )}
-                  </TableCell>
+                  <TableHead className="text-right">Hành động</TableHead>
                 )}
               </TableRow>
-            ))}
-          </TableBody>
+            </TableHeader>
+            <TableBody>
+              {refunds.length === 0 && (
+                <TableEmptyStateRow
+                  colSpan={canApprove ? 8 : 7}
+                  paddingClassName="py-16"
+                  title="Không có yêu cầu hoàn tiền nào"
+                  description="Dữ liệu trống cho bộ lọc hiện tại."
+                  icon={
+                    <RotateCcw className="mx-auto size-8 text-muted-foreground" />
+                  }
+                />
+              )}
+              {refunds.map((refund) => (
+                <TableRow key={refund.id}>
+                  <TableCell>
+                    <span className="font-mono text-sm font-medium">
+                      {refund.order_number}
+                    </span>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell text-sm">
+                    {refund.branch_name}
+                  </TableCell>
+                  <TableCell className="text-right font-mono font-medium">
+                    {formatVND(refund.amount)}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-sm max-w-xs truncate">
+                    {refund.reason}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm">
+                    {refund.created_by_name}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                    {new Date(refund.created_at).toLocaleString("vi-VN", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge tone={refundStatusTone(refund.status)}>
+                      {REFUND_STATUS_LABELS[refund.status] ?? refund.status}
+                    </StatusBadge>
+                  </TableCell>
+                  {canApprove && (
+                    <TableCell className="text-right">
+                      {refund.status === "pending" ? (
+                        <div className="flex justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-success/20 text-success hover:bg-success/10 hover:text-success"
+                            disabled={isPending && actioningId === refund.id}
+                            onClick={() => handleApprove(refund.id, true)}
+                          >
+                            {isPending && actioningId === refund.id ? (
+                              <Loader2 className="size-3.5 animate-spin" />
+                            ) : (
+                              <CheckCircle className="size-3.5" />
+                            )}
+                            <span className="ml-1 hidden sm:inline">Duyệt</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            disabled={isPending && actioningId === refund.id}
+                            onClick={() => handleApprove(refund.id, false)}
+                          >
+                            {isPending && actioningId === refund.id ? (
+                              <Loader2 className="size-3.5 animate-spin" />
+                            ) : (
+                              <XCircle className="size-3.5" />
+                            )}
+                            <span className="ml-1 hidden sm:inline">
+                              Từ chối
+                            </span>
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          {refund.approved_by_name ?? "—"}
+                        </span>
+                      )}
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
           </Table>
         </div>
       </SectionCard>

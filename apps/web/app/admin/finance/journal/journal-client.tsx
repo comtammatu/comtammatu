@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { SectionCard } from "@comtammatu/ui/components/admin-patterns";
+import { SectionCard } from "@/components/v2/patterns";
 import {
   Table,
   TableBody,
@@ -104,7 +104,9 @@ export function JournalClient({ entries: initial, accounts }: Props) {
       // Prepend optimistic entry
       const newEntry: JournalEntryRow = {
         id: (res.data as { id: number }).id,
-        entry_number: (res.data as { id: number; entry_number?: string }).entry_number ?? "JE-pending",
+        entry_number:
+          (res.data as { id: number; entry_number?: string }).entry_number ??
+          "JE-pending",
         entry_date: form.entryDate,
         description: form.description,
         ref_type: form.refType || null,
@@ -193,7 +195,9 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                     <TableCell className="text-muted-foreground text-sm">
                       {e.ref_type ? `${e.ref_type}#${e.ref_id}` : "—"}
                     </TableCell>
-                    <TableCell>{statusBadge(e.status, e.entry_number)}</TableCell>
+                    <TableCell>
+                      {statusBadge(e.status, e.entry_number)}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {totalDr.toLocaleString("vi-VN")}
                     </TableCell>

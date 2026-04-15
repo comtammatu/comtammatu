@@ -1,8 +1,5 @@
 import { createClient } from "@comtammatu/database/supabase/server";
-import {
-  PageContainer,
-  PageHeader,
-} from "@comtammatu/ui/components/admin-patterns";
+import { PageContainer, PageHeader } from "@/components/v2/patterns";
 import { fetchEmployees } from "./actions";
 import { HrClient } from "./hr-client";
 
@@ -26,10 +23,7 @@ export default async function HrPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        eyebrow="Phân hệ ERP"
-        title="Nhân sự & Lương"
-      />
+      <PageHeader eyebrow="Phân hệ ERP" title="Nhân sự & Lương" />
       <HrClient employees={employees} branches={branchOptions} />
     </PageContainer>
   );

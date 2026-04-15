@@ -9,7 +9,7 @@ import {
   PageContainer,
   PageHeader,
   SectionCard,
-} from "@comtammatu/ui/components/admin-patterns";
+} from "@/components/v2/patterns";
 import { CategoryTable } from "./category-table";
 import { AddCategoryButton } from "./add-category-button";
 import { ItemTable } from "./item-table";
@@ -51,26 +51,23 @@ export default async function MenuPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        eyebrow="Danh mục kinh doanh"
-        title="Thực đơn"
-      />
+      <PageHeader eyebrow="Danh mục kinh doanh" title="Thực đơn" />
 
       <SectionCard>
         <Tabs defaultValue="items">
           <TabsList className="h-11 rounded-lg bg-muted/60">
-          <TabsTrigger value="items" className="px-5">
-            Món ăn
-            <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
-              {items.length}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="categories" className="px-5">
-            Danh mục
-            <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
-              {categories.length}
-            </span>
-          </TabsTrigger>
+            <TabsTrigger value="items" className="px-5">
+              Món ăn
+              <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
+                {items.length}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="px-5">
+              Danh mục
+              <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
+                {categories.length}
+              </span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="items" className="mt-6 space-y-4">

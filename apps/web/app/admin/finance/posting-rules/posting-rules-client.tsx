@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { SectionCard } from "@comtammatu/ui/components/admin-patterns";
+import { SectionCard } from "@/components/v2/patterns";
 import {
   Table,
   TableBody,
@@ -70,7 +70,9 @@ export function PostingRulesClient({ rules: initial, accounts }: Props) {
       const res = await updatePostingRule({ id: ruleId, isActive });
       if (res.success) {
         setRules((prev) =>
-          prev.map((r) => (r.id === ruleId ? { ...r, is_active: isActive } : r)),
+          prev.map((r) =>
+            r.id === ruleId ? { ...r, is_active: isActive } : r,
+          ),
         );
       }
     });

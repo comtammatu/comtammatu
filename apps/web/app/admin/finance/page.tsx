@@ -1,9 +1,6 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { fetchDailyRevenue, fetchTaxInvoices, fetchTopItems } from "./actions";
-import {
-  PageContainer,
-  PageHeader,
-} from "@comtammatu/ui/components/admin-patterns";
+import { PageContainer, PageHeader } from "@/components/v2/patterns";
 import { FinanceClient } from "./finance-client";
 
 export default async function FinancePage() {
@@ -51,10 +48,7 @@ export default async function FinancePage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        eyebrow="Phân hệ ERP"
-        title="Tài chính"
-      />
+      <PageHeader eyebrow="Phân hệ ERP" title="Tài chính" />
       <FinanceClient
         dailyRevenue={dailyRevenue}
         topItems={topItems}

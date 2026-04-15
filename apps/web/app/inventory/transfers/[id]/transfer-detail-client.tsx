@@ -20,7 +20,7 @@ import {
   TableRow,
   TableFooter,
 } from "@comtammatu/ui/components/table";
-import { SectionCard } from "../../_components/section-card";
+import { SectionCard } from "@/components/v2/patterns";
 import { TimelineStepper } from "../../_components/timeline-stepper";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
@@ -173,10 +173,7 @@ export function TransferDetailClient({
         {/* Items table */}
         <div className="lg:col-span-2">
           <section
-            className={cn(
-              panelClassName,
-              "overflow-hidden rounded-lg bg-card",
-            )}
+            className={cn(panelClassName, "overflow-hidden rounded-lg bg-card")}
           >
             <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <h4 className="text-lg font-bold">{tTerm("ingredientsList")}</h4>

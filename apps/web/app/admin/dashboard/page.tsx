@@ -37,7 +37,7 @@ import {
   PageHeader,
   SectionCard,
   StatusBadge,
-} from "@comtammatu/ui/components/admin-patterns";
+} from "@/components/v2/patterns";
 import { fetchDashboardStats } from "./actions";
 
 interface StatCardProps {
@@ -254,7 +254,9 @@ export default async function DashboardPage() {
               <Link href="/admin/settings">Nền tảng</Link>
             </Button>
             <Button asChild size="sm">
-              <Link href="/admin/reports">{APP_COPY_VI.executiveReporting}</Link>
+              <Link href="/admin/reports">
+                {APP_COPY_VI.executiveReporting}
+              </Link>
             </Button>
           </>
         }
@@ -285,9 +287,7 @@ export default async function DashboardPage() {
         <SectionCard>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold tracking-tight">
-                Nền tảng
-              </h2>
+              <h2 className="text-lg font-semibold tracking-tight">Nền tảng</h2>
             </div>
             <StatusBadge tone="neutral" className="rounded-full px-3 py-1.5">
               {foundationCards.length} mục

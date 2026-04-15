@@ -1,6 +1,6 @@
-# Design System — Cơm Tấm Má Tư
+# Design System — Cơm Tấm Má Tư Web App V2
 
-> Version: 6.0.0 | Updated: 2026-04-15
+> Version: 7.0.0 | Updated: 2026-04-16
 > Stack: Next.js 16.2 · React 19.2 · Tailwind CSS 4.2 · shadcn/ui · TypeScript 6.0
 
 ## Source of Truth
@@ -16,17 +16,16 @@ Hai noi nay phai khop 1:1.
 
 ## Design Direction
 
-Huong chinh thuc la `Minimalist B/W + Orange Accent` (shadcn/ui based).
+Huong chinh thuc cua web app la `Restaurant Ops OS`.
 
-- Background: pure white (#ffffff)
-- Foreground: near-black (#09090b, zinc-950)
-- Brand accent: orange (#d35400) — mau duy nhat ngoai trang/den
-- Neutral scale: zinc (zinc-50 → zinc-950)
-- Semantic status: success / warning / info / destructive
-- Typography: Be Vietnam Pro cho trai nghiem tieng Viet-first
-- Muc tieu: doc nhanh, van hanh dai gio, tuong thich du lieu day va touch-first
-- No gradients, no frosted glass, no backdrop-blur decorations
-- Solid colors, clean borders, minimal shadows
+- Typography chinh: `Inter`
+- Typography mono: `Geist Mono`
+- Nen tong the: giay van hanh am (`paper`) thay vi trang tron
+- Accent thuong hieu: rust orange cho action va trang thai dang xu ly
+- Surface grammar: lenh dieu phoi, de doc nhanh, khong con shell/sidebar kieu cu
+- Tonality: calm under load, role-aware, action-first, mobile-capable
+- Khong dung AI-generic layouts, khong ra nhieu mini theme rieng cho tung surface
+- Cac surface duoc phep khac nhau o contrast, density, interaction rhythm; khong duoc tu tao token system rieng
 
 ## Architecture
 
@@ -47,19 +46,24 @@ Dinh nghia o `apps/web/app/globals.css`:
 - Safe-area utilities
 - Vietnamese text utilities
 
-### 2. Domain Composition
+### 2. App-local V2 Composition
 
-Shared thin wrappers cho page-level composition:
+Composition layer moi song trong `apps/web/app/components/v2/`.
 
-- `packages/ui/src/components/admin-patterns.tsx`
-- `packages/ui/src/components/inventory-patterns.tsx`
-- `packages/ui/src/components/blocked-state-flash.tsx`
+- V2 shells
+- top context bars
+- nav rails / drawers
+- metric panels
+- dense tables / mobile cards
+- empty / loading / blocked states
+- route recovery states
 
-Composition API vẫn dùng shadcn primitives làm nền. Mục tiêu là gom cấu trúc lặp lại theo domain, không tạo design system riêng. Các helper `density`/`surface` chỉ còn để migration compatibility và sẽ được giảm dần khi chạm các màn liên quan.
+`packages/ui` giu vai tro primitive-only. Khong mo rong `admin-patterns` / `inventory-patterns` nhu contract chinh cho surface moi.
 
 ### 3. Primitives (shadcn/ui)
 
 32+ shadcn/ui components based on Radix UI:
+
 - Location: `packages/ui/src/components/`
 - Export: `@comtammatu/ui/components/*`
 - Only `cn` is exported from `@comtammatu/ui` barrel
@@ -68,55 +72,59 @@ Composition API vẫn dùng shadcn primitives làm nền. Mục tiêu là gom c�
 
 ### Core colors
 
-| Token | Value | Description |
-|---|---|---|
-| `background` | `#ffffff` | Pure white |
-| `foreground` | `#09090b` | zinc-950 |
-| `primary` | `#d35400` | Orange accent |
-| `primary-foreground` | `#ffffff` | White on orange |
-| `secondary` | `#f4f4f5` | zinc-100 |
-| `secondary-foreground` | `#18181b` | zinc-900 |
-| `accent` | `#f4f4f5` | zinc-100 |
-| `accent-foreground` | `#18181b` | zinc-900 |
-| `muted` | `#f4f4f5` | zinc-100 |
-| `muted-foreground` | `#71717a` | zinc-500 |
-| `card` | `#ffffff` | White |
-| `card-foreground` | `#09090b` | zinc-950 |
-| `border` | `#e4e4e7` | zinc-200 |
-| `input` | `#e4e4e7` | zinc-200 |
-| `ring` | `#d35400` | Orange focus ring |
-| `destructive` | `#dc2626` | Red |
-| `success` | `#16a34a` | Green |
-| `warning` | `#d97706` | Amber |
-| `info` | `#2563eb` | Blue |
+| Token                  | Value     | Description                 |
+| ---------------------- | --------- | --------------------------- |
+| `background`           | `#f3efe6` | Paper background            |
+| `foreground`           | `#15191d` | Primary ink                 |
+| `primary`              | `#c35a22` | Rust action                 |
+| `primary-foreground`   | `#fff8f2` | Light ink on rust           |
+| `secondary`            | `#e5ddcf` | Warm neutral block          |
+| `secondary-foreground` | `#23282d` | Dense neutral text          |
+| `accent`               | `#d7cebf` | Highlighted control surface |
+| `accent-foreground`    | `#171a1e` | Accent text                 |
+| `muted`                | `#e6dfd3` | Quiet surface               |
+| `muted-foreground`     | `#6c6c67` | Secondary text              |
+| `card`                 | `#fbf8f1` | Raised panel                |
+| `card-foreground`      | `#15191d` | Panel text                  |
+| `border`               | `#c9c1b4` | Warm divider                |
+| `input`                | `#c9c1b4` | Input stroke                |
+| `ring`                 | `#c35a22` | Focus ring                  |
+| `destructive`          | `#be3a2d` | Error                       |
+| `success`              | `#197355` | Success                     |
+| `warning`              | `#ab7218` | Warning                     |
+| `info`                 | `#285fc0` | Info                        |
 
 ### Sidebar tokens
 
-| Token | Value |
-|---|---|
-| `sidebar` | `#fafafa` (zinc-50) |
-| `sidebar-foreground` | `#09090b` |
-| `sidebar-primary` | `#d35400` |
-| `sidebar-primary-foreground` | `#ffffff` |
-| `sidebar-accent` | `#f4f4f5` |
-| `sidebar-accent-foreground` | `#18181b` |
-| `sidebar-border` | `#e4e4e7` |
-| `sidebar-ring` | `#d35400` |
+| Token                        | Value     |
+| ---------------------------- | --------- |
+| `sidebar`                    | `#12161a` |
+| `sidebar-foreground`         | `#f6f2e9` |
+| `sidebar-primary`            | `#c35a22` |
+| `sidebar-primary-foreground` | `#fff8f2` |
+| `sidebar-accent`             | `#1e2429` |
+| `sidebar-accent-foreground`  | `#f6f2e9` |
+| `sidebar-border`             | `#2a3238` |
+| `sidebar-ring`               | `#c35a22` |
 
 ### Surface semantics
 
-| Token | Value |
-|---|---|
-| `surface-raised` | `#ffffff` |
-| `surface-sunken` | `#f4f4f5` |
-| `state-pending` | `#d97706` |
-| `state-processing` | `#ea580c` |
-| `state-ready` | `#16a34a` |
-| `state-cancelled` | `#71717a` |
+| Token              | Value     |
+| ------------------ | --------- |
+| `surface-raised`   | `#fbf8f1` |
+| `surface-sunken`   | `#e8e1d5` |
+| `panel-subtle`     | `#efe8dc` |
+| `panel-strong`     | `#ddd2c2` |
+| `shell`            | `#12161a` |
+| `shell-foreground` | `#f6f2e9` |
+| `state-pending`    | `#ab7218` |
+| `state-processing` | `#c35a22` |
+| `state-ready`      | `#197355` |
+| `state-cancelled`  | `#767069` |
 
 ### Typography
 
-- `font-sans`: Be Vietnam Pro
+- `font-sans`: Inter
 - `font-mono`: Geist Mono
 - `text-data`: 13px (tables, lists)
 - `text-label`: 10px (badges, chips)
@@ -132,26 +140,32 @@ Composition API vẫn dùng shadcn primitives làm nền. Mục tiêu là gom c�
 ## Styling Patterns
 
 ### Standard panel
+
 ```tsx
-className="rounded-lg border bg-card shadow-sm"
+className = "rounded-3xl border border-border/80 bg-card shadow-app-sm";
 ```
 
 ### Standard header
+
 ```tsx
-className="sticky top-0 z-30 border-b bg-background"
+className = "sticky top-0 z-30 border-b border-border/70 bg-background/95";
 ```
 
-### Standard sidebar
+### Standard shell rail
+
 ```tsx
-className="border-r bg-sidebar"
+className =
+  "rounded-[2rem] border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-app-lg";
 ```
 
 ### Stat card
+
 ```tsx
-className="rounded-lg border bg-card p-5 shadow-sm"
+className = "rounded-3xl border border-border/80 bg-card p-5 shadow-app-sm";
 ```
 
 ### Status badge tones
+
 ```txt
 success: "bg-green-50 text-green-700 border-green-200 text-xs font-medium"
 warning: "bg-amber-50 text-amber-700 border-amber-200 text-xs font-medium"
@@ -161,6 +175,7 @@ neutral: "bg-muted text-muted-foreground border-border text-xs font-medium"
 ```
 
 ### KDS dark surface
+
 ```txt
 Shell:  "min-h-screen bg-zinc-950 text-white"
 Panel:  "rounded-lg border border-zinc-800 bg-zinc-900 text-white shadow-sm"
@@ -168,8 +183,9 @@ Header: "sticky top-0 z-30 border-b border-zinc-800 bg-zinc-950 text-white"
 ```
 
 ### Hover lift
+
 ```tsx
-className="transition-all hover:-translate-y-0.5 hover:shadow-md"
+className = "transition-all hover:-translate-y-0.5 hover:shadow-md";
 ```
 
 ## Accessibility
@@ -185,14 +201,15 @@ className="transition-all hover:-translate-y-0.5 hover:shadow-md"
 1. Khong import `theme.css` o domain/page de override system.
 2. Khong them static inline style vao foundation, shell hoac auth/mobile chrome.
 3. Khi can token moi, them vao `globals.css` truoc roi moi dung o component.
-4. Khong dung custom CSS classes — chi dung Tailwind utility classes + shadcn components.
-5. `pnpm typecheck && pnpm lint && pnpm build` xanh truoc khi ship.
+4. App-local V2 composition phai song trong `apps/web/app/components/v2/`.
+5. `packages/ui` la primitive-first; khong coi `admin-patterns` / `inventory-patterns` la contract moi.
+6. Copy phai di qua glossary/dictionary khi dung term nghiep vu.
+7. `pnpm typecheck && pnpm lint && pnpm build` xanh truoc khi ship.
 
 ## Related Files
 
 - `apps/web/app/globals.css`
-- `packages/ui/src/components/admin-patterns.tsx`
-- `packages/ui/src/components/inventory-patterns.tsx`
+- `apps/web/app/components/v2/`
 - `packages/ui/src/components/blocked-state-flash.tsx`
 - `packages/ui/src/components/` (shadcn/ui primitives)
 - `docs/modules/ui.md`

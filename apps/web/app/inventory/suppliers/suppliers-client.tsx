@@ -163,38 +163,36 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             className={cn(panelClassName, "rounded-lg bg-card")}
           >
             <CardContent className="p-6">
-            <div className="mb-4 flex items-start justify-between">
-              <div
+              <div className="mb-4 flex items-start justify-between">
+                <div
+                  className={cn(
+                    "flex size-10 items-center justify-center rounded-xl",
+                    card.iconBg,
+                    card.iconColor,
+                  )}
+                >
+                  {card.icon}
+                </div>
+                <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                  Hệ thống
+                </span>
+              </div>
+              <h3
                 className={cn(
-                  "flex size-10 items-center justify-center rounded-xl",
-                  card.iconBg,
-                  card.iconColor,
+                  "text-3xl font-black tracking-tight",
+                  card.valueClassName,
                 )}
               >
-                {card.icon}
-              </div>
-              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-                Hệ thống
-              </span>
-            </div>
-            <h3
-              className={cn(
-                "text-3xl font-black tracking-tight",
-                card.valueClassName,
-              )}
-            >
-              {card.value}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">{card.label}</p>
+                {card.value}
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">{card.label}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {/* Data Table */}
-      <div
-        className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}
-      >
+      <div className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}>
         {/* Search bar */}
         <div className="flex flex-wrap items-center gap-3 border-b border-border px-6 py-4">
           <Search className="size-4 shrink-0 text-muted-foreground" />

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { SectionCard } from "../../_components/section-card";
+import { SectionCard } from "@/components/v2/patterns";
 import {
   ArrowLeft,
   CheckCircle,
@@ -139,9 +139,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <section
-            className={cn(panelClassName, "overflow-hidden")}
-          >
+          <section className={cn(panelClassName, "overflow-hidden")}>
             <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <h4 className="text-lg font-bold">Danh sách mặt hàng nhập</h4>
               <span className="text-xs font-medium text-muted-foreground">
@@ -158,7 +156,9 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-bold">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">{item.sku}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.sku}
+                      </p>
                     </div>
                     {item.status === "pass" ? (
                       <CheckCircle2 className="size-4 text-success" />
@@ -169,7 +169,9 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
                   <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <p className="text-muted-foreground">Yêu cầu</p>
-                      <p className="mt-1 font-medium">{item.required} {item.unit}</p>
+                      <p className="mt-1 font-medium">
+                        {item.required} {item.unit}
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Thực nhận</p>
@@ -186,7 +188,9 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
                     <div className="col-span-2">
                       <p className="text-muted-foreground">Số lô / HSD</p>
                       <p className="mt-1 font-mono">{item.lot}</p>
-                      <p className="text-xs text-muted-foreground">{item.expiry}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.expiry}
+                      </p>
                     </div>
                   </div>
                 </div>

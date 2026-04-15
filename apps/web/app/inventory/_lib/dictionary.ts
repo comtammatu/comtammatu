@@ -185,10 +185,7 @@ export function tRoute(
   return resolveLabelByContext(variants, context);
 }
 
-export function tTerm(
-  key: string,
-  context: LabelContext = "table",
-): string {
+export function tTerm(key: string, context: LabelContext = "table"): string {
   const variants = VI_DICTIONARY.terms[key];
   if (!variants) return key;
   return resolveLabelByContext(variants, context);

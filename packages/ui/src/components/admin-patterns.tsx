@@ -21,18 +21,24 @@ const TONE_VARIANTS: Record<StatusTone, BadgeProps["variant"]> = {
   neutral: "secondary",
 };
 
-const EMPTY_STATE_COPY: Record<EmptyStateMode, { title: string; description: string }> = {
+const EMPTY_STATE_COPY: Record<
+  EmptyStateMode,
+  { title: string; description: string }
+> = {
   "no-data": {
     title: "Chưa có dữ liệu",
-    description: "Danh sách hiện chưa có dữ liệu để hiển thị cho nghiệp vụ hiện tại.",
+    description:
+      "Danh sách hiện chưa có dữ liệu để hiển thị cho nghiệp vụ hiện tại.",
   },
   "no-results": {
     title: "Không có kết quả phù hợp",
-    description: "Thử điều chỉnh bộ lọc hoặc phạm vi truy vấn rồi thử lại một lượt nữa.",
+    description:
+      "Thử điều chỉnh bộ lọc hoặc phạm vi truy vấn rồi thử lại một lượt nữa.",
   },
   "no-access": {
     title: "Không có quyền truy cập",
-    description: "Bạn không có quyền xem khu vực này. Liên hệ quản trị viên để được cấp quyền.",
+    description:
+      "Bạn không có quyền xem khu vực này. Liên hệ quản trị viên để được cấp quyền.",
   },
 };
 
@@ -49,7 +55,16 @@ export function PageContainer({
   children: ReactNode;
   className?: string;
 }) {
-  return <div className={cn("space-y-5 p-5 md:space-y-6 md:p-6", className)}>{children}</div>;
+  return (
+    <div
+      className={cn(
+        "space-y-4 px-4 py-4 md:space-y-5 md:px-6 md:py-6",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function PageHeader({
@@ -65,10 +80,14 @@ export function PageHeader({
   actions?: ReactNode;
   className?: string;
 }) {
-  
   return (
-    <Card className={cn(className)}>
-      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <Card
+      className={cn(
+        "rounded-4xl border-border/80 bg-card shadow-app-sm",
+        className,
+      )}
+    >
+      <CardHeader className="flex flex-col gap-4 p-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-2">
           {eyebrow ? (
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -76,7 +95,9 @@ export function PageHeader({
             </p>
           ) : null}
           <div className="space-y-1.5">
-            <CardTitle className="text-2xl md:text-3xl">{title}</CardTitle>
+            <CardTitle className="text-2xl tracking-tight md:text-4xl">
+              {title}
+            </CardTitle>
             {description ? (
               <CardDescription className="max-w-3xl leading-6">
                 {description}
@@ -84,7 +105,11 @@ export function PageHeader({
             ) : null}
           </div>
         </div>
-        {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+        {actions ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {actions}
+          </div>
+        ) : null}
       </CardHeader>
     </Card>
   );
@@ -100,8 +125,15 @@ export function FilterBar({
   density?: "compact" | "comfortable" | "touch";
 }) {
   return (
-    <Card className={className}>
-      <CardContent className="flex flex-wrap items-end gap-3">{children}</CardContent>
+    <Card
+      className={cn(
+        "rounded-4xl border-border/80 bg-card shadow-app-sm",
+        className,
+      )}
+    >
+      <CardContent className="flex flex-wrap items-end gap-3 p-5">
+        {children}
+      </CardContent>
     </Card>
   );
 }
@@ -127,10 +159,15 @@ export function EmptyState({
   const resolvedDescription = description ?? EMPTY_STATE_COPY[mode].description;
 
   return (
-    <Card className={className}>
-      <CardContent className="flex min-h-52 flex-col items-center justify-center gap-4 px-6 py-10 text-center">
+    <Card
+      className={cn(
+        "rounded-4xl border-border/80 bg-card shadow-app-sm",
+        className,
+      )}
+    >
+      <CardContent className="flex min-h-56 flex-col items-center justify-center gap-4 px-6 py-10 text-center">
         {(icon ?? EMPTY_STATE_ICONS[mode]) ? (
-          <div className="flex size-12 items-center justify-center rounded-full border bg-muted/40 text-muted-foreground">
+          <div className="flex size-14 items-center justify-center rounded-3xl border border-border/70 bg-panel-subtle text-muted-foreground">
             {icon ?? EMPTY_STATE_ICONS[mode]}
           </div>
         ) : null}
@@ -158,8 +195,13 @@ export function SectionCard({
   density?: "compact" | "comfortable" | "touch";
 }) {
   return (
-    <Card className={className}>
-      <CardContent>{children}</CardContent>
+    <Card
+      className={cn(
+        "rounded-4xl border-border/80 bg-card shadow-app-sm",
+        className,
+      )}
+    >
+      <CardContent className="p-5 md:p-6">{children}</CardContent>
     </Card>
   );
 }
@@ -174,7 +216,10 @@ export function StatusBadge({
   children: ReactNode;
 }) {
   return (
-    <Badge variant={TONE_VARIANTS[tone]} className={className}>
+    <Badge
+      variant={TONE_VARIANTS[tone]}
+      className={cn("rounded-full px-3 py-1", className)}
+    >
       {children}
     </Badge>
   );

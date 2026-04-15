@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -11,18 +11,18 @@ import {
   ChefHat,
   ExternalLink,
   Heart,
-  Home,
   LayoutDashboard,
   LogOut,
+  Menu,
   Monitor,
   Package,
-  PanelLeft,
-  PanelLeftClose,
   Receipt,
   Settings,
+  ShieldCheck,
   Users,
   UtensilsCrossed,
   Wallet,
+  X,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import {
@@ -45,31 +45,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
+import { SearchParamBlockedStateFlash } from "@/components/foundation/blocked-state-flash";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-  useSidebar,
-} from "@comtammatu/ui/components/sidebar";
-import {
-  SearchParamBlockedStateFlash,
-} from "@/components/foundation/blocked-state-flash";
-import { StatusBadge } from "@comtammatu/ui/components/admin-patterns";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+  findActiveNavItem,
+  formatPathSegment,
+  getInitials,
+  isNavItemActive,
+  type ShellNavGroup,
+} from "@/components/v2/shell-primitives";
 
 const ADMIN_ICON_MAP: Record<string, React.ElementType> = {
   LayoutDashboard,
@@ -93,30 +76,10 @@ interface ResolvedNavItem {
   moduleKey: ModuleKey;
 }
 
-type ResolvedNavGroup = {
-  title: SharedResolvedNavGroup["title"];
-  items: ResolvedNavItem[];
-};
-
 type UiQuickLaunchGroup = {
   title: string;
   items: ResolvedNavItem[];
 };
-
-interface BreadcrumbItem {
-  label: string;
-  href?: string;
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((part) => part[0] ?? "")
-    .filter(Boolean)
-    .slice(-2)
-    .join("")
-    .toUpperCase();
-}
 
 function mapResolvedNavLink(item: ResolvedNavLink): ResolvedNavItem {
   return {
@@ -127,127 +90,93 @@ function mapResolvedNavLink(item: ResolvedNavLink): ResolvedNavItem {
   };
 }
 
-function mapResolvedNavGroups(groups: SharedResolvedNavGroup[]): ResolvedNavGroup[] {
+function mapResolvedNavGroups(
+  groups: SharedResolvedNavGroup[],
+): ShellNavGroup[] {
+  return groups.map((group) => ({
+    title: group.title,
+    items: group.items.map((item) => ({
+      href: item.href,
+      label: item.label,
+      icon: (ADMIN_ICON_MAP[item.icon] ??
+        LayoutDashboard) as typeof LayoutDashboard,
+    })),
+  }));
+}
+
+function mapQuickLaunchGroups(
+  groups: ReturnType<typeof resolveQuickLaunchGroups>,
+): UiQuickLaunchGroup[] {
   return groups.map((group) => ({
     title: group.title,
     items: group.items.map((item) => mapResolvedNavLink(item)),
   }));
 }
 
-const SEGMENT_LABEL_VI: Record<string, string> = {
-  "purchase-orders": "Đặt hàng (PO)",
-  grn: "Nhập kho (GRN)",
-  transfers: "Luân chuyển",
-  suppliers: "Nhà cung cấp",
-  "supplier-invoices": "HĐ NCC",
-  recipes: "Công thức",
-};
-
-function toBreadcrumbLabel(segment: string): string {
-  if (/^\d+$/.test(segment)) return `#${segment}`;
-  if (SEGMENT_LABEL_VI[segment]) return SEGMENT_LABEL_VI[segment];
-  return segment
-    .replaceAll("-", " ")
-    .replaceAll("_", " ")
-    .split(" ")
-    .filter(Boolean)
-    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
-    .join(" ");
-}
-
-function buildBreadcrumb(
+function buildContext(
   pathname: string,
-  navItems: ResolvedNavItem[],
-): { title: string; items: BreadcrumbItem[] } {
-  const matchedItem = navItems
-    .filter(
-      (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
-    )
-    .sort((a, b) => b.href.length - a.href.length)[0];
-
-  if (!matchedItem) {
+  groups: ShellNavGroup[],
+): { title: string; trail: string[] } {
+  const active = findActiveNavItem(groups, pathname);
+  if (!active) {
     return {
       title: APP_COPY_VI.adminSurface,
-      items: [{ label: APP_COPY_VI.adminSurface, href: "/admin/dashboard" }],
+      trail: [APP_COPY_VI.adminSurface],
     };
   }
 
   const pathTail = pathname
-    .slice(matchedItem.href.length)
+    .slice(active.href.length)
     .split("/")
-    .filter(Boolean);
-  const tailItems = pathTail.map((segment, index) => {
-    const isLast = index === pathTail.length - 1;
-    return {
-      label: toBreadcrumbLabel(decodeURIComponent(segment)),
-      href: isLast
-        ? undefined
-        : `${matchedItem.href}/${pathTail.slice(0, index + 1).join("/")}`,
-    };
-  });
-
-  const items: BreadcrumbItem[] = [
-    { label: APP_COPY_VI.adminSurface, href: "/admin/dashboard" },
-    {
-      label: matchedItem.label,
-      href: pathTail.length > 0 ? matchedItem.href : undefined,
-    },
-    ...tailItems,
-  ];
+    .filter(Boolean)
+    .map((segment) => formatPathSegment(segment));
+  const trail = [APP_COPY_VI.adminSurface, active.label, ...pathTail];
 
   return {
-    title: tailItems.at(-1)?.label ?? matchedItem.label,
-    items,
+    title: trail[trail.length - 1] ?? APP_COPY_VI.adminSurface,
+    trail,
   };
 }
 
-function QuickLaunchMenu({
-  groups,
-  compact = false,
-}: {
-  groups: UiQuickLaunchGroup[];
-  compact?: boolean;
-}) {
+function QuickLaunchMenu({ groups }: { groups: UiQuickLaunchGroup[] }) {
   if (groups.length === 0) return null;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant={compact ? "ghost" : "outline"}
-          size={compact ? "icon" : "sm"}
-          className={cn(
-            compact
-              ? "min-h-11 min-w-11 size-8 text-muted-foreground hover:text-foreground"
-              : "min-h-11 min-w-11 h-9 gap-2 rounded-full border-border/70 bg-background/90 px-3 text-foreground shadow-sm hover:bg-muted/80",
-          )}
+          variant="outline"
+          size="sm"
+          className="h-11 rounded-full border-border/70 bg-card px-4 shadow-app-sm"
           aria-label={APP_COPY_VI.quickAccessAria}
         >
           <ExternalLink className="size-4" />
-          {!compact && (
-            <>
-              <span className="font-medium">{APP_COPY_VI.quickAccess}</span>
-              <ChevronDown className="size-3.5 text-muted-foreground" />
-            </>
-          )}
+          <span className="font-medium">{APP_COPY_VI.quickAccess}</span>
+          <ChevronDown className="size-4 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        {groups.map((group, groupIndex) => (
+      <DropdownMenuContent
+        align="end"
+        className="w-64 rounded-3xl border-border/80 p-2"
+      >
+        {groups.map((group, index) => (
           <div key={group.title}>
-            {groupIndex > 0 && <DropdownMenuSeparator />}
-            <div className="px-2 py-1.5 text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+            {index > 0 ? <DropdownMenuSeparator /> : null}
+            <div className="px-2 py-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               {group.title}
             </div>
             {group.items.map((item) => {
               const Icon = item.icon;
-
               return (
-                <DropdownMenuItem key={item.href} asChild>
-                  <Link href={item.href} className="flex items-center gap-2">
+                <DropdownMenuItem
+                  key={item.href}
+                  asChild
+                  className="rounded-2xl"
+                >
+                  <Link href={item.href} className="flex items-center gap-2.5">
                     <Icon className="size-4" />
                     <span>{item.label}</span>
-                    <ExternalLink className="ml-auto size-3 opacity-60" />
+                    <ExternalLink className="ml-auto size-3.5 opacity-60" />
                   </Link>
                 </DropdownMenuItem>
               );
@@ -259,320 +188,266 @@ function QuickLaunchMenu({
   );
 }
 
-function SidebarNav({
-  groups,
+function NavSection({
   pathname,
+  groups,
   onNavigate,
 }: {
-  groups: ResolvedNavGroup[];
   pathname: string;
+  groups: ShellNavGroup[];
   onNavigate?: () => void;
 }) {
-  const { isMobile, setOpenMobile } = useSidebar();
-
-  const closeMobile = () => {
-    if (isMobile) {
-      setOpenMobile(false);
-    }
-  };
-
   return (
-    <SidebarContent>
-      {groups.map((group, groupIndex) => (
-        <SidebarGroup key={`${group.title || "default"}-${groupIndex}`}>
-          {group.title ? <SidebarGroupLabel>{group.title}</SidebarGroupLabel> : null}
-          <SidebarMenu>
+    <div className="space-y-6">
+      {groups.map((group) => (
+        <section key={group.title} className="space-y-2">
+          <p className="px-1 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/45">
+            {group.title}
+          </p>
+          <div className="space-y-1">
             {group.items.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const active = isNavItemActive(item, pathname);
               const Icon = item.icon;
 
-              const navigate = () => {
-                onNavigate?.();
-                closeMobile();
-              };
-
               return (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive}
-                    tooltip={item.label}
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onNavigate}
+                  className={cn(
+                    "flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm transition-colors",
+                    active
+                      ? "border-sidebar-primary/40 bg-sidebar-primary text-sidebar-primary-foreground"
+                      : "border-transparent bg-transparent text-sidebar-foreground/72 hover:border-sidebar-border hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex size-9 items-center justify-center rounded-xl border",
+                      active
+                        ? "border-white/10 bg-white/10"
+                        : "border-sidebar-border bg-sidebar-accent/80",
+                    )}
                   >
-                    <Link href={item.href} onClick={navigate}>
-                      <Icon className="size-4" />
-                      <span>{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                    <Icon className="size-4" />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate font-medium">
+                    {item.label}
+                  </span>
+                  <ChevronRight className="size-4 opacity-60" />
+                </Link>
               );
             })}
-          </SidebarMenu>
-        </SidebarGroup>
+          </div>
+        </section>
       ))}
-    </SidebarContent>
+    </div>
   );
 }
 
-function SidebarUserFooter({
+function AdminRail({
+  pathname,
+  groups,
+  quickLaunchGroups,
   user,
   role,
+  onNavigate,
 }: {
+  pathname: string;
+  groups: ShellNavGroup[];
+  quickLaunchGroups: UiQuickLaunchGroup[];
   user: { name: string };
   role: StaffRole;
+  onNavigate?: () => void;
 }) {
   return (
-    <SidebarFooter className="pt-2">
-      <div className="flex items-center gap-3 px-2 py-2">
-        <Avatar className="size-8">
-          <AvatarFallback className="bg-sidebar-accent text-xs font-semibold text-sidebar-accent-foreground">
-            {getInitials(user.name)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-sidebar-foreground">
-            {user.name}
-          </p>
-          <p className="truncate text-xs font-medium text-sidebar-foreground/45">
-            {ROLE_LABEL_VI[role]}
-          </p>
+    <div className="surface-shell flex h-full flex-col p-4">
+      <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+        <p className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/55">
+          Restaurant Ops OS
+        </p>
+        <div className="mt-3 flex items-start gap-3">
+          <div className="flex size-12 items-center justify-center rounded-2xl border border-white/10 bg-sidebar-primary text-sidebar-primary-foreground">
+            <ShieldCheck className="size-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-lg font-semibold text-sidebar-foreground">
+              Cơm Tấm Má Tư
+            </p>
+            <p className="mt-1 text-sm leading-5 text-sidebar-foreground/65">
+              Trung tâm điều phối hệ thống và backoffice.
+            </p>
+          </div>
         </div>
-        <form action="/api/auth/signout" method="post">
-          <Button
-            type="submit"
-            variant="ghost"
-            size="icon"
-            className="size-8 text-sidebar-foreground/50 hover:text-sidebar-foreground"
-            aria-label="Đăng xuất"
-          >
-            <LogOut className="size-4" />
-          </Button>
-        </form>
       </div>
-    </SidebarFooter>
-  );
-}
 
-interface AdminShellProps {
-  children: React.ReactNode;
-  user: { name: string };
-  role: StaffRole;
-  branchId?: number | null;
+      <div className="mt-4">
+        <QuickLaunchMenu groups={quickLaunchGroups} />
+      </div>
+
+      <div className="mt-5 flex-1 overflow-y-auto pr-1">
+        <NavSection
+          pathname={pathname}
+          groups={groups}
+          onNavigate={onNavigate}
+        />
+      </div>
+
+      <div className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-3">
+        <div className="flex items-center gap-3">
+          <Avatar className="size-11 rounded-2xl border border-white/10">
+            <AvatarFallback className="rounded-2xl bg-sidebar-primary text-sidebar-primary-foreground">
+              {getInitials(user.name)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-sidebar-foreground">
+              {user.name}
+            </p>
+            <p className="truncate text-xs text-sidebar-foreground/60">
+              {ROLE_LABEL_VI[role]}
+            </p>
+          </div>
+          <form action="/api/auth/signout" method="post">
+            <button
+              type="submit"
+              className="flex size-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-sidebar-foreground/70 transition-colors hover:bg-white/10 hover:text-sidebar-foreground"
+              aria-label="Đăng xuất"
+            >
+              <LogOut className="size-4" />
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function AdminShell({
-  children,
   user,
   role,
   branchId,
-}: AdminShellProps) {
+  children,
+}: {
+  user: { name: string };
+  role: StaffRole;
+  branchId: number | null;
+  children: ReactNode;
+}) {
   const pathname = usePathname();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  const filteredGroups = useMemo(
+  const navGroups = useMemo(
     () => mapResolvedNavGroups(resolveAdminNavGroups(role)),
     [role],
   );
   const quickLaunchGroups = useMemo(
-    () =>
-      resolveQuickLaunchGroups(role, branchId).map((group) => ({
-        title: group.title,
-        items: group.items.map((item) => mapResolvedNavLink(item)),
-      })),
+    () => mapQuickLaunchGroups(resolveQuickLaunchGroups(role, branchId)),
     [branchId, role],
   );
-  const navItems = useMemo(
-    () => filteredGroups.flatMap((group) => group.items),
-    [filteredGroups],
-  );
-  const workspaceLabel = branchId ? `Chi nhánh #${branchId}` : "Toàn hệ thống";
-  const headerBreadcrumb = useMemo(
-    () => buildBreadcrumb(pathname, navItems),
-    [pathname, navItems],
-  );
-  const quickLaunchCount = quickLaunchGroups.reduce(
-    (sum, group) => sum + group.items.length,
-    0,
+  const pageContext = useMemo(
+    () => buildContext(pathname, navGroups),
+    [navGroups, pathname],
   );
 
   return (
-    <SidebarProvider
-      defaultOpen
-      open={sidebarOpen}
-      onOpenChange={setSidebarOpen}
-    >
-      <div className="flex min-h-screen w-full overflow-hidden bg-background">
-        <Sidebar collapsible="icon">
-          <SidebarHeader className="gap-3 px-2 py-3">
-            <div className="flex items-center gap-2 rounded-lg bg-sidebar-accent p-2">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary text-lg font-extrabold text-sidebar-primary-foreground">
-                MT
-              </div>
+    <div className="min-h-dvh bg-background text-foreground md:p-3">
+      <div className="mx-auto flex min-h-dvh w-full max-w-screen-2xl gap-3">
+        <aside className="hidden w-80 shrink-0 md:block">
+          <div className="sticky top-3 h-dvh">
+            <AdminRail
+              pathname={pathname}
+              groups={navGroups}
+              quickLaunchGroups={quickLaunchGroups}
+              user={user}
+              role={role}
+            />
+          </div>
+        </aside>
+
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <header className="surface-panel sticky top-0 z-30 px-4 py-4 md:top-3 md:px-6">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setMobileOpen(true)}
+                className="flex size-11 items-center justify-center rounded-2xl border border-border/70 bg-panel-subtle text-foreground md:hidden"
+                aria-label="Mở điều hướng"
+              >
+                <Menu className="size-5" />
+              </button>
+
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/45">
-                  {APP_COPY_VI.erpCockpit}
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  {pageContext.trail.slice(0, -1).join(" · ") ||
+                    APP_COPY_VI.adminSurface}
                 </p>
-                <span className="truncate text-sm font-bold tracking-tight text-sidebar-foreground">
-                  Cơm Tấm Má Tư
-                </span>
+                <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl">
+                  {pageContext.title}
+                </h1>
               </div>
-            </div>
-          </SidebarHeader>
 
-          <SidebarNav groups={filteredGroups} pathname={pathname} />
-
-          <SidebarUserFooter user={user} role={role} />
-        </Sidebar>
-
-        <SidebarInset>
-          <header className="sticky top-0 z-30 flex min-h-16 items-center gap-4 border-b bg-background px-4 py-3 sm:px-6">
-            <SidebarTrigger className="md:hidden" />
-
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground hidden md:block">
-                {APP_COPY_VI.adminFoundation}
-              </p>
-              <nav
-                aria-label="Breadcrumb"
-                className="hidden items-center gap-1 pt-1 text-xs text-muted-foreground md:flex"
-              >
-                {headerBreadcrumb.items.map((item, index) => {
-                  const isLast = index === headerBreadcrumb.items.length - 1;
-                  return (
-                    <div key={`${item.label}-${index}`} className="flex items-center gap-1">
-                      {index > 0 && (
-                        <ChevronRight className="size-3 text-muted-foreground/70" />
-                      )}
-                      {item.href ? (
-                        <Link
-                          href={item.href}
-                          className="truncate hover:text-foreground focus-visible:outline-none focus-visible:underline"
-                        >
-                          {index === 0 ? (
-                            <span className="inline-flex items-center gap-1">
-                              <Home className="size-3.5" />
-                              {item.label}
-                            </span>
-                          ) : (
-                            item.label
-                          )}
-                        </Link>
-                      ) : (
-                        <span
-                          className={cn(
-                            "truncate font-medium",
-                            isLast ? "text-foreground" : "text-muted-foreground",
-                          )}
-                        >
-                          {item.label}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </nav>
-              <p className="truncate text-sm font-semibold text-foreground md:hidden">
-                {headerBreadcrumb.title}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="min-h-11 min-w-11"
-                aria-label="Chuyển trạng thái sidebar"
-                onClick={() => setSidebarOpen((open) => !open)}
-              >
-                {sidebarOpen ? (
-                  <PanelLeftClose className="size-4" />
-                ) : (
-                  <PanelLeft className="size-4" />
-                )}
-              </Button>
-              <div className="hidden md:block">
-                <QuickLaunchMenu groups={quickLaunchGroups} />
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary" className="rounded-full px-3 py-1">
+                  {ROLE_LABEL_VI[role]}
+                </Badge>
+                <div className="hidden sm:block">
+                  <QuickLaunchMenu groups={quickLaunchGroups} />
+                </div>
               </div>
-            </div>
-
-            <div className="flex items-center gap-1 md:hidden">
-              <QuickLaunchMenu groups={quickLaunchGroups} compact />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="min-h-11 min-w-11 size-8"
-                    aria-label="Menu tài khoản"
-                  >
-                    <Avatar className="size-8">
-                      <AvatarFallback className="bg-muted text-xs font-medium">
-                        {getInitials(user.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <div className="px-2 py-1.5">
-                    <p className="text-sm font-medium">{user.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {ROLE_LABEL_VI[role]}
-                    </p>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <form action="/api/auth/signout" method="post">
-                      <button className="flex w-full items-center gap-2" type="submit">
-                        <LogOut className="size-4" />
-                        <span>Đăng xuất</span>
-                      </button>
-                    </form>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8">
-            <div className="mx-auto flex max-w-screen-2xl flex-col">
-              <div className="mb-5 hidden md:block">
-                <Card>
-                  <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div className="min-w-0 space-y-1.5">
-                      <CardDescription>Quản trị</CardDescription>
-                      <CardTitle>{ROLE_LABEL_VI[role]}</CardTitle>
-                    </div>
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      <StatusBadge
-                        tone="info"
-                        className="rounded-full px-3 py-1 text-xs font-semibold"
-                      >
-                        Vai trò {ROLE_LABEL_VI[role]}
-                      </StatusBadge>
-                      <StatusBadge
-                        tone="neutral"
-                        className="rounded-full px-3 py-1 text-xs font-semibold"
-                      >
-                        {workspaceLabel}
-                      </StatusBadge>
-                      <Badge
-                        variant={quickLaunchCount > 0 ? "success" : "warning"}
-                        className="rounded-full px-3 py-1 text-xs font-semibold"
-                      >
-                        {navItems.length} mục chính · {quickLaunchCount} truy cập nhanh
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                </Card>
-              </div>
-              <div>{children}</div>
+          <main id="main-content" className="min-w-0 flex-1 pb-6">
+            <div className="space-y-4">
+              <Suspense fallback={null}>
+                <SearchParamBlockedStateFlash
+                  autoClear
+                  className="surface-panel p-4"
+                  mode="inline"
+                />
+              </Suspense>
+              {children}
             </div>
           </main>
-        </SidebarInset>
+        </div>
       </div>
 
-      <Suspense fallback={null}>
-        <SearchParamBlockedStateFlash mode="toast" autoClear />
-      </Suspense>
-    </SidebarProvider>
+      {mobileOpen ? (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-40 bg-black/50 md:hidden"
+            onClick={() => setMobileOpen(false)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                setMobileOpen(false);
+              }
+            }}
+            aria-label="Đóng điều hướng"
+          />
+          <div className="fixed inset-y-0 left-0 z-50 w-80 max-w-full p-3 md:hidden">
+            <div className="relative h-full">
+              <button
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                className="absolute right-6 top-6 z-10 flex size-10 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-sidebar-foreground"
+                aria-label="Đóng"
+              >
+                <X className="size-4" />
+              </button>
+              <AdminRail
+                pathname={pathname}
+                groups={navGroups}
+                quickLaunchGroups={quickLaunchGroups}
+                user={user}
+                role={role}
+                onNavigate={() => setMobileOpen(false)}
+              />
+            </div>
+          </div>
+        </>
+      ) : null}
+    </div>
   );
 }

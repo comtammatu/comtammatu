@@ -106,7 +106,9 @@ export function TransfersListClient({
   const canCreate = Boolean(hq && operational.length >= 1);
   const branchLabelById = useMemo(
     () =>
-      new Map(branches.map((branch) => [branch.id, formatBranchSiteLabel(branch)])),
+      new Map(
+        branches.map((branch) => [branch.id, formatBranchSiteLabel(branch)]),
+      ),
     [branches],
   );
 
@@ -149,7 +151,8 @@ export function TransfersListClient({
           <div className="space-y-1">
             <CardTitle className="text-2xl">Luân chuyển nội bộ</CardTitle>
             <CardDescription>
-              Trụ sở ↔ kho vận hành hoặc giữa các kho vận hành. Hàng từ NCC chỉ nhập tại Trụ sở (PO/GRN).
+              Trụ sở ↔ kho vận hành hoặc giữa các kho vận hành. Hàng từ NCC chỉ
+              nhập tại Trụ sở (PO/GRN).
             </CardDescription>
           </div>
           <Button
@@ -209,199 +212,205 @@ export function TransfersListClient({
       {/* Table card */}
       <Card className="overflow-hidden rounded-lg">
         <CardContent className="p-4 md:p-5">
-        {/* Search bar */}
-        <div className="-m-4 flex items-center gap-3 border-b bg-muted/20 px-4 py-3 md:-m-5 md:px-5">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
-          <Input
-            placeholder="Tìm số phiếu hoặc tên kho…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-8 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
-          />
-          <span className="shrink-0 text-xs text-muted-foreground">
-            {filtered.length} / {rows.length}
-          </span>
-        </div>
-
-        {/* Mobile card layout */}
-        {isMobile ? (
-          <div className="divide-y">
-            {filtered.length === 0 && (
-              <div className="px-4 py-16 text-center">
-                <p className="text-sm font-medium text-muted-foreground">
-                  {search || statusFilter
-                    ? "Không tìm thấy phiếu nào"
-                    : "Chưa có phiếu luân chuyển"}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {search || statusFilter
-                    ? "Thử từ khóa khác"
-                    : 'Nhấn "Tạo phiếu" để tạo phiếu luân chuyển đầu tiên'}
-                </p>
-              </div>
-            )}
-            {filtered.map((r) => {
-              const meta = STATUS_META[r.status] ?? {
-                label: r.status,
-                className: "bg-muted text-muted-foreground",
-              };
-              return (
-                <Link
-                  key={r.id}
-                  href={`${basePath}/${r.id}`}
-                  className="block px-4 py-3 hover:bg-muted/20 transition-colors"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-sm font-medium">
-                      {r.transfer_number}
-                    </span>
-                    <Badge className={cn("text-xs shrink-0", meta.className)}>
-                      {meta.label}
-                    </Badge>
-                  </div>
-                  <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span>
-                      {branchLabelById.get(r.from_branch_id) ?? r.from_branch_name}
-                    </span>
-                    <MoveRight className="size-3 shrink-0" />
-                    <span>
-                      {branchLabelById.get(r.to_branch_id) ?? r.to_branch_name}
-                    </span>
-                    <span className="ml-auto tabular-nums">
-                      {new Date(r.created_at).toLocaleDateString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
+          {/* Search bar */}
+          <div className="-m-4 flex items-center gap-3 border-b bg-muted/20 px-4 py-3 md:-m-5 md:px-5">
+            <Search className="size-4 shrink-0 text-muted-foreground" />
+            <Input
+              placeholder="Tìm số phiếu hoặc tên kho…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+            />
+            <span className="shrink-0 text-xs text-muted-foreground">
+              {filtered.length} / {rows.length}
+            </span>
           </div>
-        ) : (
-          /* Desktop table layout */
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/20 hover:bg-muted/20">
-                <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  Số phiếu
-                </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  Lộ trình
-                </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  Trạng thái
-                </TableHead>
-                <TableHead className="hidden md:table-cell text-xs font-semibold uppercase tracking-wider">
-                  Ngày tạo
-                </TableHead>
-                <TableHead className="hidden lg:table-cell text-xs font-semibold uppercase tracking-wider">
-                  Ngày xuất / nhận
-                </TableHead>
-                <TableHead className="w-10" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+
+          {/* Mobile card layout */}
+          {isMobile ? (
+            <div className="divide-y">
               {filtered.length === 0 && (
-                <TableEmptyStateRow
-                  colSpan={6}
-                  paddingClassName="py-16"
-                  title={
-                    search || statusFilter
+                <div className="px-4 py-16 text-center">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {search || statusFilter
                       ? "Không tìm thấy phiếu nào"
-                      : "Chưa có phiếu luân chuyển"
-                  }
-                  description={
-                    search || statusFilter
+                      : "Chưa có phiếu luân chuyển"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {search || statusFilter
                       ? "Thử từ khóa khác"
-                      : 'Nhấn "Tạo phiếu" để tạo phiếu luân chuyển đầu tiên'
-                  }
-                />
+                      : 'Nhấn "Tạo phiếu" để tạo phiếu luân chuyển đầu tiên'}
+                  </p>
+                </div>
               )}
               {filtered.map((r) => {
                 const meta = STATUS_META[r.status] ?? {
                   label: r.status,
                   className: "bg-muted text-muted-foreground",
                 };
-                const dateDisplay = r.shipped_at
-                  ? new Date(r.shipped_at).toLocaleDateString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                    })
-                  : r.received_at
-                    ? new Date(r.received_at).toLocaleDateString("vi-VN", {
+                return (
+                  <Link
+                    key={r.id}
+                    href={`${basePath}/${r.id}`}
+                    className="block px-4 py-3 hover:bg-muted/20 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-sm font-medium">
+                        {r.transfer_number}
+                      </span>
+                      <Badge className={cn("text-xs shrink-0", meta.className)}>
+                        {meta.label}
+                      </Badge>
+                    </div>
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span>
+                        {branchLabelById.get(r.from_branch_id) ??
+                          r.from_branch_name}
+                      </span>
+                      <MoveRight className="size-3 shrink-0" />
+                      <span>
+                        {branchLabelById.get(r.to_branch_id) ??
+                          r.to_branch_name}
+                      </span>
+                      <span className="ml-auto tabular-nums">
+                        {new Date(r.created_at).toLocaleDateString("vi-VN", {
+                          day: "2-digit",
+                          month: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            /* Desktop table layout */
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/20 hover:bg-muted/20">
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                    Số phiếu
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                    Lộ trình
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                    Trạng thái
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell text-xs font-semibold uppercase tracking-wider">
+                    Ngày tạo
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell text-xs font-semibold uppercase tracking-wider">
+                    Ngày xuất / nhận
+                  </TableHead>
+                  <TableHead className="w-10" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 && (
+                  <TableEmptyStateRow
+                    colSpan={6}
+                    paddingClassName="py-16"
+                    title={
+                      search || statusFilter
+                        ? "Không tìm thấy phiếu nào"
+                        : "Chưa có phiếu luân chuyển"
+                    }
+                    description={
+                      search || statusFilter
+                        ? "Thử từ khóa khác"
+                        : 'Nhấn "Tạo phiếu" để tạo phiếu luân chuyển đầu tiên'
+                    }
+                  />
+                )}
+                {filtered.map((r) => {
+                  const meta = STATUS_META[r.status] ?? {
+                    label: r.status,
+                    className: "bg-muted text-muted-foreground",
+                  };
+                  const dateDisplay = r.shipped_at
+                    ? new Date(r.shipped_at).toLocaleDateString("vi-VN", {
                         day: "2-digit",
                         month: "2-digit",
                       })
-                    : "—";
-                const dateLabel = r.shipped_at
-                  ? "Xuất"
-                  : r.received_at
-                    ? "Nhận"
-                    : null;
+                    : r.received_at
+                      ? new Date(r.received_at).toLocaleDateString("vi-VN", {
+                          day: "2-digit",
+                          month: "2-digit",
+                        })
+                      : "—";
+                  const dateLabel = r.shipped_at
+                    ? "Xuất"
+                    : r.received_at
+                      ? "Nhận"
+                      : null;
 
-                return (
-                  <TableRow
-                    key={r.id}
-                    className="group hover:bg-muted/30 transition-colors"
-                  >
-                    <TableCell className="font-mono text-sm font-medium">
-                      {r.transfer_number}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5 text-sm">
-                        <span className="font-medium">
-                          {branchLabelById.get(r.from_branch_id) ?? r.from_branch_name}
-                        </span>
-                        <MoveRight className="size-3.5 shrink-0 text-muted-foreground" />
-                        <span className="font-medium">
-                          {branchLabelById.get(r.to_branch_id) ?? r.to_branch_name}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={cn("text-xs", meta.className)}>
-                        {meta.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground tabular-nums">
-                      {new Date(r.created_at).toLocaleDateString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                      })}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      {dateLabel ? (
-                        <span className="text-sm text-muted-foreground tabular-nums">
-                          <span className="mr-1 text-xs text-muted-foreground/70">
-                            {dateLabel}:
+                  return (
+                    <TableRow
+                      key={r.id}
+                      className="group hover:bg-muted/30 transition-colors"
+                    >
+                      <TableCell className="font-mono text-sm font-medium">
+                        {r.transfer_number}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5 text-sm">
+                          <span className="font-medium">
+                            {branchLabelById.get(r.from_branch_id) ??
+                              r.from_branch_name}
                           </span>
-                          {dateDisplay}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8"
-                        asChild
-                        aria-label="Chi tiết"
-                      >
-                        <Link href={`${basePath}/${r.id}`}>
-                          <ArrowRight className="size-4" />
-                        </Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        )}
+                          <MoveRight className="size-3.5 shrink-0 text-muted-foreground" />
+                          <span className="font-medium">
+                            {branchLabelById.get(r.to_branch_id) ??
+                              r.to_branch_name}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={cn("text-xs", meta.className)}>
+                          {meta.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground tabular-nums">
+                        {new Date(r.created_at).toLocaleDateString("vi-VN", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        })}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {dateLabel ? (
+                          <span className="text-sm text-muted-foreground tabular-nums">
+                            <span className="mr-1 text-xs text-muted-foreground/70">
+                              {dateLabel}:
+                            </span>
+                            {dateDisplay}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">
+                            —
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
+                          asChild
+                          aria-label="Chi tiết"
+                        >
+                          <Link href={`${basePath}/${r.id}`}>
+                            <ArrowRight className="size-4" />
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 

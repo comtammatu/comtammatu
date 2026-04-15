@@ -14,8 +14,8 @@ export default async function SupplierInvoicesPage() {
     supplierName:
       ((row.suppliers as Record<string, unknown>)?.name as string) ?? "—",
     grnCode:
-      ((row.goods_received_notes as Record<string, unknown>)?.grn_number as string) ??
-      null,
+      ((row.goods_received_notes as Record<string, unknown>)
+        ?.grn_number as string) ?? null,
     matchStatus: (row.match_status as string) ?? "pending",
     paymentStatus: (row.payment_status as string) ?? "unpaid",
     amount: Number(row.total_amount ?? 0),

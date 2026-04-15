@@ -124,7 +124,8 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
             <div className="space-y-1">
               <CardTitle className="text-3xl">Danh mục nguyên liệu</CardTitle>
               <CardDescription className="max-w-3xl leading-6">
-                Chuẩn hóa tên, SKU, bảo quản và ngưỡng tồn để toàn bộ nghiệp vụ kho dùng chung một nguồn dữ liệu.
+                Chuẩn hóa tên, SKU, bảo quản và ngưỡng tồn để toàn bộ nghiệp vụ
+                kho dùng chung một nguồn dữ liệu.
               </CardDescription>
             </div>
           </div>
@@ -137,15 +138,15 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
       <Card className="border-border/70">
         <CardContent className="p-4 md:p-5">
           <div className="grid w-full gap-3 xl:grid-cols-[minmax(0,1fr)_220px_220px_auto]">
-          <div className="flex h-11 items-center gap-3 rounded-lg border border-input bg-background px-3">
-            <Search className="size-4 shrink-0 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Tìm theo tên hoặc SKU"
-              className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
-            />
-          </div>
+            <div className="flex h-11 items-center gap-3 rounded-lg border border-input bg-background px-3">
+              <Search className="size-4 shrink-0 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Tìm theo tên hoặc SKU"
+                className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+              />
+            </div>
 
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger className="h-11">
@@ -224,7 +225,9 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
                       <div className="flex items-center gap-2">
                         <p className="font-semibold">{item.name}</p>
                         {item.category ? (
-                          <Badge className={categoryTone}>{item.category}</Badge>
+                          <Badge className={categoryTone}>
+                            {item.category}
+                          </Badge>
                         ) : null}
                       </div>
                       <p className="text-sm text-muted-foreground">

@@ -28,7 +28,7 @@ import {
   fetchInventoryValueByBranch,
   fetchInventoryValueSystem,
 } from "./inventory-value-actions";
-import { EmptyStatePanel } from "./_components/empty-state-panel";
+import { EmptyStatePanel } from "@/components/v2/patterns";
 
 interface InventoryValuePanelProps {
   visibility: InventoryValueVisibility;
@@ -164,23 +164,25 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               <div className="grid gap-3 sm:grid-cols-2">
                 <Card className="rounded-lg border-border/70 bg-muted/25">
                   <CardContent className="p-4">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                    Giá trị hiện tại
-                  </p>
-                  <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
-                    {systemTotal == null ? "—" : formatVND(systemTotal)}
-                  </p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                      Giá trị hiện tại
+                    </p>
+                    <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
+                      {systemTotal == null ? "—" : formatVND(systemTotal)}
+                    </p>
                   </CardContent>
                 </Card>
                 <Card className="rounded-lg border-border/70 bg-muted/25">
                   <CardContent className="p-4">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                    Phạm vi xem
-                  </p>
-                  <p className="mt-2 text-base font-semibold">Toàn hệ thống</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Tổng hợp tất cả chi nhánh theo WAC hoặc giá tham chiếu.
-                  </p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                      Phạm vi xem
+                    </p>
+                    <p className="mt-2 text-base font-semibold">
+                      Toàn hệ thống
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Tổng hợp tất cả chi nhánh theo WAC hoặc giá tham chiếu.
+                    </p>
                   </CardContent>
                 </Card>
               </div>
@@ -192,74 +194,76 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
       {visibility.area && (
         <TabsContent value="area" className="mt-3">
           {areaRows == null ? (
-            <p className="text-sm text-muted-foreground">{APP_COPY_VI.loading}</p>
+            <p className="text-sm text-muted-foreground">
+              {APP_COPY_VI.loading}
+            </p>
           ) : areaRows.length === 0 ? (
             <EmptyStatePanel className="py-10" title={APP_COPY_VI.noAreaData} />
           ) : isMobile ? (
             <Card className={sectionCardClassName}>
               <CardContent className="space-y-4 p-4 md:p-5">
-              <div className={summaryBoxClassName}>
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                  Tổng theo khu vực
-                </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {formatVND(areaTotal)}
-                </p>
-              </div>
-              <div className="-m-4 divide-y md:-m-5">
-                {areaRows.map((row) => (
-                  <div
-                    key={row.areaId}
-                    className="flex items-center justify-between gap-3 px-4 py-3 md:px-5"
-                  >
-                    <span className="truncate text-sm font-medium">
-                      {row.areaName}
-                    </span>
-                    <span className="shrink-0 text-sm font-mono tabular-nums">
-                      {formatVND(row.totalValue)}
-                    </span>
-                  </div>
-                ))}
-              </div>
+                <div className={summaryBoxClassName}>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                    Tổng theo khu vực
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold tabular-nums">
+                    {formatVND(areaTotal)}
+                  </p>
+                </div>
+                <div className="-m-4 divide-y md:-m-5">
+                  {areaRows.map((row) => (
+                    <div
+                      key={row.areaId}
+                      className="flex items-center justify-between gap-3 px-4 py-3 md:px-5"
+                    >
+                      <span className="truncate text-sm font-medium">
+                        {row.areaName}
+                      </span>
+                      <span className="shrink-0 text-sm font-mono tabular-nums">
+                        {formatVND(row.totalValue)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           ) : (
             <Card className={sectionCardClassName}>
               <CardContent className="space-y-4 p-4 md:p-5">
-              <div className={summaryBoxClassName}>
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                  Tổng theo khu vực
-                </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {formatVND(areaTotal)}
-                </p>
-              </div>
-              <div className="-m-4 md:-m-5">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/20 hover:bg-muted/20">
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                        Khu vực
-                      </TableHead>
-                      <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
-                        Giá trị tồn kho
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {areaRows.map((row) => (
-                      <TableRow key={row.areaId}>
-                        <TableCell className="font-medium">
-                          {row.areaName}
-                        </TableCell>
-                        <TableCell className="text-right font-mono tabular-nums">
-                          {formatVND(row.totalValue)}
-                        </TableCell>
+                <div className={summaryBoxClassName}>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                    Tổng theo khu vực
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold tabular-nums">
+                    {formatVND(areaTotal)}
+                  </p>
+                </div>
+                <div className="-m-4 md:-m-5">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/20 hover:bg-muted/20">
+                        <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                          Khu vực
+                        </TableHead>
+                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
+                          Giá trị tồn kho
+                        </TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {areaRows.map((row) => (
+                        <TableRow key={row.areaId}>
+                          <TableCell className="font-medium">
+                            {row.areaName}
+                          </TableCell>
+                          <TableCell className="text-right font-mono tabular-nums">
+                            {formatVND(row.totalValue)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -269,7 +273,9 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
       {visibility.branch && (
         <TabsContent value="branch" className="mt-3">
           {branchRows == null ? (
-            <p className="text-sm text-muted-foreground">{APP_COPY_VI.loading}</p>
+            <p className="text-sm text-muted-foreground">
+              {APP_COPY_VI.loading}
+            </p>
           ) : branchRows.length === 0 ? (
             <EmptyStatePanel
               className="py-10"
@@ -278,68 +284,68 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
           ) : isMobile ? (
             <Card className={sectionCardClassName}>
               <CardContent className="space-y-4 p-4 md:p-5">
-              <div className={summaryBoxClassName}>
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                  Tổng theo chi nhánh
-                </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {formatVND(branchTotal)}
-                </p>
-              </div>
-              <div className="-m-4 divide-y md:-m-5">
-                {branchRows.map((row) => (
-                  <div
-                    key={row.branchId}
-                    className="flex items-center justify-between gap-3 px-4 py-3 md:px-5"
-                  >
-                    <span className="truncate text-sm font-medium">
-                      {row.branchName}
-                    </span>
-                    <span className="shrink-0 text-sm font-mono tabular-nums">
-                      {formatVND(row.totalValue)}
-                    </span>
-                  </div>
-                ))}
-              </div>
+                <div className={summaryBoxClassName}>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                    Tổng theo chi nhánh
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold tabular-nums">
+                    {formatVND(branchTotal)}
+                  </p>
+                </div>
+                <div className="-m-4 divide-y md:-m-5">
+                  {branchRows.map((row) => (
+                    <div
+                      key={row.branchId}
+                      className="flex items-center justify-between gap-3 px-4 py-3 md:px-5"
+                    >
+                      <span className="truncate text-sm font-medium">
+                        {row.branchName}
+                      </span>
+                      <span className="shrink-0 text-sm font-mono tabular-nums">
+                        {formatVND(row.totalValue)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           ) : (
             <Card className={sectionCardClassName}>
               <CardContent className="space-y-4 p-4 md:p-5">
-              <div className={summaryBoxClassName}>
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                  Tổng theo chi nhánh
-                </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {formatVND(branchTotal)}
-                </p>
-              </div>
-              <div className="-m-4 md:-m-5">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/20 hover:bg-muted/20">
-                      <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                        Chi nhánh
-                      </TableHead>
-                      <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
-                        Giá trị tồn kho
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {branchRows.map((row) => (
-                      <TableRow key={row.branchId}>
-                        <TableCell className="font-medium">
-                          {row.branchName}
-                        </TableCell>
-                        <TableCell className="text-right font-mono tabular-nums">
-                          {formatVND(row.totalValue)}
-                        </TableCell>
+                <div className={summaryBoxClassName}>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                    Tổng theo chi nhánh
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold tabular-nums">
+                    {formatVND(branchTotal)}
+                  </p>
+                </div>
+                <div className="-m-4 md:-m-5">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/20 hover:bg-muted/20">
+                        <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                          Chi nhánh
+                        </TableHead>
+                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
+                          Giá trị tồn kho
+                        </TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {branchRows.map((row) => (
+                        <TableRow key={row.branchId}>
+                          <TableCell className="font-medium">
+                            {row.branchName}
+                          </TableCell>
+                          <TableCell className="text-right font-mono tabular-nums">
+                            {formatVND(row.totalValue)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           )}

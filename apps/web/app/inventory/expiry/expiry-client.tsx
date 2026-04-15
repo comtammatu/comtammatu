@@ -86,58 +86,58 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <Card className={cn(panelClassName, "rounded-lg bg-card")}>
           <CardContent className="p-6">
-          <div className="mb-4 flex items-start justify-between">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-destructive/12">
-              <AlertOctagon className="size-5 text-destructive" />
+            <div className="mb-4 flex items-start justify-between">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-destructive/12">
+                <AlertOctagon className="size-5 text-destructive" />
+              </div>
+              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                Quá hạn
+              </span>
             </div>
-            <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-              Quá hạn
-            </span>
-          </div>
-          <h3 className="text-3xl font-black tracking-tight text-destructive">
-            {String(expiredCount).padStart(2, "0")}
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Mặt hàng đã hết hạn
-          </p>
+            <h3 className="text-3xl font-black tracking-tight text-destructive">
+              {String(expiredCount).padStart(2, "0")}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Mặt hàng đã hết hạn
+            </p>
           </CardContent>
         </Card>
 
         <Card className={cn(panelClassName, "rounded-lg bg-card")}>
           <CardContent className="p-6">
-          <div className="mb-4 flex items-start justify-between">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/12">
-              <AlertTriangle className="size-5 text-primary" />
+            <div className="mb-4 flex items-start justify-between">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/12">
+                <AlertTriangle className="size-5 text-primary" />
+              </div>
+              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                3 ngày tới
+              </span>
             </div>
-            <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-              3 ngày tới
-            </span>
-          </div>
-          <h3 className="text-3xl font-black tracking-tight text-primary">
-            {String(criticalCount).padStart(2, "0")}
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Hết hạn trong 3 ngày tới
-          </p>
+            <h3 className="text-3xl font-black tracking-tight text-primary">
+              {String(criticalCount).padStart(2, "0")}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Hết hạn trong 3 ngày tới
+            </p>
           </CardContent>
         </Card>
 
         <Card className={cn(panelClassName, "rounded-lg bg-card")}>
           <CardContent className="p-6">
-          <div className="mb-4 flex items-start justify-between">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-warning/12">
-              <Clock className="size-5 text-warning" />
+            <div className="mb-4 flex items-start justify-between">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-warning/12">
+                <Clock className="size-5 text-warning" />
+              </div>
+              <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
+                7 ngày tới
+              </span>
             </div>
-            <span className="whitespace-nowrap text-label font-semibold uppercase tracking-wide text-muted-foreground">
-              7 ngày tới
-            </span>
-          </div>
-          <h3 className="text-3xl font-black tracking-tight text-warning">
-            {String(warningCount).padStart(2, "0")}
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Hết hạn trong 7 ngày tới
-          </p>
+            <h3 className="text-3xl font-black tracking-tight text-warning">
+              {String(warningCount).padStart(2, "0")}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Hết hạn trong 7 ngày tới
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -163,9 +163,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
         })}
       </div>
 
-      <div
-        className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}
-      >
+      <div className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}>
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40">

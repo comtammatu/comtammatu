@@ -1,11 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  ArrowLeft,
-  XCircle,
-  CheckCircle,
-} from "lucide-react";
+import { ArrowLeft, XCircle, CheckCircle } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
@@ -170,7 +166,9 @@ export function PODetailClient({ po }: { po: PODetail }) {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-bold">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">{item.sku}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.sku}
+                      </p>
                     </div>
                     <div
                       className={cn(

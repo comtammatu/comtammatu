@@ -1,11 +1,10 @@
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims, INVENTORY_CATALOG_ROLES } from "@comtammatu/shared/auth";
-import { fetchIngredients } from "@/inventory/actions";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+  extractClaims,
+  INVENTORY_CATALOG_ROLES,
+} from "@comtammatu/shared/auth";
+import { fetchIngredients } from "@/inventory/actions";
+import { Card, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
 import { IngredientsSettingsClient } from "./ingredients-settings-client";
 import type { IngredientRow } from "@/inventory/page";
 import { tRoute } from "../../_lib/dictionary";

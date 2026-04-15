@@ -2,11 +2,7 @@ import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
 import { fetchExpiryAlerts } from "@/inventory/actions";
 import { ExpiryListClient } from "@/inventory/expiry/expiry-list-client";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import { Card, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
 import type { BranchOption, ExpiryAlertRow } from "@/inventory/page";
 import { tRoute } from "../../_lib/dictionary";
 

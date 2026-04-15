@@ -66,12 +66,14 @@ export default async function BranchesPage() {
             {branches?.length ?? 0} điểm vận hành
           </p>
         </div>
-        <AddBranchButton branchKindSchemaAvailable={branchKindSchemaAvailable} />
+        <AddBranchButton
+          branchKindSchemaAvailable={branchKindSchemaAvailable}
+        />
       </div>
       {!branchKindSchemaAvailable && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-          Database hiện tại chưa có cột <code>branch_kind</code>. Danh sách
-          điểm vận hành vẫn dùng được, nhưng phân loại bếp trung tâm sẽ chỉ hoạt động
+          Database hiện tại chưa có cột <code>branch_kind</code>. Danh sách điểm
+          vận hành vẫn dùng được, nhưng phân loại bếp trung tâm sẽ chỉ hoạt động
           sau khi migration được áp dụng.
         </div>
       )}
