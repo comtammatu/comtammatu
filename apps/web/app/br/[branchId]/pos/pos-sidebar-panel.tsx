@@ -55,7 +55,11 @@ export function PosSidebarTabs({
 >) {
   return (
     <div className="border-b border-border/60 px-3 py-3">
-      <div role="tablist" aria-label="POS sidebar" className="app-dock grid grid-cols-2 gap-2 p-2">
+      <div
+        role="tablist"
+        aria-label="POS sidebar"
+        className="rounded-lg border bg-card shadow-sm grid grid-cols-2 gap-2 p-2"
+      >
         <button
           type="button"
           role="tab"

@@ -78,7 +78,7 @@ export function PosSessionHeader({
           </Button>
         </div>
 
-        <div className="app-panel p-4 md:p-5">
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 md:p-5">
           <div className="relative space-y-4">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div className="space-y-2">
@@ -93,7 +93,7 @@ export function PosSessionHeader({
                 </p>
               </div>
               <div className="grid gap-2 sm:grid-cols-2 xl:min-w-88">
-                <div className="app-stat">
+                <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Ngữ cảnh hiện tại
                   </p>
@@ -105,7 +105,7 @@ export function PosSessionHeader({
                         : "Chưa gán bàn"}
                   </p>
                 </div>
-                <div className="app-stat">
+                <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Đơn đang chạy
                   </p>
@@ -131,11 +131,13 @@ export function PosSessionHeader({
               {flowSteps.map((step, index) => (
                 <div
                   key={step.label}
-                  className="app-subpanel p-3"
+                  className="rounded-lg border bg-muted/30 text-card-foreground p-3"
                   data-state={step.state}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">{index + 1}</div>
+                    <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">
+                      {index + 1}
+                    </div>
                     <div className="space-y-1">
                       <p className="text-sm font-semibold">{step.label}</p>
                       <p className="text-xs leading-5 text-muted-foreground">
@@ -148,15 +150,17 @@ export function PosSessionHeader({
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="app-subpanel border-primary/15 bg-primary/8 p-3">
+              <div className="rounded-lg border bg-muted/30 text-card-foreground border-primary/15 bg-primary/8 p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-primary">
                   Giỏ hiện tại
                 </p>
                 <p className="mt-2 text-lg font-semibold text-foreground">
-                  {cartQuantity > 0 ? `${cartQuantity} món` : "Chưa có món trong giỏ"}
+                  {cartQuantity > 0
+                    ? `${cartQuantity} món`
+                    : "Chưa có món trong giỏ"}
                 </p>
               </div>
-              <div className="app-subpanel border-success/15 bg-success/10 p-3">
+              <div className="rounded-lg border bg-muted/30 text-card-foreground border-success/15 bg-success/10 p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-success">
                   Đơn sẵn sàng
                 </p>
@@ -164,7 +168,7 @@ export function PosSessionHeader({
                   {readyOrderCount} đơn
                 </p>
               </div>
-              <div className="app-subpanel p-3">
+              <div className="rounded-lg border bg-muted/30 text-card-foreground p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Đã hoàn tất
                 </p>
@@ -172,7 +176,7 @@ export function PosSessionHeader({
                   {completedOrderCount} đơn
                 </p>
               </div>
-              <div className="app-subpanel border-warning/15 bg-warning/10 p-3">
+              <div className="rounded-lg border bg-muted/30 text-card-foreground border-warning/15 bg-warning/10 p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-warning">
                   Doanh thu ca
                 </p>

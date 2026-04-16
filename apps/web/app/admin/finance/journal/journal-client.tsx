@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { SectionCard } from "@/components/patterns";
 import {
   Table,
   TableBody,
@@ -12,6 +11,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Dialog,
   DialogContent,
@@ -159,55 +159,57 @@ export function JournalClient({ entries: initial, accounts }: Props) {
         </Button>
       </div>
 
-      <SectionCard className="overflow-hidden" density="compact">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-28">Ngày</TableHead>
-              <TableHead>Diễn giải</TableHead>
-              <TableHead className="w-24">Tham chiếu</TableHead>
-              <TableHead className="w-24">Trạng thái</TableHead>
-              <TableHead className="w-32 text-right">Tổng nợ (₫)</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {entries.length === 0 ? (
+      <Card className="overflow-hidden">
+        <CardContent className="px-4 sm:px-5">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="py-10 text-center text-muted-foreground"
-                >
-                  Chưa có bút toán nào.
-                </TableCell>
+                <TableHead className="w-28">Ngày</TableHead>
+                <TableHead>Diễn giải</TableHead>
+                <TableHead className="w-24">Tham chiếu</TableHead>
+                <TableHead className="w-24">Trạng thái</TableHead>
+                <TableHead className="w-32 text-right">Tổng nợ (₫)</TableHead>
               </TableRow>
-            ) : (
-              entries.map((e) => {
-                const totalDr = e.journal_entry_lines.reduce(
-                  (s, l) => s + l.debit,
-                  0,
-                );
-                return (
-                  <TableRow key={e.id}>
-                    <TableCell className="tabular-nums">
-                      {e.entry_date}
-                    </TableCell>
-                    <TableCell>{e.description}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {e.ref_type ? `${e.ref_type}#${e.ref_id}` : "—"}
-                    </TableCell>
-                    <TableCell>
-                      {statusBadge(e.status, e.entry_number)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {totalDr.toLocaleString("vi-VN")}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </SectionCard>
+            </TableHeader>
+            <TableBody>
+              {entries.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="py-10 text-center text-muted-foreground"
+                  >
+                    Chưa có bút toán nào.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                entries.map((e) => {
+                  const totalDr = e.journal_entry_lines.reduce(
+                    (s, l) => s + l.debit,
+                    0,
+                  );
+                  return (
+                    <TableRow key={e.id}>
+                      <TableCell className="tabular-nums">
+                        {e.entry_date}
+                      </TableCell>
+                      <TableCell>{e.description}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {e.ref_type ? `${e.ref_type}#${e.ref_id}` : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {statusBadge(e.status, e.entry_number)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {totalDr.toLocaleString("vi-VN")}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-2xl">

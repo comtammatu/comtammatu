@@ -1,7 +1,7 @@
 import { createClient } from "@comtammatu/database/supabase/server";
-import { fetchDailyRevenue, fetchTaxInvoices, fetchTopItems } from "./actions";
-import { PageContainer, PageHeader } from "@/components/patterns";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { FinanceClient } from "./finance-client";
+import { fetchDailyRevenue, fetchTaxInvoices, fetchTopItems } from "./actions";
 
 export default async function FinancePage() {
   const supabase = await createClient();
@@ -47,14 +47,27 @@ export default async function FinancePage() {
     : [];
 
   return (
-    <PageContainer>
-      <PageHeader eyebrow="Phân hệ ERP" title="Tài chính" />
+    <div className="space-y-5 lg:space-y-6">
+      <Card>
+        <CardContent className="p-5 sm:p-6">
+          <div className="space-y-3">
+            <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              Phân hệ ERP
+            </span>
+            <div className="space-y-2">
+              <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                Tài chính
+              </h2>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       <FinanceClient
         dailyRevenue={dailyRevenue}
         topItems={topItems}
         invoices={invoices}
       />
-    </PageContainer>
+    </div>
   );
 }
 

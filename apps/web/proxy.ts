@@ -102,25 +102,31 @@ export async function proxy(request: NextRequest) {
       );
     }
 
-    // POS/KDS are not available on headquarters (office-only branch)
+    // POS/KDS are not available on warehouse or central_kitchen branches
     if ((moduleKey === "pos" || moduleKey === "kds") && claims) {
       const routePath = betaSurface ? stripBetaPrefix(pathname) : pathname;
       const pathMatch = routePath.match(/^\/br\/(\d+)\//);
       if (pathMatch) {
         const routeBranchId = Number(pathMatch[1]);
-        const { data: hqRow } = await supabase
+        // Check branch_kind first (post-migration), fall back to is_headquarters
+        const { data: branchRow } = await supabase
           .from("branches")
-          .select("id")
+          .select("id, branch_kind, is_headquarters")
           .eq("id", routeBranchId)
           .eq("tenant_id", claims.tenant_id)
-          .eq("is_headquarters", true)
           .maybeSingle();
-        if (hqRow) {
+        const kind = branchRow?.branch_kind;
+        const isBlocked =
+          kind === "warehouse" ||
+          kind === "central_kitchen" ||
+          kind === "headquarters" ||
+          branchRow?.is_headquarters === true;
+        if (branchRow && isBlocked) {
           return redirectToBlockedDefault(
             request,
             response,
             resolvePostLoginRedirect(claims, null),
-            "headquarters-branch-restricted",
+            "warehouse-branch-restricted",
           );
         }
       }

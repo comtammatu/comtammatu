@@ -4,6 +4,12 @@ import { useMemo, useState } from "react";
 import { Pencil, Search } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   Select,
@@ -20,11 +26,6 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import {
-  FilterBar,
-  PageHeader,
-  SectionCard,
-} from "@/components/patterns";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { formatVND } from "../_lib/format";
 import { fetchIngredients } from "../actions";
@@ -96,7 +97,8 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
 
   const activeCount = rows.filter((item) => item.is_active).length;
   const chilledCount = rows.filter(
-    (item) => item.storage_type === "refrigerated" || item.storage_type === "frozen",
+    (item) =>
+      item.storage_type === "refrigerated" || item.storage_type === "frozen",
   ).length;
 
   async function reload() {
@@ -118,34 +120,49 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow="Danh muc dung chung"
-        title="Danh mục nguyên liệu"
-        description="Chot ten, SKU, bao quan va nguong ton trong mot cua vao duy nhat de procurement, branch operations va recipe cung dung chung."
-        actions={
-          <Button type="button" onClick={openCreate}>
-            Tạo nguyên liệu
-          </Button>
-        }
-      />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-muted-foreground">
+            Danh muc dung chung
+          </p>
+          <div className="space-y-1">
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Danh mục nguyên liệu
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Chot ten, SKU, bao quan va nguong ton trong mot cua vao duy nhat
+              de procurement, branch operations va recipe cung dung chung.
+            </p>
+          </div>
+        </div>
+        <Button type="button" onClick={openCreate}>
+          Tạo nguyên liệu
+        </Button>
+      </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="app-stat">
-          <p className="app-kicker">Tổng nguyên liệu</p>
+        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            Tổng nguyên liệu
+          </p>
           <p className="mt-3 text-3xl font-semibold">{rows.length}</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Danh mục đang phục vụ nhập hàng, kho và recipe.
           </p>
         </div>
-        <div className="app-stat">
-          <p className="app-kicker">Đang hoạt động</p>
+        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            Đang hoạt động
+          </p>
           <p className="mt-3 text-3xl font-semibold">{activeCount}</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Mặt hàng đang sẵn sàng sử dụng trong vận hành.
           </p>
         </div>
-        <div className="app-stat">
-          <p className="app-kicker">Cần chuỗi lạnh</p>
+        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            Cần chuỗi lạnh
+          </p>
           <p className="mt-3 text-3xl font-semibold">{chilledCount}</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Nhóm nguyên liệu đòi hỏi bảo quản lạnh hoặc đông.
@@ -153,7 +170,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
         </div>
       </div>
 
-      <FilterBar className="gap-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
         <div className="relative min-w-[16rem] flex-1">
           <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -193,108 +210,113 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
         <Badge variant="outline" className="rounded-full">
           {filtered.length} / {rows.length} nguyên liệu
         </Badge>
-      </FilterBar>
+      </div>
 
-      <SectionCard
-        title="Bảng nguyên liệu"
-        description="Tên chuẩn, SKU, bảo quản, ngưỡng tồn và trạng thái sử dụng."
-        className="overflow-hidden"
-        density="compact"
-      >
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="min-w-52">Nguyên liệu</TableHead>
-              <TableHead className="min-w-28">SKU</TableHead>
-              <TableHead className="min-w-28">Đơn vị</TableHead>
-              <TableHead className="min-w-36">Bảo quản</TableHead>
-              <TableHead className="min-w-32">Giá tham chiếu</TableHead>
-              <TableHead className="min-w-44">Ngưỡng tồn</TableHead>
-              <TableHead className="min-w-28">Trạng thái</TableHead>
-              <TableHead className="w-24 text-right">Thao tác</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableEmptyStateRow
-                colSpan={8}
-                title={
-                  searchQuery.trim()
-                    ? "Không tìm thấy nguyên liệu phù hợp"
-                    : "Chưa có nguyên liệu"
-                }
-                description={
-                  searchQuery.trim()
-                    ? "Thử bộ lọc hoặc từ khóa khác."
-                    : 'Nhấn "Tạo nguyên liệu" để bắt đầu danh mục.'
-                }
-              />
-            ) : null}
+      <Card className="overflow-hidden">
+        <CardHeader className="gap-1">
+          <CardTitle>Bảng nguyên liệu</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Tên chuẩn, SKU, bảo quản, ngưỡng tồn và trạng thái sử dụng.
+          </p>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-52">Nguyên liệu</TableHead>
+                <TableHead className="min-w-28">SKU</TableHead>
+                <TableHead className="min-w-28">Đơn vị</TableHead>
+                <TableHead className="min-w-36">Bảo quản</TableHead>
+                <TableHead className="min-w-32">Giá tham chiếu</TableHead>
+                <TableHead className="min-w-44">Ngưỡng tồn</TableHead>
+                <TableHead className="min-w-28">Trạng thái</TableHead>
+                <TableHead className="w-24 text-right">Thao tác</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 ? (
+                <TableEmptyStateRow
+                  colSpan={8}
+                  title={
+                    searchQuery.trim()
+                      ? "Không tìm thấy nguyên liệu phù hợp"
+                      : "Chưa có nguyên liệu"
+                  }
+                  description={
+                    searchQuery.trim()
+                      ? "Thử bộ lọc hoặc từ khóa khác."
+                      : 'Nhấn "Tạo nguyên liệu" để bắt đầu danh mục.'
+                  }
+                />
+              ) : null}
 
-            {filtered.map((item) => {
-              const categoryTone =
-                categoryToneClass[item.category ?? ""] ??
-                "bg-muted text-muted-foreground";
-              const isActive = item.is_active;
+              {filtered.map((item) => {
+                const categoryTone =
+                  categoryToneClass[item.category ?? ""] ??
+                  "bg-muted text-muted-foreground";
+                const isActive = item.is_active;
 
-              return (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold">{item.name}</p>
-                        {item.category ? (
-                          <Badge className={categoryTone}>{item.category}</Badge>
-                        ) : null}
+                return (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold">{item.name}</p>
+                          {item.category ? (
+                            <Badge className={categoryTone}>
+                              {item.category}
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Dùng chung cho kho, nhập hàng và sản xuất.
+                        </p>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        Dùng chung cho kho, nhập hàng và sản xuất.
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-mono text-sm text-muted-foreground">
-                    {item.sku || "—"}
-                  </TableCell>
-                  <TableCell>{item.unit}</TableCell>
-                  <TableCell>{storageLabel(item.storage_type)}</TableCell>
-                  <TableCell className="font-mono">
-                    {item.unit_cost ? `${formatVND(item.unit_cost)}đ` : "—"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="destructive">
-                        Min {item.min_stock_level ?? 0}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm text-muted-foreground">
+                      {item.sku || "—"}
+                    </TableCell>
+                    <TableCell>{item.unit}</TableCell>
+                    <TableCell>{storageLabel(item.storage_type)}</TableCell>
+                    <TableCell className="font-mono">
+                      {item.unit_cost ? `${formatVND(item.unit_cost)}đ` : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="destructive">
+                          Min {item.min_stock_level ?? 0}
+                        </Badge>
+                        <Badge variant="secondary">
+                          Max {item.max_stock_level ?? 0}
+                        </Badge>
+                        <Badge variant="success">
+                          Re {item.reorder_point ?? 0}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={isActive ? "success" : "secondary"}>
+                        {isActive ? "Đang hoạt động" : "Tạm ngưng"}
                       </Badge>
-                      <Badge variant="secondary">
-                        Max {item.max_stock_level ?? 0}
-                      </Badge>
-                      <Badge variant="success">
-                        Re {item.reorder_point ?? 0}
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={isActive ? "success" : "secondary"}>
-                      {isActive ? "Đang hoạt động" : "Tạm ngưng"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => openEdit(item)}
-                      aria-label={`Sửa ${item.name}`}
-                    >
-                      <Pencil className="size-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </SectionCard>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => openEdit(item)}
+                        aria-label={`Sửa ${item.name}`}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <IngredientDialog
         open={dialogOpen}

@@ -23,6 +23,12 @@ import {
 } from "@comtammatu/ui/components/dialog";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -41,7 +47,6 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { EmptyStatePanel, PageHeader, SectionCard } from "@/components/patterns";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatDateTime, formatQty, formatVND } from "../../_lib/format";
@@ -207,23 +212,31 @@ export function IssueDetailClient({
           <ArrowLeft className="size-4" /> {tRoute("/inventory/issues")}
         </Link>
 
-        <PageHeader
-          eyebrow={surface.eyebrow}
-          title={issue.issue_number}
-          description={`${surface.label} tai ${issue.branches?.name ?? `Chi nhanh #${issue.branch_id}`} • ${issue.issued_at ? formatDateTime(issue.issued_at) : "—"}`}
-          actions={
-            <Badge variant={getInventoryStatusBadgeVariant(issue.status)}>
-              {getInventoryStatusLabel(issue.status)}
-            </Badge>
-          }
-        />
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-muted-foreground">
+              {surface.eyebrow}
+            </p>
+            <div className="space-y-1">
+              <h1 className="text-3xl font-semibold tracking-tight">
+                {issue.issue_number}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {`${surface.label} tai ${issue.branches?.name ?? `Chi nhanh #${issue.branch_id}`} • ${issue.issued_at ? formatDateTime(issue.issued_at) : "—"}`}
+              </p>
+            </div>
+          </div>
+          <Badge variant={getInventoryStatusBadgeVariant(issue.status)}>
+            {getInventoryStatusLabel(issue.status)}
+          </Badge>
+        </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
-          {
-            label: "Nghiep vu",
-            value: surface.label,
-          },
+            {
+              label: "Nghiep vu",
+              value: surface.label,
+            },
             {
               label: "Chi nhánh",
               value: issue.branches?.name ?? `Chi nhánh #${issue.branch_id}`,
@@ -237,8 +250,13 @@ export function IssueDetailClient({
               value: `${formatVND(totalAmount)}đ`,
             },
           ].map((item) => (
-            <div key={item.label} className="app-stat">
-              <p className="app-kicker">{item.label}</p>
+            <div
+              key={item.label}
+              className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm"
+            >
+              <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                {item.label}
+              </p>
               <p className="mt-3 text-xl font-semibold text-foreground">
                 {item.value}
               </p>
@@ -247,25 +265,29 @@ export function IssueDetailClient({
         </div>
 
         {issue.notes ? (
-          <SectionCard density="compact">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              {surface.noteLabel}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">{issue.notes}</p>
-          </SectionCard>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                {surface.noteLabel}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {issue.notes}
+              </p>
+            </CardContent>
+          </Card>
         ) : null}
 
-        <SectionCard
-          title={tTerm("ingredientsList")}
-          description={
-            isDraft
-              ? "Phiếu nháp tự lưu khi thêm hoặc xóa dòng."
-              : "Phiếu đã chốt, dữ liệu chỉ còn ở chế độ xem."
-          }
-          className="overflow-hidden"
-          density="compact"
-          action={
-            isDraft ? (
+        <Card className="overflow-hidden">
+          <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <CardTitle>{tTerm("ingredientsList")}</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {isDraft
+                  ? "Phiếu nháp tự lưu khi thêm hoặc xóa dòng."
+                  : "Phiếu đã chốt, dữ liệu chỉ còn ở chế độ xem."}
+              </p>
+            </div>
+            {isDraft ? (
               <Button
                 onClick={() => setAddDialogOpen(true)}
                 className="bg-success/10 text-success hover:bg-success/15 hover:text-success"
@@ -273,203 +295,203 @@ export function IssueDetailClient({
                 <PlusCircle className="size-4" />
                 Thêm {tTerm("ingredient", "button").toLowerCase()}
               </Button>
-            ) : null
-          }
-        >
-
-          {lines.length === 0 ? (
-            <div className="px-6 py-10">
-              <EmptyStatePanel
-                title={
-                  isDraft
-                  ? "Chưa có dòng nguyên liệu"
-                    : `${surface.label} khong co dong nguyen lieu`
-                }
-                description={
-                  isDraft
-                    ? `Them it nhat mot dong de ${surface.confirmAction.toLowerCase()}.`
-                    : "Danh sach nguyen lieu se hien thi o day neu phieu co du lieu."
-                }
-              />
-            </div>
-          ) : (
-            <>
-              <div className="space-y-3 p-4 md:hidden">
-                {lines.map((line) => (
-                  <div
-                    key={line.id}
-                    className="rounded-lg border border-border bg-muted/20 p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-bold">
-                          {line.ingredients?.name ?? `#${line.ingredient_id}`}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          ID: {line.ingredient_id}
-                        </p>
-                      </div>
-                      {isDraft ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setPendingDeleteId(line.id)}
-                          disabled={isPending}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      ) : null}
-                    </div>
-                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Số lượng</p>
-                        <p className="font-semibold">
-                          {formatQty(Number(line.quantity ?? 0))}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Đơn vị</p>
-                        <p className="font-semibold">
-                          {line.unit ?? line.ingredients?.unit ?? "—"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Đơn giá (WAC)</p>
-                        <p className="font-semibold">
-                          {formatVND(Number(line.unit_cost ?? 0))}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Thành tiền</p>
-                        <p className="font-semibold text-primary">
-                          {formatVND(Number(line.total_cost ?? 0))}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-4 rounded-xl bg-background px-3 py-2 text-sm">
-                      <p className="text-muted-foreground">
-                        {tTerm("issueReason")}
-                      </p>
-                      <p className="mt-1">{line.reason ?? "—"}</p>
-                    </div>
-                  </div>
-                ))}
+            ) : null}
+          </CardHeader>
+          <CardContent>
+            {lines.length === 0 ? (
+              <div className="px-6 py-10">
+                <div className="rounded-lg border border-dashed px-6 py-10 text-center">
+                  <p className="text-base font-semibold">
+                    {isDraft
+                      ? "Chưa có dòng nguyên liệu"
+                      : `${surface.label} khong co dong nguyen lieu`}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {isDraft
+                      ? `Them it nhat mot dong de ${surface.confirmAction.toLowerCase()}.`
+                      : "Danh sach nguyen lieu se hien thi o day neu phieu co du lieu."}
+                  </p>
+                </div>
               </div>
+            ) : (
+              <>
+                <div className="space-y-3 p-4 md:hidden">
+                  {lines.map((line) => (
+                    <div
+                      key={line.id}
+                      className="rounded-lg border border-border bg-muted/20 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-bold">
+                            {line.ingredients?.name ?? `#${line.ingredient_id}`}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            ID: {line.ingredient_id}
+                          </p>
+                        </div>
+                        {isDraft ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setPendingDeleteId(line.id)}
+                            disabled={isPending}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        ) : null}
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Số lượng</p>
+                          <p className="font-semibold">
+                            {formatQty(Number(line.quantity ?? 0))}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Đơn vị</p>
+                          <p className="font-semibold">
+                            {line.unit ?? line.ingredients?.unit ?? "—"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Đơn giá (WAC)</p>
+                          <p className="font-semibold">
+                            {formatVND(Number(line.unit_cost ?? 0))}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Thành tiền</p>
+                          <p className="font-semibold text-primary">
+                            {formatVND(Number(line.total_cost ?? 0))}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-4 rounded-xl bg-background px-3 py-2 text-sm">
+                        <p className="text-muted-foreground">
+                          {tTerm("issueReason")}
+                        </p>
+                        <p className="mt-1">{line.reason ?? "—"}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
-              <div className="hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/40">
-                      {[
-                        { label: tTerm("ingredient"), align: "" },
-                        { label: "Số lượng", align: "text-right" },
-                        { label: "Đơn vị", align: "" },
-                        { label: "Đơn giá (WAC)", align: "text-right" },
-                        { label: "Thành tiền", align: "text-right" },
-                        { label: tTerm("issueReason"), align: "" },
-                        { label: "", align: "text-center" },
-                      ].map((header) => (
-                        <TableHead
-                          key={header.label || "delete"}
-                          className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${header.align}`}
-                        >
-                          {header.label}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {lines.length === 0 && (
-                      <TableEmptyStateRow
-                        colSpan={7}
-                        title="Phiếu xuất chưa có dữ liệu"
-                        description="Danh sách nguyên liệu sẽ hiển thị tại đây khi phiếu có dòng hàng."
-                      />
-                    )}
-                    {lines.map((line) => (
-                      <TableRow key={line.id} className="transition-colors">
-                        <TableCell className="px-6 py-4">
-                          <div className="flex flex-col">
-                            <span className="font-bold">
-                              {line.ingredients?.name ??
-                                `#${line.ingredient_id}`}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              ID: {line.ingredient_id}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-4 text-right font-semibold">
-                          {formatQty(Number(line.quantity ?? 0))}
-                        </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <span className="rounded bg-muted px-2 py-1 text-xs font-medium">
-                            {line.unit ?? line.ingredients?.unit ?? ""}
-                          </span>
-                        </TableCell>
-                        <TableCell className="px-6 py-4 text-right font-medium">
-                          {formatVND(Number(line.unit_cost ?? 0))}
-                        </TableCell>
-                        <TableCell className="px-6 py-4 text-right font-bold">
-                          {formatVND(Number(line.total_cost ?? 0))}
-                        </TableCell>
-                        <TableCell className="px-6 py-4 text-sm text-muted-foreground">
-                          {line.reason ?? "—"}
-                        </TableCell>
-                        <TableCell className="px-6 py-4 text-center">
-                          {isDraft ? (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setPendingDeleteId(line.id)}
-                              disabled={isPending}
-                              className="text-muted-foreground hover:text-destructive"
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              —
-                            </span>
-                          )}
-                        </TableCell>
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/40">
+                        {[
+                          { label: tTerm("ingredient"), align: "" },
+                          { label: "Số lượng", align: "text-right" },
+                          { label: "Đơn vị", align: "" },
+                          { label: "Đơn giá (WAC)", align: "text-right" },
+                          { label: "Thành tiền", align: "text-right" },
+                          { label: tTerm("issueReason"), align: "" },
+                          { label: "", align: "text-center" },
+                        ].map((header) => (
+                          <TableHead
+                            key={header.label || "delete"}
+                            className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${header.align}`}
+                          >
+                            {header.label}
+                          </TableHead>
+                        ))}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
-          )}
+                    </TableHeader>
+                    <TableBody>
+                      {lines.length === 0 && (
+                        <TableEmptyStateRow
+                          colSpan={7}
+                          title="Phiếu xuất chưa có dữ liệu"
+                          description="Danh sách nguyên liệu sẽ hiển thị tại đây khi phiếu có dòng hàng."
+                        />
+                      )}
+                      {lines.map((line) => (
+                        <TableRow key={line.id} className="transition-colors">
+                          <TableCell className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="font-bold">
+                                {line.ingredients?.name ??
+                                  `#${line.ingredient_id}`}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                ID: {line.ingredient_id}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-4 text-right font-semibold">
+                            {formatQty(Number(line.quantity ?? 0))}
+                          </TableCell>
+                          <TableCell className="px-6 py-4">
+                            <span className="rounded bg-muted px-2 py-1 text-xs font-medium">
+                              {line.unit ?? line.ingredients?.unit ?? ""}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-6 py-4 text-right font-medium">
+                            {formatVND(Number(line.unit_cost ?? 0))}
+                          </TableCell>
+                          <TableCell className="px-6 py-4 text-right font-bold">
+                            {formatVND(Number(line.total_cost ?? 0))}
+                          </TableCell>
+                          <TableCell className="px-6 py-4 text-sm text-muted-foreground">
+                            {line.reason ?? "—"}
+                          </TableCell>
+                          <TableCell className="px-6 py-4 text-center">
+                            {isDraft ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setPendingDeleteId(line.id)}
+                                disabled={isPending}
+                                className="text-muted-foreground hover:text-destructive"
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">
+                                —
+                              </span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
+            )}
 
-          <div className="mt-4 flex justify-end rounded-[1.75rem] border border-border/60 bg-muted/30 p-5 sm:p-6 lg:p-8">
-            <div className="w-full max-w-sm space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Tổng số dòng:</span>
-                <span className="font-bold">
-                  {String(lines.length).padStart(2, "0")}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Cộng tiền hàng:</span>
-                <span className="font-bold">{formatVND(totalAmount)}</span>
-              </div>
-              <div className="flex items-end justify-between border-t border-border pt-3">
-                <span className="text-sm font-bold">TỔNG CỘNG</span>
-                <div className="text-right">
-                  <span className="block text-2xl font-black leading-none text-primary">
-                    {formatVND(totalAmount)}
+            <div className="mt-4 flex justify-end rounded-[1.75rem] border border-border/60 bg-muted/30 p-5 sm:p-6 lg:p-8">
+              <div className="w-full max-w-sm space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Tổng số dòng:</span>
+                  <span className="font-bold">
+                    {String(lines.length).padStart(2, "0")}
                   </span>
-                  <span className="text-xs font-semibold text-muted-foreground">
-                    VNĐ
-                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Cộng tiền hàng:</span>
+                  <span className="font-bold">{formatVND(totalAmount)}</span>
+                </div>
+                <div className="flex items-end justify-between border-t border-border pt-3">
+                  <span className="text-sm font-bold">TỔNG CỘNG</span>
+                  <div className="text-right">
+                    <span className="block text-2xl font-black leading-none text-primary">
+                      {formatVND(totalAmount)}
+                    </span>
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      VNĐ
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </SectionCard>
+          </CardContent>
+        </Card>
 
         {isDraft ? (
           <footer className="flex flex-col gap-4 border-t border-border py-6 md:flex-row md:items-center md:justify-between">
@@ -519,23 +541,23 @@ export function IssueDetailClient({
               <div className="space-y-2">
                 <p>Thao tác này sẽ trừ tồn kho và không thể hoàn tác.</p>
                 {lines.length > 0 ? (
-                  <SectionCard
-                    className="rounded-lg bg-muted/30 text-left"
-                    density="compact"
-                  >
-                    {lines.map((line) => (
-                      <p key={line.id}>
-                        Se tru{" "}
-                        <strong>
-                          {formatQty(Number(line.quantity ?? 0))} {line.unit}
-                        </strong>{" "}
-                        <strong>
-                          {line.ingredients?.name ?? `#${line.ingredient_id}`}
-                        </strong>{" "}
-                        khoi kho <strong>{issue.branches?.name ?? "—"}</strong>.
-                      </p>
-                    ))}
-                  </SectionCard>
+                  <Card className="bg-muted/30 text-left">
+                    <CardContent className="space-y-2 pt-6">
+                      {lines.map((line) => (
+                        <p key={line.id}>
+                          Se tru{" "}
+                          <strong>
+                            {formatQty(Number(line.quantity ?? 0))} {line.unit}
+                          </strong>{" "}
+                          <strong>
+                            {line.ingredients?.name ?? `#${line.ingredient_id}`}
+                          </strong>{" "}
+                          khoi kho{" "}
+                          <strong>{issue.branches?.name ?? "—"}</strong>.
+                        </p>
+                      ))}
+                    </CardContent>
+                  </Card>
                 ) : null}
               </div>
             </AlertDialogDescription>

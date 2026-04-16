@@ -1,15 +1,11 @@
 import { createClient } from "@comtammatu/database/supabase/server";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
-import {
-  PageContainer,
-  PageHeader,
-  SectionCard,
-} from "@/components/patterns";
 import { CategoryTable } from "./category-table";
 import { AddCategoryButton } from "./add-category-button";
 import { ItemTable } from "./item-table";
@@ -50,45 +46,58 @@ export default async function MenuPage() {
   }));
 
   return (
-    <PageContainer>
-      <PageHeader eyebrow="Danh mục kinh doanh" title="Thực đơn" />
+    <div className="space-y-5 lg:space-y-6">
+      <Card>
+        <CardContent className="p-5 sm:p-6">
+          <div className="space-y-3">
+            <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              Danh mục kinh doanh
+            </span>
+            <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+              Thực đơn
+            </h2>
+          </div>
+        </CardContent>
+      </Card>
 
-      <SectionCard>
-        <Tabs defaultValue="items">
-          <TabsList className="h-11 rounded-lg bg-muted/60">
-            <TabsTrigger value="items" className="px-5">
-              Món ăn
-              <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
-                {items.length}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="px-5">
-              Danh mục
-              <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
-                {categories.length}
-              </span>
-            </TabsTrigger>
-          </TabsList>
+      <Card>
+        <CardContent className="p-5 sm:p-6">
+          <Tabs defaultValue="items">
+            <TabsList className="h-11 rounded-lg bg-muted/60">
+              <TabsTrigger value="items" className="px-5">
+                Món ăn
+                <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
+                  {items.length}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="categories" className="px-5">
+                Danh mục
+                <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
+                  {categories.length}
+                </span>
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="items" className="mt-6 space-y-4">
-            <div className="flex justify-end">
-              <AddItemButton categories={categories} />
-            </div>
-            <div className="rounded-lg border border-border/70 shadow-sm">
-              <ItemTable items={items} categories={categories} />
-            </div>
-          </TabsContent>
+            <TabsContent value="items" className="mt-6 space-y-4">
+              <div className="flex justify-end">
+                <AddItemButton categories={categories} />
+              </div>
+              <div className="rounded-lg border border-border/70 shadow-sm">
+                <ItemTable items={items} categories={categories} />
+              </div>
+            </TabsContent>
 
-          <TabsContent value="categories" className="mt-6 space-y-4">
-            <div className="flex justify-end">
-              <AddCategoryButton />
-            </div>
-            <div className="rounded-lg border border-border/70 shadow-sm">
-              <CategoryTable categories={categories} />
-            </div>
-          </TabsContent>
-        </Tabs>
-      </SectionCard>
-    </PageContainer>
+            <TabsContent value="categories" className="mt-6 space-y-4">
+              <div className="flex justify-end">
+                <AddCategoryButton />
+              </div>
+              <div className="rounded-lg border border-border/70 shadow-sm">
+                <CategoryTable categories={categories} />
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

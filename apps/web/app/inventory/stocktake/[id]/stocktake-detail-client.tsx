@@ -23,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
-import { EmptyStatePanel as EmptyState } from "@/components/patterns";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Table,
   TableBody,
@@ -36,7 +36,6 @@ import { toast } from "@comtammatu/ui/components/sonner";
 
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
-import { PageHeader, SectionCard } from "@/components/patterns";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import {
@@ -267,37 +266,41 @@ export function StocktakeDetailClient({
         <span className="font-medium text-foreground">KK-{session.id}</span>
       </div>
 
-      <PageHeader
-        eyebrow="Kiem soat cuoi ca"
-        title={`KK-${session.id}`}
-        description={headerDescription}
-        actions={
-          <>
-            <Badge className={cn("text-xs", meta.className)}>
-              {meta.label}
-            </Badge>
-            {session.status === "in_progress" ? (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => setCancelDialogOpen(true)}
-                  disabled={isPending}
-                >
-                  <Ban className="mr-2 size-4" />
-                  Hủy kiểm kê
-                </Button>
-                <Button
-                  onClick={() => setCompleteDialogOpen(true)}
-                  disabled={isPending}
-                >
-                  <CheckCircle2 className="mr-2 size-4" />
-                  Hoàn tất kiểm kê
-                </Button>
-              </>
-            ) : null}
-          </>
-        }
-      />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-muted-foreground">
+            Kiem soat cuoi ca
+          </p>
+          <div className="space-y-1">
+            <h1 className="text-3xl font-semibold tracking-tight">
+              {`KK-${session.id}`}
+            </h1>
+            <p className="text-sm text-muted-foreground">{headerDescription}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge className={cn("text-xs", meta.className)}>{meta.label}</Badge>
+          {session.status === "in_progress" ? (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setCancelDialogOpen(true)}
+                disabled={isPending}
+              >
+                <Ban className="mr-2 size-4" />
+                Hủy kiểm kê
+              </Button>
+              <Button
+                onClick={() => setCompleteDialogOpen(true)}
+                disabled={isPending}
+              >
+                <CheckCircle2 className="mr-2 size-4" />
+                Hoàn tất kiểm kê
+              </Button>
+            </>
+          ) : null}
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
@@ -318,8 +321,13 @@ export function StocktakeDetailClient({
             value: String(varianceCount).padStart(2, "0"),
           },
         ].map((item) => (
-          <div key={item.label} className="app-stat">
-            <p className="app-kicker">{item.label}</p>
+          <div
+            key={item.label}
+            className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm"
+          >
+            <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              {item.label}
+            </p>
             <p className="mt-3 text-xl font-semibold">{item.value}</p>
           </div>
         ))}
@@ -327,33 +335,40 @@ export function StocktakeDetailClient({
 
       {/* Progress (in_progress only) */}
       {session.status === "in_progress" && (
-        <SectionCard className="rounded-lg" density="compact">
-          <div className="flex items-center gap-3 text-sm">
-            <ClipboardCheck className="size-4 text-muted-foreground" />
-            <span className="text-muted-foreground">
-              Tiến độ:{" "}
-              <span className="font-medium text-foreground">
-                {countedCount}/{lines.length}
-              </span>{" "}
-              đã đếm ({progressPct}%)
-            </span>
-            <div className="h-2 flex-1 max-w-48 rounded-full bg-muted">
-              <div
-                className="h-full rounded-full bg-primary transition-all"
-                style={{ width: `${progressPct}%` }}
-              />
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3 text-sm">
+              <ClipboardCheck className="size-4 text-muted-foreground" />
+              <span className="text-muted-foreground">
+                Tiến độ:{" "}
+                <span className="font-medium text-foreground">
+                  {countedCount}/{lines.length}
+                </span>{" "}
+                đã đếm ({progressPct}%)
+              </span>
+              <div className="h-2 flex-1 max-w-48 rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
             </div>
-          </div>
-        </SectionCard>
+          </CardContent>
+        </Card>
       )}
 
       {/* Cancelled state */}
       {session.status === "cancelled" && (
-        <EmptyState
-          icon={<XCircle className="size-8" />}
-          title="Phiên kiểm kê đã bị hủy"
-          description="Dữ liệu đếm trước đó không còn hiệu lực và phiên này không thể tiếp tục chỉnh sửa."
-        />
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+            <XCircle className="size-8 text-muted-foreground" />
+            <p className="text-base font-semibold">Phiên kiểm kê đã bị hủy</p>
+            <p className="text-sm text-muted-foreground">
+              Dữ liệu đếm trước đó không còn hiệu lực và phiên này không thể
+              tiếp tục chỉnh sửa.
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       {/* Counting phase (in_progress) */}
@@ -380,11 +395,11 @@ export function StocktakeDetailClient({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-          <AlertDialogTitle>Chot ket qua kiem ke?</AlertDialogTitle>
-          <AlertDialogDescription>
-              Hanh dong nay se tinh chenh lech va cap nhat ton kho he thong.
-              Sau khi chot, phien kiem ke se chuyen sang lop doi chieu ket qua.
-          </AlertDialogDescription>
+            <AlertDialogTitle>Chot ket qua kiem ke?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hanh dong nay se tinh chenh lech va cap nhat ton kho he thong. Sau
+              khi chot, phien kiem ke se chuyen sang lop doi chieu ket qua.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
@@ -399,11 +414,11 @@ export function StocktakeDetailClient({
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-          <AlertDialogTitle>Huy phien kiem ke?</AlertDialogTitle>
-          <AlertDialogDescription>
+            <AlertDialogTitle>Huy phien kiem ke?</AlertDialogTitle>
+            <AlertDialogDescription>
               Tat ca du lieu da dem se bi huy va khong con duoc doi chieu trong
               phien nay.
-          </AlertDialogDescription>
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>Quay lại</AlertDialogCancel>
@@ -440,139 +455,152 @@ function CountingPhase({
 }) {
   if (isMobile) {
     return (
-      <SectionCard className="overflow-hidden rounded-lg" density="compact">
-        {lines.length === 0 ? (
-          <EmptyState
-            title="Không có nguyên liệu để kiểm kê"
-            description="Kho hiện chưa có dòng tồn nào cần thực hiện kiểm kê trong phiên này."
-          />
-        ) : (
-          <div className="-m-4 divide-y md:-m-5">
-            {lines.map((line) => (
-              <div key={line.id} className="space-y-2 px-4 py-3 md:px-5">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-sm font-medium">
-                    {line.ingredients?.name ?? `#${line.ingredient_id}`}
-                  </span>
-                  {savedLines.has(line.id) && (
-                    <span className="inline-flex shrink-0 items-center gap-1 text-xs text-success">
-                      <Check className="size-3" />
-                      Đã lưu
+      <Card className="overflow-hidden rounded-lg">
+        <CardContent className="p-0">
+          {lines.length === 0 ? (
+            <div className="px-6 py-10 text-center">
+              <p className="text-base font-semibold">
+                Không có nguyên liệu để kiểm kê
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Kho hiện chưa có dòng tồn nào cần thực hiện kiểm kê trong phiên
+                này.
+              </p>
+            </div>
+          ) : (
+            <div className="-m-4 divide-y md:-m-5">
+              {lines.map((line) => (
+                <div key={line.id} className="space-y-2 px-4 py-3 md:px-5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-sm font-medium">
+                      {line.ingredients?.name ?? `#${line.ingredient_id}`}
                     </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {line.ingredients?.unit ?? "—"}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min={0}
-                    step="any"
-                    defaultValue={
-                      line.counted_quantity != null
-                        ? String(line.counted_quantity)
-                        : ""
-                    }
-                    placeholder="SL thực đếm"
-                    className="h-8 flex-1 tabular-nums"
-                    onBlur={(e) => onLineBlur(line.id, e.target.value)}
-                    disabled={isPending}
-                  />
-                  <Input
-                    type="text"
-                    defaultValue={line.variance_reason ?? ""}
-                    placeholder="Lý do"
-                    className="h-8 flex-1 text-sm"
-                    onBlur={(e) => onReasonBlur(line.id, e.target.value.trim())}
-                    disabled={isPending}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </SectionCard>
-    );
-  }
-
-  return (
-    <SectionCard className="overflow-hidden rounded-lg" density="compact">
-      <div className="-m-4 md:-m-5">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/20 hover:bg-muted/20">
-              <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                {tTerm("ingredient")}
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                Đơn vị
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                SL thực đếm
-              </TableHead>
-              <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                Lý do chênh lệch
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {lines.length === 0 && (
-              <TableEmptyStateRow
-                colSpan={4}
-                paddingClassName="py-14"
-                title="Không có nguyên liệu để kiểm kê"
-                description="Kho hiện chưa có dòng tồn nào cần thực hiện kiểm kê trong phiên này."
-              />
-            )}
-            {lines.map((line) => (
-              <TableRow key={line.id}>
-                <TableCell className="text-sm font-medium">
-                  <div className="flex items-center gap-2">
-                    {line.ingredients?.name ?? `#${line.ingredient_id}`}
                     {savedLines.has(line.id) && (
-                      <span className="inline-flex items-center gap-0.5 text-xs text-success">
+                      <span className="inline-flex shrink-0 items-center gap-1 text-xs text-success">
                         <Check className="size-3" />
                         Đã lưu
                       </span>
                     )}
                   </div>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {line.ingredients?.unit ?? "—"}
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    min={0}
-                    step="any"
-                    defaultValue={
-                      line.counted_quantity != null
-                        ? String(line.counted_quantity)
-                        : ""
-                    }
-                    placeholder="0"
-                    className="h-8 w-24 tabular-nums"
-                    onBlur={(e) => onLineBlur(line.id, e.target.value)}
-                    disabled={isPending}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="text"
-                    defaultValue={line.variance_reason ?? ""}
-                    placeholder="Lý do (tùy chọn)"
-                    className="h-8 w-48 text-sm"
-                    onBlur={(e) => onReasonBlur(line.id, e.target.value.trim())}
-                    disabled={isPending}
-                  />
-                </TableCell>
+                  <p className="text-xs text-muted-foreground">
+                    {line.ingredients?.unit ?? "—"}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      step="any"
+                      defaultValue={
+                        line.counted_quantity != null
+                          ? String(line.counted_quantity)
+                          : ""
+                      }
+                      placeholder="SL thực đếm"
+                      className="h-8 flex-1 tabular-nums"
+                      onBlur={(e) => onLineBlur(line.id, e.target.value)}
+                      disabled={isPending}
+                    />
+                    <Input
+                      type="text"
+                      defaultValue={line.variance_reason ?? ""}
+                      placeholder="Lý do"
+                      className="h-8 flex-1 text-sm"
+                      onBlur={(e) =>
+                        onReasonBlur(line.id, e.target.value.trim())
+                      }
+                      disabled={isPending}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="overflow-hidden rounded-lg">
+      <CardContent className="p-0">
+        <div className="-m-4 md:-m-5">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/20 hover:bg-muted/20">
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  {tTerm("ingredient")}
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  Đơn vị
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  SL thực đếm
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  Lý do chênh lệch
+                </TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </SectionCard>
+            </TableHeader>
+            <TableBody>
+              {lines.length === 0 && (
+                <TableEmptyStateRow
+                  colSpan={4}
+                  paddingClassName="py-14"
+                  title="Không có nguyên liệu để kiểm kê"
+                  description="Kho hiện chưa có dòng tồn nào cần thực hiện kiểm kê trong phiên này."
+                />
+              )}
+              {lines.map((line) => (
+                <TableRow key={line.id}>
+                  <TableCell className="text-sm font-medium">
+                    <div className="flex items-center gap-2">
+                      {line.ingredients?.name ?? `#${line.ingredient_id}`}
+                      {savedLines.has(line.id) && (
+                        <span className="inline-flex items-center gap-0.5 text-xs text-success">
+                          <Check className="size-3" />
+                          Đã lưu
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {line.ingredients?.unit ?? "—"}
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="any"
+                      defaultValue={
+                        line.counted_quantity != null
+                          ? String(line.counted_quantity)
+                          : ""
+                      }
+                      placeholder="0"
+                      className="h-8 w-24 tabular-nums"
+                      onBlur={(e) => onLineBlur(line.id, e.target.value)}
+                      disabled={isPending}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="text"
+                      defaultValue={line.variance_reason ?? ""}
+                      placeholder="Lý do (tùy chọn)"
+                      className="h-8 w-48 text-sm"
+                      onBlur={(e) =>
+                        onReasonBlur(line.id, e.target.value.trim())
+                      }
+                      disabled={isPending}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -621,126 +649,135 @@ function ResultsPhase({
       </div>
 
       {isMobile ? (
-        <SectionCard className="overflow-hidden rounded-lg" density="compact">
-          {lines.length === 0 ? (
-            <EmptyState
-              title="Không có dữ liệu kiểm kê"
-              description="Kết quả chênh lệch sẽ xuất hiện tại đây sau khi phiên kiểm kê có dữ liệu."
-            />
-          ) : (
-            <div className="-m-4 divide-y md:-m-5">
-              {lines.map((line) => {
-                const varianceColor = getVarianceColor(line);
-                const variance = line.variance ?? 0;
-                return (
-                  <div
-                    key={line.id}
-                    className={cn(
-                      "space-y-1 px-4 py-3 md:px-5",
-                      getVarianceBg(line),
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-medium">
-                        {line.ingredients?.name ?? `#${line.ingredient_id}`}
-                      </span>
-                      <span
-                        className={cn(
-                          "shrink-0 font-mono text-sm font-medium tabular-nums",
-                          varianceColor,
-                        )}
-                      >
-                        {variance > 0 && "+"}
-                        {variance}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                      <span>
-                        HT: {line.system_quantity} · Đếm:{" "}
-                        {line.counted_quantity ?? "—"}
-                      </span>
-                      <span className="truncate text-right">
-                        {line.variance_reason ?? ""}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </SectionCard>
-      ) : (
-        <SectionCard className="overflow-hidden rounded-lg" density="compact">
-          <div className="-m-4 md:-m-5">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/20 hover:bg-muted/20">
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    {tTerm("ingredient")}
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    Đơn vị
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    SL hệ thống
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    SL thực đếm
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    Chênh lệch
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    Lý do
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {lines.length === 0 && (
-                  <TableEmptyStateRow
-                    colSpan={6}
-                    paddingClassName="py-14"
-                    title="Không có dữ liệu kiểm kê"
-                    description="Kết quả chênh lệch sẽ xuất hiện tại đây sau khi phiên kiểm kê có dữ liệu."
-                  />
-                )}
+        <Card className="overflow-hidden rounded-lg">
+          <CardContent className="p-0">
+            {lines.length === 0 ? (
+              <div className="px-6 py-10 text-center">
+                <p className="text-base font-semibold">
+                  Không có dữ liệu kiểm kê
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Kết quả chênh lệch sẽ xuất hiện tại đây sau khi phiên kiểm kê
+                  có dữ liệu.
+                </p>
+              </div>
+            ) : (
+              <div className="-m-4 divide-y md:-m-5">
                 {lines.map((line) => {
                   const varianceColor = getVarianceColor(line);
                   const variance = line.variance ?? 0;
-
                   return (
-                    <TableRow key={line.id} className={getVarianceBg(line)}>
-                      <TableCell className="text-sm font-medium">
-                        {line.ingredients?.name ?? `#${line.ingredient_id}`}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {line.ingredients?.unit ?? "—"}
-                      </TableCell>
-                      <TableCell className="text-sm tabular-nums">
-                        {line.system_quantity}
-                      </TableCell>
-                      <TableCell className="text-sm tabular-nums">
-                        {line.counted_quantity ?? "—"}
-                      </TableCell>
-                      <TableCell
-                        className={cn(
-                          "text-sm font-medium tabular-nums",
-                          varianceColor,
-                        )}
-                      >
-                        {variance > 0 && "+"}
-                        {variance}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {line.variance_reason ?? "—"}
-                      </TableCell>
-                    </TableRow>
+                    <div
+                      key={line.id}
+                      className={cn(
+                        "space-y-1 px-4 py-3 md:px-5",
+                        getVarianceBg(line),
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-medium">
+                          {line.ingredients?.name ?? `#${line.ingredient_id}`}
+                        </span>
+                        <span
+                          className={cn(
+                            "shrink-0 font-mono text-sm font-medium tabular-nums",
+                            varianceColor,
+                          )}
+                        >
+                          {variance > 0 && "+"}
+                          {variance}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                        <span>
+                          HT: {line.system_quantity} · Đếm:{" "}
+                          {line.counted_quantity ?? "—"}
+                        </span>
+                        <span className="truncate text-right">
+                          {line.variance_reason ?? ""}
+                        </span>
+                      </div>
+                    </div>
                   );
                 })}
-              </TableBody>
-            </Table>
-          </div>
-        </SectionCard>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="overflow-hidden rounded-lg">
+          <CardContent className="p-0">
+            <div className="-m-4 md:-m-5">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/20 hover:bg-muted/20">
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                      {tTerm("ingredient")}
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                      Đơn vị
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                      SL hệ thống
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                      SL thực đếm
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                      Chênh lệch
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                      Lý do
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lines.length === 0 && (
+                    <TableEmptyStateRow
+                      colSpan={6}
+                      paddingClassName="py-14"
+                      title="Không có dữ liệu kiểm kê"
+                      description="Kết quả chênh lệch sẽ xuất hiện tại đây sau khi phiên kiểm kê có dữ liệu."
+                    />
+                  )}
+                  {lines.map((line) => {
+                    const varianceColor = getVarianceColor(line);
+                    const variance = line.variance ?? 0;
+
+                    return (
+                      <TableRow key={line.id} className={getVarianceBg(line)}>
+                        <TableCell className="text-sm font-medium">
+                          {line.ingredients?.name ?? `#${line.ingredient_id}`}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {line.ingredients?.unit ?? "—"}
+                        </TableCell>
+                        <TableCell className="text-sm tabular-nums">
+                          {line.system_quantity}
+                        </TableCell>
+                        <TableCell className="text-sm tabular-nums">
+                          {line.counted_quantity ?? "—"}
+                        </TableCell>
+                        <TableCell
+                          className={cn(
+                            "text-sm font-medium tabular-nums",
+                            varianceColor,
+                          )}
+                        >
+                          {variance > 0 && "+"}
+                          {variance}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {line.variance_reason ?? "—"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

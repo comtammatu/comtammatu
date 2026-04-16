@@ -5,6 +5,12 @@ import { AlertTriangle, CheckCircle2, Search } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -31,12 +37,6 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
-import {
-  EmptyStatePanel,
-  FilterBar,
-  PageHeader,
-  SectionCard,
-} from "@/components/patterns";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import {
   createSupplierInvoice,
@@ -250,7 +250,7 @@ export function SupplierInvoicesClient({
       showOnlyOverdue);
   const selectedGrn =
     grnId !== "none"
-      ? grns.find((option) => option.id === Number(grnId)) ?? null
+      ? (grns.find((option) => option.id === Number(grnId)) ?? null)
       : null;
   const numericSubtotal = Number(subtotal || 0);
   const numericVatRate = Number(vatRate || 0);
@@ -273,9 +273,9 @@ export function SupplierInvoicesClient({
           ((row.goods_received_notes as Record<string, unknown>)
             ?.grn_number as string) ?? null,
         matchStatus:
-          ((row.matching_status as string | undefined) ??
-            (row.match_status as string | undefined) ??
-            "pending"),
+          (row.matching_status as string | undefined) ??
+          (row.match_status as string | undefined) ??
+          "pending",
         paymentStatus: (row.payment_status as string) ?? "unpaid",
         amount: Number(row.total_amount ?? 0),
         paidAmount: Number(row.paid_amount ?? 0),
@@ -383,325 +383,204 @@ export function SupplierInvoicesClient({
   return (
     <>
       <div className="space-y-6">
-      <PageHeader
-        eyebrow="Nhập hàng HQ"
-        title={tRoute("/inventory/supplier-invoices", "heading")}
-        description="Theo dõi bước cuối của hub procurement: đối soát 3-way, hạn thanh toán và công nợ phải trả sau khi GRN đã được chốt."
-        actions={
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-muted-foreground">
+              Nhập hàng HQ
+            </p>
+            <div className="space-y-1">
+              <h1 className="text-3xl font-semibold tracking-tight">
+                {tRoute("/inventory/supplier-invoices", "heading")}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Theo dõi bước cuối của hub procurement: đối soát 3-way, hạn
+                thanh toán và công nợ phải trả sau khi GRN đã được chốt.
+              </p>
+            </div>
+          </div>
           <Button type="button" onClick={() => setCreateOpen(true)}>
             Ghi nhận hóa đơn NCC
           </Button>
-        }
-      />
-
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <div className="app-stat">
-          <p className="app-kicker">Chờ đối soát</p>
-          <p className="mt-3 text-3xl font-semibold">{pendingMatchCount}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Hóa đơn còn pending hoặc có chênh lệch cần xử lý.
-          </p>
         </div>
-        <div className="app-stat">
-          <p className="app-kicker">Quá hạn chưa trả</p>
-          <p className="mt-3 text-3xl font-semibold">{overdueCount}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Khoản phải trả cần được ưu tiên trong hôm nay.
-          </p>
-        </div>
-        <div className="app-stat">
-          <p className="app-kicker">Đã thanh toán đủ</p>
-          <p className="mt-3 text-3xl font-semibold">{paidCount}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Hóa đơn đã đóng vòng công nợ hoàn chỉnh.
-          </p>
-        </div>
-        <div className="app-stat">
-          <p className="app-kicker">Công nợ còn lại</p>
-          <p className="mt-3 text-3xl font-semibold">
-            {formatVND(totalOutstanding)}đ
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Tổng giá trị cần tiếp tục thanh toán.
-          </p>
-        </div>
-      </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
-        <SectionCard
-          title="Danh sách hóa đơn nhà cung cấp"
-          description="Lọc theo nhà cung cấp, GRN liên kết, đối soát và trạng thái thanh toán."
-          className="overflow-hidden"
-          density="compact"
-        >
-          <FilterBar className="mb-4 gap-3">
-            <div className="relative min-w-[16rem] flex-1">
-              <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Tìm số hóa đơn, NCC hoặc mã GRN"
-                className="pl-10"
-              />
-            </div>
-
-            <Select value={supplierFilter} onValueChange={setSupplierFilter}>
-              <SelectTrigger className="min-w-[13rem]">
-                <SelectValue placeholder="Nhà cung cấp" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_FILTER_VALUE}>
-                  Tất cả nhà cung cấp
-                </SelectItem>
-                {supplierOptions.map((supplier) => (
-                  <SelectItem key={supplier.value} value={supplier.value}>
-                    {supplier.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={matchStatusFilter}
-              onValueChange={setMatchStatusFilter}
-            >
-              <SelectTrigger className="min-w-[13rem]">
-                <SelectValue placeholder="Đối soát" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_FILTER_VALUE}>
-                  Tất cả trạng thái đối soát
-                </SelectItem>
-                {MATCH_STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={paymentStatusFilter}
-              onValueChange={setPaymentStatusFilter}
-            >
-              <SelectTrigger className="min-w-[13rem]">
-                <SelectValue placeholder="Thanh toán" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_FILTER_VALUE}>
-                  Tất cả trạng thái thanh toán
-                </SelectItem>
-                {PAYMENT_STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FilterBar>
-
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <Button
-              type="button"
-              size="sm"
-              variant={showOnlyOverdue ? "default" : "outline"}
-              onClick={() => setShowOnlyOverdue((current) => !current)}
-              aria-pressed={showOnlyOverdue}
-            >
-              <AlertTriangle className="size-4" />
-              Chỉ xem hóa đơn quá hạn
-            </Button>
-            <Badge variant="outline" className="rounded-full">
-              {filteredInvoices.length} / {rows.length} hóa đơn
-            </Badge>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+            <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              Chờ đối soát
+            </p>
+            <p className="mt-3 text-3xl font-semibold">{pendingMatchCount}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Hóa đơn còn pending hoặc có chênh lệch cần xử lý.
+            </p>
           </div>
+          <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+            <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              Quá hạn chưa trả
+            </p>
+            <p className="mt-3 text-3xl font-semibold">{overdueCount}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Khoản phải trả cần được ưu tiên trong hôm nay.
+            </p>
+          </div>
+          <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+            <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              Đã thanh toán đủ
+            </p>
+            <p className="mt-3 text-3xl font-semibold">{paidCount}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Hóa đơn đã đóng vòng công nợ hoàn chỉnh.
+            </p>
+          </div>
+          <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+            <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              Công nợ còn lại
+            </p>
+            <p className="mt-3 text-3xl font-semibold">
+              {formatVND(totalOutstanding)}đ
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Tổng giá trị cần tiếp tục thanh toán.
+            </p>
+          </div>
+        </div>
 
-          {isMobile ? (
-            <div className="space-y-3">
-              {filteredInvoices.length === 0 ? (
-                <EmptyStatePanel
-                  title={
-                    showEmptyResults
-                      ? "Không tìm thấy hóa đơn phù hợp"
-                      : "Chưa có hóa đơn NCC"
-                  }
-                  description={
-                    showEmptyResults
-                      ? "Thử nới bộ lọc hoặc từ khóa để xem thêm kết quả."
-                      : "Các hóa đơn NCC mới sẽ xuất hiện tại đây sau khi được tạo."
-                  }
-                />
-              ) : null}
-
-              {filteredInvoices.map((invoice) => {
-                const outstandingAmount = getOutstandingAmount(invoice);
-                const overdue = isInvoiceOverdue(invoice);
-                const isActive = selectedInvoice?.id === invoice.id;
-
-                return (
-                  <div
-                    key={invoice.id}
-                    className={cn(
-                      "app-subpanel p-4 transition",
-                      isActive && "border-primary/40 shadow-md",
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 space-y-1">
-                        <p className="font-mono text-base font-semibold">
-                          {invoice.code}
-                        </p>
-                        <p className="truncate text-sm text-muted-foreground">
-                          {invoice.supplierName}
-                        </p>
-                      </div>
-                      {overdue ? (
-                        <Badge
-                          variant={getInventoryStatusBadgeVariant("overdue")}
-                        >
-                          {getInventoryStatusLabel("overdue")}
-                        </Badge>
-                      ) : null}
-                    </div>
-
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <Badge
-                        variant={getInventoryStatusBadgeVariant(
-                          invoice.matchStatus,
-                        )}
-                      >
-                        {getInventoryStatusLabel(invoice.matchStatus)}
-                      </Badge>
-                      <Badge
-                        variant={getInventoryStatusBadgeVariant(
-                          invoice.paymentStatus,
-                        )}
-                      >
-                        {getInventoryStatusLabel(invoice.paymentStatus)}
-                      </Badge>
-                    </div>
-
-                    <div className="mt-4 grid gap-2 text-sm">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-muted-foreground">
-                          Ngày hóa đơn
-                        </span>
-                        <span>{formatDate(invoice.invoiceDate)}</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-muted-foreground">
-                          Hạn thanh toán
-                        </span>
-                        <span>{formatDate(invoice.dueDate)}</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-muted-foreground">Còn lại</span>
-                        <span className="font-mono font-semibold">
-                          {formatVND(outstandingAmount)}đ
-                        </span>
-                      </div>
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant={isActive ? "default" : "outline"}
-                      className="mt-4 w-full"
-                      onClick={() => setSelectedInvoiceId(invoice.id)}
-                    >
-                      {isActive ? "Đang xem phân tích" : "Xem phân tích"}
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-40">Số hóa đơn</TableHead>
-                  <TableHead className="min-w-52">Nhà cung cấp</TableHead>
-                  <TableHead className="min-w-44">Ngày / hạn</TableHead>
-                  <TableHead className="min-w-36">Đối soát</TableHead>
-                  <TableHead className="min-w-36">Thanh toán</TableHead>
-                  <TableHead className="min-w-32 text-right">
-                    Còn lại
-                  </TableHead>
-                  <TableHead className="w-28 text-right">Thao tác</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredInvoices.length === 0 ? (
-                  <TableEmptyStateRow
-                    colSpan={7}
-                    title={
-                      showEmptyResults
-                        ? "Không tìm thấy hóa đơn phù hợp"
-                        : "Chưa có hóa đơn NCC"
-                    }
-                    description={
-                      showEmptyResults
-                        ? "Thử nới bộ lọc hoặc từ khóa để xem thêm kết quả."
-                        : "Các hóa đơn NCC mới sẽ xuất hiện tại đây sau khi được tạo."
-                    }
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
+          <Card className="overflow-hidden">
+            <CardHeader className="gap-4">
+              <div className="space-y-1">
+                <CardTitle>Danh sách hóa đơn nhà cung cấp</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Lọc theo nhà cung cấp, GRN liên kết, đối soát và trạng thái
+                  thanh toán.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
+                <div className="relative min-w-[16rem] flex-1">
+                  <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Tìm số hóa đơn, NCC hoặc mã GRN"
+                    className="pl-10"
                   />
-                ) : null}
+                </div>
 
-                {filteredInvoices.map((invoice) => {
-                  const outstandingAmount = getOutstandingAmount(invoice);
-                  const overdue = isInvoiceOverdue(invoice);
-                  const isActive = selectedInvoice?.id === invoice.id;
+                <Select
+                  value={supplierFilter}
+                  onValueChange={setSupplierFilter}
+                >
+                  <SelectTrigger className="min-w-[13rem]">
+                    <SelectValue placeholder="Nhà cung cấp" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_FILTER_VALUE}>
+                      Tất cả nhà cung cấp
+                    </SelectItem>
+                    {supplierOptions.map((supplier) => (
+                      <SelectItem key={supplier.value} value={supplier.value}>
+                        {supplier.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-                  return (
-                    <TableRow
-                      key={invoice.id}
-                      className={cn(isActive && "bg-primary/5")}
-                    >
-                      <TableCell>
-                        <div className="space-y-1">
-                          <p className="font-mono font-semibold text-foreground">
-                            {invoice.code}
-                          </p>
-                          {invoice.grnCode ? (
-                            <p className="text-xs text-muted-foreground">
-                              GRN: {invoice.grnCode}
+                <Select
+                  value={matchStatusFilter}
+                  onValueChange={setMatchStatusFilter}
+                >
+                  <SelectTrigger className="min-w-[13rem]">
+                    <SelectValue placeholder="Đối soát" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_FILTER_VALUE}>
+                      Tất cả trạng thái đối soát
+                    </SelectItem>
+                    {MATCH_STATUS_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={paymentStatusFilter}
+                  onValueChange={setPaymentStatusFilter}
+                >
+                  <SelectTrigger className="min-w-[13rem]">
+                    <SelectValue placeholder="Thanh toán" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_FILTER_VALUE}>
+                      Tất cả trạng thái thanh toán
+                    </SelectItem>
+                    {PAYMENT_STATUS_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={showOnlyOverdue ? "default" : "outline"}
+                  onClick={() => setShowOnlyOverdue((current) => !current)}
+                  aria-pressed={showOnlyOverdue}
+                >
+                  <AlertTriangle className="size-4" />
+                  Chỉ xem hóa đơn quá hạn
+                </Button>
+                <Badge variant="outline" className="rounded-full">
+                  {filteredInvoices.length} / {rows.length} hóa đơn
+                </Badge>
+              </div>
+
+              {isMobile ? (
+                <div className="space-y-3">
+                  {filteredInvoices.length === 0 ? (
+                    <Card>
+                      <CardContent className="py-10 text-center">
+                        <p className="text-base font-semibold">
+                          {showEmptyResults
+                            ? "Không tìm thấy hóa đơn phù hợp"
+                            : "Chưa có hóa đơn NCC"}
+                        </p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {showEmptyResults
+                            ? "Thử nới bộ lọc hoặc từ khóa để xem thêm kết quả."
+                            : "Các hóa đơn NCC mới sẽ xuất hiện tại đây sau khi được tạo."}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ) : null}
+
+                  {filteredInvoices.map((invoice) => {
+                    const outstandingAmount = getOutstandingAmount(invoice);
+                    const overdue = isInvoiceOverdue(invoice);
+                    const isActive = selectedInvoice?.id === invoice.id;
+
+                    return (
+                      <div
+                        key={invoice.id}
+                        className={cn(
+                          "rounded-lg border bg-muted/30 text-card-foreground p-4 transition",
+                          isActive && "border-primary/40 shadow-md",
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 space-y-1">
+                            <p className="font-mono text-base font-semibold">
+                              {invoice.code}
                             </p>
-                          ) : null}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {invoice.supplierName}
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1 text-sm">
-                          <p>{formatDate(invoice.invoiceDate)}</p>
-                          <p
-                            className={cn(
-                              "text-muted-foreground",
-                              overdue && "font-medium text-destructive",
-                            )}
-                          >
-                            Hạn: {formatDate(invoice.dueDate)}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={getInventoryStatusBadgeVariant(
-                            invoice.matchStatus,
-                          )}
-                        >
-                          {getInventoryStatusLabel(invoice.matchStatus)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge
-                            variant={getInventoryStatusBadgeVariant(
-                              invoice.paymentStatus,
-                            )}
-                          >
-                            {getInventoryStatusLabel(invoice.paymentStatus)}
-                          </Badge>
+                            <p className="truncate text-sm text-muted-foreground">
+                              {invoice.supplierName}
+                            </p>
+                          </div>
                           {overdue ? (
                             <Badge
                               variant={getInventoryStatusBadgeVariant(
@@ -712,173 +591,341 @@ export function SupplierInvoicesClient({
                             </Badge>
                           ) : null}
                         </div>
-                      </TableCell>
-                      <TableCell className="text-right font-mono font-semibold">
-                        {formatVND(outstandingAmount)}đ
-                      </TableCell>
-                      <TableCell className="text-right">
+
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <Badge
+                            variant={getInventoryStatusBadgeVariant(
+                              invoice.matchStatus,
+                            )}
+                          >
+                            {getInventoryStatusLabel(invoice.matchStatus)}
+                          </Badge>
+                          <Badge
+                            variant={getInventoryStatusBadgeVariant(
+                              invoice.paymentStatus,
+                            )}
+                          >
+                            {getInventoryStatusLabel(invoice.paymentStatus)}
+                          </Badge>
+                        </div>
+
+                        <div className="mt-4 grid gap-2 text-sm">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-muted-foreground">
+                              Ngày hóa đơn
+                            </span>
+                            <span>{formatDate(invoice.invoiceDate)}</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-muted-foreground">
+                              Hạn thanh toán
+                            </span>
+                            <span>{formatDate(invoice.dueDate)}</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-muted-foreground">
+                              Còn lại
+                            </span>
+                            <span className="font-mono font-semibold">
+                              {formatVND(outstandingAmount)}đ
+                            </span>
+                          </div>
+                        </div>
+
                         <Button
                           type="button"
-                          size="sm"
                           variant={isActive ? "default" : "outline"}
+                          className="mt-4 w-full"
                           onClick={() => setSelectedInvoiceId(invoice.id)}
                         >
-                          {isActive ? "Đang xem" : "Phân tích"}
+                          {isActive ? "Đang xem phân tích" : "Xem phân tích"}
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </SectionCard>
-
-        <SectionCard
-          title={selectedInvoice?.code ?? "Chưa chọn hóa đơn"}
-          description={
-            selectedInvoice?.supplierName ??
-            "Chọn một hóa đơn để xem phân tích công nợ và đối soát."
-          }
-          density="compact"
-          action={
-            selectedInvoice ? (
-              <div className="flex flex-wrap justify-end gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={handleRecomputeMatching}
-                  disabled={isPending}
-                >
-                  Tính lại đối soát
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => setPaymentOpen(true)}
-                  disabled={
-                    isPending ||
-                    getOutstandingAmount(selectedInvoice) <= 0
-                  }
-                >
-                  Ghi nhận thanh toán
-                </Button>
-                <Badge
-                  variant={getInventoryStatusBadgeVariant(
-                    selectedInvoice.matchStatus,
-                  )}
-                >
-                  {getInventoryStatusLabel(selectedInvoice.matchStatus)}
-                </Badge>
-                <Badge
-                  variant={getInventoryStatusBadgeVariant(
-                    selectedInvoice.paymentStatus,
-                  )}
-                >
-                  {getInventoryStatusLabel(selectedInvoice.paymentStatus)}
-                </Badge>
-              </div>
-            ) : null
-          }
-        >
-          {selectedInvoice ? (
-            <div className="space-y-5">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="app-subpanel p-4">
-                  <p className="app-kicker">Tổng hóa đơn</p>
-                  <p className="mt-2 font-mono text-xl font-semibold">
-                    {formatVND(selectedInvoice.amount)}đ
-                  </p>
-                </div>
-                <div className="app-subpanel p-4">
-                  <p className="app-kicker">Còn phải trả</p>
-                  <p className="mt-2 font-mono text-xl font-semibold">
-                    {formatVND(getOutstandingAmount(selectedInvoice))}đ
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="app-subpanel flex items-center justify-between gap-3 px-4 py-3">
-                  <span className="text-sm text-muted-foreground">
-                    Ngày hóa đơn
-                  </span>
-                  <span className="text-sm font-medium">
-                    {formatDate(selectedInvoice.invoiceDate)}
-                  </span>
-                </div>
-                <div className="app-subpanel flex items-center justify-between gap-3 px-4 py-3">
-                  <span className="text-sm text-muted-foreground">
-                    Hạn thanh toán
-                  </span>
-                  <span
-                    className={cn(
-                      "text-sm font-medium",
-                      isInvoiceOverdue(selectedInvoice) && "text-destructive",
-                    )}
-                  >
-                    {formatDate(selectedInvoice.dueDate)}
-                  </span>
-                </div>
-                <div className="app-subpanel flex items-center justify-between gap-3 px-4 py-3">
-                  <span className="text-sm text-muted-foreground">
-                    Đã thanh toán
-                  </span>
-                  <span className="text-sm font-medium">
-                    {formatVND(selectedInvoice.paidAmount)}đ
-                  </span>
-                </div>
-                <div className="app-subpanel flex items-center justify-between gap-3 px-4 py-3">
-                  <span className="text-sm text-muted-foreground">
-                    GRN liên kết
-                  </span>
-                  <span className="text-sm font-medium">
-                    {selectedInvoice.grnCode ?? "Chưa liên kết"}
-                  </span>
-                </div>
-              </div>
-
-              {selectedInvoice.variance !== null &&
-              selectedInvoice.variance > 0 ? (
-                <div className="rounded-[1.5rem] border border-destructive/30 bg-destructive/5 p-4">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 size-4 text-destructive" />
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold text-destructive">
-                        Chênh lệch đối soát {selectedInvoice.variance}%
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Kiểm tra lại số lượng thực nhận, đơn giá hoặc khoản phụ
-                        phí trước khi xác nhận thanh toán.
-                      </p>
-                    </div>
-                  </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
-                <div className="rounded-[1.5rem] border border-success/30 bg-success/5 p-4">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="mt-0.5 size-4 text-success" />
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold text-success">
-                        Hóa đơn đang ở ngưỡng an toàn để xử lý tiếp
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-40">Số hóa đơn</TableHead>
+                      <TableHead className="min-w-52">Nhà cung cấp</TableHead>
+                      <TableHead className="min-w-44">Ngày / hạn</TableHead>
+                      <TableHead className="min-w-36">Đối soát</TableHead>
+                      <TableHead className="min-w-36">Thanh toán</TableHead>
+                      <TableHead className="min-w-32 text-right">
+                        Còn lại
+                      </TableHead>
+                      <TableHead className="w-28 text-right">
+                        Thao tác
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredInvoices.length === 0 ? (
+                      <TableEmptyStateRow
+                        colSpan={7}
+                        title={
+                          showEmptyResults
+                            ? "Không tìm thấy hóa đơn phù hợp"
+                            : "Chưa có hóa đơn NCC"
+                        }
+                        description={
+                          showEmptyResults
+                            ? "Thử nới bộ lọc hoặc từ khóa để xem thêm kết quả."
+                            : "Các hóa đơn NCC mới sẽ xuất hiện tại đây sau khi được tạo."
+                        }
+                      />
+                    ) : null}
+
+                    {filteredInvoices.map((invoice) => {
+                      const outstandingAmount = getOutstandingAmount(invoice);
+                      const overdue = isInvoiceOverdue(invoice);
+                      const isActive = selectedInvoice?.id === invoice.id;
+
+                      return (
+                        <TableRow
+                          key={invoice.id}
+                          className={cn(isActive && "bg-primary/5")}
+                        >
+                          <TableCell>
+                            <div className="space-y-1">
+                              <p className="font-mono font-semibold text-foreground">
+                                {invoice.code}
+                              </p>
+                              {invoice.grnCode ? (
+                                <p className="text-xs text-muted-foreground">
+                                  GRN: {invoice.grnCode}
+                                </p>
+                              ) : null}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {invoice.supplierName}
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1 text-sm">
+                              <p>{formatDate(invoice.invoiceDate)}</p>
+                              <p
+                                className={cn(
+                                  "text-muted-foreground",
+                                  overdue && "font-medium text-destructive",
+                                )}
+                              >
+                                Hạn: {formatDate(invoice.dueDate)}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={getInventoryStatusBadgeVariant(
+                                invoice.matchStatus,
+                              )}
+                            >
+                              {getInventoryStatusLabel(invoice.matchStatus)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-2">
+                              <Badge
+                                variant={getInventoryStatusBadgeVariant(
+                                  invoice.paymentStatus,
+                                )}
+                              >
+                                {getInventoryStatusLabel(invoice.paymentStatus)}
+                              </Badge>
+                              {overdue ? (
+                                <Badge
+                                  variant={getInventoryStatusBadgeVariant(
+                                    "overdue",
+                                  )}
+                                >
+                                  {getInventoryStatusLabel("overdue")}
+                                </Badge>
+                              ) : null}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-mono font-semibold">
+                            {formatVND(outstandingAmount)}đ
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant={isActive ? "default" : "outline"}
+                              onClick={() => setSelectedInvoiceId(invoice.id)}
+                            >
+                              {isActive ? "Đang xem" : "Phân tích"}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-1">
+                <CardTitle>
+                  {selectedInvoice?.code ?? "Chưa chọn hóa đơn"}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  {selectedInvoice?.supplierName ??
+                    "Chọn một hóa đơn để xem phân tích công nợ và đối soát."}
+                </p>
+              </div>
+              {selectedInvoice ? (
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleRecomputeMatching}
+                    disabled={isPending}
+                  >
+                    Tính lại đối soát
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setPaymentOpen(true)}
+                    disabled={
+                      isPending || getOutstandingAmount(selectedInvoice) <= 0
+                    }
+                  >
+                    Ghi nhận thanh toán
+                  </Button>
+                  <Badge
+                    variant={getInventoryStatusBadgeVariant(
+                      selectedInvoice.matchStatus,
+                    )}
+                  >
+                    {getInventoryStatusLabel(selectedInvoice.matchStatus)}
+                  </Badge>
+                  <Badge
+                    variant={getInventoryStatusBadgeVariant(
+                      selectedInvoice.paymentStatus,
+                    )}
+                  >
+                    {getInventoryStatusLabel(selectedInvoice.paymentStatus)}
+                  </Badge>
+                </div>
+              ) : null}
+            </CardHeader>
+            <CardContent>
+              {selectedInvoice ? (
+                <div className="space-y-5">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border bg-muted/30 text-card-foreground p-4">
+                      <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                        Tổng hóa đơn
                       </p>
-                      <p className="text-sm text-muted-foreground">
-                        Không có cảnh báo chênh lệch lớn trên dữ liệu hiện tại.
+                      <p className="mt-2 font-mono text-xl font-semibold">
+                        {formatVND(selectedInvoice.amount)}đ
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-muted/30 text-card-foreground p-4">
+                      <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                        Còn phải trả
+                      </p>
+                      <p className="mt-2 font-mono text-xl font-semibold">
+                        {formatVND(getOutstandingAmount(selectedInvoice))}đ
                       </p>
                     </div>
                   </div>
+
+                  <div className="space-y-3">
+                    <div className="rounded-lg border bg-muted/30 text-card-foreground flex items-center justify-between gap-3 px-4 py-3">
+                      <span className="text-sm text-muted-foreground">
+                        Ngày hóa đơn
+                      </span>
+                      <span className="text-sm font-medium">
+                        {formatDate(selectedInvoice.invoiceDate)}
+                      </span>
+                    </div>
+                    <div className="rounded-lg border bg-muted/30 text-card-foreground flex items-center justify-between gap-3 px-4 py-3">
+                      <span className="text-sm text-muted-foreground">
+                        Hạn thanh toán
+                      </span>
+                      <span
+                        className={cn(
+                          "text-sm font-medium",
+                          isInvoiceOverdue(selectedInvoice) &&
+                            "text-destructive",
+                        )}
+                      >
+                        {formatDate(selectedInvoice.dueDate)}
+                      </span>
+                    </div>
+                    <div className="rounded-lg border bg-muted/30 text-card-foreground flex items-center justify-between gap-3 px-4 py-3">
+                      <span className="text-sm text-muted-foreground">
+                        Đã thanh toán
+                      </span>
+                      <span className="text-sm font-medium">
+                        {formatVND(selectedInvoice.paidAmount)}đ
+                      </span>
+                    </div>
+                    <div className="rounded-lg border bg-muted/30 text-card-foreground flex items-center justify-between gap-3 px-4 py-3">
+                      <span className="text-sm text-muted-foreground">
+                        GRN liên kết
+                      </span>
+                      <span className="text-sm font-medium">
+                        {selectedInvoice.grnCode ?? "Chưa liên kết"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {selectedInvoice.variance !== null &&
+                  selectedInvoice.variance > 0 ? (
+                    <div className="rounded-[1.5rem] border border-destructive/30 bg-destructive/5 p-4">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="mt-0.5 size-4 text-destructive" />
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-destructive">
+                            Chênh lệch đối soát {selectedInvoice.variance}%
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Kiểm tra lại số lượng thực nhận, đơn giá hoặc khoản
+                            phụ phí trước khi xác nhận thanh toán.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-[1.5rem] border border-success/30 bg-success/5 p-4">
+                      <div className="flex items-start gap-3">
+                        <CheckCircle2 className="mt-0.5 size-4 text-success" />
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-success">
+                            Hóa đơn đang ở ngưỡng an toàn để xử lý tiếp
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Không có cảnh báo chênh lệch lớn trên dữ liệu hiện
+                            tại.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed px-6 py-10 text-center">
+                  <p className="text-base font-semibold">
+                    Chưa có hóa đơn để phân tích
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Chọn một hóa đơn từ danh sách bên trái để xem chi tiết công
+                    nợ và trạng thái đối soát.
+                  </p>
                 </div>
               )}
-            </div>
-          ) : (
-            <EmptyStatePanel
-              title="Chưa có hóa đơn để phân tích"
-              description="Chọn một hóa đơn từ danh sách bên trái để xem chi tiết công nợ và trạng thái đối soát."
-            />
-          )}
-        </SectionCard>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -1003,7 +1050,11 @@ export function SupplierInvoicesClient({
             >
               Hủy
             </Button>
-            <Button type="button" onClick={handleCreateInvoice} disabled={isPending}>
+            <Button
+              type="button"
+              onClick={handleCreateInvoice}
+              disabled={isPending}
+            >
               Lưu hóa đơn
             </Button>
           </DialogFooter>
@@ -1019,7 +1070,9 @@ export function SupplierInvoicesClient({
             <div className="rounded-2xl border border-border/60 bg-muted/20 px-4 py-3 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">Hóa đơn</span>
-                <span className="font-mono">{selectedInvoice?.code ?? "—"}</span>
+                <span className="font-mono">
+                  {selectedInvoice?.code ?? "—"}
+                </span>
               </div>
               <div className="mt-2 flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">Còn phải trả</span>

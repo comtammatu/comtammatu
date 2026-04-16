@@ -35,6 +35,7 @@ export interface BranchOption {
   id: number;
   name: string;
   is_headquarters?: boolean | null;
+  branch_kind?: string | null;
 }
 
 export interface StaffRow {

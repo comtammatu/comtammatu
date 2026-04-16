@@ -1,4 +1,6 @@
 import { createClient } from "@comtammatu/database/supabase/server";
+import { Badge } from "@comtammatu/ui/components/badge";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { extractClaims } from "@comtammatu/shared/auth";
 import { redirect } from "next/navigation";
 import { fetchIngredients } from "../actions";
@@ -9,7 +11,6 @@ import {
   type ProductionRecipeRow,
 } from "../production-actions";
 import { ProductionHubClient } from "../production-client";
-import { EmptyStatePanel, PageHeader } from "@/components/patterns";
 import { hasBranchKindSchema } from "../_lib/branch-kind-schema";
 
 type InventoryIngredientRow = {
@@ -37,7 +38,8 @@ export default async function ProductionPage() {
     ? extractClaims(session.user.app_metadata)
     : null;
 
-  if (claims?.user_role !== "super_manager") {
+  const role = claims?.user_role;
+  if (!role || !["owner", "super_manager", "branch_manager", "warehouse_manager", "production_manager"].includes(role)) {
     redirect("/inventory?forbidden=1&reason=insufficient-permission");
   }
 
@@ -75,7 +77,16 @@ export default async function ProductionPage() {
         }))
     : [];
 
-  const visibleBranches = centralKitchenBranches;
+  // branch_manager sees only their own central_kitchen; super_manager/owner see all
+  const visibleBranches =
+    role === "branch_manager"
+      ? centralKitchenBranches.filter((b) => b.id === claims!.branch_id)
+      : centralKitchenBranches;
+
+  // branch_manager not assigned to a central_kitchen → no access
+  if (role === "branch_manager" && branchKindSchemaAvailable && visibleBranches.length === 0) {
+    redirect("/inventory?forbidden=1&reason=insufficient-permission");
+  }
 
   const allIngredients =
     ingredientsRes.success && Array.isArray(ingredientsRes.data)
@@ -100,17 +111,39 @@ export default async function ProductionPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow="Central Kitchen"
-        title="Bếp trung tâm"
-        description="Điều phối sản xuất bán thành phẩm và thành phẩm từ trụ sở hoặc bếp trung tâm trong cùng một flow vận hành mới."
-      />
+      <Card>
+        <CardContent className="p-5 sm:p-6">
+          <div className="space-y-3">
+            <Badge variant="secondary">
+              Central Kitchen
+            </Badge>
+            <div className="space-y-2">
+              <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                Bếp trung tâm
+              </h2>
+              <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
+                Điều phối sản xuất bán thành phẩm và thành phẩm từ trụ sở hoặc
+                bếp trung tâm trong cùng một flow vận hành mới.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       {!branchKindSchemaAvailable && (
-        <EmptyStatePanel
-          className="border-warning/20 bg-warning/10 text-left"
-          title="Thiếu schema branch_kind"
-          description="Database hiện tại chưa có cột `branch_kind`. Màn Bếp trung tâm đang ở chế độ chờ migration, nên các thao tác sản xuất tạm thời bị khóa để tránh phát sinh lỗi mơ hồ."
-        />
+        <Card className="border-warning/20 bg-warning/10">
+          <CardContent className="py-12 text-center">
+            <div className="space-y-1.5">
+              <h3 className="text-2xl font-semibold">
+                Thiếu schema branch_kind
+              </h3>
+              <p className="mx-auto max-w-md text-sm leading-6 text-muted-foreground">
+                Database hiện tại chưa có cột `branch_kind`. Màn Bếp trung tâm
+                đang ở chế độ chờ migration, nên các thao tác sản xuất tạm thời
+                bị khóa để tránh phát sinh lỗi mơ hồ.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       )}
       <ProductionHubClient
         branchKindSchemaAvailable={branchKindSchemaAvailable}

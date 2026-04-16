@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { TableCell, TableRow } from "@comtammatu/ui/components/table";
 import { cn } from "@comtammatu/ui";
-import { type EmptyStateMode } from "@/components/patterns";
+
+type EmptyStateMode = "no-data" | "no-results" | "no-access";
 
 const TABLE_EMPTY_STATE_COPY: Partial<Record<EmptyStateMode, string>> = {
   "no-data": "Chưa có dữ liệu",

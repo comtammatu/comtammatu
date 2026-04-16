@@ -3,8 +3,9 @@ import { ChefHat, Loader2, TriangleAlert } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims, canAccess } from "@comtammatu/shared/auth";
 import { redirect } from "next/navigation";
+import { Badge } from "@comtammatu/ui/components/badge";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { KdsBoard } from "./kds-board";
-import { RouteStateCard } from "@/components/route-state-card";
 
 /* ─── Types shared with client ─── */
 
@@ -74,36 +75,78 @@ export default async function KdsPage({
 
   if (stationsError) {
     return (
-      <RouteStateCard
-        title="Không thể dựng bảng điều phối bếp"
-        description="Không tải được trạm KDS."
-        icon={<ChefHat className="size-5" />}
-        status={
-          <>
-            <TriangleAlert className="size-3.5" />
-            <span>Lỗi tải trạm KDS</span>
-          </>
-        }
-        statusTone="danger"
-        steps={[
-          {
-            label: "Xác minh quyền bếp",
-            description: "Đã xác minh quyền truy cập.",
-            state: "done",
-          },
-          {
-            label: "Nạp trạm chế biến",
-            description: "Đang tải trạm hoạt động.",
-            state: "current",
-          },
-          {
-            label: "Hiển thị đơn đang chạy",
-            description: "Mở bảng điều phối.",
-            state: "todo",
-          },
-        ]}
-        surface="dark"
-      />
+      <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
+        <CardContent className="p-6 sm:p-8">
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-4">
+                <div className="flex size-14 items-center justify-center rounded-full border border-border/70 bg-background/80 text-primary shadow-sm">
+                  <ChefHat className="size-5" />
+                </div>
+                <div className="space-y-1.5">
+                  <h2 className="text-3xl font-semibold tracking-tight">
+                    Không thể dựng bảng điều phối bếp
+                  </h2>
+                  <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
+                    Không tải được trạm KDS.
+                  </p>
+                </div>
+              </div>
+              <Badge variant="destructive">
+                <TriangleAlert className="size-3.5" />
+                <span>Lỗi tải trạm KDS</span>
+              </Badge>
+            </div>
+            <ol className="grid gap-3 lg:grid-cols-3">
+              <li>
+                <Card className="rounded-lg border border-emerald-200 bg-emerald-50 text-card-foreground dark:border-emerald-500/30 dark:bg-emerald-500/10">
+                  <CardContent className="p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Bước 1
+                    </p>
+                    <h3 className="mt-2 text-base font-semibold">
+                      Xác minh quyền bếp
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Đã xác minh quyền truy cập.
+                    </p>
+                  </CardContent>
+                </Card>
+              </li>
+              <li>
+                <Card className="rounded-lg border border-amber-200 bg-amber-50 text-card-foreground dark:border-amber-500/30 dark:bg-amber-500/10">
+                  <CardContent className="p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Bước 2
+                    </p>
+                    <h3 className="mt-2 text-base font-semibold">
+                      Nạp trạm chế biến
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Đang tải trạm hoạt động.
+                    </p>
+                  </CardContent>
+                </Card>
+              </li>
+              <li>
+                <Card className="rounded-lg border bg-muted/30 text-card-foreground">
+                  <CardContent className="p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Bước 3
+                    </p>
+                    <h3 className="mt-2 text-base font-semibold">
+                      Hiển thị đơn đang chạy
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Mở bảng điều phối.
+                    </p>
+                  </CardContent>
+                </Card>
+              </li>
+            </ol>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -119,36 +162,78 @@ export default async function KdsPage({
 
   if (ticketsError) {
     return (
-      <RouteStateCard
-        title="Không thể dựng bảng điều phối bếp"
-        description="Không tải được vé bếp."
-        icon={<ChefHat className="size-5" />}
-        status={
-          <>
-            <TriangleAlert className="size-3.5" />
-            <span>Lỗi tải vé bếp</span>
-          </>
-        }
-        statusTone="danger"
-        steps={[
-          {
-            label: "Xác minh quyền bếp",
-            description: "Đã xác minh quyền truy cập.",
-            state: "done",
-          },
-          {
-            label: "Nạp trạm chế biến",
-            description: "Đã tải trạm hoạt động.",
-            state: "done",
-          },
-          {
-            label: "Hiển thị đơn đang chạy",
-            description: "Không thể tải vé bếp.",
-            state: "current",
-          },
-        ]}
-        surface="dark"
-      />
+      <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
+        <CardContent className="p-6 sm:p-8">
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-4">
+                <div className="flex size-14 items-center justify-center rounded-full border border-border/70 bg-background/80 text-primary shadow-sm">
+                  <ChefHat className="size-5" />
+                </div>
+                <div className="space-y-1.5">
+                  <h2 className="text-3xl font-semibold tracking-tight">
+                    Không thể dựng bảng điều phối bếp
+                  </h2>
+                  <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
+                    Không tải được vé bếp.
+                  </p>
+                </div>
+              </div>
+              <Badge variant="destructive">
+                <TriangleAlert className="size-3.5" />
+                <span>Lỗi tải vé bếp</span>
+              </Badge>
+            </div>
+            <ol className="grid gap-3 lg:grid-cols-3">
+              <li>
+                <Card className="rounded-lg border border-emerald-200 bg-emerald-50 text-card-foreground dark:border-emerald-500/30 dark:bg-emerald-500/10">
+                  <CardContent className="p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Bước 1
+                    </p>
+                    <h3 className="mt-2 text-base font-semibold">
+                      Xác minh quyền bếp
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Đã xác minh quyền truy cập.
+                    </p>
+                  </CardContent>
+                </Card>
+              </li>
+              <li>
+                <Card className="rounded-lg border border-emerald-200 bg-emerald-50 text-card-foreground dark:border-emerald-500/30 dark:bg-emerald-500/10">
+                  <CardContent className="p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Bước 2
+                    </p>
+                    <h3 className="mt-2 text-base font-semibold">
+                      Nạp trạm chế biến
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Đã tải trạm hoạt động.
+                    </p>
+                  </CardContent>
+                </Card>
+              </li>
+              <li>
+                <Card className="rounded-lg border border-amber-200 bg-amber-50 text-card-foreground dark:border-amber-500/30 dark:bg-amber-500/10">
+                  <CardContent className="p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Bước 3
+                    </p>
+                    <h3 className="mt-2 text-base font-semibold">
+                      Hiển thị đơn đang chạy
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Không thể tải vé bếp.
+                    </p>
+                  </CardContent>
+                </Card>
+              </li>
+            </ol>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -184,36 +269,78 @@ export default async function KdsPage({
   return (
     <Suspense
       fallback={
-        <RouteStateCard
-          title="Đang dựng bảng điều phối bếp"
-          description="Đang nạp trạm và đơn."
-          icon={<ChefHat className="size-5" />}
-          status={
-            <>
-              <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
-              <span>Đồng bộ ticket nhà bếp</span>
-            </>
-          }
-          statusTone="info"
-          steps={[
-            {
-              label: "Station sẵn sàng",
-              description: "Danh sách trạm đã sẵn sàng.",
-              state: "done",
-            },
-            {
-              label: "Ghép ticket và đơn",
-              description: "Đang ghép món và trạng thái.",
-              state: "current",
-            },
-            {
-              label: "Mở board thao tác",
-              description: "Mở board thao tác.",
-              state: "todo",
-            },
-          ]}
-          surface="dark"
-        />
+        <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
+          <CardContent className="p-6 sm:p-8">
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-4">
+                  <div className="flex size-14 items-center justify-center rounded-full border border-border/70 bg-background/80 text-primary shadow-sm">
+                    <ChefHat className="size-5" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <h2 className="text-3xl font-semibold tracking-tight">
+                      Đang dựng bảng điều phối bếp
+                    </h2>
+                    <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
+                      Đang nạp trạm và đơn.
+                    </p>
+                  </div>
+                </div>
+                <Badge variant="info">
+                  <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
+                  <span>Đồng bộ ticket nhà bếp</span>
+                </Badge>
+              </div>
+              <ol className="grid gap-3 lg:grid-cols-3">
+                <li>
+                  <Card className="rounded-lg border border-emerald-200 bg-emerald-50 text-card-foreground dark:border-emerald-500/30 dark:bg-emerald-500/10">
+                    <CardContent className="p-4">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                        Bước 1
+                      </p>
+                      <h3 className="mt-2 text-base font-semibold">
+                        Station sẵn sàng
+                      </h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Danh sách trạm đã sẵn sàng.
+                      </p>
+                    </CardContent>
+                  </Card>
+                </li>
+                <li>
+                  <Card className="rounded-lg border border-amber-200 bg-amber-50 text-card-foreground dark:border-amber-500/30 dark:bg-amber-500/10">
+                    <CardContent className="p-4">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                        Bước 2
+                      </p>
+                      <h3 className="mt-2 text-base font-semibold">
+                        Ghép ticket và đơn
+                      </h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Đang ghép món và trạng thái.
+                      </p>
+                    </CardContent>
+                  </Card>
+                </li>
+                <li>
+                  <Card className="rounded-lg border bg-muted/30 text-card-foreground">
+                    <CardContent className="p-4">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                        Bước 3
+                      </p>
+                      <h3 className="mt-2 text-base font-semibold">
+                        Mở board thao tác
+                      </h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Mở board thao tác.
+                      </p>
+                    </CardContent>
+                  </Card>
+                </li>
+              </ol>
+            </div>
+          </CardContent>
+        </Card>
       }
     >
       <KdsBoard

@@ -525,7 +525,21 @@ export async function completeStocktake(
   const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
+
+  // Pre-flight: count uncounted lines before calling the RPC so we don't
+  // depend on the RPC's error message text (which can change).
+  const { data: uncounted } = await supabase
+    .from("stocktake_lines")
+    .select("id")
+    .eq("session_id", parsedId.data)
+    .eq("tenant_id", claims.tenant_id)
+    .is("counted_quantity", null)
+    .limit(1);
+
+  if (uncounted && uncounted.length > 0) {
+    return { success: false, error: "Còn nguyên liệu chưa được đếm." };
+  }
 
   const { data, error } = await supabase.rpc("complete_stocktake", {
     p_session_id: parsedId.data,

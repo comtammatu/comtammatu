@@ -3,7 +3,6 @@
 "use client";
 
 import { type ChangeEvent, useState, useTransition } from "react";
-import { SectionCard } from "@/components/patterns";
 import {
   Table,
   TableBody,
@@ -14,6 +13,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Dialog,
   DialogContent,
@@ -104,66 +104,70 @@ export function ChartOfAccountsClient({ accounts: initial }: Props) {
         </Button>
       </div>
 
-      <SectionCard className="overflow-hidden" density="compact">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-28">Mã TK</TableHead>
-              <TableHead>Tên tài khoản</TableHead>
-              <TableHead className="w-36">Loại</TableHead>
-              <TableHead className="w-24">Trạng thái</TableHead>
-              <TableHead className="w-20" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {accounts.length === 0 ? (
+      <Card className="overflow-hidden">
+        <CardContent className="px-4 sm:px-5">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="py-10 text-center text-muted-foreground"
-                >
-                  Chưa có tài khoản nào. Thêm tài khoản đầu tiên.
-                </TableCell>
+                <TableHead className="w-28">Mã TK</TableHead>
+                <TableHead>Tên tài khoản</TableHead>
+                <TableHead className="w-36">Loại</TableHead>
+                <TableHead className="w-24">Trạng thái</TableHead>
+                <TableHead className="w-20" />
               </TableRow>
-            ) : (
-              accounts.map((a) => (
-                <TableRow key={a.id}>
-                  <TableCell className="font-mono font-medium">
-                    {a.code}
-                  </TableCell>
-                  <TableCell>{a.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{typeLabel(a.account_type)}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    {a.is_active ? (
-                      <Badge variant="success">
-                        {ACTIVE_STATE_LABELS_VI.active}
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">
-                        {ACTIVE_STATE_LABELS_VI.inactive}
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={isPending}
-                      onClick={() => handleToggleActive(a.id, a.is_active)}
-                    >
-                      {a.is_active
-                        ? ACTIVE_STATE_LABELS_VI.inactive
-                        : "Kích hoạt"}
-                    </Button>
+            </TableHeader>
+            <TableBody>
+              {accounts.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="py-10 text-center text-muted-foreground"
+                  >
+                    Chưa có tài khoản nào. Thêm tài khoản đầu tiên.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </SectionCard>
+              ) : (
+                accounts.map((a) => (
+                  <TableRow key={a.id}>
+                    <TableCell className="font-mono font-medium">
+                      {a.code}
+                    </TableCell>
+                    <TableCell>{a.name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {typeLabel(a.account_type)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {a.is_active ? (
+                        <Badge variant="success">
+                          {ACTIVE_STATE_LABELS_VI.active}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">
+                          {ACTIVE_STATE_LABELS_VI.inactive}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={isPending}
+                        onClick={() => handleToggleActive(a.id, a.is_active)}
+                      >
+                        {a.is_active
+                          ? ACTIVE_STATE_LABELS_VI.inactive
+                          : "Kích hoạt"}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">

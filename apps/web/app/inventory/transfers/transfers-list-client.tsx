@@ -7,6 +7,12 @@ import { ArrowRight, MoveRight, Plus, Search } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   Table,
@@ -18,7 +24,6 @@ import {
 } from "@comtammatu/ui/components/table";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { FilterBar, PageHeader, SectionCard } from "@/components/patterns";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
 import { fetchStockTransfers } from "../transfer-actions";
 import { CreateTransferDialog } from "./create-transfer-dialog";
@@ -95,10 +100,10 @@ export function TransfersListClient({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
-  const hq = branches.find((b) => b.is_headquarters);
-  const operational = branches.filter((b) => !b.is_headquarters);
-  const isBranchManager = userRole === "branch_manager";
-  const canCreate = !isBranchManager && Boolean(hq && operational.length >= 1);
+  const isBranchManager = userRole === "branch_manager"
+    || userRole === "warehouse_manager"
+    || userRole === "production_manager";
+  const canCreate = branches.length >= 2;
   const branchLabelById = useMemo(
     () =>
       new Map(
@@ -141,23 +146,29 @@ export function TransfersListClient({
 
   return (
     <>
-      <PageHeader
-        eyebrow="Transfer Monitor"
-        title="Luân chuyển nội bộ"
-        description={
-          isBranchManager
-            ? "Theo dõi hàng đến chi nhánh, xác nhận thực nhận và giữ liền mạch với bước cấp bếp."
-            : "Điều phối hàng giữa Trụ sở, bếp trung tâm và các kho vận hành. Hàng từ NCC vẫn chỉ nhập tại Trụ sở (PO/GRN)."
-        }
-        actions={
-          canCreate ? (
-            <Button type="button" onClick={() => setOpen(true)}>
-              <Plus className="mr-2 size-4" />
-              Tạo phiếu
-            </Button>
-          ) : null
-        }
-      />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-muted-foreground">
+            Transfer Monitor
+          </p>
+          <div className="space-y-1">
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Luân chuyển nội bộ
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {isBranchManager
+                ? "Theo dõi hàng đến chi nhánh, xác nhận thực nhận và giữ liền mạch với bước cấp bếp."
+                : "Điều phối hàng giữa Trụ sở, bếp trung tâm và các kho vận hành. Hàng từ NCC vẫn chỉ nhập tại Trụ sở (PO/GRN)."}
+            </p>
+          </div>
+        </div>
+        {canCreate ? (
+          <Button type="button" onClick={() => setOpen(true)}>
+            <Plus className="mr-2 size-4" />
+            Tạo phiếu
+          </Button>
+        ) : null}
+      </div>
 
       {!canCreate && !isBranchManager && (
         <p className="text-sm text-warning">
@@ -166,7 +177,9 @@ export function TransfersListClient({
       )}
       {isBranchManager && (
         <p className="rounded-2xl border border-info/20 bg-info/5 px-4 py-3 text-sm text-muted-foreground">
-          Vai trò chi nhánh chỉ theo dõi và xác nhận hàng đến. Tạo mới inter-site transfer vẫn thuộc tuyến HQ hoặc bếp trung tâm trong pilot hiện tại.
+          Vai trò chi nhánh chỉ theo dõi và xác nhận hàng đến. Tạo mới
+          inter-site transfer vẫn thuộc tuyến HQ hoặc bếp trung tâm trong pilot
+          hiện tại.
         </p>
       )}
 
@@ -211,25 +224,29 @@ export function TransfersListClient({
         )}
       </div>
 
-      <SectionCard
-        title="Danh sách phiếu luân chuyển"
-        description="Giữ liền mạch hành trình xuất, vận chuyển, nhận và kiểm nhận giữa các site."
-        className="overflow-hidden rounded-lg"
-        density="compact"
-      >
-        <FilterBar className="mb-4 gap-3">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
-          <Input
-            placeholder="Tìm số phiếu hoặc tên kho…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
-          />
-          <span className="shrink-0 text-xs text-muted-foreground">
-            {filtered.length} / {rows.length}
-          </span>
-        </FilterBar>
-
+      <Card className="overflow-hidden rounded-lg">
+        <CardHeader className="gap-4">
+          <div className="space-y-1">
+            <CardTitle>Danh sách phiếu luân chuyển</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Giữ liền mạch hành trình xuất, vận chuyển, nhận và kiểm nhận giữa
+              các site.
+            </p>
+          </div>
+          <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
+            <Search className="size-4 shrink-0 text-muted-foreground" />
+            <Input
+              placeholder="Tìm số phiếu hoặc tên kho…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+            />
+            <span className="shrink-0 text-xs text-muted-foreground">
+              {filtered.length} / {rows.length}
+            </span>
+          </CardContent></Card>
+        </CardHeader>
+        <CardContent className="p-0">
           {/* Mobile card layout */}
           {isMobile ? (
             <div className="divide-y">
@@ -258,7 +275,7 @@ export function TransfersListClient({
                   <Link
                     key={r.id}
                     href={`${basePath}/${r.id}`}
-                    className="app-subpanel block px-4 py-3 transition-colors hover:border-primary/20"
+                    className="rounded-lg border bg-muted/30 text-card-foreground block px-4 py-3 transition-colors hover:border-primary/20"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-mono text-sm font-medium">
@@ -418,7 +435,8 @@ export function TransfersListClient({
               </TableBody>
             </Table>
           )}
-      </SectionCard>
+        </CardContent>
+      </Card>
 
       <CreateTransferDialog
         open={open}

@@ -1,11 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-  Card,
-  CardContent,
-} from "@comtammatu/ui/components/card";
-import { SectionCard } from "@/components/patterns";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import type { ProductionOrderRow } from "./production-types";
 
 interface ProductionStatsProps {
@@ -35,12 +31,11 @@ export function ProductionStats({
   return (
     <>
       {readinessMessage && (
-        <SectionCard
-          className="border-warning/20 bg-warning/10"
-          density="compact"
-        >
-          {readinessMessage}
-        </SectionCard>
+        <Card className="border-warning/20 bg-warning/10">
+          <CardContent className="px-4 py-5 text-sm text-foreground sm:px-5">
+            {readinessMessage}
+          </CardContent>
+        </Card>
       )}
       <div className="grid gap-3 md:grid-cols-3">
         <Card>

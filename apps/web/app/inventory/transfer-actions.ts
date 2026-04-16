@@ -2,11 +2,10 @@
 
 import { randomUUID } from "crypto";
 import { z } from "zod";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
-import { fetchHeadquartersBranchId } from "./_lib/headquarters";
 import type { Database, SupabaseClient } from "@comtammatu/database";
 import {
   resolveDefaultInventoryLocation,
@@ -15,16 +14,13 @@ import {
 
 type TenantSupabase = SupabaseClient<Database>;
 
-const ROLES: readonly StaffRole[] = [
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-];
+const ROLES = INVENTORY_OPS_ROLES;
 
-/** For RSC/UI: id điểm vận hành Trụ sở (nhãn nút luân chuyển). */
+/** @deprecated For backward compat only — UI should use branch_kind picker. */
 export async function resolveHeadquartersBranchId(): Promise<number | null> {
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return null;
+  const { fetchHeadquartersBranchId } = await import("./_lib/procurement-branches");
   return fetchHeadquartersBranchId(ctx.supabase, ctx.claims.tenant_id);
 }
 
@@ -96,44 +92,31 @@ const transferLineInputSchema = z.object({
   unit: z.string().min(1),
 });
 
-const transferCreateSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("hq_to_branch"),
-    toBranchId: z.coerce.number().int().positive(),
-    notes: z.string().optional(),
-    vehicleInfo: z.string().optional(),
-    lines: z.array(transferLineInputSchema).optional(),
-  }),
-  z.object({
-    kind: z.literal("branch_to_hq"),
-    fromBranchId: z.coerce.number().int().positive(),
-    notes: z.string().optional(),
-    vehicleInfo: z.string().optional(),
-    lines: z.array(transferLineInputSchema).optional(),
-  }),
-  z.object({
-    kind: z.literal("branch_to_branch"),
-    fromBranchId: z.coerce.number().int().positive(),
-    toBranchId: z.coerce.number().int().positive(),
-    notes: z.string().optional(),
-    vehicleInfo: z.string().optional(),
-    lines: z.array(transferLineInputSchema).optional(),
-  }),
-]);
+const transferCreateSchema = z.object({
+  fromBranchId: z.coerce.number().int().positive(),
+  toBranchId: z.coerce.number().int().positive(),
+  fromLocationId: z.coerce.number().int().positive().optional(),
+  toLocationId: z.coerce.number().int().positive().optional(),
+  notes: z.string().optional(),
+  vehicleInfo: z.string().optional(),
+  lines: z.array(transferLineInputSchema).optional(),
+});
 
-async function loadBranchHeadquartersFlag(
+async function loadBranchKind(
   supabase: TenantSupabase,
   tenantId: number,
   branchId: number,
-): Promise<boolean | null> {
+): Promise<string | null> {
   const { data, error } = await supabase
     .from("branches")
-    .select("is_headquarters")
+    .select("branch_kind")
     .eq("tenant_id", tenantId)
     .eq("id", branchId)
     .single();
   if (error || !data) return null;
-  return data.is_headquarters;
+  // Backward compat: headquarters → warehouse
+  const kind = data.branch_kind;
+  return kind === "headquarters" ? "warehouse" : kind;
 }
 
 export async function createStockTransfer(
@@ -149,114 +132,62 @@ export async function createStockTransfer(
   const ctx = await getAuthContext(ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
-  const hqId = await fetchHeadquartersBranchId(supabase, claims.tenant_id);
-  if (!hqId) {
-    return { success: false, error: "Chưa cấu hình Trụ sở." };
+
+  const { fromBranchId, toBranchId } = parsed.data;
+  const isIntraBranch = fromBranchId === toBranchId;
+
+  // Intra-branch: must have different locations
+  if (isIntraBranch) {
+    if (!parsed.data.fromLocationId || !parsed.data.toLocationId) {
+      return { success: false, error: "Chuyển nội bộ cần chọn vị trí kho gửi và nhận." };
+    }
+    if (parsed.data.fromLocationId === parsed.data.toLocationId) {
+      return { success: false, error: "Vị trí gửi và nhận phải khác nhau." };
+    }
   }
 
-  let fromBranchId: number;
-  let toBranchId: number;
-
-  if (parsed.data.kind === "hq_to_branch") {
-    const toHq = await loadBranchHeadquartersFlag(
-      supabase,
-      claims.tenant_id,
-      parsed.data.toBranchId,
-    );
-    if (toHq == null || toHq === true || parsed.data.toBranchId === hqId) {
-      return {
-        success: false,
-        error: "Kho nhận phải là điểm vận hành (không phải Trụ sở).",
-      };
+  // Validate branch_kind for inter-branch transfers
+  if (!isIntraBranch) {
+    const fromKind = await loadBranchKind(supabase, claims.tenant_id, fromBranchId);
+    const toKind = await loadBranchKind(supabase, claims.tenant_id, toBranchId);
+    if (!fromKind || !toKind) {
+      return { success: false, error: "Chi nhánh không hợp lệ." };
     }
-    fromBranchId = hqId;
-    toBranchId = parsed.data.toBranchId;
-  } else if (parsed.data.kind === "branch_to_hq") {
-    const fromHq = await loadBranchHeadquartersFlag(
-      supabase,
-      claims.tenant_id,
-      parsed.data.fromBranchId,
-    );
-    if (
-      fromHq == null ||
-      fromHq === true ||
-      parsed.data.fromBranchId === hqId
-    ) {
-      return {
-        success: false,
-        error: "Kho gửi phải là điểm vận hành (không phải Trụ sở).",
-      };
+    // branch → branch not allowed (Kho Bếp CN1 → Kho Bếp CN2)
+    if (fromKind === "branch" && toKind === "branch") {
+      return { success: false, error: "Không được chuyển giữa hai chi nhánh vận hành." };
     }
-    fromBranchId = parsed.data.fromBranchId;
-    toBranchId = hqId;
-  } else {
-    if (parsed.data.fromBranchId === parsed.data.toBranchId) {
-      return { success: false, error: "Kho gửi và kho nhận phải khác nhau." };
-    }
-    const fromHq = await loadBranchHeadquartersFlag(
-      supabase,
-      claims.tenant_id,
-      parsed.data.fromBranchId,
-    );
-    const toHq = await loadBranchHeadquartersFlag(
-      supabase,
-      claims.tenant_id,
-      parsed.data.toBranchId,
-    );
-    if (fromHq == null || toHq == null || fromHq === true || toHq === true) {
-      return {
-        success: false,
-        error: "Luân chuyển nội bộ chỉ áp dụng giữa các kho vận hành.",
-      };
-    }
-    fromBranchId = parsed.data.fromBranchId;
-    toBranchId = parsed.data.toBranchId;
   }
 
-  if (claims.user_role === "branch_manager" && claims.branch_id != null) {
+  // Branch-scoped role check
+  if (
+    claims.user_role &&
+    ["branch_manager", "warehouse_manager", "production_manager"].includes(claims.user_role) &&
+    claims.branch_id != null
+  ) {
     const my = claims.branch_id;
-    if (my === hqId) {
-      if (parsed.data.kind === "hq_to_branch") {
-        /* xuất từ Trụ sở */
-      } else if (parsed.data.kind === "branch_to_hq" && toBranchId === hqId) {
-        /* nhập về Trụ sở từ chi nhánh */
-      } else {
-        return {
-          success: false,
-          error:
-            "Tài khoản Trụ sở chỉ tạo phiếu xuất đi kho vận hành hoặc nhập về Trụ sở.",
-        };
-      }
-    } else if (parsed.data.kind === "hq_to_branch") {
-      if (toBranchId !== my) {
-        return {
-          success: false,
-          error: "Phiếu nhập chỉ nhận về kho của bạn.",
-        };
-      }
-    } else if (fromBranchId !== my) {
-      return {
-        success: false,
-        error: "Phiếu xuất chỉ gửi từ kho của bạn.",
-      };
+    if (fromBranchId !== my && toBranchId !== my) {
+      return { success: false, error: "Bạn chỉ được tạo phiếu chuyển liên quan đến kho của mình." };
     }
   }
 
   const transferNumber = `TRF-${randomUUID().slice(0, 8)}`;
-  const fromLocationId = await resolveDefaultInventoryLocation(
+
+  // Resolve locations if not provided
+  const fromLocationId = parsed.data.fromLocationId ?? await resolveDefaultInventoryLocation(
     supabase,
     claims.tenant_id,
     fromBranchId,
     "issue",
   );
-  const toLocationId = await resolveDefaultInventoryLocation(
+  const toLocationId = parsed.data.toLocationId ?? await resolveDefaultInventoryLocation(
     supabase,
     claims.tenant_id,
     toBranchId,
     "receive",
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC create_stock_transfer_draft missing p_from/to_location_id in generated types
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC signature may not match generated types yet
   const sb = supabase as any;
   const transferLines = (parsed.data.lines ?? []).map((line) => ({
     ingredientId: line.ingredientId,
@@ -272,7 +203,7 @@ export async function createStockTransfer(
         p_to_location_id: toLocationId,
         p_transfer_number: transferNumber,
         p_notes: parsed.data.notes ?? null,
-        p_vehicle_info: parsed.data.vehicleInfo ?? null,
+        p_vehicle_info: isIntraBranch ? null : (parsed.data.vehicleInfo ?? null),
         p_lines: transferLines,
       }),
     () =>
@@ -281,7 +212,7 @@ export async function createStockTransfer(
         p_to_branch_id: toBranchId,
         p_transfer_number: transferNumber,
         p_notes: parsed.data.notes ?? null,
-        p_vehicle_info: parsed.data.vehicleInfo ?? null,
+        p_vehicle_info: isIntraBranch ? null : (parsed.data.vehicleInfo ?? null),
         p_lines: transferLines,
       }),
   );
@@ -349,7 +280,7 @@ export async function transferConfirmShip(
     console.error("transferConfirmShip", error);
     return {
       success: false,
-      error: "Không thể xác nhận xuất (kiểm tra tồn Trụ sở).",
+      error: "Không thể xác nhận xuất (kiểm tra tồn kho gửi).",
     };
   }
   return { success: true };

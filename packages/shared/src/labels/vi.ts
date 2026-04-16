@@ -1,4 +1,5 @@
-export type SiteKind = "headquarters" | "central_kitchen" | "branch";
+/** @deprecated "headquarters" kept for backward compat — use "warehouse" for new code */
+export type SiteKind = "headquarters" | "warehouse" | "central_kitchen" | "branch";
 
 export type ModuleLabelKey =
   | "dashboard"
@@ -65,13 +66,15 @@ export const APP_COPY_VI = {
 } as const;
 
 export const SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
-  headquarters: "Trụ sở",
+  headquarters: "Kho tổng",
+  warehouse: "Kho tổng",
   central_kitchen: "Bếp trung tâm",
   branch: "Chi nhánh",
 };
 
 export const INVENTORY_SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
-  headquarters: "Trụ sở",
+  headquarters: "Kho tổng",
+  warehouse: "Kho tổng",
   central_kitchen: "Bếp trung tâm",
   branch: "Kho chi nhánh",
 };
@@ -82,8 +85,12 @@ export const ACTIVE_STATE_LABELS_VI = {
 } as const;
 
 export function resolveSiteKind(site: SiteLike): SiteKind {
+  if (site.branch_kind === "warehouse") {
+    return "warehouse";
+  }
+  // Backward compat: pre-migration data may still have "headquarters"
   if (site.is_headquarters === true || site.branch_kind === "headquarters") {
-    return "headquarters";
+    return "warehouse";
   }
   if (site.branch_kind === "central_kitchen") {
     return "central_kitchen";

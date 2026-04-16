@@ -1,7 +1,8 @@
 export type BlockedStateReasonCode =
   | "insufficient-permission"
   | "missing-auth-context"
-  | "headquarters-branch-restricted";
+  | "headquarters-branch-restricted"
+  | "warehouse-branch-restricted";
 
 export interface BlockedStateCopy {
   title: string;
@@ -41,12 +42,21 @@ const BLOCKED_STATE_REASON_COPY: Record<
     tone: "danger",
   },
   "headquarters-branch-restricted": {
-    title: "Khu vực này không mở trên trụ sở",
+    title: "Khu vực này không mở trên kho tổng",
     description:
-      "POS và KDS chỉ được mở trên chi nhánh vận hành, không dùng cho chi nhánh trụ sở.",
+      "POS và KDS chỉ được mở trên chi nhánh vận hành, không dùng cho kho tổng hoặc bếp trung tâm.",
     nextStep:
       "Chuyển sang chi nhánh vận hành phù hợp hoặc quay lại phân hệ quản trị.",
-    toastMessage: "POS/KDS không mở trên chi nhánh trụ sở.",
+    toastMessage: "POS/KDS không mở trên kho tổng/bếp trung tâm.",
+    tone: "warning",
+  },
+  "warehouse-branch-restricted": {
+    title: "Khu vực này không mở trên kho tổng",
+    description:
+      "POS và KDS chỉ được mở trên chi nhánh vận hành, không dùng cho kho tổng hoặc bếp trung tâm.",
+    nextStep:
+      "Chuyển sang chi nhánh vận hành phù hợp hoặc quay lại phân hệ quản trị.",
+    toastMessage: "POS/KDS không mở trên kho tổng/bếp trung tâm.",
     tone: "warning",
   },
 };
@@ -61,7 +71,8 @@ export function isBlockedStateReasonCode(
   return (
     value === "insufficient-permission" ||
     value === "missing-auth-context" ||
-    value === "headquarters-branch-restricted"
+    value === "headquarters-branch-restricted" ||
+    value === "warehouse-branch-restricted"
   );
 }
 

@@ -8,9 +8,12 @@ Nơi lưu các artefact theo dõi tiến độ và adoption.
 ## Inventory
 
 - [inventory/adoption-matrix.md](inventory/adoption-matrix.md): theo dõi trạng thái `doc / code / verify / decision`
+- [inventory/inventory-ux-workflow-review.md](inventory/inventory-ux-workflow-review.md): review workflow/IA trước refactor UI
+- [inventory/inventory-ux-contract.md](inventory/inventory-ux-contract.md): contract UX đã chốt cho pilot hiện tại
 
 ## Quy tắc
 
 - Ghi ngắn, cập nhật được, và bám đúng trạng thái thực tế
 - Khi một lát feature thay đổi materially, cập nhật worklog tương ứng
+- Với Inventory, thay đổi UX/IA hoặc workflow wiring phải cập nhật cả adoption matrix và artefact review/contract liên quan
 - Nếu một quyết định đã ổn định dài hạn, chuyển nó về `docs/ref/`

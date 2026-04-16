@@ -42,8 +42,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { cn } from "@comtammatu/ui";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { EmptyStatePanel as EmptyState } from "@/components/patterns";
-import { SectionCard } from "@/components/patterns";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { createIngredient } from "./actions";
 import {
   deleteProductionRecipeGroup,
@@ -608,8 +607,8 @@ export function ProductionRecipePanel({
         <div>
           <h3 className="text-base font-semibold">Công thức sản xuất</h3>
           <p className="text-sm text-muted-foreground">
-            Mỗi thành phẩm có thể gồm nhiều nguyên liệu. Mỗi lần lưu là một
-            dòng nguyên liệu trong BOM của thành phẩm đó.
+            Mỗi thành phẩm có thể gồm nhiều nguyên liệu. Mỗi lần lưu là một dòng
+            nguyên liệu trong BOM của thành phẩm đó.
           </p>
         </div>
         <Button
@@ -640,8 +639,8 @@ export function ProductionRecipePanel({
 
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Một thành phẩm có thể có nhiều dòng nguyên liệu. Mỗi dòng bên
-              dưới tương ứng với một nguyên liệu trong BOM sản xuất.
+              Một thành phẩm có thể có nhiều dòng nguyên liệu. Mỗi dòng bên dưới
+              tương ứng với một nguyên liệu trong BOM sản xuất.
             </p>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -718,14 +717,14 @@ export function ProductionRecipePanel({
                 </Select>
                 {!editingRecipe && (
                   <p className="text-xs text-muted-foreground">
-                    Nếu thiếu nguyên liệu đầu vào, tạo mới ngay tại đây rồi
-                    chọn lại dòng BOM.
+                    Nếu thiếu nguyên liệu đầu vào, tạo mới ngay tại đây rồi chọn
+                    lại dòng BOM.
                   </p>
                 )}
                 {editingRecipe && (
                   <p className="text-xs text-muted-foreground">
-                    Muốn đổi thành phẩm hoặc nguyên liệu, hãy xóa dòng cũ và
-                    tạo dòng mới để tránh ghi đè sai BOM.
+                    Muốn đổi thành phẩm hoặc nguyên liệu, hãy xóa dòng cũ và tạo
+                    dòng mới để tránh ghi đè sai BOM.
                   </p>
                 )}
               </div>
@@ -840,126 +839,133 @@ export function ProductionRecipePanel({
       </AlertDialog>
 
       {groupedRecipes.length === 0 ? (
-        <EmptyState
-          title="Chưa có BOM nào"
-          description="Hãy thêm ít nhất một dòng nguyên liệu để bắt đầu cấu hình công thức cho thành phẩm."
-          className="min-h-40 border border-dashed"
-        />
+        <Card className="min-h-40 border border-dashed">
+          <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+            <div className="space-y-1.5">
+              <h3 className="text-2xl font-semibold">Chưa có BOM nào</h3>
+              <p className="max-w-md text-sm leading-6 text-muted-foreground">
+                Hãy thêm ít nhất một dòng nguyên liệu để bắt đầu cấu hình công
+                thức cho thành phẩm.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
           {groupedRecipes.map((group) => (
-            <SectionCard
+            <Card
               key={group.finishedGoodId}
               className="group/recipe overflow-hidden rounded-lg"
-              density="compact"
             >
-              <div
-                className={cn(
-                  "-m-4 flex flex-wrap items-center justify-between gap-3 border-b bg-muted/20 px-4 py-3 transition-colors md:-m-5 md:px-5",
-                  "group-hover/recipe:bg-muted/35 group-focus-within/recipe:bg-muted/35",
-                )}
-              >
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h4 className="font-semibold">
-                      {group.finishedGoodName}
-                    </h4>
-                    <Badge variant={badgeVariantFromTone("neutral")}>
-                      {group.lines.length} nguyên liệu
-                    </Badge>
+              <CardContent className="px-4 py-5 sm:px-5">
+                <div
+                  className={cn(
+                    "-m-4 flex flex-wrap items-center justify-between gap-3 border-b bg-muted/20 px-4 py-3 transition-colors md:-m-5 md:px-5",
+                    "group-hover/recipe:bg-muted/35 group-focus-within/recipe:bg-muted/35",
+                  )}
+                >
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="font-semibold">
+                        {group.finishedGoodName}
+                      </h4>
+                      <Badge variant={badgeVariantFromTone("neutral")}>
+                        {group.lines.length} nguyên liệu
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Mỗi dòng bên dưới là một nguyên liệu cấu thành thành phẩm
+                      này.
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Mỗi dòng bên dưới là một nguyên liệu cấu thành thành phẩm
-                    này.
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openRecipeDialog(group.finishedGoodId)}
+                      disabled={!branchKindSchemaAvailable}
+                    >
+                      <Plus className="mr-2 size-4" />
+                      Thêm nguyên liệu
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setRecipeGroupToDelete(group)}
+                      disabled={!branchKindSchemaAvailable}
+                      className={cn(
+                        "transition-opacity md:opacity-0 md:group-hover/recipe:opacity-100 md:group-focus-within/recipe:opacity-100",
+                        "md:pointer-events-none md:group-hover/recipe:pointer-events-auto md:group-focus-within/recipe:pointer-events-auto",
+                      )}
+                    >
+                      <Trash2 className="mr-2 size-4" />
+                      Xóa toàn bộ BOM
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openRecipeDialog(group.finishedGoodId)}
-                    disabled={!branchKindSchemaAvailable}
-                  >
-                    <Plus className="mr-2 size-4" />
-                    Thêm nguyên liệu
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setRecipeGroupToDelete(group)}
-                    disabled={!branchKindSchemaAvailable}
-                    className={cn(
-                      "transition-opacity md:opacity-0 md:group-hover/recipe:opacity-100 md:group-focus-within/recipe:opacity-100",
-                      "md:pointer-events-none md:group-hover/recipe:pointer-events-auto md:group-focus-within/recipe:pointer-events-auto",
-                    )}
-                  >
-                    <Trash2 className="mr-2 size-4" />
-                    Xóa toàn bộ BOM
-                  </Button>
-                </div>
-              </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nguyên liệu</TableHead>
-                    <TableHead>Số lượng</TableHead>
-                    <TableHead>Yield</TableHead>
-                    <TableHead>Ghi chú</TableHead>
-                    <TableHead className="w-24" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {group.lines.map((recipe) => (
-                    <TableRow key={recipe.id}>
-                      <TableCell>
-                        <div className="font-medium">
-                          {recipe.ingredient_name}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {recipe.unit}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {recipe.quantity} {recipe.unit}
-                      </TableCell>
-                      <TableCell>{recipe.yield_factor}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {recipe.note ?? "—"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setEditingRecipe(recipe)}
-                            disabled={!branchKindSchemaAvailable}
-                            aria-label={`Chỉnh sửa dòng BOM ${recipe.ingredient_name}`}
-                            title="Chỉnh sửa dòng BOM"
-                          >
-                            <Pencil className="size-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRecipeDelete(recipe.id)}
-                            disabled={!branchKindSchemaAvailable}
-                            aria-label={`Xóa dòng BOM ${recipe.ingredient_name}`}
-                            title="Xóa dòng BOM"
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nguyên liệu</TableHead>
+                      <TableHead>Số lượng</TableHead>
+                      <TableHead>Yield</TableHead>
+                      <TableHead>Ghi chú</TableHead>
+                      <TableHead className="w-24" />
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </SectionCard>
+                  </TableHeader>
+                  <TableBody>
+                    {group.lines.map((recipe) => (
+                      <TableRow key={recipe.id}>
+                        <TableCell>
+                          <div className="font-medium">
+                            {recipe.ingredient_name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {recipe.unit}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {recipe.quantity} {recipe.unit}
+                        </TableCell>
+                        <TableCell>{recipe.yield_factor}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {recipe.note ?? "—"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setEditingRecipe(recipe)}
+                              disabled={!branchKindSchemaAvailable}
+                              aria-label={`Chỉnh sửa dòng BOM ${recipe.ingredient_name}`}
+                              title="Chỉnh sửa dòng BOM"
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRecipeDelete(recipe.id)}
+                              disabled={!branchKindSchemaAvailable}
+                              aria-label={`Xóa dòng BOM ${recipe.ingredient_name}`}
+                              title="Xóa dòng BOM"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

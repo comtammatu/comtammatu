@@ -28,7 +28,7 @@ import {
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { EmptyStatePanel } from "@/components/patterns";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
 import { createStockTransfer } from "../transfer-actions";
 import type { IngredientRow } from "../page";
@@ -81,14 +81,18 @@ export function CreateTransferDialog({
   const [pickerIngredientId, setPickerIngredientId] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  const operational = branches.filter((b) => !b.is_headquarters);
+  const isProcurementBranch = (b: BranchForTransfer) =>
+    b.branch_kind === "warehouse" || b.branch_kind === "central_kitchen" || b.branch_kind === "headquarters" || b.is_headquarters;
+  const operational = branches.filter((b) => !isProcurementBranch(b));
   const canBranchToBranch = operational.length >= 2;
 
   const isUserHq =
     hqBranchId != null && userBranchId != null && userBranchId === hqBranchId;
   const isUserOperational =
     hqBranchId != null && userBranchId != null && userBranchId !== hqBranchId;
-  const isBranchManager = userRole === "branch_manager";
+  const isBranchManager = userRole === "branch_manager"
+    || userRole === "warehouse_manager"
+    || userRole === "production_manager";
 
   const myBranchName = useMemo(() => {
     if (userBranchId == null) return null;
@@ -166,20 +170,20 @@ export function CreateTransferDialog({
   }
 
   function doCreate(
-    kind: string,
-    params: Record<string, unknown>,
+    fromBranchId: number,
+    toBranchId: number,
     linesPayload: { ingredientId: number; quantity: number; unit: string }[],
     notes?: string,
     vehicleInfo?: string,
   ) {
     startTransition(async () => {
       const res = await createStockTransfer({
-        kind,
-        ...params,
+        fromBranchId,
+        toBranchId,
         notes,
         vehicleInfo,
         lines: linesPayload,
-      } as Parameters<typeof createStockTransfer>[0]);
+      });
       if (!res.success || !res.data) {
         toast.error(res.error ?? "Không tạo được phiếu");
         return;
@@ -203,92 +207,30 @@ export function CreateTransferDialog({
     const linesPayload = buildLinesPayload(draftLines);
     if (linesPayload === undefined) return;
 
-    if (hqBranchId == null) {
-      toast.error("Chưa cấu hình Trụ sở.");
-      return;
-    }
+    // Resolve fromBranchId / toBranchId based on slip direction
+    let fromId: number | undefined;
+    let toId: number | undefined;
 
     if (slipKind === "inbound") {
-      if (isUserOperational && userBranchId != null) {
-        doCreate(
-          "hq_to_branch",
-          { toBranchId: userBranchId },
-          linesPayload,
-          notes,
-          vehicleInfo,
-        );
-        return;
+      // Inbound: receiving TO user's branch (or selected branch)
+      toId = userBranchId ?? (Number(inboundToBranchId) || undefined);
+      fromId = (Number(inboundFromBranchId) || hqBranchId) ?? undefined;
+    } else {
+      // Outbound: sending FROM user's branch (or HQ)
+      fromId = userBranchId ?? hqBranchId ?? undefined;
+      if (outboundDest === "hq" && hqBranchId) {
+        toId = hqBranchId;
+      } else {
+        toId = Number(outboundOtherBranchId) || Number(outboundToBranchId) || undefined;
       }
-      if (isUserHq) {
-        const f = Number(inboundFromBranchId);
-        if (!f) {
-          toast.error("Chọn kho gửi");
-          return;
-        }
-        doCreate(
-          "branch_to_hq",
-          { fromBranchId: f },
-          linesPayload,
-          notes,
-          vehicleInfo,
-        );
-        return;
-      }
-      const t = Number(inboundToBranchId);
-      if (!t) {
-        toast.error("Chọn kho nhận");
-        return;
-      }
-      doCreate(
-        "hq_to_branch",
-        { toBranchId: t },
-        linesPayload,
-        notes,
-        vehicleInfo,
-      );
+    }
+
+    if (!fromId || !toId) {
+      toast.error("Chọn kho gửi và kho nhận.");
       return;
     }
 
-    /* outbound */
-    if (isUserOperational && userBranchId != null) {
-      if (outboundDest === "hq") {
-        doCreate(
-          "branch_to_hq",
-          { fromBranchId: userBranchId },
-          linesPayload,
-          notes,
-          vehicleInfo,
-        );
-        return;
-      }
-      const other = Number(outboundOtherBranchId);
-      if (!other || other === userBranchId) {
-        toast.error("Chọn kho nhận");
-        return;
-      }
-      doCreate(
-        "branch_to_branch",
-        { fromBranchId: userBranchId, toBranchId: other },
-        linesPayload,
-        notes,
-        vehicleInfo,
-      );
-      return;
-    }
-
-    /* HQ / tenant-wide */
-    const to = Number(outboundToBranchId);
-    if (!to) {
-      toast.error("Chọn kho nhận");
-      return;
-    }
-    doCreate(
-      "hq_to_branch",
-      { toBranchId: to },
-      linesPayload,
-      notes,
-      vehicleInfo,
-    );
+    doCreate(fromId, toId, linesPayload, notes, vehicleInfo);
   }
 
   const submitDisabled =
@@ -496,11 +438,18 @@ export function CreateTransferDialog({
             </div>
 
             {draftLines.length === 0 ? (
-              <EmptyStatePanel
-                title="Chưa có nguyên liệu"
-                description="Thêm ít nhất một nguyên liệu để tạo phiếu luân chuyển."
-                className="rounded-lg border-dashed bg-muted/10 py-6"
-              />
+              <Card className="rounded-lg border-dashed bg-muted/10">
+                <CardContent className="py-6 text-center">
+                  <div className="space-y-1.5">
+                    <h3 className="text-2xl font-semibold">
+                      Chưa có nguyên liệu
+                    </h3>
+                    <p className="max-w-md text-sm leading-6 text-muted-foreground mx-auto">
+                      Thêm ít nhất một nguyên liệu để tạo phiếu luân chuyển.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             ) : (
               <div className="space-y-2">
                 {draftLines.map((l) => (

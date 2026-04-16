@@ -1,92 +1,34 @@
 # Design System - Cơm Tấm Má Tư Web App
 
-> Version: 11.0.0 | Updated: 2026-04-16
-> Stack: Next.js 16.2 · React 19.2 · Tailwind CSS 4.2 · shadcn/ui · TypeScript 6.0
+> Version: 12.0.0 | Updated: 2026-04-16
 
-## Source of Truth
+## Active Preset
 
-UI runtime cua repo phai duoc doc theo thu tu:
-
-1. `packages/ui/components.json`
-2. `apps/web/components.json`
-3. `apps/web/app/globals.css`
-4. `apps/web/app/layout.tsx`
-5. tai lieu nay
-
-Neu code doi, docs phai doi cung luc.
-
-## Active shadcn Preset
-
-Preset hien tai:
+Preset runtime:
 
 - `style`: `radix-mira`
 - `baseColor`: `taupe`
 - `cssVariables`: `true`
-- `menuColor`: `default`
-- `menuAccent`: `subtle`
-- base library: `radix`
-- primitive source: `packages/ui/src/components/*`
+- `iconLibrary`: `lucide`
 
-## Runtime Foundation
+## Foundation
 
-`apps/web/app/globals.css` va `apps/web/app/layout.tsx` chi duoc giu:
+`apps/web/app/globals.css` va `apps/web/app/layout.tsx` phai o trang thai stock-shadcn-first:
 
-- token cua preset
-- font runtime mapping
+- token theo preset
+- font runtime toi thieu
 - base body/html styles
-- compatibility shims toi thieu cho route chua cleanup xong
+- khong co helper layer rieng
 
-Khong duoc tiep tuc dung foundation de tao:
+## Shared UI
 
-- background texture rieng
-- page chrome rieng
-- presentation system vuot ra ngoai preset
+`packages/ui/src/components/*` la primitive layer duy nhat.
 
-## Primitive Contract
+App-level wrappers duoc phep ton tai cho structure, nhung khong duoc tao mot design language rieng.
 
-Primitive layer tiep tuc di qua:
+## Forbidden
 
-- `Button`
-- `Card`
-- `Sidebar`
-- `Badge`
-- `Table`
-- `Dialog`
-- `Sheet`
-- `Tabs`
-- `Input`
-- `Select`
-
-Primitive phai giu theo shadcn structure. Khong tao primitive fork song song.
-
-## Composition Contract
-
-Composition layer duoc phep:
-
-- dung primitive truc tiep
-- sap xep layout bang utility classes co san
-- them wrappers nho de tap hop behavior hoac structure
-
-Composition layer khong duoc:
-
-- redefine visual contract cua primitive
-- hop thuc hoa `app-*` helpers thanh design language moi
-- dua page-level styling thanh source of truth
-
-## Compatibility Policy
-
-`app-*` helper classes duoc giu lai chi de tranh blast radius trong migration.
-
-Dieu nay co nghia:
-
-- new work khong duoc them usage moi
-- helper cu phai duoc thu hep dan ve utility/token co san
-- khi sua wrapper/shared shell, uu tien bo phu thuoc vao helper va quay ve shadcn primitives
-
-## Reset Policy
-
-Repo chi duoc xem xet reset UI surface va chay lai:
-
-`pnpm dlx shadcn@latest init --preset b1GfmQMCm --template next`
-
-khi audit cho thay refactor tang foundation/composition khong con kha thi. Day khong phai duong mac dinh.
+- `app-*` helpers
+- custom global chrome/background/theme
+- primitive overrides theo page/surface
+- compatibility shim cho design system cu

@@ -7,6 +7,12 @@ import { ArrowLeft, XCircle, CheckCircle } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
+import {
   Table,
   TableBody,
   TableCell,
@@ -16,7 +22,6 @@ import {
   TableFooter,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { PageHeader, SectionCard } from "@/components/patterns";
 import { TimelineStepper } from "../../_components/timeline-stepper";
 import { formatVND } from "../../_lib/format";
 import { tRoute } from "../../_lib/dictionary";
@@ -52,17 +57,9 @@ export type PODetail = {
   }>;
 };
 
-function VarianceBadge({
-  variance,
-}: {
-  variance: number;
-}) {
+function VarianceBadge({ variance }: { variance: number }) {
   const variant =
-    variance > 0
-      ? "destructive"
-      : variance < 0
-        ? "success"
-        : "secondary";
+    variance > 0 ? "destructive" : variance < 0 ? "success" : "secondary";
   return (
     <Badge variant={variant}>
       {variance > 0 ? "+" : ""}
@@ -132,192 +129,216 @@ export function PODetailClient({ po }: { po: PODetail }) {
         {tRoute("/inventory/purchase-orders", "heading")}
       </Link>
 
-      <PageHeader
-        eyebrow="Nhập hàng HQ"
-        title={po.code}
-        description={`${po.supplier} • ${po.date} • Gửi NCC ${po.sentAt} • Bước mở đầu của hub procurement`}
-        actions={
-          <Badge variant={getInventoryStatusBadgeVariant(po.status)}>
-            {getInventoryStatusLabel(po.status)}
-          </Badge>
-        }
-      />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-muted-foreground">
+            Nhập hàng HQ
+          </p>
+          <div className="space-y-1">
+            <h1 className="text-3xl font-semibold tracking-tight">{po.code}</h1>
+            <p className="text-sm text-muted-foreground">
+              {`${po.supplier} • ${po.date} • Gửi NCC ${po.sentAt} • Bước mở đầu của hub procurement`}
+            </p>
+          </div>
+        </div>
+        <Badge variant={getInventoryStatusBadgeVariant(po.status)}>
+          {getInventoryStatusLabel(po.status)}
+        </Badge>
+      </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="app-stat">
-          <p className="app-kicker">Nhà cung cấp</p>
+        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            Nhà cung cấp
+          </p>
           <p className="mt-3 text-xl font-semibold">{po.supplier}</p>
         </div>
-        <div className="app-stat">
-          <p className="app-kicker">Tổng tiền hàng</p>
-          <p className="mt-3 text-xl font-semibold">{formatVND(po.total)} VNĐ</p>
+        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            Tổng tiền hàng
+          </p>
+          <p className="mt-3 text-xl font-semibold">
+            {formatVND(po.total)} VNĐ
+          </p>
         </div>
-        <div className="app-stat">
-          <p className="app-kicker">Tổng cộng</p>
+        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            Tổng cộng
+          </p>
           <p className="mt-3 text-2xl font-semibold text-primary">
-            {formatVND(po.grandTotal)} <span className="text-xs font-normal">VNĐ</span>
+            {formatVND(po.grandTotal)}{" "}
+            <span className="text-xs font-normal">VNĐ</span>
           </p>
         </div>
       </div>
 
-      <SectionCard density="compact">
-        <div className="flex justify-center py-2">
-          <TimelineStepper
-            steps={[
-              { label: "Nháp", date: po.date, completed: true },
-              {
-                label: "Đã gửi",
-                date: po.sentAt,
-                completed: po.status !== "draft",
-              },
-              { label: "Chờ kiểm nhận", active: po.status === "sent" },
-              { label: "Đã có GRN" },
-            ]}
-          />
-        </div>
-      </SectionCard>
+      <Card>
+        <CardContent className="py-6">
+          <div className="flex justify-center">
+            <TimelineStepper
+              steps={[
+                { label: "Nháp", date: po.date, completed: true },
+                {
+                  label: "Đã gửi",
+                  date: po.sentAt,
+                  completed: po.status !== "draft",
+                },
+                { label: "Chờ kiểm nhận", active: po.status === "sent" },
+                { label: "Đã có GRN" },
+              ]}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <SectionCard
-            title="Danh mục đặt mua"
-            description={`${po.items.length} mặt hàng trong đơn mua này trước khi chuyển sang bước GRN.`}
-            className="overflow-hidden"
-            density="compact"
-          >
-
-            <div className="space-y-3 md:hidden">
-              {po.items.map((item) => (
-                <div
-                  key={item.sku}
-                  className="app-subpanel p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-bold">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.sku}
-                      </p>
+          <Card className="overflow-hidden">
+            <CardHeader className="gap-1">
+              <CardTitle>Danh mục đặt mua</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {`${po.items.length} mặt hàng trong đơn mua này trước khi chuyển sang bước GRN.`}
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="space-y-3 p-6 md:hidden">
+                {po.items.map((item) => (
+                  <div
+                    key={item.sku}
+                    className="rounded-lg border bg-muted/30 text-card-foreground p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-bold">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.sku}
+                        </p>
+                      </div>
+                      <VarianceBadge variance={item.variance} />
                     </div>
-                    <VarianceBadge variance={item.variance} />
+                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Số lượng</p>
+                        <p className="font-semibold">
+                          {item.qty} {item.unit}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Đơn giá</p>
+                        <p className="font-semibold">
+                          {formatVND(item.price)}đ
+                        </p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Thành tiền</p>
+                        <p className="font-semibold text-primary">
+                          {formatVND(item.total)}đ
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Số lượng</p>
-                      <p className="font-semibold">
-                        {item.qty} {item.unit}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Đơn giá</p>
-                      <p className="font-semibold">{formatVND(item.price)}đ</p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-muted-foreground">Thành tiền</p>
-                      <p className="font-semibold text-primary">
-                        {formatVND(item.total)}đ
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
 
-            <div className="hidden md:block">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/40">
-                    {[
-                      { label: "Mặt hàng", align: "" },
-                      { label: "Số lượng", align: "text-right" },
-                      { label: "Đơn giá", align: "text-right" },
-                      { label: "Thành tiền", align: "text-right" },
-                      { label: "Biến động giá", align: "text-right" },
-                    ].map((h) => (
-                      <TableHead
-                        key={h.label}
-                        className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${h.align}`}
-                      >
-                        {h.label}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {po.items.map((item) => (
-                    <TableRow
-                      key={item.sku}
-                      className="group transition-colors"
-                    >
-                      <TableCell className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className="font-bold">{item.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {item.sku}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
-                        {item.qty}
-                      </TableCell>
-                      <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
-                        {formatVND(item.price)}đ
-                      </TableCell>
-                      <TableCell className="px-6 py-4 text-right font-mono tabular-nums font-semibold">
-                        {formatVND(item.total)}đ
-                      </TableCell>
-                      <TableCell className="px-6 py-4 text-right">
-                        <VarianceBadge variance={item.variance} />
-                      </TableCell>
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40">
+                      {[
+                        { label: "Mặt hàng", align: "" },
+                        { label: "Số lượng", align: "text-right" },
+                        { label: "Đơn giá", align: "text-right" },
+                        { label: "Thành tiền", align: "text-right" },
+                        { label: "Biến động giá", align: "text-right" },
+                      ].map((h) => (
+                        <TableHead
+                          key={h.label}
+                          className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${h.align}`}
+                        >
+                          {h.label}
+                        </TableHead>
+                      ))}
                     </TableRow>
-                  ))}
-                </TableBody>
-                <TableFooter>
-                  <TableRow className="border-border">
-                    <TableCell
-                      colSpan={3}
-                      className="px-6 py-3 text-right text-sm text-muted-foreground"
-                    >
-                      Tổng tiền hàng
-                    </TableCell>
-                    <TableCell className="px-6 py-3 text-right font-mono tabular-nums font-semibold">
-                      {formatVND(po.total)}đ
-                    </TableCell>
-                    <TableCell />
-                  </TableRow>
-                  <TableRow className="border-border">
-                    <TableCell
-                      colSpan={3}
-                      className="px-6 py-3 text-right text-sm text-muted-foreground"
-                    >
-                      Thuế (VAT 8%)
-                    </TableCell>
-                    <TableCell className="px-6 py-3 text-right font-mono tabular-nums">
-                      {formatVND(po.tax)}đ
-                    </TableCell>
-                    <TableCell />
-                  </TableRow>
-                  <TableRow className="border-border">
-                    <TableCell
-                      colSpan={3}
-                      className="px-6 py-3 text-right text-sm font-bold"
-                    >
-                      Tổng cộng
-                    </TableCell>
-                    <TableCell className="px-6 py-3 text-right font-mono tabular-nums font-bold text-primary">
-                      {formatVND(po.grandTotal)}đ
-                    </TableCell>
-                    <TableCell />
-                  </TableRow>
-                </TableFooter>
-              </Table>
-            </div>
-          </SectionCard>
+                  </TableHeader>
+                  <TableBody>
+                    {po.items.map((item) => (
+                      <TableRow
+                        key={item.sku}
+                        className="group transition-colors"
+                      >
+                        <TableCell className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="font-bold">{item.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {item.sku}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
+                          {item.qty}
+                        </TableCell>
+                        <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
+                          {formatVND(item.price)}đ
+                        </TableCell>
+                        <TableCell className="px-6 py-4 text-right font-mono tabular-nums font-semibold">
+                          {formatVND(item.total)}đ
+                        </TableCell>
+                        <TableCell className="px-6 py-4 text-right">
+                          <VarianceBadge variance={item.variance} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow className="border-border">
+                      <TableCell
+                        colSpan={3}
+                        className="px-6 py-3 text-right text-sm text-muted-foreground"
+                      >
+                        Tổng tiền hàng
+                      </TableCell>
+                      <TableCell className="px-6 py-3 text-right font-mono tabular-nums font-semibold">
+                        {formatVND(po.total)}đ
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                    <TableRow className="border-border">
+                      <TableCell
+                        colSpan={3}
+                        className="px-6 py-3 text-right text-sm text-muted-foreground"
+                      >
+                        Thuế (VAT 8%)
+                      </TableCell>
+                      <TableCell className="px-6 py-3 text-right font-mono tabular-nums">
+                        {formatVND(po.tax)}đ
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                    <TableRow className="border-border">
+                      <TableCell
+                        colSpan={3}
+                        className="px-6 py-3 text-right text-sm font-bold"
+                      >
+                        Tổng cộng
+                      </TableCell>
+                      <TableCell className="px-6 py-3 text-right font-mono tabular-nums font-bold text-primary">
+                        {formatVND(po.grandTotal)}đ
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                  </TableFooter>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="space-y-4">
-          <SectionCard title="Tóm tắt đơn mua" density="compact">
-            <div className="space-y-3 text-sm">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Tóm tắt đơn mua</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">Số mặt hàng</span>
                 <span className="font-semibold">{po.items.length}</span>
@@ -336,37 +357,48 @@ export function PODetailClient({ po }: { po: PODetail }) {
                   {formatVND(po.grandTotal)}đ
                 </p>
               </div>
-            </div>
-          </SectionCard>
+            </CardContent>
+          </Card>
 
-          <SectionCard title="Thông tin NCC" density="compact">
-            {supplierInfoAvailable ? (
-              <div className="space-y-3 text-sm">
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Địa chỉ xuất hóa đơn
-                  </p>
-                  <p className="mt-1 font-medium">{po.supplierInfo.address}</p>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Thông tin NCC</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {supplierInfoAvailable ? (
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Địa chỉ xuất hóa đơn
+                    </p>
+                    <p className="mt-1 font-medium">
+                      {po.supplierInfo.address}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Người liên hệ
+                    </p>
+                    <p className="mt-1 font-medium">
+                      {po.supplierInfo.contact}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Hạn thanh toán
+                    </p>
+                    <p className="mt-1 font-medium">
+                      {po.supplierInfo.payment}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Người liên hệ
-                  </p>
-                  <p className="mt-1 font-medium">{po.supplierInfo.contact}</p>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  Chưa có thêm thông tin nhà cung cấp trong đơn mua này.
                 </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Hạn thanh toán
-                  </p>
-                  <p className="mt-1 font-medium">{po.supplierInfo.payment}</p>
-                </div>
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground">
-                Chưa có thêm thông tin nhà cung cấp trong đơn mua này.
-              </div>
-            )}
-          </SectionCard>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 

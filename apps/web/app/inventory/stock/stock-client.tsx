@@ -150,7 +150,7 @@ export function StockClient({
 
   return (
     <div className="space-y-6">
-      <Card className="app-panel">
+      <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1.5">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -179,7 +179,7 @@ export function StockClient({
       </Card>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <Card className="app-panel bg-primary text-primary-foreground">
+        <Card className="rounded-lg border bg-card text-card-foreground shadow-sm bg-primary text-primary-foreground">
           <CardHeader>
             <div className="flex items-center gap-2 text-primary-foreground/80">
               <Wallet className="size-4" />
@@ -212,7 +212,7 @@ export function StockClient({
           </CardContent>
         </Card>
 
-        <Card className="app-panel">
+        <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">Phân loại nhanh</CardTitle>
             <CardDescription>
@@ -234,7 +234,7 @@ export function StockClient({
           </CardContent>
         </Card>
 
-        <Card className="app-panel">
+        <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="size-4" />
@@ -256,7 +256,7 @@ export function StockClient({
         </Card>
       </div>
 
-      <Card className="app-panel">
+      <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
         <CardHeader className="gap-4">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
@@ -267,7 +267,7 @@ export function StockClient({
               </CardDescription>
             </div>
             <div className="grid gap-3 xl:grid-cols-[minmax(0,320px)_auto]">
-              <div className="app-subpanel flex h-11 items-center gap-3 px-3">
+              <div className="rounded-lg border bg-muted/30 text-card-foreground flex h-11 items-center gap-3 px-3">
                 <Search className="size-4 shrink-0 text-muted-foreground" />
                 <Input
                   value={searchQuery}

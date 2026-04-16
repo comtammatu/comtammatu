@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
-import { PageContainer, PageHeader } from "@/components/patterns";
 import { StaffTable } from "./staff-table";
 import { StaffFilters } from "./staff-filters";
 import { AddStaffButton } from "./add-staff-button";
@@ -23,7 +23,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   // Fetch branches for filters + form
   const { data: branches } = await supabase
     .from("branches")
-    .select("id, name, is_headquarters")
+    .select("id, name, is_headquarters, branch_kind")
     .eq("is_active", true)
     .order("name");
 
@@ -62,16 +62,30 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   const branchOptions = branches ?? [];
 
   return (
-    <PageContainer>
-      <PageHeader
-        eyebrow="Nền tảng ERP"
-        title="Nhân viên"
-        actions={<AddStaffButton branches={branchOptions} />}
-      />
+    <div className="space-y-5 lg:space-y-6">
+      <Card>
+        <CardContent className="p-5 sm:p-6">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="space-y-3">
+              <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                Nền tảng ERP
+              </span>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                  Nhân viên
+                </h2>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 self-start">
+              <AddStaffButton branches={branchOptions} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       <Suspense>
         <StaffFilters branches={branchOptions} />
       </Suspense>
       <StaffTable staff={staff} branches={branchOptions} />
-    </PageContainer>
+    </div>
   );
 }

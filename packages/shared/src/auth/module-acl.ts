@@ -31,7 +31,7 @@ interface ModuleAcl {
 export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   dashboard: {
     path: "/admin/dashboard",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager", "warehouse_manager", "production_manager"],
     label: getModuleLabelVi("dashboard"),
   },
   menu: {
@@ -41,13 +41,13 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   inventory: {
     path: "/inventory",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager", "warehouse_manager", "production_manager"],
     label: getModuleLabelVi("inventory"),
   },
-  /** NCC, PO, GRN, HĐ NCC, công thức — vai trò trụ sở */
+  /** NCC, PO, GRN, HĐ NCC, công thức — kho tổng + bếp TT */
   inventory_procurement: {
     path: "/inventory/suppliers",
-    allowedRoles: ["owner", "super_manager"],
+    allowedRoles: ["owner", "super_manager", "warehouse_manager", "production_manager"],
     label: getModuleLabelVi("inventory_procurement"),
   },
   orders: {
@@ -77,7 +77,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   reports: {
     path: "/admin/reports",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager", "warehouse_manager", "production_manager"],
     label: getModuleLabelVi("reports"),
   },
   settings: {

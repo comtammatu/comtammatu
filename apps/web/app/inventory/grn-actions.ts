@@ -6,7 +6,7 @@ import { PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "../_lib/with-action";
 import { getAuthContext } from "./_lib/auth";
-import { fetchHeadquartersBranchId } from "./_lib/headquarters";
+import { fetchProcurementBranches } from "./_lib/procurement-branches";
 
 const ROLES = PROCUREMENT_ROLES;
 
@@ -166,6 +166,7 @@ export async function fetchGrnDetail(grnId: number): Promise<ActionResult> {
 
 const grnCreateSchema = z.object({
   supplierId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive().optional(),
   poId: z.coerce.number().int().positive().optional().nullable(),
   notes: z.string().optional(),
 });
@@ -173,16 +174,32 @@ const grnCreateSchema = z.object({
 export const createGrnDraft = withAction(
   { roles: ROLES, schema: grnCreateSchema },
   async (data, { supabase, claims, user }) => {
-    const hqId = await fetchHeadquartersBranchId(supabase, claims.tenant_id);
-    if (!hqId) {
-      return { success: false, error: "Chưa cấu hình chi nhánh Trụ sở." };
+    let targetBranchId = data.branchId;
+
+    if (!targetBranchId) {
+      const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
+      targetBranchId = branches[0]?.id;
     }
+
+    if (!targetBranchId) {
+      return { success: false, error: "Chưa cấu hình kho tổng hoặc bếp trung tâm." };
+    }
+
+    // Branch-scoped roles: must match their assigned branch
+    if (
+      (claims.user_role === "warehouse_manager" || claims.user_role === "production_manager") &&
+      claims.branch_id != null &&
+      claims.branch_id !== targetBranchId
+    ) {
+      return { success: false, error: "Bạn chỉ được tạo phiếu nhập cho kho của mình." };
+    }
+
     const grnNumber = `GRN-${randomUUID().slice(0, 8)}`;
     const { data: row, error } = await supabase
       .from("goods_received_notes")
       .insert({
         tenant_id: claims.tenant_id,
-        branch_id: hqId,
+        branch_id: targetBranchId,
         supplier_id: data.supplierId,
         po_id: data.poId ?? null,
         grn_number: grnNumber,
@@ -267,7 +284,10 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
     return { success: false, error: "Không thể xác nhận phiếu nhập." };
   }
 
-  // Auto-update PO status when a linked GRN is confirmed
+  // Auto-update PO status when a linked GRN is confirmed.
+  // NOTE: siblings fetch + PO update are not atomic. For a single-tenant restaurant
+  // the concurrent-confirm risk is negligible, but this should eventually move into
+  // the confirm_goods_receipt_note RPC to be fully atomic.
   const poId = grnMeta?.po_id ?? null;
   if (poId) {
     const { data: siblings } = await supabase
@@ -338,16 +358,29 @@ export async function createGrnFromPo(poId: number): Promise<ActionResult> {
     };
   }
 
-  const hqId = await fetchHeadquartersBranchId(supabase, claims.tenant_id);
-  if (!hqId)
-    return { success: false, error: "Chưa cấu hình chi nhánh Trụ sở." };
+  // Use PO's branch (it already points to a valid procurement branch)
+  const { data: poBranch } = await supabase
+    .from("purchase_orders")
+    .select("branch_id")
+    .eq("id", po.id)
+    .eq("tenant_id", claims.tenant_id)
+    .single();
+
+  let targetBranchId = poBranch?.branch_id;
+  if (!targetBranchId) {
+    // Fallback: first procurement branch
+    const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
+    targetBranchId = branches[0]?.id;
+  }
+  if (!targetBranchId)
+    return { success: false, error: "Chưa cấu hình kho tổng." };
 
   const grnNumber = `GRN-${randomUUID().slice(0, 8)}`;
   const { data, error } = await supabase
     .from("goods_received_notes")
     .insert({
       tenant_id: claims.tenant_id,
-      branch_id: hqId,
+      branch_id: targetBranchId,
       supplier_id: po.supplier_id,
       po_id: po.id,
       grn_number: grnNumber,

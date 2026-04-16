@@ -36,7 +36,7 @@ export async function MobileHeader() {
   return (
     <header className="sticky top-0 z-30 px-3 py-3 backdrop-blur sm:px-4 lg:px-6">
       <div className="mx-auto max-w-6xl">
-        <Card className="app-panel">
+        <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
           <CardContent className="p-4 sm:p-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-3">
@@ -49,7 +49,8 @@ export async function MobileHeader() {
                     {branchName ?? "Không gian cá nhân"}
                   </p>
                   <p className="text-sm leading-6 text-muted-foreground">
-                    Bắt đầu ca làm, xem lịch, chấm công và mở đúng workspace theo vai trò hiện tại.
+                    Bắt đầu ca làm, xem lịch, chấm công và mở đúng workspace
+                    theo vai trò hiện tại.
                   </p>
                 </div>
               </div>
