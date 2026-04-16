@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { SettingsSectionNav } from "./settings-section-nav";
 
 export default async function InventorySettingsLayout({
@@ -19,9 +20,11 @@ export default async function InventorySettingsLayout({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border bg-card px-4 py-4 shadow-sm sm:px-5">
-        <SettingsSectionNav role={role} />
-      </div>
+      <Card>
+        <CardContent className="px-4 py-4 sm:px-5">
+          <SettingsSectionNav role={role} />
+        </CardContent>
+      </Card>
       <div>{children}</div>
     </div>
   );

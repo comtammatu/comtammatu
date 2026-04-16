@@ -11,6 +11,7 @@ import {
   Users,
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
   CardContent,
@@ -59,7 +60,6 @@ const avatarColors = [
 ];
 
 export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
-  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const [rows, setRows] = useState(initial);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -122,14 +122,14 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             <CardDescription>Đối tác cung ứng.</CardDescription>
           </CardHeader>
         </Card>
-        <button
+        <Button
           type="button"
           onClick={openCreate}
-          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-[1.02]"
+          className="min-h-11 rounded-full px-6 font-bold shadow-lg"
         >
           <Plus className="size-4" />
           Thêm nhà cung cấp
-        </button>
+        </Button>
       </div>
 
       {/* Stats Grid */}
@@ -158,10 +158,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             value: String(suspended).padStart(2, "0"),
           },
         ].map((card) => (
-          <Card
-            key={card.label}
-            className={cn(panelClassName, "rounded-lg bg-card")}
-          >
+          <Card key={card.label} className="shadow-sm">
             <CardContent className="p-6">
               <div className="mb-4 flex items-start justify-between">
                 <div
@@ -192,7 +189,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
       </div>
 
       {/* Data Table */}
-      <div className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}>
+      <Card className="shadow-sm">
         {/* Search bar */}
         <div className="flex flex-wrap items-center gap-3 border-b border-border px-6 py-4">
           <Search className="size-4 shrink-0 text-muted-foreground" />
@@ -294,22 +291,25 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
                   </TableCell>
                   <TableCell className="px-6 py-5 text-right">
                     <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="icon"
                         onClick={() => openEdit(s)}
-                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         aria-label={`Sửa ${s.name}`}
                       >
                         <Pencil className="size-4" />
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="icon"
                         onClick={() => setDeleteConfirmId(s.id)}
-                        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full p-1.5 text-destructive transition-colors hover:bg-destructive/10"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                         aria-label={`Xóa ${s.name}`}
                       >
                         <Trash2 className="size-4" />
-                      </button>
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -329,7 +329,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             </span>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Create / Edit Dialog */}
       <SupplierDialog

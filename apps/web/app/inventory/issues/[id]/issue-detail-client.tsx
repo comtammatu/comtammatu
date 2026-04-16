@@ -4,7 +4,6 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle, PlusCircle, Trash2, X } from "lucide-react";
-import { cn } from "@comtammatu/ui";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +25,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
+  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -109,7 +109,6 @@ export function IssueDetailClient({
   ingredients: IngredientRow[];
 }) {
   const router = useRouter();
-  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const [issue, setIssue] = useState(initialIssue);
   const [lines, setLines] = useState(initialLines);
   const [isPending, startTransition] = useTransition();
@@ -194,7 +193,7 @@ export function IssueDetailClient({
           <ArrowLeft className="size-4" /> {tRoute("/inventory/issues")}
         </Link>
 
-        <Card className="border-border/70">
+        <Card>
           <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -230,20 +229,19 @@ export function IssueDetailClient({
               value: `${formatVND(totalAmount)}đ`,
             },
           ].map((item) => (
-            <div key={item.label} className={cn(panelClassName, "p-4")}>
-              <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                {item.label}
-              </p>
-              <p className="mt-1 text-sm font-semibold">{item.value}</p>
-            </div>
+            <Card key={item.label}>
+              <CardContent className="p-4">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                  {item.label}
+                </p>
+                <p className="mt-1 text-sm font-semibold">{item.value}</p>
+              </CardContent>
+            </Card>
           ))}
         </div>
 
         {issue.notes ? (
-          <SectionCard
-            className="rounded-lg border border-border bg-card"
-            density="compact"
-          >
+          <SectionCard density="compact">
             <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Ghi chú phiếu xuất
             </p>
@@ -251,8 +249,8 @@ export function IssueDetailClient({
           </SectionCard>
         ) : null}
 
-        <section className={cn(panelClassName, "overflow-hidden")}>
-          <div className="flex flex-col gap-4 border-b border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h4 className="text-lg font-bold">{tTerm("ingredientsList")}</h4>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -270,7 +268,7 @@ export function IssueDetailClient({
                 Thêm {tTerm("ingredient", "button").toLowerCase()}
               </Button>
             ) : null}
-          </div>
+          </CardHeader>
 
           {lines.length === 0 ? (
             <div className="px-6 py-10">
@@ -305,14 +303,16 @@ export function IssueDetailClient({
                         </p>
                       </div>
                       {isDraft ? (
-                        <button
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setPendingDeleteId(line.id)}
                           disabled={isPending}
-                          className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:opacity-60"
+                          className="text-muted-foreground hover:text-destructive"
                         >
                           <Trash2 className="size-4" />
-                        </button>
+                        </Button>
                       ) : null}
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -413,14 +413,16 @@ export function IssueDetailClient({
                         </TableCell>
                         <TableCell className="px-6 py-4 text-center">
                           {isDraft ? (
-                            <button
+                            <Button
                               type="button"
+                              variant="ghost"
+                              size="icon"
                               onClick={() => setPendingDeleteId(line.id)}
                               disabled={isPending}
-                              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:opacity-60"
+                              className="text-muted-foreground hover:text-destructive"
                             >
                               <Trash2 className="size-4" />
-                            </button>
+                            </Button>
                           ) : (
                             <span className="text-xs text-muted-foreground">
                               —
@@ -460,7 +462,7 @@ export function IssueDetailClient({
               </div>
             </div>
           </div>
-        </section>
+        </Card>
 
         {isDraft ? (
           <footer className="flex flex-col gap-4 border-t border-border py-6 md:flex-row md:items-center md:justify-between">
@@ -775,20 +777,16 @@ function AddIssueLineDialog({
           </div>
 
           <DialogFooter>
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={() => onOpenChange(false)}
-              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground"
             >
               Hủy
-            </button>
-            <button
-              type="submit"
-              disabled={isPending}
-              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" disabled={isPending}>
               {isPending ? "Đang lưu..." : "Lưu dòng"}
-            </button>
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

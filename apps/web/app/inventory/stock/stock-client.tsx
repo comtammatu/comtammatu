@@ -150,7 +150,7 @@ export function StockClient({
 
   return (
     <div className="space-y-6">
-      <Card className="border-border/70">
+      <Card>
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1.5">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -177,7 +177,7 @@ export function StockClient({
       </Card>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
-        <Card className="border-border/70 bg-primary text-primary-foreground">
+        <Card className="bg-primary text-primary-foreground">
           <CardHeader>
             <div className="flex items-center gap-2 text-primary-foreground/80">
               <Wallet className="size-4" />
@@ -210,7 +210,7 @@ export function StockClient({
           </CardContent>
         </Card>
 
-        <Card className="border-border/70">
+        <Card>
           <CardHeader>
             <CardTitle className="text-base">Phân loại nhanh</CardTitle>
             <CardDescription>
@@ -232,7 +232,7 @@ export function StockClient({
           </CardContent>
         </Card>
 
-        <Card className="border-border/70">
+        <Card>
           <CardHeader>
             <div className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="size-4" />
@@ -254,7 +254,7 @@ export function StockClient({
         </Card>
       </div>
 
-      <Card className="border-border/70">
+      <Card>
         <CardHeader className="gap-4">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
@@ -301,7 +301,7 @@ export function StockClient({
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-border/70">
+          <div className="overflow-x-auto rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/20 hover:bg-muted/20">

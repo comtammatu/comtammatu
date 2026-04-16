@@ -13,8 +13,8 @@ import {
   MoreVertical,
   Plus,
 } from "lucide-react";
-import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
   CardContent,
@@ -98,7 +98,6 @@ export function IssuesClient({
   const [issueType, setIssueType] = useState<IssueTypeValue>("consumption");
   const [notes, setNotes] = useState("");
   const [isPending, startTransition] = useTransition();
-  const panelClassName = "rounded-lg border bg-card shadow-sm";
 
   const filtered = useMemo(
     () =>
@@ -150,7 +149,7 @@ export function IssuesClient({
     <>
       <div className="space-y-6">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <Card className="flex-1 border-border/70">
+          <Card className="flex-1">
             <CardHeader>
               <CardTitle className="text-2xl">
                 {tRoute("/inventory/issues")}
@@ -161,34 +160,25 @@ export function IssuesClient({
             </CardHeader>
           </Card>
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 font-semibold shadow-sm transition-all"
-            >
+            <Button type="button" variant="outline">
               <FileDown className="size-4" />
-              <span>Xuất báo cáo</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setCreateOpen(true)}
-              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-lg transition-transform active:scale-[0.98]"
-            >
+              Xuất báo cáo
+            </Button>
+            <Button type="button" onClick={() => setCreateOpen(true)}>
               <Plus className="size-4" />
-              <span>Tạo phiếu mới</span>
-            </button>
+              Tạo phiếu mới
+            </Button>
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-          <Card className={panelClassName}>
+          <Card>
             <CardContent className="p-6">
               <div className="mb-4 flex items-start justify-between">
                 <div className="flex size-10 items-center justify-center rounded-xl bg-warning/12">
                   <ClipboardList className="size-5 text-warning" />
                 </div>
-                <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Tháng này
-                </span>
+                <Badge variant="secondary">Tháng này</Badge>
               </div>
               <h3 className="text-3xl font-black tracking-tight">
                 {issues.length}
@@ -199,15 +189,13 @@ export function IssuesClient({
             </CardContent>
           </Card>
 
-          <Card className={panelClassName}>
+          <Card>
             <CardContent className="p-6">
               <div className="mb-4 flex items-start justify-between">
                 <div className="flex size-10 items-center justify-center rounded-xl bg-success/12">
                   <ChefHat className="size-5 text-success" />
                 </div>
-                <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Cấp phát bếp
-                </span>
+                <Badge variant="secondary">Cấp phát bếp</Badge>
               </div>
               <h3 className="text-3xl font-black tracking-tight text-success">
                 {kitchenUseCount}
@@ -220,15 +208,13 @@ export function IssuesClient({
             </CardContent>
           </Card>
 
-          <Card className={panelClassName}>
+          <Card>
             <CardContent className="p-6">
               <div className="mb-4 flex items-start justify-between">
                 <div className="flex size-10 items-center justify-center rounded-xl bg-destructive/12">
                   <AlertTriangle className="size-5 text-destructive" />
                 </div>
-                <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Hư hỏng
-                </span>
+                <Badge variant="secondary">Hư hỏng</Badge>
               </div>
               <h3 className="text-3xl font-black tracking-tight text-destructive">
                 {writeOffCount}
@@ -239,15 +225,13 @@ export function IssuesClient({
             </CardContent>
           </Card>
 
-          <Card className={panelClassName}>
+          <Card>
             <CardContent className="p-6">
               <div className="mb-4 flex items-start justify-between">
                 <div className="flex size-10 items-center justify-center rounded-xl bg-muted">
                   <Clock className="size-5 text-muted-foreground" />
                 </div>
-                <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Chờ duyệt
-                </span>
+                <Badge variant="secondary">Chờ duyệt</Badge>
               </div>
               <h3 className="text-3xl font-black tracking-tight">
                 {String(draftCount).padStart(2, "0")}
@@ -259,13 +243,8 @@ export function IssuesClient({
           </Card>
         </div>
 
-        <Card
-          className={cn(
-            panelClassName,
-            "items-center justify-between bg-muted px-6 py-4",
-          )}
-        >
-          <CardContent className="flex items-center justify-between gap-4 p-0">
+        <Card className="bg-muted">
+          <CardContent className="flex items-center justify-between gap-4 px-6 py-4">
             <div className="flex items-center gap-6">
               <div className="flex flex-col gap-1">
                 <label className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -308,9 +287,9 @@ export function IssuesClient({
                 />
               </div>
             </div>
-            <button
+            <Button
               type="button"
-              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex items-center gap-1 rounded-full px-2 text-sm font-medium text-primary hover:underline"
+              variant="link"
               onClick={() => {
                 setActiveStatus("all");
                 setActiveType("all");
@@ -318,11 +297,11 @@ export function IssuesClient({
             >
               <FilterX className="size-4" />
               Xoá bộ lọc
-            </button>
+            </Button>
           </CardContent>
         </Card>
 
-        <div className={cn(panelClassName, "overflow-hidden rounded-xl")}>
+        <Card className="overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40">
@@ -421,24 +400,16 @@ export function IssuesClient({
               Hiển thị {filtered.length} / {issues.length} phiếu
             </span>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
-              >
+              <Button type="button" variant="outline" size="sm">
                 ← Trước
-              </button>
-              <span className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                1
-              </span>
-              <button
-                type="button"
-                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground"
-              >
+              </Button>
+              <Badge variant="default">1</Badge>
+              <Button type="button" variant="outline" size="sm">
                 Sau →
-              </button>
+              </Button>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       <Dialog
@@ -503,20 +474,16 @@ export function IssuesClient({
             </div>
 
             <DialogFooter>
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={() => setCreateOpen(false)}
-                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground"
               >
                 Hủy
-              </button>
-              <button
-                type="submit"
-                disabled={isPending}
-                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-              >
+              </Button>
+              <Button type="submit" disabled={isPending}>
                 {isPending ? "Đang tạo..." : "Tạo phiếu"}
-              </button>
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

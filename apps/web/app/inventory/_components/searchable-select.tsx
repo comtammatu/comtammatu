@@ -3,6 +3,7 @@
 import { useState, type CSSProperties } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@comtammatu/ui";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Popover,
   PopoverContent,
@@ -51,20 +52,12 @@ export function SearchableSelect({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
+        <Button
           type="button"
           role="combobox"
           aria-expanded={open}
-          className={cn(
-            "inline-flex items-center gap-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-            variant === "default" &&
-              "rounded-xl border-none px-4 py-3 font-medium focus:outline-none focus:ring-0",
-            variant === "ghost" &&
-              "cursor-pointer border-none bg-transparent p-0 pr-1 focus:ring-0",
-            variant === "pill" &&
-              "rounded-lg border-none px-4 py-2 focus:outline-none focus:ring-0",
-            className,
-          )}
+          variant={variant === "ghost" ? "ghost" : "outline"}
+          className={cn("justify-between", className)}
           style={style}
         >
           <span className={cn(!selected && "opacity-60")}>
@@ -76,10 +69,10 @@ export function SearchableSelect({
               open && "rotate-180",
             )}
           />
-        </button>
+        </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="rounded-xl border border-border bg-card p-0 shadow-lg"
+        className="p-0"
         align="start"
         style={{
           width: "var(--radix-popover-trigger-width)",

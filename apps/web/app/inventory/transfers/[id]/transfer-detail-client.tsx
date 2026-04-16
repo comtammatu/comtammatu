@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { ArrowLeft, MapPin, CheckCircle, Printer } from "lucide-react";
-import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
+  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -57,7 +57,6 @@ export function TransferDetailClient({
 }: {
   transfer: TransferDetail;
 }) {
-  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const receivedCount = transfer.items.filter(
     (item) => item.received != null,
   ).length;
@@ -89,30 +88,27 @@ export function TransferDetailClient({
       </Card>
 
       {/* Timeline */}
-      <section
-        className={cn(
-          panelClassName,
-          "flex justify-center overflow-hidden rounded-lg bg-card py-6",
-        )}
-      >
-        <TimelineStepper
-          steps={[
-            { label: "Nháp", completed: true },
-            { label: "Đã gửi", completed: transfer.status !== "draft" },
-            {
-              label: "Đang vận chuyển",
-              active: transfer.status === "in_transit",
-              completed:
-                transfer.status === "receiving" ||
-                transfer.status === "completed",
-            },
-            {
-              label: "Đã nhận",
-              completed: transfer.status === "completed",
-            },
-          ]}
-        />
-      </section>
+      <Card className="shadow-sm">
+        <CardContent className="flex justify-center py-6">
+          <TimelineStepper
+            steps={[
+              { label: "Nháp", completed: true },
+              { label: "Đã gửi", completed: transfer.status !== "draft" },
+              {
+                label: "Đang vận chuyển",
+                active: transfer.status === "in_transit",
+                completed:
+                  transfer.status === "receiving" ||
+                  transfer.status === "completed",
+              },
+              {
+                label: "Đã nhận",
+                completed: transfer.status === "completed",
+              },
+            ]}
+          />
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
@@ -142,17 +138,16 @@ export function TransferDetailClient({
             icon: null,
           },
         ].map((info) => (
-          <div
-            key={info.label}
-            className={cn(panelClassName, "rounded-lg bg-card p-4")}
-          >
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">
-              {info.label}
-            </p>
-            <p className="mt-1 flex items-center gap-1 text-sm font-semibold">
-              {info.icon} {info.value}
-            </p>
-          </div>
+          <Card key={info.label} className="shadow-sm">
+            <CardContent className="p-4">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                {info.label}
+              </p>
+              <p className="mt-1 flex items-center gap-1 text-sm font-semibold">
+                {info.icon} {info.value}
+              </p>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
@@ -172,20 +167,19 @@ export function TransferDetailClient({
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Items table */}
         <div className="lg:col-span-2">
-          <section
-            className={cn(panelClassName, "overflow-hidden rounded-lg bg-card")}
-          >
+          <Card className="shadow-sm">
             <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <h4 className="text-lg font-bold">{tTerm("ingredientsList")}</h4>
-              <button
+              <Button
                 type="button"
-                className="rounded-full bg-success/10 px-4 py-2 text-sm font-bold text-success transition-all"
+                variant="ghost"
+                className="font-bold text-success"
               >
                 Kiểm bổ sung
-              </button>
+              </Button>
             </div>
 
-            <div className="space-y-3 p-4 md:hidden">
+            <CardContent className="space-y-3 p-4 md:hidden">
               {transfer.items.map((item) => (
                 <div
                   key={item.sku || item.name}
@@ -198,9 +192,7 @@ export function TransferDetailClient({
                         {item.sku}
                       </p>
                     </div>
-                    <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
-                      {item.unit}
-                    </span>
+                    <Badge variant="secondary">{item.unit}</Badge>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div>
@@ -226,7 +218,7 @@ export function TransferDetailClient({
                   </div>
                 </div>
               ))}
-            </div>
+            </CardContent>
 
             <div className="hidden md:block">
               <Table>
@@ -275,9 +267,7 @@ export function TransferDetailClient({
                         {item.qty}
                       </TableCell>
                       <TableCell className="px-6 py-4">
-                        <span className="rounded bg-muted px-2 py-1 text-xs font-medium">
-                          {item.unit}
-                        </span>
+                        <Badge variant="secondary">{item.unit}</Badge>
                       </TableCell>
                       <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
                         {formatVND(item.cost)}
@@ -331,7 +321,7 @@ export function TransferDetailClient({
                 </TableFooter>
               </Table>
             </div>
-          </section>
+          </Card>
         </div>
 
         {/* Sidebar value card */}

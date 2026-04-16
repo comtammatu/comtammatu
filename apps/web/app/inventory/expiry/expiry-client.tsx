@@ -10,6 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@comtammatu/ui";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
@@ -41,19 +42,18 @@ export type ExpiryAlertRow = {
 
 const tabs = ["Tất cả", "expired", "critical", "warning"] as const;
 
-function getUrgencyBadgeClassName(urgency: string) {
+function getUrgencyBadgeVariant(urgency: string) {
   if (urgency === "expired") {
-    return "bg-destructive/10 text-destructive";
+    return "destructive" as const;
   }
   if (urgency === "critical") {
-    return "bg-primary/10 text-primary";
+    return "default" as const;
   }
-  return "bg-warning/12 text-warning";
+  return "warning" as const;
 }
 
 export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
   const [activeTab, setActiveTab] = useState<string>("Tất cả");
-  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const filtered =
     activeTab === "Tất cả"
       ? alerts
@@ -84,7 +84,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <Card className={cn(panelClassName, "rounded-lg bg-card")}>
+        <Card>
           <CardContent className="p-6">
             <div className="mb-4 flex items-start justify-between">
               <div className="flex size-10 items-center justify-center rounded-xl bg-destructive/12">
@@ -103,7 +103,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
           </CardContent>
         </Card>
 
-        <Card className={cn(panelClassName, "rounded-lg bg-card")}>
+        <Card>
           <CardContent className="p-6">
             <div className="mb-4 flex items-start justify-between">
               <div className="flex size-10 items-center justify-center rounded-xl bg-primary/12">
@@ -122,7 +122,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
           </CardContent>
         </Card>
 
-        <Card className={cn(panelClassName, "rounded-lg bg-card")}>
+        <Card>
           <CardContent className="p-6">
             <div className="mb-4 flex items-start justify-between">
               <div className="flex size-10 items-center justify-center rounded-xl bg-warning/12">
@@ -146,24 +146,23 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
         {tabs.map((tab) => {
           const isActive = activeTab === tab;
           return (
-            <button
+            <Button
               key={tab}
               type="button"
+              variant={isActive ? "secondary" : "ghost"}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background inline-flex rounded-full whitespace-nowrap flex-1 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-white font-bold text-primary shadow-sm"
-                  : "text-muted-foreground",
+                "flex-1 rounded-xl",
+                isActive && "font-bold shadow-sm",
               )}
             >
               {tab === "Tất cả" ? "Tất cả" : tStatus(tab, "tab")}
-            </button>
+            </Button>
           );
         })}
       </div>
 
-      <div className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}>
+      <Card className="overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40">
@@ -198,16 +197,11 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
                   {item.expiryDate}
                 </TableCell>
                 <TableCell className="px-6 py-5 text-center">
-                  <span
-                    className={cn(
-                      "inline-flex whitespace-nowrap items-center rounded-full px-2.5 py-1 text-xs font-bold",
-                      getUrgencyBadgeClassName(item.urgency),
-                    )}
-                  >
+                  <Badge variant={getUrgencyBadgeVariant(item.urgency)}>
                     {item.daysLeft <= 0
                       ? `Đã hết hạn ${Math.abs(item.daysLeft)} ngày`
                       : `Còn ${item.daysLeft} ngày`}
-                  </span>
+                  </Badge>
                 </TableCell>
                 <TableCell className="px-6 py-5 font-mono text-sm text-primary">
                   {item.grnCode}
@@ -230,33 +224,37 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
             ))}
           </TableBody>
         </Table>
-      </div>
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-          <Lightbulb className="mt-0.5 size-5 shrink-0 text-primary" />
-          <div>
-            <p className="text-sm font-semibold">Gợi ý tối ưu hóa</p>
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="flex items-start gap-3 p-4">
+            <Lightbulb className="mt-0.5 size-5 shrink-0 text-primary" />
+            <div>
+              <p className="text-sm font-semibold">Gợi ý tối ưu hóa</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Dựa trên dữ liệu 30 ngày qua, tỷ lệ hàng quá hạn tại CN Quận 1 cao
+                hơn 15% so với trung bình. Hệ thống đề xuất điều chuyển nguyên
+                liệu sớm sang các chi nhánh có lượng tiêu thụ cao hơn.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-muted/50">
+          <CardContent className="p-4">
+            <p className="text-sm font-semibold">Thông báo tự động</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Dựa trên dữ liệu 30 ngày qua, tỷ lệ hàng quá hạn tại CN Quận 1 cao
-              hơn 15% so với trung bình. Hệ thống đề xuất điều chuyển nguyên
-              liệu sớm sang các chi nhánh có lượng tiêu thụ cao hơn.
+              Cài đặt nhắc báo qua Email hoặc Zalo cho quản lý kho khi hàng hóa
+              còn dưới 5 ngày sử dụng.
             </p>
-          </div>
-        </div>
-        <div className="rounded-xl border border-border bg-muted/50 p-4">
-          <p className="text-sm font-semibold">Thông báo tự động</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Cài đặt nhắc báo qua Email hoặc Zalo cho quản lý kho khi hàng hóa
-            còn dưới 5 ngày sử dụng.
-          </p>
-          <div className="mt-2 flex items-center gap-2">
-            <Bell className="size-4 text-success" />
-            <span className="text-xs font-medium text-success">
-              Đã bật Email
-            </span>
-          </div>
-        </div>
+            <div className="mt-2 flex items-center gap-2">
+              <Bell className="size-4 text-success" />
+              <span className="text-xs font-medium text-success">
+                Đã bật Email
+              </span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

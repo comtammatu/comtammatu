@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
   CardContent,
@@ -46,7 +47,6 @@ export type GrnRow = {
 export function GrnListClient({ grns }: { grns: GrnRow[] }) {
   const totalValue = grns.reduce((s, g) => s + g.total, 0);
   const pendingCount = grns.filter((g) => g.status === "pending").length;
-  const panelClassName = "rounded-lg border bg-card shadow-sm";
 
   return (
     <div className="space-y-6">
@@ -58,32 +58,28 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
           </CardHeader>
         </Card>
         <div className="flex items-center gap-3">
-          <button
+          <Button
             type="button"
-            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-11 items-center gap-2 rounded-full bg-muted px-5 py-2.5 font-semibold text-foreground transition-colors hover:bg-muted/80"
+            variant="secondary"
+            className="min-h-11 rounded-full px-5 py-2.5 font-semibold"
           >
             <Filter className="size-4" />
             Lọc dữ liệu
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-primary-foreground shadow-lg transition-transform hover:scale-[1.02]"
+            className="min-h-11 rounded-full px-6 py-2.5 font-bold shadow-lg transition-transform hover:scale-[1.02]"
           >
             <Plus className="size-4" />
             Tạo GRN
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Asymmetric Dashboard Highlights */}
       <div className="grid grid-cols-12 gap-6">
         {/* Pending Count */}
-        <Card
-          className={cn(
-            panelClassName,
-            "col-span-12 rounded-xl bg-card md:col-span-4",
-          )}
-        >
+        <Card className="col-span-12 md:col-span-4">
           <CardContent className="p-6">
             <div className="mb-4 flex items-center gap-4">
               <div className="flex size-12 items-center justify-center rounded-lg bg-info/12">
@@ -101,39 +97,36 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
         </Card>
 
         {/* Total Value Hero */}
-        <div
-          className={cn(
-            panelClassName,
-            "relative col-span-12 flex items-center justify-between overflow-hidden rounded-xl border-primary/15 bg-primary/5 p-6 md:col-span-8",
-          )}
-        >
-          <div className="z-10">
-            <div className="mb-2 text-sm font-semibold text-muted-foreground">
-              Giá trị nhập kho tháng này
+        <Card className="relative col-span-12 border-primary/15 bg-primary/5 md:col-span-8">
+          <CardContent className="flex items-center justify-between p-6">
+            <div className="z-10">
+              <div className="mb-2 text-sm font-semibold text-muted-foreground">
+                Giá trị nhập kho tháng này
+              </div>
+              <div className="mb-2 text-4xl font-black tracking-tight">
+                {formatVND(totalValue)}
+                <span className="ml-1 text-xl font-medium opacity-50">₫</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm font-semibold text-success">
+                <TrendingUp className="size-4" />
+                14.2% so với tháng trước
+              </div>
             </div>
-            <div className="mb-2 text-4xl font-black tracking-tight">
-              {formatVND(totalValue)}
-              <span className="ml-1 text-xl font-medium opacity-50">₫</span>
+            <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-10">
+              <Receipt className="size-24 text-success" />
             </div>
-            <div className="flex items-center gap-2 text-sm font-semibold text-success">
-              <TrendingUp className="size-4" />
-              14.2% so với tháng trước
-            </div>
-          </div>
-          <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-10">
-            <Receipt className="size-24 text-success" />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Table Section */}
-      <div className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}>
+      <Card className="overflow-hidden">
         {/* Table Toolbar */}
         <div className="flex items-center justify-between border-b border-border bg-muted/30 p-6">
           <div className="flex gap-4">
-            <span className="rounded-full bg-muted px-3 py-1 text-sm font-bold text-muted-foreground">
+            <Badge variant="secondary" className="px-3 py-1 font-bold">
               Tất cả ({grns.length})
-            </span>
+            </Badge>
             <span className="cursor-pointer px-3 py-1 text-sm font-medium text-muted-foreground opacity-60 hover:opacity-100">
               Mới nhất
             </span>
@@ -141,13 +134,14 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
               Giá trị cao
             </span>
           </div>
-          <button
+          <Button
             type="button"
-            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-10 items-center gap-1 rounded-full px-2 text-sm font-bold text-primary hover:underline"
+            variant="link"
+            className="min-h-10 font-bold"
           >
             Xuất báo cáo Excel
             <Download className="size-4" />
-          </button>
+          </Button>
         </div>
 
         <Table>
@@ -212,18 +206,20 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
                   </Badge>
                 </TableCell>
                 <TableCell className="px-8 py-6 text-right">
-                  <button
+                  <Button
                     type="button"
-                    className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-lg p-2 text-muted-foreground opacity-0 transition-all group-hover:opacity-100"
+                    variant="ghost"
+                    size="icon"
+                    className="opacity-0 transition-all group-hover:opacity-100"
                   >
                     <MoreVertical className="size-5" />
-                  </button>
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-      </div>
+      </Card>
     </div>
   );
 }

@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Card,
+  CardContent,
+} from "@comtammatu/ui/components/card";
 import { SectionCard } from "@/components/patterns";
 import {
   ArrowLeft,
@@ -11,7 +15,6 @@ import {
   AlertTriangle,
   X,
 } from "lucide-react";
-import { cn } from "@comtammatu/ui";
 import {
   Table,
   TableBody,
@@ -53,7 +56,6 @@ export type GRNDetail = {
 export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
   const qcPassed = grn.items.filter((i) => i.status === "pass").length;
   const qcWarning = grn.items.filter((i) => i.status === "warning").length;
-  const panelClassName = "rounded-lg border bg-card shadow-sm";
 
   return (
     <div className="space-y-6">
@@ -65,81 +67,78 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
       </Link>
 
       {/* Header Identity Card */}
-      <section
-        className={cn(
-          panelClassName,
-          "relative overflow-hidden bg-muted p-5 sm:p-6 lg:p-8",
-        )}
-      >
-        <div className="absolute right-5 top-5 sm:right-6 sm:top-6 lg:right-8 lg:top-8">
-          <Badge variant={getInventoryStatusBadgeVariant(grn.status)}>
-            {getInventoryStatusLabel(grn.status)}
-          </Badge>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8 lg:gap-12">
-          <div className="space-y-4">
-            <div>
-              <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                Mã phiếu nhập
-              </p>
-              <h3 className="text-3xl font-black tracking-tight">{grn.code}</h3>
-            </div>
-            <div>
-              <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                Mã PO
-              </p>
-              {grn.poCode && grn.poId ? (
-                <Link
-                  href={`/inventory/purchase-orders/${grn.poId}`}
-                  className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm font-semibold text-primary hover:underline"
-                >
-                  {grn.poCode}
-                </Link>
-              ) : (
-                <span className="text-muted-foreground">—</span>
-              )}
-            </div>
+      <Card className="relative bg-muted">
+        <CardContent className="p-5 sm:p-6 lg:p-8">
+          <div className="absolute right-5 top-5 sm:right-6 sm:top-6 lg:right-8 lg:top-8">
+            <Badge variant={getInventoryStatusBadgeVariant(grn.status)}>
+              {getInventoryStatusLabel(grn.status)}
+            </Badge>
           </div>
 
-          <div className="space-y-4 border-border md:border-l md:pl-8 lg:pl-12">
-            <div>
-              <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                Nhà cung cấp
-              </p>
-              <p className="font-semibold">{grn.supplier}</p>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8 lg:gap-12">
+            <div className="space-y-4">
+              <div>
+                <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
+                  Mã phiếu nhập
+                </p>
+                <h3 className="text-3xl font-black tracking-tight">{grn.code}</h3>
+              </div>
+              <div>
+                <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
+                  Mã PO
+                </p>
+                {grn.poCode && grn.poId ? (
+                  <Link
+                    href={`/inventory/purchase-orders/${grn.poId}`}
+                    className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm font-semibold text-primary hover:underline"
+                  >
+                    {grn.poCode}
+                  </Link>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </div>
             </div>
-            <div>
-              <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                Ngày nhập
-              </p>
-              <p className="font-semibold">{grn.date}</p>
-            </div>
-          </div>
 
-          <div className="space-y-4 border-border md:border-l md:pl-8 lg:pl-12">
-            <div>
-              <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                Tổng giá trị nhập
-              </p>
-              <p className="text-2xl font-black text-primary">
-                {formatVND(grn.total)}{" "}
-                <span className="text-xs font-normal">VNĐ</span>
-              </p>
+            <div className="space-y-4 border-border md:border-l md:pl-8 lg:pl-12">
+              <div>
+                <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
+                  Nhà cung cấp
+                </p>
+                <p className="font-semibold">{grn.supplier}</p>
+              </div>
+              <div>
+                <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
+                  Ngày nhập
+                </p>
+                <p className="font-semibold">{grn.date}</p>
+              </div>
             </div>
-            <div>
-              <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                Thuế (VAT)
-              </p>
-              <p className="font-semibold">{formatVND(grn.tax)} VNĐ</p>
+
+            <div className="space-y-4 border-border md:border-l md:pl-8 lg:pl-12">
+              <div>
+                <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
+                  Tổng giá trị nhập
+                </p>
+                <p className="text-2xl font-black text-primary">
+                  {formatVND(grn.total)}{" "}
+                  <span className="text-xs font-normal">VNĐ</span>
+                </p>
+              </div>
+              <div>
+                <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
+                  Thuế (VAT)
+                </p>
+                <p className="font-semibold">{formatVND(grn.tax)} VNĐ</p>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <section className={cn(panelClassName, "overflow-hidden")}>
+          <Card className="overflow-hidden">
             <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <h4 className="text-lg font-bold">Danh sách mặt hàng nhập</h4>
               <span className="text-xs font-medium text-muted-foreground">
@@ -275,13 +274,13 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
                 </TableBody>
               </Table>
             </div>
-          </section>
+          </Card>
         </div>
 
         {/* Sidebar -- 1/3 */}
         <div className="space-y-4">
           {/* Quality Summary */}
-          <SectionCard className={panelClassName} density="compact">
+          <SectionCard density="compact">
             <div className="-m-5 border-b border-border px-5 py-5 md:-m-6 md:px-6 md:py-6">
               <h4 className="text-sm font-bold">Tổng hợp chất lượng</h4>
             </div>
@@ -309,7 +308,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
 
           {/* Total value card */}
           <SectionCard
-            className="rounded-lg border-primary/20 bg-primary/5"
+            className="border-primary/20 bg-primary/5"
             density="compact"
           >
             <p className="text-xs uppercase tracking-wider text-muted-foreground">

@@ -1,6 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
+import {
+  Card,
+  CardContent,
+} from "@comtammatu/ui/components/card";
 import { SectionCard } from "@/components/patterns";
 import type { ProductionOrderRow } from "./production-types";
 
@@ -32,37 +36,43 @@ export function ProductionStats({
     <>
       {readinessMessage && (
         <SectionCard
-          className="rounded-lg border-warning/20 bg-warning/10"
+          className="border-warning/20 bg-warning/10"
           density="compact"
         >
           {readinessMessage}
         </SectionCard>
       )}
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-lg border bg-card p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Lệnh nháp
-          </p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums">
-            {totals.draft}
-          </p>
-        </div>
-        <div className="rounded-lg border bg-card p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Đã hoàn tất
-          </p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums">
-            {totals.completed}
-          </p>
-        </div>
-        <div className="rounded-lg border bg-card p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Đã hủy
-          </p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums">
-            {totals.cancelled}
-          </p>
-        </div>
+        <Card>
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Lệnh nháp
+            </p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {totals.draft}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Đã hoàn tất
+            </p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {totals.completed}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Đã hủy
+            </p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {totals.cancelled}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl p-4">

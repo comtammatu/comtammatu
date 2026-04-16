@@ -14,6 +14,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
+  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -39,8 +40,9 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { cn } from "@comtammatu/ui";
+
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { cn } from "@comtammatu/ui";
 import { SectionCard } from "@/components/patterns";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
@@ -119,7 +121,6 @@ export function StocktakeDetailClient({
   const [savedLines, setSavedLines] = useState<Set<number>>(new Set());
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const panelClassName = "rounded-lg border bg-card shadow-sm";
 
   const meta = STATUS_META[session.status] ?? {
     label: session.status,
@@ -325,12 +326,12 @@ export function StocktakeDetailClient({
             value: String(varianceCount).padStart(2, "0"),
           },
         ].map((item) => (
-          <div key={item.label} className={cn(panelClassName, "p-4")}>
+          <Card key={item.label}><CardContent className="p-4">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">
               {item.label}
             </p>
             <p className="mt-1 text-sm font-semibold">{item.value}</p>
-          </div>
+          </CardContent></Card>
         ))}
       </div>
 

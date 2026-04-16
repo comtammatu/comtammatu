@@ -55,7 +55,6 @@ export type TransferRow = {
 };
 
 export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
-  const panelClassName = "rounded-lg border bg-card shadow-sm";
   const [statusFilter, setStatusFilter] = useState("all");
   const [branchFilter, setBranchFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -131,13 +130,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
             value: String(receivedCount).padStart(2, "0"),
           },
         ].map((card) => (
-          <Card
-            key={card.label}
-            className={cn(
-              panelClassName,
-              "flex items-center gap-5 rounded-lg bg-card",
-            )}
-          >
+          <Card key={card.label} className="flex items-center gap-5 shadow-sm">
             <CardContent className="flex items-center gap-5 p-6">
               <div
                 className={cn(
@@ -159,7 +152,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
         ))}
       </div>
 
-      <Card className={cn(panelClassName, "border-border/70")}>
+      <Card className="border-border/70">
         <CardContent className="p-4">
           <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_220px_220px_auto] xl:items-center">
             <div className="relative min-w-0">
@@ -207,9 +200,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
       </Card>
 
       {/* Data Table */}
-      <Card
-        className={cn(panelClassName, "overflow-hidden rounded-xl bg-card")}
-      >
+      <Card className="shadow-sm">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -294,7 +285,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
       </Card>
 
       {/* Operational insight */}
-      <Card className="rounded-lg border-info/20 bg-info/8">
+      <Card className="border-info/20 bg-info/8">
         <CardContent className="p-5">
           <div className="flex items-start gap-3">
             <Lightbulb className="mt-0.5 size-5 shrink-0 text-info" />

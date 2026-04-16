@@ -116,7 +116,6 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
     areaRows?.reduce((sum, row) => sum + Number(row.totalValue), 0) ?? 0;
   const branchTotal =
     branchRows?.reduce((sum, row) => sum + Number(row.totalValue), 0) ?? 0;
-  const sectionCardClassName = "space-y-4 overflow-hidden rounded-lg";
   const summaryBoxClassName = "rounded-lg bg-muted/25 px-4 py-4";
 
   return (
@@ -130,7 +129,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
         </div>
         <div className="flex items-center gap-2">
           {tabCount > 1 && (
-            <TabsList className="h-auto justify-start gap-2 overflow-x-auto rounded-lg border border-border/70 bg-muted/40 p-2">
+            <TabsList className="h-auto justify-start gap-2 overflow-x-auto rounded-lg border bg-muted/40 p-2">
               {visibility.system && (
                 <TabsTrigger value="system">Toàn hệ thống</TabsTrigger>
               )}
@@ -159,10 +158,10 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
 
       {visibility.system && (
         <TabsContent value="system" className="mt-3">
-          <Card className="rounded-xl border-border/70">
+          <Card>
             <CardContent className="space-y-4 pt-6">
               <div className="grid gap-3 sm:grid-cols-2">
-                <Card className="rounded-lg border-border/70 bg-muted/25">
+                <Card className="bg-muted/25">
                   <CardContent className="p-4">
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                       Giá trị hiện tại
@@ -172,7 +171,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="rounded-lg border-border/70 bg-muted/25">
+                <Card className="bg-muted/25">
                   <CardContent className="p-4">
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                       Phạm vi xem
@@ -200,7 +199,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
           ) : areaRows.length === 0 ? (
             <EmptyStatePanel className="py-10" title={APP_COPY_VI.noAreaData} />
           ) : isMobile ? (
-            <Card className={sectionCardClassName}>
+            <Card className="overflow-hidden">
               <CardContent className="space-y-4 p-4 md:p-5">
                 <div className={summaryBoxClassName}>
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
@@ -228,7 +227,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               </CardContent>
             </Card>
           ) : (
-            <Card className={sectionCardClassName}>
+            <Card className="overflow-hidden">
               <CardContent className="space-y-4 p-4 md:p-5">
                 <div className={summaryBoxClassName}>
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
@@ -282,7 +281,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               title={APP_COPY_VI.noScopedBranches}
             />
           ) : isMobile ? (
-            <Card className={sectionCardClassName}>
+            <Card className="overflow-hidden">
               <CardContent className="space-y-4 p-4 md:p-5">
                 <div className={summaryBoxClassName}>
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
@@ -310,7 +309,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               </CardContent>
             </Card>
           ) : (
-            <Card className={sectionCardClassName}>
+            <Card className="overflow-hidden">
               <CardContent className="space-y-4 p-4 md:p-5">
                 <div className={summaryBoxClassName}>
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">

@@ -1,5 +1,6 @@
 import { cn } from "@comtammatu/ui";
 import type { ReactNode } from "react";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { TableCell, TableRow } from "@comtammatu/ui/components/table";
 import type { EmptyStateMode } from "@/components/patterns";
 
@@ -33,21 +34,23 @@ export function TableEmptyStateRow({
         colSpan={colSpan}
         className={cn(paddingClassName, "text-center")}
       >
-        <div className="mx-auto flex max-w-sm flex-col items-center gap-3 rounded-lg border bg-background px-4 py-6">
-          {icon ? (
-            <div className="flex size-11 items-center justify-center rounded-full border bg-muted/40 text-muted-foreground">
-              {icon}
-            </div>
-          ) : null}
-          <p className="text-sm font-semibold text-foreground">
-            {resolvedTitle}
-          </p>
-          {description ? (
-            <p className="text-xs leading-5 text-muted-foreground">
-              {description}
+        <Card className="mx-auto max-w-sm">
+          <CardContent className="flex flex-col items-center gap-3 py-6">
+            {icon ? (
+              <div className="flex size-11 items-center justify-center rounded-full border bg-muted text-muted-foreground">
+                {icon}
+              </div>
+            ) : null}
+            <p className="text-sm font-semibold text-foreground">
+              {resolvedTitle}
             </p>
-          ) : null}
-        </div>
+            {description ? (
+              <p className="text-xs leading-5 text-muted-foreground">
+                {description}
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
       </TableCell>
     </TableRow>
   );
