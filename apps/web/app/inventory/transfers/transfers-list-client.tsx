@@ -7,12 +7,7 @@ import { ArrowRight, MoveRight, Plus, Search } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   Table,
@@ -23,12 +18,12 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { cn } from "@comtammatu/ui";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
 import { fetchStockTransfers } from "../transfer-actions";
 import { CreateTransferDialog } from "./create-transfer-dialog";
 import type { BranchForTransfer } from "./create-transfer-dialog";
 import type { IngredientRow } from "../page";
+import { InventoryHeader } from "../_components/inventory-header";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 
 export type { BranchForTransfer };
@@ -50,30 +45,12 @@ export interface TransferListRow {
 }
 
 const STATUS_META: Record<string, { label: string; className: string }> = {
-  draft: {
-    label: "Nháp",
-    className: "bg-muted text-muted-foreground",
-  },
-  confirmed_ship: {
-    label: "Đã xuất kho",
-    className: "bg-info/10 text-info border-info/30",
-  },
-  in_transit: {
-    label: "Đang vận chuyển",
-    className: "bg-info/10 text-info border-info/30",
-  },
-  confirmed_receive: {
-    label: "Đang kiểm nhận",
-    className: "bg-warning/10 text-warning border-warning/30",
-  },
-  received: {
-    label: "Đã nhận",
-    className: "bg-success/10 text-success border-success/30",
-  },
-  cancelled: {
-    label: "Đã hủy",
-    className: "bg-destructive/10 text-destructive border-destructive/30",
-  },
+  draft: { label: "Nháp", className: "bg-muted text-muted-foreground" },
+  confirmed_ship: { label: "Đã xuất kho", className: "bg-info/10 text-info border-info/30" },
+  in_transit: { label: "Đang vận chuyển", className: "bg-info/10 text-info border-info/30" },
+  confirmed_receive: { label: "Đang kiểm nhận", className: "bg-warning/10 text-warning border-warning/30" },
+  received: { label: "Đã nhận", className: "bg-success/10 text-success border-success/30" },
+  cancelled: { label: "Đã hủy", className: "bg-destructive/10 text-destructive border-destructive/30" },
 };
 
 export function TransfersListClient({
@@ -94,37 +71,26 @@ export function TransfersListClient({
   basePath?: string;
 }) {
   const router = useRouter();
-  const isMobile = useIsMobile();
   const [rows, setRows] = useState(initial);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
-  const isBranchManager = userRole === "branch_manager"
-    || userRole === "warehouse_manager"
-    || userRole === "production_manager";
   const canCreate = branches.length >= 2;
   const branchLabelById = useMemo(
-    () =>
-      new Map(
-        branches.map((branch) => [branch.id, formatBranchSiteLabel(branch)]),
-      ),
+    () => new Map(branches.map((b) => [b.id, formatBranchSiteLabel(b)])),
     [branches],
   );
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const r of rows) {
-      counts[r.status] = (counts[r.status] ?? 0) + 1;
-    }
+    for (const r of rows) counts[r.status] = (counts[r.status] ?? 0) + 1;
     return counts;
   }, [rows]);
 
   const filtered = useMemo(() => {
     let list = rows;
-    if (statusFilter) {
-      list = list.filter((r) => r.status === statusFilter);
-    }
+    if (statusFilter) list = list.filter((r) => r.status === statusFilter);
     const q = search.trim().toLowerCase();
     if (q) {
       list = list.filter(
@@ -146,297 +112,146 @@ export function TransfersListClient({
 
   return (
     <>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">
-            Transfer Monitor
-          </p>
-          <div className="space-y-1">
-            <h1 className="text-3xl font-semibold tracking-tight">
-              Luân chuyển nội bộ
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {isBranchManager
-                ? "Theo dõi hàng đến chi nhánh, xác nhận thực nhận và giữ liền mạch với bước cấp bếp."
-                : "Điều phối hàng giữa Trụ sở, bếp trung tâm và các kho vận hành. Hàng từ NCC vẫn chỉ nhập tại Trụ sở (PO/GRN)."}
-            </p>
-          </div>
-        </div>
-        {canCreate ? (
-          <Button type="button" onClick={() => setOpen(true)}>
-            <Plus className="mr-2 size-4" />
-            Tạo phiếu
-          </Button>
-        ) : null}
-      </div>
-
-      {!canCreate && !isBranchManager && (
-        <p className="text-sm text-warning">
-          Cần cấu hình Trụ sở và ít nhất một kho vận hành hoạt động.
-        </p>
-      )}
-      {isBranchManager && (
-        <p className="rounded-2xl border border-info/20 bg-info/5 px-4 py-3 text-sm text-muted-foreground">
-          Vai trò chi nhánh chỉ theo dõi và xác nhận hàng đến. Tạo mới
-          inter-site transfer vẫn thuộc tuyến HQ hoặc bếp trung tâm trong pilot
-          hiện tại.
-        </p>
-      )}
-
-      {/* Status count badges */}
-      <div className="flex flex-wrap gap-1.5">
-        {Object.entries(STATUS_META).map(([key, meta]) => {
-          const count = statusCounts[key] ?? 0;
-          if (count === 0) return null;
-          const isActive = statusFilter === key;
-          return (
-            <Button
-              key={key}
-              type="button"
-              variant="ghost"
-              size="xs"
-              onClick={() => setStatusFilter(isActive ? null : key)}
-              className="h-auto rounded-full p-0 transition-opacity hover:bg-transparent"
-            >
-              <Badge
-                className={cn(
-                  "text-xs cursor-pointer",
-                  isActive
-                    ? meta.className
-                    : "bg-muted/60 text-muted-foreground",
-                )}
-              >
-                {meta.label} {count}
-              </Badge>
+      <InventoryHeader
+        title="Điều chuyển nội bộ"
+        actions={
+          canCreate ? (
+            <Button size="sm" onClick={() => setOpen(true)}>
+              <Plus className="size-4" />
+              Tạo phiếu
             </Button>
-          );
-        })}
-        {statusFilter && (
-          <Button
-            type="button"
-            variant="link"
-            size="xs"
-            onClick={() => setStatusFilter(null)}
-            className="h-auto px-0 text-muted-foreground hover:text-foreground"
-          >
-            Xóa bộ lọc
-          </Button>
-        )}
-      </div>
-
-      <Card className="overflow-hidden rounded-lg">
-        <CardHeader className="gap-4">
-          <div className="space-y-1">
-            <CardTitle>Danh sách phiếu luân chuyển</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Giữ liền mạch hành trình xuất, vận chuyển, nhận và kiểm nhận giữa
-              các site.
-            </p>
+          ) : undefined
+        }
+      />
+      <div className="flex-1 overflow-auto p-4">
+        <div className="mx-auto max-w-7xl space-y-4">
+          {/* Status filter buttons */}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={statusFilter === null ? "default" : "outline"}
+              size="sm"
+              onClick={() => setStatusFilter(null)}
+            >
+              Tất cả
+              <Badge variant="secondary" className="ml-2">{rows.length}</Badge>
+            </Button>
+            {Object.entries(STATUS_META).map(([key, meta]) => {
+              const count = statusCounts[key] ?? 0;
+              if (count === 0) return null;
+              return (
+                <Button
+                  key={key}
+                  variant={statusFilter === key ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setStatusFilter(statusFilter === key ? null : key)}
+                >
+                  {meta.label}
+                  <Badge variant="secondary" className="ml-2">{count}</Badge>
+                </Button>
+              );
+            })}
           </div>
-          <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
-            <Search className="size-4 shrink-0 text-muted-foreground" />
-            <Input
-              placeholder="Tìm số phiếu hoặc tên kho…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
-            />
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {filtered.length} / {rows.length}
-            </span>
-          </CardContent></Card>
-        </CardHeader>
-        <CardContent className="p-0">
-          {/* Mobile card layout */}
-          {isMobile ? (
-            <div className="divide-y">
-              {filtered.length === 0 && (
-                <div className="px-4 py-16 text-center">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {search || statusFilter
-                      ? "Không tìm thấy phiếu nào"
-                      : "Chưa có phiếu luân chuyển"}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {search || statusFilter
-                      ? "Thử từ khóa khác"
-                      : isBranchManager
-                        ? "Phiếu điều chuyển đến sẽ xuất hiện tại đây để bạn xác nhận nhận hàng."
-                        : 'Nhấn "Tạo phiếu" để tạo phiếu luân chuyển đầu tiên'}
-                  </p>
-                </div>
-              )}
-              {filtered.map((r) => {
-                const meta = STATUS_META[r.status] ?? {
-                  label: r.status,
-                  className: "bg-muted text-muted-foreground",
-                };
-                return (
-                  <Link
-                    key={r.id}
-                    href={`${basePath}/${r.id}`}
-                    className="rounded-lg border bg-muted/30 text-card-foreground block px-4 py-3 transition-colors hover:border-primary/20"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-sm font-medium">
-                        {r.transfer_number}
-                      </span>
-                      <Badge className={cn("text-xs shrink-0", meta.className)}>
-                        {meta.label}
-                      </Badge>
-                    </div>
-                    <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <span>
-                        {branchLabelById.get(r.from_branch_id) ??
-                          r.from_branch_name}
-                      </span>
-                      <MoveRight className="size-3 shrink-0" />
-                      <span>
-                        {branchLabelById.get(r.to_branch_id) ??
-                          r.to_branch_name}
-                      </span>
-                      <span className="ml-auto tabular-nums">
-                        {new Date(r.created_at).toLocaleDateString("vi-VN", {
-                          day: "2-digit",
-                          month: "2-digit",
-                        })}
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          ) : (
-            /* Desktop table layout */
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/20 hover:bg-muted/20">
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    Số phiếu
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    Lộ trình
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    Trạng thái
-                  </TableHead>
-                  <TableHead className="hidden md:table-cell text-xs font-semibold uppercase tracking-wider">
-                    Ngày tạo
-                  </TableHead>
-                  <TableHead className="hidden lg:table-cell text-xs font-semibold uppercase tracking-wider">
-                    Ngày xuất / nhận
-                  </TableHead>
-                  <TableHead className="w-10" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.length === 0 && (
-                  <TableEmptyStateRow
-                    colSpan={6}
-                    paddingClassName="py-16"
-                    title={
-                      search || statusFilter
-                        ? "Không tìm thấy phiếu nào"
-                        : "Chưa có phiếu luân chuyển"
-                    }
-                    description={
-                      search || statusFilter
-                        ? "Thử từ khóa khác"
-                        : isBranchManager
-                          ? "Phiếu điều chuyển đến sẽ xuất hiện tại đây để bạn xác nhận nhận hàng."
-                          : 'Nhấn "Tạo phiếu" để tạo phiếu luân chuyển đầu tiên'
-                    }
-                  />
-                )}
-                {filtered.map((r) => {
-                  const meta = STATUS_META[r.status] ?? {
-                    label: r.status,
-                    className: "bg-muted text-muted-foreground",
-                  };
-                  const dateDisplay = r.shipped_at
-                    ? new Date(r.shipped_at).toLocaleDateString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                      })
-                    : r.received_at
-                      ? new Date(r.received_at).toLocaleDateString("vi-VN", {
-                          day: "2-digit",
-                          month: "2-digit",
-                        })
-                      : "—";
-                  const dateLabel = r.shipped_at
-                    ? "Xuất"
-                    : r.received_at
-                      ? "Nhận"
-                      : null;
 
-                  return (
-                    <TableRow
-                      key={r.id}
-                      className="group hover:bg-muted/30 transition-colors"
-                    >
-                      <TableCell className="font-mono text-sm font-medium">
-                        {r.transfer_number}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5 text-sm">
-                          <span className="font-medium">
-                            {branchLabelById.get(r.from_branch_id) ??
-                              r.from_branch_name}
-                          </span>
-                          <MoveRight className="size-3.5 shrink-0 text-muted-foreground" />
-                          <span className="font-medium">
-                            {branchLabelById.get(r.to_branch_id) ??
-                              r.to_branch_name}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={cn("text-xs", meta.className)}>
-                          {meta.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground tabular-nums">
-                        {new Date(r.created_at).toLocaleDateString("vi-VN", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        })}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        {dateLabel ? (
-                          <span className="text-sm text-muted-foreground tabular-nums">
-                            <span className="mr-1 text-xs text-muted-foreground/70">
-                              {dateLabel}:
-                            </span>
-                            {dateDisplay}
-                          </span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            —
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon-lg"
-                          asChild
-                          aria-label="Chi tiết"
-                        >
-                          <Link href={`${basePath}/${r.id}`}>
-                            <ArrowRight className="size-4" />
-                          </Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+          {/* Search */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Tìm số phiếu hoặc tên kho..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {filtered.length} / {rows.length}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Table */}
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Số phiếu</TableHead>
+                    <TableHead>Lộ trình</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>Ngày tạo</TableHead>
+                    <TableHead>Ngày xuất / nhận</TableHead>
+                    <TableHead className="w-10" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.length === 0 && (
+                    <TableEmptyStateRow
+                      colSpan={6}
+                      title={
+                        search || statusFilter
+                          ? "Không tìm thấy phiếu nào"
+                          : "Chưa có phiếu luân chuyển"
+                      }
+                    />
+                  )}
+                  {filtered.map((r) => {
+                    const meta = STATUS_META[r.status] ?? {
+                      label: r.status,
+                      className: "bg-muted text-muted-foreground",
+                    };
+                    const dateDisplay = r.shipped_at
+                      ? `Xuất: ${new Date(r.shipped_at).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })}`
+                      : r.received_at
+                        ? `Nhận: ${new Date(r.received_at).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })}`
+                        : "—";
+
+                    return (
+                      <TableRow key={r.id}>
+                        <TableCell className="font-medium">
+                          {r.transfer_number}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5 text-sm">
+                            <span>{branchLabelById.get(r.from_branch_id) ?? r.from_branch_name}</span>
+                            <MoveRight className="size-3 text-muted-foreground" />
+                            <span>{branchLabelById.get(r.to_branch_id) ?? r.to_branch_name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={cn("text-xs", meta.className)}>
+                            {meta.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {new Date(r.created_at).toLocaleDateString("vi-VN", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          })}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {dateDisplay}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon-sm" asChild>
+                            <Link href={`${basePath}/${r.id}`}>
+                              <ArrowRight className="size-4" />
+                            </Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       <CreateTransferDialog
         open={open}

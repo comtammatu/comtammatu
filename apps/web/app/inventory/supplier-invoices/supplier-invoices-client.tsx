@@ -226,23 +226,6 @@ export function SupplierInvoicesClient({
     filteredInvoices[0] ??
     null;
 
-  const totalOutstanding = useMemo(() => {
-    return rows.reduce(
-      (sum, invoice) => sum + getOutstandingAmount(invoice),
-      0,
-    );
-  }, [rows]);
-
-  const pendingMatchCount = rows.filter(
-    (invoice) =>
-      invoice.matchStatus === "pending" ||
-      invoice.matchStatus === "discrepancy",
-  ).length;
-  const overdueCount = rows.filter(isInvoiceOverdue).length;
-  const paidCount = rows.filter(
-    (invoice) => invoice.paymentStatus === "paid",
-  ).length;
-
   const showEmptyResults =
     filteredInvoices.length === 0 &&
     (search.trim().length > 0 ||
@@ -392,129 +375,80 @@ export function SupplierInvoicesClient({
           </Button>
         }
       />
-      <div className="space-y-6">
-
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <Card><CardContent>
-            <Badge variant="secondary">
-              Chờ đối soát
-            </Badge>
-            <p className="mt-3 text-3xl font-semibold">{pendingMatchCount}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Hóa đơn còn pending hoặc có chênh lệch cần xử lý.
-            </p>
-          </CardContent></Card>
-          <Card><CardContent>
-            <Badge variant="secondary">
-              Quá hạn chưa trả
-            </Badge>
-            <p className="mt-3 text-3xl font-semibold">{overdueCount}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Khoản phải trả cần được ưu tiên trong hôm nay.
-            </p>
-          </CardContent></Card>
-          <Card><CardContent>
-            <Badge variant="secondary">
-              Đã thanh toán đủ
-            </Badge>
-            <p className="mt-3 text-3xl font-semibold">{paidCount}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Hóa đơn đã đóng vòng công nợ hoàn chỉnh.
-            </p>
-          </CardContent></Card>
-          <Card><CardContent>
-            <Badge variant="secondary">
-              Công nợ còn lại
-            </Badge>
-            <p className="mt-3 text-3xl font-semibold">
-              {formatVND(totalOutstanding)}đ
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Tổng giá trị cần tiếp tục thanh toán.
-            </p>
-          </CardContent></Card>
-        </div>
+      <div className="flex-1 overflow-auto p-4">
+      <div className="mx-auto max-w-7xl space-y-4">
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
-          <Card className="overflow-hidden">
-            <CardHeader className="gap-4">
-              <div className="space-y-1">
-                <CardTitle>Danh sách hóa đơn nhà cung cấp</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Lọc theo nhà cung cấp, GRN liên kết, đối soát và trạng thái
-                  thanh toán.
-                </p>
-              </div>
-              <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
-                <div className="relative min-w-[16rem] flex-1">
-                  <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Tìm số hóa đơn, NCC hoặc mã GRN"
-                    className="pl-10"
-                  />
-                </div>
+          {/* Search + filters */}
+          <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Tìm số hóa đơn, NCC hoặc mã GRN"
+                className="pl-10"
+              />
+            </div>
 
-                <Select
-                  value={supplierFilter}
-                  onValueChange={setSupplierFilter}
-                >
-                  <SelectTrigger className="min-w-[13rem]">
-                    <SelectValue placeholder="Nhà cung cấp" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_FILTER_VALUE}>
-                      Tất cả nhà cung cấp
-                    </SelectItem>
-                    {supplierOptions.map((supplier) => (
-                      <SelectItem key={supplier.value} value={supplier.value}>
-                        {supplier.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <Select value={supplierFilter} onValueChange={setSupplierFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Nhà cung cấp" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_FILTER_VALUE}>
+                  Tất cả nhà cung cấp
+                </SelectItem>
+                {supplierOptions.map((supplier) => (
+                  <SelectItem key={supplier.value} value={supplier.value}>
+                    {supplier.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-                <Select
-                  value={matchStatusFilter}
-                  onValueChange={setMatchStatusFilter}
-                >
-                  <SelectTrigger className="min-w-[13rem]">
-                    <SelectValue placeholder="Đối soát" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_FILTER_VALUE}>
-                      Tất cả trạng thái đối soát
-                    </SelectItem>
-                    {MATCH_STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <Select
+              value={matchStatusFilter}
+              onValueChange={setMatchStatusFilter}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Đối soát" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_FILTER_VALUE}>
+                  Tất cả đối soát
+                </SelectItem>
+                {MATCH_STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-                <Select
-                  value={paymentStatusFilter}
-                  onValueChange={setPaymentStatusFilter}
-                >
-                  <SelectTrigger className="min-w-[13rem]">
-                    <SelectValue placeholder="Thanh toán" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_FILTER_VALUE}>
-                      Tất cả trạng thái thanh toán
-                    </SelectItem>
-                    {PAYMENT_STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </CardContent></Card>
-            </CardHeader>
-            <CardContent className="p-6 pt-0">
+            <Select
+              value={paymentStatusFilter}
+              onValueChange={setPaymentStatusFilter}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Thanh toán" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_FILTER_VALUE}>
+                  Tất cả thanh toán
+                </SelectItem>
+                {PAYMENT_STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent></Card>
+
+          {/* Table */}
+          <Card>
+            <CardContent className="p-0">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <Button
                   type="button"
@@ -760,15 +694,9 @@ export function SupplierInvoicesClient({
 
           <Card>
             <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="space-y-1">
-                <CardTitle>
-                  {selectedInvoice?.code ?? "Chưa chọn hóa đơn"}
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  {selectedInvoice?.supplierName ??
-                    "Chọn một hóa đơn để xem phân tích công nợ và đối soát."}
-                </p>
-              </div>
+              <CardTitle>
+                {selectedInvoice?.code ?? "Chưa chọn hóa đơn"}
+              </CardTitle>
               {selectedInvoice ? (
                 <div className="flex flex-wrap justify-end gap-2">
                   <Button
@@ -872,7 +800,7 @@ export function SupplierInvoicesClient({
 
                   {selectedInvoice.variance !== null &&
                   selectedInvoice.variance > 0 ? (
-                    <div className="rounded-[1.5rem] border border-destructive/30 bg-destructive/5 p-4">
+                    <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
                       <div className="flex items-start gap-3">
                         <AlertTriangle className="mt-0.5 size-4 text-destructive" />
                         <div className="space-y-1">
@@ -887,7 +815,7 @@ export function SupplierInvoicesClient({
                       </div>
                     </div>
                   ) : (
-                    <div className="rounded-[1.5rem] border border-success/30 bg-success/5 p-4">
+                    <div className="rounded-2xl border border-success/30 bg-success/5 p-4">
                       <div className="flex items-start gap-3">
                         <CheckCircle2 className="mt-0.5 size-4 text-success" />
                         <div className="space-y-1">
@@ -917,6 +845,7 @@ export function SupplierInvoicesClient({
             </CardContent>
           </Card>
         </div>
+      </div>
       </div>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

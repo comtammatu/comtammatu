@@ -97,7 +97,8 @@ export default async function ProductionPage() {
   return (
     <>
       <InventoryHeader title="Bếp trung tâm" />
-      <div className="space-y-6">
+      <div className="flex-1 overflow-auto p-4">
+      <div className="mx-auto max-w-7xl space-y-6">
       <ProductionHubClient
         centralKitchenBranches={visibleBranches}
         ingredients={allIngredients.map((ingredient) => ({
@@ -110,6 +111,7 @@ export default async function ProductionPage() {
         orders={orders}
         recipes={recipes}
       />
+    </div>
     </div>
     </>
   );

@@ -7,12 +7,7 @@ import { ArrowRight, ClipboardCheck, Plus, Search } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Dialog,
   DialogContent,
@@ -166,46 +161,48 @@ export function StocktakeListClient({
           </Button>
         }
       />
-      <div className="space-y-6">
+      <div className="flex-1 overflow-auto p-4">
+      <div className="mx-auto max-w-7xl space-y-4">
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        {/* Status filter buttons */}
+        <div className="flex flex-wrap gap-2">
           {Object.entries(STATUS_META).map(([key, meta]) => {
             const count = statusCounts[key] ?? 0;
             const isActive = statusFilter === key;
 
             return (
-              <button
+              <Button
                 key={key}
                 type="button"
+                size="sm"
+                variant={isActive ? "default" : "outline"}
                 onClick={() => setStatusFilter(isActive ? null : key)}
-                className={cn(
-                  "rounded-lg border bg-card p-4 text-card-foreground shadow-sm text-left transition",
-                  isActive && "ring-2 ring-primary/25",
-                )}
+                aria-pressed={isActive}
               >
-                <Badge className={cn("w-fit", meta.className)}>
-                  {meta.label}
-                </Badge>
-                <p className="mt-4 text-3xl font-semibold tabular-nums">
-                  {String(count).padStart(2, "0")}
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {key === "in_progress"
-                    ? "Phiên đang mở để nhập số lượng thực đếm."
-                    : key === "completed"
-                      ? "Phiên đã chốt và sẵn sàng đối chiếu kết quả."
-                      : "Phiên đã dừng và không còn hiệu lực chỉnh sửa."}
-                </p>
-              </button>
+                {meta.label}
+                <span className="text-xs opacity-80">{count}</span>
+              </Button>
             );
           })}
+          {statusFilter && (
+            <Button
+              type="button"
+              size="sm"
+              variant="link"
+              onClick={() => setStatusFilter(null)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Xóa bộ lọc
+            </Button>
+          )}
         </div>
 
+        {/* Search */}
         <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
-          <div className="relative min-w-[16rem] flex-1">
+          <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Tìm mã phiên hoặc tên chi nhánh…"
+              placeholder="Tìm mã phiên hoặc tên chi nhánh..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10"
@@ -214,27 +211,11 @@ export function StocktakeListClient({
           <Badge variant="outline" className="rounded-full">
             {filtered.length} / {rows.length} phiên
           </Badge>
-          {statusFilter && (
-            <Button
-              type="button"
-              variant="link"
-              onClick={() => setStatusFilter(null)}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              Xóa bộ lọc
-            </Button>
-          )}
         </CardContent></Card>
 
-        <Card className="overflow-hidden">
-          <CardHeader className="gap-1">
-            <CardTitle>Danh sách phiên kiểm kê</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Theo doi cac phien dang mo, da chot hoac da huy theo tung chi
-              nhanh.
-            </p>
-          </CardHeader>
-          <CardContent className="p-6 pt-0">
+        {/* Table */}
+        <Card>
+          <CardContent className="p-0">
             {isMobile ? (
               <div className="space-y-3">
                 {filtered.length === 0 && (
@@ -391,6 +372,7 @@ export function StocktakeListClient({
             )}
           </CardContent>
         </Card>
+      </div>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

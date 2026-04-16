@@ -5,12 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Plus, Search } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   Select,
@@ -137,7 +132,8 @@ export function PurchaseOrdersClient({
           </Button>
         }
       />
-      <div className="space-y-6">
+      <div className="flex-1 overflow-auto p-4">
+      <div className="mx-auto max-w-7xl space-y-4">
 
       {suppliers.length === 0 ? (
         <Card className="border-warning/40 bg-warning/10">
@@ -155,97 +151,7 @@ export function PurchaseOrdersClient({
         </Card>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <Card><CardContent>
-          <Badge variant="secondary">
-            Tổng PO
-          </Badge>
-          <p className="mt-3 text-3xl font-semibold">{rows.length}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Tất cả đơn mua đang được theo dõi.
-          </p>
-        </CardContent></Card>
-        <Card><CardContent>
-          <Badge variant="secondary">
-            Chờ gửi NCC
-          </Badge>
-          <p className="mt-3 text-3xl font-semibold">
-            {statusCounts.draft ?? 0}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Đơn nháp cần rà lại trước khi phát hành.
-          </p>
-        </CardContent></Card>
-        <Card><CardContent>
-          <Badge variant="secondary">
-            Đang nhận hàng
-          </Badge>
-          <p className="mt-3 text-3xl font-semibold">
-            {statusCounts.partially_received ?? 0}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            PO đã đi vào giai đoạn nhập kho thực tế.
-          </p>
-        </CardContent></Card>
-        <Card><CardContent>
-          <Badge variant="secondary">
-            Hoàn tất
-          </Badge>
-          <p className="mt-3 text-3xl font-semibold">
-            {statusCounts.received ?? 0}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Đơn đã nhận đủ và sẵn sàng đối soát.
-          </p>
-        </CardContent></Card>
-      </div>
-
-      <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
-        <div className="relative min-w-[16rem] flex-1">
-          <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Tìm theo số PO, nhà cung cấp hoặc ghi chú"
-            className="pl-10"
-          />
-        </div>
-
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="min-w-[13rem]">
-            <SelectValue placeholder="Trạng thái" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_FILTER_VALUE}>Tất cả trạng thái</SelectItem>
-            {STATUS_KEYS.map((statusKey) => (
-              <SelectItem key={statusKey} value={statusKey}>
-                {tStatus(statusKey, "table")}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={supplierFilter} onValueChange={setSupplierFilter}>
-          <SelectTrigger className="min-w-[13rem]">
-            <SelectValue placeholder="Nhà cung cấp" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_FILTER_VALUE}>
-              Tất cả nhà cung cấp
-            </SelectItem>
-            {suppliers.map((supplier) => (
-              <SelectItem key={supplier.id} value={String(supplier.id)}>
-                {supplier.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Badge variant="outline" className="rounded-full">
-          {filteredRows.length} / {rows.length} PO
-        </Badge>
-      </CardContent></Card>
-
+      {/* Status filter buttons */}
       <div className="flex flex-wrap gap-2">
         {STATUS_KEYS.map((statusKey) => (
           <Button
@@ -268,14 +174,42 @@ export function PurchaseOrdersClient({
         ))}
       </div>
 
-      <Card className="overflow-hidden">
-        <CardHeader className="gap-1">
-          <CardTitle>Danh sách đơn đặt hàng</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Toàn bộ PO theo nhà cung cấp, trạng thái và ghi chú xử lý.
-          </p>
-        </CardHeader>
-        <CardContent className="p-6 pt-0">
+      {/* Search + filters */}
+      <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Tìm theo số PO, nhà cung cấp hoặc ghi chú"
+            className="pl-10"
+          />
+        </div>
+
+        <Select value={supplierFilter} onValueChange={setSupplierFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Nhà cung cấp" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_FILTER_VALUE}>
+              Tất cả nhà cung cấp
+            </SelectItem>
+            {suppliers.map((supplier) => (
+              <SelectItem key={supplier.id} value={String(supplier.id)}>
+                {supplier.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Badge variant="outline" className="rounded-full">
+          {filteredRows.length} / {rows.length} PO
+        </Badge>
+      </CardContent></Card>
+
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
           {isMobile ? (
             <div className="space-y-3">
               {filteredRows.length === 0 ? (
@@ -322,7 +256,7 @@ export function PurchaseOrdersClient({
                       </span>
                     </div>
                     {row.notes ? (
-                      <div className="rounded-[1.25rem] border border-border/60 bg-background/75 px-3 py-2 text-sm text-foreground">
+                      <div className="rounded-2xl border border-border/60 bg-background/75 px-3 py-2 text-sm text-foreground">
                         {row.notes}
                       </div>
                     ) : null}
@@ -409,6 +343,7 @@ export function PurchaseOrdersClient({
           )}
         </CardContent>
       </Card>
+    </div>
     </div>
     </>
   );

@@ -2,14 +2,10 @@
 
 import Link from "next/link";
 import {
-  FileDown,
   BarChart3,
   TrendingUp,
   ArrowLeftRight,
   Package,
-  Calendar,
-  Store,
-  ChevronDown,
 } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -62,66 +58,14 @@ export function ReportsClient({
         : foodCostTrendDeltaPct < 0
           ? `Giảm ${Math.abs(foodCostTrendDeltaPct)}% so với tháng trước`
           : "Ổn định so với tháng trước";
-  const overdueAmount = apAging[apAging.length - 1]?.amount ?? 0;
-  const varianceCount = consumptionVariance.length;
-
   return (
     <>
       <InventoryHeader title="Báo cáo" />
-      <div className="space-y-6">
-
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)] lg:items-center">
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <Card className="bg-muted/30 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium">
-                    <Calendar className="size-4 text-primary" />
-                    <span className="text-foreground">Tháng này</span>
-                    <ChevronDown className="size-3.5 text-muted-foreground" />
-                  </Card>
-                  <Card className="bg-muted/30 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium">
-                    <Store className="size-4 text-primary" />
-                    <span className="text-foreground">Tất cả chi nhánh</span>
-                    <ChevronDown className="size-3.5 text-muted-foreground" />
-                  </Card>
-                </div>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Card className="bg-muted/20"><CardContent className="px-4 py-4">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Cong no qua han
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold">
-                    {formatVND(overdueAmount)}đ
-                  </p>
-                </CardContent></Card>
-                <Card className="bg-muted/20"><CardContent className="px-4 py-4">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Ma lech dinh muc
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold">{varianceCount}</p>
-                </CardContent></Card>
-              </div>
-            </div>
-            <div className="mt-4 flex justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                disabled
-                className="rounded-full border-primary/30 bg-card px-5 font-bold text-primary hover:bg-muted"
-              >
-                <FileDown className="size-4" />
-                Xuất CSV/Excel (sắp mở)
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex-1 overflow-auto p-4">
+      <div className="mx-auto max-w-7xl space-y-4">
 
       {/* Dashboard Grid — 12 col asymmetric */}
-      <div className="grid grid-cols-12 gap-6">
+      <div className="grid grid-cols-12 gap-4">
         {/* Stock Movement Summary — col-span-8 */}
         <Card className="col-span-12 flex flex-col lg:col-span-8">
           <CardContent className="flex flex-1 flex-col p-6">
@@ -366,6 +310,7 @@ export function ReportsClient({
           </Card>
         ))}
       </div>
+    </div>
     </div>
     </>
   );

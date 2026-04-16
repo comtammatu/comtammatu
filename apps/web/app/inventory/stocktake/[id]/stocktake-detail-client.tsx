@@ -252,6 +252,8 @@ export function StocktakeDetailClient({
           </Link>
         }
       />
+      <div className="flex-1 overflow-auto p-4">
+      <div className="mx-auto max-w-7xl space-y-6">
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">
@@ -371,6 +373,8 @@ export function StocktakeDetailClient({
       {session.status === "completed" && (
         <ResultsPhase lines={lines} isMobile={isMobile} />
       )}
+      </div>
+      </div>
 
       {/* Complete confirm dialog */}
       <AlertDialog

@@ -275,7 +275,9 @@ export function InventoryShell({
         </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset className="flex flex-col">{children}</SidebarInset>
+      <SidebarInset className="flex min-h-dvh flex-col">
+        {children}
+      </SidebarInset>
     </SidebarProvider>
   );
 }

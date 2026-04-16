@@ -205,7 +205,6 @@ export function IssueDetailClient({
 
   return (
     <>
-      <div className="space-y-6">
         <InventoryHeader
           title="Chi tiết xuất kho"
           actions={
@@ -217,6 +216,8 @@ export function IssueDetailClient({
             </Link>
           }
         />
+        <div className="flex-1 overflow-auto p-4">
+        <div className="mx-auto max-w-7xl space-y-6">
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
@@ -524,6 +525,7 @@ export function IssueDetailClient({
             </div>
           </footer>
         ) : null}
+      </div>
       </div>
 
       <AddIssueLineDialog

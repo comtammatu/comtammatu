@@ -3,24 +3,10 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  AlertTriangle,
-  ChefHat,
-  ClipboardList,
-  Clock,
-  FileDown,
-  FilterX,
-  MoreVertical,
-  Plus,
-} from "lucide-react";
+import { FileDown, FilterX, MoreVertical, Plus } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Dialog,
   DialogContent,
@@ -108,14 +94,6 @@ export function IssuesClient({
     [activeStatus, activeType, issues],
   );
 
-  const draftCount = issues.filter((issue) => issue.status === "draft").length;
-  const kitchenUseCount = issues.filter(
-    (issue) => issue.type === "kitchen_use",
-  ).length;
-  const writeOffCount = issues.filter(
-    (issue) => issue.type === "writeoff",
-  ).length;
-
   function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const parsedBranchId = Number(branchId);
@@ -161,113 +139,41 @@ export function IssuesClient({
           </>
         }
       />
-      <div className="space-y-6">
+      <div className="flex-1 overflow-auto p-4">
+      <div className="mx-auto max-w-7xl space-y-4">
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <Card><CardContent>
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex size-11 items-center justify-center rounded-full bg-warning/12 text-warning">
-                <ClipboardList className="size-5" />
-              </div>
-              <Badge variant="secondary">Tháng này</Badge>
-            </div>
-            <p className="mt-4 text-3xl font-semibold tracking-tight text-foreground">
-              {issues.length}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Tổng phiếu đã xuất trong hệ thống.
-            </p>
-          </CardContent></Card>
-
-          <Card><CardContent>
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex size-11 items-center justify-center rounded-full bg-success/12 text-success">
-                <ChefHat className="size-5" />
-              </div>
-              <Badge variant="secondary">Cấp phát bếp</Badge>
-            </div>
-            <p className="mt-4 text-3xl font-semibold tracking-tight text-success">
-              {kitchenUseCount}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {issues.length > 0
-                ? `Chiếm ${Math.round((kitchenUseCount / issues.length) * 100)}% tỉ lệ xuất`
-                : "Chưa có dữ liệu để so sánh tỉ trọng."}
-            </p>
-          </CardContent></Card>
-
-          <Card><CardContent>
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex size-11 items-center justify-center rounded-full bg-destructive/12 text-destructive">
-                <AlertTriangle className="size-5" />
-              </div>
-              <Badge variant="secondary">Hư hỏng</Badge>
-            </div>
-            <p className="mt-4 text-3xl font-semibold tracking-tight text-destructive">
-              {writeOffCount}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Số phiếu cần được đọc kỹ để tối ưu quy trình hao hụt.
-            </p>
-          </CardContent></Card>
-
-          <Card><CardContent>
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                <Clock className="size-5" />
-              </div>
-              <Badge variant="secondary">Chờ duyệt</Badge>
-            </div>
-            <p className="mt-4 text-3xl font-semibold tracking-tight text-foreground">
-              {String(draftCount).padStart(2, "0")}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Phiếu nháp hiện có sẵn cho bước rà soát và chốt xuất.
-            </p>
-          </CardContent></Card>
-        </div>
-
+        {/* Filters */}
         <Card className="py-0"><CardContent className="flex flex-wrap items-center justify-between gap-3 p-3">
           <div className="flex flex-1 flex-wrap items-end gap-3">
-            <div className="grid gap-1">
-              <label className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Trạng thái
-              </label>
-              <SearchableSelect
-                options={[
-                  { value: "all", label: "Tất cả trạng thái" },
-                  { value: "draft", label: "Nháp" },
-                  { value: "confirmed", label: "Đã xác nhận" },
-                  { value: "cancelled", label: "Đã huỷ" },
-                ]}
-                value={activeStatus}
-                onValueChange={setActiveStatus}
-                placeholder="Tất cả trạng thái"
-                searchPlaceholder="Tìm trạng thái..."
-                variant="ghost"
-                className="min-w-[13rem] text-foreground"
-              />
-            </div>
-            <div className="grid gap-1">
-              <label className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Loại xuất
-              </label>
-              <SearchableSelect
-                options={[
-                  { value: "all", label: "Tất cả loại xuất" },
-                  ...ISSUE_TYPES.map((option) => ({
-                    value: option.value,
-                    label: option.label,
-                  })),
-                ]}
-                value={activeType}
-                onValueChange={setActiveType}
-                placeholder="Tất cả loại xuất"
-                searchPlaceholder="Tìm loại xuất..."
-                variant="ghost"
-                className="min-w-[13rem] text-foreground"
-              />
-            </div>
+            <SearchableSelect
+              options={[
+                { value: "all", label: "Tất cả trạng thái" },
+                { value: "draft", label: "Nháp" },
+                { value: "confirmed", label: "Đã xác nhận" },
+                { value: "cancelled", label: "Đã huỷ" },
+              ]}
+              value={activeStatus}
+              onValueChange={setActiveStatus}
+              placeholder="Tất cả trạng thái"
+              searchPlaceholder="Tìm trạng thái..."
+              variant="ghost"
+              className="w-48 text-foreground"
+            />
+            <SearchableSelect
+              options={[
+                { value: "all", label: "Tất cả loại xuất" },
+                ...ISSUE_TYPES.map((option) => ({
+                  value: option.value,
+                  label: option.label,
+                })),
+              ]}
+              value={activeType}
+              onValueChange={setActiveType}
+              placeholder="Tất cả loại xuất"
+              searchPlaceholder="Tìm loại xuất..."
+              variant="ghost"
+              className="w-48 text-foreground"
+            />
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="rounded-full">
@@ -287,15 +193,9 @@ export function IssuesClient({
           </div>
         </CardContent></Card>
 
-        <Card className="overflow-hidden">
-          <CardHeader className="gap-1">
-            <CardTitle>Danh sách phiếu xuất</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Tất cả chứng từ xuất kho đã tạo, sẵn sàng để rà soát, xác nhận
-              hoặc mở chi tiết.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4 p-6">
+        {/* Table */}
+        <Card>
+          <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -373,14 +273,9 @@ export function IssuesClient({
               </TableBody>
             </Table>
 
-            <div className="flex flex-col gap-3 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-xs font-medium text-muted-foreground">
-                Hiển thị {filtered.length} / {issues.length} phiếu
-              </span>
-              <Badge variant="outline">Một trang trong pilot hiện tại</Badge>
-            </div>
           </CardContent>
         </Card>
+      </div>
       </div>
 
       <Dialog
@@ -439,7 +334,7 @@ export function IssuesClient({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                className="w-full rounded-[1.5rem] border border-input bg-background px-4 py-3 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="w-full rounded-2xl border border-input bg-background px-4 py-3 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 placeholder="Nhập ghi chú cho phiếu xuất"
               />
             </div>

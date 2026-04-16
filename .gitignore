@@ -27,6 +27,9 @@ dist/
 apps/web/.playwright/
 apps/web/playwright-report/
 apps/web/test-results/
+
+# QA/tmp artifacts
+apps/web/tmp/
 *.pem
 *.tsbuildinfo
 

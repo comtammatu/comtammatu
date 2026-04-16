@@ -4,12 +4,7 @@ import { useMemo, useState } from "react";
 import { Pencil, Search } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   Select,
@@ -96,12 +91,6 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
     return result;
   }, [rows, category, preservation, searchQuery]);
 
-  const activeCount = rows.filter((item) => item.is_active).length;
-  const chilledCount = rows.filter(
-    (item) =>
-      item.storage_type === "refrigerated" || item.storage_type === "frozen",
-  ).length;
-
   async function reload() {
     const response = await fetchIngredients();
     if (response.success) {
@@ -129,40 +118,12 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
           </Button>
         }
       />
-      <div className="space-y-6">
+      <div className="flex-1 overflow-auto p-4">
+      <div className="mx-auto max-w-7xl space-y-4">
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <Card><CardContent>
-          <Badge variant="secondary">
-            Tổng nguyên liệu
-          </Badge>
-          <p className="mt-3 text-3xl font-semibold">{rows.length}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Danh mục đang phục vụ nhập hàng, kho và recipe.
-          </p>
-        </CardContent></Card>
-        <Card><CardContent>
-          <Badge variant="secondary">
-            Đang hoạt động
-          </Badge>
-          <p className="mt-3 text-3xl font-semibold">{activeCount}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Mặt hàng đang sẵn sàng sử dụng trong vận hành.
-          </p>
-        </CardContent></Card>
-        <Card><CardContent>
-          <Badge variant="secondary">
-            Cần chuỗi lạnh
-          </Badge>
-          <p className="mt-3 text-3xl font-semibold">{chilledCount}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Nhóm nguyên liệu đòi hỏi bảo quản lạnh hoặc đông.
-          </p>
-        </CardContent></Card>
-      </div>
-
+      {/* Search + filters */}
       <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
-        <div className="relative min-w-[16rem] flex-1">
+        <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchQuery}
@@ -173,7 +134,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
         </div>
 
         <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger className="min-w-[13rem]">
+          <SelectTrigger className="w-40">
             <SelectValue placeholder="Tất cả loại" />
           </SelectTrigger>
           <SelectContent>
@@ -186,7 +147,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
         </Select>
 
         <Select value={preservation} onValueChange={setPreservation}>
-          <SelectTrigger className="min-w-[13rem]">
+          <SelectTrigger className="w-40">
             <SelectValue placeholder="Mọi bảo quản" />
           </SelectTrigger>
           <SelectContent>
@@ -203,13 +164,8 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
         </Badge>
       </CardContent></Card>
 
-      <Card className="overflow-hidden">
-        <CardHeader className="gap-1">
-          <CardTitle>Bảng nguyên liệu</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Tên chuẩn, SKU, bảo quản, ngưỡng tồn và trạng thái sử dụng.
-          </p>
-        </CardHeader>
+      {/* Table */}
+      <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -315,6 +271,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
         ingredient={editingIngredient}
         onSaved={reload}
       />
+    </div>
     </div>
     </>
   );

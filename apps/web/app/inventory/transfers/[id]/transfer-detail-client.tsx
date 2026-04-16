@@ -190,7 +190,7 @@ export function TransferDetailClient({
   }
 
   return (
-    <div className="space-y-6">
+    <>
       <InventoryHeader
         title="Chi tiết điều chuyển"
         actions={
@@ -202,6 +202,8 @@ export function TransferDetailClient({
           </Link>
         }
       />
+      <div className="flex-1 overflow-auto p-4">
+      <div className="mx-auto max-w-7xl space-y-6">
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">
@@ -487,5 +489,7 @@ export function TransferDetailClient({
         </Button>
       </footer>
     </div>
+    </div>
+    </>
   );
 }

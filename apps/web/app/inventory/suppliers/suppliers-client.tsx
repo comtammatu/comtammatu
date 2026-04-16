@@ -1,23 +1,11 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import {
-  CheckCircle,
-  Pause,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-  Users,
-} from "lucide-react";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { Input } from "@comtammatu/ui/components/input";
 import {
   Table,
   TableBody,
@@ -80,8 +68,6 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
     );
   }, [rows, search]);
 
-  const active = rows.filter((s) => s.is_active).length;
-  const suspended = rows.filter((s) => !s.is_active).length;
   const deleteTarget = rows.find((r) => r.id === deleteConfirmId);
 
   async function reload() {
@@ -127,88 +113,28 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
           </Button>
         }
       />
-      <div className="space-y-6">
+      <div className="flex-1 overflow-auto p-4">
+      <div className="mx-auto max-w-7xl space-y-4">
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        {[
-          {
-            icon: <Users className="size-5" />,
-            iconBg: "bg-info/12",
-            iconColor: "text-info",
-            label: "Tổng đối tác",
-            value: String(rows.length).padStart(2, "0"),
-          },
-          {
-            icon: <CheckCircle className="size-5" />,
-            iconBg: "bg-success/12",
-            iconColor: "text-success",
-            label: "Đang hoạt động",
-            value: String(active).padStart(2, "0"),
-            valueClassName: "text-success",
-          },
-          {
-            icon: <Pause className="size-5" />,
-            iconBg: "bg-muted",
-            iconColor: "text-muted-foreground",
-            label: "Tạm ngưng",
-            value: String(suspended).padStart(2, "0"),
-          },
-        ].map((card) => (
-          <Card
-            key={card.label}
-          ><CardContent>
-            <div className="mb-4 flex items-start justify-between">
-              <div
-                className={cn(
-                  "flex size-10 items-center justify-center rounded-xl",
-                  card.iconBg,
-                  card.iconColor,
-                )}
-              >
-                {card.icon}
-              </div>
-              <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Hệ thống
-              </span>
-            </div>
-            <h3
-              className={cn(
-                "text-3xl font-black tracking-tight",
-                card.valueClassName,
-              )}
-            >
-              {card.value}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">{card.label}</p>
-          </CardContent></Card>
-        ))}
-      </div>
+      {/* Search */}
+      <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Tìm tên, mã số thuế, điện thoại..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Badge variant="outline" className="rounded-full">
+          {filtered.length} / {rows.length}
+        </Badge>
+      </CardContent></Card>
 
-      {/* Data Table */}
-      <Card className="overflow-hidden">
-        <CardHeader className="gap-4">
-          <div className="space-y-1">
-            <CardTitle>Danh sách nhà cung cấp</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Theo dõi đối tác cung ứng, trạng thái hoạt động và thông tin liên
-              hệ trong một cửa vào duy nhất.
-            </p>
-          </div>
-          <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
-            <Search className="size-4 shrink-0 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Tìm tên, mã số thuế, điện thoại…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="min-w-0 flex-1 border-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-            />
-            <span className="shrink-0 text-xs font-medium text-muted-foreground">
-              {filtered.length} / {rows.length}
-            </span>
-          </CardContent></Card>
-        </CardHeader>
+      {/* Table */}
+      <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -323,16 +249,6 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             </TableBody>
           </Table>
 
-          <div className="flex items-center justify-between border-t border-border px-6 py-4">
-            <span className="text-xs font-medium text-muted-foreground">
-              Hiển thị {filtered.length} nhà cung cấp
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                1
-              </span>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
@@ -373,6 +289,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
     </div>
     </>
   );

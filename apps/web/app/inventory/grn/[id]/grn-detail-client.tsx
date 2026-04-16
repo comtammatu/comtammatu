@@ -80,7 +80,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
   }
 
   return (
-    <div className="space-y-6">
+    <>
       <InventoryHeader
         title="Chi tiết phiếu nhập"
         actions={
@@ -92,6 +92,8 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
           </Link>
         }
       />
+      <div className="flex-1 overflow-auto p-4">
+      <div className="mx-auto max-w-7xl space-y-6">
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">
@@ -373,5 +375,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
         </Button>
       </footer>
     </div>
+    </div>
+    </>
   );
 }

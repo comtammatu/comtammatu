@@ -23,7 +23,8 @@ export default async function InventorySettingsLayout({
   return (
     <>
       <InventoryHeader title="Cài đặt" />
-      <div className="space-y-6">
+      <div className="flex-1 overflow-auto p-4">
+      <div className="mx-auto max-w-7xl space-y-6">
       <Card>
         <CardContent className="space-y-4 px-4 py-4 sm:px-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -48,6 +49,7 @@ export default async function InventorySettingsLayout({
         </CardContent>
       </Card>
       <div>{children}</div>
+    </div>
     </div>
     </>
   );

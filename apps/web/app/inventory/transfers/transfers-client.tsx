@@ -2,32 +2,11 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  CheckCircle,
-  Eye,
-  Lightbulb,
-  PlusCircle,
-  Printer,
-  Search,
-  Truck,
-  Waypoints,
-} from "lucide-react";
+import { ArrowRight, Plus, Search, Truck } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
 import {
   Table,
   TableBody,
@@ -54,23 +33,20 @@ export type TransferRow = {
 
 export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
   const [statusFilter, setStatusFilter] = useState("all");
-  const [branchFilter, setBranchFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const inTransit = transfers.filter((t) => t.status === "in_transit").length;
-  const awaiting = transfers.filter((t) => t.status === "confirmed").length;
-  const receivedCount = transfers.filter((t) => t.status === "received").length;
 
-  const branchOptions = useMemo(() => {
-    return [...new Set(transfers.map((t) => t.toBranch).filter(Boolean))].sort(
-      (a, b) => a.localeCompare(b, "vi"),
-    );
-  }, [transfers]);
+  const statusCounts = useMemo(() => ({
+    all: transfers.length,
+    draft: transfers.filter((t) => t.status === "draft").length,
+    in_transit: transfers.filter((t) => t.status === "in_transit").length,
+    confirmed: transfers.filter((t) => t.status === "confirmed").length,
+    received: transfers.filter((t) => t.status === "received").length,
+  }), [transfers]);
 
   const filteredTransfers = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return transfers.filter((t) => {
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
-      if (branchFilter !== "all" && t.toBranch !== branchFilter) return false;
       if (!q) return true;
       return (
         t.code.toLowerCase().includes(q) ||
@@ -78,189 +54,123 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
         t.toBranch.toLowerCase().includes(q)
       );
     });
-  }, [transfers, statusFilter, branchFilter, searchQuery]);
+  }, [transfers, statusFilter, searchQuery]);
 
   return (
     <>
       <InventoryHeader
         title="Điều chuyển nội bộ"
         actions={
-          <Button type="button" className="min-h-11 px-6 font-semibold">
-            <PlusCircle className="size-4" />
-            Tạo phiếu mới
+          <Button size="sm">
+            <Plus className="size-4" />
+            Tạo phiếu
           </Button>
         }
       />
-      <div className="space-y-6">
-
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <Card><CardContent>
-          <div className="flex size-11 items-center justify-center rounded-full bg-info/12 text-info">
-            <Truck className="size-5" />
-          </div>
-          <p className="mt-4 text-3xl font-semibold">
-            {String(inTransit).padStart(2, "0")}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Phiếu đang trên đường, cần ưu tiên theo dõi nhận hàng.
-          </p>
-        </CardContent></Card>
-        <Card><CardContent>
-          <div className="flex size-11 items-center justify-center rounded-full bg-warning/12 text-warning">
-            <Waypoints className="size-5" />
-          </div>
-          <p className="mt-4 text-3xl font-semibold">
-            {String(awaiting).padStart(2, "0")}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Phiếu đã xác nhận nhưng chưa chốt ở kho nhận.
-          </p>
-        </CardContent></Card>
-        <Card><CardContent>
-          <div className="flex size-11 items-center justify-center rounded-full bg-success/12 text-success">
-            <CheckCircle className="size-5" />
-          </div>
-          <p className="mt-4 text-3xl font-semibold">
-            {String(receivedCount).padStart(2, "0")}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Chứng từ đã hoàn tất và bám theo nghiệp vụ kho thực tế.
-          </p>
-        </CardContent></Card>
-      </div>
-
-      <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
-        <div className="relative min-w-[16rem] flex-1">
-          <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Tìm mã phiếu, kho gửi, kho nhận..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="min-w-[13rem]">
-            <SelectValue placeholder="Trạng thái" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tất cả trạng thái</SelectItem>
-            <SelectItem value="in_transit">Đang vận chuyển</SelectItem>
-            <SelectItem value="confirmed">Chờ nhận</SelectItem>
-            <SelectItem value="received">Hoàn thành</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={branchFilter} onValueChange={setBranchFilter}>
-          <SelectTrigger className="min-w-[13rem]">
-            <SelectValue placeholder="Chi nhánh đến" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tất cả chi nhánh đến</SelectItem>
-            {branchOptions.map((branch) => (
-              <SelectItem key={branch} value={branch}>
-                {branch}
-              </SelectItem>
+      <div className="flex-1 overflow-auto p-4">
+        <div className="mx-auto max-w-7xl space-y-4">
+          {/* Status filter buttons */}
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                ["all", "Tất cả"],
+                ["draft", "Nháp"],
+                ["in_transit", "Đang vận chuyển"],
+                ["confirmed", "Chờ nhận"],
+                ["received", "Đã nhận"],
+              ] as const
+            ).map(([key, label]) => (
+              <Button
+                key={key}
+                variant={statusFilter === key ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter(key)}
+              >
+                {label}
+                <Badge variant="secondary" className="ml-2">
+                  {statusCounts[key]}
+                </Badge>
+              </Button>
             ))}
-          </SelectContent>
-        </Select>
-        <Badge variant="outline" className="rounded-full">
-          {filteredTransfers.length} / {transfers.length} phiếu
-        </Badge>
-      </CardContent></Card>
-
-      <Card className="overflow-hidden">
-        <CardHeader className="gap-1">
-          <CardTitle>Danh sách luân chuyển</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Toàn bộ phiếu điều chuyển hiện có giữa các kho và chi nhánh.
-          </p>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Mã phiếu</TableHead>
-                <TableHead>Kho gửi</TableHead>
-                <TableHead>Kho nhận</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead>Ngày tạo</TableHead>
-                <TableHead className="text-right">Thao tác</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTransfers.length === 0 && (
-                <TableEmptyStateRow
-                  colSpan={6}
-                  title="Không có phiếu luân chuyển phù hợp"
-                  description="Thử điều chỉnh trạng thái, chi nhánh đến hoặc từ khóa tìm kiếm."
-                />
-              )}
-              {filteredTransfers.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell>
-                    <Link
-                      href={`/inventory/transfers/${t.id}`}
-                      className="rounded-sm font-semibold tracking-tight text-primary transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    >
-                      {t.code}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-sm">{t.fromBranch}</TableCell>
-                  <TableCell className="text-sm">{t.toBranch}</TableCell>
-                  <TableCell>
-                    <Badge variant={getInventoryStatusBadgeVariant(t.status)}>
-                      {getInventoryStatusLabel(t.status)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {t.date}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        aria-label="Xem phiếu"
-                      >
-                        <Eye className="size-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        aria-label="In phiếu"
-                      >
-                        <Printer className="size-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <Card className="ring-info/20 bg-info/8">
-        <CardContent className="flex items-start gap-3">
-          <Lightbulb className="mt-0.5 size-5 shrink-0 text-info" />
-          <div>
-            <Badge variant="secondary">
-              Gợi ý vận hành
-            </Badge>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              {transfers.length > 0
-                ? inTransit > 0
-                  ? `Có ${inTransit} phiếu đang vận chuyển và ${awaiting} phiếu chờ nhận. Ưu tiên xác nhận hàng đến để giảm ùn tắc luân chuyển.`
-                  : `Đã ghi nhận ${receivedCount} phiếu luân chuyển hoàn tất. Dữ liệu đang bám theo chứng từ thực tế của kho.`
-                : "Chưa có phiếu luân chuyển nào. Khi phát sinh chứng từ thực, hệ thống sẽ tự hiển thị trạng thái ưu tiên."}
-            </p>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+
+          {/* Search */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Tìm theo số phiếu, kho xuất/nhận..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Table */}
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Số phiếu</TableHead>
+                    <TableHead>Lộ trình</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>Ngày tạo</TableHead>
+                    <TableHead className="w-10" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTransfers.length === 0 && (
+                    <TableEmptyStateRow
+                      colSpan={5}
+                      icon={<Truck className="size-5" />}
+                      title="Không tìm thấy phiếu điều chuyển nào"
+                    />
+                  )}
+                  {filteredTransfers.map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell>
+                        <Link
+                          href={`/inventory/transfers/${t.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {t.code}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-sm">
+                          <span>{t.fromBranch}</span>
+                          <ArrowRight className="size-3 text-muted-foreground" />
+                          <span>{t.toBranch}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getInventoryStatusBadgeVariant(t.status)}>
+                          {getInventoryStatusLabel(t.status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {t.date}
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon-sm" asChild>
+                          <Link href={`/inventory/transfers/${t.id}`}>
+                            <ArrowRight className="size-4" />
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </>
   );
 }

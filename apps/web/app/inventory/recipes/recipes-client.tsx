@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, UtensilsCrossed } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -69,18 +69,6 @@ export function RecipesClient({
   >();
   const [editingLine, setEditingLine] = useState<EditingLine | null>(null);
 
-  const totalLines = recipes.reduce(
-    (sum, recipe) => sum + recipe.items.length,
-    0,
-  );
-  const averageCost =
-    recipes.length > 0
-      ? Math.round(
-          recipes.reduce((sum, recipe) => sum + recipe.estimatedCost, 0) /
-            recipes.length,
-        )
-      : 0;
-
   function openAddLine(menuItemId?: number) {
     setEditingLine(null);
     setLineDialogMenuItemId(menuItemId);
@@ -114,39 +102,8 @@ export function RecipesClient({
           </Button>
         }
       />
-      <div className="space-y-6">
-
-      <div className="grid gap-3 md:grid-cols-3">
-        <Card><CardContent>
-          <Badge variant="secondary">
-            Tổng công thức
-          </Badge>
-          <p className="mt-3 text-3xl font-semibold">{recipes.length}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Món đang có recipe để vận hành.
-          </p>
-        </CardContent></Card>
-        <Card><CardContent>
-          <Badge variant="secondary">
-            Tổng dòng nguyên liệu
-          </Badge>
-          <p className="mt-3 text-3xl font-semibold">{totalLines}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Số cấu phần đã được chuẩn hóa trong bếp.
-          </p>
-        </CardContent></Card>
-        <Card><CardContent>
-          <Badge variant="secondary">
-            Giá vốn bình quân
-          </Badge>
-          <p className="mt-3 text-3xl font-semibold">
-            {formatVND(averageCost)} đ
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Ước tính giá vốn trung bình trên mỗi recipe.
-          </p>
-        </CardContent></Card>
-      </div>
+      <div className="flex-1 overflow-auto p-4">
+      <div className="mx-auto max-w-7xl space-y-4">
 
       {recipes.length === 0 && (
         <Card>
@@ -159,18 +116,18 @@ export function RecipesClient({
         </Card>
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         {recipes.map((recipe) => (
           <Card key={recipe.id} className="overflow-hidden">
             <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="space-y-1">
+              <div className="flex items-center gap-2">
                 <CardTitle>{recipe.name}</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  {`Cập nhật ${recipe.updatedAt}`}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
                 <Badge variant="success">{recipe.category}</Badge>
+                <span className="text-sm text-muted-foreground">
+                  {formatVND(recipe.estimatedCost)} đ/phần
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   type="button"
                   variant="ghost"
@@ -184,45 +141,13 @@ export function RecipesClient({
                   type="button"
                   onClick={() => openAddLine(recipe.menuItemId)}
                   variant="outline"
-                  className="text-primary"
+                  size="sm"
                 >
-                  + Thêm dòng công thức
+                  + Thêm dòng
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="mb-4 flex items-center gap-4 rounded-[1.75rem] border border-border/60 bg-background/75 p-4">
-                <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10">
-                  <UtensilsCrossed className="size-5 text-primary" />
-                </div>
-                <div className="grid flex-1 gap-2 md:grid-cols-3">
-                  <div>
-                    <Badge variant="secondary">
-                      Danh mục
-                    </Badge>
-                    <p className="mt-1 text-sm font-medium">
-                      {recipe.category}
-                    </p>
-                  </div>
-                  <div>
-                    <Badge variant="secondary">
-                      Số dòng nguyên liệu
-                    </Badge>
-                    <p className="mt-1 text-sm font-medium">
-                      {recipe.items.length}
-                    </p>
-                  </div>
-                  <div>
-                    <Badge variant="secondary">
-                      Giá vốn tạm tính
-                    </Badge>
-                    <p className="mt-1 text-sm font-medium text-primary">
-                      {formatVND(recipe.estimatedCost)} đ / phần
-                    </p>
-                  </div>
-                </div>
-              </div>
-
+            <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -289,6 +214,7 @@ export function RecipesClient({
         editingLine={editingLine}
         onSaved={handleSaved}
       />
+    </div>
     </div>
     </>
   );

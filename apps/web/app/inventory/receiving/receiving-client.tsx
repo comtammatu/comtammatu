@@ -5,18 +5,12 @@ import {
   ArrowRight,
   ClipboardCheck,
   FileText,
-  Lightbulb,
   ShoppingCart,
   Zap,
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Table,
   TableBody,
@@ -130,63 +124,36 @@ export function ReceivingClient({
           </>
         }
       />
-      <div className="space-y-6">
+      <div className="flex-1 overflow-auto p-4">
+      <div className="mx-auto max-w-7xl space-y-4">
 
       <div className="grid gap-4 xl:grid-cols-3">
         {WORKFLOW_STEPS.map((step, index) => {
           const Icon = step.icon;
 
           return (
-            <Card
-              key={step.key}
-            ><CardContent>
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-3">
-                  <div
-                    className={cn(
-                      "inline-flex size-11 items-center justify-center rounded-full",
-                      step.badgeClassName,
-                    )}
-                  >
-                    <Icon className="size-5" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="font-heading text-2xl font-semibold">
-                      {step.label}
-                    </p>
-                    <p className="text-sm leading-6 text-muted-foreground">
-                      {step.description}
-                    </p>
-                  </div>
+            <Card key={step.key}><CardContent>
+              <div className="flex items-center gap-3">
+                <div
+                  className={cn(
+                    "inline-flex size-10 items-center justify-center rounded-full",
+                    step.badgeClassName,
+                  )}
+                >
+                  <Icon className="size-5" />
                 </div>
-                <Badge variant="outline" className="rounded-full">
-                  Bước {index + 1}
-                </Badge>
-              </div>
-
-              <div className="mt-5 flex items-end justify-between gap-3 rounded-[1.75rem] border border-border/60 bg-background/75 p-4">
-                <div>
-                  <Badge variant="secondary">
-                    Đang mở
-                  </Badge>
-                  <p
-                    className={cn(
-                      "mt-2 text-4xl font-semibold",
-                      step.toneClassName,
-                    )}
-                  >
-                    {String(countsByKey[step.key]).padStart(2, "0")}
+                <div className="flex-1">
+                  <p className="text-sm font-semibold">{step.label}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Bước {index + 1} &middot; {countsByKey[step.key]} đang mở
                   </p>
                 </div>
-                <p className="max-w-36 text-right text-sm text-muted-foreground">
-                  Hồ sơ cần xử lý ở bước này.
-                </p>
               </div>
-
               <Button
                 asChild
                 variant="outline"
-                className="mt-4 w-full justify-between"
+                size="sm"
+                className="mt-3 w-full justify-between"
               >
                 <Link href={step.href}>
                   {step.cta}
@@ -198,21 +165,9 @@ export function ReceivingClient({
         })}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_360px]">
-        <Card className="overflow-hidden">
-          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1">
-              <CardTitle>Hoạt động gần đây</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Theo dõi PO, GRN và hóa đơn mới nhất trong cùng một dòng thời
-                gian.
-              </p>
-            </div>
-            <Button asChild size="sm" variant="outline">
-              <Link href="/inventory/supplier-invoices">Xem hóa đơn</Link>
-            </Button>
-          </CardHeader>
-          <CardContent className="px-4 sm:px-5">
+      {/* Recent activity */}
+      <Card>
+        <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -263,44 +218,7 @@ export function ReceivingClient({
             </Table>
           </CardContent>
         </Card>
-
-        <div className="space-y-4">
-          <Card className="ring-info/20 bg-info/8"><CardContent>
-            <div className="flex items-start gap-3">
-              <Lightbulb className="mt-0.5 size-5 shrink-0 text-info" />
-              <div>
-                <Badge variant="secondary">
-                  Boundary HQ
-                </Badge>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  {recentActivity.length > 0
-                    ? "Giữ chặt luồng PO → GRN → hóa đơn để tránh tồn đọng công nợ và lệch chi phí đầu vào giữa kho với kế toán. Nhận hàng nội bộ tại chi nhánh không đi qua hub này."
-                    : "Khi bắt đầu phát sinh chứng từ, khu vực này sẽ giúp quản lý nhìn nhanh bottleneck của luồng nhập hàng HQ mà không trộn với flow chi nhánh."}
-                </p>
-              </div>
-            </div>
-          </CardContent></Card>
-
-          <Card><CardContent>
-            <Badge variant="secondary">
-              Tỷ trọng workflow HQ
-            </Badge>
-            <div className="mt-4 space-y-3">
-              {WORKFLOW_STEPS.map((step) => (
-                <div
-                  key={step.key}
-                  className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-border/60 bg-background/75 px-4 py-3"
-                >
-                  <span className="text-sm font-medium">{step.label}</span>
-                  <span className="font-mono text-sm text-muted-foreground">
-                    {String(countsByKey[step.key]).padStart(2, "0")}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent></Card>
-        </div>
-      </div>
+    </div>
     </div>
     </>
   );

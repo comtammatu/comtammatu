@@ -5,12 +5,7 @@ import { CheckCircle2, Search, Trash2 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -187,43 +182,7 @@ export function ExpiryListClient({
 
   function renderTable(items: ExpiryAlertRow[]) {
     return (
-      <Card className="overflow-hidden rounded-lg">
-        <CardHeader className="gap-4">
-          <div className="space-y-1">
-            <CardTitle>Danh sách lô cần xử lý</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Tìm theo nguyên liệu, lô, phiếu nhập và chi nhánh để thao tác xóa
-              sổ nhanh.
-            </p>
-          </div>
-          <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
-            <Search className="size-4 shrink-0 text-muted-foreground" />
-            <Input
-              placeholder="Tìm nguyên liệu, lô hàng, phiếu nhập..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="min-w-0 flex-1 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
-            />
-            {!isBranchLocked && (
-              <Select value={branchFilter} onValueChange={setBranchFilter}>
-                <SelectTrigger className="h-8 w-auto min-w-36 text-sm">
-                  <SelectValue placeholder="Chi nhánh" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả chi nhánh</SelectItem>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={String(b.id)}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {items.length} mục
-            </span>
-          </CardContent></Card>
-        </CardHeader>
+      <Card>
         <CardContent className="p-0">
           {isMobile ? (
             <div className="divide-y">
@@ -386,44 +345,41 @@ export function ExpiryListClient({
   return (
     <>
       <InventoryHeader title="Hạn sử dụng" />
+      <div className="flex-1 overflow-auto p-4">
+      <div className="mx-auto max-w-7xl space-y-4">
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <Card><CardContent>
-          <Badge variant="secondary">
-            Đã hết hạn
-          </Badge>
-          <p className="mt-3 text-3xl font-semibold text-destructive">
-            {urgencyCounts.expired}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Lô cần khóa và xử lý ngay.
-          </p>
-        </CardContent></Card>
-        <Card><CardContent>
-          <Badge variant="secondary">
-            Nguy cấp
-          </Badge>
-          <p className="mt-3 text-3xl font-semibold text-destructive">
-            {urgencyCounts.critical}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Lô còn rất ít ngày sử dụng.
-          </p>
-        </CardContent></Card>
-        <Card><CardContent>
-          <Badge variant="secondary">
-            Sắp hết hạn
-          </Badge>
-          <p className="mt-3 text-3xl font-semibold text-warning">
-            {urgencyCounts.warning}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Lô cần được điều phối hoặc tiêu thụ sớm.
-          </p>
-        </CardContent></Card>
-      </div>
+      {/* Search + branch filter */}
+      <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
+        <div className="relative flex-1">
+          <Search className="size-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Tìm nguyên liệu, lô hàng, phiếu nhập..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        {!isBranchLocked && (
+          <Select value={branchFilter} onValueChange={setBranchFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Chi nhánh" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả chi nhánh</SelectItem>
+              {branches.map((b) => (
+                <SelectItem key={b.id} value={String(b.id)}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <Badge variant="outline" className="rounded-full">
+          {displayItems.length} mục
+        </Badge>
+      </CardContent></Card>
 
-      {/* Urgency count badges */}
+      {/* Urgency filter buttons */}
       <div className="flex flex-wrap items-center gap-2">
         <Button
           type="button"
@@ -539,6 +495,8 @@ export function ExpiryListClient({
           )}
         </TabsContent>
       </Tabs>
+      </div>
+      </div>
 
       {/* Write-off AlertDialog */}
       <AlertDialog
