@@ -36,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { InventoryHeader } from "../_components/inventory-header";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import {
   getInventoryStatusBadgeVariant,
@@ -80,28 +81,17 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
   }, [transfers, statusFilter, branchFilter, searchQuery]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">
-            Internal Logistics
-          </p>
-          <div className="space-y-1">
-            <h1 className="text-3xl font-semibold tracking-tight">
-              Luân chuyển nội bộ
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Theo dõi nhịp điều chuyển giữa trụ sở, bếp trung tâm và chi nhánh
-              bằng một khung danh sách rõ ràng, tập trung vào trạng thái luồng
-              hàng.
-            </p>
-          </div>
-        </div>
-        <Button type="button" className="min-h-11 px-6 font-semibold">
-          <PlusCircle className="size-4" />
-          Tạo phiếu mới
-        </Button>
-      </div>
+    <>
+      <InventoryHeader
+        title="Điều chuyển nội bộ"
+        actions={
+          <Button type="button" className="min-h-11 px-6 font-semibold">
+            <PlusCircle className="size-4" />
+            Tạo phiếu mới
+          </Button>
+        }
+      />
+      <div className="space-y-6">
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <Card><CardContent>
@@ -271,5 +261,6 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }

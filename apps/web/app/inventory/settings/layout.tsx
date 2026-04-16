@@ -3,6 +3,7 @@ import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { InventoryHeader } from "../_components/inventory-header";
 import { SettingsSectionNav } from "./settings-section-nav";
 
 export default async function InventorySettingsLayout({
@@ -20,7 +21,9 @@ export default async function InventorySettingsLayout({
   const role = claims?.user_role ?? "branch_manager";
 
   return (
-    <div className="space-y-6">
+    <>
+      <InventoryHeader title="Cài đặt" />
+      <div className="space-y-6">
       <Card>
         <CardContent className="space-y-4 px-4 py-4 sm:px-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -46,5 +49,6 @@ export default async function InventorySettingsLayout({
       </Card>
       <div>{children}</div>
     </div>
+    </>
   );
 }

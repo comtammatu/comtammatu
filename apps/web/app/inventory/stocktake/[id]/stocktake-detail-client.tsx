@@ -36,6 +36,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
+import { InventoryHeader } from "../../_components/inventory-header";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import {
@@ -93,7 +94,6 @@ export function StocktakeDetailClient({
   session: initialSession,
   lines: initialLines,
   routeBase = "/inventory/stocktake",
-  inventoryBasePath = "/inventory",
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   session: any;
@@ -241,30 +241,17 @@ export function StocktakeDetailClient({
 
   return (
     <>
-      {/* Breadcrumb + Back */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Button variant="ghost" size="icon-lg" asChild>
-          <Link href={routeBase}>
-            <ArrowLeft className="size-4" />
-            <span className="sr-only">Quay lại</span>
+      <InventoryHeader
+        title="Chi tiết kiểm kê"
+        actions={
+          <Link
+            href={routeBase}
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+          >
+            <ArrowLeft className="size-4" /> {tRoute("/inventory/stocktake")}
           </Link>
-        </Button>
-        <Link
-          href={inventoryBasePath}
-          className="hover:text-foreground transition-colors"
-        >
-          {tTerm("inventoryModule")}
-        </Link>
-        <span>/</span>
-        <Link
-          href={routeBase}
-          className="hover:text-foreground transition-colors"
-        >
-          {tRoute("/inventory/stocktake")}
-        </Link>
-        <span>/</span>
-        <span className="font-medium text-foreground">KK-{session.id}</span>
-      </div>
+        }
+      />
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">

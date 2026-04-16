@@ -1,7 +1,6 @@
 import { createClient } from "@comtammatu/database/supabase/server";
-import { Badge } from "@comtammatu/ui/components/badge";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { extractClaims } from "@comtammatu/shared/auth";
+import { InventoryHeader } from "../_components/inventory-header";
 import { redirect } from "next/navigation";
 import { fetchIngredients } from "../actions";
 import {
@@ -96,25 +95,9 @@ export default async function ProductionPage() {
     : [];
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardContent className="p-5 sm:p-6">
-          <div className="space-y-3">
-            <Badge variant="secondary">
-              Central Kitchen
-            </Badge>
-            <div className="space-y-2">
-              <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                Bếp trung tâm
-              </h2>
-              <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                Điều phối sản xuất bán thành phẩm và thành phẩm từ trụ sở hoặc
-                bếp trung tâm trong cùng một flow vận hành mới.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <>
+      <InventoryHeader title="Bếp trung tâm" />
+      <div className="space-y-6">
       <ProductionHubClient
         centralKitchenBranches={visibleBranches}
         ingredients={allIngredients.map((ingredient) => ({
@@ -128,5 +111,6 @@ export default async function ProductionPage() {
         recipes={recipes}
       />
     </div>
+    </>
   );
 }

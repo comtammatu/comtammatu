@@ -40,7 +40,9 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { tRoute } from "../_lib/dictionary";
+import { InventoryHeader } from "../_components/inventory-header";
+
+
 import { createStocktakeSession, fetchStocktakeSessions } from "../actions";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 
@@ -155,28 +157,16 @@ export function StocktakeListClient({
 
   return (
     <>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">
-              Kiem soat cuoi ca
-            </p>
-            <div className="space-y-1">
-              <h1 className="text-3xl font-semibold tracking-tight">
-                {tRoute("/inventory/stocktake")}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Mo phien kiem ke, ghi so luong thuc te va chot chenh lech nhu
-                lop kiem soat cuoi ngay thay vi mot module tach roi khoi van
-                hanh.
-              </p>
-            </div>
-          </div>
+      <InventoryHeader
+        title="Kiểm kê"
+        actions={
           <Button type="button" onClick={handleCreate} disabled={isPending}>
             <Plus className="size-4" />
             Mo phien kiem ke
           </Button>
-        </div>
+        }
+      />
+      <div className="space-y-6">
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {Object.entries(STATUS_META).map(([key, meta]) => {

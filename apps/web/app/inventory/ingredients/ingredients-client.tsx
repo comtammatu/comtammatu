@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { InventoryHeader } from "../_components/inventory-header";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { formatVND } from "../_lib/format";
 import { fetchIngredients } from "../actions";
@@ -119,26 +120,16 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">
-            Danh muc dung chung
-          </p>
-          <div className="space-y-1">
-            <h1 className="text-3xl font-semibold tracking-tight">
-              Danh mục nguyên liệu
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Chot ten, SKU, bao quan va nguong ton trong mot cua vao duy nhat
-              de procurement, branch operations va recipe cung dung chung.
-            </p>
-          </div>
-        </div>
-        <Button type="button" onClick={openCreate}>
-          Tạo nguyên liệu
-        </Button>
-      </div>
+    <>
+      <InventoryHeader
+        title="Nguyên liệu"
+        actions={
+          <Button type="button" onClick={openCreate}>
+            Tạo nguyên liệu
+          </Button>
+        }
+      />
+      <div className="space-y-6">
 
       <div className="grid gap-3 md:grid-cols-3">
         <Card><CardContent>
@@ -325,5 +316,6 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
         onSaved={reload}
       />
     </div>
+    </>
   );
 }

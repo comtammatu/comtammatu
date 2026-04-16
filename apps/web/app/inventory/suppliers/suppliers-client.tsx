@@ -38,6 +38,7 @@ import {
 } from "@comtammatu/ui/components/alert-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
+import { InventoryHeader } from "../_components/inventory-header";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import {
   getInventoryStatusBadgeVariant,
@@ -113,31 +114,20 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">
-            Danh muc doi tac
-          </p>
-          <div className="space-y-1">
-            <h1 className="text-3xl font-semibold tracking-tight">
-              Nha cung cap
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Quan ly doi tac cung ung trong cung mot cua vao danh muc, tach
-              khoi settings de procurement hub bot roi.
-            </p>
-          </div>
-        </div>
-        <Button
-          type="button"
-          onClick={openCreate}
-          className="min-h-11 rounded-full px-6 font-bold shadow-lg"
-        >
-          <Plus className="size-4" />
-          Them nha cung cap
-        </Button>
-      </div>
+    <>
+      <InventoryHeader
+        title="Nhà cung cấp"
+        actions={
+          <Button
+            type="button"
+            onClick={openCreate}
+          >
+            <Plus className="size-4" />
+            Them nha cung cap
+          </Button>
+        }
+      />
+      <div className="space-y-6">
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -384,5 +374,6 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </>
   );
 }

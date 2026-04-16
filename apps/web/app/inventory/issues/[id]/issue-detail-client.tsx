@@ -47,6 +47,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { InventoryHeader } from "../../_components/inventory-header";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatDateTime, formatQty, formatVND } from "../../_lib/format";
@@ -205,12 +206,17 @@ export function IssueDetailClient({
   return (
     <>
       <div className="space-y-6">
-        <Link
-          href="/inventory/issues"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-        >
-          <ArrowLeft className="size-4" /> {tRoute("/inventory/issues")}
-        </Link>
+        <InventoryHeader
+          title="Chi tiết xuất kho"
+          actions={
+            <Link
+              href="/inventory/issues"
+              className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+            >
+              <ArrowLeft className="size-4" /> {tRoute("/inventory/issues")}
+            </Link>
+          }
+        />
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">

@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { InventoryHeader } from "../_components/inventory-header";
 import { tStatus } from "../_lib/dictionary";
 
 export type ExpiryAlertRow = {
@@ -62,37 +63,9 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
   const warningCount = alerts.filter((e) => e.urgency === "warning").length;
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardContent className="p-5 sm:p-6">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div className="space-y-3">
-              <Badge variant="secondary">
-                Shelf Life Radar
-              </Badge>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                  Hạn sử dụng
-                </h2>
-                <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                  Theo dõi lô gần quá hạn, quá hạn và ưu tiên xử lý trong kho
-                  theo cùng một nhịp điều phối mới.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 self-start">
-              <Button
-                type="button"
-                variant="destructive"
-                className="min-h-11 px-5"
-              >
-                <Trash2 className="size-4" />
-                Hủy tất cả hàng đã hết hạn
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <>
+      <InventoryHeader title="Hạn sử dụng" />
+      <div className="space-y-6">
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <Card><CardContent>
@@ -244,5 +217,6 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
         </CardContent></Card>
       </div>
     </div>
+    </>
   );
 }

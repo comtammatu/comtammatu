@@ -23,6 +23,7 @@ import {
   TableFooter,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { InventoryHeader } from "../../_components/inventory-header";
 import { TimelineStepper } from "../../_components/timeline-stepper";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
@@ -190,12 +191,17 @@ export function TransferDetailClient({
 
   return (
     <div className="space-y-6">
-      <Link
-        href="/inventory/transfers"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-      >
-        <ArrowLeft className="size-4" /> {tRoute("/inventory/transfers")}
-      </Link>
+      <InventoryHeader
+        title="Chi tiết điều chuyển"
+        actions={
+          <Link
+            href="/inventory/transfers"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+          >
+            <ArrowLeft className="size-4" /> {tRoute("/inventory/transfers")}
+          </Link>
+        }
+      />
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">

@@ -22,6 +22,7 @@ import {
   TableFooter,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { InventoryHeader } from "../../_components/inventory-header";
 import { TimelineStepper } from "../../_components/timeline-stepper";
 import { formatVND } from "../../_lib/format";
 import { tRoute } from "../../_lib/dictionary";
@@ -121,13 +122,18 @@ export function PODetailClient({ po }: { po: PODetail }) {
 
   return (
     <div className="space-y-6">
-      <Link
-        href="/inventory/purchase-orders"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
-      >
-        <ArrowLeft className="size-4" />{" "}
-        {tRoute("/inventory/purchase-orders", "heading")}
-      </Link>
+      <InventoryHeader
+        title="Chi tiết đơn hàng"
+        actions={
+          <Link
+            href="/inventory/purchase-orders"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+          >
+            <ArrowLeft className="size-4" />{" "}
+            {tRoute("/inventory/purchase-orders", "heading")}
+          </Link>
+        }
+      />
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">

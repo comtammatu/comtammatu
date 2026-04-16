@@ -29,6 +29,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { cn } from "@comtammatu/ui";
+import { InventoryHeader } from "../_components/inventory-header";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { formatQty, formatVND } from "../_lib/format";
 import {
@@ -149,7 +150,9 @@ export function StockClient({
   }).format(new Date());
 
   return (
-    <div className="space-y-6">
+    <>
+      <InventoryHeader title="Tồn kho" />
+      <div className="space-y-6">
       <Card>
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1.5">
@@ -442,5 +445,6 @@ export function StockClient({
         />
       ) : null}
     </div>
+    </>
   );
 }

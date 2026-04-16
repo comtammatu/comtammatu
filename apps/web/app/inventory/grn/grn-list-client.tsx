@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { InventoryHeader } from "../_components/inventory-header";
 import { formatVND } from "../_lib/format";
 import {
   getInventoryStatusBadgeVariant,
@@ -47,35 +48,19 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
   const pendingCount = grns.filter((g) => g.status === "pending").length;
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardContent className="p-5 sm:p-6">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div className="space-y-3">
-              <Badge variant="secondary">
-                Nhập hàng HQ
-              </Badge>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                  GRN và kiểm nhận
-                </h2>
-                <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                  Theo dõi bước kiểm nhận thực tế từ nhà cung cấp sau PO, trước
-                  khi đi tiếp sang đối soát hóa đơn NCC.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 self-start">
-              <Button asChild type="button">
-                <Link href="/inventory/purchase-orders">
-                  <Plus className="size-4" />
-                  Chọn PO để tạo GRN
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <>
+      <InventoryHeader
+        title="Phiếu nhập kho"
+        actions={
+          <Button asChild type="button">
+            <Link href="/inventory/purchase-orders">
+              <Plus className="size-4" />
+              Chọn PO để tạo GRN
+            </Link>
+          </Button>
+        }
+      />
+      <div className="space-y-6">
 
       <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <Card><CardContent>
@@ -200,5 +185,6 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }

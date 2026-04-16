@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { InventoryHeader } from "../_components/inventory-header";
 import { formatVND } from "../_lib/format";
 import { RecipeLineDialog } from "./recipe-line-dialog";
 import type {
@@ -104,26 +105,16 @@ export function RecipesClient({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">
-            Danh muc cong thuc
-          </p>
-          <div className="space-y-1">
-            <h1 className="text-3xl font-semibold tracking-tight">
-              Công thức món ăn
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Dat recipe vao nhom danh muc de gia von, san xuat va tieu hao van
-              hanh tu cung mot bo dinh muc.
-            </p>
-          </div>
-        </div>
-        <Button type="button" onClick={() => openAddLine()}>
-          + Tạo món mới
-        </Button>
-      </div>
+    <>
+      <InventoryHeader
+        title="Công thức món"
+        actions={
+          <Button type="button" onClick={() => openAddLine()}>
+            + Tạo món mới
+          </Button>
+        }
+      />
+      <div className="space-y-6">
 
       <div className="grid gap-3 md:grid-cols-3">
         <Card><CardContent>
@@ -299,5 +290,6 @@ export function RecipesClient({
         onSaved={handleSaved}
       />
     </div>
+    </>
   );
 }

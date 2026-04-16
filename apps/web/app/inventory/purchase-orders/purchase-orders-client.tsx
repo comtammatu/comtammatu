@@ -29,9 +29,10 @@ import {
 } from "@comtammatu/ui/components/table";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
+import { InventoryHeader } from "../_components/inventory-header";
 import type { SupplierRow } from "../suppliers/suppliers-client";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
-import { tRoute, tStatus } from "../_lib/dictionary";
+import { tStatus } from "../_lib/dictionary";
 import {
   getInventoryStatusBadgeVariant,
   getInventoryStatusLabel,
@@ -124,29 +125,19 @@ export function PurchaseOrdersClient({
       supplierFilter !== ALL_FILTER_VALUE);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">
-            Procurement Desk
-          </p>
-          <div className="space-y-1">
-            <h1 className="text-3xl font-semibold tracking-tight">
-              {tRoute("/inventory/purchase-orders", "heading")}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Theo dõi đơn mua theo nhà cung cấp, trạng thái xử lý và nhịp đặt
-              hàng bằng cùng một ngôn ngữ vận hành mới.
-            </p>
-          </div>
-        </div>
-        <Button asChild disabled={suppliers.length === 0}>
-          <Link href={`${purchaseOrdersBasePath}/new`}>
-            <Plus className="size-4" />
-            Tạo PO
-          </Link>
-        </Button>
-      </div>
+    <>
+      <InventoryHeader
+        title="Đơn đặt hàng NCC"
+        actions={
+          <Button asChild disabled={suppliers.length === 0}>
+            <Link href={`${purchaseOrdersBasePath}/new`}>
+              <Plus className="size-4" />
+              Tạo PO
+            </Link>
+          </Button>
+        }
+      />
+      <div className="space-y-6">
 
       {suppliers.length === 0 ? (
         <Card className="border-warning/40 bg-warning/10">
@@ -419,5 +410,6 @@ export function PurchaseOrdersClient({
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }

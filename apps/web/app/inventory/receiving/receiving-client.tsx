@@ -26,6 +26,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { cn } from "@comtammatu/ui";
+import { InventoryHeader } from "../_components/inventory-header";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { tNav } from "../_lib/dictionary";
 import { formatVND } from "../_lib/format";
@@ -112,39 +113,24 @@ export function ReceivingClient({
   } satisfies Record<(typeof WORKFLOW_STEPS)[number]["key"], number>;
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardContent className="p-5 sm:p-6">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div className="space-y-3">
-              <Badge variant="secondary">
-                HQ Procurement Hub
-              </Badge>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                  {tNav("receiving", "heading")}
-                </h2>
-                <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                  Hub nhập hàng dành cho HQ: gom PO, GRN và hóa đơn NCC vào cùng
-                  một nhịp để không lẫn với thao tác nhận transfer nội bộ của
-                  chi nhánh.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 self-start">
-              <Button asChild variant="outline">
-                <Link href="/inventory/grn">Mở GRN</Link>
-              </Button>
-              <Button asChild>
-                <Link href="/inventory/purchase-orders/new">
-                  <Zap className="size-4" />
-                  Tạo PO nhanh
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <>
+      <InventoryHeader
+        title="Nhập hàng HQ"
+        actions={
+          <>
+            <Button asChild variant="outline">
+              <Link href="/inventory/grn">Mở GRN</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/inventory/purchase-orders/new">
+                <Zap className="size-4" />
+                Tạo PO nhanh
+              </Link>
+            </Button>
+          </>
+        }
+      />
+      <div className="space-y-6">
 
       <div className="grid gap-4 xl:grid-cols-3">
         {WORKFLOW_STEPS.map((step, index) => {
@@ -316,5 +302,6 @@ export function ReceivingClient({
         </div>
       </div>
     </div>
+    </>
   );
 }

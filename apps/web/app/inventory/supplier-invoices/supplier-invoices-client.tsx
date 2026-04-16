@@ -37,6 +37,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
+import { InventoryHeader } from "../_components/inventory-header";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import {
   createSupplierInvoice,
@@ -44,7 +45,8 @@ import {
   markInvoicePaid,
   recomputeInvoiceMatching,
 } from "../procurement-actions";
-import { tRoute } from "../_lib/dictionary";
+
+
 import { formatVND } from "../_lib/format";
 import {
   getInventoryStatusBadgeVariant,
@@ -382,26 +384,15 @@ export function SupplierInvoicesClient({
 
   return (
     <>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">
-              Nhập hàng HQ
-            </p>
-            <div className="space-y-1">
-              <h1 className="text-3xl font-semibold tracking-tight">
-                {tRoute("/inventory/supplier-invoices", "heading")}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Theo dõi bước cuối của hub procurement: đối soát 3-way, hạn
-                thanh toán và công nợ phải trả sau khi GRN đã được chốt.
-              </p>
-            </div>
-          </div>
+      <InventoryHeader
+        title="Hóa đơn NCC"
+        actions={
           <Button type="button" onClick={() => setCreateOpen(true)}>
             Ghi nhận hóa đơn NCC
           </Button>
-        </div>
+        }
+      />
+      <div className="space-y-6">
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <Card><CardContent>

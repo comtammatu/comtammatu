@@ -47,6 +47,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { InventoryHeader } from "../_components/inventory-header";
 import { adjustStock, fetchExpiryAlerts } from "../actions";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import type { BranchOption, ExpiryAlertRow } from "../page";
@@ -384,18 +385,7 @@ export function ExpiryListClient({
 
   return (
     <>
-      <div className="space-y-1">
-        <p className="text-sm font-medium text-muted-foreground">
-          Expiry Policy
-        </p>
-        <div className="space-y-1">
-          <h1 className="text-3xl font-semibold tracking-tight">Hạn sử dụng</h1>
-          <p className="text-sm text-muted-foreground">
-            Theo dõi hàng sắp hết hạn, khóa lô quá hạn và thao tác xóa sổ trực
-            tiếp từ khu vực settings.
-          </p>
-        </div>
-      </div>
+      <InventoryHeader title="Hạn sử dụng" />
 
       <div className="grid gap-3 md:grid-cols-3">
         <Card><CardContent>

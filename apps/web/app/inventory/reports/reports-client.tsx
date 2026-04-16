@@ -18,6 +18,7 @@ import {
   Card,
   CardContent,
 } from "@comtammatu/ui/components/card";
+import { InventoryHeader } from "../_components/inventory-header";
 import { SimpleBarChart, TrendSparkline } from "../_lib/chart-primitives";
 import { formatVND } from "../_lib/format";
 import {
@@ -65,21 +66,9 @@ export function ReportsClient({
   const varianceCount = consumptionVariance.length;
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <p className="text-sm font-medium text-muted-foreground">
-          Control Layer
-        </p>
-        <div className="space-y-1">
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Bao cao va sai lech
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Tong hop bien dong kho, cong no va sai lech tieu hao nhu mot lop
-            kiem soat ngang sau procurement, dieu chuyen va van hanh chi nhanh.
-          </p>
-        </div>
-      </div>
+    <>
+      <InventoryHeader title="Báo cáo" />
+      <div className="space-y-6">
 
       <Card>
         <CardContent className="pt-6">
@@ -378,5 +367,6 @@ export function ReportsClient({
         ))}
       </div>
     </div>
+    </>
   );
 }

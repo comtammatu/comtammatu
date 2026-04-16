@@ -45,6 +45,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { InventoryHeader } from "../_components/inventory-header";
 import { SearchableSelect } from "../_components/searchable-select";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import {
@@ -145,23 +146,10 @@ export function IssuesClient({
 
   return (
     <>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">
-              Vận hành chi nhánh
-            </p>
-            <div className="space-y-1">
-              <h1 className="text-3xl font-semibold tracking-tight">
-                Cấp bếp & xuất kho
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Ưu tiên cấp phát từ kho chi nhánh xuống bếp, rồi mới theo dõi
-                tiêu hao và các phiếu write-off bất thường.
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+      <InventoryHeader
+        title="Cấp bếp"
+        actions={
+          <>
             <Button type="button" variant="outline" disabled>
               <FileDown className="size-4" />
               Xuất báo cáo (sắp mở)
@@ -170,8 +158,10 @@ export function IssuesClient({
               <Plus className="size-4" />
               Tạo phiếu cấp bếp
             </Button>
-          </div>
-        </div>
+          </>
+        }
+      />
+      <div className="space-y-6">
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           <Card><CardContent>
