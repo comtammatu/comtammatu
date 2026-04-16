@@ -27,6 +27,7 @@ import {
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import { Separator } from "@comtammatu/ui/components/separator";
 import {
   Sidebar,
@@ -183,13 +184,15 @@ export function AdminShell({
                   </p>
                 </div>
                 <form action="/api/auth/signout" method="post">
-                  <button
+                  <Button
                     type="submit"
-                    className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    variant="ghost"
+                    size="icon-lg"
+                    className="text-muted-foreground hover:text-accent-foreground"
                     aria-label="Đăng xuất"
                   >
                     <LogOut className="size-4" />
-                  </button>
+                  </Button>
                 </form>
               </div>
             </SidebarMenuItem>

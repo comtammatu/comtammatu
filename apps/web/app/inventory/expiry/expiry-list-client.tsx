@@ -389,13 +389,15 @@ export function ExpiryListClient({
 
       {/* Urgency count badges */}
       <div className="flex flex-wrap items-center gap-2">
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="xs"
           onClick={() =>
             setUrgencyFilter((prev) => (prev === "expired" ? null : "expired"))
           }
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+            "h-auto gap-1.5 rounded-full px-3 py-1 font-medium",
             urgencyFilter === "expired"
               ? "bg-destructive/10 text-destructive border-destructive/30"
               : "bg-muted/50 text-muted-foreground hover:bg-muted",
@@ -405,16 +407,18 @@ export function ExpiryListClient({
           <span className="font-mono tabular-nums">
             {urgencyCounts.expired}
           </span>
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="outline"
+          size="xs"
           onClick={() =>
             setUrgencyFilter((prev) =>
               prev === "critical" ? null : "critical",
             )
           }
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+            "h-auto gap-1.5 rounded-full px-3 py-1 font-medium",
             urgencyFilter === "critical"
               ? "bg-destructive/10 text-destructive border-destructive/30"
               : "bg-muted/50 text-muted-foreground hover:bg-muted",
@@ -424,14 +428,16 @@ export function ExpiryListClient({
           <span className="font-mono tabular-nums">
             {urgencyCounts.critical}
           </span>
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="outline"
+          size="xs"
           onClick={() =>
             setUrgencyFilter((prev) => (prev === "warning" ? null : "warning"))
           }
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+            "h-auto gap-1.5 rounded-full px-3 py-1 font-medium",
             urgencyFilter === "warning"
               ? "bg-warning/10 text-warning border-warning/30"
               : "bg-muted/50 text-muted-foreground hover:bg-muted",
@@ -441,15 +447,17 @@ export function ExpiryListClient({
           <span className="font-mono tabular-nums">
             {urgencyCounts.warning}
           </span>
-        </button>
+        </Button>
         {urgencyFilter && (
-          <button
+          <Button
             type="button"
+            variant="link"
+            size="xs"
             onClick={() => setUrgencyFilter(null)}
-            className="text-xs text-muted-foreground underline hover:text-foreground"
+            className="h-auto px-0 text-muted-foreground hover:text-foreground"
           >
             Xóa bộ lọc
-          </button>
+          </Button>
         )}
       </div>
 

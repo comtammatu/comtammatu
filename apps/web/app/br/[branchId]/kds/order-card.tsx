@@ -222,7 +222,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
   return (
     <Card
       className={cn(
-        "transition-all hover:-translate-y-0.5 hover:shadow-md flex flex-col overflow-hidden border border-l-2 bg-zinc-900 text-white shadow-sm",
+        "transition-all hover:-translate-y-0.5 hover:shadow-md flex flex-col overflow-hidden border border-l-2 bg-sidebar-accent text-white shadow-sm",
         borderClass,
         getCardLeftAccent(overallStatus, elapsed),
       )}
@@ -287,7 +287,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
       <div className="border-b border-border/30 px-3 py-3 md:px-4">
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-lg border border-border/60 bg-zinc-900 px-3 py-2">
+            <div className="rounded-lg border border-border/60 bg-sidebar-accent px-3 py-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Chờ
               </p>
@@ -314,10 +314,10 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
-              <span className="rounded-full border border-border/70 bg-zinc-800 px-3 py-1.5">
+              <span className="rounded-full border border-border/70 bg-muted px-3 py-1.5">
                 {readyCount}/{totalTickets} món đã xong
               </span>
-              <span className="rounded-full border border-border/70 bg-zinc-800 px-3 py-1.5">
+              <span className="rounded-full border border-border/70 bg-muted px-3 py-1.5">
                 {pendingCount > 0
                   ? `${pendingCount} món cần nhận`
                   : "Không còn món chờ"}

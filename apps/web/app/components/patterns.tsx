@@ -20,6 +20,16 @@ export type EmptyStateMode =
   | "no-access"
   | "error";
 
+export type SurfaceDensity =
+  | "compact"
+  | "default"
+  | "comfortable"
+  | "touch";
+
+function resolveCardSize(density: SurfaceDensity | undefined): "default" | "sm" {
+  return density === "compact" ? "sm" : "default";
+}
+
 /* ── PageContainer ── */
 
 export function PageContainer({
@@ -79,17 +89,21 @@ export function SectionCard({
   children,
   className,
   action,
-  density: _density,
+  density = "default",
 }: {
   title?: string;
   description?: string;
   children: ReactNode;
   className?: string;
   action?: ReactNode;
-  density?: string;
+  density?: SurfaceDensity;
 }) {
   return (
-    <Card className={className}>
+    <Card
+      size={resolveCardSize(density)}
+      data-density={density}
+      className={className}
+    >
       {title ? (
         <CardHeader>
           <CardTitle>{title}</CardTitle>
@@ -112,8 +126,8 @@ export function EmptyState({
   description,
   action,
   className,
-  mode: _mode,
-  density: _density,
+  mode = "full",
+  density = "default",
   children,
 }: {
   icon?: ReactNode;
@@ -122,11 +136,13 @@ export function EmptyState({
   action?: ReactNode;
   className?: string;
   mode?: EmptyStateMode;
-  density?: string;
+  density?: SurfaceDensity;
   children?: ReactNode;
 }) {
   return (
     <div
+      data-mode={mode}
+      data-density={density}
       className={cn(
         "flex flex-col items-center justify-center gap-4 py-12 text-center",
         className,
@@ -264,8 +280,6 @@ export function ActionIconButton({
   label: string;
   onClick?: () => void;
   className?: string;
-  variant?: string;
-  size?: string;
 }) {
   return (
     <Button

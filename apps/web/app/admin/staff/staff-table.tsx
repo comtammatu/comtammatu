@@ -207,7 +207,7 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-8">
+                      <Button variant="ghost" size="icon-lg">
                         <MoreHorizontal className="size-4" />
                         <span className="sr-only">Menu</span>
                       </Button>

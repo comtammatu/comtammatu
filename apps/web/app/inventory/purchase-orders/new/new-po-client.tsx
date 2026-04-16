@@ -417,9 +417,10 @@ function SuggestionsPanel({
       <Collapsible open={suggestionsOpen} onOpenChange={onOpenChange}>
         <div className="-m-4 md:-m-5">
           <CollapsibleTrigger asChild>
-            <button
+            <Button
               type="button"
-              className="flex w-full items-center justify-between px-4 py-3 text-left md:px-5"
+              variant="ghost"
+              className="h-auto w-full justify-between rounded-none px-4 py-3 text-left md:px-5"
             >
               <div className="flex items-center gap-2">
                 <Lightbulb className="size-4 text-info" />
@@ -431,7 +432,7 @@ function SuggestionsPanel({
               <ChevronDown
                 className={`size-4 text-muted-foreground transition-transform ${suggestionsOpen ? "rotate-180" : ""}`}
               />
-            </button>
+            </Button>
           </CollapsibleTrigger>
 
           <CollapsibleContent>

@@ -246,8 +246,7 @@ export function AttendanceConfigDialog({
                   </span>
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="size-8"
+                    size="icon-lg"
                     onClick={handleCopyCode}
                   >
                     <Copy className="size-4" />

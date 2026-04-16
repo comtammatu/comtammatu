@@ -181,11 +181,13 @@ export function StocktakeListClient({
           if (count === 0) return null;
           const isActive = statusFilter === key;
           return (
-            <button
+            <Button
               key={key}
               type="button"
+              variant="ghost"
+              size="xs"
               onClick={() => setStatusFilter(isActive ? null : key)}
-              className="transition-opacity"
+              className="h-auto rounded-full p-0 transition-opacity hover:bg-transparent"
             >
               <Badge
                 className={cn(
@@ -197,17 +199,19 @@ export function StocktakeListClient({
               >
                 {meta.label} {count}
               </Badge>
-            </button>
+            </Button>
           );
         })}
         {statusFilter && (
-          <button
+          <Button
             type="button"
+            variant="link"
+            size="xs"
             onClick={() => setStatusFilter(null)}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="h-auto px-0 text-muted-foreground hover:text-foreground"
           >
             Xóa bộ lọc
-          </button>
+          </Button>
         )}
       </div>
 
@@ -364,8 +368,7 @@ export function StocktakeListClient({
                     <TableCell>
                       <Button
                         variant="ghost"
-                        size="icon"
-                        className="size-8"
+                        size="icon-lg"
                         asChild
                         aria-label="Chi tiết"
                       >

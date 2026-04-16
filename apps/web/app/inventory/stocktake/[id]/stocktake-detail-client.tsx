@@ -251,7 +251,7 @@ export function StocktakeDetailClient({
     <>
       {/* Breadcrumb + Back */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Button variant="ghost" size="icon" className="size-8" asChild>
+        <Button variant="ghost" size="icon-lg" asChild>
           <Link href={routeBase}>
             <ArrowLeft className="size-4" />
             <span className="sr-only">Quay lại</span>

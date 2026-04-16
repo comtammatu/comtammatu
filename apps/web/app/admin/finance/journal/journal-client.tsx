@@ -329,8 +329,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                           {lines.length > 2 && (
                             <Button
                               variant="ghost"
-                              size="icon"
-                              className="size-8"
+                              size="icon-lg"
                               onClick={() => removeLine(i)}
                             >
                               <Trash2 className="size-3.5 text-destructive" />

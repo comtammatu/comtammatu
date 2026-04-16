@@ -240,8 +240,7 @@ export function IngredientTable({
                       <TableCell>
                         <Button
                           variant="ghost"
-                          size="icon"
-                          className="size-8"
+                          size="icon-lg"
                           aria-label={`Chỉnh sửa ${ing.name}`}
                           onClick={() => setEditItem(ing)}
                         >

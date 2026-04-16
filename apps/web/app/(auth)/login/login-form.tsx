@@ -73,7 +73,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
               autoComplete="email"
               spellCheck={false}
               placeholder="email@comtammatu.com"
-              className="touch-target rounded-2xl border-border bg-card text-sm shadow-sm"
+              className="h-11 rounded-2xl border-border bg-card text-sm shadow-sm"
             />
           </div>
 
@@ -87,7 +87,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
               type="password"
               required
               autoComplete="current-password"
-              className="touch-target rounded-2xl border-border bg-card text-sm shadow-sm"
+              className="h-11 rounded-2xl border-border bg-card text-sm shadow-sm"
             />
           </div>
         </div>
@@ -105,7 +105,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
         <Button
           type="submit"
           size="lg"
-          className="touch-target h-12 w-full rounded-full text-sm font-semibold"
+          className="h-11 h-12 w-full rounded-full text-sm font-semibold"
           disabled={isPending}
         >
           {isPending ? (
@@ -121,7 +121,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
           )}
         </Button>
 
-        <div className="surface-muted p-4">
+        <div className="rounded-lg border bg-muted/50 p-4">
           <div className="flex items-start gap-3">
             <div className="flex size-10 items-center justify-center rounded-full border border-border bg-card text-primary">
               <ShieldCheck className="size-4" />

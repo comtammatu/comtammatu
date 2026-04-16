@@ -44,6 +44,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { Label } from "@comtammatu/ui/components/label";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { ActionIconButton } from "@/components/patterns";
 import {
   fetchShiftAssignments,
   createShiftAssignment,
@@ -352,22 +353,23 @@ export function ShiftAssignmentsTable({
                                     a.employees?.employee_code ??
                                     "—"}
                                 </span>
-                                <button
-                                  type="button"
+                                <ActionIconButton
+                                  icon={<X className="size-3" />}
+                                  label="Xóa phân ca"
                                   className="hidden shrink-0 text-muted-foreground hover:text-destructive group-hover:inline-flex"
                                   onClick={() => setDeleteTarget(a)}
-                                >
-                                  <X className="size-3" />
-                                </button>
+                                />
                               </div>
                             ))}
-                            <button
+                            <Button
                               type="button"
-                              className="flex items-center justify-center rounded border border-dashed border-muted-foreground/30 py-0.5 text-muted-foreground/50 hover:border-primary hover:text-primary"
+                              variant="outline"
+                              size="xs"
+                              className="h-auto border-dashed py-0.5 text-muted-foreground/50 hover:border-primary hover:text-primary"
                               onClick={() => openAddDialog(shift.id, date)}
                             >
                               <Plus className="size-3" />
-                            </button>
+                            </Button>
                           </div>
                         </TableCell>
                       );
