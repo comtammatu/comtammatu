@@ -1,216 +1,276 @@
-# Design System — Cơm Tấm Má Tư Web App V2
+# Design System - Cơm Tấm Má Tư Web App
 
-> Version: 8.0.0 | Updated: 2026-04-16
+> Version: 9.0.0 | Updated: 2026-04-16
 > Stack: Next.js 16.2 · React 19.2 · Tailwind CSS 4.2 · shadcn/ui · TypeScript 6.0
 
 ## Source of Truth
 
-Design system co dung mot nguon su that van hanh:
+UI governance phai di theo config va runtime that su cua repo. Thu tu uu tien:
 
-1. `apps/web/app/globals.css`
-   Day la nguon compile/runtime cho token va utility classes.
-2. Tai lieu nay
-   Day la nguon quyet dinh san pham, governance va contract.
+1. `packages/ui/components.json`
+2. `apps/web/components.json`
+3. `apps/web/app/globals.css`
+4. `apps/web/app/layout.tsx`
+5. Tai lieu nay
 
-Hai noi nay phai khop 1:1.
+Tai lieu nay chi duoc mo ta nhung gi dang co that trong 4 nguon tren. Docs khong duoc invent theme, font, layer, hay preset moi.
 
-## Design Direction
+## Active shadcn Preset
 
-Huong chinh thuc cua web app la `Restaurant Ops Ledger`.
+Preset hien tai cua du an:
 
-- Typography chinh: `Be Vietnam Pro`
-- Typography tieu de: `Lora`
-- Typography mono: `IBM Plex Mono`
-- Nen tong the: giay van hanh am (`paper`) co luoi in nhe va lop nhan do
-- Accent thuong hieu: rust orange cho action va trang thai dang xu ly
-- Surface grammar: panel bo tron lon, rail toi mau, chip thong tin, action-first
-- Tonality: calm under load, role-aware, editorial nhưng van day nghiep vu
-- Khong dung AI-generic layouts, khong ra nhieu mini theme rieng cho tung surface
-- Cac surface duoc phep khac nhau o contrast, density, interaction rhythm; khong duoc tu tao token system rieng
+- `style`: `radix-mira`
+- `baseColor`: `taupe`
+- `cssVariables`: `true`
+- `menuColor`: `default`
+- `menuAccent`: `subtle`
+- primitive source: `packages/ui/src/components/*`
 
-## Architecture
+He thong nay duoc xem la preset cao nhat cho UI primitives. Moi rule moi phai phuc tung preset nay.
 
-Design system gom 3 tang:
+## Runtime Theme Notes
 
-### 1. Foundation (tokens + utilities)
+Theme direction hien tai duoc suy ra tu `globals.css`, khong tu prose marketing:
 
-Dinh nghia o `apps/web/app/globals.css`:
+- `primary` va `sidebar-primary` nam trong nhom orange/rust
+- `chart-1` -> `chart-5` nam trong nhom amber/orange
+- exact token values song trong `apps/web/app/globals.css`
 
-- Color tokens (warm ledger palette + rust accent)
-- Typography scale (`Be Vietnam Pro`, `Lora`, `IBM Plex Mono`)
-- Spacing scale
-- Radius
-- Elevation (neutral shadows)
-- Animations
-- Focus ring
-- Touch target utilities
-- Safe-area utilities
-- Vietnamese text utilities
+Docs khong duoc dat ten mot "art direction" rieng neu code/config khong co mot preset tuong ung.
 
-### 2. App-local V2 Composition
+## Runtime Typography Notes
 
-Composition layer moi song trong `apps/web/app/components/v2/`.
+Typography phai duoc mo ta theo mapping hien tai:
 
-- V2 shells
-- top context bars
-- nav rails / drawers
-- metric panels
-- dense tables / mobile cards
-- empty / loading / blocked states
-- route recovery states
+- `apps/web/app/layout.tsx` load `Inter`, `Be_Vietnam_Pro`, `Lora`, `IBM_Plex_Mono`
+- `Inter` dang duoc gan vao `--font-sans`
+- `apps/web/app/globals.css` dang map `--font-heading` ve `--font-sans`
+- vi vay, `font-sans` va `font-heading` hien tai deu theo `Inter`
 
-`packages/ui` giu vai tro primitive-only. Khong mo rong `admin-patterns` / `inventory-patterns` nhu contract chinh cho surface moi.
-
-### 3. Primitives (shadcn/ui)
-
-32+ shadcn/ui components based on Radix UI:
-
-- Location: `packages/ui/src/components/`
-- Export: `@comtammatu/ui/components/*`
-- Only `cn` is exported from `@comtammatu/ui` barrel
+`Be_Vietnam_Pro`, `Lora`, va `IBM_Plex_Mono` co duoc load trong layout, nhung khong duoc coi la UI token contract chinh neu chua duoc map thanh token su dung that su trong `globals.css`.
 
 ## Token Contract
 
-### Core colors
+Nguon chinh xac: `apps/web/app/globals.css`. Tat ca values dung `oklch()`.
 
-| Token                  | Value     | Description                 |
-| ---------------------- | --------- | --------------------------- |
-| `background`           | `#f5efe5` | Paper background            |
-| `foreground`           | `#1f1916` | Primary ink                 |
-| `primary`              | `#b85726` | Rust action                 |
-| `primary-foreground`   | `#fff8f2` | Light ink on rust           |
-| `secondary`            | `#eadcc8` | Warm neutral block          |
-| `secondary-foreground` | `#23282d` | Dense neutral text          |
-| `accent`               | `#d7cebf` | Highlighted control surface |
-| `accent-foreground`    | `#171a1e` | Accent text                 |
-| `muted`                | `#e6dfd3` | Quiet surface               |
-| `muted-foreground`     | `#6c6c67` | Secondary text              |
-| `card`                 | `#fff8ef` | Raised panel                |
-| `card-foreground`      | `#241c17` | Panel text                  |
-| `border`               | `#ccb8a1` | Warm divider                |
-| `input`                | `#ccb8a1` | Input stroke                |
-| `ring`                 | `#b85726` | Focus ring                  |
-| `destructive`          | `#be3a2d` | Error                       |
-| `success`              | `#197355` | Success                     |
-| `warning`              | `#ab7218` | Warning                     |
-| `info`                 | `#285fc0` | Info                        |
+### Light mode (`:root`)
 
-### Sidebar tokens
+| Token                  | Value                        |
+| ---------------------- | ---------------------------- |
+| `background`           | `oklch(1 0 0)`               |
+| `foreground`           | `oklch(0.147 0.004 49.3)`    |
+| `card`                 | `oklch(1 0 0)`               |
+| `card-foreground`      | `oklch(0.147 0.004 49.3)`    |
+| `popover`              | `oklch(1 0 0)`               |
+| `popover-foreground`   | `oklch(0.147 0.004 49.3)`    |
+| `primary`              | `oklch(0.553 0.195 38.402)`  |
+| `primary-foreground`   | `oklch(0.98 0.016 73.684)`   |
+| `secondary`            | `oklch(0.967 0.001 286.375)` |
+| `secondary-foreground` | `oklch(0.21 0.006 285.885)`  |
+| `muted`                | `oklch(0.96 0.002 17.2)`     |
+| `muted-foreground`     | `oklch(0.547 0.021 43.1)`    |
+| `accent`               | `oklch(0.96 0.002 17.2)`     |
+| `accent-foreground`    | `oklch(0.214 0.009 43.1)`    |
+| `destructive`          | `oklch(0.577 0.245 27.325)`  |
+| `border`               | `oklch(0.922 0.005 34.3)`    |
+| `input`                | `oklch(0.922 0.005 34.3)`    |
+| `ring`                 | `oklch(0.714 0.014 41.2)`    |
+| `success`              | `oklch(0.627 0.154 154.032)` |
+| `success-foreground`   | `oklch(0.982 0.018 155.826)` |
+| `warning`              | `oklch(0.741 0.148 75.164)`  |
+| `warning-foreground`   | `oklch(0.211 0.034 58.016)`  |
+| `info`                 | `oklch(0.607 0.152 252.417)` |
+| `info-foreground`      | `oklch(0.985 0.016 252.417)` |
+| `sidebar`              | `oklch(0.986 0.002 67.8)`    |
+| `sidebar-foreground`   | `oklch(0.147 0.004 49.3)`    |
+| `sidebar-primary`      | `oklch(0.646 0.222 41.116)`  |
+| `sidebar-primary-foreground` | `oklch(0.98 0.016 73.684)` |
+| `sidebar-accent`       | `oklch(0.96 0.002 17.2)`     |
+| `sidebar-accent-foreground` | `oklch(0.214 0.009 43.1)` |
+| `sidebar-border`       | `oklch(0.922 0.005 34.3)`    |
+| `sidebar-ring`         | `oklch(0.714 0.014 41.2)`    |
+| `radius`               | `0.625rem`                   |
 
-| Token                        | Value     |
-| ---------------------------- | --------- |
-| `sidebar`                    | `#12161a` |
-| `sidebar-foreground`         | `#f6f2e9` |
-| `sidebar-primary`            | `#c35a22` |
-| `sidebar-primary-foreground` | `#fff8f2` |
-| `sidebar-accent`             | `#1e2429` |
-| `sidebar-accent-foreground`  | `#f6f2e9` |
-| `sidebar-border`             | `#2a3238` |
-| `sidebar-ring`               | `#c35a22` |
+### Dark mode (`.dark`)
 
-### Surface semantics
+| Token                  | Value                        |
+| ---------------------- | ---------------------------- |
+| `background`           | `oklch(0.147 0.004 49.3)`    |
+| `foreground`           | `oklch(0.986 0.002 67.8)`    |
+| `card`                 | `oklch(0.214 0.009 43.1)`    |
+| `card-foreground`      | `oklch(0.986 0.002 67.8)`    |
+| `primary`              | `oklch(0.47 0.157 37.304)`   |
+| `primary-foreground`   | `oklch(0.98 0.016 73.684)`   |
+| `secondary`            | `oklch(0.274 0.006 286.033)` |
+| `secondary-foreground` | `oklch(0.985 0 0)`           |
+| `muted`                | `oklch(0.268 0.011 36.5)`    |
+| `muted-foreground`     | `oklch(0.714 0.014 41.2)`    |
+| `accent`               | `oklch(0.268 0.011 36.5)`    |
+| `accent-foreground`    | `oklch(0.986 0.002 67.8)`    |
+| `destructive`          | `oklch(0.704 0.191 22.216)`  |
+| `border`               | `oklch(1 0 0 / 10%)`         |
+| `input`                | `oklch(1 0 0 / 15%)`         |
+| `ring`                 | `oklch(0.547 0.021 43.1)`    |
+| `success`              | `oklch(0.696 0.17 152.729)`  |
+| `success-foreground`   | `oklch(0.982 0.018 155.826)` |
+| `warning`              | `oklch(0.811 0.148 75.164)`  |
+| `warning-foreground`   | `oklch(0.211 0.034 58.016)`  |
+| `info`                 | `oklch(0.707 0.152 252.417)` |
+| `info-foreground`      | `oklch(0.985 0.016 252.417)` |
+| `sidebar`              | `oklch(0.214 0.009 43.1)`    |
+| `sidebar-foreground`   | `oklch(0.986 0.002 67.8)`    |
+| `sidebar-primary`      | `oklch(0.705 0.213 47.604)`  |
+| `sidebar-primary-foreground` | `oklch(0.98 0.016 73.684)` |
+| `sidebar-accent`       | `oklch(0.268 0.011 36.5)`    |
+| `sidebar-accent-foreground` | `oklch(0.986 0.002 67.8)` |
+| `sidebar-border`       | `oklch(1 0 0 / 10%)`         |
+| `sidebar-ring`         | `oklch(0.547 0.021 43.1)`    |
 
-| Token              | Value     |
-| ------------------ | --------- |
-| `surface-raised`   | `#fbf8f1` |
-| `surface-sunken`   | `#e8e1d5` |
-| `panel-subtle`     | `#efe8dc` |
-| `panel-strong`     | `#ddd2c2` |
-| `shell`            | `#12161a` |
-| `shell-foreground` | `#f6f2e9` |
-| `state-pending`    | `#ab7218` |
-| `state-processing` | `#c35a22` |
-| `state-ready`      | `#197355` |
-| `state-cancelled`  | `#767069` |
+### Chart tokens (light & dark same)
 
-### Typography
+| Token     | Value                       |
+| --------- | --------------------------- |
+| `chart-1` | `oklch(0.879 0.169 91.605)` |
+| `chart-2` | `oklch(0.769 0.188 70.08)`  |
+| `chart-3` | `oklch(0.666 0.179 58.318)` |
+| `chart-4` | `oklch(0.555 0.163 48.998)` |
+| `chart-5` | `oklch(0.473 0.137 46.201)` |
 
-- `font-sans`: Be Vietnam Pro
-- `font-heading`: Lora
-- `font-mono`: IBM Plex Mono
-- `text-data`: 13px (tables, lists)
-- `text-label`: 10px (badges, chips)
-- `text-caption`: 11px (captions)
+### Radius scale (`@theme inline`)
 
-### Layout
+| Token        | Value                        |
+| ------------ | ---------------------------- |
+| `radius-sm`  | `calc(var(--radius) * 0.6)`  |
+| `radius-md`  | `calc(var(--radius) * 0.8)`  |
+| `radius-lg`  | `var(--radius)` = `0.625rem` |
+| `radius-xl`  | `calc(var(--radius) * 1.4)`  |
+| `radius-2xl` | `calc(var(--radius) * 1.8)`  |
+| `radius-3xl` | `calc(var(--radius) * 2.2)`  |
+| `radius-4xl` | `calc(var(--radius) * 2.6)`  |
 
-- Spacing: `space-1` (0.25rem) → `space-12` (3rem)
-- Radius: `radius-sm` → `radius-xl`
-- Elevation: neutral shadows, 3 levels
-- Z-index: `z-overlay-1` → `z-overlay-5`
+## Architecture
 
-## Styling Patterns
+UI hien tai co 3 tang, khong co tang thu 4:
 
-### Standard panel
+### 1. Foundation
 
-```tsx
-className = "surface-panel";
-```
+Song trong `apps/web/app/globals.css`.
 
-### Standard header
+Chiu trach nhiem cho:
 
-```tsx
-className = "surface-panel-strong sticky top-3 z-30";
-```
+- CSS variables
+- token mau
+- token radius
+- token ring/border/input
+- chart tokens
+- sidebar tokens
+- base element styling
 
-### Standard shell rail
+### 2. Primitives
 
-```tsx
-className = "surface-shell paper-grid-dark";
-```
+Song trong `packages/ui/src/components/*`.
 
-### Stat card
+Day la cac shadcn/ui components da duoc copy vao repo va tuy bien tren nen preset hien tai. Vi du:
 
-```tsx
-className = "rounded-3xl border border-border/80 bg-card p-5 shadow-app-sm";
-```
+- `button`
+- `table`
+- `sidebar`
+- `card`
+- `badge`
+- `dialog`
+- `sheet`
+- `tabs`
+- `input`
+- `select`
 
-### Status badge tones
+Primitive layer la nguon chuan toi cao cho behavior va styling co ban cua component.
 
-```txt
-success: "bg-green-50 text-green-700 border-green-200 text-xs font-medium"
-warning: "bg-amber-50 text-amber-700 border-amber-200 text-xs font-medium"
-danger:  "bg-red-50 text-red-700 border-red-200 text-xs font-medium"
-info:    "bg-blue-50 text-blue-700 border-blue-200 text-xs font-medium"
-neutral: "bg-muted text-muted-foreground border-border text-xs font-medium"
-```
+### 3. App Composition
 
-### KDS dark surface
+Song trong app web, chu yeu o:
 
-```txt
-Shell:  "min-h-screen bg-zinc-950 text-white"
-Panel:  "rounded-lg border border-zinc-800 bg-zinc-900 text-white shadow-sm"
-Header: "sticky top-0 z-30 border-b border-zinc-800 bg-zinc-950 text-white"
-```
+- `apps/web/app/components/patterns.tsx`
+- shell files nhu:
+  - `apps/web/app/admin/components/admin-shell.tsx`
+  - `apps/web/app/inventory/_components/inventory-shell.tsx`
+  - `apps/web/app/hr/components/hr-shell.tsx`
 
-### Hover lift
+Composition layer chi duoc phep sap xep va tai su dung primitive hien co. No khong duoc tro thanh mot design system song song.
 
-```tsx
-className = "transition-all hover:-translate-y-0.5 hover:shadow-md";
-```
+## Public Contracts
+
+Primitive contracts chinh thuc:
+
+- `Button`
+- `Table`
+- `Sidebar`
+- `Card`
+- `Badge`
+
+App composition contracts dang ton tai:
+
+- `PageContainer`
+- `PageHeader`
+- `SectionCard`
+- `FilterBar`
+- `EmptyState`
+- `EmptyStatePanel`
+- `StatusBadge`
+- `ActionIconButton`
+
+Nhung wrapper nay chi hop le khi chung composition lai primitive va token hien co. Chung khong duoc dinh nghia spacing scale, density taxonomy, shell API, hay visual grammar moi vuot preset.
+
+## Preset-First Rules
+
+1. Khong override preset o muc primitive.
+2. Khong tao "design language" rieng vuot qua `radix-mira` + `taupe`.
+3. Khong tao layer moi nhu `components/v2` neu layer do chua ton tai trong repo.
+4. Khong mo ta docs nhu the du an dang co mot preset/theme khac voi `components.json`.
+5. Khong them wrapper moi chi de ep `padding`, `margin`, `size`, hoac `radius` khac preset.
+6. Khi can nhat quan usage, uu tien dung lai primitive va wrappers hien co.
+7. Khi can doi preset/runtime, phai doi config/code truoc roi moi cap nhat docs.
+
+## Use This, Not That
+
+Nen dung:
+
+- `@comtammatu/ui/components/button`
+- `@comtammatu/ui/components/table`
+- `@comtammatu/ui/components/sidebar`
+- `@comtammatu/ui/components/card`
+- `@comtammatu/ui/components/badge`
+- `apps/web/app/components/patterns.tsx` cho page/header/section/filter/empty/status/action khi wrapper do da du
+
+Khong nen dung:
+
+- primitive forks theo tung page
+- wrapper moi chi de tao spacing grammar rieng
+- docs noi ve typography/palette/surface grammar khong ton tai trong runtime
+- references den `components/v2` hoac "V2 design direction" khi repo chua co layer do
 
 ## Accessibility
 
 - Moi control tuong tac phai co visible focus state
 - Keyboard navigation bat buoc hoat dong
-- Touch-first surfaces phai dat minimum touch target (44x44, uu tien 56x56)
+- Touch target can phu hop voi ngu canh surface
 - Reduced motion phai duoc ton trong
 - Status colors phai giu contrast hop le
 
 ## Governance
 
-1. Khong import `theme.css` o domain/page de override system.
-2. Khong them static inline style vao foundation, shell hoac auth/mobile chrome.
-3. Khi can token moi, them vao `globals.css` truoc roi moi dung o component.
-4. App-local V2 composition phai song trong `apps/web/app/components/v2/`.
-5. `packages/ui` la primitive-first; khong coi `admin-patterns` / `inventory-patterns` la contract moi.
-6. Copy phai di qua glossary/dictionary khi dung term nghiep vu.
-7. `pnpm typecheck && pnpm lint && pnpm build` xanh truoc khi ship.
+1. Docs UI phai khop `components.json`, `globals.css`, va `layout.tsx`.
+2. Khong import `theme.css` theo domain/page de override system.
+3. Khong them static inline style vao foundation, shell, auth, hoac mobile chrome.
+4. Khong them arbitrary Tailwind dimensions; mo rong token truoc khi mo rong usage.
+5. Khong mo rong `patterns.tsx` thanh mot preset song song.
+6. `pnpm typecheck && pnpm lint && pnpm build` phai xanh truoc khi ket luan task.
 
 ## Related Files
 
+- `packages/ui/components.json`
+- `apps/web/components.json`
 - `apps/web/app/globals.css`
-- `apps/web/app/components/v2/`
-- `packages/ui/src/components/blocked-state-flash.tsx`
-- `packages/ui/src/components/` (shadcn/ui primitives)
+- `apps/web/app/layout.tsx`
+- `packages/ui/src/components/*`
+- `apps/web/app/components/patterns.tsx`
 - `docs/modules/ui.md`
