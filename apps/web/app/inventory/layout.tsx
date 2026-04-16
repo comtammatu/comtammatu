@@ -7,7 +7,7 @@ import {
   extractClaims,
 } from "@comtammatu/shared/auth";
 import { InventoryShell } from "./_components/inventory-shell";
-import { fetchInventorySiteContext } from "./_lib/headquarters";
+import { fetchInventorySiteContext } from "./_lib/procurement-branches";
 
 export default async function InventoryLayout({
   children,

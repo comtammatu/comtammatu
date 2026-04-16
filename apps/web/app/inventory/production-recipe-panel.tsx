@@ -384,14 +384,12 @@ function QuickRawIngredientDialog({
 /* ─── Main recipe panel ─── */
 
 interface ProductionRecipePanelProps {
-  branchKindSchemaAvailable: boolean;
   finishedGoods: FinishedGoodOption[];
   ingredients: IngredientOption[];
   recipes: ProductionRecipeRow[];
 }
 
 export function ProductionRecipePanel({
-  branchKindSchemaAvailable,
   finishedGoods,
   ingredients,
   recipes,
@@ -615,9 +613,7 @@ export function ProductionRecipePanel({
           type="button"
           variant="outline"
           onClick={() => openRecipeDialog()}
-          disabled={
-            !branchKindSchemaAvailable || finishedGoodsOptions.length === 0
-          }
+          disabled={finishedGoodsOptions.length === 0}
         >
           <Plus className="mr-2 size-4" />
           Thêm dòng BOM
@@ -652,7 +648,6 @@ export function ProductionRecipePanel({
                     variant="ghost"
                     size="sm"
                     onClick={() => setQuickFinishedGoodDialogOpen(true)}
-                    disabled={!branchKindSchemaAvailable}
                   >
                     <Plus className="mr-2 size-4" />
                     Tạo thành phẩm
@@ -687,7 +682,6 @@ export function ProductionRecipePanel({
                     variant="ghost"
                     size="sm"
                     onClick={() => setQuickRawIngredientDialogOpen(true)}
-                    disabled={!branchKindSchemaAvailable}
                   >
                     <Plus className="mr-2 size-4" />
                     Tạo nguyên liệu
@@ -884,7 +878,6 @@ export function ProductionRecipePanel({
                       variant="outline"
                       size="sm"
                       onClick={() => openRecipeDialog(group.finishedGoodId)}
-                      disabled={!branchKindSchemaAvailable}
                     >
                       <Plus className="mr-2 size-4" />
                       Thêm nguyên liệu
@@ -894,7 +887,6 @@ export function ProductionRecipePanel({
                       variant="destructive"
                       size="sm"
                       onClick={() => setRecipeGroupToDelete(group)}
-                      disabled={!branchKindSchemaAvailable}
                       className={cn(
                         "transition-opacity md:opacity-0 md:group-hover/recipe:opacity-100 md:group-focus-within/recipe:opacity-100",
                         "md:pointer-events-none md:group-hover/recipe:pointer-events-auto md:group-focus-within/recipe:pointer-events-auto",
@@ -941,7 +933,6 @@ export function ProductionRecipePanel({
                               variant="ghost"
                               size="icon"
                               onClick={() => setEditingRecipe(recipe)}
-                              disabled={!branchKindSchemaAvailable}
                               aria-label={`Chỉnh sửa dòng BOM ${recipe.ingredient_name}`}
                               title="Chỉnh sửa dòng BOM"
                             >
@@ -952,7 +943,6 @@ export function ProductionRecipePanel({
                               variant="ghost"
                               size="icon"
                               onClick={() => handleRecipeDelete(recipe.id)}
-                              disabled={!branchKindSchemaAvailable}
                               aria-label={`Xóa dòng BOM ${recipe.ingredient_name}`}
                               title="Xóa dòng BOM"
                             >

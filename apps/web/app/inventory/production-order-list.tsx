@@ -29,12 +29,10 @@ import type { ProductionOrderRow } from "./production-types";
 
 interface ProductionOrderListProps {
   orders: ProductionOrderRow[];
-  branchKindSchemaAvailable: boolean;
 }
 
 export function ProductionOrderList({
   orders,
-  branchKindSchemaAvailable,
 }: ProductionOrderListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -133,7 +131,7 @@ export function ProductionOrderList({
                           type="button"
                           size="sm"
                           onClick={() => handleConfirm(order.id)}
-                          disabled={isPending || !branchKindSchemaAvailable}
+                          disabled={isPending}
                         >
                           <CheckCircle2 className="mr-2 size-4" />
                           Xác nhận
@@ -143,7 +141,7 @@ export function ProductionOrderList({
                           variant="outline"
                           size="sm"
                           onClick={() => handleCancel(order.id)}
-                          disabled={isPending || !branchKindSchemaAvailable}
+                          disabled={isPending}
                         >
                           Hủy
                         </Button>

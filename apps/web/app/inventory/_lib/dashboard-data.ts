@@ -9,9 +9,9 @@ import { fetchPurchaseOrders } from "../procurement-actions";
 import { fetchStockTransfers } from "../transfer-actions";
 import { fetchInventoryValueSystem } from "../inventory-value-actions";
 import { formatDate } from "./format";
-import { fetchInventorySiteContext } from "./headquarters";
+import { fetchInventorySiteContext } from "./procurement-branches";
 
-type DashboardSiteKind = "warehouse" | "headquarters" | "central_kitchen" | "branch";
+type DashboardSiteKind = "warehouse" | "central_kitchen" | "branch";
 
 type DashboardTransfer = {
   id: number;

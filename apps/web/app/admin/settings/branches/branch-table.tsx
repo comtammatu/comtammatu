@@ -52,13 +52,9 @@ export interface BranchRow {
 
 interface BranchTableProps {
   branches: BranchRow[];
-  branchKindSchemaAvailable: boolean;
 }
 
-export function BranchTable({
-  branches,
-  branchKindSchemaAvailable,
-}: BranchTableProps) {
+export function BranchTable({ branches }: BranchTableProps) {
   const [editBranch, setEditBranch] = useState<BranchRow | null>(null);
   const [attendanceBranch, setAttendanceBranch] = useState<BranchRow | null>(
     null,
@@ -202,7 +198,6 @@ export function BranchTable({
         open={!!editBranch}
         onOpenChange={(open) => !open && setEditBranch(null)}
         branch={editBranch}
-        branchKindSchemaAvailable={branchKindSchemaAvailable}
       />
 
       {attendanceBranch && (

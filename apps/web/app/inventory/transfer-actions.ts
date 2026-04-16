@@ -7,22 +7,11 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import type { Database, SupabaseClient } from "@comtammatu/database";
-import {
-  resolveDefaultInventoryLocation,
-  withInventoryLocationCompatFallback,
-} from "./_lib/inventory-location-compat";
+import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 
 type TenantSupabase = SupabaseClient<Database>;
 
 const ROLES = INVENTORY_OPS_ROLES;
-
-/** @deprecated For backward compat only — UI should use branch_kind picker. */
-export async function resolveHeadquartersBranchId(): Promise<number | null> {
-  const ctx = await getAuthContext(ROLES);
-  if (!ctx) return null;
-  const { fetchHeadquartersBranchId } = await import("./_lib/procurement-branches");
-  return fetchHeadquartersBranchId(ctx.supabase, ctx.claims.tenant_id);
-}
 
 export async function fetchStockTransferDetail(
   transferId: number,
@@ -114,9 +103,7 @@ async function loadBranchKind(
     .eq("id", branchId)
     .single();
   if (error || !data) return null;
-  // Backward compat: headquarters → warehouse
-  const kind = data.branch_kind;
-  return kind === "headquarters" ? "warehouse" : kind;
+  return data.branch_kind;
 }
 
 export async function createStockTransfer(
@@ -187,35 +174,21 @@ export async function createStockTransfer(
     "receive",
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC signature may not match generated types yet
-  const sb = supabase as any;
   const transferLines = (parsed.data.lines ?? []).map((line) => ({
     ingredientId: line.ingredientId,
     quantity: line.quantity,
     unit: line.unit,
   }));
-  const { data, error } = await withInventoryLocationCompatFallback(
-    () =>
-      sb.rpc("create_stock_transfer_draft", {
-        p_from_branch_id: fromBranchId,
-        p_to_branch_id: toBranchId,
-        p_from_location_id: fromLocationId,
-        p_to_location_id: toLocationId,
-        p_transfer_number: transferNumber,
-        p_notes: parsed.data.notes ?? null,
-        p_vehicle_info: isIntraBranch ? null : (parsed.data.vehicleInfo ?? null),
-        p_lines: transferLines,
-      }),
-    () =>
-      sb.rpc("create_stock_transfer_draft", {
-        p_from_branch_id: fromBranchId,
-        p_to_branch_id: toBranchId,
-        p_transfer_number: transferNumber,
-        p_notes: parsed.data.notes ?? null,
-        p_vehicle_info: isIntraBranch ? null : (parsed.data.vehicleInfo ?? null),
-        p_lines: transferLines,
-      }),
-  );
+  const { data, error } = await supabase.rpc("create_stock_transfer_draft", {
+    p_from_branch_id: fromBranchId,
+    p_to_branch_id: toBranchId,
+    p_from_location_id: fromLocationId ?? undefined,
+    p_to_location_id: toLocationId ?? undefined,
+    p_transfer_number: transferNumber,
+    p_notes: parsed.data.notes ?? undefined,
+    p_vehicle_info: isIntraBranch ? undefined : (parsed.data.vehicleInfo ?? undefined),
+    p_lines: transferLines,
+  });
 
   if (error) {
     if (error.code === "42501") {

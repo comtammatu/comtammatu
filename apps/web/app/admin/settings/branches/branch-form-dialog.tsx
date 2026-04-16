@@ -18,24 +18,30 @@ interface BranchFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   branch?: BranchRow | null;
-  branchKindSchemaAvailable: boolean;
 }
 
 export function BranchFormDialog({
   open,
   onOpenChange,
   branch,
-  branchKindSchemaAvailable,
 }: BranchFormDialogProps) {
   const isEdit = !!branch;
   const isHeadquarters = branch?.is_headquarters === true;
   const [branchKind, setBranchKind] = useState(
-    branch?.branch_kind === "central_kitchen" ? "central_kitchen" : "branch",
+    branch?.branch_kind === "central_kitchen"
+      ? "central_kitchen"
+      : branch?.branch_kind === "warehouse"
+        ? "warehouse"
+        : "branch",
   );
 
   useEffect(() => {
     setBranchKind(
-      branch?.branch_kind === "central_kitchen" ? "central_kitchen" : "branch",
+      branch?.branch_kind === "central_kitchen"
+        ? "central_kitchen"
+        : branch?.branch_kind === "warehouse"
+          ? "warehouse"
+          : "branch",
     );
   }, [branch]);
 
@@ -54,11 +60,7 @@ export function BranchFormDialog({
       submitLabel={isEdit ? "Cập nhật" : "Tạo mới"}
     >
       {isEdit && <input type="hidden" name="id" value={branch.id} />}
-      <input
-        type="hidden"
-        name="branchKind"
-        value={isHeadquarters ? "headquarters" : branchKind}
-      />
+      <input type="hidden" name="branchKind" value={branchKind} />
 
       <div className="space-y-2">
         <Label htmlFor="name">Tên điểm vận hành *</Label>
@@ -97,12 +99,6 @@ export function BranchFormDialog({
         {isHeadquarters ? (
           <p className="text-sm text-muted-foreground">
             Trụ sở được gán bằng nút &quot;Đặt làm trụ sở chính&quot;.
-          </p>
-        ) : !branchKindSchemaAvailable ? (
-          <p className="text-sm text-muted-foreground">
-            Database hiện tại chưa có cột <code>branch_kind</code>, nên chi
-            nhánh sẽ được lưu theo schema cũ. Hãy áp dụng migration để bật
-            phân loại <em>bếp trung tâm</em>.
           </p>
         ) : (
           <Select value={branchKind} onValueChange={setBranchKind}>

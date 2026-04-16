@@ -8,10 +8,7 @@ import {
 } from "@comtammatu/shared/auth";
 import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
-import {
-  resolveDefaultInventoryLocation,
-  withInventoryLocationCompatFallback,
-} from "./_lib/inventory-location-compat";
+import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 
 /* ─── Schemas ─── */
 
@@ -298,19 +295,10 @@ export async function createStocktakeSession(
     "receive",
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC create_stocktake_session missing p_location_id in generated types
-  const sb = supabase as any;
-  const { data, error } = await withInventoryLocationCompatFallback(
-    () =>
-      sb.rpc("create_stocktake_session", {
-        p_branch_id: parsedBranch.data,
-        p_location_id: defaultLocationId,
-      }),
-    () =>
-      sb.rpc("create_stocktake_session", {
-        p_branch_id: parsedBranch.data,
-      }),
-  );
+  const { data, error } = await supabase.rpc("create_stocktake_session", {
+    p_branch_id: parsedBranch.data,
+    p_location_id: defaultLocationId ?? undefined,
+  });
 
   if (error) {
     if (error.code === "23505") {

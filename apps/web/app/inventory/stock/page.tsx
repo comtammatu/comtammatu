@@ -5,7 +5,7 @@ import {
 } from "@comtammatu/shared/auth";
 import { redirect } from "next/navigation";
 import { fetchIngredients } from "../actions";
-import { fetchHeadquartersBranchId } from "../_lib/headquarters";
+import { fetchProcurementBranches } from "../_lib/procurement-branches";
 import { formatDate } from "../_lib/format";
 import { StockClient } from "./stock-client";
 import type { StockIngredient } from "./stock-client";
@@ -38,10 +38,15 @@ export default async function StockPage() {
   const claims = extractClaims(session.user.app_metadata);
   if (!claims) redirect(buildLoginBlockedStatePath());
 
-  // Resolve branch: use user's branch if set, otherwise HQ
+  // Resolve branch: use user's branch if set, otherwise first warehouse
+  const procBranches = claims.branch_id
+    ? []
+    : await fetchProcurementBranches(supabase, claims.tenant_id);
   const branchId =
     claims.branch_id ??
-    (await fetchHeadquartersBranchId(supabase, claims.tenant_id));
+    procBranches.find((b) => b.branch_kind === "warehouse")?.id ??
+    procBranches[0]?.id ??
+    null;
   if (!branchId) redirect("/inventory");
 
   // Fetch ingredients + stock levels in parallel

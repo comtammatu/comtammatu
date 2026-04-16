@@ -80,7 +80,7 @@ function formatTime(d: Date) {
   return `${String(h12).padStart(2, "0")}:${m} ${period}`;
 }
 
-type DashboardSiteKind = "warehouse" | "headquarters" | "central_kitchen" | "branch";
+type DashboardSiteKind = "warehouse" | "central_kitchen" | "branch";
 
 type QuickAction = {
   icon: ReactNode;
@@ -121,7 +121,7 @@ function buildQuickActions(
 ): QuickAction[] {
   const paths = getInventoryPaths(routeBase);
 
-  if (siteKind === "warehouse" || siteKind === "headquarters") {
+  if (siteKind === "warehouse") {
     return [
       {
         icon: <ShoppingCart className="size-7" />,
@@ -383,7 +383,7 @@ function buildTaskQueueItems({
     (transfer) => transfer.fromBranch === siteName,
   );
 
-  if (siteKind === "warehouse" || siteKind === "headquarters") {
+  if (siteKind === "warehouse") {
     if (pendingPO > 0) {
       items.push({
         key: "hq-po",

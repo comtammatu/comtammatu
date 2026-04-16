@@ -4,7 +4,6 @@ import { fetchIngredients } from "../actions";
 import {
   fetchStockTransfers,
   fetchBranchesForTransfer,
-  resolveHeadquartersBranchId,
 } from "../transfer-actions";
 import type {
   BranchForTransfer,
@@ -22,10 +21,9 @@ export default async function TransfersPage() {
     ? extractClaims(session.user.app_metadata)
     : null;
 
-  const [trRes, brRes, hqBranchId, ingRes] = await Promise.all([
+  const [trRes, brRes, ingRes] = await Promise.all([
     fetchStockTransfers(),
     fetchBranchesForTransfer(),
-    resolveHeadquartersBranchId(),
     fetchIngredients(),
   ]);
 
@@ -35,10 +33,8 @@ export default async function TransfersPage() {
   const branches: BranchForTransfer[] = brRes.success
     ? ((brRes.data ?? []) as BranchForTransfer[])
     : [];
-  const resolvedHqBranchId =
-    hqBranchId ?? branches.find((b) =>
-      b.branch_kind === "warehouse" || b.branch_kind === "headquarters" || b.is_headquarters
-    )?.id ?? null;
+  const hqBranchId =
+    branches.find((b) => b.branch_kind === "warehouse")?.id ?? null;
   const ingredients: IngredientRow[] = ingRes.success
     ? ((ingRes.data ?? []) as IngredientRow[])
     : [];
@@ -48,7 +44,7 @@ export default async function TransfersPage() {
       initial={rows}
       branches={branches}
       ingredients={ingredients}
-      hqBranchId={resolvedHqBranchId}
+      hqBranchId={hqBranchId}
       userBranchId={claims?.branch_id ?? null}
       userRole={claims?.user_role ?? "branch_manager"}
       basePath="/inventory/transfers"

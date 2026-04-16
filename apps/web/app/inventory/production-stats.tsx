@@ -8,14 +8,12 @@ interface ProductionStatsProps {
   orders: ProductionOrderRow[];
   readinessMessage: string | null;
   centralKitchenCount: number;
-  branchKindSchemaAvailable: boolean;
 }
 
 export function ProductionStats({
   orders,
   readinessMessage,
   centralKitchenCount,
-  branchKindSchemaAvailable,
 }: ProductionStatsProps) {
   const totals = useMemo(() => {
     const draft = orders.filter((order) => order.status === "draft").length;
@@ -74,9 +72,7 @@ export function ProductionStats({
         <div className="text-sm text-muted-foreground">
           {centralKitchenCount > 0
             ? `Có ${centralKitchenCount} bếp trung tâm đang hoạt động`
-            : branchKindSchemaAvailable
-              ? "Chưa có bếp trung tâm nào được cấu hình"
-              : "Chưa thể đọc danh sách bếp trung tâm vì thiếu migration"}
+            : "Chưa có bếp trung tâm nào được cấu hình"}
         </div>
       </div>
     </>

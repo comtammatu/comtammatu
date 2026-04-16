@@ -11,8 +11,6 @@ import {
   type ProductionRecipeRow,
 } from "../production-actions";
 import { ProductionHubClient } from "../production-client";
-import { hasBranchKindSchema } from "../_lib/branch-kind-schema";
-
 type InventoryIngredientRow = {
   id: number;
   name: string;
@@ -23,8 +21,7 @@ type InventoryIngredientRow = {
 type BranchPreviewRow = {
   id: number;
   name: string;
-  branch_kind?: string | null;
-  is_headquarters?: boolean | null;
+  branch_kind: string | null;
   is_active: boolean | null;
 };
 
@@ -43,21 +40,12 @@ export default async function ProductionPage() {
     redirect("/inventory?forbidden=1&reason=insufficient-permission");
   }
 
-  const branchKindSchemaAvailable = await hasBranchKindSchema(supabase);
-
-  const branchesQuery = branchKindSchemaAvailable
-    ? supabase
-        .from("branches")
-        .select("id, name, branch_kind, is_active")
-        .eq("tenant_id", claims?.tenant_id ?? 0)
-        .eq("is_active", true)
-        .order("name")
-    : supabase
-        .from("branches")
-        .select("id, name, is_headquarters, is_active")
-        .eq("tenant_id", claims?.tenant_id ?? 0)
-        .eq("is_active", true)
-        .order("name");
+  const branchesQuery = supabase
+    .from("branches")
+    .select("id, name, branch_kind, is_active")
+    .eq("tenant_id", claims?.tenant_id ?? 0)
+    .eq("is_active", true)
+    .order("name");
 
   const [branchesRes, ingredientsRes, ordersRes, recipesRes] =
     await Promise.all([
@@ -68,14 +56,12 @@ export default async function ProductionPage() {
     ]);
   const branches = (branchesRes.data ?? []) as BranchPreviewRow[];
 
-  const centralKitchenBranches = branchKindSchemaAvailable
-    ? branches
-        .filter((branch) => branch.branch_kind === "central_kitchen")
-        .map((branch) => ({
-          id: branch.id,
-          name: branch.name,
-        }))
-    : [];
+  const centralKitchenBranches = branches
+    .filter((branch) => branch.branch_kind === "central_kitchen")
+    .map((branch) => ({
+      id: branch.id,
+      name: branch.name,
+    }));
 
   // branch_manager sees only their own central_kitchen; super_manager/owner see all
   const visibleBranches =
@@ -84,7 +70,7 @@ export default async function ProductionPage() {
       : centralKitchenBranches;
 
   // branch_manager not assigned to a central_kitchen → no access
-  if (role === "branch_manager" && branchKindSchemaAvailable && visibleBranches.length === 0) {
+  if (role === "branch_manager" && visibleBranches.length === 0) {
     redirect("/inventory?forbidden=1&reason=insufficient-permission");
   }
 
@@ -129,24 +115,7 @@ export default async function ProductionPage() {
           </div>
         </CardContent>
       </Card>
-      {!branchKindSchemaAvailable && (
-        <Card className="border-warning/20 bg-warning/10">
-          <CardContent className="py-12 text-center">
-            <div className="space-y-1.5">
-              <h3 className="text-2xl font-semibold">
-                Thiếu schema branch_kind
-              </h3>
-              <p className="mx-auto max-w-md text-sm leading-6 text-muted-foreground">
-                Database hiện tại chưa có cột `branch_kind`. Màn Bếp trung tâm
-                đang ở chế độ chờ migration, nên các thao tác sản xuất tạm thời
-                bị khóa để tránh phát sinh lỗi mơ hồ.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
       <ProductionHubClient
-        branchKindSchemaAvailable={branchKindSchemaAvailable}
         centralKitchenBranches={visibleBranches}
         ingredients={allIngredients.map((ingredient) => ({
           id: ingredient.id,
