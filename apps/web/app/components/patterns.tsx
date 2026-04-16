@@ -4,6 +4,9 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
   CardContent,
 } from "@comtammatu/ui/components/card";
 
@@ -54,13 +57,17 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <Card className="app-panel">
+    <Card>
       <CardContent className="p-5 sm:p-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div className="space-y-3">
-            {eyebrow ? <span className="app-kicker">{eyebrow}</span> : null}
+            {eyebrow ? (
+              <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                {eyebrow}
+              </span>
+            ) : null}
             <div className="space-y-2">
-              <h2 className="font-heading text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+              <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
                 {title}
               </h2>
               {description ? (
@@ -102,22 +109,16 @@ export function SectionCard({
     <Card
       size={resolveCardSize(density)}
       data-density={density}
-      className={cn("app-panel", className)}
+      className={className}
     >
       {title ? (
-        <div className="flex flex-col gap-4 border-b border-border/60 px-4 pb-4 sm:flex-row sm:items-start sm:justify-between sm:px-5 sm:pb-5">
+        <CardHeader className="flex flex-col gap-4 border-b border-border/60 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
-            <h3 className="font-heading text-xl font-semibold text-foreground">
-              {title}
-            </h3>
-            {description ? (
-              <p className="text-sm leading-6 text-muted-foreground">
-                {description}
-              </p>
-            ) : null}
+            <CardTitle className="text-xl font-semibold">{title}</CardTitle>
+            {description ? <CardDescription>{description}</CardDescription> : null}
           </div>
           {action ? <div className="flex items-center gap-2">{action}</div> : null}
-        </div>
+        </CardHeader>
       ) : null}
       <CardContent className="px-4 sm:px-5">{children}</CardContent>
     </Card>
@@ -155,12 +156,12 @@ export function EmptyState({
       )}
     >
       {icon ? (
-        <div className="flex size-14 items-center justify-center rounded-full border border-border/70 bg-background/80 text-primary shadow-sm">
+        <div className="flex size-14 items-center justify-center rounded-full border bg-muted text-primary">
           {icon}
         </div>
       ) : null}
       <div className="space-y-1.5">
-        <h3 className="font-heading text-2xl font-semibold">{title}</h3>
+        <h3 className="text-2xl font-semibold">{title}</h3>
         {description ? (
           <p className="max-w-md text-sm leading-6 text-muted-foreground">
             {description}
@@ -195,7 +196,7 @@ export function EmptyStatePanel({
   children?: ReactNode;
 }) {
   return (
-    <Card className={cn("app-panel", className)}>
+    <Card className={className}>
       <CardContent>
         <EmptyState
           icon={icon}
@@ -265,7 +266,7 @@ export function FilterBar({
   return (
     <div
       className={cn(
-        "app-subpanel flex flex-wrap items-center gap-2 p-3",
+        "flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3",
         className,
       )}
     >

@@ -50,17 +50,14 @@ export function WorkspaceShell({
 }: WorkspaceShellProps) {
   return (
     <SidebarProvider>
-      <div className="app-canvas flex min-h-dvh w-full safe-top">
-        <Sidebar variant="floating" className="border-none">
-          <SidebarHeader className="gap-4 p-3">{sidebarHeader}</SidebarHeader>
+      <div className="flex min-h-dvh w-full">
+        <Sidebar variant="inset">
+          <SidebarHeader className="gap-4 p-4">{sidebarHeader}</SidebarHeader>
 
-          <SidebarContent className="px-2 pb-3">
+          <SidebarContent className="px-2 pb-4">
             {navGroups.map((group) => (
-              <SidebarGroup
-                key={group.title}
-                className="mb-3 rounded-3xl border border-sidebar-border/70 bg-sidebar-accent/55 p-2 shadow-sm"
-              >
-                <SidebarGroupLabel className="px-3 pt-2 text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/60">
+              <SidebarGroup key={group.title} className="px-0 py-1">
+                <SidebarGroupLabel className="px-2 pb-1 text-xs font-medium text-sidebar-foreground/70">
                   {group.title}
                 </SidebarGroupLabel>
                 <SidebarMenu>
@@ -74,7 +71,7 @@ export function WorkspaceShell({
                           isActive={active}
                           size="lg"
                           tooltip={item.label}
-                          className="rounded-2xl px-3"
+                          className="rounded-md"
                         >
                           <Link href={item.href}>
                             <Icon />
@@ -90,57 +87,57 @@ export function WorkspaceShell({
           </SidebarContent>
 
           {sidebarFooter ? (
-            <SidebarFooter className="p-3">{sidebarFooter}</SidebarFooter>
+            <SidebarFooter className="p-4">{sidebarFooter}</SidebarFooter>
           ) : null}
         </Sidebar>
 
-        <SidebarInset className="min-h-dvh bg-transparent">
-          <div className="flex min-h-full flex-1 flex-col p-3 md:p-4">
-            <div className="app-shell flex min-h-full flex-1 flex-col">
-              <header className="border-b border-border/60 p-4 sm:p-5">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <SidebarTrigger className="md:hidden" />
-                      {eyebrow ? (
-                        <span className="app-kicker">{eyebrow}</span>
-                      ) : null}
-                      {badge ? badge : null}
-                    </div>
-
-                    <div className="space-y-2">
-                      <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                        {title}
-                      </h1>
-                      {description ? (
-                        <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                          {description}
-                        </p>
-                      ) : null}
-                    </div>
+        <SidebarInset className="min-h-dvh bg-background">
+          <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
+            <header className="rounded-lg border bg-card p-4 sm:p-6">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <SidebarTrigger className="md:hidden" />
+                    {eyebrow ? (
+                      <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                        {eyebrow}
+                      </span>
+                    ) : null}
+                    {badge ? badge : null}
                   </div>
 
-                  {actions ? (
-                    <div className="flex flex-wrap items-center gap-2">
-                      {actions}
-                    </div>
-                  ) : null}
+                  <div className="space-y-2">
+                    <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                      {title}
+                    </h1>
+                    {description ? (
+                      <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
+                        {description}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
 
-                {headerMeta ? (
-                  <div className="mt-4 rounded-3xl border border-border/60 bg-background/75 p-3 shadow-sm backdrop-blur">
-                    {headerMeta}
+                {actions ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {actions}
                   </div>
                 ) : null}
-              </header>
+              </div>
 
-              <main
-                id="main-content"
-                className={cn("flex-1 p-4 sm:p-5", contentClassName)}
-              >
-                <div className="space-y-5">{children}</div>
-              </main>
-            </div>
+              {headerMeta ? (
+                <div className="mt-4 rounded-lg border bg-muted/30 p-4">
+                  {headerMeta}
+                </div>
+              ) : null}
+            </header>
+
+            <main
+              id="main-content"
+              className={cn("flex-1", contentClassName)}
+            >
+              <div className="space-y-4">{children}</div>
+            </main>
           </div>
         </SidebarInset>
       </div>

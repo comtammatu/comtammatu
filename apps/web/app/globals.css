@@ -143,33 +143,6 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-image:
-      radial-gradient(circle at top left, oklch(0.89 0.05 72 / 0.95), transparent 34%),
-      radial-gradient(circle at top right, oklch(0.9 0.04 150 / 0.75), transparent 28%),
-      linear-gradient(145deg, oklch(0.985 0.012 73), oklch(0.958 0.012 66));
-    background-attachment: fixed;
-    position: relative;
-  }
-  body::before {
-    background-image:
-      linear-gradient(to right, oklch(0.78 0.05 74 / 0.11) 1px, transparent 1px),
-      linear-gradient(to bottom, oklch(0.78 0.05 74 / 0.11) 1px, transparent 1px);
-    background-position: center;
-    background-size: 2.75rem 2.75rem;
-    content: "";
-    inset: 0;
-    pointer-events: none;
-    position: fixed;
-    z-index: -2;
-  }
-  body::after {
-    background:
-      radial-gradient(circle at center, oklch(0.96 0.02 73 / 0.5), transparent 55%);
-    content: "";
-    inset: 0;
-    pointer-events: none;
-    position: fixed;
-    z-index: -1;
   }
   html {
     @apply font-sans;
@@ -189,48 +162,30 @@
   }
 
   .app-canvas {
-    isolation: isolate;
-    position: relative;
+    @apply min-h-dvh w-full;
   }
 
   .app-shell {
-    @apply relative overflow-hidden rounded-3xl border border-border/70 bg-background/85 shadow-sm backdrop-blur-xl;
-  }
-
-  .app-shell::before,
-  .app-panel::before {
-    background:
-      linear-gradient(135deg, oklch(0.99 0.012 72 / 0.84), transparent 55%),
-      radial-gradient(circle at top right, oklch(0.86 0.05 74 / 0.24), transparent 38%);
-    content: "";
-    inset: 0;
-    pointer-events: none;
-    position: absolute;
-  }
-
-  .app-shell > *,
-  .app-panel > * {
-    position: relative;
-    z-index: 1;
+    @apply rounded-lg border bg-background shadow-sm;
   }
 
   .app-panel {
-    @apply relative overflow-hidden rounded-3xl border border-border/70 bg-card/90 shadow-sm backdrop-blur-xl;
+    @apply rounded-lg border bg-card text-card-foreground shadow-sm;
   }
 
   .app-subpanel {
-    @apply rounded-2xl border border-border/60 bg-background/80 shadow-sm backdrop-blur;
+    @apply rounded-lg border bg-muted/30 text-card-foreground;
   }
 
   .app-kicker {
-    @apply inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground;
+    @apply inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground;
   }
 
   .app-stat {
-    @apply rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm backdrop-blur;
+    @apply rounded-lg border bg-card p-4 text-card-foreground shadow-sm;
   }
 
   .app-dock {
-    @apply rounded-3xl border border-border/70 bg-background/90 shadow-sm backdrop-blur-xl;
+    @apply rounded-lg border bg-card shadow-sm;
   }
 }

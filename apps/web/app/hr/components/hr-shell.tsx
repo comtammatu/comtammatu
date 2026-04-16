@@ -19,6 +19,7 @@ import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   findActiveNavItem,
   formatPathSegment,
@@ -80,10 +81,10 @@ export function HRShell({ children, user, role }: HRShellProps) {
       navGroups={NAV_GROUPS}
       title={pageTitle}
       eyebrow={APP_COPY_VI.hrWorkspaceSubtitle}
-      description="Thiết kế lại hoàn toàn không gian nhân sự và tiền lương để đọc nhanh hơn, bớt cảm giác bảng điều khiển cũ, nhưng vẫn giữ nguyên route và phân quyền."
+      description="Tập trung điều hướng nhân sự, chấm công và bảng lương theo cùng một cấu trúc thao tác."
       badge={<Badge variant="secondary">{ROLE_LABEL_VI[role]}</Badge>}
       sidebarHeader={
-        <div className="rounded-3xl border border-sidebar-border/70 bg-sidebar-accent/70 p-4 text-sidebar-foreground shadow-sm">
+        <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-4 text-sidebar-foreground">
           <Link
             href="/admin/dashboard"
             className="inline-flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground"
@@ -92,20 +93,20 @@ export function HRShell({ children, user, role }: HRShellProps) {
             Quản trị
           </Link>
           <div className="mt-4 flex items-center gap-3">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-sidebar-primary text-sidebar-primary-foreground shadow-sm">
+            <div className="flex size-12 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
               <Briefcase className="size-5" />
             </div>
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/55">
                 Chuyên trách
               </p>
-              <p className="font-heading text-2xl font-semibold">
+              <p className="text-xl font-semibold">
                 {APP_COPY_VI.hrWorkspace}
               </p>
             </div>
           </div>
           <p className="mt-4 text-sm leading-6 text-sidebar-foreground/72">
-            Tập trung ca làm, chấm công và bảng lương trong cùng một khung thao tác mới.
+            Tập trung ca làm, chấm công và bảng lương trong cùng một tuyến thao tác.
           </p>
         </div>
       }
@@ -122,46 +123,52 @@ export function HRShell({ children, user, role }: HRShellProps) {
       headerMeta={
         <div className="grid gap-3 md:grid-cols-2 md:items-start">
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="app-stat">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Vai trò
-              </p>
-              <p className="mt-2 font-heading text-2xl font-semibold">
-                {ROLE_LABEL_VI[role]}
-              </p>
-            </div>
-            <div className="app-stat">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Khu làm việc
-              </p>
-              <p className="mt-2 text-sm leading-6 text-foreground">
-                Tuyến nghiệp vụ nhân sự tập trung
-              </p>
-            </div>
-            <div className="app-stat">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Điều hướng
-              </p>
-              <p className="mt-2 text-sm leading-6 text-foreground">
-                {NAV_GROUPS[0]?.items.length ?? 0} điểm vào chính
-              </p>
-            </div>
+            <Card>
+              <CardContent className="space-y-2 p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Vai trò
+                </p>
+                <p className="text-lg font-semibold">{ROLE_LABEL_VI[role]}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="space-y-2 p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Khu làm việc
+                </p>
+                <p className="text-sm leading-6 text-foreground">
+                  Tuyến nghiệp vụ nhân sự tập trung
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="space-y-2 p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Điều hướng
+                </p>
+                <p className="text-sm leading-6 text-foreground">
+                  {NAV_GROUPS[0]?.items.length ?? 0} điểm vào chính
+                </p>
+              </CardContent>
+            </Card>
           </div>
-          <div className="app-subpanel flex items-center gap-3 p-3">
-            <Avatar size="sm">
-              <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{user.name}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {ROLE_LABEL_VI[role]}
-              </p>
-            </div>
-          </div>
+          <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+              <Avatar size="sm">
+                <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">{user.name}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {ROLE_LABEL_VI[role]}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       }
       sidebarFooter={
-        <div className="rounded-3xl border border-sidebar-border/70 bg-sidebar-accent/70 p-3 shadow-sm">
+        <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-3">
           <div className="flex items-center gap-3">
             <Avatar size="sm">
               <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
