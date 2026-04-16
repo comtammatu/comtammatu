@@ -879,6 +879,7 @@ export function SupplierInvoicesClient({
           )}
         </SectionCard>
       </div>
+      </div>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>

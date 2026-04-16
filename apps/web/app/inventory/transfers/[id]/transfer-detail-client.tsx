@@ -268,14 +268,9 @@ export function TransferDetailClient({
             className="overflow-hidden"
             density="compact"
             action={
-              <Button
-                type="button"
-                variant="ghost"
-                className="font-bold text-success"
-                disabled
-              >
-                Kiem nhan tai danh sach
-              </Button>
+              <span className="text-xs font-medium text-muted-foreground">
+                Nhan toan bo theo so luong gui tren tung dong
+              </span>
             }
           >
 

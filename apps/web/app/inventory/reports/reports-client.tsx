@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   FileDown,
   BarChart3,
@@ -107,10 +108,11 @@ export function ReportsClient({
             <Button
               type="button"
               variant="outline"
+              disabled
               className="rounded-full border-primary/30 bg-card px-5 font-bold text-primary hover:bg-muted"
             >
               <FileDown className="size-4" />
-              Xuất CSV/Excel
+              Xuất CSV/Excel (sắp mở)
             </Button>
           </div>
         </div>
@@ -154,9 +156,7 @@ export function ReportsClient({
             </div>
             <div className="mt-4 flex items-center justify-between">
               <p className="text-sm text-muted-foreground">{trendLabel}</p>
-              <Button type="button" variant="link" className="font-bold">
-                Chi tiết
-              </Button>
+              <Badge variant="outline">Đang xem snapshot tháng này</Badge>
             </div>
           </CardContent>
         </Card>
@@ -225,11 +225,12 @@ export function ReportsClient({
               })}
             </div>
             <Button
+              asChild
               type="button"
               variant="outline"
               className="mt-6 w-full rounded-full text-muted-foreground"
             >
-              Xem danh sách NCC
+              <Link href="/inventory/supplier-invoices">Mở công nợ NCC</Link>
             </Button>
           </CardContent>
         </Card>
@@ -344,11 +345,14 @@ export function ReportsClient({
         ].map((report) => (
           <div
             key={report.title}
-            className="app-panel group cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md"
+            className="app-panel"
           >
             <div className="p-5">
-              <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted transition-colors">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div className="flex size-12 items-center justify-center rounded-full bg-muted transition-colors">
                 <report.icon className="size-5 text-muted-foreground" />
+                </div>
+                <Badge variant="outline">Sắp mở</Badge>
               </div>
               <p className="font-bold text-foreground">{report.title}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">

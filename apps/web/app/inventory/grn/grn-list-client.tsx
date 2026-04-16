@@ -48,9 +48,11 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
         title="GRN và kiểm nhận"
         description="Theo dõi bước kiểm nhận thực tế từ nhà cung cấp sau PO, trước khi đi tiếp sang đối soát hóa đơn NCC."
         actions={
-          <Button type="button" disabled>
-            <Plus className="size-4" />
-            Tạo GRN từ PO
+          <Button asChild type="button">
+            <Link href="/inventory/purchase-orders">
+              <Plus className="size-4" />
+              Chọn PO để tạo GRN
+            </Link>
           </Button>
         }
       />
@@ -92,8 +94,13 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
         className="overflow-hidden"
         density="compact"
         action={
-          <Button type="button" variant="link" className="font-semibold">
-            Xuất báo cáo Excel
+          <Button
+            type="button"
+            variant="link"
+            className="font-semibold"
+            disabled
+          >
+            Xuất báo cáo Excel (sắp mở)
             <Download className="size-4" />
           </Button>
         }
@@ -150,8 +157,10 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button type="button" variant="ghost" size="icon">
+                  <Button asChild type="button" variant="ghost" size="icon">
+                    <Link href={`/inventory/grn/${g.id}`}>
                     <MoreVertical className="size-4" />
+                    </Link>
                   </Button>
                 </TableCell>
               </TableRow>

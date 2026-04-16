@@ -147,9 +147,9 @@ export function IssuesClient({
           description="Ưu tiên cấp phát từ kho chi nhánh xuống bếp, rồi mới theo dõi tiêu hao và các phiếu write-off bất thường."
           actions={
             <>
-              <Button type="button" variant="outline">
+              <Button type="button" variant="outline" disabled>
                 <FileDown className="size-4" />
-                Xuất báo cáo
+                Xuất báo cáo (sắp mở)
               </Button>
               <Button type="button" onClick={() => setCreateOpen(true)}>
                 <Plus className="size-4" />
@@ -367,15 +367,7 @@ export function IssuesClient({
             <span className="text-xs font-medium text-muted-foreground">
               Hiển thị {filtered.length} / {issues.length} phiếu
             </span>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm">
-                ← Trước
-              </Button>
-              <Badge variant="default">1</Badge>
-              <Button type="button" variant="outline" size="sm">
-                Sau →
-              </Button>
-            </div>
+            <Badge variant="outline">Một trang trong pilot hiện tại</Badge>
           </div>
         </SectionCard>
       </div>
