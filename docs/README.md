@@ -26,6 +26,15 @@
 - ERP gap matrix: [ref/inventory-erp-gap-matrix.md](ref/inventory-erp-gap-matrix.md)
 - QA gate: [runbooks/inventory/pre-release-qa.md](runbooks/inventory/pre-release-qa.md)
 - Adoption tracking: [worklog/inventory/adoption-matrix.md](worklog/inventory/adoption-matrix.md)
+- UX workflow review: [worklog/inventory/inventory-ux-workflow-review.md](worklog/inventory/inventory-ux-workflow-review.md)
+- UX contract đã chốt: [worklog/inventory/inventory-ux-contract.md](worklog/inventory/inventory-ux-contract.md)
+
+### Trạng thái Inventory hiện tại
+
+- Procurement UI đã chốt là `HQ procurement hub`: `Receiving -> PO -> GRN -> supplier invoice`
+- Branch flow hiện đi theo `Nhận transfer -> Cấp bếp -> Stocktake/alerts`, không dùng `Receiving` như generic inbound hub
+- Dashboard `/inventory` đã chuyển sang `task queue first`
+- `Ingredients / Suppliers / Recipes` đã canonical về `Danh mục`; các route cũ trong `Settings` chỉ còn giữ redirect tương thích
 
 ## Quy ước
 

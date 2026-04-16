@@ -3,14 +3,16 @@
 > Active work items for the current session/phase.
 > Update during work, clear completed items regularly.
 
-## Module Status (updated 2026-04-10 CEO review)
+## Module Status (updated 2026-04-16 inventory docs sync)
 
 M0-M3, M5 SHIPPED. M5-Ext central kitchen production is live. M4/M6/M7 PARTIAL where blocked on credentials or incomplete accounting/payroll calc.
 
 ## Documentation Status
 
 - [x] Inventory docs now have canonical reference + SOP + role handoff + RBAC matrix + ERP gap matrix + pre-release QA runbook + adoption matrix
-- [ ] When Inventory behavior changes materially, update `docs/ref/inventory.md`, `docs/ref/inventory-sop.md`, and `docs/worklog/inventory/adoption-matrix.md` together
+- [x] Inventory UX workflow review + UX contract added under `docs/worklog/inventory/`
+- [x] Inventory module/runbook docs synced with current UI contract, workflow wiring, and canonical catalog routes (2026-04-16)
+- [ ] When Inventory behavior changes materially, update `docs/ref/inventory.md`, `docs/ref/inventory-sop.md`, `docs/modules/web-app.md`, and `docs/worklog/inventory/adoption-matrix.md` together
 - [ ] Khi cần tách tồn riêng `Kho chi nhánh` / `Bếp chi nhánh`, triển khai project location-ledger theo `docs/plan/inventory-branch-kitchen-model.md`
 - [ ] Khi mở phase tách tồn thật, triển khai theo `docs/plan/inventory-location-ledger.md` với rollout `seed -> compatibility -> dual-write -> cutover`
 - [x] Owner apply migration `20260417040000_inventory_locations_phase1.sql` — APPLIED, types regenerated (confirmed 2026-04-15)
@@ -26,6 +28,7 @@ M0-M3, M5 SHIPPED. M5-Ext central kitchen production is live. M4/M6/M7 PARTIAL w
 - [x] M3: KDS — realtime queue, bump/complete, station config
 - [x] M4: Cash payment ✅ — VietQR/Momo blocked on merchant credentials
 - [x] M5: Stock — ingredients, recipes, stock levels, procurement, GRN, stocktake, transfers, central kitchen production hub
+- [x] Inventory UI contract shipped — task-queue-first dashboard, HQ-only procurement hub, branch `Cấp bếp` labeling, catalog dedupe, major workflow buttons wired (2026-04-16)
 - [x] M6: Revenue dashboard ✅ — HĐĐT blocked on MISA credentials, VAS stubs
 - [x] M7: Attendance GPS/QR ✅ — payroll calc incomplete
 
@@ -43,6 +46,8 @@ M0-M3, M5 SHIPPED. M5-Ext central kitchen production is live. M4/M6/M7 PARTIAL w
 
 - [x] Fix: Invoice empty `items[]` — use typed nested select, filter cancelled, validate non-empty (PR #15, 2026-04-15)
 - [ ] Uptime monitor on `/api/health` (UptimeRobot — ops task, not code)
+- [ ] Inventory: chạy manual smoke theo `docs/runbooks/inventory/pre-release-qa.md` sau đợt refactor UI/wiring 2026-04-16
+- [ ] Inventory: thay các CTA `sắp mở` còn lại bằng workflow thật khi backend/report surface sẵn sàng
 - [ ] Momo webhook: atomic `complete_payment_and_consume_stock` RPC (migration needed when M4 wired)
 - [ ] Ops reconciliation: before Momo go-live, add admin query to find payment-order desync:
   ```sql

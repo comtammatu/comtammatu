@@ -65,9 +65,11 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 | kds                                                     |       |           |          | ✓          |         |        | ✓    |        |
 | employee                                                | ✓     | ✓         | ✓        | ✓          | ✓       | ✓      | ✓    | ✓      |
 
-**Owner (chủ sở hữu):** ngoài các module quản trị / giám sát còn có thể vào `orders` và `inventory` để kiểm tra trực tiếp vận hành tenant-level. Các phân hệ vận hành chi tiết khác như `menu`, `staff`, `crm` vẫn không mở cho owner trong ACL hiện tại.
+**Owner (chủ sở hữu):** ngoài các module quản trị / giám sát còn có thể vào `orders` và `inventory` để kiểm tra trực tiếp vận hành tenant-level. Tuy vậy owner không được coi là operator hằng ngày trong inventory docs/UI; các bề mặt Inventory hiện tối ưu cho `super_manager`, `area_manager`, `branch_manager`.
 
-**Inventory sub-route ACL:** `inventory` allows `owner`, `super_manager`, `area_manager`, `branch_manager` for tồn kho, luân chuyển, stocktake, và production tại bếp trung tâm. Inventory route ownership now lives only at `/inventory`. `inventory_procurement` remains narrower ở cấp trụ sở: `owner` và `super_manager` vào NCC/PO/GRN/HĐ NCC/công thức, trong khi production actions còn bị ràng buộc thêm bởi `branch_kind = central_kitchen` ở RLS/RPC. See `proxy.ts`, `module-acl.ts`, and inventory production migrations.
+**Inventory sub-route ACL:** `inventory` allows `owner`, `super_manager`, `area_manager`, `branch_manager` cho tồn kho, điều chuyển, stocktake, expiry, reports, và branch operations. `inventory_procurement` vẫn hẹp ở cấp trụ sở: `owner` và `super_manager` vào `suppliers`, `purchase-orders`, `grn`, `supplier-invoices`, `recipes`, và `receiving` theo `route-resolution.ts`. `production` không dùng module riêng nhưng page/nav đang giữ hẹp cho `super_manager` ở UI layer và page guard. `branch_manager` vì vậy chỉ nên thấy nhịp branch ops: nhận transfer, `kitchen_use` (`Cấp bếp`), stocktake, adjustment.
+
+**UX boundary quan trọng:** nav có thể hẹp hơn module-level ACL để giảm nhiễu vận hành. Ví dụ `branch_manager` vẫn vào được `/inventory/transfers` để nhận hàng, nhưng UI không nên quảng bá action tạo inter-site transfer như tác vụ mặc định của vai trò này.
 
 **Settings sub-page ACL:** The settings module allows area_manager and branch_manager, but sub-pages have additional guards:
 
@@ -135,5 +137,6 @@ Current blocked-state hosts:
 Written by codebase-oracle (manual) | 2026-04-02
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 95%
+Updated: Inventory route boundary + UX/nav sync (2026-04-16)
 Unknowns: 1 (area_manager scoping)
 -->

@@ -73,27 +73,27 @@ apps/web/app/
 │
 ├── inventory/              # Inventory operations cockpit (HQ / central_kitchen / branch)
 │   ├── layout.tsx          # Inventory shell with site context + role-aware nav
-│   ├── page.tsx            # Operations dashboard with recent activity timeline
-│   ├── ingredients/        # Ingredient master data
-│   ├── recipes/            # Recipe management (BOM)
+│   ├── page.tsx            # Task-queue-first dashboard by role/site
+│   ├── ingredients/        # Ingredient master data (canonical catalog entry)
+│   ├── recipes/            # Recipe management (BOM, procurement-scoped catalog entry)
 │   ├── stock/              # Live stock levels by site (search + status filter)
-│   ├── suppliers/          # Supplier directory
+│   ├── suppliers/          # Supplier directory (canonical catalog entry)
 │   ├── purchase-orders/    # PO list + new + [id] detail
-│   ├── receiving/          # Receiving hub with recent activity timeline (PO/GRN/invoice)
-│   ├── grn/                # Goods received notes list + [id] detail
-│   ├── supplier-invoices/  # Supplier invoice matching
+│   ├── receiving/          # HQ procurement hub (PO/GRN/invoice), not generic receiving
+│   ├── grn/                # Goods received notes list + [id] detail, GRN confirm wired
+│   ├── supplier-invoices/  # Supplier invoice matching + payment status actions
 │   ├── transfers/          # Internal transfers list + [id] detail
-│   ├── production/         # Central kitchen production surface
+│   ├── production/         # Central kitchen production surface (nav only for super_manager)
 │   ├── stocktake/          # Stocktake list + [id] detail
-│   ├── issues/             # Stock issue list + [id] detail
+│   ├── issues/             # Stock issue list + [id] detail, branch UX relabeled as "Cấp bếp"
 │   ├── expiry/             # Expiry tracking
 │   ├── reports/            # Inventory reporting with live data
 │   └── settings/           # Inventory-specific settings
 │       ├── layout.tsx      # Settings nav
-│       ├── page.tsx        # Settings landing
-│       ├── ingredients/    # Ingredient categories & config
-│       ├── recipes/        # Recipe categories & config
-│       ├── suppliers/      # Supplier categories & config
+│       ├── page.tsx        # Redirect to expiry settings
+│       ├── ingredients/    # Compatibility redirect → /inventory/ingredients
+│       ├── recipes/        # Compatibility redirect → /inventory/recipes
+│       ├── suppliers/      # Compatibility redirect → /inventory/suppliers
 │       └── expiry/         # Expiry alert thresholds
 │
 ├── hr/                     # HR workspace (manager+)
@@ -126,6 +126,38 @@ Nhóm điều hướng được lọc qua `canAccess(role, moduleKey)` — phân
 ### Server action đăng nhập (`apps/web/app/(auth)/login/actions.ts`)
 
 Server action with rate limiting (`loginRateLimit` from `@comtammatu/security`). Validates with Zod, calls `signInWithPassword()`, extracts claims, redirects to role default via `getDefaultRedirect()`.
+
+## Inventory workspace hiện tại
+
+### IA theo workflow
+
+Inventory không còn dùng sidebar kiểu liệt kê chứng từ phẳng. `inventory-shell.tsx` hiện gom điều hướng theo nhịp vận hành thật:
+
+- `Hôm nay`
+- `Nhập hàng HQ`
+- `Điều chuyển nội bộ`
+- `Vận hành chi nhánh` hoặc `Tồn và xuất` tùy site
+- `Bếp trung tâm`
+- `Kiểm soát`
+- `Danh mục`
+
+Các nguyên tắc đang được code phản ánh:
+
+- `Receiving` là hub procurement của HQ, không phải hub nhận hàng chung cho chi nhánh
+- `Production` chỉ hiện trên nav cho `super_manager`
+- `Issues` được đổi mental model ở branch thành `Cấp bếp`
+- `Ingredients / Suppliers / Recipes` chỉ còn một cửa vào chính trong `Danh mục`
+
+### Workflow đã wire thật ở UI
+
+Các detail pages của Inventory không còn chỉ là read-only shells:
+
+- `purchase-orders/[id]`: `draft` có thể gửi / hủy PO; `sent|partially_received` có thể tạo GRN từ PO
+- `grn/[id]`: có action chốt nhập kho (`confirmGrn`)
+- `transfers/[id]`: đã wire đủ state machine `draft -> confirmed_ship -> in_transit -> confirmed_receive -> received`
+- `supplier-invoices`: đã có tạo hóa đơn NCC, tính lại đối soát, và ghi nhận thanh toán
+
+Một số CTA vẫn được giữ là `sắp mở` có chủ đích khi chưa có input surface hoặc backend/reporting hoàn chỉnh, để tránh false promise.
 
 ## Vòng đời request
 
@@ -173,13 +205,13 @@ Browser request
 - **Inventory is a standalone surface:** `/inventory` is the only live Inventory domain and should not be mirrored under `/admin/*`.
 - **Employee portal is live:** profile, clock, attendance, schedule, payslip pages shipped. HR workspace has payroll management.
 - **Finance & reports expanded:** chart-of-accounts, journal, food-cost, statements, revenue, inventory-value, stock-movement all live.
-- **Inventory settings migrated:** dedicated `/inventory/settings` subtree with ingredient/recipe/supplier/expiry config (moved from admin).
+- **Inventory settings are narrower now:** `/inventory/settings` chỉ giữ policy/config như expiry; catalog pages canonical sống ở `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/recipes`, còn route settings cũ giữ redirect tương thích.
 - **CRM remains Post-v1.0.**
 
 <!-- ORACLE-META
 Written by codebase-oracle (manual) | 2026-04-06
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 95%
-Updated: Full route tree sync — inventory settings, employee portal, HR, finance, reports (2026-04-15)
+Updated: Inventory IA/task queue sync + route tree refresh (2026-04-16)
 Unknowns: 0
 -->

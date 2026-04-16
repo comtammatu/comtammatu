@@ -26,6 +26,25 @@ pnpm db:types     # Regenerate Supabase types (after migration merged & applied)
 - NEVER apply migrations directly — write file → PR → merge → owner applies manually
 - ACL single source: `packages/shared/src/auth/module-acl.ts`
 
+### UI Guardrails
+
+- NEVER invent or redesign the UI outside the project's established design system.
+- NEVER exceed authority when editing UI; only make UI changes explicitly requested or clearly required by the task.
+- ALWAYS follow project UI rules and regressions before changing any interface.
+- USE `shadcn/ui` components and the project's active preset as the default UI path.
+- NEVER override the visual contract of core primitives through ad-hoc wrappers, custom themes, or parallel surface systems.
+- Source of truth:
+  - `docs/modules/ui.md`
+  - `tasks/regressions.md`
+  - `apps/web/components.json`
+  - `packages/ui/components.json`
+- External references:
+  - Shadcn UI Docs: https://ui.shadcn.com/docs/
+  - Installation: https://ui.shadcn.com/docs/installation/
+  - Preset: https://ui.shadcn.com/create?preset=b1GfmQMCm
+  - Components: https://ui.shadcn.com/docs/components/
+  - Preset command: `pnpm dlx shadcn@latest init --preset b1GfmQMCm --template next`
+
 ## Architecture
 
 ```
