@@ -7,6 +7,19 @@
 -- Each 'branch' gets a second location (kitchen) for consumption tracking.
 -- warehouse/central_kitchen branches keep their single default location.
 
+-- Step A: Clear is_default_consumption on existing warehouse locations for branch-kind
+-- branches FIRST (before inserting kitchen locations) to avoid unique index violation.
+UPDATE public.inventory_locations wh
+SET is_default_consumption = false
+WHERE wh.location_kind = 'warehouse'
+  AND wh.is_default_consumption = true
+  AND EXISTS (
+    SELECT 1 FROM public.branches b
+    WHERE b.id = wh.branch_id
+      AND b.branch_kind = 'branch'
+  );
+
+-- Step B: Now insert kitchen locations with is_default_consumption = true
 INSERT INTO public.inventory_locations (
   tenant_id, branch_id, code, name, location_kind,
   is_default_receive, is_default_issue, is_default_consumption, sort_order
@@ -26,17 +39,6 @@ WHERE b.branch_kind = 'branch'
   AND NOT EXISTS (
     SELECT 1 FROM public.inventory_locations il
     WHERE il.branch_id = b.id AND il.location_kind = 'kitchen'
-  );
-
--- Clear is_default_consumption on warehouse locations at branches that now have a kitchen
-UPDATE public.inventory_locations wh
-SET is_default_consumption = false
-WHERE wh.location_kind = 'warehouse'
-  AND EXISTS (
-    SELECT 1 FROM public.inventory_locations k
-    WHERE k.branch_id = wh.branch_id
-      AND k.location_kind = 'kitchen'
-      AND k.is_default_consumption = true
   );
 
 -- ─── 2. Backfill location_id on stock_levels ───
