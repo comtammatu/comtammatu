@@ -2,72 +2,53 @@
 
 ## Overview
 
-UI hien tai cua repo tiep tuc dua tren shadcn preset chung, nhung surface chrome da duoc rebuild lai de bo hẳn khung layout cu.
+UI cua repo phai di theo `shadcn/ui` preset hien hanh, khong duoc mo them mot design system song song.
 
-He thong gom 3 tang:
+Thu tu source of truth:
 
-1. `Foundation`
-   - `apps/web/app/globals.css`
-2. `Primitives`
-   - `packages/ui/src/components/*`
-3. `App composition`
-   - `apps/web/app/components/*`
-   - route shells trong `apps/web/app/**/layout.tsx` va `*_shell.tsx`
+1. `packages/ui/components.json`
+2. `apps/web/components.json`
+3. `apps/web/app/globals.css`
+4. `apps/web/app/layout.tsx`
 
-## Owners
+Tai lieu nay chi mo ta runtime va governance dang duoc phep. Neu runtime doi, docs phai doi cung luc.
 
-- `apps/web/app/layout.tsx`
-  - font loading va root runtime wiring
-- `apps/web/app/globals.css`
-  - token, global background, safe-area helpers, shell helper classes
-- `packages/ui/components.json`
-  - UI package preset config
-- `apps/web/components.json`
-  - web preset config
-- `packages/ui/src/components/*`
-  - primitive layer
-- `apps/web/app/components/patterns.tsx`
-  - shared page composition wrappers
-- `apps/web/app/components/workspace-shell.tsx`
-  - shared workspace chrome cho admin/hr/inventory
+## Active Preset
 
-## Runtime Contracts
+Repo dang chay voi:
 
-### Typography
+- `style`: `radix-mira`
+- `baseColor`: `taupe`
+- `cssVariables`: `true`
+- `iconLibrary`: `lucide`
+- `rsc`: `true`
 
-- `font-sans` = `Be_Vietnam_Pro`
-- `font-heading` = `Lora`
-- `font-code` = `IBM_Plex_Mono`
+Monorepo da duoc `shadcn` CLI nhan dien hop le tai `apps/web` va `packages/ui`.
 
-### Theme direction
+## Allowed Layers
 
-- warm taupe background
-- clay/orange `primary`
-- muted green `accent`
-- dark espresso sidebar
-- global gradient + grid texture duoc set o root body
+### 1. Foundation
 
-### Shared helper classes
+Song trong `apps/web/app/globals.css` va `apps/web/app/layout.tsx`.
 
-Foundation export cac helper classes sau:
+Foundation chi duoc:
 
-- `safe-top`
-- `safe-bottom`
-- `app-canvas`
-- `app-shell`
-- `app-panel`
-- `app-subpanel`
-- `app-kicker`
-- `app-stat`
-- `app-dock`
+- khai bao preset token / CSS variables
+- map font runtime
+- dat base styles toan app
+- giu cac helper tương thich toi thieu cho surface cu
 
-Chung duoc dung de xep bo cuc va shell presentation, khong thay the primitive.
+Foundation khong duoc:
 
-## Public APIs
+- tao background chrome rieng theo page
+- them grid/gradient/trang tri vuot qua preset
+- tro thanh mot theme system doc lap
 
-### Primitive layer
+### 2. Primitives
 
-Primitive duoc governance chat:
+Song trong `packages/ui/src/components/*`.
+
+Primitives la nguon chuan cho:
 
 - `button`
 - `card`
@@ -80,47 +61,40 @@ Primitive duoc governance chat:
 - `input`
 - `select`
 
-### App composition layer
+Khong fork primitive theo domain. Neu can thay doi primitive, phai di theo `shadcn` structure/preset.
 
-Wrapper contract dang ton tai:
+### 3. Composition
 
-- `PageContainer`
-- `PageHeader`
-- `SectionCard`
-- `FilterBar`
-- `EmptyState`
-- `EmptyStatePanel`
-- `StatusBadge`
-- `ActionIconButton`
-- `RouteStateCard`
-- `WorkspaceShell`
+Song trong `apps/web/app/components/*` va route shells.
 
-Wrapper layer nay chi duoc composition lai primitive + token runtime. Khong duoc tu tao theme system rieng.
+Composition chi duoc:
 
-## Surface Coverage
+- sap xep layout bang primitive san co
+- truyen `className` muc toi thieu de sap xep spacing/layout
+- reuse variants/tokens da ton tai
 
-Shell / chrome hien tai da duoc dua ve mot visual language chung cho:
+Composition khong duoc:
 
-- `auth`
-- `employee`
-- `admin`
-- `hr`
-- `inventory`
-- `pos`
-- `kds`
+- doi visual contract cua primitive
+- them shadow/radius/chrome rieng nhu mot he thong moi
+- hop thuc hoa helper classes thanh API UI chinh thuc
 
-Moi surface co workflow rieng, nhung van phai bam cung:
+## Compatibility Helpers
 
-- root token contract
-- preset `radix-mira`
-- shared helper classes
-- primitive behavior cua `packages/ui`
+Mot so `app-*` helper classes van con ton tai de giu cac route cu chay on dinh trong qua trinh thu hep UI.
+
+Quy tac:
+
+- chi duoc coi la compatibility shim
+- khong duoc them helper moi
+- khong duoc nang cap chung thanh visual language rieng
+- new work phai compose truc tiep tu shadcn primitives thay vi dua vao helper nay
 
 ## Governance
 
-- Single source of truth: `components.json` + `globals.css` + `layout.tsx`
-- Khong import theme file theo domain
-- Khong them inline static styles vao shell/auth/mobile chrome
-- Khong tao `components/v2` hoac primitive fork
-- Khong viet docs marketing khac voi runtime thuc te
-- Khi doi shell helper classes hoac font/token mapping, cap nhat docs cung luc
+- Preset truoc, page sau.
+- Docs phai khop runtime.
+- Khong co `theme.css` theo surface.
+- Khong co inline static presentation trong shell/auth/mobile chrome.
+- Gap yeu cau vuot kha nang bieu dat cua preset hien tai thi dung lai va escalate, khong tu che them UI.
+- Reset UI bang `pnpm dlx shadcn@latest init --preset b1GfmQMCm --template next` chi la fallback cuoi cung va chi duoc lam khi co phe duyet ro rang.

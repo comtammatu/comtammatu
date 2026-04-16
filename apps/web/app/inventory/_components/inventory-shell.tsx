@@ -26,6 +26,7 @@ import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   findActiveNavItem,
   formatPathSegment,
@@ -192,23 +193,23 @@ export function InventoryShell({
         </Badge>
       }
       sidebarHeader={
-        <div className="rounded-3xl border border-sidebar-border/70 bg-sidebar-accent/70 p-4 text-sidebar-foreground shadow-sm">
+        <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-4 text-sidebar-foreground">
           <div className="flex items-center gap-3">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-sidebar-primary text-sidebar-primary-foreground shadow-sm">
+            <div className="flex size-12 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
               <Package className="size-5" />
             </div>
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/55">
                 Site vận hành
               </p>
-              <p className="font-heading text-2xl font-semibold">Kho vận</p>
+              <p className="text-xl font-semibold">Kho vận</p>
               <p className="text-sm text-sidebar-foreground/72">{siteName}</p>
               <p className="text-xs text-sidebar-foreground/60">
                 {getInventorySiteKindLabelVi(siteKind)}
               </p>
             </div>
           </div>
-          <div className="mt-4 rounded-2xl border border-sidebar-border/60 bg-sidebar px-3 py-2.5 text-xs leading-5 text-sidebar-foreground/75">
+          <div className="mt-4 rounded-md border border-sidebar-border bg-sidebar px-3 py-2.5 text-xs leading-5 text-sidebar-foreground/75">
             Điều hướng được gom theo tuyến công việc: hôm nay, nhập hàng HQ, điều chuyển, vận hành chi nhánh, kiểm soát và danh mục.
           </div>
         </div>
@@ -229,51 +230,62 @@ export function InventoryShell({
         </>
       }
       headerMeta={
-        <div className="grid gap-3 md:grid-cols-2 md:items-start">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="app-stat">
+        <div className="grid gap-3 lg:grid-cols-4">
+          <Card>
+            <CardContent className="space-y-3 p-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Người đang thao tác
+              </p>
+              <div className="flex items-center gap-3">
+                <Avatar size="sm">
+                  <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-foreground">
+                    {user.name}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {ROLE_LABEL_VI[userRole]}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="space-y-2 p-4">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Site
               </p>
-              <p className="mt-2 font-heading text-2xl font-semibold">
-                {siteName}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="text-lg font-semibold">{siteName}</p>
+              <p className="text-xs text-muted-foreground">
                 {getInventorySiteKindLabelVi(siteKind)}
               </p>
-            </div>
-            <div className="app-stat">
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="space-y-2 p-4">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Quyền hiện tại
               </p>
-              <p className="mt-2 text-sm leading-6 text-foreground">
+              <p className="text-sm leading-6 text-foreground">
                 {ROLE_LABEL_VI[userRole]}
               </p>
-            </div>
-            <div className="app-stat">
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="space-y-2 p-4">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Procurement
               </p>
-              <p className="mt-2 text-sm leading-6 text-foreground">
+              <p className="text-sm leading-6 text-foreground">
                 {showProcurement ? "Đã mở tuyến NCC & công thức" : "Ẩn theo ACL hiện tại"}
               </p>
-            </div>
-          </div>
-          <div className="app-subpanel flex items-center gap-3 p-3">
-            <Avatar size="sm">
-              <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{user.name}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {ROLE_LABEL_VI[userRole]}
-              </p>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       }
       sidebarFooter={
-        <div className="space-y-3 rounded-3xl border border-sidebar-border/70 bg-sidebar-accent/70 p-3 shadow-sm">
+        <div className="space-y-3 rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-3">
           <div className="flex items-center gap-3">
             <Avatar size="sm">
               <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
