@@ -11,6 +11,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -324,29 +325,29 @@ export function RevenueReportClient({
                 )}
               </TableBody>
               {rows.length > 0 && (
-                <tfoot className="border-t bg-muted/40">
-                  <tr>
-                    <td className="px-4 py-2 font-medium text-sm">Tổng cộng</td>
-                    <td className="px-4 py-2 text-right tabular-nums text-sm font-medium">
+                <TableFooter>
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell className="font-medium">Tổng cộng</TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">
                       {totalOrders.toLocaleString("vi-VN")}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-sm font-bold">
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums font-bold">
                       {totalRevenue.toLocaleString("vi-VN")}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-sm">
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
                       {totalCash.toLocaleString("vi-VN")}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-sm">
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
                       {totalVietqr.toLocaleString("vi-VN")}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-sm">
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
                       {totalMomo.toLocaleString("vi-VN")}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-sm">
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
                       {totalTax.toLocaleString("vi-VN")}
-                    </td>
-                  </tr>
-                </tfoot>
+                    </TableCell>
+                  </TableRow>
+                </TableFooter>
               )}
             </Table>
           </div>

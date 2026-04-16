@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition, type ReactNode } from "react";
 import { RefreshCw } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
@@ -118,8 +118,9 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
     areaRows?.reduce((sum, row) => sum + Number(row.totalValue), 0) ?? 0;
   const branchTotal =
     branchRows?.reduce((sum, row) => sum + Number(row.totalValue), 0) ?? 0;
-  const summaryBoxClassName =
-    "rounded-lg border bg-muted/30 text-card-foreground px-4 py-4";
+  const SummaryBox = ({ children }: { children: ReactNode }) => (
+    <Card className="bg-muted/30"><CardContent className="px-4 py-4">{children}</CardContent></Card>
+  );
 
   return (
     <Tabs defaultValue={defaultTab} className="space-y-4">
@@ -173,15 +174,15 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
           <Card>
             <CardContent className="space-y-4 pt-6">
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border bg-muted/30 text-card-foreground p-4">
+                <Card className="bg-muted/30"><CardContent className="p-4">
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                     Giá trị hiện tại
                   </p>
                   <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
                     {systemTotal == null ? "—" : formatVND(systemTotal)}
                   </p>
-                </div>
-                <div className="rounded-lg border bg-muted/30 text-card-foreground p-4">
+                </CardContent></Card>
+                <Card className="bg-muted/30"><CardContent className="p-4">
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                     Phạm vi xem
                   </p>
@@ -189,7 +190,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                   <p className="mt-1 text-sm text-muted-foreground">
                     Tổng hợp tất cả chi nhánh theo WAC hoặc giá tham chiếu.
                   </p>
-                </div>
+                </CardContent></Card>
               </div>
             </CardContent>
           </Card>
@@ -213,14 +214,14 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
           ) : isMobile ? (
             <Card className="overflow-hidden">
               <CardContent className="space-y-4 pt-6">
-                <div className={summaryBoxClassName}>
+                <SummaryBox>
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                     Tổng theo khu vực
                   </p>
                   <p className="mt-2 text-2xl font-semibold tabular-nums">
                     {formatVND(areaTotal)}
                   </p>
-                </div>
+                </SummaryBox>
                 <div className="-m-4 divide-y md:-m-5">
                   {areaRows.map((row) => (
                     <div
@@ -241,14 +242,14 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
           ) : (
             <Card className="overflow-hidden">
               <CardContent className="space-y-4 pt-6">
-                <div className={summaryBoxClassName}>
+                <SummaryBox>
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                     Tổng theo khu vực
                   </p>
                   <p className="mt-2 text-2xl font-semibold tabular-nums">
                     {formatVND(areaTotal)}
                   </p>
-                </div>
+                </SummaryBox>
                 <div className="-m-4 md:-m-5">
                   <Table>
                     <TableHeader>
@@ -298,14 +299,14 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
           ) : isMobile ? (
             <Card className="overflow-hidden">
               <CardContent className="space-y-4 pt-6">
-                <div className={summaryBoxClassName}>
+                <SummaryBox>
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                     Tổng theo chi nhánh
                   </p>
                   <p className="mt-2 text-2xl font-semibold tabular-nums">
                     {formatVND(branchTotal)}
                   </p>
-                </div>
+                </SummaryBox>
                 <div className="-m-4 divide-y md:-m-5">
                   {branchRows.map((row) => (
                     <div
@@ -326,14 +327,14 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
           ) : (
             <Card className="overflow-hidden">
               <CardContent className="space-y-4 pt-6">
-                <div className={summaryBoxClassName}>
+                <SummaryBox>
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                     Tổng theo chi nhánh
                   </p>
                   <p className="mt-2 text-2xl font-semibold tabular-nums">
                     {formatVND(branchTotal)}
                   </p>
-                </div>
+                </SummaryBox>
                 <div className="-m-4 md:-m-5">
                   <Table>
                     <TableHeader>

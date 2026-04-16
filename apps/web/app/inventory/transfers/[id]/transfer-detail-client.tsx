@@ -253,17 +253,14 @@ export function TransferDetailClient({
             icon: null,
           },
         ].map((info) => (
-          <div
-            key={info.label}
-            className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm"
-          >
-            <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          <Card key={info.label}><CardContent>
+            <Badge variant="secondary">
               {info.label}
-            </p>
+            </Badge>
             <p className="mt-3 flex items-center gap-1 text-lg font-semibold">
               {info.icon} {info.value}
             </p>
-          </div>
+          </CardContent></Card>
         ))}
       </div>
 
@@ -294,9 +291,9 @@ export function TransferDetailClient({
             <CardContent className="p-0">
               <div className="space-y-3 p-6 md:hidden">
                 {transfer.items.map((item) => (
-                  <div
+                  <Card
                     key={item.sku || item.name}
-                    className="rounded-lg border bg-muted/30 text-card-foreground p-4"
+                    className="bg-muted/30"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -329,7 +326,7 @@ export function TransferDetailClient({
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </Card>
                 ))}
               </div>
 

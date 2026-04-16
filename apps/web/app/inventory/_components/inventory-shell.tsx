@@ -363,14 +363,14 @@ export function InventoryShell({
 
         <SidebarInset className="min-h-dvh bg-background">
           <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
-            <header className="rounded-lg border bg-card p-4 sm:p-6">
+            <Card className="py-0"><CardContent className="p-4 sm:p-6">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <SidebarTrigger className="md:hidden" />
-                    <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                    <Badge variant="secondary">
                       {pageContext.eyebrow}
-                    </span>
+                    </Badge>
                     <Badge variant="secondary">
                       <MapPin className="size-3.5" />
                       {siteName}
@@ -465,7 +465,7 @@ export function InventoryShell({
                   </Card>
                 </div>
               </div>
-            </header>
+            </CardContent></Card>
 
             <main id="main-content" className="flex-1">
               <div className="space-y-4">{children}</div>

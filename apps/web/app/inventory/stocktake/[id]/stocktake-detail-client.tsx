@@ -321,15 +321,12 @@ export function StocktakeDetailClient({
             value: String(varianceCount).padStart(2, "0"),
           },
         ].map((item) => (
-          <div
-            key={item.label}
-            className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm"
-          >
-            <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          <Card key={item.label}><CardContent>
+            <Badge variant="secondary">
               {item.label}
-            </p>
+            </Badge>
             <p className="mt-3 text-xl font-semibold">{item.value}</p>
-          </div>
+          </CardContent></Card>
         ))}
       </div>
 

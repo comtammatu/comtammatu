@@ -67,9 +67,9 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
         <CardContent className="p-5 sm:p-6">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div className="space-y-3">
-              <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              <Badge variant="secondary">
                 Shelf Life Radar
-              </span>
+              </Badge>
               <div className="space-y-2">
                 <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
                   Hạn sử dụng
@@ -95,7 +95,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
       </Card>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+        <Card><CardContent>
           <div className="flex size-11 items-center justify-center rounded-full bg-destructive/12 text-destructive">
             <AlertOctagon className="size-5" />
           </div>
@@ -105,9 +105,9 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
           <p className="mt-1 text-sm text-muted-foreground">
             Mặt hàng đã hết hạn cần khóa xử lý ngay.
           </p>
-        </div>
+        </CardContent></Card>
 
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+        <Card><CardContent>
           <div className="flex size-11 items-center justify-center rounded-full bg-primary/12 text-primary">
             <AlertTriangle className="size-5" />
           </div>
@@ -117,9 +117,9 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
           <p className="mt-1 text-sm text-muted-foreground">
             Hàng hóa sẽ chạm hạn trong 3 ngày tới.
           </p>
-        </div>
+        </CardContent></Card>
 
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+        <Card><CardContent>
           <div className="flex size-11 items-center justify-center rounded-full bg-warning/12 text-warning">
             <Clock className="size-5" />
           </div>
@@ -129,10 +129,10 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
           <p className="mt-1 text-sm text-muted-foreground">
             Nhóm cần chuẩn bị kế hoạch xoay vòng trong 7 ngày tới.
           </p>
-        </div>
+        </CardContent></Card>
       </div>
 
-      <div className="rounded-lg border bg-muted/30 text-card-foreground flex flex-wrap gap-2 p-2">
+      <Card className="bg-muted/30 py-0"><CardContent className="flex flex-wrap gap-2 p-2">
         {tabs.map((tab) => {
           const isActive = activeTab === tab;
           return (
@@ -150,7 +150,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
             </Button>
           );
         })}
-      </div>
+      </CardContent></Card>
 
       <Card className="overflow-hidden">
         <CardHeader>
@@ -212,13 +212,14 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-lg border bg-card text-card-foreground shadow-sm border-primary/20 bg-primary/5">
+        <Card className="ring-primary/20 bg-primary/5">
+          <CardContent>
           <div className="flex items-start gap-3">
             <Lightbulb className="mt-0.5 size-5 shrink-0 text-primary" />
             <div>
-              <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              <Badge variant="secondary">
                 Gợi ý tối ưu hóa
-              </p>
+              </Badge>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 Dựa trên dữ liệu 30 ngày qua, tỷ lệ hàng quá hạn tại CN Quận 1
                 cao hơn 15% so với trung bình. Hệ thống đề xuất điều chuyển
@@ -226,11 +227,12 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
               </p>
             </div>
           </div>
-        </div>
-        <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
-          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          </CardContent>
+        </Card>
+        <Card><CardContent>
+          <Badge variant="secondary">
             Thông báo tự động
-          </p>
+          </Badge>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             Cài đặt nhắc báo qua Email hoặc Zalo cho quản lý kho khi hàng hóa
             còn dưới 5 ngày sử dụng.
@@ -239,7 +241,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
             <Bell className="size-4" />
             <span className="text-xs font-medium">Đã bật Email</span>
           </div>
-        </div>
+        </CardContent></Card>
       </div>
     </div>
   );

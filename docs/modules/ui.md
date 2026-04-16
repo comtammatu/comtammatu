@@ -52,5 +52,14 @@ Khong cho phep:
 - helper class kieu `app-*`
 - custom theme layer
 - wrapper override visual contract cua primitive
+- dung `div` / `span` / `p` thuong de gia lap `Card`, `Badge`, `Button`, `Table`, `Tabs`, `Input`, `Select`
 - per-surface `theme.css`
 - shell chrome tu che de thay cho stock shadcn structure
+
+Quy tac review:
+
+- neu UI trong giong `card` thi phai dung `Card`
+- neu UI trong giong `badge/chip` thi phai dung `Badge`
+- neu UI trong giong `button` thi phai dung `Button`
+- neu UI trong giong bang du lieu thi phai dung `Table`
+- neu khong co primitive phu hop, dung lai va thong nhat truoc khi them pattern moi

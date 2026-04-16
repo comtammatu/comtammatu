@@ -404,44 +404,44 @@ export function SupplierInvoicesClient({
         </div>
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-            <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          <Card><CardContent>
+            <Badge variant="secondary">
               Chờ đối soát
-            </p>
+            </Badge>
             <p className="mt-3 text-3xl font-semibold">{pendingMatchCount}</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Hóa đơn còn pending hoặc có chênh lệch cần xử lý.
             </p>
-          </div>
-          <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-            <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          </CardContent></Card>
+          <Card><CardContent>
+            <Badge variant="secondary">
               Quá hạn chưa trả
-            </p>
+            </Badge>
             <p className="mt-3 text-3xl font-semibold">{overdueCount}</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Khoản phải trả cần được ưu tiên trong hôm nay.
             </p>
-          </div>
-          <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-            <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          </CardContent></Card>
+          <Card><CardContent>
+            <Badge variant="secondary">
               Đã thanh toán đủ
-            </p>
+            </Badge>
             <p className="mt-3 text-3xl font-semibold">{paidCount}</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Hóa đơn đã đóng vòng công nợ hoàn chỉnh.
             </p>
-          </div>
-          <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-            <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          </CardContent></Card>
+          <Card><CardContent>
+            <Badge variant="secondary">
               Công nợ còn lại
-            </p>
+            </Badge>
             <p className="mt-3 text-3xl font-semibold">
               {formatVND(totalOutstanding)}đ
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
               Tổng giá trị cần tiếp tục thanh toán.
             </p>
-          </div>
+          </CardContent></Card>
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
@@ -454,7 +454,7 @@ export function SupplierInvoicesClient({
                   thanh toán.
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
+              <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
                 <div className="relative min-w-[16rem] flex-1">
                   <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -521,7 +521,7 @@ export function SupplierInvoicesClient({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </CardContent></Card>
             </CardHeader>
             <CardContent className="p-6 pt-0">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -565,13 +565,13 @@ export function SupplierInvoicesClient({
                     const isActive = selectedInvoice?.id === invoice.id;
 
                     return (
-                      <div
+                      <Card
                         key={invoice.id}
                         className={cn(
-                          "rounded-lg border bg-muted/30 text-card-foreground p-4 transition",
-                          isActive && "border-primary/40 shadow-md",
+                          "bg-muted/30 transition",
+                          isActive && "ring-primary/40 shadow-md",
                         )}
-                      >
+                      ><CardContent>
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 space-y-1">
                             <p className="font-mono text-base font-semibold">
@@ -640,7 +640,7 @@ export function SupplierInvoicesClient({
                         >
                           {isActive ? "Đang xem phân tích" : "Xem phân tích"}
                         </Button>
-                      </div>
+                      </CardContent></Card>
                     );
                   })}
                 </div>
@@ -820,34 +820,34 @@ export function SupplierInvoicesClient({
               {selectedInvoice ? (
                 <div className="space-y-5">
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-lg border bg-muted/30 text-card-foreground p-4">
-                      <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                    <Card className="bg-muted/30"><CardContent>
+                      <Badge variant="secondary">
                         Tổng hóa đơn
-                      </p>
+                      </Badge>
                       <p className="mt-2 font-mono text-xl font-semibold">
                         {formatVND(selectedInvoice.amount)}đ
                       </p>
-                    </div>
-                    <div className="rounded-lg border bg-muted/30 text-card-foreground p-4">
-                      <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                    </CardContent></Card>
+                    <Card className="bg-muted/30"><CardContent>
+                      <Badge variant="secondary">
                         Còn phải trả
-                      </p>
+                      </Badge>
                       <p className="mt-2 font-mono text-xl font-semibold">
                         {formatVND(getOutstandingAmount(selectedInvoice))}đ
                       </p>
-                    </div>
+                    </CardContent></Card>
                   </div>
 
                   <div className="space-y-3">
-                    <div className="rounded-lg border bg-muted/30 text-card-foreground flex items-center justify-between gap-3 px-4 py-3">
+                    <Card className="bg-muted/30 py-0"><CardContent className="flex items-center justify-between gap-3 px-4 py-3">
                       <span className="text-sm text-muted-foreground">
                         Ngày hóa đơn
                       </span>
                       <span className="text-sm font-medium">
                         {formatDate(selectedInvoice.invoiceDate)}
                       </span>
-                    </div>
-                    <div className="rounded-lg border bg-muted/30 text-card-foreground flex items-center justify-between gap-3 px-4 py-3">
+                    </CardContent></Card>
+                    <Card className="bg-muted/30 py-0"><CardContent className="flex items-center justify-between gap-3 px-4 py-3">
                       <span className="text-sm text-muted-foreground">
                         Hạn thanh toán
                       </span>
@@ -860,23 +860,23 @@ export function SupplierInvoicesClient({
                       >
                         {formatDate(selectedInvoice.dueDate)}
                       </span>
-                    </div>
-                    <div className="rounded-lg border bg-muted/30 text-card-foreground flex items-center justify-between gap-3 px-4 py-3">
+                    </CardContent></Card>
+                    <Card className="bg-muted/30 py-0"><CardContent className="flex items-center justify-between gap-3 px-4 py-3">
                       <span className="text-sm text-muted-foreground">
                         Đã thanh toán
                       </span>
                       <span className="text-sm font-medium">
                         {formatVND(selectedInvoice.paidAmount)}đ
                       </span>
-                    </div>
-                    <div className="rounded-lg border bg-muted/30 text-card-foreground flex items-center justify-between gap-3 px-4 py-3">
+                    </CardContent></Card>
+                    <Card className="bg-muted/30 py-0"><CardContent className="flex items-center justify-between gap-3 px-4 py-3">
                       <span className="text-sm text-muted-foreground">
                         GRN liên kết
                       </span>
                       <span className="text-sm font-medium">
                         {selectedInvoice.grnCode ?? "Chưa liên kết"}
                       </span>
-                    </div>
+                    </CardContent></Card>
                   </div>
 
                   {selectedInvoice.variance !== null &&

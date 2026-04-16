@@ -117,9 +117,9 @@ export function ReceivingClient({
         <CardContent className="p-5 sm:p-6">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div className="space-y-3">
-              <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              <Badge variant="secondary">
                 HQ Procurement Hub
-              </span>
+              </Badge>
               <div className="space-y-2">
                 <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
                   {tNav("receiving", "heading")}
@@ -151,10 +151,9 @@ export function ReceivingClient({
           const Icon = step.icon;
 
           return (
-            <div
+            <Card
               key={step.key}
-              className="rounded-lg border bg-card text-card-foreground shadow-sm"
-            >
+            ><CardContent>
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-3">
                   <div
@@ -181,9 +180,9 @@ export function ReceivingClient({
 
               <div className="mt-5 flex items-end justify-between gap-3 rounded-[1.75rem] border border-border/60 bg-background/75 p-4">
                 <div>
-                  <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                  <Badge variant="secondary">
                     Đang mở
-                  </p>
+                  </Badge>
                   <p
                     className={cn(
                       "mt-2 text-4xl font-semibold",
@@ -208,7 +207,7 @@ export function ReceivingClient({
                   <ArrowRight className="size-4" />
                 </Link>
               </Button>
-            </div>
+            </CardContent></Card>
           );
         })}
       </div>
@@ -280,13 +279,13 @@ export function ReceivingClient({
         </Card>
 
         <div className="space-y-4">
-          <div className="rounded-lg border bg-card text-card-foreground shadow-sm border-info/20 bg-info/8">
+          <Card className="ring-info/20 bg-info/8"><CardContent>
             <div className="flex items-start gap-3">
               <Lightbulb className="mt-0.5 size-5 shrink-0 text-info" />
               <div>
-                <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                <Badge variant="secondary">
                   Boundary HQ
-                </p>
+                </Badge>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   {recentActivity.length > 0
                     ? "Giữ chặt luồng PO → GRN → hóa đơn để tránh tồn đọng công nợ và lệch chi phí đầu vào giữa kho với kế toán. Nhận hàng nội bộ tại chi nhánh không đi qua hub này."
@@ -294,12 +293,12 @@ export function ReceivingClient({
                 </p>
               </div>
             </div>
-          </div>
+          </CardContent></Card>
 
-          <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
-            <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          <Card><CardContent>
+            <Badge variant="secondary">
               Tỷ trọng workflow HQ
-            </p>
+            </Badge>
             <div className="mt-4 space-y-3">
               {WORKFLOW_STEPS.map((step) => (
                 <div
@@ -313,7 +312,7 @@ export function ReceivingClient({
                 </div>
               ))}
             </div>
-          </div>
+          </CardContent></Card>
         </div>
       </div>
     </div>

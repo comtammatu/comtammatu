@@ -87,33 +87,33 @@ export function ReportsClient({
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)] lg:items-center">
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-3">
-                  <div className="rounded-lg border bg-muted/30 text-card-foreground flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium">
+                  <Card className="bg-muted/30 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium">
                     <Calendar className="size-4 text-primary" />
                     <span className="text-foreground">Tháng này</span>
                     <ChevronDown className="size-3.5 text-muted-foreground" />
-                  </div>
-                  <div className="rounded-lg border bg-muted/30 text-card-foreground flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium">
+                  </Card>
+                  <Card className="bg-muted/30 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium">
                     <Store className="size-4 text-primary" />
                     <span className="text-foreground">Tất cả chi nhánh</span>
                     <ChevronDown className="size-3.5 text-muted-foreground" />
-                  </div>
+                  </Card>
                 </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border bg-muted/30 text-card-foreground bg-muted/20 px-4 py-4">
+                <Card className="bg-muted/20"><CardContent className="px-4 py-4">
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                     Cong no qua han
                   </p>
                   <p className="mt-2 text-2xl font-semibold">
                     {formatVND(overdueAmount)}đ
                   </p>
-                </div>
-                <div className="rounded-lg border bg-muted/30 text-card-foreground bg-muted/20 px-4 py-4">
+                </CardContent></Card>
+                <Card className="bg-muted/20"><CardContent className="px-4 py-4">
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                     Ma lech dinh muc
                   </p>
                   <p className="mt-2 text-2xl font-semibold">{varianceCount}</p>
-                </div>
+                </CardContent></Card>
               </div>
             </div>
             <div className="mt-4 flex justify-end">
@@ -134,7 +134,7 @@ export function ReportsClient({
       {/* Dashboard Grid — 12 col asymmetric */}
       <div className="grid grid-cols-12 gap-6">
         {/* Stock Movement Summary — col-span-8 */}
-        <Card className="rounded-lg border bg-card text-card-foreground shadow-sm col-span-12 flex flex-col shadow-sm lg:col-span-8">
+        <Card className="col-span-12 flex flex-col lg:col-span-8">
           <CardContent className="flex flex-1 flex-col p-6">
             <div className="mb-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -174,7 +174,7 @@ export function ReportsClient({
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg border bg-card text-card-foreground shadow-sm col-span-12 shadow-sm lg:col-span-4">
+        <Card className="col-span-12 lg:col-span-4">
           <CardContent className="p-6">
             <h3 className="mb-4 text-lg font-bold text-foreground">
               Công nợ nhà cung cấp
@@ -248,7 +248,7 @@ export function ReportsClient({
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg border bg-card text-card-foreground shadow-sm col-span-12 shadow-sm md:col-span-6">
+        <Card className="col-span-12 md:col-span-6">
           <CardContent className="p-6">
             <h3 className="mb-2 text-lg font-bold text-foreground">
               Chênh lệch tiêu hao
@@ -260,9 +260,9 @@ export function ReportsClient({
               {consumptionVariance.map((item) => {
                 const isUp = item.trend === "up";
                 return (
-                  <div
+                  <Card
                     key={item.name}
-                    className="rounded-lg border bg-muted/30 text-card-foreground flex items-center justify-between bg-muted/35 p-4"
+                    className="bg-muted/35 flex items-center justify-between p-4"
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex size-10 items-center justify-center rounded-full bg-card">
@@ -290,14 +290,14 @@ export function ReportsClient({
                         {isUp ? "Vượt định mức" : "Tiết kiệm"}
                       </Badge>
                     </div>
-                  </div>
+                  </Card>
                 );
               })}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg border bg-card text-card-foreground shadow-sm col-span-12 shadow-sm md:col-span-6">
+        <Card className="col-span-12 md:col-span-6">
           <CardContent className="p-6">
             <div className="mb-6 flex items-center justify-between">
               <div>
@@ -361,11 +361,8 @@ export function ReportsClient({
             desc: "Giá trị tồn khi chốt.",
           },
         ].map((report) => (
-          <div
-            key={report.title}
-            className="rounded-lg border bg-card text-card-foreground shadow-sm"
-          >
-            <div className="p-5">
+          <Card key={report.title}>
+            <CardContent className="p-5">
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div className="flex size-12 items-center justify-center rounded-full bg-muted transition-colors">
                   <report.icon className="size-5 text-muted-foreground" />
@@ -376,8 +373,8 @@ export function ReportsClient({
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {report.desc}
               </p>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
     </div>

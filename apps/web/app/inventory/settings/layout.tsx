@@ -21,7 +21,7 @@ export default async function InventorySettingsLayout({
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
+      <Card>
         <CardContent className="space-y-4 px-4 py-4 sm:px-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">

@@ -147,29 +147,29 @@ export function PODetailClient({ po }: { po: PODetail }) {
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        <Card><CardContent>
+          <Badge variant="secondary">
             Nhà cung cấp
-          </p>
+          </Badge>
           <p className="mt-3 text-xl font-semibold">{po.supplier}</p>
-        </div>
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        </CardContent></Card>
+        <Card><CardContent>
+          <Badge variant="secondary">
             Tổng tiền hàng
-          </p>
+          </Badge>
           <p className="mt-3 text-xl font-semibold">
             {formatVND(po.total)} VNĐ
           </p>
-        </div>
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        </CardContent></Card>
+        <Card><CardContent>
+          <Badge variant="secondary">
             Tổng cộng
-          </p>
+          </Badge>
           <p className="mt-3 text-2xl font-semibold text-primary">
             {formatVND(po.grandTotal)}{" "}
             <span className="text-xs font-normal">VNĐ</span>
           </p>
-        </div>
+        </CardContent></Card>
       </div>
 
       <Card>
@@ -203,10 +203,10 @@ export function PODetailClient({ po }: { po: PODetail }) {
             <CardContent className="p-0">
               <div className="space-y-3 p-6 md:hidden">
                 {po.items.map((item) => (
-                  <div
+                  <Card
                     key={item.sku}
-                    className="rounded-lg border bg-muted/30 text-card-foreground p-4"
-                  >
+                    className="bg-muted/20"
+                  ><CardContent>
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-bold">{item.name}</p>
@@ -236,7 +236,7 @@ export function PODetailClient({ po }: { po: PODetail }) {
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </CardContent></Card>
                 ))}
               </div>
 

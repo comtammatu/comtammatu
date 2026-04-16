@@ -174,7 +174,7 @@ export function IssuesClient({
         </div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+          <Card><CardContent>
             <div className="flex items-start justify-between gap-4">
               <div className="flex size-11 items-center justify-center rounded-full bg-warning/12 text-warning">
                 <ClipboardList className="size-5" />
@@ -187,9 +187,9 @@ export function IssuesClient({
             <p className="mt-1 text-sm text-muted-foreground">
               Tổng phiếu đã xuất trong hệ thống.
             </p>
-          </div>
+          </CardContent></Card>
 
-          <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+          <Card><CardContent>
             <div className="flex items-start justify-between gap-4">
               <div className="flex size-11 items-center justify-center rounded-full bg-success/12 text-success">
                 <ChefHat className="size-5" />
@@ -204,9 +204,9 @@ export function IssuesClient({
                 ? `Chiếm ${Math.round((kitchenUseCount / issues.length) * 100)}% tỉ lệ xuất`
                 : "Chưa có dữ liệu để so sánh tỉ trọng."}
             </p>
-          </div>
+          </CardContent></Card>
 
-          <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+          <Card><CardContent>
             <div className="flex items-start justify-between gap-4">
               <div className="flex size-11 items-center justify-center rounded-full bg-destructive/12 text-destructive">
                 <AlertTriangle className="size-5" />
@@ -219,9 +219,9 @@ export function IssuesClient({
             <p className="mt-1 text-sm text-muted-foreground">
               Số phiếu cần được đọc kỹ để tối ưu quy trình hao hụt.
             </p>
-          </div>
+          </CardContent></Card>
 
-          <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+          <Card><CardContent>
             <div className="flex items-start justify-between gap-4">
               <div className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
                 <Clock className="size-5" />
@@ -234,10 +234,10 @@ export function IssuesClient({
             <p className="mt-1 text-sm text-muted-foreground">
               Phiếu nháp hiện có sẵn cho bước rà soát và chốt xuất.
             </p>
-          </div>
+          </CardContent></Card>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-3">
+        <Card className="py-0"><CardContent className="flex flex-wrap items-center justify-between gap-3 p-3">
           <div className="flex flex-1 flex-wrap items-end gap-3">
             <div className="grid gap-1">
               <label className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -295,7 +295,7 @@ export function IssuesClient({
               Xoá bộ lọc
             </Button>
           </div>
-        </div>
+        </CardContent></Card>
 
         <Card className="overflow-hidden">
           <CardHeader className="gap-1">

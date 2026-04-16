@@ -126,35 +126,35 @@ export function RecipesClient({
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        <Card><CardContent>
+          <Badge variant="secondary">
             Tổng công thức
-          </p>
+          </Badge>
           <p className="mt-3 text-3xl font-semibold">{recipes.length}</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Món đang có recipe để vận hành.
           </p>
-        </div>
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        </CardContent></Card>
+        <Card><CardContent>
+          <Badge variant="secondary">
             Tổng dòng nguyên liệu
-          </p>
+          </Badge>
           <p className="mt-3 text-3xl font-semibold">{totalLines}</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Số cấu phần đã được chuẩn hóa trong bếp.
           </p>
-        </div>
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        </CardContent></Card>
+        <Card><CardContent>
+          <Badge variant="secondary">
             Giá vốn bình quân
-          </p>
+          </Badge>
           <p className="mt-3 text-3xl font-semibold">
             {formatVND(averageCost)} đ
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             Ước tính giá vốn trung bình trên mỗi recipe.
           </p>
-        </div>
+        </CardContent></Card>
       </div>
 
       {recipes.length === 0 && (
@@ -206,25 +206,25 @@ export function RecipesClient({
                 </div>
                 <div className="grid flex-1 gap-2 md:grid-cols-3">
                   <div>
-                    <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                    <Badge variant="secondary">
                       Danh mục
-                    </p>
+                    </Badge>
                     <p className="mt-1 text-sm font-medium">
                       {recipe.category}
                     </p>
                   </div>
                   <div>
-                    <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                    <Badge variant="secondary">
                       Số dòng nguyên liệu
-                    </p>
+                    </Badge>
                     <p className="mt-1 text-sm font-medium">
                       {recipe.items.length}
                     </p>
                   </div>
                   <div>
-                    <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                    <Badge variant="secondary">
                       Giá vốn tạm tính
-                    </p>
+                    </Badge>
                     <p className="mt-1 text-sm font-medium text-primary">
                       {formatVND(recipe.estimatedCost)} đ / phần
                     </p>

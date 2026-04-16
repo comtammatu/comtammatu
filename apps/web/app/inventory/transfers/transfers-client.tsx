@@ -104,7 +104,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+        <Card><CardContent>
           <div className="flex size-11 items-center justify-center rounded-full bg-info/12 text-info">
             <Truck className="size-5" />
           </div>
@@ -114,8 +114,8 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
           <p className="mt-1 text-sm text-muted-foreground">
             Phiếu đang trên đường, cần ưu tiên theo dõi nhận hàng.
           </p>
-        </div>
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+        </CardContent></Card>
+        <Card><CardContent>
           <div className="flex size-11 items-center justify-center rounded-full bg-warning/12 text-warning">
             <Waypoints className="size-5" />
           </div>
@@ -125,8 +125,8 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
           <p className="mt-1 text-sm text-muted-foreground">
             Phiếu đã xác nhận nhưng chưa chốt ở kho nhận.
           </p>
-        </div>
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+        </CardContent></Card>
+        <Card><CardContent>
           <div className="flex size-11 items-center justify-center rounded-full bg-success/12 text-success">
             <CheckCircle className="size-5" />
           </div>
@@ -136,10 +136,10 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
           <p className="mt-1 text-sm text-muted-foreground">
             Chứng từ đã hoàn tất và bám theo nghiệp vụ kho thực tế.
           </p>
-        </div>
+        </CardContent></Card>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
+      <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
         <div className="relative min-w-[16rem] flex-1">
           <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -177,7 +177,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
         <Badge variant="outline" className="rounded-full">
           {filteredTransfers.length} / {transfers.length} phiếu
         </Badge>
-      </div>
+      </CardContent></Card>
 
       <Card className="overflow-hidden">
         <CardHeader className="gap-1">
@@ -253,13 +253,13 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
         </CardContent>
       </Card>
 
-      <div className="rounded-lg border bg-card text-card-foreground shadow-sm border-info/20 bg-info/8">
-        <div className="flex items-start gap-3">
+      <Card className="ring-info/20 bg-info/8">
+        <CardContent className="flex items-start gap-3">
           <Lightbulb className="mt-0.5 size-5 shrink-0 text-info" />
           <div>
-            <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            <Badge variant="secondary">
               Gợi ý vận hành
-            </p>
+            </Badge>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               {transfers.length > 0
                 ? inTransit > 0
@@ -268,8 +268,8 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
                 : "Chưa có phiếu luân chuyển nào. Khi phát sinh chứng từ thực, hệ thống sẽ tự hiển thị trạng thái ưu tiên."}
             </p>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

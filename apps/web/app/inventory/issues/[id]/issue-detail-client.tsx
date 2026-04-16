@@ -250,17 +250,14 @@ export function IssueDetailClient({
               value: `${formatVND(totalAmount)}đ`,
             },
           ].map((item) => (
-            <div
-              key={item.label}
-              className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm"
-            >
-              <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            <Card key={item.label}><CardContent>
+              <Badge variant="secondary">
                 {item.label}
-              </p>
+              </Badge>
               <p className="mt-3 text-xl font-semibold text-foreground">
                 {item.value}
               </p>
-            </div>
+            </CardContent></Card>
           ))}
         </div>
 
@@ -317,10 +314,10 @@ export function IssueDetailClient({
               <>
                 <div className="space-y-3 p-4 md:hidden">
                   {lines.map((line) => (
-                    <div
+                    <Card
                       key={line.id}
-                      className="rounded-lg border border-border bg-muted/20 p-4"
-                    >
+                      className="bg-muted/20"
+                    ><CardContent>
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="font-bold">
@@ -375,7 +372,7 @@ export function IssueDetailClient({
                         </p>
                         <p className="mt-1">{line.reason ?? "—"}</p>
                       </div>
-                    </div>
+                    </CardContent></Card>
                   ))}
                 </div>
 

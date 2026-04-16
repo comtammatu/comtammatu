@@ -165,51 +165,51 @@ export function PurchaseOrdersClient({
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        <Card><CardContent>
+          <Badge variant="secondary">
             Tổng PO
-          </p>
+          </Badge>
           <p className="mt-3 text-3xl font-semibold">{rows.length}</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Tất cả đơn mua đang được theo dõi.
           </p>
-        </div>
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        </CardContent></Card>
+        <Card><CardContent>
+          <Badge variant="secondary">
             Chờ gửi NCC
-          </p>
+          </Badge>
           <p className="mt-3 text-3xl font-semibold">
             {statusCounts.draft ?? 0}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             Đơn nháp cần rà lại trước khi phát hành.
           </p>
-        </div>
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        </CardContent></Card>
+        <Card><CardContent>
+          <Badge variant="secondary">
             Đang nhận hàng
-          </p>
+          </Badge>
           <p className="mt-3 text-3xl font-semibold">
             {statusCounts.partially_received ?? 0}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             PO đã đi vào giai đoạn nhập kho thực tế.
           </p>
-        </div>
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        </CardContent></Card>
+        <Card><CardContent>
+          <Badge variant="secondary">
             Hoàn tất
-          </p>
+          </Badge>
           <p className="mt-3 text-3xl font-semibold">
             {statusCounts.received ?? 0}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             Đơn đã nhận đủ và sẵn sàng đối soát.
           </p>
-        </div>
+        </CardContent></Card>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
+      <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
         <div className="relative min-w-[16rem] flex-1">
           <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -253,7 +253,7 @@ export function PurchaseOrdersClient({
         <Badge variant="outline" className="rounded-full">
           {filteredRows.length} / {rows.length} PO
         </Badge>
-      </div>
+      </CardContent></Card>
 
       <div className="flex flex-wrap gap-2">
         {STATUS_KEYS.map((statusKey) => (
@@ -305,10 +305,10 @@ export function PurchaseOrdersClient({
               ) : null}
 
               {filteredRows.map((row) => (
-                <div
+                <Card
                   key={row.id}
-                  className="rounded-lg border bg-muted/30 text-card-foreground p-4"
-                >
+                  className="bg-muted/20"
+                ><CardContent>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 space-y-1">
                       <p className="font-mono text-base font-semibold">
@@ -343,7 +343,7 @@ export function PurchaseOrdersClient({
                       <ArrowRight className="size-4" />
                     </Link>
                   </Button>
-                </div>
+                </CardContent></Card>
               ))}
             </div>
           ) : (

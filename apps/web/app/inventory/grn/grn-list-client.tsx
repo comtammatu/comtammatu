@@ -52,9 +52,9 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
         <CardContent className="p-5 sm:p-6">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div className="space-y-3">
-              <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              <Badge variant="secondary">
                 Nhập hàng HQ
-              </span>
+              </Badge>
               <div className="space-y-2">
                 <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
                   GRN và kiểm nhận
@@ -78,7 +78,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
       </Card>
 
       <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+        <Card><CardContent>
           <div className="flex size-11 items-center justify-center rounded-full bg-info/12 text-info">
             <Clock className="size-5" />
           </div>
@@ -88,14 +88,14 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
           <p className="mt-1 text-sm text-muted-foreground">
             Phiếu cần kiểm nhận hoặc chờ chốt nhập trong ngày.
           </p>
-        </div>
+        </CardContent></Card>
 
-        <div className="rounded-lg border bg-card text-card-foreground shadow-sm border-primary/15 bg-primary/5">
-          <div className="flex items-center justify-between gap-6">
+        <Card className="ring-primary/15 bg-primary/5">
+          <CardContent className="flex items-center justify-between gap-6">
             <div>
-              <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              <Badge variant="secondary">
                 Giá trị GRN tháng này
-              </p>
+              </Badge>
               <p className="mt-3 text-4xl font-semibold tracking-tight">
                 {formatVND(totalValue)}
                 <span className="ml-1 text-xl font-medium opacity-50">₫</span>
@@ -106,8 +106,8 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
               </div>
             </div>
             <Receipt className="size-20 shrink-0 text-success/15" />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card className="overflow-hidden">

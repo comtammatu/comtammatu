@@ -165,10 +165,9 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             value: String(suspended).padStart(2, "0"),
           },
         ].map((card) => (
-          <div
+          <Card
             key={card.label}
-            className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm"
-          >
+          ><CardContent>
             <div className="mb-4 flex items-start justify-between">
               <div
                 className={cn(
@@ -192,7 +191,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
               {card.value}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">{card.label}</p>
-          </div>
+          </CardContent></Card>
         ))}
       </div>
 
@@ -206,7 +205,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
               hệ trong một cửa vào duy nhất.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
+          <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
             <Search className="size-4 shrink-0 text-muted-foreground" />
             <input
               type="text"
@@ -218,7 +217,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             <span className="shrink-0 text-xs font-medium text-muted-foreground">
               {filtered.length} / {rows.length}
             </span>
-          </div>
+          </CardContent></Card>
         </CardHeader>
         <CardContent className="p-0">
           <Table>

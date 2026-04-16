@@ -37,3 +37,8 @@
    - Pattern: Ad-hoc hardcoded Vietnamese copy introduced drift terms (e.g. "Employee Portal" instead of canonical label, "Kiểm kê kho" instead of "Stocktake")
    - Rule: All domain/UI wording must come from one of three canonical sources: `docs/ref/glossary.md` (business meaning), `packages/shared/src/labels/vi.ts` (shared labels), or `apps/web/app/inventory/_lib/dictionary.ts` (inventory-specific adapters). Never introduce new copy inline.
    - Prevention: When adding or changing copy, update the canonical source first (or in the same PR). Run `pnpm lint:copy` to catch drift. See regression rule TERMINOLOGY-SOURCE-OF-TRUTH.
+
+8. **Do not fake preset UI with raw elements**
+   - Pattern: Used plain `div` / `span` / `p` plus Tailwind classes to imitate preset-backed `Card`, `Badge`, `Button`, `Table`, or other shadcn primitives.
+   - Rule: If a surface visually behaves like a primitive, it must use the project primitive directly. Never rebuild the same surface with raw elements, even if the result looks similar.
+   - Prevention: Before writing any UI markup, map each visible surface to an existing primitive from `packages/ui/src/components/*`. If no primitive fits, stop and discuss instead of inventing a parallel pattern.

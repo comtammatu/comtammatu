@@ -107,10 +107,10 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
       </div>
 
       <div className="grid gap-3 md:grid-cols-4">
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        <Card><CardContent>
+          <Badge variant="secondary">
             PO liên kết
-          </p>
+          </Badge>
           <div className="mt-3 text-lg font-semibold">
             {grn.poCode && grn.poId ? (
               <Link
@@ -123,27 +123,27 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
               <span className="text-muted-foreground">—</span>
             )}
           </div>
-        </div>
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        </CardContent></Card>
+        <Card><CardContent>
+          <Badge variant="secondary">
             Nhà cung cấp
-          </p>
+          </Badge>
           <p className="mt-3 text-lg font-semibold">{grn.supplier}</p>
-        </div>
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        </CardContent></Card>
+        <Card><CardContent>
+          <Badge variant="secondary">
             Tổng giá trị nhập
-          </p>
+          </Badge>
           <p className="mt-3 text-xl font-semibold text-primary">
             {formatVND(grn.total)} VNĐ
           </p>
-        </div>
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        </CardContent></Card>
+        <Card><CardContent>
+          <Badge variant="secondary">
             Thuế (VAT)
-          </p>
+          </Badge>
           <p className="mt-3 text-xl font-semibold">{formatVND(grn.tax)} VNĐ</p>
-        </div>
+        </CardContent></Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -158,9 +158,9 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
             <CardContent className="p-0">
               <div className="space-y-3 p-4 md:hidden">
                 {grn.items.map((item) => (
-                  <div
+                  <Card
                     key={item.sku || item.name}
-                    className="rounded-lg border bg-muted/30 text-card-foreground p-4"
+                    className="bg-muted/30"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -204,7 +204,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </Card>
                 ))}
               </div>
 

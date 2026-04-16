@@ -195,7 +195,7 @@ export function ExpiryListClient({
               sổ nhanh.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
+          <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
             <Search className="size-4 shrink-0 text-muted-foreground" />
             <Input
               placeholder="Tìm nguyên liệu, lô hàng, phiếu nhập..."
@@ -221,7 +221,7 @@ export function ExpiryListClient({
             <span className="shrink-0 text-xs text-muted-foreground">
               {items.length} mục
             </span>
-          </div>
+          </CardContent></Card>
         </CardHeader>
         <CardContent className="p-0">
           {isMobile ? (
@@ -243,10 +243,10 @@ export function ExpiryListClient({
                   className: "bg-muted text-muted-foreground",
                 };
                 return (
-                  <div
+                  <Card
                     key={`${alert.ingredient_id}-${alert.grn_number}-${alert.batch_number ?? ""}-${String(idx)}`}
-                    className="rounded-lg border bg-muted/30 text-card-foreground flex items-center justify-between gap-3 px-4 py-3"
-                  >
+                    className="bg-muted/30 py-0"
+                  ><CardContent className="flex items-center justify-between gap-3 px-4 py-3">
                     <div className="min-w-0 space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium truncate">
@@ -275,7 +275,7 @@ export function ExpiryListClient({
                       <Trash2 className="size-3.5" />
                       Xóa sổ
                     </Button>
-                  </div>
+                  </CardContent></Card>
                 );
               })}
             </div>
@@ -398,39 +398,39 @@ export function ExpiryListClient({
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        <Card><CardContent>
+          <Badge variant="secondary">
             Đã hết hạn
-          </p>
+          </Badge>
           <p className="mt-3 text-3xl font-semibold text-destructive">
             {urgencyCounts.expired}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             Lô cần khóa và xử lý ngay.
           </p>
-        </div>
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        </CardContent></Card>
+        <Card><CardContent>
+          <Badge variant="secondary">
             Nguy cấp
-          </p>
+          </Badge>
           <p className="mt-3 text-3xl font-semibold text-destructive">
             {urgencyCounts.critical}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             Lô còn rất ít ngày sử dụng.
           </p>
-        </div>
-        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+        </CardContent></Card>
+        <Card><CardContent>
+          <Badge variant="secondary">
             Sắp hết hạn
-          </p>
+          </Badge>
           <p className="mt-3 text-3xl font-semibold text-warning">
             {urgencyCounts.warning}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             Lô cần được điều phối hoặc tiêu thụ sớm.
           </p>
-        </div>
+        </CardContent></Card>
       </div>
 
       {/* Urgency count badges */}

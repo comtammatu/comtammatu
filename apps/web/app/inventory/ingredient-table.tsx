@@ -97,7 +97,7 @@ export function IngredientTable({
           </p>
         </CardHeader>
         <CardContent className="px-4 sm:px-5">
-          <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3 gap-3">
+          <Card className="mb-4 py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
             <Search className="size-4 shrink-0 text-muted-foreground" />
             <Input
               placeholder="Tìm tên, SKU, danh mục…"
@@ -108,7 +108,7 @@ export function IngredientTable({
             <span className="shrink-0 text-xs text-muted-foreground">
               {filtered.length} / {ingredients.length}
             </span>
-          </div>
+          </CardContent></Card>
 
           {isMobile ? (
             <div className="space-y-3">
@@ -123,9 +123,9 @@ export function IngredientTable({
                 </div>
               )}
               {filtered.map((ing) => (
-                <div
+                <Card
                   key={ing.id}
-                  className="rounded-lg border bg-muted/30 text-card-foreground flex items-center justify-between gap-3 px-4 py-3"
+                  className="bg-muted/30 flex items-center justify-between gap-3 px-4 py-3"
                 >
                   <div className="min-w-0 space-y-1">
                     <div className="flex items-center gap-2">
@@ -163,7 +163,7 @@ export function IngredientTable({
                       <Pencil className="size-4" />
                     </Button>
                   )}
-                </div>
+                </Card>
               ))}
             </div>
           ) : (

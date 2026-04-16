@@ -211,7 +211,7 @@ export function StocktakeListClient({
           })}
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
+        <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
           <div className="relative min-w-[16rem] flex-1">
             <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -234,7 +234,7 @@ export function StocktakeListClient({
               Xóa bộ lọc
             </Button>
           )}
-        </div>
+        </CardContent></Card>
 
         <Card className="overflow-hidden">
           <CardHeader className="gap-1">
