@@ -40,10 +40,10 @@ export default async function KdsLayout({
   return (
     <main
       id="main-content"
-      className="app-canvas safe-top flex h-dvh min-h-screen flex-col touch-manipulation overflow-hidden"
+      className="min-h-dvh w-full  flex h-dvh min-h-screen flex-col touch-manipulation overflow-hidden"
     >
       <div className="flex min-h-full w-full flex-1 p-3 md:p-4">
-        <div className="app-shell relative flex min-h-full w-full flex-1 flex-col overflow-hidden">
+        <div className="rounded-lg border bg-background shadow-sm relative flex min-h-full w-full flex-1 flex-col overflow-hidden">
           {children}
         </div>
       </div>

@@ -280,7 +280,7 @@ export async function fetchProductionOrders(): Promise<
     }
   }
 
-  const { data, error } = await supabase
+  let ordersQuery = supabase
     .from("production_orders")
     .select(
       `
@@ -304,6 +304,13 @@ export async function fetchProductionOrders(): Promise<
     )
     .eq("tenant_id", claims.tenant_id)
     .order("created_at", { ascending: false });
+
+  // branch_manager sees only their own branch's orders
+  if (claims.user_role === "branch_manager" && claims.branch_id != null) {
+    ordersQuery = ordersQuery.eq("branch_id", claims.branch_id);
+  }
+
+  const { data, error } = await ordersQuery;
 
   if (error) {
     return { success: false, error: "Không thể tải lệnh sản xuất." };

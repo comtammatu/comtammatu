@@ -13,6 +13,12 @@ import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
+import {
   Table,
   TableBody,
   TableCell,
@@ -20,7 +26,6 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { PageHeader, SectionCard } from "@/components/patterns";
 import { tStatus } from "../_lib/dictionary";
 
 export type ExpiryAlertRow = {
@@ -58,20 +63,39 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow="Shelf Life Radar"
-        title="Hạn sử dụng"
-        description="Theo dõi lô gần quá hạn, quá hạn và ưu tiên xử lý trong kho theo cùng một nhịp điều phối mới."
-        actions={
-          <Button type="button" variant="destructive" className="min-h-11 px-5">
-            <Trash2 className="size-4" />
-            Hủy tất cả hàng đã hết hạn
-          </Button>
-        }
-      />
+      <Card>
+        <CardContent className="p-5 sm:p-6">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="space-y-3">
+              <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                Shelf Life Radar
+              </span>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                  Hạn sử dụng
+                </h2>
+                <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
+                  Theo dõi lô gần quá hạn, quá hạn và ưu tiên xử lý trong kho
+                  theo cùng một nhịp điều phối mới.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 self-start">
+              <Button
+                type="button"
+                variant="destructive"
+                className="min-h-11 px-5"
+              >
+                <Trash2 className="size-4" />
+                Hủy tất cả hàng đã hết hạn
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <div className="app-stat">
+        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
           <div className="flex size-11 items-center justify-center rounded-full bg-destructive/12 text-destructive">
             <AlertOctagon className="size-5" />
           </div>
@@ -83,7 +107,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
           </p>
         </div>
 
-        <div className="app-stat">
+        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
           <div className="flex size-11 items-center justify-center rounded-full bg-primary/12 text-primary">
             <AlertTriangle className="size-5" />
           </div>
@@ -95,7 +119,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
           </p>
         </div>
 
-        <div className="app-stat">
+        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
           <div className="flex size-11 items-center justify-center rounded-full bg-warning/12 text-warning">
             <Clock className="size-5" />
           </div>
@@ -108,7 +132,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
         </div>
       </div>
 
-      <div className="app-subpanel flex flex-wrap gap-2 p-2">
+      <div className="rounded-lg border bg-muted/30 text-card-foreground flex flex-wrap gap-2 p-2">
         {tabs.map((tab) => {
           const isActive = activeTab === tab;
           return (
@@ -117,7 +141,10 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
               type="button"
               variant={isActive ? "secondary" : "ghost"}
               onClick={() => setActiveTab(tab)}
-              className={cn("flex-1 rounded-full", isActive && "font-semibold shadow-sm")}
+              className={cn(
+                "flex-1 rounded-full",
+                isActive && "font-semibold shadow-sm",
+              )}
             >
               {tab === "Tất cả" ? "Tất cả" : tStatus(tab, "tab")}
             </Button>
@@ -125,68 +152,73 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
         })}
       </div>
 
-      <SectionCard
-        title="Danh sách cảnh báo theo lô"
-        description="Ưu tiên theo số ngày còn lại, chứng từ nhập và chi nhánh sở hữu."
-        className="overflow-hidden"
-        density="compact"
-      >
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nguyên liệu</TableHead>
-              <TableHead>Số lô</TableHead>
-              <TableHead>Ngày hết hạn</TableHead>
-              <TableHead className="text-center">Ngày còn lại</TableHead>
-              <TableHead>Phiếu nhập</TableHead>
-              <TableHead>Chi nhánh</TableHead>
-              <TableHead className="text-right">Thao tác</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell className="text-sm font-semibold">
-                  {item.ingredientName}
-                </TableCell>
-                <TableCell className="font-mono text-sm text-muted-foreground">
-                  {item.lot}
-                </TableCell>
-                <TableCell className="text-sm">{item.expiryDate}</TableCell>
-                <TableCell className="text-center">
-                  <Badge variant={getUrgencyBadgeVariant(item.urgency)}>
-                    {item.daysLeft <= 0
-                      ? `Đã hết hạn ${Math.abs(item.daysLeft)} ngày`
-                      : `Còn ${item.daysLeft} ngày`}
-                  </Badge>
-                </TableCell>
-                <TableCell className="font-mono text-sm text-primary">
-                  {item.grnCode}
-                </TableCell>
-                <TableCell className="text-sm">{item.branchName}</TableCell>
-                <TableCell className="text-right">
-                  {item.urgency === "expired" ? (
-                    <Button variant="destructive" size="sm" className="gap-1">
-                      <Trash2 className="size-3" /> Hủy hàng
-                    </Button>
-                  ) : (
-                    <Button variant="outline" size="sm">
-                      Chi tiết
-                    </Button>
-                  )}
-                </TableCell>
+      <Card className="overflow-hidden">
+        <CardHeader>
+          <CardTitle>Danh sách cảnh báo theo lô</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Ưu tiên theo số ngày còn lại, chứng từ nhập và chi nhánh sở hữu.
+          </p>
+        </CardHeader>
+        <CardContent className="px-4 sm:px-5">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nguyên liệu</TableHead>
+                <TableHead>Số lô</TableHead>
+                <TableHead>Ngày hết hạn</TableHead>
+                <TableHead className="text-center">Ngày còn lại</TableHead>
+                <TableHead>Phiếu nhập</TableHead>
+                <TableHead>Chi nhánh</TableHead>
+                <TableHead className="text-right">Thao tác</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </SectionCard>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="text-sm font-semibold">
+                    {item.ingredientName}
+                  </TableCell>
+                  <TableCell className="font-mono text-sm text-muted-foreground">
+                    {item.lot}
+                  </TableCell>
+                  <TableCell className="text-sm">{item.expiryDate}</TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant={getUrgencyBadgeVariant(item.urgency)}>
+                      {item.daysLeft <= 0
+                        ? `Đã hết hạn ${Math.abs(item.daysLeft)} ngày`
+                        : `Còn ${item.daysLeft} ngày`}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-mono text-sm text-primary">
+                    {item.grnCode}
+                  </TableCell>
+                  <TableCell className="text-sm">{item.branchName}</TableCell>
+                  <TableCell className="text-right">
+                    {item.urgency === "expired" ? (
+                      <Button variant="destructive" size="sm" className="gap-1">
+                        <Trash2 className="size-3" /> Hủy hàng
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="sm">
+                        Chi tiết
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="app-panel border-primary/20 bg-primary/5">
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm border-primary/20 bg-primary/5">
           <div className="flex items-start gap-3">
             <Lightbulb className="mt-0.5 size-5 shrink-0 text-primary" />
             <div>
-              <p className="app-kicker">Gợi ý tối ưu hóa</p>
+              <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                Gợi ý tối ưu hóa
+              </p>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 Dựa trên dữ liệu 30 ngày qua, tỷ lệ hàng quá hạn tại CN Quận 1
                 cao hơn 15% so với trung bình. Hệ thống đề xuất điều chuyển
@@ -195,8 +227,10 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
             </div>
           </div>
         </div>
-        <div className="app-panel">
-          <p className="app-kicker">Thông báo tự động</p>
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            Thông báo tự động
+          </p>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             Cài đặt nhắc báo qua Email hoặc Zalo cho quản lý kho khi hàng hóa
             còn dưới 5 ngày sử dụng.

@@ -21,12 +21,26 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@comtammatu/ui/components/sidebar";
+import {
   findActiveNavItem,
   formatPathSegment,
   getInitials,
+  isNavItemActive,
   type ShellNavGroup,
 } from "@/lib/shell-primitives";
-import { WorkspaceShell } from "@/components/workspace-shell";
 
 const NAV_GROUPS: ShellNavGroup[] = [
   {
@@ -76,127 +90,195 @@ export function HRShell({ children, user, role }: HRShellProps) {
   const pageTitle = useMemo(() => resolveTitle(pathname), [pathname]);
 
   return (
-    <WorkspaceShell
-      pathname={pathname}
-      navGroups={NAV_GROUPS}
-      title={pageTitle}
-      eyebrow={APP_COPY_VI.hrWorkspaceSubtitle}
-      description="Tập trung điều hướng nhân sự, chấm công và bảng lương theo cùng một cấu trúc thao tác."
-      badge={<Badge variant="secondary">{ROLE_LABEL_VI[role]}</Badge>}
-      sidebarHeader={
-        <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-4 text-sidebar-foreground">
-          <Link
-            href="/admin/dashboard"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground"
-          >
-            <ArrowLeft className="size-3.5" />
-            Quản trị
-          </Link>
-          <div className="mt-4 flex items-center gap-3">
-            <div className="flex size-12 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-              <Briefcase className="size-5" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/55">
-                Chuyên trách
-              </p>
-              <p className="text-xl font-semibold">
-                {APP_COPY_VI.hrWorkspace}
-              </p>
-            </div>
-          </div>
-          <p className="mt-4 text-sm leading-6 text-sidebar-foreground/72">
-            Tập trung ca làm, chấm công và bảng lương trong cùng một tuyến thao tác.
-          </p>
-        </div>
-      }
-      actions={
-        <>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/admin/dashboard">Quản trị</Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link href="/hr/payroll">Bảng lương</Link>
-          </Button>
-        </>
-      }
-      headerMeta={
-        <div className="grid gap-3 md:grid-cols-2 md:items-start">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Card>
-              <CardContent className="space-y-2 p-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Vai trò
-                </p>
-                <p className="text-lg font-semibold">{ROLE_LABEL_VI[role]}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="space-y-2 p-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Khu làm việc
-                </p>
-                <p className="text-sm leading-6 text-foreground">
-                  Tuyến nghiệp vụ nhân sự tập trung
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="space-y-2 p-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Điều hướng
-                </p>
-                <p className="text-sm leading-6 text-foreground">
-                  {NAV_GROUPS[0]?.items.length ?? 0} điểm vào chính
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-          <Card>
-            <CardContent className="flex items-center gap-3 p-4">
-              <Avatar size="sm">
-                <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-              </Avatar>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">{user.name}</p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {ROLE_LABEL_VI[role]}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      }
-      sidebarFooter={
-        <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-3">
-          <div className="flex items-center gap-3">
-            <Avatar size="sm">
-              <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-sidebar-foreground">
-                {user.name}
-              </p>
-              <p className="truncate text-xs text-sidebar-foreground/65">
-                {ROLE_LABEL_VI[role]}
-              </p>
-            </div>
-            <form action="/api/auth/signout" method="post">
-              <Button
-                type="submit"
-                variant="ghost"
-                size="icon-lg"
-                className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
-                aria-label="Đăng xuất"
+    <SidebarProvider>
+      <div className="flex min-h-dvh w-full">
+        <Sidebar variant="inset">
+          <SidebarHeader className="gap-4 p-4">
+            <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-4 text-sidebar-foreground">
+              <Link
+                href="/admin/dashboard"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground"
               >
-                <LogOut className="size-4" />
-              </Button>
-            </form>
+                <ArrowLeft className="size-3.5" />
+                Quản trị
+              </Link>
+              <div className="mt-4 flex items-center gap-3">
+                <div className="flex size-12 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
+                  <Briefcase className="size-5" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/55">
+                    Chuyên trách
+                  </p>
+                  <p className="text-xl font-semibold">
+                    {APP_COPY_VI.hrWorkspace}
+                  </p>
+                </div>
+              </div>
+              <p className="mt-4 text-sm leading-6 text-sidebar-foreground/72">
+                Tập trung ca làm, chấm công và bảng lương trong cùng một tuyến
+                thao tác.
+              </p>
+            </div>
+          </SidebarHeader>
+
+          <SidebarContent className="px-2 pb-4">
+            {NAV_GROUPS.map((group) => (
+              <SidebarGroup key={group.title} className="px-0 py-1">
+                <SidebarGroupLabel className="px-2 pb-1 text-xs font-medium text-sidebar-foreground/70">
+                  {group.title}
+                </SidebarGroupLabel>
+                <SidebarMenu>
+                  {group.items.map((item) => {
+                    const active = isNavItemActive(item, pathname);
+                    const Icon = item.icon;
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active}
+                          size="lg"
+                          tooltip={item.label}
+                          className="rounded-md"
+                        >
+                          <Link href={item.href}>
+                            <Icon />
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroup>
+            ))}
+          </SidebarContent>
+
+          <SidebarFooter className="p-4">
+            <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-3">
+              <div className="flex items-center gap-3">
+                <Avatar size="sm">
+                  <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-sidebar-foreground">
+                    {user.name}
+                  </p>
+                  <p className="truncate text-xs text-sidebar-foreground/65">
+                    {ROLE_LABEL_VI[role]}
+                  </p>
+                </div>
+                <form action="/api/auth/signout" method="post">
+                  <Button
+                    type="submit"
+                    variant="ghost"
+                    size="icon-lg"
+                    className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
+                    aria-label="Đăng xuất"
+                  >
+                    <LogOut className="size-4" />
+                  </Button>
+                </form>
+              </div>
+            </div>
+          </SidebarFooter>
+        </Sidebar>
+
+        <SidebarInset className="min-h-dvh bg-background">
+          <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
+            <header className="rounded-lg border bg-card p-4 sm:p-6">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <SidebarTrigger className="md:hidden" />
+                    <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                      {APP_COPY_VI.hrWorkspaceSubtitle}
+                    </span>
+                    <Badge variant="secondary">{ROLE_LABEL_VI[role]}</Badge>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                      {pageTitle}
+                    </h1>
+                    <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
+                      Tập trung điều hướng nhân sự, chấm công và bảng lương theo
+                      cùng một cấu trúc thao tác.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/admin/dashboard">Quản trị</Link>
+                  </Button>
+                  <Button asChild size="sm">
+                    <Link href="/hr/payroll">Bảng lương</Link>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-lg border bg-muted/30 p-4">
+                <div className="grid gap-3 md:grid-cols-2 md:items-start">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <Card>
+                      <CardContent className="space-y-2 p-4">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                          Vai trò
+                        </p>
+                        <p className="text-lg font-semibold">
+                          {ROLE_LABEL_VI[role]}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="space-y-2 p-4">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                          Khu làm việc
+                        </p>
+                        <p className="text-sm leading-6 text-foreground">
+                          Tuyến nghiệp vụ nhân sự tập trung
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="space-y-2 p-4">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                          Điều hướng
+                        </p>
+                        <p className="text-sm leading-6 text-foreground">
+                          {NAV_GROUPS[0]?.items.length ?? 0} điểm vào chính
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  <Card>
+                    <CardContent className="flex items-center gap-3 p-4">
+                      <Avatar size="sm">
+                        <AvatarFallback>
+                          {getInitials(user.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">
+                          {user.name}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {ROLE_LABEL_VI[role]}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </header>
+
+            <main id="main-content" className="flex-1">
+              <div className="space-y-4">{children}</div>
+            </main>
           </div>
-        </div>
-      }
-    >
-      {children}
-    </WorkspaceShell>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   );
 }

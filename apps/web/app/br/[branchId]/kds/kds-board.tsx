@@ -437,7 +437,9 @@ export function KdsBoard({
   );
   const oldestActiveOrderMinutes = useMemo(() => {
     if (displayOrders.length === 0) return 0;
-    return Math.max(...displayOrders.map((order) => getElapsedMinutes(order.createdAt)));
+    return Math.max(
+      ...displayOrders.map((order) => getElapsedMinutes(order.createdAt)),
+    );
   }, [displayOrders]);
   const hotOrders = useMemo(
     () =>
@@ -453,14 +455,22 @@ export function KdsBoard({
   const stationSummary = useMemo(
     () =>
       stations.map((station) => {
-        const stationTickets = tickets.filter((ticket) => ticket.station_id === station.id);
+        const stationTickets = tickets.filter(
+          (ticket) => ticket.station_id === station.id,
+        );
         return {
           stationId: station.id,
           stationName: station.name,
-          active: stationTickets.filter((ticket) => ticket.status !== "ready").length,
-          pending: stationTickets.filter((ticket) => ticket.status === "pending").length,
-          preparing: stationTickets.filter((ticket) => ticket.status === "preparing").length,
-          ready: stationTickets.filter((ticket) => ticket.status === "ready").length,
+          active: stationTickets.filter((ticket) => ticket.status !== "ready")
+            .length,
+          pending: stationTickets.filter(
+            (ticket) => ticket.status === "pending",
+          ).length,
+          preparing: stationTickets.filter(
+            (ticket) => ticket.status === "preparing",
+          ).length,
+          ready: stationTickets.filter((ticket) => ticket.status === "ready")
+            .length,
         };
       }),
     [stations, tickets],
@@ -472,15 +482,19 @@ export function KdsBoard({
         <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-4">
           <div className="flex items-center gap-2">
             <EmployeePortalBackControl className="h-8 rounded-full px-2 text-xs" />
-            <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">KDS chi nhánh #{branchId}</span>
+            <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              KDS chi nhánh #{branchId}
+            </span>
           </div>
 
           <div className="grid gap-4 xl:grid-cols-4">
-            <div className="app-panel p-5 xl:col-span-3">
+            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-5 xl:col-span-3">
               <div className="relative space-y-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Điều phối line bếp</p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Điều phối line bếp
+                    </p>
                     <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground">
                       Món cần nhận, đang làm, đã xong.
                     </h1>
@@ -546,7 +560,9 @@ export function KdsBoard({
                 {hotOrders.length > 0 && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-foreground">Đơn chờ</p>
+                      <p className="text-sm font-semibold text-foreground">
+                        Đơn chờ
+                      </p>
                       <span className="text-xs text-muted-foreground">
                         Ưu tiên đơn chờ lâu
                       </span>
@@ -573,8 +589,17 @@ export function KdsBoard({
                             </span>
                           </div>
                           <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                            {order.tickets.filter((ticket) => ticket.status === "pending").length}{" "}
-                            chờ · {order.tickets.filter((ticket) => ticket.status === "preparing").length}{" "}
+                            {
+                              order.tickets.filter(
+                                (ticket) => ticket.status === "pending",
+                              ).length
+                            }{" "}
+                            chờ ·{" "}
+                            {
+                              order.tickets.filter(
+                                (ticket) => ticket.status === "preparing",
+                              ).length
+                            }{" "}
                             đang làm
                           </p>
                         </div>
@@ -586,24 +611,30 @@ export function KdsBoard({
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-              <div className="app-subpanel p-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Đơn hiển thị</p>
+              <div className="rounded-lg border bg-muted/30 text-card-foreground p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Đơn hiển thị
+                </p>
                 <p className="mt-2 text-2xl font-semibold tabular-nums">
                   {displayOrders.length}
                 </p>
               </div>
-              <div className="app-subpanel p-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Món còn việc</p>
+              <div className="rounded-lg border bg-muted/30 text-card-foreground p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Món còn việc
+                </p>
                 <p className="mt-2 flex items-center gap-2 text-2xl font-semibold tabular-nums">
                   <Flame className="size-5 text-warning" />
                   {totalActiveCount}
                 </p>
               </div>
-              <div className="app-subpanel p-4">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Order lâu nhất</p>
-                    <p className="mt-2 flex items-center gap-2 text-2xl font-semibold tabular-nums">
-                      <PackageCheck className="size-5 text-info" />
-                      {oldestActiveOrderMinutes}m
+              <div className="rounded-lg border bg-muted/30 text-card-foreground p-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Order lâu nhất
+                </p>
+                <p className="mt-2 flex items-center gap-2 text-2xl font-semibold tabular-nums">
+                  <PackageCheck className="size-5 text-info" />
+                  {oldestActiveOrderMinutes}m
                 </p>
               </div>
             </div>
@@ -663,127 +694,139 @@ export function KdsBoard({
               "flex shrink-0 items-stretch border-t border-border/40 pt-3",
             )}
           >
-        <ScrollArea className="min-w-0 flex-1">
-          <div className="flex gap-1.5">
-            <button
-              type="button"
-              className={cn(
-                "transition-all hover:-translate-y-0.5 hover:shadow-md flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-bold duration-150 md:min-h-14 md:px-5 md:text-base",
-                activeStationId === null
-                  ? "bg-accent text-accent-foreground shadow-sm"
-                  : "bg-secondary text-secondary-foreground hover:bg-muted",
-              )}
-              onClick={() => replaceQuery({ station: null })}
-            >
-              Tất cả
-              <span
-                className={cn(
-                  "flex size-6 items-center justify-center rounded-full text-xs font-black tabular-nums",
-                  activeStationId === null
-                    ? "bg-accent-foreground/15 text-accent-foreground"
-                    : "bg-muted text-muted-foreground",
-                )}
-              >
-                {totalActiveCount}
-              </span>
-            </button>
-
-            {/* Per-station tabs */}
-            {stations.map((station) => {
-              const isActive = activeStationId === station.id;
-              const count = stationCounts.get(station.id) ?? 0;
-              return (
+            <ScrollArea className="min-w-0 flex-1">
+              <div className="flex gap-1.5">
                 <button
-                  key={station.id}
                   type="button"
                   className={cn(
                     "transition-all hover:-translate-y-0.5 hover:shadow-md flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-bold duration-150 md:min-h-14 md:px-5 md:text-base",
-                    isActive
+                    activeStationId === null
                       ? "bg-accent text-accent-foreground shadow-sm"
                       : "bg-secondary text-secondary-foreground hover:bg-muted",
                   )}
-                  onClick={() => replaceQuery({ station: String(station.id) })}
+                  onClick={() => replaceQuery({ station: null })}
                 >
-                  {station.name}
+                  Tất cả
                   <span
                     className={cn(
                       "flex size-6 items-center justify-center rounded-full text-xs font-black tabular-nums",
-                      isActive
+                      activeStationId === null
                         ? "bg-accent-foreground/15 text-accent-foreground"
-                        : count > 0
-                          ? "bg-warning/20 text-warning"
-                          : "bg-muted text-muted-foreground",
+                        : "bg-muted text-muted-foreground",
                     )}
                   >
-                    {count}
+                    {totalActiveCount}
                   </span>
                 </button>
-              );
-            })}
-          </div>
-        </ScrollArea>
+
+                {/* Per-station tabs */}
+                {stations.map((station) => {
+                  const isActive = activeStationId === station.id;
+                  const count = stationCounts.get(station.id) ?? 0;
+                  return (
+                    <button
+                      key={station.id}
+                      type="button"
+                      className={cn(
+                        "transition-all hover:-translate-y-0.5 hover:shadow-md flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-bold duration-150 md:min-h-14 md:px-5 md:text-base",
+                        isActive
+                          ? "bg-accent text-accent-foreground shadow-sm"
+                          : "bg-secondary text-secondary-foreground hover:bg-muted",
+                      )}
+                      onClick={() =>
+                        replaceQuery({ station: String(station.id) })
+                      }
+                    >
+                      {station.name}
+                      <span
+                        className={cn(
+                          "flex size-6 items-center justify-center rounded-full text-xs font-black tabular-nums",
+                          isActive
+                            ? "bg-accent-foreground/15 text-accent-foreground"
+                            : count > 0
+                              ? "bg-warning/20 text-warning"
+                              : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </ScrollArea>
           </div>
         </div>
       </div>
 
       <div className="border-b border-border/30 bg-secondary/35 px-3 py-2 md:px-4">
         <div className="mx-auto w-full max-w-screen-2xl">
-          <div className="app-subpanel px-3 py-2.5">
-          <div className="relative flex shrink-0 flex-nowrap items-center gap-2 overflow-x-auto md:flex-wrap">
-            <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
-              <Filter className="size-4 shrink-0" aria-hidden />
-              <span className="hidden text-sm font-medium sm:inline">Bộ lọc</span>
-            </div>
-            <Select
-              value={ticketStatusFilter}
-              onValueChange={(v) => {
-                if (v === "all") replaceQuery({ status: null });
-                else replaceQuery({ status: v });
-              }}
-            >
-              <SelectTrigger
-                className="h-10 min-h-10 w-auto min-w-32 shrink-0 rounded-lg text-sm md:h-11 md:min-h-11 md:min-w-40"
-                aria-label="Lọc theo trạng thái món"
+          <div className="rounded-lg border bg-muted/30 text-card-foreground px-3 py-2.5">
+            <div className="relative flex shrink-0 flex-nowrap items-center gap-2 overflow-x-auto md:flex-wrap">
+              <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+                <Filter className="size-4 shrink-0" aria-hidden />
+                <span className="hidden text-sm font-medium sm:inline">
+                  Bộ lọc
+                </span>
+              </div>
+              <Select
+                value={ticketStatusFilter}
+                onValueChange={(v) => {
+                  if (v === "all") replaceQuery({ status: null });
+                  else replaceQuery({ status: v });
+                }}
               >
-                <SelectValue placeholder="Trạng thái" />
-              </SelectTrigger>
-              <SelectContent>
-                {TICKET_STATUS_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value} className="text-sm">
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={orderTypeFilter}
-              onValueChange={(v) => {
-                if (v === "all") replaceQuery({ orderType: null });
-                else replaceQuery({ orderType: v });
-              }}
-            >
-              <SelectTrigger
-                className="h-10 min-h-10 w-auto min-w-28 shrink-0 rounded-lg text-sm md:h-11 md:min-h-11 md:min-w-36"
-                aria-label="Lọc theo loại đơn"
+                <SelectTrigger
+                  className="h-10 min-h-10 w-auto min-w-32 shrink-0 rounded-lg text-sm md:h-11 md:min-h-11 md:min-w-40"
+                  aria-label="Lọc theo trạng thái món"
+                >
+                  <SelectValue placeholder="Trạng thái" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TICKET_STATUS_OPTIONS.map((opt) => (
+                    <SelectItem
+                      key={opt.value}
+                      value={opt.value}
+                      className="text-sm"
+                    >
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={orderTypeFilter}
+                onValueChange={(v) => {
+                  if (v === "all") replaceQuery({ orderType: null });
+                  else replaceQuery({ orderType: v });
+                }}
               >
-                <SelectValue placeholder="Loại đơn" />
-              </SelectTrigger>
-              <SelectContent>
-                {ORDER_TYPE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value} className="text-sm">
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                <SelectTrigger
+                  className="h-10 min-h-10 w-auto min-w-28 shrink-0 rounded-lg text-sm md:h-11 md:min-h-11 md:min-w-36"
+                  aria-label="Lọc theo loại đơn"
+                >
+                  <SelectValue placeholder="Loại đơn" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ORDER_TYPE_OPTIONS.map((opt) => (
+                    <SelectItem
+                      key={opt.value}
+                      value={opt.value}
+                      className="text-sm"
+                    >
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            {displayOrders.length > 0 && (
-              <span className="ml-auto text-sm font-semibold tabular-nums text-muted-foreground">
-                {displayOrders.length} đơn
-              </span>
-            )}
+              {displayOrders.length > 0 && (
+                <span className="ml-auto text-sm font-semibold tabular-nums text-muted-foreground">
+                  {displayOrders.length} đơn
+                </span>
+              )}
+            </div>
           </div>
-        </div>
         </div>
       </div>
 

@@ -12,19 +12,20 @@ import {
   Wallet,
 } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import {
   buildLoginBlockedStatePath,
   canAccess,
   extractClaims,
 } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
-import {
-  PageContainer,
-  PageHeader,
-  SectionCard,
-  StatusBadge,
-} from "@/components/patterns";
 
 interface ReportCardProps {
   title: string;
@@ -53,7 +54,7 @@ function ReportCard({
   return (
     <Link
       href={href}
-      className="app-subpanel group flex h-full flex-col justify-between p-5 transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-md"
+      className="rounded-lg border bg-muted/30 text-card-foreground group flex h-full flex-col justify-between p-5 transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-md"
     >
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
@@ -62,9 +63,9 @@ function ReportCard({
           >
             <Icon className="size-5" />
           </div>
-          <StatusBadge tone="neutral" className="rounded-full px-3 py-1">
+          <Badge variant="secondary" className="rounded-full px-3 py-1">
             {badge}
-          </StatusBadge>
+          </Badge>
         </div>
         <div>
           <p className="text-base font-semibold tracking-tight">{title}</p>
@@ -177,56 +178,81 @@ export default async function ReportsPage() {
   }
 
   return (
-    <PageContainer>
-      <PageHeader
-        eyebrow={APP_COPY_VI.executiveReporting}
-        title="Báo cáo điều hành"
-        description="Mỗi báo cáo và lối vào phân hệ nguồn giờ dùng cùng một grammar bề mặt mới, thay cho cụm card cũ."
-        actions={
-          <>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/admin/dashboard">Về Admin</Link>
-            </Button>
-            <Button asChild size="sm">
-              <Link href="/admin/settings">Mở nền tảng</Link>
-            </Button>
-          </>
-        }
-      />
+    <div className="space-y-5 lg:space-y-6">
+      <Card>
+        <CardContent className="p-5 sm:p-6">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="space-y-3">
+              <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                {APP_COPY_VI.executiveReporting}
+              </span>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                  Báo cáo điều hành
+                </h2>
+                <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
+                  Mỗi báo cáo và lối vào phân hệ nguồn giờ dùng cùng một grammar
+                  bề mặt mới, thay cho cụm card cũ.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 self-start">
+              <Button asChild variant="outline" size="sm">
+                <Link href="/admin/dashboard">Về Admin</Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link href="/admin/settings">Mở nền tảng</Link>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <SectionCard
-        title="Báo cáo lõi"
-        description="Những góc nhìn tổng hợp nhất cho vận hành, doanh thu, tồn kho và tài chính."
-        action={
-          <StatusBadge tone="neutral" className="rounded-full px-3 py-1.5">
+      <Card>
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle>Báo cáo lõi</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Những góc nhìn tổng hợp nhất cho vận hành, doanh thu, tồn kho và
+              tài chính.
+            </p>
+          </div>
+          <Badge variant="secondary" className="rounded-full px-3 py-1.5">
             Điều hành
-          </StatusBadge>
-        }
-      >
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {executiveCards.map((card) => (
-            <ReportCard key={card.href} {...card} />
-          ))}
-        </div>
-      </SectionCard>
-
-      {deepDiveCards.length > 0 ? (
-        <SectionCard
-          title="Phân hệ nguồn"
-          description="Đi sâu từ báo cáo điều hành sang các nguồn dữ liệu và bề mặt chuyên môn."
-          action={
-            <StatusBadge tone="info" className="rounded-full px-3 py-1.5">
-              Phân hệ
-            </StatusBadge>
-          }
-        >
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {deepDiveCards.map((card) => (
+          </Badge>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {executiveCards.map((card) => (
               <ReportCard key={card.href} {...card} />
             ))}
           </div>
-        </SectionCard>
+        </CardContent>
+      </Card>
+
+      {deepDiveCards.length > 0 ? (
+        <Card>
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <CardTitle>Phân hệ nguồn</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Đi sâu từ báo cáo điều hành sang các nguồn dữ liệu và bề mặt
+                chuyên môn.
+              </p>
+            </div>
+            <Badge variant="info" className="rounded-full px-3 py-1.5">
+              Phân hệ
+            </Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {deepDiveCards.map((card) => (
+                <ReportCard key={card.href} {...card} />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       ) : null}
-    </PageContainer>
+    </div>
   );
 }

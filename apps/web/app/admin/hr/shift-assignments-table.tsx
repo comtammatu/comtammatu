@@ -44,7 +44,6 @@ import {
 } from "@comtammatu/ui/components/table";
 import { Label } from "@comtammatu/ui/components/label";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { ActionIconButton } from "@/components/patterns";
 import {
   fetchShiftAssignments,
   createShiftAssignment,
@@ -221,7 +220,9 @@ export function ShiftAssignmentsTable({
     if (!deleteTarget) return;
 
     startTransition(async () => {
-      const result = await deleteShiftAssignment({ assignmentId: deleteTarget.id });
+      const result = await deleteShiftAssignment({
+        assignmentId: deleteTarget.id,
+      });
       if (!result.success) {
         toast.error(result.error ?? "Không thể xóa phân ca");
         return;
@@ -353,12 +354,16 @@ export function ShiftAssignmentsTable({
                                     a.employees?.employee_code ??
                                     "—"}
                                 </span>
-                                <ActionIconButton
-                                  icon={<X className="size-3" />}
-                                  label="Xóa phân ca"
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  aria-label="Xóa phân ca"
                                   className="hidden shrink-0 text-muted-foreground hover:text-destructive group-hover:inline-flex"
                                   onClick={() => setDeleteTarget(a)}
-                                />
+                                >
+                                  <X className="size-3" />
+                                </Button>
                               </div>
                             ))}
                             <Button

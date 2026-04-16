@@ -1,5 +1,5 @@
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { fetchFiscalPeriods } from "../period-actions";
-import { PageContainer, PageHeader } from "@/components/patterns";
 import { PeriodsClient } from "./periods-client";
 
 export default async function PeriodsPage() {
@@ -9,8 +9,21 @@ export default async function PeriodsPage() {
     : [];
 
   return (
-    <PageContainer>
-      <PageHeader eyebrow="Tài chính" title="Kỳ kế toán" />
+    <div className="space-y-5 lg:space-y-6">
+      <Card>
+        <CardContent className="p-5 sm:p-6">
+          <div className="space-y-3">
+            <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              Tài chính
+            </span>
+            <div className="space-y-2">
+              <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                Kỳ kế toán
+              </h2>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       {!result.success ? (
         <p className="py-10 text-center text-destructive">
           {result.error ?? "Không thể tải danh sách kỳ kế toán."}
@@ -18,7 +31,7 @@ export default async function PeriodsPage() {
       ) : (
         <PeriodsClient periods={periods} />
       )}
-    </PageContainer>
+    </div>
   );
 }
 

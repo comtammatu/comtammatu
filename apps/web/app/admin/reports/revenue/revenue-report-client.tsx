@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { FilterBar, PageHeader, SectionCard } from "@/components/patterns";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import {
   Table,
   TableBody,
@@ -62,22 +67,37 @@ export function RevenueReportClient({
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        eyebrow="Finance Pulse"
-        title="Doanh thu theo ngày"
-        description="Tổng hợp doanh thu, số đơn và cơ cấu thanh toán theo từng ngày để theo dõi nhịp bán hàng toàn chi nhánh."
-        actions={
-          <Button
-            onClick={handleFilter}
-            disabled={isPending}
-            className="min-h-11 px-5"
-          >
-            {isPending ? "Đang tải..." : "Làm mới báo cáo"}
-          </Button>
-        }
-      />
+      <Card>
+        <CardContent className="p-5 sm:p-6">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="space-y-3">
+              <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                Finance Pulse
+              </span>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                  Doanh thu theo ngày
+                </h2>
+                <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
+                  Tổng hợp doanh thu, số đơn và cơ cấu thanh toán theo từng ngày
+                  để theo dõi nhịp bán hàng toàn chi nhánh.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 self-start">
+              <Button
+                onClick={handleFilter}
+                disabled={isPending}
+                className="min-h-11 px-5"
+              >
+                {isPending ? "Đang tải..." : "Làm mới báo cáo"}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <FilterBar className="items-end gap-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3 items-end gap-3">
         <div className="grid min-w-[11rem] flex-1 gap-1.5 sm:max-w-44 sm:flex-none">
           <Label className="text-xs">Từ ngày</Label>
           <Input
@@ -115,11 +135,13 @@ export function RevenueReportClient({
             </p>
           )}
         </div>
-      </FilterBar>
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="app-stat">
-          <p className="app-kicker">Tổng doanh thu</p>
+        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            Tổng doanh thu
+          </p>
           <p className="mt-3 text-3xl font-semibold tabular-nums text-foreground">
             {totalRevenue.toLocaleString("vi-VN")} ₫
           </p>
@@ -127,8 +149,10 @@ export function RevenueReportClient({
             Tổng giá trị đã ghi nhận trong kỳ lọc.
           </p>
         </div>
-        <div className="app-stat">
-          <p className="app-kicker">Số đơn hàng</p>
+        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            Số đơn hàng
+          </p>
           <p className="mt-3 text-3xl font-semibold tabular-nums text-foreground">
             {totalOrders.toLocaleString("vi-VN")}
           </p>
@@ -136,8 +160,10 @@ export function RevenueReportClient({
             Khối lượng đơn đã hoàn tất trong giai đoạn chọn.
           </p>
         </div>
-        <div className="app-stat">
-          <p className="app-kicker">Thuế VAT</p>
+        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            Thuế VAT
+          </p>
           <p className="mt-3 text-3xl font-semibold tabular-nums text-foreground">
             {totalTax.toLocaleString("vi-VN")} ₫
           </p>
@@ -145,13 +171,12 @@ export function RevenueReportClient({
             Phần thuế phát sinh để đối soát hóa đơn và dòng tiền.
           </p>
         </div>
-        <div className="app-stat">
-          <p className="app-kicker">Trung bình mỗi ngày</p>
+        <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+          <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            Trung bình mỗi ngày
+          </p>
           <p className="mt-3 text-3xl font-semibold tabular-nums text-foreground">
-            {rows.length > 0
-              ? averageRevenue.toLocaleString("vi-VN")
-              : "—"}{" "}
-            ₫
+            {rows.length > 0 ? averageRevenue.toLocaleString("vi-VN") : "—"} ₫
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
             Nhịp doanh thu bình quân để so trend theo tuần.
@@ -159,160 +184,174 @@ export function RevenueReportClient({
         </div>
       </div>
 
-      <SectionCard
-        title="Bảng doanh thu chi tiết"
-        description="So sánh từng ngày theo tổng doanh thu, cơ cấu thanh toán và tiền thuế."
-        className="overflow-hidden"
-        density="compact"
-      >
-        <div className="mb-4 grid gap-3 rounded-[1.75rem] border border-border/60 bg-background/70 p-4 md:grid-cols-3">
-          <div className="space-y-1">
-            <p className="app-kicker">Tiền mặt</p>
-            <p className="text-lg font-semibold tabular-nums">
-              {totalCash.toLocaleString("vi-VN")} ₫
-            </p>
-          </div>
-          <div className="space-y-1">
-            <p className="app-kicker">VietQR</p>
-            <p className="text-lg font-semibold tabular-nums">
-              {totalVietqr.toLocaleString("vi-VN")} ₫
-            </p>
-          </div>
-          <div className="space-y-1">
-            <p className="app-kicker">MoMo</p>
-            <p className="text-lg font-semibold tabular-nums">
-              {totalMomo.toLocaleString("vi-VN")} ₫
-            </p>
-          </div>
-        </div>
-        {rows.length === 0 ? (
-          <div className="px-4 py-10 text-center text-muted-foreground">
-            Không có dữ liệu trong khoảng thời gian này.
-          </div>
-        ) : null}
-
-        <div className="space-y-3 md:hidden">
-          {rows.map((r) => (
-            <div
-              key={r.date}
-              className="app-subpanel p-4"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <p className="font-medium tabular-nums">{r.date}</p>
-                <p className="text-sm text-muted-foreground">
-                  {r.order_count.toLocaleString("vi-VN")} đơn
-                </p>
-              </div>
-              <p className="mt-3 text-lg font-semibold tabular-nums">
-                {(r.total_revenue ?? 0).toLocaleString("vi-VN")} ₫
+      <Card className="overflow-hidden">
+        <CardHeader>
+          <CardTitle>Bảng doanh thu chi tiết</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            So sánh từng ngày theo tổng doanh thu, cơ cấu thanh toán và tiền
+            thuế.
+          </p>
+        </CardHeader>
+        <CardContent className="px-4 sm:px-5">
+          <div className="mb-4 grid gap-3 rounded-[1.75rem] border border-border/60 bg-background/70 p-4 md:grid-cols-3">
+            <div className="space-y-1">
+              <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                Tiền mặt
               </p>
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Tiền mặt</p>
-                  <p className="mt-1 tabular-nums">
-                    {(r.cash_revenue ?? 0).toLocaleString("vi-VN")} ₫
+              <p className="text-lg font-semibold tabular-nums">
+                {totalCash.toLocaleString("vi-VN")} ₫
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                VietQR
+              </p>
+              <p className="text-lg font-semibold tabular-nums">
+                {totalVietqr.toLocaleString("vi-VN")} ₫
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                MoMo
+              </p>
+              <p className="text-lg font-semibold tabular-nums">
+                {totalMomo.toLocaleString("vi-VN")} ₫
+              </p>
+            </div>
+          </div>
+          {rows.length === 0 ? (
+            <div className="px-4 py-10 text-center text-muted-foreground">
+              Không có dữ liệu trong khoảng thời gian này.
+            </div>
+          ) : null}
+
+          <div className="space-y-3 md:hidden">
+            {rows.map((r) => (
+              <div
+                key={r.date}
+                className="rounded-lg border bg-muted/30 text-card-foreground p-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-medium tabular-nums">{r.date}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {r.order_count.toLocaleString("vi-VN")} đơn
                   </p>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">VietQR</p>
-                  <p className="mt-1 tabular-nums">
-                    {(r.vietqr_revenue ?? 0).toLocaleString("vi-VN")} ₫
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">MoMo</p>
-                  <p className="mt-1 tabular-nums">
-                    {(r.momo_revenue ?? 0).toLocaleString("vi-VN")} ₫
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Thuế</p>
-                  <p className="mt-1 tabular-nums">
-                    {(r.total_tax ?? 0).toLocaleString("vi-VN")} ₫
-                  </p>
+                <p className="mt-3 text-lg font-semibold tabular-nums">
+                  {(r.total_revenue ?? 0).toLocaleString("vi-VN")} ₫
+                </p>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Tiền mặt</p>
+                    <p className="mt-1 tabular-nums">
+                      {(r.cash_revenue ?? 0).toLocaleString("vi-VN")} ₫
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">VietQR</p>
+                    <p className="mt-1 tabular-nums">
+                      {(r.vietqr_revenue ?? 0).toLocaleString("vi-VN")} ₫
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">MoMo</p>
+                    <p className="mt-1 tabular-nums">
+                      {(r.momo_revenue ?? 0).toLocaleString("vi-VN")} ₫
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Thuế</p>
+                    <p className="mt-1 tabular-nums">
+                      {(r.total_tax ?? 0).toLocaleString("vi-VN")} ₫
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        <div className="hidden md:block">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-28">Ngày</TableHead>
-                <TableHead className="w-20 text-right">Đơn</TableHead>
-                <TableHead className="w-36 text-right">Doanh thu (₫)</TableHead>
-                <TableHead className="w-28 text-right">Tiền mặt (₫)</TableHead>
-                <TableHead className="w-28 text-right">VietQR (₫)</TableHead>
-                <TableHead className="w-28 text-right">MoMo (₫)</TableHead>
-                <TableHead className="w-28 text-right">Thuế (₫)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.length === 0 ? (
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="py-10 text-center text-muted-foreground"
-                  >
-                    Không có dữ liệu trong khoảng thời gian này.
-                  </TableCell>
+                  <TableHead className="w-28">Ngày</TableHead>
+                  <TableHead className="w-20 text-right">Đơn</TableHead>
+                  <TableHead className="w-36 text-right">
+                    Doanh thu (₫)
+                  </TableHead>
+                  <TableHead className="w-28 text-right">
+                    Tiền mặt (₫)
+                  </TableHead>
+                  <TableHead className="w-28 text-right">VietQR (₫)</TableHead>
+                  <TableHead className="w-28 text-right">MoMo (₫)</TableHead>
+                  <TableHead className="w-28 text-right">Thuế (₫)</TableHead>
                 </TableRow>
-              ) : (
-                rows.map((r) => (
-                  <TableRow key={r.date}>
-                    <TableCell className="tabular-nums">{r.date}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {r.order_count.toLocaleString("vi-VN")}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums font-medium">
-                      {(r.total_revenue ?? 0).toLocaleString("vi-VN")}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">
-                      {(r.cash_revenue ?? 0).toLocaleString("vi-VN")}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">
-                      {(r.vietqr_revenue ?? 0).toLocaleString("vi-VN")}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">
-                      {(r.momo_revenue ?? 0).toLocaleString("vi-VN")}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">
-                      {(r.total_tax ?? 0).toLocaleString("vi-VN")}
+              </TableHeader>
+              <TableBody>
+                {rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={7}
+                      className="py-10 text-center text-muted-foreground"
+                    >
+                      Không có dữ liệu trong khoảng thời gian này.
                     </TableCell>
                   </TableRow>
-                ))
+                ) : (
+                  rows.map((r) => (
+                    <TableRow key={r.date}>
+                      <TableCell className="tabular-nums">{r.date}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {r.order_count.toLocaleString("vi-VN")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">
+                        {(r.total_revenue ?? 0).toLocaleString("vi-VN")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {(r.cash_revenue ?? 0).toLocaleString("vi-VN")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {(r.vietqr_revenue ?? 0).toLocaleString("vi-VN")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {(r.momo_revenue ?? 0).toLocaleString("vi-VN")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {(r.total_tax ?? 0).toLocaleString("vi-VN")}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+              {rows.length > 0 && (
+                <tfoot className="border-t bg-muted/40">
+                  <tr>
+                    <td className="px-4 py-2 font-medium text-sm">Tổng cộng</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-sm font-medium">
+                      {totalOrders.toLocaleString("vi-VN")}
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums text-sm font-bold">
+                      {totalRevenue.toLocaleString("vi-VN")}
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums text-sm">
+                      {totalCash.toLocaleString("vi-VN")}
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums text-sm">
+                      {totalVietqr.toLocaleString("vi-VN")}
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums text-sm">
+                      {totalMomo.toLocaleString("vi-VN")}
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums text-sm">
+                      {totalTax.toLocaleString("vi-VN")}
+                    </td>
+                  </tr>
+                </tfoot>
               )}
-            </TableBody>
-            {rows.length > 0 && (
-              <tfoot className="border-t bg-muted/40">
-                <tr>
-                  <td className="px-4 py-2 font-medium text-sm">Tổng cộng</td>
-                  <td className="px-4 py-2 text-right tabular-nums text-sm font-medium">
-                    {totalOrders.toLocaleString("vi-VN")}
-                  </td>
-                  <td className="px-4 py-2 text-right tabular-nums text-sm font-bold">
-                    {totalRevenue.toLocaleString("vi-VN")}
-                  </td>
-                  <td className="px-4 py-2 text-right tabular-nums text-sm">
-                    {totalCash.toLocaleString("vi-VN")}
-                  </td>
-                  <td className="px-4 py-2 text-right tabular-nums text-sm">
-                    {totalVietqr.toLocaleString("vi-VN")}
-                  </td>
-                  <td className="px-4 py-2 text-right tabular-nums text-sm">
-                    {totalMomo.toLocaleString("vi-VN")}
-                  </td>
-                  <td className="px-4 py-2 text-right tabular-nums text-sm">
-                    {totalTax.toLocaleString("vi-VN")}
-                  </td>
-                </tr>
-              </tfoot>
-            )}
-          </Table>
-        </div>
-      </SectionCard>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

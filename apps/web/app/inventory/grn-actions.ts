@@ -267,7 +267,10 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
     return { success: false, error: "Không thể xác nhận phiếu nhập." };
   }
 
-  // Auto-update PO status when a linked GRN is confirmed
+  // Auto-update PO status when a linked GRN is confirmed.
+  // NOTE: siblings fetch + PO update are not atomic. For a single-tenant restaurant
+  // the concurrent-confirm risk is negligible, but this should eventually move into
+  // the confirm_goods_receipt_note RPC to be fully atomic.
   const poId = grnMeta?.po_id ?? null;
   if (poId) {
     const { data: siblings } = await supabase

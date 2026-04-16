@@ -21,7 +21,6 @@ import {
 import { Plus, Pencil } from "lucide-react";
 import { StationFormDialog } from "./station-form-dialog";
 import { EmptyStatePanel } from "../../components/empty-state-panel";
-import { StatusBadge } from "@/components/patterns";
 
 /* ─── Types ─── */
 
@@ -164,12 +163,12 @@ export function StationsClient({
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <StatusBadge
-                        tone={station.is_active ? "success" : "neutral"}
+                      <Badge
+                        variant={station.is_active ? "success" : "secondary"}
                         className="text-xs"
                       >
                         {station.is_active ? "Hoạt động" : "Tạm tắt"}
-                      </StatusBadge>
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Button

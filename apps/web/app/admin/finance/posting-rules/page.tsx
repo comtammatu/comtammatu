@@ -1,6 +1,6 @@
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { fetchPostingRules } from "../posting-rules-actions";
 import { fetchChartOfAccounts } from "../chart-of-accounts-actions";
-import { PageContainer, PageHeader } from "@/components/patterns";
 import { PostingRulesClient } from "./posting-rules-client";
 
 export default async function PostingRulesPage() {
@@ -17,10 +17,23 @@ export default async function PostingRulesPage() {
     : [];
 
   return (
-    <PageContainer>
-      <PageHeader eyebrow="Tài chính" title="Quy tắc hạch toán tự động" />
+    <div className="space-y-5 lg:space-y-6">
+      <Card>
+        <CardContent className="p-5 sm:p-6">
+          <div className="space-y-3">
+            <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              Tài chính
+            </span>
+            <div className="space-y-2">
+              <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                Quy tắc hạch toán tự động
+              </h2>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       <PostingRulesClient rules={rules} accounts={accounts} />
-    </PageContainer>
+    </div>
   );
 }
 

@@ -5,6 +5,12 @@ import { Loader2, ShoppingBag } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -26,7 +32,6 @@ import { fetchOrders } from "./actions";
 import { OrderDetailSheet } from "./order-detail-sheet";
 import type { OrderRow, FetchOrdersFilters } from "./actions";
 import { TableEmptyStateRow } from "../components/table-empty-state-row";
-import { FilterBar, StatusBadge, SectionCard } from "@/components/patterns";
 
 /* ─── Status config ─── */
 
@@ -142,7 +147,7 @@ export function OrdersClient({
   return (
     <>
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="app-subpanel p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
+        <div className="rounded-lg border bg-muted/30 text-card-foreground p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Đang xử lý
           </p>
@@ -153,7 +158,7 @@ export function OrdersClient({
             Đơn đang chờ hoặc đang làm cần theo dõi.
           </p>
         </div>
-        <div className="app-subpanel p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
+        <div className="rounded-lg border bg-muted/30 text-card-foreground p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Hoàn thành
           </p>
@@ -164,7 +169,7 @@ export function OrdersClient({
             Đơn đã hoàn tất trong tập kết quả hiện tại.
           </p>
         </div>
-        <div className="app-subpanel p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
+        <div className="rounded-lg border bg-muted/30 text-card-foreground p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Giá trị đơn
           </p>
@@ -178,7 +183,7 @@ export function OrdersClient({
       </div>
 
       {/* ─── Filter bar ─── */}
-      <FilterBar>
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3">
         <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
           <Label htmlFor="date-from" className="text-xs">
             Từ ngày
@@ -265,147 +270,88 @@ export function OrdersClient({
             </Button>
           )}
         </div>
-      </FilterBar>
+      </div>
 
-      <div className="app-subpanel flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <div className="rounded-lg border bg-muted/30 text-card-foreground flex flex-wrap items-center justify-between gap-3 px-4 py-3">
         <p className="text-sm text-muted-foreground">
           {displayOrders.length} đơn hàng
         </p>
         {hasFilters && (
-          <StatusBadge tone="info" className="rounded-full px-3 py-1.5">
+          <Badge variant="info" className="rounded-full px-3 py-1.5">
             Bộ lọc đang áp dụng
-          </StatusBadge>
+          </Badge>
         )}
       </div>
 
       {/* ─── Table ─── */}
-      <SectionCard
-        title="Danh sách đơn"
-        description="Trạng thái, thanh toán và tổng tiền được gom vào cùng một bề mặt điều phối."
-      >
-        {displayOrders.length === 0 ? (
-          <div className="app-subpanel border-dashed px-6 py-16 text-center">
-            <ShoppingBag className="mx-auto size-8 text-muted-foreground" />
-            <p className="mt-3 text-sm font-medium">Không có đơn hàng nào</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {hasFilters
-                ? "Thử xóa bộ lọc hoặc đổi mốc thời gian để mở rộng kết quả."
-                : "Hệ thống chưa có đơn nào trong phạm vi đang xem."}
-            </p>
-          </div>
-        ) : null}
+      <Card>
+        <CardHeader>
+          <CardTitle>Danh sách đơn</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Trạng thái, thanh toán và tổng tiền được gom vào cùng một bề mặt
+            điều phối.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {displayOrders.length === 0 ? (
+            <div className="rounded-lg border bg-muted/30 text-card-foreground border-dashed px-6 py-16 text-center">
+              <ShoppingBag className="mx-auto size-8 text-muted-foreground" />
+              <p className="mt-3 text-sm font-medium">Không có đơn hàng nào</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {hasFilters
+                  ? "Thử xóa bộ lọc hoặc đổi mốc thời gian để mở rộng kết quả."
+                  : "Hệ thống chưa có đơn nào trong phạm vi đang xem."}
+              </p>
+            </div>
+          ) : null}
 
-        <div className="space-y-3 md:hidden">
-          {displayOrders.map((order) => (
-            <button
-              key={order.id}
-              type="button"
-              onClick={() => setSelectedOrder(order)}
-              className="app-subpanel w-full p-4 text-left transition-colors hover:bg-muted/20"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-mono text-sm font-medium">
-                    {order.order_number}
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {order.branch_name}
-                  </p>
-                </div>
-                <StatusBadge tone={statusBadgeVariant(order.status)}>
-                  {statusLabel(order.status)}
-                </StatusBadge>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Nhân viên</p>
-                  <p className="mt-1 font-medium">{order.created_by_name}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-muted-foreground">Tổng tiền</p>
-                  <p className="mt-1 font-mono font-medium">
-                    {formatVND(order.total_amount)}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-4 flex items-center justify-between gap-3">
-                <p className="text-xs text-muted-foreground">
-                  {new Date(order.created_at).toLocaleString("vi-VN", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
-                {order.payment_method ? (
-                  <Badge variant="outline" className="text-xs">
-                    {PAYMENT_METHOD_LABELS[order.payment_method] ??
-                      order.payment_method}
-                  </Badge>
-                ) : (
-                  <span className="text-xs text-muted-foreground">—</span>
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
-
-        <div className="hidden overflow-hidden rounded-3xl border border-border/70 md:block">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Mã đơn</TableHead>
-                <TableHead className="hidden sm:table-cell">
-                  Chi nhánh
-                </TableHead>
-                <TableHead className="hidden md:table-cell">
-                  Nhân viên
-                </TableHead>
-                <TableHead className="hidden lg:table-cell">
-                  Thời gian
-                </TableHead>
-                <TableHead className="text-right">Tổng tiền</TableHead>
-                <TableHead className="hidden sm:table-cell">
-                  Thanh toán
-                </TableHead>
-                <TableHead>Trạng thái</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {displayOrders.length === 0 && (
-                <TableEmptyStateRow
-                  colSpan={7}
-                  paddingClassName="py-16"
-                  title="Không có đơn hàng nào"
-                  description={
-                    hasFilters
-                      ? "Thử xóa bộ lọc hoặc đổi mốc thời gian để mở rộng kết quả."
-                      : "Hệ thống chưa có đơn nào trong phạm vi đang xem."
-                  }
-                  icon={
-                    <ShoppingBag className="mx-auto size-8 text-muted-foreground" />
-                  }
-                />
-              )}
-              {displayOrders.map((order) => (
-                <TableRow
-                  key={order.id}
-                  className="cursor-pointer hover:bg-muted/45"
-                  onClick={() => setSelectedOrder(order)}
-                >
-                  <TableCell>
-                    <span className="font-mono text-sm font-medium">
+          <div className="space-y-3 md:hidden">
+            {displayOrders.map((order) => (
+              <button
+                key={order.id}
+                type="button"
+                onClick={() => setSelectedOrder(order)}
+                className="rounded-lg border bg-muted/30 text-card-foreground w-full p-4 text-left transition-colors hover:bg-muted/20"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-mono text-sm font-medium">
                       {order.order_number}
-                    </span>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell text-sm">
-                    {order.branch_name}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-sm">
-                    {order.created_by_name}
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {order.branch_name}
+                    </p>
+                  </div>
+                  <Badge
+                    variant={
+                      statusBadgeVariant(order.status) === "warning"
+                        ? "warning"
+                        : statusBadgeVariant(order.status) === "info"
+                          ? "info"
+                          : statusBadgeVariant(order.status) === "success"
+                            ? "success"
+                            : statusBadgeVariant(order.status) === "danger"
+                              ? "destructive"
+                              : "secondary"
+                    }
+                  >
+                    {statusLabel(order.status)}
+                  </Badge>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Nhân viên</p>
+                    <p className="mt-1 font-medium">{order.created_by_name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-muted-foreground">Tổng tiền</p>
+                    <p className="mt-1 font-mono font-medium">
+                      {formatVND(order.total_amount)}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">
                     {new Date(order.created_at).toLocaleString("vi-VN", {
                       day: "2-digit",
                       month: "2-digit",
@@ -413,31 +359,120 @@ export function OrdersClient({
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
-                  </TableCell>
-                  <TableCell className="text-right font-mono font-medium">
-                    {formatVND(order.total_amount)}
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    {order.payment_method ? (
-                      <Badge variant="outline" className="text-xs">
-                        {PAYMENT_METHOD_LABELS[order.payment_method] ??
-                          order.payment_method}
-                      </Badge>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge tone={statusBadgeVariant(order.status)}>
-                      {statusLabel(order.status)}
-                    </StatusBadge>
-                  </TableCell>
+                  </p>
+                  {order.payment_method ? (
+                    <Badge variant="outline" className="text-xs">
+                      {PAYMENT_METHOD_LABELS[order.payment_method] ??
+                        order.payment_method}
+                    </Badge>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="hidden overflow-hidden rounded-3xl border border-border/70 md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Mã đơn</TableHead>
+                  <TableHead className="hidden sm:table-cell">
+                    Chi nhánh
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    Nhân viên
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell">
+                    Thời gian
+                  </TableHead>
+                  <TableHead className="text-right">Tổng tiền</TableHead>
+                  <TableHead className="hidden sm:table-cell">
+                    Thanh toán
+                  </TableHead>
+                  <TableHead>Trạng thái</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </SectionCard>
+              </TableHeader>
+              <TableBody>
+                {displayOrders.length === 0 && (
+                  <TableEmptyStateRow
+                    colSpan={7}
+                    paddingClassName="py-16"
+                    title="Không có đơn hàng nào"
+                    description={
+                      hasFilters
+                        ? "Thử xóa bộ lọc hoặc đổi mốc thời gian để mở rộng kết quả."
+                        : "Hệ thống chưa có đơn nào trong phạm vi đang xem."
+                    }
+                    icon={
+                      <ShoppingBag className="mx-auto size-8 text-muted-foreground" />
+                    }
+                  />
+                )}
+                {displayOrders.map((order) => (
+                  <TableRow
+                    key={order.id}
+                    className="cursor-pointer hover:bg-muted/45"
+                    onClick={() => setSelectedOrder(order)}
+                  >
+                    <TableCell>
+                      <span className="font-mono text-sm font-medium">
+                        {order.order_number}
+                      </span>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-sm">
+                      {order.branch_name}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-sm">
+                      {order.created_by_name}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                      {new Date(order.created_at).toLocaleString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-medium">
+                      {formatVND(order.total_amount)}
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      {order.payment_method ? (
+                        <Badge variant="outline" className="text-xs">
+                          {PAYMENT_METHOD_LABELS[order.payment_method] ??
+                            order.payment_method}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          statusBadgeVariant(order.status) === "warning"
+                            ? "warning"
+                            : statusBadgeVariant(order.status) === "info"
+                              ? "info"
+                              : statusBadgeVariant(order.status) === "success"
+                                ? "success"
+                                : statusBadgeVariant(order.status) === "danger"
+                                  ? "destructive"
+                                  : "secondary"
+                        }
+                      >
+                        {statusLabel(order.status)}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* ─── Detail sheet ─── */}
       <OrderDetailSheet

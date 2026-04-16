@@ -12,6 +12,12 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
+import {
   Table,
   TableBody,
   TableCell,
@@ -20,7 +26,6 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { cn } from "@comtammatu/ui";
-import { PageHeader, SectionCard } from "@/components/patterns";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { tNav } from "../_lib/dictionary";
 import { formatVND } from "../_lib/format";
@@ -108,31 +113,48 @@ export function ReceivingClient({
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow="HQ Procurement Hub"
-        title={tNav("receiving", "heading")}
-        description="Hub nhập hàng dành cho HQ: gom PO, GRN và hóa đơn NCC vào cùng một nhịp để không lẫn với thao tác nhận transfer nội bộ của chi nhánh."
-        actions={
-          <>
-            <Button asChild variant="outline">
-              <Link href="/inventory/grn">Mở GRN</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/inventory/purchase-orders/new">
-                <Zap className="size-4" />
-                Tạo PO nhanh
-              </Link>
-            </Button>
-          </>
-        }
-      />
+      <Card>
+        <CardContent className="p-5 sm:p-6">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="space-y-3">
+              <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                HQ Procurement Hub
+              </span>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                  {tNav("receiving", "heading")}
+                </h2>
+                <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
+                  Hub nhập hàng dành cho HQ: gom PO, GRN và hóa đơn NCC vào cùng
+                  một nhịp để không lẫn với thao tác nhận transfer nội bộ của
+                  chi nhánh.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 self-start">
+              <Button asChild variant="outline">
+                <Link href="/inventory/grn">Mở GRN</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/inventory/purchase-orders/new">
+                  <Zap className="size-4" />
+                  Tạo PO nhanh
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 xl:grid-cols-3">
         {WORKFLOW_STEPS.map((step, index) => {
           const Icon = step.icon;
 
           return (
-            <div key={step.key} className="app-panel">
+            <div
+              key={step.key}
+              className="rounded-lg border bg-card text-card-foreground shadow-sm"
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-3">
                   <div
@@ -159,7 +181,9 @@ export function ReceivingClient({
 
               <div className="mt-5 flex items-end justify-between gap-3 rounded-[1.75rem] border border-border/60 bg-background/75 p-4">
                 <div>
-                  <p className="app-kicker">Đang mở</p>
+                  <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                    Đang mở
+                  </p>
                   <p
                     className={cn(
                       "mt-2 text-4xl font-semibold",
@@ -174,7 +198,11 @@ export function ReceivingClient({
                 </p>
               </div>
 
-              <Button asChild variant="outline" className="mt-4 w-full justify-between">
+              <Button
+                asChild
+                variant="outline"
+                className="mt-4 w-full justify-between"
+              >
                 <Link href={step.href}>
                   {step.cta}
                   <ArrowRight className="size-4" />
@@ -186,71 +214,79 @@ export function ReceivingClient({
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_360px]">
-        <SectionCard
-          title="Hoạt động gần đây"
-          description="Theo dõi PO, GRN và hóa đơn mới nhất trong cùng một dòng thời gian."
-          className="overflow-hidden"
-          density="compact"
-          action={
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <CardTitle>Hoạt động gần đây</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Theo dõi PO, GRN và hóa đơn mới nhất trong cùng một dòng thời
+                gian.
+              </p>
+            </div>
             <Button asChild size="sm" variant="outline">
               <Link href="/inventory/supplier-invoices">Xem hóa đơn</Link>
             </Button>
-          }
-        >
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="min-w-36">Mã phiếu</TableHead>
-                <TableHead className="min-w-44">Nhà cung cấp</TableHead>
-                <TableHead className="min-w-32">Thời gian</TableHead>
-                <TableHead className="min-w-32">Trạng thái</TableHead>
-                <TableHead className="min-w-28 text-right">
-                  Tổng tiền
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {recentActivity.length === 0 ? (
-                <TableEmptyStateRow
-                  colSpan={5}
-                  title="Chưa có hoạt động nào"
-                  description="PO, GRN và hóa đơn mới sẽ xuất hiện tại đây khi phát sinh."
-                />
-              ) : null}
-              {recentActivity.map((item) => (
-                <TableRow key={`${item.type}-${item.id}`}>
-                  <TableCell className="font-mono font-medium">
-                    <Link
-                      href={activityHref(item)}
-                      className="text-primary transition hover:underline"
-                    >
-                      {item.code}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{item.supplier}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatActivityDate(item.date)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getInventoryStatusBadgeVariant(item.status)}>
-                      {getInventoryStatusLabel(item.status)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-mono font-semibold">
-                    {item.total != null ? `${formatVND(item.total)}đ` : "—"}
-                  </TableCell>
+          </CardHeader>
+          <CardContent className="px-4 sm:px-5">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-36">Mã phiếu</TableHead>
+                  <TableHead className="min-w-44">Nhà cung cấp</TableHead>
+                  <TableHead className="min-w-32">Thời gian</TableHead>
+                  <TableHead className="min-w-32">Trạng thái</TableHead>
+                  <TableHead className="min-w-28 text-right">
+                    Tổng tiền
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </SectionCard>
+              </TableHeader>
+              <TableBody>
+                {recentActivity.length === 0 ? (
+                  <TableEmptyStateRow
+                    colSpan={5}
+                    title="Chưa có hoạt động nào"
+                    description="PO, GRN và hóa đơn mới sẽ xuất hiện tại đây khi phát sinh."
+                  />
+                ) : null}
+                {recentActivity.map((item) => (
+                  <TableRow key={`${item.type}-${item.id}`}>
+                    <TableCell className="font-mono font-medium">
+                      <Link
+                        href={activityHref(item)}
+                        className="text-primary transition hover:underline"
+                      >
+                        {item.code}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{item.supplier}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {formatActivityDate(item.date)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={getInventoryStatusBadgeVariant(item.status)}
+                      >
+                        {getInventoryStatusLabel(item.status)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-semibold">
+                      {item.total != null ? `${formatVND(item.total)}đ` : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
         <div className="space-y-4">
-          <div className="app-panel border-info/20 bg-info/8">
+          <div className="rounded-lg border bg-card text-card-foreground shadow-sm border-info/20 bg-info/8">
             <div className="flex items-start gap-3">
               <Lightbulb className="mt-0.5 size-5 shrink-0 text-info" />
               <div>
-                <p className="app-kicker">Boundary HQ</p>
+                <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                  Boundary HQ
+                </p>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   {recentActivity.length > 0
                     ? "Giữ chặt luồng PO → GRN → hóa đơn để tránh tồn đọng công nợ và lệch chi phí đầu vào giữa kho với kế toán. Nhận hàng nội bộ tại chi nhánh không đi qua hub này."
@@ -260,8 +296,10 @@ export function ReceivingClient({
             </div>
           </div>
 
-          <div className="app-panel">
-            <p className="app-kicker">Tỷ trọng workflow HQ</p>
+          <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+            <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              Tỷ trọng workflow HQ
+            </p>
             <div className="mt-4 space-y-3">
               {WORKFLOW_STEPS.map((step) => (
                 <div

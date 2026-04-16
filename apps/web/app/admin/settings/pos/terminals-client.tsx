@@ -18,10 +18,10 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { ExternalLink, Pencil, Plus } from "lucide-react";
 import { TerminalFormDialog } from "./terminal-form-dialog";
 import { EmptyStatePanel } from "../../components/empty-state-panel";
-import { StatusBadge } from "@/components/patterns";
 
 export interface TerminalRow {
   id: number;
@@ -134,12 +134,12 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
                       {terminal.device_id ?? "—"}
                     </TableCell>
                     <TableCell className="text-center">
-                      <StatusBadge
-                        tone={terminal.is_active ? "success" : "neutral"}
+                      <Badge
+                        variant={terminal.is_active ? "success" : "secondary"}
                         className="text-xs"
                       >
                         {terminal.is_active ? "Hoạt động" : "Tạm tắt"}
-                      </StatusBadge>
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Button

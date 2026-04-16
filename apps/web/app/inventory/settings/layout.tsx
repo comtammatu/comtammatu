@@ -21,7 +21,7 @@ export default async function InventorySettingsLayout({
 
   return (
     <div className="space-y-6">
-      <Card className="app-panel">
+      <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
         <CardContent className="space-y-4 px-4 py-4 sm:px-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
@@ -32,7 +32,9 @@ export default async function InventorySettingsLayout({
                 Chính sách & mặc định
               </p>
               <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-                Khu vực này chỉ giữ các cấu hình hành vi hoặc policy của Inventory. Danh mục master data đã được dồn về nhóm `Danh mục` để tránh trùng cửa vào.
+                Khu vực này chỉ giữ các cấu hình hành vi hoặc policy của
+                Inventory. Danh mục master data đã được dồn về nhóm `Danh mục`
+                để tránh trùng cửa vào.
               </p>
             </div>
             <Badge variant="outline" className="rounded-full">

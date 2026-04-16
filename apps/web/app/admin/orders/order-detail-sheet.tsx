@@ -17,7 +17,6 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import type { OrderRow } from "./actions";
-import { StatusBadge } from "@/components/patterns";
 
 /* ─── Helpers ─── */
 
@@ -109,9 +108,21 @@ export function OrderDetailSheet({
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             <span className="text-muted-foreground">Trạng thái</span>
             <div>
-              <StatusBadge tone={orderStatusTone(order.status)}>
+              <Badge
+                variant={
+                  orderStatusTone(order.status) === "success"
+                    ? "success"
+                    : orderStatusTone(order.status) === "warning"
+                      ? "warning"
+                      : orderStatusTone(order.status) === "info"
+                        ? "info"
+                        : orderStatusTone(order.status) === "danger"
+                          ? "destructive"
+                          : "secondary"
+                }
+              >
                 {ORDER_STATUS_LABELS[order.status] ?? order.status}
-              </StatusBadge>
+              </Badge>
             </div>
 
             <span className="text-muted-foreground">Chi nhánh</span>

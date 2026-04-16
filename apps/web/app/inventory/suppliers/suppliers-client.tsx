@@ -13,6 +13,12 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
+import {
   Table,
   TableBody,
   TableCell,
@@ -32,7 +38,6 @@ import {
 } from "@comtammatu/ui/components/alert-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
-import { FilterBar, PageHeader, SectionCard } from "@/components/patterns";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import {
   getInventoryStatusBadgeVariant,
@@ -109,21 +114,30 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow="Danh muc doi tac"
-        title="Nha cung cap"
-        description="Quan ly doi tac cung ung trong cung mot cua vao danh muc, tach khoi settings de procurement hub bot roi."
-        actions={
-          <Button
-            type="button"
-            onClick={openCreate}
-            className="min-h-11 rounded-full px-6 font-bold shadow-lg"
-          >
-            <Plus className="size-4" />
-            Them nha cung cap
-          </Button>
-        }
-      />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-muted-foreground">
+            Danh muc doi tac
+          </p>
+          <div className="space-y-1">
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Nha cung cap
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Quan ly doi tac cung ung trong cung mot cua vao danh muc, tach
+              khoi settings de procurement hub bot roi.
+            </p>
+          </div>
+        </div>
+        <Button
+          type="button"
+          onClick={openCreate}
+          className="min-h-11 rounded-full px-6 font-bold shadow-lg"
+        >
+          <Plus className="size-4" />
+          Them nha cung cap
+        </Button>
+      </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -151,180 +165,187 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             value: String(suspended).padStart(2, "0"),
           },
         ].map((card) => (
-          <div key={card.label} className="app-stat">
-              <div className="mb-4 flex items-start justify-between">
-                <div
-                  className={cn(
-                    "flex size-10 items-center justify-center rounded-xl",
-                    card.iconBg,
-                    card.iconColor,
-                  )}
-                >
-                  {card.icon}
-                </div>
-                <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Hệ thống
-                </span>
-              </div>
-              <h3
+          <div
+            key={card.label}
+            className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm"
+          >
+            <div className="mb-4 flex items-start justify-between">
+              <div
                 className={cn(
-                  "text-3xl font-black tracking-tight",
-                  card.valueClassName,
+                  "flex size-10 items-center justify-center rounded-xl",
+                  card.iconBg,
+                  card.iconColor,
                 )}
               >
-                {card.value}
-              </h3>
-              <p className="mt-1 text-sm text-muted-foreground">{card.label}</p>
+                {card.icon}
+              </div>
+              <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Hệ thống
+              </span>
+            </div>
+            <h3
+              className={cn(
+                "text-3xl font-black tracking-tight",
+                card.valueClassName,
+              )}
+            >
+              {card.value}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">{card.label}</p>
           </div>
         ))}
       </div>
 
       {/* Data Table */}
-      <SectionCard
-        title="Danh sách nhà cung cấp"
-        description="Theo dõi đối tác cung ứng, trạng thái hoạt động và thông tin liên hệ trong một cửa vào duy nhất."
-        className="overflow-hidden"
-        density="compact"
-      >
-        <FilterBar className="mb-4 gap-3">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Tìm tên, mã số thuế, điện thoại…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="min-w-0 flex-1 border-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-          />
-          <span className="shrink-0 text-xs font-medium text-muted-foreground">
-            {filtered.length} / {rows.length}
-          </span>
-        </FilterBar>
-
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/40">
-              {[
-                "Nhà cung cấp",
-                "Mã số thuế",
-                "Điện thoại",
-                "Địa chỉ",
-                "Trạng thái",
-                "Thao tác",
-              ].map((h) => (
-                <TableHead
-                  key={h}
-                  className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground ${h === "Trạng thái" ? "text-center" : ""} ${h === "Thao tác" ? "text-right" : ""}`}
-                >
-                  {h}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 && (
-              <TableEmptyStateRow
-                colSpan={6}
-                paddingClassName="py-16"
-                title={
-                  search
-                    ? "Không tìm thấy nhà cung cấp nào"
-                    : "Chưa có nhà cung cấp"
-                }
-                description={
-                  search
-                    ? "Thử tên, mã số thuế hoặc số điện thoại khác."
-                    : 'Nhấn "Thêm nhà cung cấp" để bắt đầu.'
-                }
-              />
-            )}
-            {filtered.map((s, i) => {
-              const color = avatarColors[i % avatarColors.length]!;
-              return (
-                <TableRow
-                  key={s.id}
-                  className="group border-border transition-colors"
-                >
-                  <TableCell className="px-6 py-5">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={cn(
-                          "flex size-9 items-center justify-center rounded-full text-xs font-bold",
-                          color.bg,
-                          color.fg,
-                        )}
-                      >
-                        {s.name
-                          .split(" ")
-                          .map((w) => w[0])
-                          .slice(0, 2)
-                          .join("")}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">{s.name}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-6 py-5 font-mono text-sm text-muted-foreground">
-                    {s.tax_code ?? "—"}
-                  </TableCell>
-                  <TableCell className="px-6 py-5 font-mono text-sm">
-                    {s.phone ?? "—"}
-                  </TableCell>
-                  <TableCell className="max-w-44 truncate px-6 py-5 text-sm text-muted-foreground">
-                    {s.address ?? "—"}
-                  </TableCell>
-                  <TableCell className="px-6 py-5 text-center">
-                    <Badge
-                      variant={getInventoryStatusBadgeVariant(
-                        s.is_active ? "active" : "suspended",
-                      )}
-                    >
-                      {getInventoryStatusLabel(
-                        s.is_active ? "active" : "suspended",
-                      )}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="px-6 py-5 text-right">
-                    <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEdit(s)}
-                        aria-label={`Sửa ${s.name}`}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDeleteConfirmId(s.id)}
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        aria-label={`Xóa ${s.name}`}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-
-        {/* Pagination */}
-        <div className="flex items-center justify-between border-t border-border px-6 py-4">
-          <span className="text-xs font-medium text-muted-foreground">
-            Hiển thị {filtered.length} nhà cung cấp
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-              1
+      <Card className="overflow-hidden">
+        <CardHeader className="gap-4">
+          <div className="space-y-1">
+            <CardTitle>Danh sách nhà cung cấp</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Theo dõi đối tác cung ứng, trạng thái hoạt động và thông tin liên
+              hệ trong một cửa vào duy nhất.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
+            <Search className="size-4 shrink-0 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Tìm tên, mã số thuế, điện thoại…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="min-w-0 flex-1 border-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            />
+            <span className="shrink-0 text-xs font-medium text-muted-foreground">
+              {filtered.length} / {rows.length}
             </span>
           </div>
-        </div>
-      </SectionCard>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/40">
+                {[
+                  "Nhà cung cấp",
+                  "Mã số thuế",
+                  "Điện thoại",
+                  "Địa chỉ",
+                  "Trạng thái",
+                  "Thao tác",
+                ].map((h) => (
+                  <TableHead
+                    key={h}
+                    className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground ${h === "Trạng thái" ? "text-center" : ""} ${h === "Thao tác" ? "text-right" : ""}`}
+                  >
+                    {h}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 && (
+                <TableEmptyStateRow
+                  colSpan={6}
+                  paddingClassName="py-16"
+                  title={
+                    search
+                      ? "Không tìm thấy nhà cung cấp nào"
+                      : "Chưa có nhà cung cấp"
+                  }
+                  description={
+                    search
+                      ? "Thử tên, mã số thuế hoặc số điện thoại khác."
+                      : 'Nhấn "Thêm nhà cung cấp" để bắt đầu.'
+                  }
+                />
+              )}
+              {filtered.map((s, i) => {
+                const color = avatarColors[i % avatarColors.length]!;
+                return (
+                  <TableRow
+                    key={s.id}
+                    className="group border-border transition-colors"
+                  >
+                    <TableCell className="px-6 py-5">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={cn(
+                            "flex size-9 items-center justify-center rounded-full text-xs font-bold",
+                            color.bg,
+                            color.fg,
+                          )}
+                        >
+                          {s.name
+                            .split(" ")
+                            .map((w) => w[0])
+                            .slice(0, 2)
+                            .join("")}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold">{s.name}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-6 py-5 font-mono text-sm text-muted-foreground">
+                      {s.tax_code ?? "—"}
+                    </TableCell>
+                    <TableCell className="px-6 py-5 font-mono text-sm">
+                      {s.phone ?? "—"}
+                    </TableCell>
+                    <TableCell className="max-w-44 truncate px-6 py-5 text-sm text-muted-foreground">
+                      {s.address ?? "—"}
+                    </TableCell>
+                    <TableCell className="px-6 py-5 text-center">
+                      <Badge
+                        variant={getInventoryStatusBadgeVariant(
+                          s.is_active ? "active" : "suspended",
+                        )}
+                      >
+                        {getInventoryStatusLabel(
+                          s.is_active ? "active" : "suspended",
+                        )}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-6 py-5 text-right">
+                      <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEdit(s)}
+                          aria-label={`Sửa ${s.name}`}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteConfirmId(s.id)}
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          aria-label={`Xóa ${s.name}`}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+
+          <div className="flex items-center justify-between border-t border-border px-6 py-4">
+            <span className="text-xs font-medium text-muted-foreground">
+              Hiển thị {filtered.length} nhà cung cấp
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                1
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Create / Edit Dialog */}
       <SupplierDialog

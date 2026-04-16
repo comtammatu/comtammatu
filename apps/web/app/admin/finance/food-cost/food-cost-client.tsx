@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { FilterBar, SectionCard } from "@/components/patterns";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Table,
   TableBody,
@@ -71,7 +71,7 @@ export function FoodCostClient({
 
   return (
     <div className="space-y-4">
-      <FilterBar>
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3">
         <div className="grid gap-1.5">
           <Label className="text-xs">Từ ngày</Label>
           <Input
@@ -98,72 +98,80 @@ export function FoodCostClient({
           {isPending ? "Đang tải..." : "Lọc"}
         </Button>
         {error && <p className="text-sm text-destructive">{error}</p>}
-      </FilterBar>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <SectionCard density="compact">
-          <p className="text-xs text-muted-foreground">Tổng doanh thu</p>
-          <p className="mt-1 text-xl font-bold tabular-nums">
-            {totalRevenue.toLocaleString("vi-VN")} ₫
-          </p>
-        </SectionCard>
-        <SectionCard density="compact">
-          <p className="text-xs text-muted-foreground">Tổng food cost</p>
-          <p className="mt-1 text-xl font-bold tabular-nums">
-            {totalCost.toLocaleString("vi-VN")} ₫
-          </p>
-        </SectionCard>
-        <SectionCard density="compact">
-          <p className="text-xs text-muted-foreground">Biên lợi nhuận TB</p>
-          <p className="mt-1 text-xl font-bold">{avgMargin}%</p>
-        </SectionCard>
       </div>
 
-      <SectionCard className="overflow-hidden" density="compact">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Món</TableHead>
-              <TableHead className="w-24 text-right">SL bán</TableHead>
-              <TableHead className="w-36 text-right">Doanh thu (₫)</TableHead>
-              <TableHead className="w-36 text-right">Food cost (₫)</TableHead>
-              <TableHead className="w-24 text-right">Biên lãi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card>
+          <CardContent className="px-4 py-5">
+            <p className="text-xs text-muted-foreground">Tổng doanh thu</p>
+            <p className="mt-1 text-xl font-bold tabular-nums">
+              {totalRevenue.toLocaleString("vi-VN")} ₫
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="px-4 py-5">
+            <p className="text-xs text-muted-foreground">Tổng food cost</p>
+            <p className="mt-1 text-xl font-bold tabular-nums">
+              {totalCost.toLocaleString("vi-VN")} ₫
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="px-4 py-5">
+            <p className="text-xs text-muted-foreground">Biên lợi nhuận TB</p>
+            <p className="mt-1 text-xl font-bold">{avgMargin}%</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="overflow-hidden">
+        <CardContent className="px-4 sm:px-5">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="py-10 text-center text-muted-foreground"
-                >
-                  Không có dữ liệu trong khoảng thời gian này.
-                </TableCell>
+                <TableHead>Món</TableHead>
+                <TableHead className="w-24 text-right">SL bán</TableHead>
+                <TableHead className="w-36 text-right">Doanh thu (₫)</TableHead>
+                <TableHead className="w-36 text-right">Food cost (₫)</TableHead>
+                <TableHead className="w-24 text-right">Biên lãi</TableHead>
               </TableRow>
-            ) : (
-              rows.map((r, i) => (
-                <TableRow key={i}>
-                  <TableCell>{r.item_name ?? "—"}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {(r.qty_sold ?? 0).toLocaleString("vi-VN")}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {(r.revenue ?? 0).toLocaleString("vi-VN")}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {(r.food_cost ?? 0).toLocaleString("vi-VN")}
-                  </TableCell>
+            </TableHeader>
+            <TableBody>
+              {rows.length === 0 ? (
+                <TableRow>
                   <TableCell
-                    className={`text-right font-medium ${marginColor(r)}`}
+                    colSpan={5}
+                    className="py-10 text-center text-muted-foreground"
                   >
-                    {margin(r)}
+                    Không có dữ liệu trong khoảng thời gian này.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </SectionCard>
+              ) : (
+                rows.map((r, i) => (
+                  <TableRow key={i}>
+                    <TableCell>{r.item_name ?? "—"}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {(r.qty_sold ?? 0).toLocaleString("vi-VN")}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {(r.revenue ?? 0).toLocaleString("vi-VN")}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {(r.food_cost ?? 0).toLocaleString("vi-VN")}
+                    </TableCell>
+                    <TableCell
+                      className={`text-right font-medium ${marginColor(r)}`}
+                    >
+                      {margin(r)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

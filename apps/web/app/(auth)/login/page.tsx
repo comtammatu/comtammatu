@@ -20,7 +20,10 @@ function BrandPanel() {
     <Card className="order-2 overflow-hidden border-none bg-sidebar text-sidebar-foreground shadow-sm lg:order-1">
       <CardContent className="flex h-full flex-col justify-between gap-8 p-6 sm:p-8">
         <div className="space-y-6">
-          <Badge variant="outline" className="border-sidebar-border text-sidebar-foreground/70">
+          <Badge
+            variant="outline"
+            className="border-sidebar-border text-sidebar-foreground/70"
+          >
             Hệ điều hành nhà hàng
           </Badge>
           <div className="space-y-4">
@@ -67,7 +70,7 @@ function BrandPanel() {
 function TrustRow() {
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      <Card className="app-panel">
+      <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
             <div className="flex size-10 items-center justify-center rounded-full border bg-muted text-primary">
@@ -82,7 +85,7 @@ function TrustRow() {
           </div>
         </CardContent>
       </Card>
-      <Card className="app-panel">
+      <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
             <div className="flex size-10 items-center justify-center rounded-full border bg-muted text-primary">
@@ -97,7 +100,7 @@ function TrustRow() {
           </div>
         </CardContent>
       </Card>
-      <Card className="app-panel">
+      <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
             <div className="flex size-10 items-center justify-center rounded-full border bg-muted text-primary">
@@ -124,13 +127,13 @@ export default async function LoginPage({
   const sp = await searchParams;
 
   return (
-    <main id="main-content" className="app-canvas safe-top min-h-dvh p-4 sm:p-6">
+    <main id="main-content" className="min-h-dvh w-full  min-h-dvh p-4 sm:p-6">
       <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-2 lg:items-stretch">
         <BrandPanel />
 
         <section className="order-1 flex lg:order-2 lg:items-center">
           <div className="w-full space-y-4">
-            <Card className="app-panel">
+            <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
               <CardHeader>
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex size-14 items-center justify-center rounded-3xl bg-primary text-primary-foreground shadow-sm">
@@ -142,7 +145,8 @@ export default async function LoginPage({
                   Sẵn sàng vào ca, đúng vai trò
                 </CardTitle>
                 <CardDescription>
-                  Toàn bộ UI đã được dựng lại để tách khỏi bố cục cũ, nhưng logic quyền và đường dẫn vẫn giữ nguyên.
+                  Toàn bộ UI đã được dựng lại để tách khỏi bố cục cũ, nhưng
+                  logic quyền và đường dẫn vẫn giữ nguyên.
                 </CardDescription>
               </CardHeader>
               <CardContent>

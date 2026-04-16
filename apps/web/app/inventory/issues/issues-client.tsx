@@ -16,6 +16,12 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -39,7 +45,6 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { FilterBar, PageHeader, SectionCard } from "@/components/patterns";
 import { SearchableSelect } from "../_components/searchable-select";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import {
@@ -141,26 +146,35 @@ export function IssuesClient({
   return (
     <>
       <div className="space-y-6">
-        <PageHeader
-          eyebrow="Vận hành chi nhánh"
-          title="Cấp bếp & xuất kho"
-          description="Ưu tiên cấp phát từ kho chi nhánh xuống bếp, rồi mới theo dõi tiêu hao và các phiếu write-off bất thường."
-          actions={
-            <>
-              <Button type="button" variant="outline" disabled>
-                <FileDown className="size-4" />
-                Xuất báo cáo (sắp mở)
-              </Button>
-              <Button type="button" onClick={() => setCreateOpen(true)}>
-                <Plus className="size-4" />
-                Tạo phiếu cấp bếp
-              </Button>
-            </>
-          }
-        />
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-muted-foreground">
+              Vận hành chi nhánh
+            </p>
+            <div className="space-y-1">
+              <h1 className="text-3xl font-semibold tracking-tight">
+                Cấp bếp & xuất kho
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Ưu tiên cấp phát từ kho chi nhánh xuống bếp, rồi mới theo dõi
+                tiêu hao và các phiếu write-off bất thường.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" disabled>
+              <FileDown className="size-4" />
+              Xuất báo cáo (sắp mở)
+            </Button>
+            <Button type="button" onClick={() => setCreateOpen(true)}>
+              <Plus className="size-4" />
+              Tạo phiếu cấp bếp
+            </Button>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <div className="app-stat">
+          <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div className="flex size-11 items-center justify-center rounded-full bg-warning/12 text-warning">
                 <ClipboardList className="size-5" />
@@ -175,7 +189,7 @@ export function IssuesClient({
             </p>
           </div>
 
-          <div className="app-stat">
+          <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div className="flex size-11 items-center justify-center rounded-full bg-success/12 text-success">
                 <ChefHat className="size-5" />
@@ -192,7 +206,7 @@ export function IssuesClient({
             </p>
           </div>
 
-          <div className="app-stat">
+          <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div className="flex size-11 items-center justify-center rounded-full bg-destructive/12 text-destructive">
                 <AlertTriangle className="size-5" />
@@ -207,7 +221,7 @@ export function IssuesClient({
             </p>
           </div>
 
-          <div className="app-stat">
+          <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
                 <Clock className="size-5" />
@@ -223,7 +237,7 @@ export function IssuesClient({
           </div>
         </div>
 
-        <FilterBar className="justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-3">
           <div className="flex flex-1 flex-wrap items-end gap-3">
             <div className="grid gap-1">
               <label className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -281,95 +295,102 @@ export function IssuesClient({
               Xoá bộ lọc
             </Button>
           </div>
-        </FilterBar>
+        </div>
 
-        <SectionCard
-          title="Danh sách phiếu xuất"
-          description="Tất cả chứng từ xuất kho đã tạo, sẵn sàng để rà soát, xác nhận hoặc mở chi tiết."
-          className="overflow-hidden"
-          density="compact"
-        >
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Mã phiếu</TableHead>
-                <TableHead>Loại xuất</TableHead>
-                <TableHead>Chi nhánh</TableHead>
-                <TableHead>Ngày tạo</TableHead>
-                <TableHead>Người tạo</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead className="text-right">Thao tác</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 && (
-                <TableEmptyStateRow
-                  colSpan={7}
-                  title="Chưa có phiếu xuất phù hợp"
-                  description="Điều chỉnh bộ lọc hoặc tạo phiếu xuất mới để bắt đầu."
-                />
-              )}
-              {filtered.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    <Link
-                      href={`/inventory/issues/${item.id}`}
-                      className="rounded-sm text-sm font-semibold text-primary transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    >
-                      {item.code}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm font-medium">
-                      {ISSUE_TYPES.find((option) => option.value === item.type)
-                        ?.label ?? item.type}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {item.branchName}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {item.date}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="flex size-8 items-center justify-center rounded-full border border-border/60 bg-muted/50 text-xs font-bold">
-                        {item.createdBy
-                          .split(" ")
-                          .map((word) => word[0])
-                          .join("")
-                          .slice(0, 2)}
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        {item.createdBy}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getInventoryStatusBadgeVariant(item.status)}>
-                      {getInventoryStatusLabel(item.status)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Link
-                      href={`/inventory/issues/${item.id}`}
-                      className="inline-flex rounded-full border border-border/60 bg-background/80 p-2 text-muted-foreground transition hover:border-primary/30 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    >
-                      <MoreVertical className="size-4" />
-                    </Link>
-                  </TableCell>
+        <Card className="overflow-hidden">
+          <CardHeader className="gap-1">
+            <CardTitle>Danh sách phiếu xuất</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Tất cả chứng từ xuất kho đã tạo, sẵn sàng để rà soát, xác nhận
+              hoặc mở chi tiết.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4 p-6">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Mã phiếu</TableHead>
+                  <TableHead>Loại xuất</TableHead>
+                  <TableHead>Chi nhánh</TableHead>
+                  <TableHead>Ngày tạo</TableHead>
+                  <TableHead>Người tạo</TableHead>
+                  <TableHead>Trạng thái</TableHead>
+                  <TableHead className="text-right">Thao tác</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 && (
+                  <TableEmptyStateRow
+                    colSpan={7}
+                    title="Chưa có phiếu xuất phù hợp"
+                    description="Điều chỉnh bộ lọc hoặc tạo phiếu xuất mới để bắt đầu."
+                  />
+                )}
+                {filtered.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <Link
+                        href={`/inventory/issues/${item.id}`}
+                        className="rounded-sm text-sm font-semibold text-primary transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      >
+                        {item.code}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm font-medium">
+                        {ISSUE_TYPES.find(
+                          (option) => option.value === item.type,
+                        )?.label ?? item.type}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {item.branchName}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {item.date}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="flex size-8 items-center justify-center rounded-full border border-border/60 bg-muted/50 text-xs font-bold">
+                          {item.createdBy
+                            .split(" ")
+                            .map((word) => word[0])
+                            .join("")
+                            .slice(0, 2)}
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {item.createdBy}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={getInventoryStatusBadgeVariant(item.status)}
+                      >
+                        {getInventoryStatusLabel(item.status)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Link
+                        href={`/inventory/issues/${item.id}`}
+                        className="inline-flex rounded-full border border-border/60 bg-background/80 p-2 text-muted-foreground transition hover:border-primary/30 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      >
+                        <MoreVertical className="size-4" />
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
 
-          <div className="mt-4 flex flex-col gap-3 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <span className="text-xs font-medium text-muted-foreground">
-              Hiển thị {filtered.length} / {issues.length} phiếu
-            </span>
-            <Badge variant="outline">Một trang trong pilot hiện tại</Badge>
-          </div>
-        </SectionCard>
+            <div className="flex flex-col gap-3 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-xs font-medium text-muted-foreground">
+                Hiển thị {filtered.length} / {issues.length} phiếu
+              </span>
+              <Badge variant="outline">Một trang trong pilot hiện tại</Badge>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Dialog

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { SectionCard } from "@/components/patterns";
 import {
   Table,
   TableBody,
@@ -12,6 +11,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Dialog,
   DialogContent,
@@ -165,78 +165,80 @@ export function PeriodsClient({ periods: initial }: Props) {
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <SectionCard className="overflow-hidden" density="compact">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-32">Kỳ</TableHead>
-              <TableHead className="w-28">Trạng thái</TableHead>
-              <TableHead>Ngày đóng</TableHead>
-              <TableHead>Ghi chú</TableHead>
-              <TableHead className="w-48 text-right">Thao tác</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {periods.length === 0 ? (
+      <Card className="overflow-hidden">
+        <CardContent className="px-4 sm:px-5">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="py-10 text-center text-muted-foreground"
-                >
-                  Chưa có kỳ kế toán nào. Nhấn &quot;Mở kỳ tháng hiện tại&quot;
-                  để bắt đầu.
-                </TableCell>
+                <TableHead className="w-32">Kỳ</TableHead>
+                <TableHead className="w-28">Trạng thái</TableHead>
+                <TableHead>Ngày đóng</TableHead>
+                <TableHead>Ghi chú</TableHead>
+                <TableHead className="w-48 text-right">Thao tác</TableHead>
               </TableRow>
-            ) : (
-              periods.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-medium tabular-nums">
-                    {formatPeriod(p.period_month, p.period_year)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={STATUS_VARIANT[p.status] ?? "secondary"}>
-                      {STATUS_LABEL[p.status] ?? p.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {p.closed_at
-                      ? new Date(p.closed_at).toLocaleDateString("vi-VN")
-                      : "—"}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
-                    {p.notes ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          handleViewRecon(p.period_year, p.period_month)
-                        }
-                      >
-                        <FileSearch className="mr-1 size-3.5" />
-                        Đối chiếu
-                      </Button>
-                      {p.status === "open" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleClose(p)}
-                          disabled={isPending}
-                        >
-                          <Lock className="mr-1 size-3.5" />
-                          Đóng kỳ
-                        </Button>
-                      )}
-                    </div>
+            </TableHeader>
+            <TableBody>
+              {periods.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="py-10 text-center text-muted-foreground"
+                  >
+                    Chưa có kỳ kế toán nào. Nhấn &quot;Mở kỳ tháng hiện
+                    tại&quot; để bắt đầu.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </SectionCard>
+              ) : (
+                periods.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium tabular-nums">
+                      {formatPeriod(p.period_month, p.period_year)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={STATUS_VARIANT[p.status] ?? "secondary"}>
+                        {STATUS_LABEL[p.status] ?? p.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {p.closed_at
+                        ? new Date(p.closed_at).toLocaleDateString("vi-VN")
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
+                      {p.notes ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            handleViewRecon(p.period_year, p.period_month)
+                          }
+                        >
+                          <FileSearch className="mr-1 size-3.5" />
+                          Đối chiếu
+                        </Button>
+                        {p.status === "open" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleClose(p)}
+                            disabled={isPending}
+                          >
+                            <Lock className="mr-1 size-3.5" />
+                            Đóng kỳ
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {/* Close confirmation dialog */}
       <Dialog

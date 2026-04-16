@@ -24,7 +24,7 @@ export default async function EmployeeLayout({
   if (!claims) redirect(buildLoginBlockedStatePath());
 
   return (
-    <div className="app-canvas safe-top flex min-h-dvh flex-col">
+    <div className="min-h-dvh w-full  flex min-h-dvh flex-col">
       <MobileHeader />
       <main
         id="main-content"

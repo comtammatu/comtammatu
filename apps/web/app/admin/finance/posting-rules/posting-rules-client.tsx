@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { SectionCard } from "@/components/patterns";
 import {
   Table,
   TableBody,
@@ -11,6 +10,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { Switch } from "@comtammatu/ui/components/switch";
 import {
   Select,
@@ -89,86 +89,90 @@ export function PostingRulesClient({ rules: initial, accounts }: Props) {
   return (
     <div className="grid gap-6">
       {Object.entries(grouped).map(([type, typeRules]) => (
-        <SectionCard key={type} className="overflow-hidden" density="compact">
+        <Card key={type} className="overflow-hidden">
           <div className="border-b px-4 py-2.5">
             <Badge variant="outline" className="text-xs">
               {TYPE_LABELS[type] ?? type}
             </Badge>
           </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-44">Mã quy tắc</TableHead>
-                <TableHead>Mô tả</TableHead>
-                <TableHead className="w-48">TK Nợ</TableHead>
-                <TableHead className="w-48">TK Có</TableHead>
-                <TableHead className="w-20 text-center">Bật</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {typeRules.map((rule) => (
-                <TableRow
-                  key={rule.id}
-                  className={rule.is_active ? "" : "opacity-50"}
-                >
-                  <TableCell className="font-mono text-xs">
-                    {rule.rule_code}
-                  </TableCell>
-                  <TableCell className="text-sm">{rule.description}</TableCell>
-                  <TableCell>
-                    <Select
-                      value={rule.debit_account_code}
-                      onValueChange={(v: string) =>
-                        handleAccountChange(rule.id, "debitAccountCode", v)
-                      }
-                      disabled={isPending}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {activeAccounts.map((a) => (
-                          <SelectItem key={a.id} value={a.code}>
-                            {a.code} — {a.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={rule.credit_account_code}
-                      onValueChange={(v: string) =>
-                        handleAccountChange(rule.id, "creditAccountCode", v)
-                      }
-                      disabled={isPending}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {activeAccounts.map((a) => (
-                          <SelectItem key={a.id} value={a.code}>
-                            {a.code} — {a.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Switch
-                      checked={rule.is_active}
-                      onCheckedChange={(checked: boolean) =>
-                        handleToggle(rule.id, checked)
-                      }
-                      disabled={isPending}
-                    />
-                  </TableCell>
+          <CardContent className="px-4 sm:px-5">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-44">Mã quy tắc</TableHead>
+                  <TableHead>Mô tả</TableHead>
+                  <TableHead className="w-48">TK Nợ</TableHead>
+                  <TableHead className="w-48">TK Có</TableHead>
+                  <TableHead className="w-20 text-center">Bật</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </SectionCard>
+              </TableHeader>
+              <TableBody>
+                {typeRules.map((rule) => (
+                  <TableRow
+                    key={rule.id}
+                    className={rule.is_active ? "" : "opacity-50"}
+                  >
+                    <TableCell className="font-mono text-xs">
+                      {rule.rule_code}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {rule.description}
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={rule.debit_account_code}
+                        onValueChange={(v: string) =>
+                          handleAccountChange(rule.id, "debitAccountCode", v)
+                        }
+                        disabled={isPending}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activeAccounts.map((a) => (
+                            <SelectItem key={a.id} value={a.code}>
+                              {a.code} — {a.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={rule.credit_account_code}
+                        onValueChange={(v: string) =>
+                          handleAccountChange(rule.id, "creditAccountCode", v)
+                        }
+                        disabled={isPending}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activeAccounts.map((a) => (
+                            <SelectItem key={a.id} value={a.code}>
+                              {a.code} — {a.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Switch
+                        checked={rule.is_active}
+                        onCheckedChange={(checked: boolean) =>
+                          handleToggle(rule.id, checked)
+                        }
+                        disabled={isPending}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       ))}
     </div>
   );

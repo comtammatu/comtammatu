@@ -28,7 +28,7 @@ import {
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { EmptyStatePanel } from "@/components/patterns";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
 import { createStockTransfer } from "../transfer-actions";
 import type { IngredientRow } from "../page";
@@ -496,11 +496,18 @@ export function CreateTransferDialog({
             </div>
 
             {draftLines.length === 0 ? (
-              <EmptyStatePanel
-                title="Chưa có nguyên liệu"
-                description="Thêm ít nhất một nguyên liệu để tạo phiếu luân chuyển."
-                className="rounded-lg border-dashed bg-muted/10 py-6"
-              />
+              <Card className="rounded-lg border-dashed bg-muted/10">
+                <CardContent className="py-6 text-center">
+                  <div className="space-y-1.5">
+                    <h3 className="text-2xl font-semibold">
+                      Chưa có nguyên liệu
+                    </h3>
+                    <p className="max-w-md text-sm leading-6 text-muted-foreground mx-auto">
+                      Thêm ít nhất một nguyên liệu để tạo phiếu luân chuyển.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             ) : (
               <div className="space-y-2">
                 {draftLines.map((l) => (

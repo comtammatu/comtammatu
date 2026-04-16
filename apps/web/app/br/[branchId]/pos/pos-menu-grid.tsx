@@ -65,7 +65,8 @@ export function PosMenuGrid({
     [categories, activeCategoryId],
   );
 
-  const activeZoneLabel = CATEGORY_TYPE_LABELS[effectiveMenuZone] ?? effectiveMenuZone;
+  const activeZoneLabel =
+    CATEGORY_TYPE_LABELS[effectiveMenuZone] ?? effectiveMenuZone;
   const activeMenuItemCount = activeCategory?.menu_items.length ?? 0;
 
   if (availableMenuZones.length === 0) {
@@ -85,7 +86,9 @@ export function PosMenuGrid({
         <div className="space-y-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Khu thực đơn</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Khu thực đơn
+              </p>
               <h2 className="font-heading text-3xl font-semibold tracking-tight text-foreground">
                 {activeZoneLabel}
               </h2>
@@ -95,7 +98,7 @@ export function PosMenuGrid({
               </p>
             </div>
             <div className="grid gap-2 sm:grid-cols-3">
-              <div className="app-subpanel px-4 py-3 transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <div className="rounded-lg border bg-muted/30 text-card-foreground px-4 py-3 transition-all hover:-translate-y-0.5 hover:shadow-md">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Danh mục
                 </p>
@@ -103,7 +106,7 @@ export function PosMenuGrid({
                   {categoriesInActiveZone.length}
                 </p>
               </div>
-              <div className="app-subpanel border-primary/15 bg-primary/8 px-4 py-3 transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <div className="rounded-lg border bg-muted/30 text-card-foreground border-primary/15 bg-primary/8 px-4 py-3 transition-all hover:-translate-y-0.5 hover:shadow-md">
                 <p className="text-xs font-semibold uppercase tracking-wide text-primary">
                   Giỏ hiện tại
                 </p>
@@ -111,7 +114,7 @@ export function PosMenuGrid({
                   {cartQuantity} món
                 </p>
               </div>
-              <div className="app-subpanel border-success/15 bg-success/10 px-4 py-3 transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <div className="rounded-lg border bg-muted/30 text-card-foreground border-success/15 bg-success/10 px-4 py-3 transition-all hover:-translate-y-0.5 hover:shadow-md">
                 <p className="text-xs font-semibold uppercase tracking-wide text-success">
                   Tạm tính
                 </p>
@@ -200,7 +203,7 @@ export function PosMenuGrid({
               <button
                 key={item.id}
                 type="button"
-                className="app-subpanel min-h-14 min-w-14 flex min-h-40 cursor-pointer flex-col p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.985]"
+                className="rounded-lg border bg-muted/30 text-card-foreground min-h-14 min-w-14 flex min-h-40 cursor-pointer flex-col p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.985]"
                 onClick={() => onItemTap(item)}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -214,7 +217,7 @@ export function PosMenuGrid({
                       </p>
                       <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">
                         {item.description ??
-                              "Chạm để thêm nhanh hoặc mở tuỳ chọn của món."}
+                          "Chạm để thêm nhanh hoặc mở tuỳ chọn của món."}
                       </p>
                     </div>
                   </div>

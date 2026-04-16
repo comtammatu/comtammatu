@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { EmptyState, SectionCard, StatusBadge } from "@/components/patterns";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Table,
   TableBody,
@@ -90,21 +90,31 @@ export function ChartOfAccountsClient({
 
   if (accounts.length === 0) {
     return (
-      <EmptyState
-        icon={<CircleOff className="size-8" />}
-        title="Chưa có hệ thống tài khoản"
-        description="Khởi tạo VAS để bắt đầu hạch toán."
-        action={
-          <Button onClick={handleSeed} disabled={isPending}>
-            {isPending ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            ) : (
-              <Plus className="mr-2 size-4" />
-            )}
-            Khởi tạo hệ thống tài khoản VAS
-          </Button>
-        }
-      />
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+          <div className="flex size-14 items-center justify-center rounded-full border bg-muted text-primary">
+            <CircleOff className="size-8" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-2xl font-semibold">
+              Chưa có hệ thống tài khoản
+            </h3>
+            <p className="max-w-md text-sm leading-6 text-muted-foreground">
+              Khởi tạo VAS để bắt đầu hạch toán.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button onClick={handleSeed} disabled={isPending}>
+              {isPending ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <Plus className="mr-2 size-4" />
+              )}
+              Khởi tạo hệ thống tài khoản VAS
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -130,64 +140,79 @@ export function ChartOfAccountsClient({
         </Button>
       </div>
 
-      <SectionCard className="overflow-hidden rounded-lg" density="compact">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-32">Mã TK</TableHead>
-              <TableHead>Tên tài khoản</TableHead>
-              <TableHead className="w-32">Loại</TableHead>
-              <TableHead className="w-24 text-center">Trạng thái</TableHead>
-              <TableHead className="w-24" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {accounts.map((account) => (
-              <TableRow
-                key={account.id}
-                className={!account.is_active ? "opacity-50" : undefined}
-              >
-                <TableCell className="font-mono font-medium">
-                  <span
-                    style={{ paddingLeft: `${(account.level - 1) * 16}px` }}
-                  >
-                    {account.account_code}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span
-                    style={{ paddingLeft: `${(account.level - 1) * 16}px` }}
-                  >
-                    {account.account_name}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge
-                    tone={TYPE_COLORS[account.account_type] ?? "neutral"}
-                  >
-                    {TYPE_LABELS[account.account_type] ?? account.account_type}
-                  </StatusBadge>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Badge variant={account.is_active ? "default" : "secondary"}>
-                    {account.is_active ? "Hoạt động" : "Tắt"}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleToggle(account.id)}
-                    disabled={isPending}
-                  >
-                    {account.is_active ? "Tắt" : "Bật"}
-                  </Button>
-                </TableCell>
+      <Card className="overflow-hidden rounded-lg">
+        <CardContent className="px-4 sm:px-5">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-32">Mã TK</TableHead>
+                <TableHead>Tên tài khoản</TableHead>
+                <TableHead className="w-32">Loại</TableHead>
+                <TableHead className="w-24 text-center">Trạng thái</TableHead>
+                <TableHead className="w-24" />
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </SectionCard>
+            </TableHeader>
+            <TableBody>
+              {accounts.map((account) => (
+                <TableRow
+                  key={account.id}
+                  className={!account.is_active ? "opacity-50" : undefined}
+                >
+                  <TableCell className="font-mono font-medium">
+                    <span
+                      style={{ paddingLeft: `${(account.level - 1) * 16}px` }}
+                    >
+                      {account.account_code}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      style={{ paddingLeft: `${(account.level - 1) * 16}px` }}
+                    >
+                      {account.account_name}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        TYPE_COLORS[account.account_type] === "success"
+                          ? "success"
+                          : TYPE_COLORS[account.account_type] === "warning"
+                            ? "warning"
+                            : TYPE_COLORS[account.account_type] === "danger"
+                              ? "destructive"
+                              : TYPE_COLORS[account.account_type] === "info"
+                                ? "info"
+                                : "secondary"
+                      }
+                    >
+                      {TYPE_LABELS[account.account_type] ??
+                        account.account_type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      variant={account.is_active ? "default" : "secondary"}
+                    >
+                      {account.is_active ? "Hoạt động" : "Tắt"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleToggle(account.id)}
+                      disabled={isPending}
+                    >
+                      {account.is_active ? "Tắt" : "Bật"}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
