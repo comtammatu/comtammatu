@@ -4,7 +4,6 @@ import { z } from "zod";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, withFormAction } from "@/_lib/with-action";
-import { hasBranchKindSchema } from "../../_lib/branch-kind-schema";
 
 const SETTINGS_ROLES: StaffRole[] = ["owner", "super_manager"];
 
@@ -19,22 +18,11 @@ const branchSchema = z.object({
 
 const updateBranchSchema = branchSchema.extend({
   id: z.coerce.number().int().positive(),
-  branchKind: z
-    .enum(["branch", "central_kitchen", "warehouse", "headquarters"])
-    .default("branch"),
 });
 
 const toggleIdSchema = z.object({
   id: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
 });
-
-type BranchWritePayload = {
-  tenant_id: number;
-  name: string;
-  address: string | null;
-  phone: string | null;
-  branch_kind?: "branch" | "central_kitchen" | "warehouse" | "headquarters";
-};
 
 /* ─── Actions ─── */
 
@@ -50,19 +38,13 @@ export const createBranch = withFormAction(
     }),
   },
   async (data, { supabase, claims }) => {
-    const branchKindSchemaAvailable = await hasBranchKindSchema(supabase);
-
-    const branchPayload: BranchWritePayload = {
+    const { error } = await supabase.from("branches").insert({
       tenant_id: claims.tenant_id,
       name: data.name,
       address: data.address || null,
       phone: data.phone || null,
-    };
-    if (branchKindSchemaAvailable) {
-      branchPayload.branch_kind = data.branchKind;
-    }
-
-    const { error } = await supabase.from("branches").insert(branchPayload);
+      branch_kind: data.branchKind,
+    });
 
     if (error) {
       if (error.code === "23505") {
@@ -99,38 +81,14 @@ export const updateBranch = withFormAction(
     }),
   },
   async (data, { supabase, claims }) => {
-    const branchKindSchemaAvailable = await hasBranchKindSchema(supabase);
-
-    const { data: currentBranch, error: currentBranchError } = await supabase
-      .from("branches")
-      .select("is_headquarters")
-      .eq("id", data.id)
-      .eq("tenant_id", claims.tenant_id)
-      .maybeSingle();
-
-    if (currentBranchError || !currentBranch) {
-      return { success: false, error: "Điểm vận hành không tồn tại" };
-    }
-
-    // Map legacy "headquarters" to "warehouse"
-    const resolvedKind = data.branchKind === "headquarters" ? "warehouse" : data.branchKind;
-
     const { error } = await supabase
       .from("branches")
-      .update(
-        branchKindSchemaAvailable
-          ? ({
-              name: data.name,
-              address: data.address || null,
-              phone: data.phone || null,
-              branch_kind: resolvedKind,
-            } as BranchWritePayload)
-          : ({
-              name: data.name,
-              address: data.address || null,
-              phone: data.phone || null,
-            } as Omit<BranchWritePayload, "tenant_id">),
-      )
+      .update({
+        name: data.name,
+        address: data.address || null,
+        phone: data.phone || null,
+        branch_kind: data.branchKind,
+      })
       .eq("id", data.id)
       .eq("tenant_id", claims.tenant_id);
 

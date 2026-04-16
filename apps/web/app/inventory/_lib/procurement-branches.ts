@@ -15,51 +15,16 @@ export async function fetchProcurementBranches(
   supabase: TenantSupabase,
   tenantId: number,
 ): Promise<ProcurementBranch[]> {
-  // Try branch_kind first (post-migration)
   const { data, error } = await supabase
     .from("branches")
     .select("id, name, branch_kind")
     .eq("tenant_id", tenantId)
     .eq("is_active", true)
-    .in("branch_kind", ["warehouse", "central_kitchen", "headquarters"])
+    .in("branch_kind", ["warehouse", "central_kitchen"])
     .order("id");
 
-  if (!error && data && data.length > 0) return data;
-
-  // Fallback: pre-migration, use is_headquarters
-  const { data: fallback } = await supabase
-    .from("branches")
-    .select("id, name, branch_kind")
-    .eq("tenant_id", tenantId)
-    .eq("is_headquarters", true)
-    .maybeSingle();
-
-  if (fallback) return [fallback];
-
-  // Last resort: RPC
-  const { data: branchList } = await supabase.rpc(
-    "stock_transfer_list_branches",
-  );
-  const hqBranch = (
-    (branchList as Array<{ id: number; name: string; is_headquarters: boolean; branch_kind: string }> | null) ?? []
-  ).find((b) => b.is_headquarters);
-
-  return hqBranch ? [{ id: hqBranch.id, name: hqBranch.name, branch_kind: hqBranch.branch_kind ?? "warehouse" }] : [];
-}
-
-/**
- * @deprecated Use fetchProcurementBranches() instead.
- * Returns the first warehouse branch ID for backward compat.
- */
-export async function fetchHeadquartersBranchId(
-  supabase: TenantSupabase,
-  tenantId: number,
-): Promise<number | null> {
-  const branches = await fetchProcurementBranches(supabase, tenantId);
-  const warehouse = branches.find(
-    (b) => b.branch_kind === "warehouse" || b.branch_kind === "headquarters",
-  );
-  return warehouse?.id ?? branches[0]?.id ?? null;
+  if (error) return [];
+  return data ?? [];
 }
 
 export type InventorySiteContext = {
@@ -96,7 +61,7 @@ export async function fetchInventorySiteContext(
   if (!fallbackData) {
     const procBranches = await fetchProcurementBranches(supabase, tenantId);
     const warehouseId = procBranches.find(
-      (b) => b.branch_kind === "warehouse" || b.branch_kind === "headquarters",
+      (b) => b.branch_kind === "warehouse",
     )?.id;
     if (warehouseId) {
       fallbackData = await loadBranch(warehouseId);

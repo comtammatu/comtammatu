@@ -3,7 +3,6 @@ import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
 import { BranchTable } from "./branch-table";
 import { AddBranchButton } from "./add-branch-button";
-import { hasBranchKindSchema } from "../../_lib/branch-kind-schema";
 
 export default async function BranchesPage() {
   const supabase = await createClient();
@@ -18,25 +17,13 @@ export default async function BranchesPage() {
     redirect("/admin/settings/tables");
   }
 
-  const branchKindSchemaAvailable = await hasBranchKindSchema(supabase);
-
-  const branchesQuery = branchKindSchemaAvailable
-    ? supabase
-        .from("branches")
-        .select(
-          "id, name, address, phone, is_active, is_headquarters, branch_kind, latitude, longitude",
-        )
-        .order("is_headquarters", { ascending: false })
-        .order("name")
-    : supabase
-        .from("branches")
-        .select(
-          "id, name, address, phone, is_active, is_headquarters, latitude, longitude",
-        )
-        .order("is_headquarters", { ascending: false })
-        .order("name");
-
-  const { data: branches } = await branchesQuery;
+  const { data: branches } = await supabase
+    .from("branches")
+    .select(
+      "id, name, address, phone, is_active, is_headquarters, branch_kind, latitude, longitude",
+    )
+    .order("is_headquarters", { ascending: false })
+    .order("name");
 
   // Check which branches have attendance secrets configured
   const { data: configs } = await supabase
@@ -50,10 +37,6 @@ export default async function BranchesPage() {
     ...b,
     latitude: b.latitude as number | null,
     longitude: b.longitude as number | null,
-    branch_kind:
-      "branch_kind" in b && typeof b.branch_kind === "string"
-        ? b.branch_kind
-        : null,
     hasAttendanceSecret: configuredBranchIds.has(b.id),
   }));
 
@@ -66,21 +49,9 @@ export default async function BranchesPage() {
             {branches?.length ?? 0} điểm vận hành
           </p>
         </div>
-        <AddBranchButton
-          branchKindSchemaAvailable={branchKindSchemaAvailable}
-        />
+        <AddBranchButton />
       </div>
-      {!branchKindSchemaAvailable && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-          Database hiện tại chưa có cột <code>branch_kind</code>. Danh sách điểm
-          vận hành vẫn dùng được, nhưng phân loại bếp trung tâm sẽ chỉ hoạt động
-          sau khi migration được áp dụng.
-        </div>
-      )}
-      <BranchTable
-        branches={branchesWithConfig}
-        branchKindSchemaAvailable={branchKindSchemaAvailable}
-      />
+      <BranchTable branches={branchesWithConfig} />
     </div>
   );
 }

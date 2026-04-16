@@ -15,7 +15,6 @@ import type {
 } from "./production-types";
 
 interface ProductionHubClientProps {
-  branchKindSchemaAvailable: boolean;
   centralKitchenBranches: BranchOption[];
   ingredients: IngredientOption[];
   finishedGoods: FinishedGoodOption[];
@@ -24,7 +23,6 @@ interface ProductionHubClientProps {
 }
 
 export function ProductionHubClient({
-  branchKindSchemaAvailable,
   centralKitchenBranches,
   ingredients,
   finishedGoods,
@@ -49,9 +47,8 @@ export function ProductionHubClient({
     [ingredients],
   );
 
-  const readinessMessage = !branchKindSchemaAvailable
-    ? "Màn Bếp trung tâm đang chờ migration `branch_kind`, nên tất cả thao tác tạo/sửa/xác nhận lệnh hiện bị khóa."
-    : centralKitchenBranches.length === 0
+  const readinessMessage =
+    centralKitchenBranches.length === 0
       ? "Chưa có bếp trung tâm nào được cấu hình."
       : sortedFinishedGoods.length === 0
         ? "Chưa có thành phẩm nào được gắn `item_kind = finished_good`, nên chưa thể tạo lệnh sản xuất."
@@ -60,7 +57,6 @@ export function ProductionHubClient({
           : null;
 
   const actionsEnabled =
-    branchKindSchemaAvailable &&
     centralKitchenBranches.length > 0 &&
     sortedFinishedGoods.length > 0 &&
     sortedRawIngredients.length > 0;
@@ -71,7 +67,6 @@ export function ProductionHubClient({
         orders={orders}
         readinessMessage={readinessMessage}
         centralKitchenCount={centralKitchenBranches.length}
-        branchKindSchemaAvailable={branchKindSchemaAvailable}
       />
 
       <div className="flex flex-wrap items-center justify-end gap-3">
@@ -82,13 +77,9 @@ export function ProductionHubClient({
         />
       </div>
 
-      <ProductionOrderList
-        orders={orders}
-        branchKindSchemaAvailable={branchKindSchemaAvailable}
-      />
+      <ProductionOrderList orders={orders} />
 
       <ProductionRecipePanel
-        branchKindSchemaAvailable={branchKindSchemaAvailable}
         finishedGoods={finishedGoods}
         ingredients={ingredients}
         recipes={recipes}

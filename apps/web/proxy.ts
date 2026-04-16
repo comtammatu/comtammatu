@@ -108,19 +108,16 @@ export async function proxy(request: NextRequest) {
       const pathMatch = routePath.match(/^\/br\/(\d+)\//);
       if (pathMatch) {
         const routeBranchId = Number(pathMatch[1]);
-        // Check branch_kind first (post-migration), fall back to is_headquarters
         const { data: branchRow } = await supabase
           .from("branches")
-          .select("id, branch_kind, is_headquarters")
+          .select("id, branch_kind")
           .eq("id", routeBranchId)
           .eq("tenant_id", claims.tenant_id)
           .maybeSingle();
         const kind = branchRow?.branch_kind;
         const isBlocked =
           kind === "warehouse" ||
-          kind === "central_kitchen" ||
-          kind === "headquarters" ||
-          branchRow?.is_headquarters === true;
+          kind === "central_kitchen";
         if (branchRow && isBlocked) {
           return redirectToBlockedDefault(
             request,

@@ -5,13 +5,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { BranchFormDialog } from "./branch-form-dialog";
 
-interface AddBranchButtonProps {
-  branchKindSchemaAvailable: boolean;
-}
-
-export function AddBranchButton({
-  branchKindSchemaAvailable,
-}: AddBranchButtonProps) {
+export function AddBranchButton() {
   const [open, setOpen] = useState(false);
 
   return (
@@ -20,11 +14,7 @@ export function AddBranchButton({
         <Plus className="mr-2 size-4" />
         Thêm điểm vận hành
       </Button>
-      <BranchFormDialog
-        open={open}
-        onOpenChange={setOpen}
-        branchKindSchemaAvailable={branchKindSchemaAvailable}
-      />
+      <BranchFormDialog open={open} onOpenChange={setOpen} />
     </>
   );
 }
