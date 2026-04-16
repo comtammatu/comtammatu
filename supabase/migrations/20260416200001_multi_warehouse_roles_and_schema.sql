@@ -3,24 +3,8 @@
 -- relax constraints, update triggers & RPCs for multi-warehouse.
 -- =============================================================
 
--- ─── 1. Rename branch_kind 'headquarters' → 'warehouse' ───
-
-ALTER TABLE public.branches
-  DROP CONSTRAINT IF EXISTS branches_branch_kind_check;
-
-UPDATE public.branches
-SET branch_kind = 'warehouse'
-WHERE branch_kind = 'headquarters';
-
-ALTER TABLE public.branches
-  ADD CONSTRAINT branches_branch_kind_check
-  CHECK (branch_kind IN ('warehouse', 'branch', 'central_kitchen'));
-
--- ─── 2. Allow multiple central_kitchen branches ───
-
-DROP INDEX IF EXISTS idx_one_active_central_kitchen_per_tenant;
-
--- ─── 3. Update sync trigger: warehouse ↔ is_headquarters ───
+-- ─── 1. Update sync trigger FIRST (before data update) ───
+-- Must be done before UPDATE so the trigger doesn't revert 'warehouse' → 'headquarters'
 
 CREATE OR REPLACE FUNCTION public.sync_branch_kind_and_hq()
 RETURNS TRIGGER
@@ -46,7 +30,22 @@ BEGIN
 END;
 $$;
 
--- Trigger already exists, CREATE OR REPLACE above is sufficient
+-- ─── 2. Rename branch_kind 'headquarters' → 'warehouse' ───
+
+ALTER TABLE public.branches
+  DROP CONSTRAINT IF EXISTS branches_branch_kind_check;
+
+UPDATE public.branches
+SET branch_kind = 'warehouse'
+WHERE branch_kind = 'headquarters';
+
+ALTER TABLE public.branches
+  ADD CONSTRAINT branches_branch_kind_check
+  CHECK (branch_kind IN ('warehouse', 'branch', 'central_kitchen'));
+
+-- ─── 3. Allow multiple central_kitchen branches ───
+
+DROP INDEX IF EXISTS idx_one_active_central_kitchen_per_tenant;
 
 -- ─── 4. PO/GRN: allow warehouse + central_kitchen ───
 
