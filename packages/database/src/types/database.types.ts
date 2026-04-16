@@ -4163,15 +4163,20 @@ export type Database = {
       create_stock_transfer_draft: {
         Args: {
           p_from_branch_id: number
+          p_from_location_id?: number
           p_lines?: Json
           p_notes?: string
           p_to_branch_id: number
+          p_to_location_id?: number
           p_transfer_number: string
           p_vehicle_info?: string
         }
         Returns: Json
       }
-      create_stocktake_session: { Args: { p_branch_id: number }; Returns: Json }
+      create_stocktake_session: {
+        Args: { p_branch_id: number; p_location_id?: number }
+        Returns: Json
+      }
       create_supplier_payment: {
         Args: {
           p_amount: number
@@ -4220,6 +4225,10 @@ export type Database = {
         Returns: undefined
       }
       seed_posting_rules: { Args: { p_tenant_id: number }; Returns: undefined }
+      set_branch_kind: {
+        Args: { p_branch_id: number; p_kind?: string }
+        Returns: undefined
+      }
       set_headquarters: { Args: { p_branch_id: number }; Returns: undefined }
       stock_transfer_confirm_receive: {
         Args: { p_transfer_id: number }
@@ -4302,6 +4311,8 @@ export type Database = {
         | "waiter"
         | "chef"
         | "office"
+        | "warehouse_manager"
+        | "production_manager"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4438,6 +4449,8 @@ export const Constants = {
         "waiter",
         "chef",
         "office",
+        "warehouse_manager",
+        "production_manager",
       ],
     },
   },
