@@ -23,13 +23,6 @@ import {
 } from "@comtammatu/ui/components/dialog";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -48,7 +41,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { EmptyStatePanel, SectionCard } from "@/components/patterns";
+import { EmptyStatePanel, PageHeader, SectionCard } from "@/components/patterns";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatDateTime, formatQty, formatVND } from "../../_lib/format";
@@ -97,6 +90,26 @@ type AddIssueLineDialogProps = {
   startTransition: React.TransitionStartFunction;
 };
 
+function getIssueSurface(issueType: string) {
+  if (issueType === "kitchen_use") {
+    return {
+      eyebrow: "Van hanh chi nhanh",
+      label: "Cap bep",
+      confirmTitle: "Xac nhan cap bep?",
+      confirmAction: "Xac nhan cap bep",
+      noteLabel: "Ghi chu cap bep",
+    };
+  }
+
+  return {
+    eyebrow: "Xuat kho",
+    label: "Phieu xuat",
+    confirmTitle: "Xac nhan xuat kho?",
+    confirmAction: "Xac nhan xuat kho",
+    noteLabel: "Ghi chu phieu xuat",
+  };
+}
+
 export function IssueDetailClient({
   issueId,
   initialIssue,
@@ -117,6 +130,7 @@ export function IssueDetailClient({
   const [confirmIssueOpen, setConfirmIssueOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const isDraft = issue.status === "draft";
+  const surface = getIssueSurface(issue.issue_type);
 
   const totalAmount = useMemo(
     () => lines.reduce((sum, line) => sum + Number(line.total_cost ?? 0), 0),
@@ -193,29 +207,23 @@ export function IssueDetailClient({
           <ArrowLeft className="size-4" /> {tRoute("/inventory/issues")}
         </Link>
 
-        <Card>
-          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Phiếu xuất
-              </p>
-              <CardTitle className="text-2xl">{issue.issue_number}</CardTitle>
-              <CardDescription>
-                {`${issue.branches?.name ?? `Chi nhánh #${issue.branch_id}`} • ${issue.issued_at ? formatDateTime(issue.issued_at) : "—"}`}
-              </CardDescription>
-            </div>
+        <PageHeader
+          eyebrow={surface.eyebrow}
+          title={issue.issue_number}
+          description={`${surface.label} tai ${issue.branches?.name ?? `Chi nhanh #${issue.branch_id}`} • ${issue.issued_at ? formatDateTime(issue.issued_at) : "—"}`}
+          actions={
             <Badge variant={getInventoryStatusBadgeVariant(issue.status)}>
               {getInventoryStatusLabel(issue.status)}
             </Badge>
-          </CardHeader>
-        </Card>
+          }
+        />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            {
-              label: "Loại phiếu",
-              value: issue.issue_type,
-            },
+          {
+            label: "Nghiep vu",
+            value: surface.label,
+          },
             {
               label: "Chi nhánh",
               value: issue.branches?.name ?? `Chi nhánh #${issue.branch_id}`,
@@ -229,37 +237,35 @@ export function IssueDetailClient({
               value: `${formatVND(totalAmount)}đ`,
             },
           ].map((item) => (
-            <Card key={item.label}>
-              <CardContent className="p-4">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                  {item.label}
-                </p>
-                <p className="mt-1 text-sm font-semibold">{item.value}</p>
-              </CardContent>
-            </Card>
+            <div key={item.label} className="app-stat">
+              <p className="app-kicker">{item.label}</p>
+              <p className="mt-3 text-xl font-semibold text-foreground">
+                {item.value}
+              </p>
+            </div>
           ))}
         </div>
 
         {issue.notes ? (
           <SectionCard density="compact">
             <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Ghi chú phiếu xuất
+              {surface.noteLabel}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">{issue.notes}</p>
           </SectionCard>
         ) : null}
 
-        <Card className="overflow-hidden">
-          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h4 className="text-lg font-bold">{tTerm("ingredientsList")}</h4>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {isDraft
-                  ? "Phiếu nháp tự lưu khi thêm hoặc xóa dòng."
-                  : "Phiếu đã chốt, dữ liệu chỉ còn ở chế độ xem."}
-              </p>
-            </div>
-            {isDraft ? (
+        <SectionCard
+          title={tTerm("ingredientsList")}
+          description={
+            isDraft
+              ? "Phiếu nháp tự lưu khi thêm hoặc xóa dòng."
+              : "Phiếu đã chốt, dữ liệu chỉ còn ở chế độ xem."
+          }
+          className="overflow-hidden"
+          density="compact"
+          action={
+            isDraft ? (
               <Button
                 onClick={() => setAddDialogOpen(true)}
                 className="bg-success/10 text-success hover:bg-success/15 hover:text-success"
@@ -267,21 +273,22 @@ export function IssueDetailClient({
                 <PlusCircle className="size-4" />
                 Thêm {tTerm("ingredient", "button").toLowerCase()}
               </Button>
-            ) : null}
-          </CardHeader>
+            ) : null
+          }
+        >
 
           {lines.length === 0 ? (
             <div className="px-6 py-10">
               <EmptyStatePanel
                 title={
                   isDraft
-                    ? "Chưa có dòng nguyên liệu"
-                    : "Phiếu xuất không có dòng nguyên liệu"
+                  ? "Chưa có dòng nguyên liệu"
+                    : `${surface.label} khong co dong nguyen lieu`
                 }
                 description={
                   isDraft
-                    ? "Thêm ít nhất một dòng để xác nhận xuất kho."
-                    : "Danh sách nguyên liệu sẽ hiển thị ở đây nếu phiếu có dữ liệu."
+                    ? `Them it nhat mot dong de ${surface.confirmAction.toLowerCase()}.`
+                    : "Danh sach nguyen lieu se hien thi o day neu phieu co du lieu."
                 }
               />
             </div>
@@ -437,7 +444,7 @@ export function IssueDetailClient({
             </>
           )}
 
-          <div className="flex justify-end bg-muted/30 p-5 sm:p-6 lg:p-8">
+          <div className="mt-4 flex justify-end rounded-[1.75rem] border border-border/60 bg-muted/30 p-5 sm:p-6 lg:p-8">
             <div className="w-full max-w-sm space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Tổng số dòng:</span>
@@ -462,7 +469,7 @@ export function IssueDetailClient({
               </div>
             </div>
           </div>
-        </Card>
+        </SectionCard>
 
         {isDraft ? (
           <footer className="flex flex-col gap-4 border-t border-border py-6 md:flex-row md:items-center md:justify-between">
@@ -487,7 +494,7 @@ export function IssueDetailClient({
                 className="shadow-lg transition-all hover:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <CheckCircle className="size-5" />
-                Xác nhận xuất kho
+                {surface.confirmAction}
               </Button>
             </div>
           </footer>
@@ -507,7 +514,7 @@ export function IssueDetailClient({
       <AlertDialog open={confirmIssueOpen} onOpenChange={setConfirmIssueOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xuất kho?</AlertDialogTitle>
+            <AlertDialogTitle>{surface.confirmTitle}</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2">
                 <p>Thao tác này sẽ trừ tồn kho và không thể hoàn tác.</p>
@@ -518,14 +525,14 @@ export function IssueDetailClient({
                   >
                     {lines.map((line) => (
                       <p key={line.id}>
-                        Sẽ trừ{" "}
+                        Se tru{" "}
                         <strong>
                           {formatQty(Number(line.quantity ?? 0))} {line.unit}
                         </strong>{" "}
                         <strong>
                           {line.ingredients?.name ?? `#${line.ingredient_id}`}
                         </strong>{" "}
-                        khỏi kho <strong>{issue.branches?.name ?? "—"}</strong>.
+                        khoi kho <strong>{issue.branches?.name ?? "—"}</strong>.
                       </p>
                     ))}
                   </SectionCard>

@@ -4,13 +4,6 @@ import { useMemo, useState } from "react";
 import { Pencil, Search } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   Select,
@@ -27,6 +20,11 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import {
+  FilterBar,
+  PageHeader,
+  SectionCard,
+} from "@/components/patterns";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { formatVND } from "../_lib/format";
 import { fetchIngredients } from "../actions";
@@ -96,6 +94,11 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
     return result;
   }, [rows, category, preservation, searchQuery]);
 
+  const activeCount = rows.filter((item) => item.is_active).length;
+  const chilledCount = rows.filter(
+    (item) => item.storage_type === "refrigerated" || item.storage_type === "frozen",
+  ).length;
+
   async function reload() {
     const response = await fetchIngredients();
     if (response.success) {
@@ -115,76 +118,92 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
 
   return (
     <div className="space-y-6">
-      <Card className="border-border/70">
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Danh mục
-            </p>
-            <div className="space-y-1">
-              <CardTitle className="text-3xl">Danh mục nguyên liệu</CardTitle>
-              <CardDescription className="max-w-3xl leading-6">
-                Chuẩn hóa tên, SKU, bảo quản và ngưỡng tồn để toàn bộ nghiệp vụ
-                kho dùng chung một nguồn dữ liệu.
-              </CardDescription>
-            </div>
-          </div>
+      <PageHeader
+        eyebrow="Danh muc dung chung"
+        title="Danh mục nguyên liệu"
+        description="Chot ten, SKU, bao quan va nguong ton trong mot cua vao duy nhat de procurement, branch operations va recipe cung dung chung."
+        actions={
           <Button type="button" onClick={openCreate}>
             Tạo nguyên liệu
           </Button>
-        </CardHeader>
-      </Card>
+        }
+      />
 
-      <Card className="border-border/70">
-        <CardContent className="p-4 md:p-5">
-          <div className="grid w-full gap-3 xl:grid-cols-[minmax(0,1fr)_220px_220px_auto]">
-            <div className="flex h-11 items-center gap-3 rounded-lg border border-input bg-background px-3">
-              <Search className="size-4 shrink-0 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Tìm theo tên hoặc SKU"
-                className="h-auto border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
-              />
-            </div>
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="app-stat">
+          <p className="app-kicker">Tổng nguyên liệu</p>
+          <p className="mt-3 text-3xl font-semibold">{rows.length}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Danh mục đang phục vụ nhập hàng, kho và recipe.
+          </p>
+        </div>
+        <div className="app-stat">
+          <p className="app-kicker">Đang hoạt động</p>
+          <p className="mt-3 text-3xl font-semibold">{activeCount}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Mặt hàng đang sẵn sàng sử dụng trong vận hành.
+          </p>
+        </div>
+        <div className="app-stat">
+          <p className="app-kicker">Cần chuỗi lạnh</p>
+          <p className="mt-3 text-3xl font-semibold">{chilledCount}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Nhóm nguyên liệu đòi hỏi bảo quản lạnh hoặc đông.
+          </p>
+        </div>
+      </div>
 
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="h-11">
-                <SelectValue placeholder="Tất cả loại" />
-              </SelectTrigger>
-              <SelectContent>
-                {categoryOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <FilterBar className="gap-3">
+        <div className="relative min-w-[16rem] flex-1">
+          <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Tìm theo tên hoặc SKU"
+            className="pl-10"
+          />
+        </div>
 
-            <Select value={preservation} onValueChange={setPreservation}>
-              <SelectTrigger className="h-11">
-                <SelectValue placeholder="Mọi bảo quản" />
-              </SelectTrigger>
-              <SelectContent>
-                {preservationOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <Select value={category} onValueChange={setCategory}>
+          <SelectTrigger className="min-w-[13rem]">
+            <SelectValue placeholder="Tất cả loại" />
+          </SelectTrigger>
+          <SelectContent>
+            {categoryOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-            <div className="flex h-11 items-center justify-end text-sm text-muted-foreground">
-              {filtered.length} / {rows.length} nguyên liệu
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        <Select value={preservation} onValueChange={setPreservation}>
+          <SelectTrigger className="min-w-[13rem]">
+            <SelectValue placeholder="Mọi bảo quản" />
+          </SelectTrigger>
+          <SelectContent>
+            {preservationOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-      <div className="overflow-x-auto rounded-lg border border-border/70 bg-card">
+        <Badge variant="outline" className="rounded-full">
+          {filtered.length} / {rows.length} nguyên liệu
+        </Badge>
+      </FilterBar>
+
+      <SectionCard
+        title="Bảng nguyên liệu"
+        description="Tên chuẩn, SKU, bảo quản, ngưỡng tồn và trạng thái sử dụng."
+        className="overflow-hidden"
+        density="compact"
+      >
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/20 hover:bg-muted/20">
+            <TableRow>
               <TableHead className="min-w-52">Nguyên liệu</TableHead>
               <TableHead className="min-w-28">SKU</TableHead>
               <TableHead className="min-w-28">Đơn vị</TableHead>
@@ -219,15 +238,13 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
               const isActive = item.is_active;
 
               return (
-                <TableRow key={item.id} className="hover:bg-muted/20">
+                <TableRow key={item.id}>
                   <TableCell>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <p className="font-semibold">{item.name}</p>
                         {item.category ? (
-                          <Badge className={categoryTone}>
-                            {item.category}
-                          </Badge>
+                          <Badge className={categoryTone}>{item.category}</Badge>
                         ) : null}
                       </div>
                       <p className="text-sm text-muted-foreground">
@@ -277,7 +294,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
             })}
           </TableBody>
         </Table>
-      </div>
+      </SectionCard>
 
       <IngredientDialog
         open={dialogOpen}

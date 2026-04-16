@@ -55,11 +55,7 @@ export function PosSidebarTabs({
 >) {
   return (
     <div className="border-b border-border/60 px-3 py-3">
-      <div
-        role="tablist"
-        aria-label="POS sidebar"
-        className="grid grid-cols-2 gap-2"
-      >
+      <div role="tablist" aria-label="POS sidebar" className="app-dock grid grid-cols-2 gap-2 p-2">
         <button
           type="button"
           role="tab"
@@ -68,7 +64,7 @@ export function PosSidebarTabs({
             "min-h-11 min-w-11 flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all",
             !showOrders
               ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
-              : "border-border/70 bg-background text-muted-foreground hover:text-foreground",
+              : "border-border/70 bg-background/80 text-muted-foreground hover:text-foreground",
           )}
           onClick={() => onShowOrdersChange(false)}
         >
@@ -87,7 +83,7 @@ export function PosSidebarTabs({
             "min-h-11 min-w-11 flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all",
             showOrders
               ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
-              : "border-border/70 bg-background text-muted-foreground hover:text-foreground",
+              : "border-border/70 bg-background/80 text-muted-foreground hover:text-foreground",
           )}
           onClick={() => {
             onShowOrdersChange(true);

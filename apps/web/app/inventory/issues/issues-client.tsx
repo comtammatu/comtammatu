@@ -16,13 +16,6 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
-import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -46,9 +39,9 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { FilterBar, PageHeader, SectionCard } from "@/components/patterns";
 import { SearchableSelect } from "../_components/searchable-select";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
-import { tRoute } from "../_lib/dictionary";
 import {
   getInventoryStatusBadgeVariant,
   getInventoryStatusLabel,
@@ -148,145 +141,134 @@ export function IssuesClient({
   return (
     <>
       <div className="space-y-6">
-        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <Card className="flex-1">
-            <CardHeader>
-              <CardTitle className="text-2xl">
-                {tRoute("/inventory/issues")}
-              </CardTitle>
-              <CardDescription>
-                Tiêu hao, hư hỏng, cấp phát nội bộ.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-          <div className="flex items-center gap-3">
-            <Button type="button" variant="outline">
-              <FileDown className="size-4" />
-              Xuất báo cáo
-            </Button>
-            <Button type="button" onClick={() => setCreateOpen(true)}>
-              <Plus className="size-4" />
-              Tạo phiếu mới
-            </Button>
+        <PageHeader
+          eyebrow="Vận hành chi nhánh"
+          title="Cấp bếp & xuất kho"
+          description="Ưu tiên cấp phát từ kho chi nhánh xuống bếp, rồi mới theo dõi tiêu hao và các phiếu write-off bất thường."
+          actions={
+            <>
+              <Button type="button" variant="outline">
+                <FileDown className="size-4" />
+                Xuất báo cáo
+              </Button>
+              <Button type="button" onClick={() => setCreateOpen(true)}>
+                <Plus className="size-4" />
+                Tạo phiếu cấp bếp
+              </Button>
+            </>
+          }
+        />
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="app-stat">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex size-11 items-center justify-center rounded-full bg-warning/12 text-warning">
+                <ClipboardList className="size-5" />
+              </div>
+              <Badge variant="secondary">Tháng này</Badge>
+            </div>
+            <p className="mt-4 text-3xl font-semibold tracking-tight text-foreground">
+              {issues.length}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Tổng phiếu đã xuất trong hệ thống.
+            </p>
+          </div>
+
+          <div className="app-stat">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex size-11 items-center justify-center rounded-full bg-success/12 text-success">
+                <ChefHat className="size-5" />
+              </div>
+              <Badge variant="secondary">Cấp phát bếp</Badge>
+            </div>
+            <p className="mt-4 text-3xl font-semibold tracking-tight text-success">
+              {kitchenUseCount}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {issues.length > 0
+                ? `Chiếm ${Math.round((kitchenUseCount / issues.length) * 100)}% tỉ lệ xuất`
+                : "Chưa có dữ liệu để so sánh tỉ trọng."}
+            </p>
+          </div>
+
+          <div className="app-stat">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex size-11 items-center justify-center rounded-full bg-destructive/12 text-destructive">
+                <AlertTriangle className="size-5" />
+              </div>
+              <Badge variant="secondary">Hư hỏng</Badge>
+            </div>
+            <p className="mt-4 text-3xl font-semibold tracking-tight text-destructive">
+              {writeOffCount}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Số phiếu cần được đọc kỹ để tối ưu quy trình hao hụt.
+            </p>
+          </div>
+
+          <div className="app-stat">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <Clock className="size-5" />
+              </div>
+              <Badge variant="secondary">Chờ duyệt</Badge>
+            </div>
+            <p className="mt-4 text-3xl font-semibold tracking-tight text-foreground">
+              {String(draftCount).padStart(2, "0")}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Phiếu nháp hiện có sẵn cho bước rà soát và chốt xuất.
+            </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-          <Card>
-            <CardContent className="p-6">
-              <div className="mb-4 flex items-start justify-between">
-                <div className="flex size-10 items-center justify-center rounded-xl bg-warning/12">
-                  <ClipboardList className="size-5 text-warning" />
-                </div>
-                <Badge variant="secondary">Tháng này</Badge>
-              </div>
-              <h3 className="text-3xl font-black tracking-tight">
-                {issues.length}
-              </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Tổng phiếu đã xuất
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="mb-4 flex items-start justify-between">
-                <div className="flex size-10 items-center justify-center rounded-xl bg-success/12">
-                  <ChefHat className="size-5 text-success" />
-                </div>
-                <Badge variant="secondary">Cấp phát bếp</Badge>
-              </div>
-              <h3 className="text-3xl font-black tracking-tight text-success">
-                {kitchenUseCount}
-              </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {issues.length > 0
-                  ? `Chiếm ${Math.round((kitchenUseCount / issues.length) * 100)}% tỉ lệ xuất`
-                  : "Chưa có dữ liệu"}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="mb-4 flex items-start justify-between">
-                <div className="flex size-10 items-center justify-center rounded-xl bg-destructive/12">
-                  <AlertTriangle className="size-5 text-destructive" />
-                </div>
-                <Badge variant="secondary">Hư hỏng</Badge>
-              </div>
-              <h3 className="text-3xl font-black tracking-tight text-destructive">
-                {writeOffCount}
-              </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Cần tối ưu quy trình
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="mb-4 flex items-start justify-between">
-                <div className="flex size-10 items-center justify-center rounded-xl bg-muted">
-                  <Clock className="size-5 text-muted-foreground" />
-                </div>
-                <Badge variant="secondary">Chờ duyệt</Badge>
-              </div>
-              <h3 className="text-3xl font-black tracking-tight">
-                {String(draftCount).padStart(2, "0")}
-              </h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Phiếu nháp hiện có
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="bg-muted">
-          <CardContent className="flex items-center justify-between gap-4 px-6 py-4">
-            <div className="flex items-center gap-6">
-              <div className="flex flex-col gap-1">
-                <label className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Trạng thái
-                </label>
-                <SearchableSelect
-                  options={[
-                    { value: "all", label: "Tất cả trạng thái" },
-                    { value: "draft", label: "Nháp" },
-                    { value: "confirmed", label: "Đã xác nhận" },
-                    { value: "cancelled", label: "Đã huỷ" },
-                  ]}
-                  value={activeStatus}
-                  onValueChange={setActiveStatus}
-                  placeholder="Tất cả trạng thái"
-                  searchPlaceholder="Tìm trạng thái..."
-                  variant="ghost"
-                  className="text-foreground"
-                />
-              </div>
-              <div className="h-8 w-px bg-border/40" />
-              <div className="flex flex-col gap-1">
-                <label className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Loại xuất
-                </label>
-                <SearchableSelect
-                  options={[
-                    { value: "all", label: "Tất cả loại xuất" },
-                    ...ISSUE_TYPES.map((option) => ({
-                      value: option.value,
-                      label: option.label,
-                    })),
-                  ]}
-                  value={activeType}
-                  onValueChange={setActiveType}
-                  placeholder="Tất cả loại xuất"
-                  searchPlaceholder="Tìm loại xuất..."
-                  variant="ghost"
-                  className="text-foreground"
-                />
-              </div>
+        <FilterBar className="justify-between gap-3">
+          <div className="flex flex-1 flex-wrap items-end gap-3">
+            <div className="grid gap-1">
+              <label className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Trạng thái
+              </label>
+              <SearchableSelect
+                options={[
+                  { value: "all", label: "Tất cả trạng thái" },
+                  { value: "draft", label: "Nháp" },
+                  { value: "confirmed", label: "Đã xác nhận" },
+                  { value: "cancelled", label: "Đã huỷ" },
+                ]}
+                value={activeStatus}
+                onValueChange={setActiveStatus}
+                placeholder="Tất cả trạng thái"
+                searchPlaceholder="Tìm trạng thái..."
+                variant="ghost"
+                className="min-w-[13rem] text-foreground"
+              />
             </div>
+            <div className="grid gap-1">
+              <label className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Loại xuất
+              </label>
+              <SearchableSelect
+                options={[
+                  { value: "all", label: "Tất cả loại xuất" },
+                  ...ISSUE_TYPES.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                  })),
+                ]}
+                value={activeType}
+                onValueChange={setActiveType}
+                placeholder="Tất cả loại xuất"
+                searchPlaceholder="Tìm loại xuất..."
+                variant="ghost"
+                className="min-w-[13rem] text-foreground"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="rounded-full">
+              {filtered.length} / {issues.length} phiếu
+            </Badge>
             <Button
               type="button"
               variant="link"
@@ -298,34 +280,25 @@ export function IssuesClient({
               <FilterX className="size-4" />
               Xoá bộ lọc
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </FilterBar>
 
-        <Card className="overflow-hidden">
+        <SectionCard
+          title="Danh sách phiếu xuất"
+          description="Tất cả chứng từ xuất kho đã tạo, sẵn sàng để rà soát, xác nhận hoặc mở chi tiết."
+          className="overflow-hidden"
+          density="compact"
+        >
           <Table>
             <TableHeader>
-              <TableRow className="bg-muted/40">
-                <TableHead className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Mã phiếu
-                </TableHead>
-                <TableHead className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Loại xuất
-                </TableHead>
-                <TableHead className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Chi nhánh
-                </TableHead>
-                <TableHead className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Ngày tạo
-                </TableHead>
-                <TableHead className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Người tạo
-                </TableHead>
-                <TableHead className="px-6 py-5 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Trạng thái
-                </TableHead>
-                <TableHead className="px-6 py-5 text-right whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Thao tác
-                </TableHead>
+              <TableRow>
+                <TableHead>Mã phiếu</TableHead>
+                <TableHead>Loại xuất</TableHead>
+                <TableHead>Chi nhánh</TableHead>
+                <TableHead>Ngày tạo</TableHead>
+                <TableHead>Người tạo</TableHead>
+                <TableHead>Trạng thái</TableHead>
+                <TableHead className="text-right">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -337,33 +310,30 @@ export function IssuesClient({
                 />
               )}
               {filtered.map((item) => (
-                <TableRow
-                  key={item.id}
-                  className="group border-border transition-colors"
-                >
-                  <TableCell className="px-6 py-5">
+                <TableRow key={item.id}>
+                  <TableCell>
                     <Link
                       href={`/inventory/issues/${item.id}`}
-                      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm text-sm font-bold hover:underline"
+                      className="rounded-sm text-sm font-semibold text-primary transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     >
                       {item.code}
                     </Link>
                   </TableCell>
-                  <TableCell className="px-6 py-5">
+                  <TableCell>
                     <span className="text-sm font-medium">
                       {ISSUE_TYPES.find((option) => option.value === item.type)
                         ?.label ?? item.type}
                     </span>
                   </TableCell>
-                  <TableCell className="px-6 py-5 text-sm font-medium text-muted-foreground">
+                  <TableCell className="text-sm text-muted-foreground">
                     {item.branchName}
                   </TableCell>
-                  <TableCell className="px-6 py-5 text-sm text-muted-foreground">
+                  <TableCell className="text-sm text-muted-foreground">
                     {item.date}
                   </TableCell>
-                  <TableCell className="px-6 py-5">
+                  <TableCell>
                     <div className="flex items-center gap-2">
-                      <div className="flex size-6 items-center justify-center rounded-full bg-muted text-xs font-bold">
+                      <div className="flex size-8 items-center justify-center rounded-full border border-border/60 bg-muted/50 text-xs font-bold">
                         {item.createdBy
                           .split(" ")
                           .map((word) => word[0])
@@ -375,19 +345,17 @@ export function IssuesClient({
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-5">
-                    <Badge
-                      variant={getInventoryStatusBadgeVariant(item.status)}
-                    >
+                  <TableCell>
+                    <Badge variant={getInventoryStatusBadgeVariant(item.status)}>
                       {getInventoryStatusLabel(item.status)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="px-6 py-5 text-right">
+                  <TableCell className="text-right">
                     <Link
                       href={`/inventory/issues/${item.id}`}
-                      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background inline-flex rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      className="inline-flex rounded-full border border-border/60 bg-background/80 p-2 text-muted-foreground transition hover:border-primary/30 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     >
-                      <MoreVertical className="size-5" />
+                      <MoreVertical className="size-4" />
                     </Link>
                   </TableCell>
                 </TableRow>
@@ -395,7 +363,7 @@ export function IssuesClient({
             </TableBody>
           </Table>
 
-          <div className="flex items-center justify-between border-t border-border px-6 py-4">
+          <div className="mt-4 flex flex-col gap-3 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-xs font-medium text-muted-foreground">
               Hiển thị {filtered.length} / {issues.length} phiếu
             </span>
@@ -409,7 +377,7 @@ export function IssuesClient({
               </Button>
             </div>
           </div>
-        </Card>
+        </SectionCard>
       </div>
 
       <Dialog
@@ -468,7 +436,7 @@ export function IssuesClient({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background w-full rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none"
+                className="w-full rounded-[1.5rem] border border-input bg-background px-4 py-3 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 placeholder="Nhập ghi chú cho phiếu xuất"
               />
             </div>

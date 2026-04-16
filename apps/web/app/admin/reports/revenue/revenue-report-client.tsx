@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { FilterBar, SectionCard } from "@/components/patterns";
+import { FilterBar, PageHeader, SectionCard } from "@/components/patterns";
 import {
   Table,
   TableBody,
@@ -57,74 +57,134 @@ export function RevenueReportClient({
   const totalCash = rows.reduce((s, r) => s + (r.cash_revenue ?? 0), 0);
   const totalVietqr = rows.reduce((s, r) => s + (r.vietqr_revenue ?? 0), 0);
   const totalMomo = rows.reduce((s, r) => s + (r.momo_revenue ?? 0), 0);
+  const averageRevenue =
+    rows.length > 0 ? Math.round(totalRevenue / rows.length) : 0;
 
   return (
     <div className="space-y-4">
-      <FilterBar>
-        <div className="grid w-full gap-1.5 sm:w-44 sm:flex-none">
+      <PageHeader
+        eyebrow="Finance Pulse"
+        title="Doanh thu theo ngày"
+        description="Tổng hợp doanh thu, số đơn và cơ cấu thanh toán theo từng ngày để theo dõi nhịp bán hàng toàn chi nhánh."
+        actions={
+          <Button
+            onClick={handleFilter}
+            disabled={isPending}
+            className="min-h-11 px-5"
+          >
+            {isPending ? "Đang tải..." : "Làm mới báo cáo"}
+          </Button>
+        }
+      />
+
+      <FilterBar className="items-end gap-3">
+        <div className="grid min-w-[11rem] flex-1 gap-1.5 sm:max-w-44 sm:flex-none">
           <Label className="text-xs">Từ ngày</Label>
           <Input
             type="date"
-            className="w-full sm:w-40"
             value={startDate}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               setStartDate(e.target.value)
             }
           />
         </div>
-        <div className="grid w-full gap-1.5 sm:w-44 sm:flex-none">
+        <div className="grid min-w-[11rem] flex-1 gap-1.5 sm:max-w-44 sm:flex-none">
           <Label className="text-xs">Đến ngày</Label>
           <Input
             type="date"
-            className="w-full sm:w-40"
             value={endDate}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               setEndDate(e.target.value)
             }
           />
         </div>
-        <Button
-          onClick={handleFilter}
-          disabled={isPending}
-          size="sm"
-          className="w-full sm:w-auto"
-        >
-          {isPending ? "Đang tải..." : "Lọc"}
-        </Button>
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        <div className="flex min-w-[11rem] flex-1 items-center justify-between gap-3 rounded-[1.75rem] border border-border/60 bg-background/75 px-4 py-3 sm:max-w-sm">
+          <div className="space-y-0.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              Khoảng ngày
+            </p>
+            <p className="text-sm font-medium text-foreground">
+              {startDate} - {endDate}
+            </p>
+          </div>
+          {error ? (
+            <p className="text-right text-sm text-destructive">{error}</p>
+          ) : (
+            <p className="text-right text-sm text-muted-foreground">
+              {rows.length} ngày có dữ liệu
+            </p>
+          )}
+        </div>
       </FilterBar>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <SectionCard density="compact">
-          <p className="text-xs text-muted-foreground">Tổng doanh thu</p>
-          <p className="mt-1 text-xl font-bold tabular-nums">
+        <div className="app-stat">
+          <p className="app-kicker">Tổng doanh thu</p>
+          <p className="mt-3 text-3xl font-semibold tabular-nums text-foreground">
             {totalRevenue.toLocaleString("vi-VN")} ₫
           </p>
-        </SectionCard>
-        <SectionCard density="compact">
-          <p className="text-xs text-muted-foreground">Số đơn hàng</p>
-          <p className="mt-1 text-xl font-bold tabular-nums">
+          <p className="mt-2 text-sm text-muted-foreground">
+            Tổng giá trị đã ghi nhận trong kỳ lọc.
+          </p>
+        </div>
+        <div className="app-stat">
+          <p className="app-kicker">Số đơn hàng</p>
+          <p className="mt-3 text-3xl font-semibold tabular-nums text-foreground">
             {totalOrders.toLocaleString("vi-VN")}
           </p>
-        </SectionCard>
-        <SectionCard density="compact">
-          <p className="text-xs text-muted-foreground">Thuế VAT</p>
-          <p className="mt-1 text-xl font-bold tabular-nums">
+          <p className="mt-2 text-sm text-muted-foreground">
+            Khối lượng đơn đã hoàn tất trong giai đoạn chọn.
+          </p>
+        </div>
+        <div className="app-stat">
+          <p className="app-kicker">Thuế VAT</p>
+          <p className="mt-3 text-3xl font-semibold tabular-nums text-foreground">
             {totalTax.toLocaleString("vi-VN")} ₫
           </p>
-        </SectionCard>
-        <SectionCard density="compact">
-          <p className="text-xs text-muted-foreground">DT trung bình / ngày</p>
-          <p className="mt-1 text-xl font-bold tabular-nums">
+          <p className="mt-2 text-sm text-muted-foreground">
+            Phần thuế phát sinh để đối soát hóa đơn và dòng tiền.
+          </p>
+        </div>
+        <div className="app-stat">
+          <p className="app-kicker">Trung bình mỗi ngày</p>
+          <p className="mt-3 text-3xl font-semibold tabular-nums text-foreground">
             {rows.length > 0
-              ? Math.round(totalRevenue / rows.length).toLocaleString("vi-VN")
+              ? averageRevenue.toLocaleString("vi-VN")
               : "—"}{" "}
             ₫
           </p>
-        </SectionCard>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Nhịp doanh thu bình quân để so trend theo tuần.
+          </p>
+        </div>
       </div>
 
-      <SectionCard className="overflow-hidden" density="compact">
+      <SectionCard
+        title="Bảng doanh thu chi tiết"
+        description="So sánh từng ngày theo tổng doanh thu, cơ cấu thanh toán và tiền thuế."
+        className="overflow-hidden"
+        density="compact"
+      >
+        <div className="mb-4 grid gap-3 rounded-[1.75rem] border border-border/60 bg-background/70 p-4 md:grid-cols-3">
+          <div className="space-y-1">
+            <p className="app-kicker">Tiền mặt</p>
+            <p className="text-lg font-semibold tabular-nums">
+              {totalCash.toLocaleString("vi-VN")} ₫
+            </p>
+          </div>
+          <div className="space-y-1">
+            <p className="app-kicker">VietQR</p>
+            <p className="text-lg font-semibold tabular-nums">
+              {totalVietqr.toLocaleString("vi-VN")} ₫
+            </p>
+          </div>
+          <div className="space-y-1">
+            <p className="app-kicker">MoMo</p>
+            <p className="text-lg font-semibold tabular-nums">
+              {totalMomo.toLocaleString("vi-VN")} ₫
+            </p>
+          </div>
+        </div>
         {rows.length === 0 ? (
           <div className="px-4 py-10 text-center text-muted-foreground">
             Không có dữ liệu trong khoảng thời gian này.
@@ -135,7 +195,7 @@ export function RevenueReportClient({
           {rows.map((r) => (
             <div
               key={r.date}
-              className="rounded-lg border border-border/70 bg-background p-4"
+              className="app-subpanel p-4"
             >
               <div className="flex items-center justify-between gap-3">
                 <p className="font-medium tabular-nums">{r.date}</p>

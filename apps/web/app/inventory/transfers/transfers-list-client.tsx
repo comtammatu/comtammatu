@@ -7,13 +7,6 @@ import { ArrowRight, MoveRight, Plus, Search } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   Table,
@@ -25,6 +18,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { FilterBar, PageHeader, SectionCard } from "@/components/patterns";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
 import { fetchStockTransfers } from "../transfer-actions";
 import { CreateTransferDialog } from "./create-transfer-dialog";
@@ -103,7 +97,8 @@ export function TransfersListClient({
 
   const hq = branches.find((b) => b.is_headquarters);
   const operational = branches.filter((b) => !b.is_headquarters);
-  const canCreate = Boolean(hq && operational.length >= 1);
+  const isBranchManager = userRole === "branch_manager";
+  const canCreate = !isBranchManager && Boolean(hq && operational.length >= 1);
   const branchLabelById = useMemo(
     () =>
       new Map(
@@ -146,29 +141,32 @@ export function TransfersListClient({
 
   return (
     <>
-      <Card className="border-border/70">
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-2xl">Luân chuyển nội bộ</CardTitle>
-            <CardDescription>
-              Trụ sở ↔ kho vận hành hoặc giữa các kho vận hành. Hàng từ NCC chỉ
-              nhập tại Trụ sở (PO/GRN).
-            </CardDescription>
-          </div>
-          <Button
-            type="button"
-            onClick={() => setOpen(true)}
-            disabled={!canCreate}
-          >
-            <Plus className="mr-2 size-4" />
-            Tạo phiếu
-          </Button>
-        </CardHeader>
-      </Card>
+      <PageHeader
+        eyebrow="Transfer Monitor"
+        title="Luân chuyển nội bộ"
+        description={
+          isBranchManager
+            ? "Theo dõi hàng đến chi nhánh, xác nhận thực nhận và giữ liền mạch với bước cấp bếp."
+            : "Điều phối hàng giữa Trụ sở, bếp trung tâm và các kho vận hành. Hàng từ NCC vẫn chỉ nhập tại Trụ sở (PO/GRN)."
+        }
+        actions={
+          canCreate ? (
+            <Button type="button" onClick={() => setOpen(true)}>
+              <Plus className="mr-2 size-4" />
+              Tạo phiếu
+            </Button>
+          ) : null
+        }
+      />
 
-      {!canCreate && (
+      {!canCreate && !isBranchManager && (
         <p className="text-sm text-warning">
           Cần cấu hình Trụ sở và ít nhất một kho vận hành hoạt động.
+        </p>
+      )}
+      {isBranchManager && (
+        <p className="rounded-2xl border border-info/20 bg-info/5 px-4 py-3 text-sm text-muted-foreground">
+          Vai trò chi nhánh chỉ theo dõi và xác nhận hàng đến. Tạo mới inter-site transfer vẫn thuộc tuyến HQ hoặc bếp trung tâm trong pilot hiện tại.
         </p>
       )}
 
@@ -213,22 +211,24 @@ export function TransfersListClient({
         )}
       </div>
 
-      {/* Table card */}
-      <Card className="overflow-hidden rounded-lg">
-        <CardContent className="p-4 md:p-5">
-          {/* Search bar */}
-          <div className="-m-4 flex items-center gap-3 border-b bg-muted/20 px-4 py-3 md:-m-5 md:px-5">
-            <Search className="size-4 shrink-0 text-muted-foreground" />
-            <Input
-              placeholder="Tìm số phiếu hoặc tên kho…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
-            />
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {filtered.length} / {rows.length}
-            </span>
-          </div>
+      <SectionCard
+        title="Danh sách phiếu luân chuyển"
+        description="Giữ liền mạch hành trình xuất, vận chuyển, nhận và kiểm nhận giữa các site."
+        className="overflow-hidden rounded-lg"
+        density="compact"
+      >
+        <FilterBar className="mb-4 gap-3">
+          <Search className="size-4 shrink-0 text-muted-foreground" />
+          <Input
+            placeholder="Tìm số phiếu hoặc tên kho…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+          />
+          <span className="shrink-0 text-xs text-muted-foreground">
+            {filtered.length} / {rows.length}
+          </span>
+        </FilterBar>
 
           {/* Mobile card layout */}
           {isMobile ? (
@@ -243,7 +243,9 @@ export function TransfersListClient({
                   <p className="mt-1 text-xs text-muted-foreground">
                     {search || statusFilter
                       ? "Thử từ khóa khác"
-                      : 'Nhấn "Tạo phiếu" để tạo phiếu luân chuyển đầu tiên'}
+                      : isBranchManager
+                        ? "Phiếu điều chuyển đến sẽ xuất hiện tại đây để bạn xác nhận nhận hàng."
+                        : 'Nhấn "Tạo phiếu" để tạo phiếu luân chuyển đầu tiên'}
                   </p>
                 </div>
               )}
@@ -256,7 +258,7 @@ export function TransfersListClient({
                   <Link
                     key={r.id}
                     href={`${basePath}/${r.id}`}
-                    className="block px-4 py-3 hover:bg-muted/20 transition-colors"
+                    className="app-subpanel block px-4 py-3 transition-colors hover:border-primary/20"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-mono text-sm font-medium">
@@ -323,7 +325,9 @@ export function TransfersListClient({
                     description={
                       search || statusFilter
                         ? "Thử từ khóa khác"
-                        : 'Nhấn "Tạo phiếu" để tạo phiếu luân chuyển đầu tiên'
+                        : isBranchManager
+                          ? "Phiếu điều chuyển đến sẽ xuất hiện tại đây để bạn xác nhận nhận hàng."
+                          : 'Nhấn "Tạo phiếu" để tạo phiếu luân chuyển đầu tiên'
                     }
                   />
                 )}
@@ -414,8 +418,7 @@ export function TransfersListClient({
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
+      </SectionCard>
 
       <CreateTransferDialog
         open={open}

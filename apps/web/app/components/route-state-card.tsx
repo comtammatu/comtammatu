@@ -42,22 +42,22 @@ export function RouteStateCard({
     "secondary";
 
   return (
-    <Card className={className}>
+    <Card className={cn("app-panel", className)}>
       <CardContent className="p-6 sm:p-8">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-4">
               {icon ? (
-                <div className="flex size-12 items-center justify-center rounded-full border bg-muted text-primary">
+                <div className="flex size-14 items-center justify-center rounded-full border border-border/70 bg-background/80 text-primary shadow-sm">
                   {icon}
                 </div>
               ) : null}
               <div className="space-y-1.5">
-                <h2 className="text-2xl font-semibold tracking-tight">
+                <h2 className="font-heading text-3xl font-semibold tracking-tight">
                   {title}
                 </h2>
                 {description ? (
-                  <p className="max-w-2xl text-sm text-muted-foreground">
+                  <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
                     {description}
                   </p>
                 ) : null}
@@ -79,6 +79,7 @@ export function RouteStateCard({
                   <li key={`${step.label}-${index}`}>
                     <Card
                       className={cn(
+                        "app-subpanel",
                         stepVariant === "success" &&
                           "border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10",
                         stepVariant === "warning" &&

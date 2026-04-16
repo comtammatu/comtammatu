@@ -468,7 +468,7 @@ export function KdsBoard({
 
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
-      <div className="border-b border-border/60 bg-sidebar px-3 py-3 md:px-4">
+      <div className="border-b border-border/60 px-3 py-3 md:px-4">
         <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-4">
           <div className="flex items-center gap-2">
             <EmployeePortalBackControl className="h-8 rounded-full px-2 text-xs" />
@@ -476,12 +476,12 @@ export function KdsBoard({
           </div>
 
           <div className="grid gap-4 xl:grid-cols-4">
-            <div className="rounded-xl border border-sidebar-border bg-sidebar-accent text-white shadow-sm p-5 xl:col-span-3">
+            <div className="app-panel p-5 xl:col-span-3">
               <div className="relative space-y-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="space-y-2">
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Điều phối line bếp</p>
-                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                    <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground">
                       Món cần nhận, đang làm, đã xong.
                     </h1>
                     <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
@@ -586,20 +586,20 @@ export function KdsBoard({
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-              <div className="rounded-lg border border-sidebar-border bg-sidebar-accent shadow-sm p-4">
+              <div className="app-subpanel p-4">
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Đơn hiển thị</p>
                 <p className="mt-2 text-2xl font-semibold tabular-nums">
                   {displayOrders.length}
                 </p>
               </div>
-              <div className="rounded-lg border border-sidebar-border bg-sidebar-accent shadow-sm p-4">
+              <div className="app-subpanel p-4">
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Món còn việc</p>
                 <p className="mt-2 flex items-center gap-2 text-2xl font-semibold tabular-nums">
                   <Flame className="size-5 text-warning" />
                   {totalActiveCount}
                 </p>
               </div>
-              <div className="rounded-lg border border-sidebar-border bg-sidebar-accent shadow-sm p-4">
+              <div className="app-subpanel p-4">
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Order lâu nhất</p>
                     <p className="mt-2 flex items-center gap-2 text-2xl font-semibold tabular-nums">
                       <PackageCheck className="size-5 text-info" />
@@ -611,7 +611,7 @@ export function KdsBoard({
         </div>
       </div>
 
-      <div className="border-b border-border/40 bg-sidebar px-3 py-3 md:px-4">
+      <div className="border-b border-border/40 px-3 py-3 md:px-4">
         <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {stationSummary.map((station) => (
@@ -622,7 +622,7 @@ export function KdsBoard({
                   "transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border p-4 text-left shadow-sm",
                   activeStationId === station.stationId
                     ? "border-primary/30 bg-primary/10"
-                    : "border-border/60 bg-sidebar-accent",
+                    : "border-border/60 bg-background/75",
                 )}
                 onClick={() =>
                   replaceQuery({
@@ -726,9 +726,9 @@ export function KdsBoard({
         </div>
       </div>
 
-      <div className="border-b border-border/30 bg-secondary/45 px-3 py-2 md:px-4">
+      <div className="border-b border-border/30 bg-secondary/35 px-3 py-2 md:px-4">
         <div className="mx-auto w-full max-w-screen-2xl">
-          <div className="rounded-lg border border-sidebar-border bg-sidebar-accent text-white shadow-sm px-3 py-2.5">
+          <div className="app-subpanel px-3 py-2.5">
           <div className="relative flex shrink-0 flex-nowrap items-center gap-2 overflow-x-auto md:flex-wrap">
             <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
               <Filter className="size-4 shrink-0" aria-hidden />

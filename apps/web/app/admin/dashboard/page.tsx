@@ -59,17 +59,17 @@ function StatCard({ title, value, change, icon: Icon }: StatCardProps) {
   const isPositive = change >= 0;
 
   return (
-    <Card className="rounded-lg border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+    <Card className="app-subpanel transition-all hover:-translate-y-0.5 hover:shadow-md">
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}
         </CardTitle>
-        <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
           <Icon className="size-5 text-primary" />
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-bold tracking-tight tabular-nums">
+        <p className="font-heading text-3xl font-bold tracking-tight tabular-nums">
           {value}
         </p>
         <StatusBadge
@@ -98,11 +98,11 @@ function SurfaceCard({
   return (
     <Link
       href={href}
-      className="group flex h-full flex-col justify-between rounded-xl border border-border/70 bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-md"
+      className="app-subpanel group flex h-full flex-col justify-between p-5 transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-md"
     >
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex size-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
             <Icon className="size-5" />
           </div>
           <StatusBadge tone="neutral" className="rounded-full px-3 py-1">
@@ -248,6 +248,7 @@ export default async function DashboardPage() {
       <PageHeader
         eyebrow={APP_COPY_VI.adminFoundation}
         title="Admin"
+        description="Buồng lái quản trị đã chuyển sang bố cục mới. Tại đây, các tín hiệu bán hàng và lối vào phân hệ được gom lại theo nhịp điều hành thay vì theo khối cũ."
         actions={
           <>
             <Button asChild variant="outline" size="sm">
@@ -284,15 +285,15 @@ export default async function DashboardPage() {
       </div>
 
       {foundationCards.length > 0 ? (
-        <SectionCard>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight">Nền tảng</h2>
-            </div>
+        <SectionCard
+          title="Nền tảng"
+          description="Những lớp cấu hình và vận hành lõi đang quyết định nhịp toàn hệ thống."
+          action={
             <StatusBadge tone="neutral" className="rounded-full px-3 py-1.5">
               {foundationCards.length} mục
             </StatusBadge>
-          </div>
+          }
+        >
           <div className="grid gap-4 lg:grid-cols-2">
             {foundationCards.map((card) => (
               <SurfaceCard key={card.href} {...card} />
@@ -302,17 +303,15 @@ export default async function DashboardPage() {
       ) : null}
 
       {domainCards.length > 0 ? (
-        <SectionCard>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight">
-                Phân hệ ERP
-              </h2>
-            </div>
+        <SectionCard
+          title="Phân hệ ERP"
+          description="Các tuyến thao tác chính để đi tiếp sang kho, nhân sự, POS, KDS và thực đơn."
+          action={
             <StatusBadge tone="info" className="rounded-full px-3 py-1.5">
               {domainCards.length} phân hệ
             </StatusBadge>
-          </div>
+          }
+        >
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {domainCards.map((card) => (
               <SurfaceCard key={card.href} {...card} />
@@ -322,18 +321,16 @@ export default async function DashboardPage() {
       ) : null}
 
       {stats.recentOrders.length > 0 ? (
-        <SectionCard>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight">
-                Tín hiệu bán hàng gần đây
-              </h2>
-            </div>
+        <SectionCard
+          title="Tín hiệu bán hàng gần đây"
+          description="Luồng đơn mới nhất để đọc nhanh các nhịp bán hàng đang diễn ra."
+          action={
             <StatusBadge tone="success" className="rounded-full px-3 py-1.5">
               Tín hiệu
             </StatusBadge>
-          </div>
-          <Card className="overflow-hidden border-border/70 bg-card shadow-none">
+          }
+        >
+          <Card className="app-subpanel overflow-hidden shadow-none">
             <CardContent className="p-0">
               <ul className="divide-y divide-border/60">
                 {stats.recentOrders.map((order) => (

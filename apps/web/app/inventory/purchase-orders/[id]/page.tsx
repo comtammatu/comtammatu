@@ -55,6 +55,7 @@ export default async function PODetailPage({
   const totalAmount = items.reduce((sum, i) => sum + i.total, 0);
 
   const po: PODetail = {
+    id: Number(id),
     code: d.po.po_number ?? "",
     status: d.po.status ?? "draft",
     supplier: supplier?.name ?? "—",

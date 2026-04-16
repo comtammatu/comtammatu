@@ -6,6 +6,7 @@ import {
   extractClaims,
   ROLE_LABEL_VI,
 } from "@comtammatu/shared/auth";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { Badge } from "@comtammatu/ui/components/badge";
 
 export async function MobileHeader() {
@@ -33,18 +34,34 @@ export async function MobileHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b bg-background/95 pt-[max(0px,env(safe-area-inset-top,0px))] backdrop-blur-sm">
-      <div className="mx-auto flex min-h-14 w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
-        <div className="min-w-0 space-y-1">
-          <Badge variant="secondary">
-            <Sparkles className="mr-1 size-3" />
-            Cổng nhân viên
-          </Badge>
-          <p className="truncate text-sm font-semibold">
-            {branchName ?? "Không gian cá nhân"}
-          </p>
-        </div>
-        <Badge variant="outline">{roleLabel}</Badge>
+    <header className="sticky top-0 z-30 px-3 py-3 backdrop-blur sm:px-4 lg:px-6">
+      <div className="mx-auto max-w-6xl">
+        <Card className="app-panel">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-3">
+                <Badge variant="secondary">
+                  <Sparkles className="size-3.5" />
+                  Cổng nhân viên
+                </Badge>
+                <div className="space-y-1">
+                  <p className="font-heading text-2xl font-semibold tracking-tight">
+                    {branchName ?? "Không gian cá nhân"}
+                  </p>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    Bắt đầu ca làm, xem lịch, chấm công và mở đúng workspace theo vai trò hiện tại.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">{roleLabel}</Badge>
+                <Badge variant={branchName ? "success" : "warning"}>
+                  {branchName ? "Đã gắn chi nhánh" : "Chưa gắn chi nhánh"}
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </header>
   );

@@ -71,6 +71,7 @@ export default async function GRNDetailPage({
   const totalAmount = items.reduce((sum, i) => sum + i.cost * i.actual, 0);
 
   const grn: GRNDetail = {
+    id: Number(id),
     code: d.grn.grn_number ?? "",
     poCode: po?.po_number ?? "",
     poId: po?.id,

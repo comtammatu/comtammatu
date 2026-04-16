@@ -150,17 +150,19 @@ export function StockClient({
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="app-panel">
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1.5">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Kho hàng
+              Van hanh chi nhanh
             </p>
             <div className="space-y-1">
-              <CardTitle className="text-3xl">Quản lý tồn kho</CardTitle>
+              <CardTitle className="font-heading text-3xl">
+                Ton kho chi nhanh
+              </CardTitle>
               <CardDescription className="max-w-3xl leading-6">
-                Xem nhanh giá trị tồn, ngưỡng cảnh báo và điều chỉnh số lượng
-                ngay tại một mặt bàn vận hành.
+                Theo doi ton hien tai sau khi nhan transfer, cap bep va kiem ke
+                de branch manager nhin thay ngay viec can xu ly trong ca.
               </CardDescription>
             </div>
           </div>
@@ -176,12 +178,12 @@ export function StockClient({
         </CardHeader>
       </Card>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
-        <Card className="bg-primary text-primary-foreground">
+      <div className="grid gap-4 xl:grid-cols-3">
+        <Card className="app-panel bg-primary text-primary-foreground">
           <CardHeader>
             <div className="flex items-center gap-2 text-primary-foreground/80">
               <Wallet className="size-4" />
-              <CardTitle className="text-base">Tổng giá trị tồn kho</CardTitle>
+              <CardTitle className="text-base">Gia tri ton hien tai</CardTitle>
             </div>
             <CardDescription className="text-primary-foreground/70">
               Cập nhật gần nhất: {updatedAtLabel}
@@ -192,7 +194,7 @@ export function StockClient({
               {formatVND(totalValue)}đ
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg bg-primary-foreground/10 p-4">
+              <div className="rounded-2xl bg-primary-foreground/10 p-4">
                 <p className="text-xs uppercase tracking-widest text-primary-foreground/70">
                   Mặt hàng
                 </p>
@@ -200,7 +202,7 @@ export function StockClient({
                   {ingredients.length}
                 </p>
               </div>
-              <div className="rounded-lg bg-primary-foreground/10 p-4">
+              <div className="rounded-2xl bg-primary-foreground/10 p-4">
                 <p className="text-xs uppercase tracking-widest text-primary-foreground/70">
                   Còn hàng
                 </p>
@@ -210,11 +212,11 @@ export function StockClient({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="app-panel">
           <CardHeader>
             <CardTitle className="text-base">Phân loại nhanh</CardTitle>
             <CardDescription>
-              Lọc tồn kho theo nhóm nguyên liệu đang vận hành.
+              Tach nhanh theo nhom nguyen lieu dang van hanh tai chi nhanh.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
@@ -232,14 +234,14 @@ export function StockClient({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="app-panel">
           <CardHeader>
             <div className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="size-4" />
-              <CardTitle className="text-base">Cảnh báo tồn kho</CardTitle>
+              <CardTitle className="text-base">Canh bao can xu ly</CardTitle>
             </div>
             <CardDescription>
-              Số nguyên liệu đang thấp hơn ngưỡng an toàn.
+              Cac mat hang dang cham nguong an toan hoac da het ton.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -254,18 +256,18 @@ export function StockClient({
         </Card>
       </div>
 
-      <Card>
+      <Card className="app-panel">
         <CardHeader className="gap-4">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
-              <CardTitle>Danh sách tồn kho</CardTitle>
+              <CardTitle>Danh sach ton kho chi nhanh</CardTitle>
               <CardDescription>
-                Kết hợp số lượng hiện tại, WAC, ngưỡng min/max và thời điểm kiểm
-                kê gần nhất.
+                Ket hop ton hien tai, WAC, nguong min/max va moc kiem ke gan
+                nhat de branch flow khong bi dut mach.
               </CardDescription>
             </div>
             <div className="grid gap-3 xl:grid-cols-[minmax(0,320px)_auto]">
-              <div className="flex h-11 items-center gap-3 rounded-lg border border-input bg-background px-3">
+              <div className="app-subpanel flex h-11 items-center gap-3 px-3">
                 <Search className="size-4 shrink-0 text-muted-foreground" />
                 <Input
                   value={searchQuery}
@@ -301,7 +303,7 @@ export function StockClient({
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border">
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/20 hover:bg-muted/20">

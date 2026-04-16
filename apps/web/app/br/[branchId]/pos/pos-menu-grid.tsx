@@ -81,12 +81,12 @@ export function PosMenuGrid({
 
   return (
     <>
-      <div className="border-b border-border/60 bg-background/75 px-3 py-3 md:px-4">
+      <div className="border-b border-border/60 px-3 py-3 md:px-4">
         <div className="space-y-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Khu thực đơn</p>
-              <h2 className="text-xl font-semibold tracking-tight text-foreground">
+              <h2 className="font-heading text-3xl font-semibold tracking-tight text-foreground">
                 {activeZoneLabel}
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -95,7 +95,7 @@ export function PosMenuGrid({
               </p>
             </div>
             <div className="grid gap-2 sm:grid-cols-3">
-              <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
+              <div className="app-subpanel px-4 py-3 transition-all hover:-translate-y-0.5 hover:shadow-md">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Danh mục
                 </p>
@@ -103,7 +103,7 @@ export function PosMenuGrid({
                   {categoriesInActiveZone.length}
                 </p>
               </div>
-              <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-primary/15 bg-primary/8 px-4 py-3 shadow-sm">
+              <div className="app-subpanel border-primary/15 bg-primary/8 px-4 py-3 transition-all hover:-translate-y-0.5 hover:shadow-md">
                 <p className="text-xs font-semibold uppercase tracking-wide text-primary">
                   Giỏ hiện tại
                 </p>
@@ -111,7 +111,7 @@ export function PosMenuGrid({
                   {cartQuantity} món
                 </p>
               </div>
-              <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-success/15 bg-success/10 px-4 py-3 shadow-sm">
+              <div className="app-subpanel border-success/15 bg-success/10 px-4 py-3 transition-all hover:-translate-y-0.5 hover:shadow-md">
                 <p className="text-xs font-semibold uppercase tracking-wide text-success">
                   Tạm tính
                 </p>
@@ -138,7 +138,7 @@ export function PosMenuGrid({
                     "min-h-11 min-w-11 flex h-11 shrink-0 cursor-pointer items-center rounded-lg border px-4 text-sm font-semibold transition-all",
                     effectiveMenuZone === z
                       ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
-                      : "border-border/70 bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
+                      : "border-border/70 bg-background/80 text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                   onClick={() => setActiveMenuZone(z)}
                 >
@@ -165,7 +165,7 @@ export function PosMenuGrid({
                       "min-h-11 min-w-11 flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-all",
                       activeCategoryId === cat.id
                         ? "border-primary/25 bg-primary/10 text-primary font-semibold shadow-sm"
-                        : "border-border/70 bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
+                        : "border-border/70 bg-background/80 text-muted-foreground hover:bg-muted hover:text-foreground",
                     )}
                     onClick={() => setActiveCategoryId(cat.id)}
                   >
@@ -200,7 +200,7 @@ export function PosMenuGrid({
               <button
                 key={item.id}
                 type="button"
-                className="transition-all hover:-translate-y-0.5 hover:shadow-md min-h-14 min-w-14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background flex min-h-40 cursor-pointer flex-col rounded-xl border border-border bg-card p-4 text-left shadow-sm hover:border-primary/25 active:scale-[0.985]"
+                className="app-subpanel min-h-14 min-w-14 flex min-h-40 cursor-pointer flex-col p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.985]"
                 onClick={() => onItemTap(item)}
               >
                 <div className="flex items-start justify-between gap-3">

@@ -80,15 +80,19 @@ export default async function OrdersPage() {
       <PageHeader
         eyebrow="Điều phối giao dịch"
         title="Đơn hàng"
+        description="Màn điều phối đơn và hoàn tiền đã được dựng lại theo cùng nhịp visual mới, ưu tiên đọc trạng thái và thao tác nhanh hơn bố cục cũ."
         actions={
           <Button asChild variant="outline" size="sm">
             <Link href="/admin/reports">Báo cáo</Link>
           </Button>
         }
       />
-      <SectionCard>
+      <SectionCard
+        title="Điều phối giao dịch"
+        description="Theo dõi luồng đơn bán và hoàn tiền trong cùng một mặt bằng thao tác."
+      >
         <Tabs defaultValue="orders">
-          <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto rounded-lg bg-muted/60 p-2 shadow-sm">
+          <TabsList className="app-dock h-auto w-full justify-start gap-2 overflow-x-auto p-2">
             <TabsTrigger
               value="orders"
               className="rounded-full px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"

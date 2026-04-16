@@ -222,7 +222,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
   return (
     <Card
       className={cn(
-        "transition-all hover:-translate-y-0.5 hover:shadow-md flex flex-col overflow-hidden border border-l-2 bg-sidebar-accent text-white shadow-sm",
+        "app-panel flex flex-col overflow-hidden border border-l-2 transition-all hover:-translate-y-0.5 hover:shadow-md",
         borderClass,
         getCardLeftAccent(overallStatus, elapsed),
       )}
@@ -272,7 +272,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                 ? "border-destructive/40 bg-destructive/15 text-destructive animate-pulse"
                 : elapsed >= 5
                   ? "border-warning/40 bg-warning/15 text-warning"
-                  : "border-border/50 bg-card text-muted-foreground",
+                  : "border-border/50 bg-background/80 text-muted-foreground",
           )}
         >
           <span className="text-2xl font-black leading-none tabular-nums">
@@ -287,7 +287,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
       <div className="border-b border-border/30 px-3 py-3 md:px-4">
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-lg border border-border/60 bg-sidebar-accent px-3 py-2">
+            <div className="app-subpanel px-3 py-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Chờ
               </p>
@@ -295,7 +295,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                 {pendingCount}
               </p>
             </div>
-            <div className="rounded-lg border border-warning/20 bg-warning/10 px-3 py-2">
+            <div className="app-subpanel border-warning/20 bg-warning/10 px-3 py-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-warning">
                 Đang làm
               </p>
@@ -303,7 +303,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                 {preparingCount}
               </p>
             </div>
-            <div className="rounded-lg border border-success/20 bg-success/10 px-3 py-2">
+            <div className="app-subpanel border-success/20 bg-success/10 px-3 py-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-success">
                 Sẵn sàng
               </p>

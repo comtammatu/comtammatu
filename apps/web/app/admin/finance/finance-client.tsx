@@ -23,7 +23,7 @@ export function FinanceClient({
 }: FinanceClientProps) {
   return (
     <Tabs defaultValue="revenue" className="space-y-4">
-      <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto rounded-lg border border-border/70 bg-muted/40 p-2">
+      <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto p-2">
         <TabsTrigger value="revenue">Doanh thu</TabsTrigger>
         <TabsTrigger value="invoices">
           Hóa đơn điện tử ({invoices.length})

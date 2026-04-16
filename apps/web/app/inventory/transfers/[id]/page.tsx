@@ -1,3 +1,5 @@
+import { createClient } from "@comtammatu/database/supabase/server";
+import { extractClaims } from "@comtammatu/shared/auth";
 import { notFound } from "next/navigation";
 import { fetchStockTransferDetail } from "../../transfer-actions";
 import { formatDateTime } from "../../_lib/format";
@@ -12,9 +14,17 @@ export default async function TransferDetailPage({
   const { id } = await params;
   const res = await fetchStockTransferDetail(Number(id));
   if (!res.success || !res.data) notFound();
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const claims = session?.user
+    ? extractClaims(session.user.app_metadata)
+    : null;
 
   const d = res.data as {
     transfer: {
+      id: number;
       transfer_number: string;
       status: string;
       from_branch_id: number;
@@ -26,6 +36,7 @@ export default async function TransferDetailPage({
       vehicle_info: string | null;
     };
     lines: Array<{
+      ingredient_id: number;
       quantity: number;
       quantity_received: number | null;
       unit: string;
@@ -43,6 +54,7 @@ export default async function TransferDetailPage({
     const cost = Number(l.unit_cost_at_ship ?? 0);
     const qty = Number(l.quantity ?? 0);
     return {
+      ingredientId: l.ingredient_id ?? ing?.id ?? 0,
       name: ing?.name ?? "—",
       sku: "",
       qty,
@@ -57,8 +69,11 @@ export default async function TransferDetailPage({
   const subtotal = items.reduce((sum, i) => sum + i.total, 0);
 
   const transfer: TransferDetail = {
+    id: d.transfer.id ?? Number(id),
     code: d.transfer.transfer_number ?? "",
     status: d.transfer.status ?? "draft",
+    fromBranchId: d.transfer.from_branch_id,
+    toBranchId: d.transfer.to_branch_id,
     fromBranch: `Chi nhánh #${d.transfer.from_branch_id}`,
     toBranch: `Chi nhánh #${d.transfer.to_branch_id}`,
     createdBy: "—",
@@ -74,5 +89,11 @@ export default async function TransferDetailPage({
     items,
   };
 
-  return <TransferDetailClient transfer={transfer} />;
+  return (
+    <TransferDetailClient
+      transfer={transfer}
+      userRole={claims?.user_role ?? "branch_manager"}
+      userBranchId={claims?.branch_id ?? null}
+    />
+  );
 }

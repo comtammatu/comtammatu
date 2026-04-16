@@ -13,13 +13,6 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
-import {
   Table,
   TableBody,
   TableCell,
@@ -39,6 +32,7 @@ import {
 } from "@comtammatu/ui/components/alert-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
+import { FilterBar, PageHeader, SectionCard } from "@/components/patterns";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import {
   getInventoryStatusBadgeVariant,
@@ -115,22 +109,21 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <Card className="flex-1 border-border/70">
-          <CardHeader>
-            <CardTitle className="text-2xl">Danh sách Nhà cung cấp</CardTitle>
-            <CardDescription>Đối tác cung ứng.</CardDescription>
-          </CardHeader>
-        </Card>
-        <Button
-          type="button"
-          onClick={openCreate}
-          className="min-h-11 rounded-full px-6 font-bold shadow-lg"
-        >
-          <Plus className="size-4" />
-          Thêm nhà cung cấp
-        </Button>
-      </div>
+      <PageHeader
+        eyebrow="Danh muc doi tac"
+        title="Nha cung cap"
+        description="Quan ly doi tac cung ung trong cung mot cua vao danh muc, tach khoi settings de procurement hub bot roi."
+        actions={
+          <Button
+            type="button"
+            onClick={openCreate}
+            className="min-h-11 rounded-full px-6 font-bold shadow-lg"
+          >
+            <Plus className="size-4" />
+            Them nha cung cap
+          </Button>
+        }
+      />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -158,8 +151,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             value: String(suspended).padStart(2, "0"),
           },
         ].map((card) => (
-          <Card key={card.label} className="shadow-sm">
-            <CardContent className="p-6">
+          <div key={card.label} className="app-stat">
               <div className="mb-4 flex items-start justify-between">
                 <div
                   className={cn(
@@ -183,15 +175,18 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
                 {card.value}
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">{card.label}</p>
-            </CardContent>
-          </Card>
+          </div>
         ))}
       </div>
 
       {/* Data Table */}
-      <Card className="shadow-sm">
-        {/* Search bar */}
-        <div className="flex flex-wrap items-center gap-3 border-b border-border px-6 py-4">
+      <SectionCard
+        title="Danh sách nhà cung cấp"
+        description="Theo dõi đối tác cung ứng, trạng thái hoạt động và thông tin liên hệ trong một cửa vào duy nhất."
+        className="overflow-hidden"
+        density="compact"
+      >
+        <FilterBar className="mb-4 gap-3">
           <Search className="size-4 shrink-0 text-muted-foreground" />
           <input
             type="text"
@@ -203,7 +198,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
           <span className="shrink-0 text-xs font-medium text-muted-foreground">
             {filtered.length} / {rows.length}
           </span>
-        </div>
+        </FilterBar>
 
         <Table>
           <TableHeader>
@@ -329,7 +324,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             </span>
           </div>
         </div>
-      </Card>
+      </SectionCard>
 
       {/* Create / Edit Dialog */}
       <SupplierDialog

@@ -1,10 +1,11 @@
 "use client";
 
+import { useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, XCircle, CheckCircle } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Table,
   TableBody,
@@ -14,15 +15,22 @@ import {
   TableRow,
   TableFooter,
 } from "@comtammatu/ui/components/table";
+import { toast } from "@comtammatu/ui/components/sonner";
+import { PageHeader, SectionCard } from "@/components/patterns";
 import { TimelineStepper } from "../../_components/timeline-stepper";
 import { formatVND } from "../../_lib/format";
 import { tRoute } from "../../_lib/dictionary";
+import {
+  createGrnFromPo,
+  updatePurchaseOrderStatus,
+} from "../../procurement-actions";
 import {
   getInventoryStatusBadgeVariant,
   getInventoryStatusLabel,
 } from "../../_lib/ui";
 
 export type PODetail = {
+  id: number;
   code: string;
   status: string;
   supplier: string;
@@ -64,11 +72,55 @@ function VarianceBadge({
 }
 
 export function PODetailClient({ po }: { po: PODetail }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const supplierInfoAvailable = [
     po.supplierInfo.address,
     po.supplierInfo.contact,
     po.supplierInfo.payment,
   ].some((value) => value && value !== "—");
+  const canSendOrCancel = po.status === "draft";
+  const canCreateGrn =
+    po.status === "sent" || po.status === "partially_received";
+
+  function handleSendPo() {
+    startTransition(async () => {
+      const res = await updatePurchaseOrderStatus(po.id, "sent");
+      if (!res.success) {
+        toast.error(res.error ?? "Không thể gửi PO.");
+        return;
+      }
+      toast.success("Đã gửi PO cho nhà cung cấp.");
+      router.refresh();
+    });
+  }
+
+  function handleCancelPo() {
+    startTransition(async () => {
+      const res = await updatePurchaseOrderStatus(po.id, "cancelled");
+      if (!res.success) {
+        toast.error(res.error ?? "Không thể hủy PO.");
+        return;
+      }
+      toast.success("Đã hủy PO.");
+      router.refresh();
+    });
+  }
+
+  function handleCreateGrn() {
+    startTransition(async () => {
+      const res = await createGrnFromPo(po.id);
+      if (!res.success || !res.data) {
+        toast.error(res.error ?? "Không thể tạo GRN từ PO.");
+        return;
+      }
+
+      const created = res.data as { id: number };
+      toast.success("Đã tạo GRN từ PO.");
+      router.push(`/inventory/grn/${created.id}`);
+      router.refresh();
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -80,69 +132,36 @@ export function PODetailClient({ po }: { po: PODetail }) {
         {tRoute("/inventory/purchase-orders", "heading")}
       </Link>
 
-      {/* Header Identity Card */}
-      <Card className="relative bg-muted shadow-sm">
-        <CardContent className="p-5 sm:p-6 lg:p-8">
-          <div className="absolute right-5 top-5 sm:right-6 sm:top-6 lg:right-8 lg:top-8">
-            <Badge variant={getInventoryStatusBadgeVariant(po.status)}>
-              {getInventoryStatusLabel(po.status)}
-            </Badge>
-          </div>
+      <PageHeader
+        eyebrow="Nhập hàng HQ"
+        title={po.code}
+        description={`${po.supplier} • ${po.date} • Gửi NCC ${po.sentAt} • Bước mở đầu của hub procurement`}
+        actions={
+          <Badge variant={getInventoryStatusBadgeVariant(po.status)}>
+            {getInventoryStatusLabel(po.status)}
+          </Badge>
+        }
+      />
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8 lg:gap-12">
-            <div className="space-y-4">
-              <div>
-                <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                  Mã PO
-                </p>
-                <h3 className="text-3xl font-black tracking-tight">{po.code}</h3>
-              </div>
-              <div>
-                <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                  Nhà cung cấp
-                </p>
-                <p className="font-semibold">{po.supplier}</p>
-              </div>
-            </div>
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="app-stat">
+          <p className="app-kicker">Nhà cung cấp</p>
+          <p className="mt-3 text-xl font-semibold">{po.supplier}</p>
+        </div>
+        <div className="app-stat">
+          <p className="app-kicker">Tổng tiền hàng</p>
+          <p className="mt-3 text-xl font-semibold">{formatVND(po.total)} VNĐ</p>
+        </div>
+        <div className="app-stat">
+          <p className="app-kicker">Tổng cộng</p>
+          <p className="mt-3 text-2xl font-semibold text-primary">
+            {formatVND(po.grandTotal)} <span className="text-xs font-normal">VNĐ</span>
+          </p>
+        </div>
+      </div>
 
-            <div className="space-y-4 border-border md:border-l md:pl-8 lg:pl-12">
-              <div>
-                <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                  Ngày tạo
-                </p>
-                <p className="font-semibold">{po.date}</p>
-              </div>
-              <div>
-                <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                  Ngày gửi
-                </p>
-                <p className="font-semibold">{po.sentAt}</p>
-              </div>
-            </div>
-
-            <div className="space-y-4 border-border md:border-l md:pl-8 lg:pl-12">
-              <div>
-                <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                  Tổng tiền hàng
-                </p>
-                <p className="text-sm font-semibold">{formatVND(po.total)} VNĐ</p>
-              </div>
-              <div>
-                <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                  Tổng cộng (incl. VAT)
-                </p>
-                <p className="text-2xl font-black text-primary">
-                  {formatVND(po.grandTotal)}{" "}
-                  <span className="text-xs font-normal">VNĐ</span>
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-sm">
-        <CardContent className="flex justify-center py-6">
+      <SectionCard density="compact">
+        <div className="flex justify-center py-2">
           <TimelineStepper
             steps={[
               { label: "Nháp", date: po.date, completed: true },
@@ -151,28 +170,27 @@ export function PODetailClient({ po }: { po: PODetail }) {
                 date: po.sentAt,
                 completed: po.status !== "draft",
               },
-              { label: "Đang vận chuyển", active: po.status === "sent" },
-              { label: "Đã nhận" },
+              { label: "Chờ kiểm nhận", active: po.status === "sent" },
+              { label: "Đã có GRN" },
             ]}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <Card className="shadow-sm">
-            <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-              <h4 className="text-lg font-bold">Chi tiết danh mục hàng</h4>
-              <span className="text-xs font-medium text-muted-foreground">
-                {po.items.length} mặt hàng
-              </span>
-            </div>
+          <SectionCard
+            title="Danh mục đặt mua"
+            description={`${po.items.length} mặt hàng trong đơn mua này trước khi chuyển sang bước GRN.`}
+            className="overflow-hidden"
+            density="compact"
+          >
 
-            <CardContent className="space-y-3 p-4 md:hidden">
+            <div className="space-y-3 md:hidden">
               {po.items.map((item) => (
                 <div
                   key={item.sku}
-                  className="rounded-lg border border-border bg-muted/20 p-4"
+                  className="app-subpanel p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -203,7 +221,7 @@ export function PODetailClient({ po }: { po: PODetail }) {
                   </div>
                 </div>
               ))}
-            </CardContent>
+            </div>
 
             <div className="hidden md:block">
               <Table>
@@ -294,15 +312,12 @@ export function PODetailClient({ po }: { po: PODetail }) {
                 </TableFooter>
               </Table>
             </div>
-          </Card>
+          </SectionCard>
         </div>
 
         <div className="space-y-4">
-          <Card className="shadow-sm">
-            <div className="border-b border-border p-6">
-              <h4 className="text-sm font-bold">Tóm tắt đơn mua</h4>
-            </div>
-            <CardContent className="space-y-3 p-6 text-sm">
+          <SectionCard title="Tóm tắt đơn mua" density="compact">
+            <div className="space-y-3 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">Số mặt hàng</span>
                 <span className="font-semibold">{po.items.length}</span>
@@ -321,15 +336,12 @@ export function PODetailClient({ po }: { po: PODetail }) {
                   {formatVND(po.grandTotal)}đ
                 </p>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm">
-            <div className="border-b border-border p-6">
-              <h4 className="text-sm font-bold">Thông tin NCC</h4>
             </div>
+          </SectionCard>
+
+          <SectionCard title="Thông tin NCC" density="compact">
             {supplierInfoAvailable ? (
-              <CardContent className="space-y-3 p-6 text-sm">
+              <div className="space-y-3 text-sm">
                 <div>
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">
                     Địa chỉ xuất hóa đơn
@@ -348,13 +360,13 @@ export function PODetailClient({ po }: { po: PODetail }) {
                   </p>
                   <p className="mt-1 font-medium">{po.supplierInfo.payment}</p>
                 </div>
-              </CardContent>
+              </div>
             ) : (
-              <CardContent className="p-6 text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground">
                 Chưa có thêm thông tin nhà cung cấp trong đơn mua này.
-              </CardContent>
+              </div>
             )}
-          </Card>
+          </SectionCard>
         </div>
       </div>
 
@@ -362,17 +374,21 @@ export function PODetailClient({ po }: { po: PODetail }) {
         <Button
           type="button"
           variant="ghost"
+          disabled={isPending || !canSendOrCancel}
           className="min-h-11 rounded-full px-6 font-bold text-destructive"
+          onClick={handleCancelPo}
         >
           <XCircle className="size-5" />
           Hủy PO
         </Button>
         <Button
           type="button"
+          disabled={isPending || (!canSendOrCancel && !canCreateGrn)}
           className="min-h-11 rounded-full px-10 font-bold shadow-lg"
+          onClick={canSendOrCancel ? handleSendPo : handleCreateGrn}
         >
           <CheckCircle className="size-5" />
-          Tạo Phiếu Nhập kho (GRN)
+          {canSendOrCancel ? "Gửi PO cho NCC" : "Sang bước tạo GRN"}
         </Button>
       </footer>
     </div>

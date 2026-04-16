@@ -22,10 +22,10 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 pb-[max(0.5rem,env(safe-area-inset-bottom,0.5rem))] backdrop-blur-sm"
+      className="fixed bottom-0 left-0 right-0 z-40 px-3 pb-3 sm:px-4 lg:px-6"
       aria-label="Điều hướng chính"
     >
-      <div className="mx-auto flex max-w-6xl items-stretch gap-1.5 px-3 py-2 sm:px-4 lg:px-6">
+      <div className="safe-bottom mx-auto flex max-w-6xl items-stretch gap-1.5 rounded-3xl border border-border/70 bg-background/92 p-2 shadow-sm backdrop-blur-xl">
         {NAV_ITEMS.map((item) => {
           const active = isActive(pathname, item.href, item.exact);
           const Icon = item.icon;
@@ -34,8 +34,8 @@ export function BottomNav() {
               key={item.href}
               asChild
               variant={active ? "default" : "ghost"}
-              size="sm"
-              className="h-auto flex-1 flex-col gap-1 py-2 text-xs"
+              size="lg"
+              className="h-auto flex-1 flex-col gap-1 rounded-2xl py-2"
             >
               <Link href={item.href} aria-current={active ? "page" : undefined}>
                 <Icon className="size-5" strokeWidth={active ? 2.4 : 2} />

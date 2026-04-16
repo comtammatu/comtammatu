@@ -1,13 +1,11 @@
 "use client";
 
+import { useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-} from "@comtammatu/ui/components/card";
-import { SectionCard } from "@/components/patterns";
+import { PageHeader, SectionCard } from "@/components/patterns";
 import {
   ArrowLeft,
   CheckCircle,
@@ -23,7 +21,9 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { toast } from "@comtammatu/ui/components/sonner";
 import { formatVND } from "../../_lib/format";
+import { confirmGrn } from "../../procurement-actions";
 import { tRoute } from "../../_lib/dictionary";
 import {
   getInventoryStatusBadgeVariant,
@@ -31,6 +31,7 @@ import {
 } from "../../_lib/ui";
 
 export type GRNDetail = {
+  id: number;
   code: string;
   poCode: string;
   poId?: number;
@@ -54,8 +55,23 @@ export type GRNDetail = {
 };
 
 export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const qcPassed = grn.items.filter((i) => i.status === "pass").length;
   const qcWarning = grn.items.filter((i) => i.status === "warning").length;
+  const canConfirm = grn.status === "draft";
+
+  function handleConfirmGrn() {
+    startTransition(async () => {
+      const res = await confirmGrn(grn.id);
+      if (!res.success) {
+        toast.error(res.error ?? "Không thể chốt nhập kho.");
+        return;
+      }
+      toast.success("Đã chốt nhập kho.");
+      router.refresh();
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -66,91 +82,63 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
         <ArrowLeft className="size-4" /> {tRoute("/inventory/grn", "heading")}
       </Link>
 
-      {/* Header Identity Card */}
-      <Card className="relative bg-muted">
-        <CardContent className="p-5 sm:p-6 lg:p-8">
-          <div className="absolute right-5 top-5 sm:right-6 sm:top-6 lg:right-8 lg:top-8">
-            <Badge variant={getInventoryStatusBadgeVariant(grn.status)}>
-              {getInventoryStatusLabel(grn.status)}
-            </Badge>
+      <PageHeader
+        eyebrow="Nhập hàng HQ"
+        title={grn.code}
+        description={`${grn.supplier} • ${grn.date} • Bước kiểm nhận sau PO`}
+        actions={
+          <Badge variant={getInventoryStatusBadgeVariant(grn.status)}>
+            {getInventoryStatusLabel(grn.status)}
+          </Badge>
+        }
+      />
+
+      <div className="grid gap-3 md:grid-cols-4">
+        <div className="app-stat">
+          <p className="app-kicker">PO liên kết</p>
+          <div className="mt-3 text-lg font-semibold">
+            {grn.poCode && grn.poId ? (
+              <Link
+                href={`/inventory/purchase-orders/${grn.poId}`}
+                className="text-primary hover:underline"
+              >
+                {grn.poCode}
+              </Link>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
           </div>
-
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8 lg:gap-12">
-            <div className="space-y-4">
-              <div>
-                <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                  Mã phiếu nhập
-                </p>
-                <h3 className="text-3xl font-black tracking-tight">{grn.code}</h3>
-              </div>
-              <div>
-                <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                  Mã PO
-                </p>
-                {grn.poCode && grn.poId ? (
-                  <Link
-                    href={`/inventory/purchase-orders/${grn.poId}`}
-                    className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm font-semibold text-primary hover:underline"
-                  >
-                    {grn.poCode}
-                  </Link>
-                ) : (
-                  <span className="text-muted-foreground">—</span>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-4 border-border md:border-l md:pl-8 lg:pl-12">
-              <div>
-                <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                  Nhà cung cấp
-                </p>
-                <p className="font-semibold">{grn.supplier}</p>
-              </div>
-              <div>
-                <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                  Ngày nhập
-                </p>
-                <p className="font-semibold">{grn.date}</p>
-              </div>
-            </div>
-
-            <div className="space-y-4 border-border md:border-l md:pl-8 lg:pl-12">
-              <div>
-                <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                  Tổng giá trị nhập
-                </p>
-                <p className="text-2xl font-black text-primary">
-                  {formatVND(grn.total)}{" "}
-                  <span className="text-xs font-normal">VNĐ</span>
-                </p>
-              </div>
-              <div>
-                <p className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-                  Thuế (VAT)
-                </p>
-                <p className="font-semibold">{formatVND(grn.tax)} VNĐ</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="app-stat">
+          <p className="app-kicker">Nhà cung cấp</p>
+          <p className="mt-3 text-lg font-semibold">{grn.supplier}</p>
+        </div>
+        <div className="app-stat">
+          <p className="app-kicker">Tổng giá trị nhập</p>
+          <p className="mt-3 text-xl font-semibold text-primary">
+            {formatVND(grn.total)} VNĐ
+          </p>
+        </div>
+        <div className="app-stat">
+          <p className="app-kicker">Thuế (VAT)</p>
+          <p className="mt-3 text-xl font-semibold">{formatVND(grn.tax)} VNĐ</p>
+        </div>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <Card className="overflow-hidden">
-            <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-              <h4 className="text-lg font-bold">Danh sách mặt hàng nhập</h4>
-              <span className="text-xs font-medium text-muted-foreground">
-                {grn.items.length} mặt hàng
-              </span>
-            </div>
+          <SectionCard
+            title="Danh sách mặt hàng kiểm nhận"
+            description={`${grn.items.length} mặt hàng trong phiếu nhận này trước khi chốt nhập kho.`}
+            className="overflow-hidden"
+            density="compact"
+          >
 
             <div className="space-y-3 p-4 md:hidden">
               {grn.items.map((item) => (
                 <div
                   key={item.sku || item.name}
-                  className="rounded-lg border border-border bg-muted/20 p-4"
+                  className="app-subpanel p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -274,7 +262,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
                 </TableBody>
               </Table>
             </div>
-          </Card>
+          </SectionCard>
         </div>
 
         {/* Sidebar -- 1/3 */}
@@ -339,16 +327,19 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
           type="button"
           variant="ghost"
           className="justify-center text-destructive hover:bg-destructive/8 hover:text-destructive"
+          disabled
         >
           <X className="size-5" />
           Hủy bỏ
         </Button>
         <Button
           type="button"
+          disabled={isPending || !canConfirm}
           className="justify-center shadow-lg transition-transform hover:scale-[0.98]"
+          onClick={handleConfirmGrn}
         >
           <CheckCircle className="size-5" />
-          Xác nhận nhập kho
+          Chốt nhập kho
         </Button>
       </footer>
     </div>

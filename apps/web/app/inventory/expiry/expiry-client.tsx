@@ -13,14 +13,6 @@ import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
-import { tStatus } from "../_lib/dictionary";
-import {
   Table,
   TableBody,
   TableCell,
@@ -28,6 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { PageHeader, SectionCard } from "@/components/patterns";
+import { tStatus } from "../_lib/dictionary";
 
 export type ExpiryAlertRow = {
   id: number;
@@ -64,85 +58,57 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <Card className="flex-1 border-border/70">
-          <CardHeader>
-            <CardTitle className="text-2xl">Hạn sử dụng</CardTitle>
-            <CardDescription>
-              Theo dõi lô gần quá hạn, quá hạn và ưu tiên xử lý trong kho.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-        <Button
-          type="button"
-          variant="destructive"
-          className="min-h-11 shrink-0 whitespace-nowrap rounded-full px-5 py-2.5 font-bold"
-        >
-          <Trash2 className="size-4 shrink-0" />
-          Hủy tất cả hàng đã hết hạn
-        </Button>
+      <PageHeader
+        eyebrow="Shelf Life Radar"
+        title="Hạn sử dụng"
+        description="Theo dõi lô gần quá hạn, quá hạn và ưu tiên xử lý trong kho theo cùng một nhịp điều phối mới."
+        actions={
+          <Button type="button" variant="destructive" className="min-h-11 px-5">
+            <Trash2 className="size-4" />
+            Hủy tất cả hàng đã hết hạn
+          </Button>
+        }
+      />
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="app-stat">
+          <div className="flex size-11 items-center justify-center rounded-full bg-destructive/12 text-destructive">
+            <AlertOctagon className="size-5" />
+          </div>
+          <p className="mt-4 text-3xl font-semibold text-destructive">
+            {String(expiredCount).padStart(2, "0")}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Mặt hàng đã hết hạn cần khóa xử lý ngay.
+          </p>
+        </div>
+
+        <div className="app-stat">
+          <div className="flex size-11 items-center justify-center rounded-full bg-primary/12 text-primary">
+            <AlertTriangle className="size-5" />
+          </div>
+          <p className="mt-4 text-3xl font-semibold text-primary">
+            {String(criticalCount).padStart(2, "0")}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Hàng hóa sẽ chạm hạn trong 3 ngày tới.
+          </p>
+        </div>
+
+        <div className="app-stat">
+          <div className="flex size-11 items-center justify-center rounded-full bg-warning/12 text-warning">
+            <Clock className="size-5" />
+          </div>
+          <p className="mt-4 text-3xl font-semibold text-warning">
+            {String(warningCount).padStart(2, "0")}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Nhóm cần chuẩn bị kế hoạch xoay vòng trong 7 ngày tới.
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <Card>
-          <CardContent className="p-6">
-            <div className="mb-4 flex items-start justify-between">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-destructive/12">
-                <AlertOctagon className="size-5 text-destructive" />
-              </div>
-              <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Quá hạn
-              </span>
-            </div>
-            <h3 className="text-3xl font-black tracking-tight text-destructive">
-              {String(expiredCount).padStart(2, "0")}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Mặt hàng đã hết hạn
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="mb-4 flex items-start justify-between">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/12">
-                <AlertTriangle className="size-5 text-primary" />
-              </div>
-              <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                3 ngày tới
-              </span>
-            </div>
-            <h3 className="text-3xl font-black tracking-tight text-primary">
-              {String(criticalCount).padStart(2, "0")}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Hết hạn trong 3 ngày tới
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="mb-4 flex items-start justify-between">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-warning/12">
-                <Clock className="size-5 text-warning" />
-              </div>
-              <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                7 ngày tới
-              </span>
-            </div>
-            <h3 className="text-3xl font-black tracking-tight text-warning">
-              {String(warningCount).padStart(2, "0")}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Hết hạn trong 7 ngày tới
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="flex gap-1 rounded-lg bg-muted p-1">
+      <div className="app-subpanel flex flex-wrap gap-2 p-2">
         {tabs.map((tab) => {
           const isActive = activeTab === tab;
           return (
@@ -151,10 +117,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
               type="button"
               variant={isActive ? "secondary" : "ghost"}
               onClick={() => setActiveTab(tab)}
-              className={cn(
-                "flex-1 rounded-xl",
-                isActive && "font-bold shadow-sm",
-              )}
+              className={cn("flex-1 rounded-full", isActive && "font-semibold shadow-sm")}
             >
               {tab === "Tất cả" ? "Tất cả" : tStatus(tab, "tab")}
             </Button>
@@ -162,54 +125,46 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
         })}
       </div>
 
-      <Card className="overflow-hidden">
+      <SectionCard
+        title="Danh sách cảnh báo theo lô"
+        description="Ưu tiên theo số ngày còn lại, chứng từ nhập và chi nhánh sở hữu."
+        className="overflow-hidden"
+        density="compact"
+      >
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/40">
-              {[
-                "Nguyên liệu",
-                "Số lô",
-                "Ngày hết hạn",
-                "Ngày còn lại",
-                "Phiếu nhập",
-                "Chi nhánh",
-                "Thao tác",
-              ].map((h) => (
-                <TableHead
-                  key={h}
-                  className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground ${h === "Ngày còn lại" ? "text-center" : ""} ${h === "Thao tác" ? "text-right" : ""}`}
-                >
-                  {h}
-                </TableHead>
-              ))}
+            <TableRow>
+              <TableHead>Nguyên liệu</TableHead>
+              <TableHead>Số lô</TableHead>
+              <TableHead>Ngày hết hạn</TableHead>
+              <TableHead className="text-center">Ngày còn lại</TableHead>
+              <TableHead>Phiếu nhập</TableHead>
+              <TableHead>Chi nhánh</TableHead>
+              <TableHead className="text-right">Thao tác</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.map((item) => (
-              <TableRow key={item.id} className="transition-colors">
-                <TableCell className="px-6 py-5 text-sm font-semibold">
+              <TableRow key={item.id}>
+                <TableCell className="text-sm font-semibold">
                   {item.ingredientName}
                 </TableCell>
-                <TableCell className="px-6 py-5 font-mono text-sm text-muted-foreground">
+                <TableCell className="font-mono text-sm text-muted-foreground">
                   {item.lot}
                 </TableCell>
-                <TableCell className="px-6 py-5 text-sm">
-                  {item.expiryDate}
-                </TableCell>
-                <TableCell className="px-6 py-5 text-center">
+                <TableCell className="text-sm">{item.expiryDate}</TableCell>
+                <TableCell className="text-center">
                   <Badge variant={getUrgencyBadgeVariant(item.urgency)}>
                     {item.daysLeft <= 0
                       ? `Đã hết hạn ${Math.abs(item.daysLeft)} ngày`
                       : `Còn ${item.daysLeft} ngày`}
                   </Badge>
                 </TableCell>
-                <TableCell className="px-6 py-5 font-mono text-sm text-primary">
+                <TableCell className="font-mono text-sm text-primary">
                   {item.grnCode}
                 </TableCell>
-                <TableCell className="px-6 py-5 text-sm">
-                  {item.branchName}
-                </TableCell>
-                <TableCell className="px-6 py-5 text-right">
+                <TableCell className="text-sm">{item.branchName}</TableCell>
+                <TableCell className="text-right">
                   {item.urgency === "expired" ? (
                     <Button variant="destructive" size="sm" className="gap-1">
                       <Trash2 className="size-3" /> Hủy hàng
@@ -224,37 +179,33 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
             ))}
           </TableBody>
         </Table>
-      </Card>
+      </SectionCard>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="flex items-start gap-3 p-4">
+        <div className="app-panel border-primary/20 bg-primary/5">
+          <div className="flex items-start gap-3">
             <Lightbulb className="mt-0.5 size-5 shrink-0 text-primary" />
             <div>
-              <p className="text-sm font-semibold">Gợi ý tối ưu hóa</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Dựa trên dữ liệu 30 ngày qua, tỷ lệ hàng quá hạn tại CN Quận 1 cao
-                hơn 15% so với trung bình. Hệ thống đề xuất điều chuyển nguyên
-                liệu sớm sang các chi nhánh có lượng tiêu thụ cao hơn.
+              <p className="app-kicker">Gợi ý tối ưu hóa</p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Dựa trên dữ liệu 30 ngày qua, tỷ lệ hàng quá hạn tại CN Quận 1
+                cao hơn 15% so với trung bình. Hệ thống đề xuất điều chuyển
+                nguyên liệu sớm sang các chi nhánh có lượng tiêu thụ cao hơn.
               </p>
             </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-muted/50">
-          <CardContent className="p-4">
-            <p className="text-sm font-semibold">Thông báo tự động</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Cài đặt nhắc báo qua Email hoặc Zalo cho quản lý kho khi hàng hóa
-              còn dưới 5 ngày sử dụng.
-            </p>
-            <div className="mt-2 flex items-center gap-2">
-              <Bell className="size-4 text-success" />
-              <span className="text-xs font-medium text-success">
-                Đã bật Email
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+        <div className="app-panel">
+          <p className="app-kicker">Thông báo tự động</p>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            Cài đặt nhắc báo qua Email hoặc Zalo cho quản lý kho khi hàng hóa
+            còn dưới 5 ngày sử dụng.
+          </p>
+          <div className="mt-4 flex items-center gap-2 text-success">
+            <Bell className="size-4" />
+            <span className="text-xs font-medium">Đã bật Email</span>
+          </div>
+        </div>
       </div>
     </div>
   );

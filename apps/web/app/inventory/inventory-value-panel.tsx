@@ -6,7 +6,6 @@ import { formatVND } from "@comtammatu/shared/format";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import type { InventoryValueVisibility } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Table,
   TableBody,
@@ -23,12 +22,12 @@ import {
 } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { PageHeader, SectionCard, EmptyStatePanel } from "@/components/patterns";
 import {
   fetchInventoryValueByArea,
   fetchInventoryValueByBranch,
   fetchInventoryValueSystem,
 } from "./inventory-value-actions";
-import { EmptyStatePanel } from "@/components/patterns";
 
 interface InventoryValuePanelProps {
   visibility: InventoryValueVisibility;
@@ -116,17 +115,30 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
     areaRows?.reduce((sum, row) => sum + Number(row.totalValue), 0) ?? 0;
   const branchTotal =
     branchRows?.reduce((sum, row) => sum + Number(row.totalValue), 0) ?? 0;
-  const summaryBoxClassName = "rounded-lg bg-muted/25 px-4 py-4";
+  const summaryBoxClassName = "app-subpanel px-4 py-4";
 
   return (
     <Tabs defaultValue={defaultTab} className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold">Giá trị tồn kho</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Xem nhanh tổng giá trị theo đúng phạm vi được phân quyền.
-          </p>
-        </div>
+      <div className="space-y-3">
+        <PageHeader
+          eyebrow="Value Visibility"
+          title="Giá trị tồn kho"
+          description="Xem nhanh tổng giá trị theo đúng phạm vi được phân quyền."
+          actions={
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refreshAll}
+              disabled={isPending}
+              className="gap-1.5 text-muted-foreground"
+            >
+              <RefreshCw
+                className={`size-4 ${isPending ? "animate-spin" : ""}`}
+              />
+              {APP_COPY_VI.refresh}
+            </Button>
+          }
+        />
         <div className="flex items-center gap-2">
           {tabCount > 1 && (
             <TabsList className="h-auto justify-start gap-2 overflow-x-auto rounded-lg border bg-muted/40 p-2">
@@ -141,38 +153,23 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               )}
             </TabsList>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={refreshAll}
-            disabled={isPending}
-            className="gap-1.5 text-muted-foreground"
-          >
-            <RefreshCw
-              className={`size-4 ${isPending ? "animate-spin" : ""}`}
-            />
-            {APP_COPY_VI.refresh}
-          </Button>
         </div>
       </div>
 
       {visibility.system && (
         <TabsContent value="system" className="mt-3">
-          <Card>
-            <CardContent className="space-y-4 pt-6">
+          <SectionCard density="compact">
+            <div className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2">
-                <Card className="bg-muted/25">
-                  <CardContent className="p-4">
+                <div className="app-subpanel p-4">
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                       Giá trị hiện tại
                     </p>
                     <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
                       {systemTotal == null ? "—" : formatVND(systemTotal)}
                     </p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/25">
-                  <CardContent className="p-4">
+                </div>
+                <div className="app-subpanel p-4">
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                       Phạm vi xem
                     </p>
@@ -182,11 +179,10 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                     <p className="mt-1 text-sm text-muted-foreground">
                       Tổng hợp tất cả chi nhánh theo WAC hoặc giá tham chiếu.
                     </p>
-                  </CardContent>
-                </Card>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </SectionCard>
         </TabsContent>
       )}
 
@@ -199,8 +195,8 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
           ) : areaRows.length === 0 ? (
             <EmptyStatePanel className="py-10" title={APP_COPY_VI.noAreaData} />
           ) : isMobile ? (
-            <Card className="overflow-hidden">
-              <CardContent className="space-y-4 p-4 md:p-5">
+            <SectionCard className="overflow-hidden" density="compact">
+              <div className="space-y-4">
                 <div className={summaryBoxClassName}>
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                     Tổng theo khu vực
@@ -224,11 +220,11 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </SectionCard>
           ) : (
-            <Card className="overflow-hidden">
-              <CardContent className="space-y-4 p-4 md:p-5">
+            <SectionCard className="overflow-hidden" density="compact">
+              <div className="space-y-4">
                 <div className={summaryBoxClassName}>
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                     Tổng theo khu vực
@@ -240,7 +236,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                 <div className="-m-4 md:-m-5">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-muted/20 hover:bg-muted/20">
+                      <TableRow>
                         <TableHead className="text-xs font-semibold uppercase tracking-wider">
                           Khu vực
                         </TableHead>
@@ -263,8 +259,8 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                     </TableBody>
                   </Table>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </SectionCard>
           )}
         </TabsContent>
       )}
@@ -281,8 +277,8 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               title={APP_COPY_VI.noScopedBranches}
             />
           ) : isMobile ? (
-            <Card className="overflow-hidden">
-              <CardContent className="space-y-4 p-4 md:p-5">
+            <SectionCard className="overflow-hidden" density="compact">
+              <div className="space-y-4">
                 <div className={summaryBoxClassName}>
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                     Tổng theo chi nhánh
@@ -306,11 +302,11 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </SectionCard>
           ) : (
-            <Card className="overflow-hidden">
-              <CardContent className="space-y-4 p-4 md:p-5">
+            <SectionCard className="overflow-hidden" density="compact">
+              <div className="space-y-4">
                 <div className={summaryBoxClassName}>
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                     Tổng theo chi nhánh
@@ -322,7 +318,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                 <div className="-m-4 md:-m-5">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-muted/20 hover:bg-muted/20">
+                      <TableRow>
                         <TableHead className="text-xs font-semibold uppercase tracking-wider">
                           Chi nhánh
                         </TableHead>
@@ -345,8 +341,8 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                     </TableBody>
                   </Table>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </SectionCard>
           )}
         </TabsContent>
       )}

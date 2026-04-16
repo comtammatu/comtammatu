@@ -53,12 +53,12 @@ function ReportCard({
   return (
     <Link
       href={href}
-      className="group flex h-full flex-col justify-between rounded-xl border border-border/70 bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-md"
+      className="app-subpanel group flex h-full flex-col justify-between p-5 transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-md"
     >
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div
-            className={`flex size-11 items-center justify-center rounded-lg ${toneClassName}`}
+            className={`flex size-11 items-center justify-center rounded-2xl ${toneClassName}`}
           >
             <Icon className="size-5" />
           </div>
@@ -181,6 +181,7 @@ export default async function ReportsPage() {
       <PageHeader
         eyebrow={APP_COPY_VI.executiveReporting}
         title="Báo cáo điều hành"
+        description="Mỗi báo cáo và lối vào phân hệ nguồn giờ dùng cùng một grammar bề mặt mới, thay cho cụm card cũ."
         actions={
           <>
             <Button asChild variant="outline" size="sm">
@@ -193,17 +194,15 @@ export default async function ReportsPage() {
         }
       />
 
-      <SectionCard>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight">
-              Báo cáo lõi
-            </h2>
-          </div>
+      <SectionCard
+        title="Báo cáo lõi"
+        description="Những góc nhìn tổng hợp nhất cho vận hành, doanh thu, tồn kho và tài chính."
+        action={
           <StatusBadge tone="neutral" className="rounded-full px-3 py-1.5">
             Điều hành
           </StatusBadge>
-        </div>
+        }
+      >
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {executiveCards.map((card) => (
             <ReportCard key={card.href} {...card} />
@@ -212,17 +211,15 @@ export default async function ReportsPage() {
       </SectionCard>
 
       {deepDiveCards.length > 0 ? (
-        <SectionCard>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight">
-                Phân hệ nguồn
-              </h2>
-            </div>
+        <SectionCard
+          title="Phân hệ nguồn"
+          description="Đi sâu từ báo cáo điều hành sang các nguồn dữ liệu và bề mặt chuyên môn."
+          action={
             <StatusBadge tone="info" className="rounded-full px-3 py-1.5">
               Phân hệ
             </StatusBadge>
-          </div>
+          }
+        >
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {deepDiveCards.map((card) => (
               <ReportCard key={card.href} {...card} />

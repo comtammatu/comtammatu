@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@comtammatu/ui";
 import type { StaffRole } from "@comtammatu/shared/auth";
-import { PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import { tRoute } from "../_lib/dictionary";
 
 interface Tab {
@@ -12,18 +11,7 @@ interface Tab {
   allowedRoles?: readonly StaffRole[];
 }
 
-const TABS: Tab[] = [
-  { href: "/inventory/settings/ingredients" },
-  {
-    href: "/inventory/settings/recipes",
-    allowedRoles: PROCUREMENT_ROLES,
-  },
-  {
-    href: "/inventory/settings/suppliers",
-    allowedRoles: PROCUREMENT_ROLES,
-  },
-  { href: "/inventory/settings/expiry" },
-];
+const TABS: Tab[] = [{ href: "/inventory/settings/expiry" }];
 
 export function SettingsSectionNav({ role }: { role: StaffRole }) {
   const pathname = usePathname();

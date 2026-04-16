@@ -142,7 +142,7 @@ export function OrdersClient({
   return (
     <>
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-lg border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+        <div className="app-subpanel p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Đang xử lý
           </p>
@@ -153,7 +153,7 @@ export function OrdersClient({
             Đơn đang chờ hoặc đang làm cần theo dõi.
           </p>
         </div>
-        <div className="rounded-lg border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+        <div className="app-subpanel p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Hoàn thành
           </p>
@@ -164,7 +164,7 @@ export function OrdersClient({
             Đơn đã hoàn tất trong tập kết quả hiện tại.
           </p>
         </div>
-        <div className="rounded-lg border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+        <div className="app-subpanel p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Giá trị đơn
           </p>
@@ -267,8 +267,7 @@ export function OrdersClient({
         </div>
       </FilterBar>
 
-      {/* ─── Summary ─── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="app-subpanel flex flex-wrap items-center justify-between gap-3 px-4 py-3">
         <p className="text-sm text-muted-foreground">
           {displayOrders.length} đơn hàng
         </p>
@@ -280,9 +279,12 @@ export function OrdersClient({
       </div>
 
       {/* ─── Table ─── */}
-      <SectionCard className="rounded-lg">
+      <SectionCard
+        title="Danh sách đơn"
+        description="Trạng thái, thanh toán và tổng tiền được gom vào cùng một bề mặt điều phối."
+      >
         {displayOrders.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border px-6 py-16 text-center">
+          <div className="app-subpanel border-dashed px-6 py-16 text-center">
             <ShoppingBag className="mx-auto size-8 text-muted-foreground" />
             <p className="mt-3 text-sm font-medium">Không có đơn hàng nào</p>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -299,7 +301,7 @@ export function OrdersClient({
               key={order.id}
               type="button"
               onClick={() => setSelectedOrder(order)}
-              className="w-full rounded-lg border border-border/70 bg-background p-4 text-left transition-colors hover:bg-muted/20"
+              className="app-subpanel w-full p-4 text-left transition-colors hover:bg-muted/20"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -349,7 +351,7 @@ export function OrdersClient({
           ))}
         </div>
 
-        <div className="hidden overflow-hidden rounded-lg border border-border/70 md:block">
+        <div className="hidden overflow-hidden rounded-3xl border border-border/70 md:block">
           <Table>
             <TableHeader>
               <TableRow>

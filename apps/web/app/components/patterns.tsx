@@ -4,11 +4,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
-  CardAction,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@comtammatu/ui/components/card";
 
 export type EmptyStateMode =
@@ -39,7 +35,7 @@ export function PageContainer({
   children: ReactNode;
   className?: string;
 }) {
-  return <Card className={className}>{children}</Card>;
+  return <div className={cn("space-y-5 lg:space-y-6", className)}>{children}</div>;
 }
 
 /* ── PageHeader ── */
@@ -58,26 +54,30 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <CardHeader>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-1">
-          {eyebrow ? (
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              {eyebrow}
-            </p>
-          ) : null}
-          <CardTitle className="text-2xl sm:text-3xl">{title}</CardTitle>
-          {description ? (
-            <CardDescription>{description}</CardDescription>
+    <Card className="app-panel">
+      <CardContent className="p-5 sm:p-6">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+          <div className="space-y-3">
+            {eyebrow ? <span className="app-kicker">{eyebrow}</span> : null}
+            <div className="space-y-2">
+              <h2 className="font-heading text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                {title}
+              </h2>
+              {description ? (
+                <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
+                  {description}
+                </p>
+              ) : null}
+            </div>
+          </div>
+          {actions ?? children ? (
+            <div className="flex flex-wrap items-center gap-2 self-start">
+              {actions ?? children}
+            </div>
           ) : null}
         </div>
-        {actions ?? children ? (
-          <div className="flex flex-wrap items-center gap-2">
-            {actions ?? children}
-          </div>
-        ) : null}
-      </div>
-    </CardHeader>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -102,18 +102,24 @@ export function SectionCard({
     <Card
       size={resolveCardSize(density)}
       data-density={density}
-      className={className}
+      className={cn("app-panel", className)}
     >
       {title ? (
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-          {description ? (
-            <CardDescription>{description}</CardDescription>
-          ) : null}
-          {action ? <CardAction>{action}</CardAction> : null}
-        </CardHeader>
+        <div className="flex flex-col gap-4 border-b border-border/60 px-4 pb-4 sm:flex-row sm:items-start sm:justify-between sm:px-5 sm:pb-5">
+          <div className="space-y-1">
+            <h3 className="font-heading text-xl font-semibold text-foreground">
+              {title}
+            </h3>
+            {description ? (
+              <p className="text-sm leading-6 text-muted-foreground">
+                {description}
+              </p>
+            ) : null}
+          </div>
+          {action ? <div className="flex items-center gap-2">{action}</div> : null}
+        </div>
       ) : null}
-      <CardContent>{children}</CardContent>
+      <CardContent className="px-4 sm:px-5">{children}</CardContent>
     </Card>
   );
 }
@@ -149,14 +155,14 @@ export function EmptyState({
       )}
     >
       {icon ? (
-        <div className="flex size-12 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground">
+        <div className="flex size-14 items-center justify-center rounded-full border border-border/70 bg-background/80 text-primary shadow-sm">
           {icon}
         </div>
       ) : null}
       <div className="space-y-1.5">
-        <h3 className="text-lg font-semibold">{title}</h3>
+        <h3 className="font-heading text-2xl font-semibold">{title}</h3>
         {description ? (
-          <p className="max-w-md text-sm text-muted-foreground">
+          <p className="max-w-md text-sm leading-6 text-muted-foreground">
             {description}
           </p>
         ) : null}
@@ -189,7 +195,7 @@ export function EmptyStatePanel({
   children?: ReactNode;
 }) {
   return (
-    <Card className={className}>
+    <Card className={cn("app-panel", className)}>
       <CardContent>
         <EmptyState
           icon={icon}
@@ -259,7 +265,7 @@ export function FilterBar({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/50 p-3",
+        "app-subpanel flex flex-wrap items-center gap-2 p-3",
         className,
       )}
     >

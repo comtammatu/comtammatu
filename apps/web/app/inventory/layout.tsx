@@ -51,6 +51,12 @@ export default async function InventoryLayout({
 
   return (
     <InventoryShell
+      user={{
+        name:
+          session.user.user_metadata?.["display_name"] ??
+          session.user.email ??
+          "",
+      }}
       userRole={claims.user_role}
       siteName={resolvedSiteContext.branchName}
       siteKind={resolvedSiteContext.branchKind}

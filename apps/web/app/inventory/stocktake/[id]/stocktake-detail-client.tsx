@@ -12,13 +12,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   AlertDialog,
@@ -43,7 +36,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
-import { SectionCard } from "@/components/patterns";
+import { PageHeader, SectionCard } from "@/components/patterns";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import {
@@ -274,13 +267,12 @@ export function StocktakeDetailClient({
         <span className="font-medium text-foreground">KK-{session.id}</span>
       </div>
 
-      <Card className="border-border/70">
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-2xl">{`KK-${session.id}`}</CardTitle>
-            <CardDescription>{headerDescription}</CardDescription>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+      <PageHeader
+        eyebrow="Kiem soat cuoi ca"
+        title={`KK-${session.id}`}
+        description={headerDescription}
+        actions={
+          <>
             <Badge className={cn("text-xs", meta.className)}>
               {meta.label}
             </Badge>
@@ -303,9 +295,9 @@ export function StocktakeDetailClient({
                 </Button>
               </>
             ) : null}
-          </div>
-        </CardHeader>
-      </Card>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
@@ -326,12 +318,10 @@ export function StocktakeDetailClient({
             value: String(varianceCount).padStart(2, "0"),
           },
         ].map((item) => (
-          <Card key={item.label}><CardContent className="p-4">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">
-              {item.label}
-            </p>
-            <p className="mt-1 text-sm font-semibold">{item.value}</p>
-          </CardContent></Card>
+          <div key={item.label} className="app-stat">
+            <p className="app-kicker">{item.label}</p>
+            <p className="mt-3 text-xl font-semibold">{item.value}</p>
+          </div>
         ))}
       </div>
 
@@ -390,16 +380,16 @@ export function StocktakeDetailClient({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hoàn tất kiểm kê?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Hành động này sẽ tính chênh lệch và cập nhật tồn kho. Bạn không
-              thể hoàn tác sau khi hoàn tất.
-            </AlertDialogDescription>
+          <AlertDialogTitle>Chot ket qua kiem ke?</AlertDialogTitle>
+          <AlertDialogDescription>
+              Hanh dong nay se tinh chenh lech va cap nhat ton kho he thong.
+              Sau khi chot, phien kiem ke se chuyen sang lop doi chieu ket qua.
+          </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
             <AlertDialogAction onClick={handleComplete} disabled={isPending}>
-              {isPending ? "Đang xử lý..." : "Hoàn tất"}
+              {isPending ? "Dang xu ly..." : "Chot ket qua"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -409,10 +399,11 @@ export function StocktakeDetailClient({
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hủy phiên kiểm kê?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tất cả dữ liệu đã đếm sẽ bị hủy. Bạn có chắc không?
-            </AlertDialogDescription>
+          <AlertDialogTitle>Huy phien kiem ke?</AlertDialogTitle>
+          <AlertDialogDescription>
+              Tat ca du lieu da dem se bi huy va khong con duoc doi chieu trong
+              phien nay.
+          </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>Quay lại</AlertDialogCancel>

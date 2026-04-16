@@ -1,12 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { Be_Vietnam_Pro, IBM_Plex_Mono, Lora, Inter } from "next/font/google";
+import { Be_Vietnam_Pro, IBM_Plex_Mono, Lora } from "next/font/google";
 import { Toaster } from "@comtammatu/ui/components/sonner";
 import { TooltipProvider } from "@comtammatu/ui/components/tooltip";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
 const bodyFont = Be_Vietnam_Pro({
   subsets: ["latin", "latin-ext", "vietnamese"],
@@ -42,8 +40,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f5efe5" },
-    { media: "(prefers-color-scheme: dark)", color: "#161311" },
+    { media: "(prefers-color-scheme: light)", color: "#f4ede3" },
+    { media: "(prefers-color-scheme: dark)", color: "#231b17" },
   ],
 };
 
@@ -51,7 +49,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="vi"
-      className={cn(bodyFont.variable, displayFont.variable, monoFont.variable, "font-sans", inter.variable)}
+      className={cn(
+        bodyFont.variable,
+        displayFont.variable,
+        monoFont.variable,
+        "font-sans",
+      )}
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">

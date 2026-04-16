@@ -77,6 +77,18 @@ type PriorityItem = {
   iconClassName: string;
 };
 
+type TaskQueueItem = {
+  key: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  href: string;
+  cta: string;
+  icon: ReactNode;
+  panelClassName: string;
+  iconClassName: string;
+};
+
 function buildQuickActions(
   siteKind: DashboardSiteKind,
   routeBase: InventoryRouteBase,
@@ -102,10 +114,10 @@ function buildQuickActions(
   }
 
   return [
-    { icon: <ShoppingCart className="size-7" />, label: "Nhận hàng", description: "Cập nhật hàng nhận từ trụ sở hoặc nguồn nội bộ.", href: paths.receiving, hoverClassName: "hover:bg-primary/10", iconClassName: "text-primary" },
+    { icon: <Truck className="size-7" />, label: "Nhận transfer", description: "Xác nhận hàng đến từ trụ sở hoặc bếp trung tâm ngay trong điều chuyển.", href: paths.transfers, hoverClassName: "hover:bg-primary/10", iconClassName: "text-primary" },
+    { icon: <CheckSquare className="size-7" />, label: "Cấp bếp", description: "Ghi nhận cấp phát từ kho chi nhánh xuống bếp theo flow kitchen_use.", href: paths.issues, hoverClassName: "hover:bg-info/10", iconClassName: "text-info" },
+    { icon: <AlertTriangle className="size-7" />, label: "Tồn kho chi nhánh", description: "Đọc nhanh mức tồn trước khi cấp bếp và chốt ca.", href: paths.stock, hoverClassName: "hover:bg-warning/10", iconClassName: "text-warning" },
     { icon: <CheckSquare className="size-7" />, label: "Kiểm kê chi nhánh", description: "Đối chiếu tồn thực tế trước khi chốt ca vận hành.", href: paths.stocktake, hoverClassName: "hover:bg-success/10", iconClassName: "text-success" },
-    { icon: <Truck className="size-7" />, label: "Điều chuyển", description: "Theo dõi hàng đi, hàng đến và các bước xác nhận.", href: paths.transfers, hoverClassName: "hover:bg-info/10", iconClassName: "text-info" },
-    { icon: <BarChart3 className="size-7" />, label: "Báo cáo", description: "Xem nhanh mức tồn, cảnh báo và giá trị kho.", href: paths.reports, hoverClassName: "hover:bg-muted", iconClassName: "text-muted-foreground" },
   ];
 }
 
@@ -194,6 +206,175 @@ function buildPriorityItems({
   return items.slice(0, 4);
 }
 
+function isTransferOpen(status: string) {
+  return [
+    "draft",
+    "confirmed",
+    "confirmed_ship",
+    "in_transit",
+    "confirmed_receive",
+  ].includes(status);
+}
+
+function buildTaskQueueItems({
+  siteKind,
+  siteName,
+  showProcurement,
+  pendingPO,
+  activeTransfers,
+  activeStocktakes,
+  reorderAlerts,
+  expiryAlerts,
+  transfers,
+  paths,
+}: {
+  siteKind: DashboardSiteKind;
+  siteName: string;
+  showProcurement: boolean;
+  pendingPO: number;
+  activeTransfers: number;
+  activeStocktakes: number;
+  reorderAlerts: DashboardProps["reorderAlerts"];
+  expiryAlerts: DashboardProps["expiryAlerts"];
+  transfers: DashboardProps["transfers"];
+  paths: ReturnType<typeof getInventoryPaths>;
+}): TaskQueueItem[] {
+  const items: TaskQueueItem[] = [];
+  const openTransfers = transfers.filter((transfer) => isTransferOpen(transfer.status));
+  const inboundTransfers = openTransfers.filter((transfer) => transfer.toBranch === siteName);
+  const outboundTransfers = openTransfers.filter((transfer) => transfer.fromBranch === siteName);
+
+  if (siteKind === "headquarters") {
+    if (pendingPO > 0) {
+      items.push({
+        key: "hq-po",
+        eyebrow: "Nhập hàng HQ",
+        title: `${pendingPO} PO cần theo dõi`,
+        description: "Đẩy nhanh các đơn đặt hàng còn mở trước khi dồn sang bước GRN và đối soát hóa đơn.",
+        href: paths.purchaseOrders,
+        cta: "Mở đơn mua",
+        icon: <ShoppingCart className="size-5" />,
+        panelClassName: "border-primary/20 bg-primary/5",
+        iconClassName: "bg-primary/10 text-primary",
+      });
+    }
+
+    if (outboundTransfers.length > 0 || activeTransfers > 0) {
+      items.push({
+        key: "hq-transfer",
+        eyebrow: "Điều chuyển HQ",
+        title: outboundTransfers.length > 0 ? `${outboundTransfers.length} phiếu xuất đang mở` : `${activeTransfers} phiếu điều chuyển cần theo dõi`,
+        description: "Theo dõi các phiếu rời kho trụ sở để không dồn bước nhận và đối chiếu cuối ngày.",
+        href: paths.transfers,
+        cta: "Mở điều chuyển",
+        icon: <Truck className="size-5" />,
+        panelClassName: "border-info/20 bg-info/5",
+        iconClassName: "bg-info/10 text-info",
+      });
+    }
+  }
+
+  if (siteKind === "central_kitchen") {
+    items.push({
+      key: "ck-production",
+      eyebrow: "Bếp trung tâm",
+      title: "Chốt nhịp sản xuất trong ngày",
+      description: "Tạo hoặc xác nhận lệnh sản xuất trước khi xuất thành phẩm sang chi nhánh.",
+      href: paths.production,
+      cta: "Mở bếp trung tâm",
+      icon: <Lightbulb className="size-5" />,
+      panelClassName: "border-primary/20 bg-primary/5",
+      iconClassName: "bg-primary/10 text-primary",
+    });
+
+    if (inboundTransfers.length > 0 || outboundTransfers.length > 0 || activeTransfers > 0) {
+      items.push({
+        key: "ck-transfer",
+        eyebrow: "Nguyên liệu & thành phẩm",
+        title: inboundTransfers.length > 0 ? `${inboundTransfers.length} phiếu nguyên liệu chờ nhận` : `${Math.max(outboundTransfers.length, activeTransfers)} phiếu cần theo dõi`,
+        description: "Giữ liền mạch giữa nhận nguyên liệu từ HQ và xuất thành phẩm sang kho chi nhánh.",
+        href: paths.transfers,
+        cta: "Mở điều chuyển",
+        icon: <Truck className="size-5" />,
+        panelClassName: "border-info/20 bg-info/5",
+        iconClassName: "bg-info/10 text-info",
+      });
+    }
+  }
+
+  if (siteKind === "branch") {
+    if (inboundTransfers.length > 0) {
+      items.push({
+        key: "branch-receive",
+        eyebrow: "Nhận hàng nội bộ",
+        title: `${inboundTransfers.length} phiếu đến cần xác nhận`,
+        description: "Nhận hàng đi thẳng từ điều chuyển, không qua hub procurement của HQ.",
+        href: paths.transfers,
+        cta: "Xác nhận hàng đến",
+        icon: <Truck className="size-5" />,
+        panelClassName: "border-primary/20 bg-primary/5",
+        iconClassName: "bg-primary/10 text-primary",
+      });
+    }
+
+    items.push({
+      key: "branch-kitchen-use",
+      eyebrow: "Vận hành chi nhánh",
+      title: "Cấp bếp theo nhịp bán",
+      description: "Ghi nhận cấp phát từ kho chi nhánh xuống bếp bằng flow kitchen_use để tránh lệch tồn bí ẩn.",
+      href: paths.issues,
+      cta: "Mở cấp bếp",
+      icon: <CheckSquare className="size-5" />,
+      panelClassName: "border-info/20 bg-info/5",
+      iconClassName: "bg-info/10 text-info",
+    });
+  }
+
+  if (activeStocktakes > 0) {
+    items.push({
+      key: "stocktake",
+      eyebrow: "Kiểm kê",
+      title: activeStocktakes === 1 ? "1 phiên đang mở" : `${activeStocktakes} phiên đang mở`,
+      description: "Hoàn tất các phiên kiểm kê để khóa chênh lệch trước khi khép ca vận hành.",
+      href: paths.stocktake,
+      cta: "Mở kiểm kê",
+      icon: <ClipboardList className="size-5" />,
+      panelClassName: "border-success/20 bg-success/5",
+      iconClassName: "bg-success/10 text-success",
+    });
+  }
+
+  if (expiryAlerts.length > 0) {
+    items.push({
+      key: "expiry",
+      eyebrow: "Hạn dùng",
+      title: expiryAlerts.length === 1 ? "1 lô cần xử lý sớm" : `${expiryAlerts.length} lô cần xử lý sớm`,
+      description: "Ưu tiên các lô cận hoặc quá hạn để giảm write-off và tránh dồn xử lý cuối ngày.",
+      href: paths.expiry,
+      cta: "Mở hạn dùng",
+      icon: <Hourglass className="size-5" />,
+      panelClassName: "border-warning/20 bg-warning/5",
+      iconClassName: "bg-warning/10 text-warning",
+    });
+  }
+
+  if (showProcurement && reorderAlerts.length > 0) {
+    items.push({
+      key: "reorder",
+      eyebrow: "Tái đặt hàng",
+      title: reorderAlerts.length === 1 ? "1 nguyên liệu chạm ngưỡng" : `${reorderAlerts.length} nguyên liệu chạm ngưỡng`,
+      description: "Đi thẳng sang procurement để chuẩn bị PO thay vì rải rác kiểm từng màn hình.",
+      href: paths.purchaseOrders,
+      cta: "Đi tới procurement",
+      icon: <ShoppingCart className="size-5" />,
+      panelClassName: "border-destructive/20 bg-destructive/5",
+      iconClassName: "bg-destructive/10 text-destructive",
+    });
+  }
+
+  return items.slice(0, 4);
+}
+
 export type DashboardProps = {
   routeBase: InventoryRouteBase;
   siteName: string;
@@ -222,7 +403,19 @@ export function DashboardClient({
   const operationalPressure = Math.min(100, alertCount * 14 + activeFlowCount * 8);
   const pressureLabel = getPressureLabel(operationalPressure);
   const priorityItems = buildPriorityItems({ showProcurement, reorderAlerts, expiryAlerts, activeTransfers, activeStocktakes, paths });
-  const activeTransferList = transfers.filter((t) => t.status === "in_transit" || t.status === "confirmed").slice(0, 3);
+  const taskQueueItems = buildTaskQueueItems({
+    siteKind,
+    siteName,
+    showProcurement,
+    pendingPO,
+    activeTransfers,
+    activeStocktakes,
+    reorderAlerts,
+    expiryAlerts,
+    transfers,
+    paths,
+  });
+  const activeTransferList = transfers.filter((t) => t.status === "in_transit" || t.status === "confirmed" || t.status === "confirmed_ship" || t.status === "confirmed_receive").slice(0, 3);
   const activeStocktakeList = stocktakeSessions.filter((s) => s.status === "in_progress");
   const criticalExpiryCount = expiryAlerts.filter((item) => item.daysLeft <= 0 || item.urgency === "critical").length;
   const reorderActionHref = showProcurement ? paths.purchaseOrders : paths.stock;
@@ -231,7 +424,7 @@ export function DashboardClient({
   return (
     <div className="space-y-6">
       {/* Hero */}
-      <Card>
+      <Card className="app-panel">
         <CardContent className="p-6 sm:p-7 lg:p-8">
           <div className="grid gap-6 xl:grid-cols-3 xl:items-start">
             <div className="space-y-5 xl:col-span-2">
@@ -239,7 +432,7 @@ export function DashboardClient({
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Tổng quan ca vận hành
                 </p>
-                <CardTitle className="text-3xl sm:text-4xl">
+                <CardTitle className="font-heading text-3xl sm:text-4xl">
                   Theo dõi kho tại {siteName}
                 </CardTitle>
                 <CardDescription>
@@ -260,10 +453,10 @@ export function DashboardClient({
                   { label: "Luồng đang mở", value: activeFlowCount, desc: `${pendingPO} PO, ${activeTransfers} điều chuyển, ${activeStocktakes} kiểm kê.` },
                   { label: "Điểm cần ưu tiên", value: reorderAlerts.length + criticalExpiryCount, desc: "Tái đặt hàng và các lô sắp quá hạn cần xử lý sớm." },
                 ].map((stat) => (
-                  <Card key={stat.label}>
+                  <Card key={stat.label} className="app-subpanel">
                     <CardContent className="p-4">
                       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{stat.label}</p>
-                      <p className="mt-2 text-3xl font-semibold">{stat.value}</p>
+                      <p className="mt-2 font-heading text-3xl font-semibold">{stat.value}</p>
                       <p className="mt-1 text-xs text-muted-foreground">{stat.desc}</p>
                     </CardContent>
                   </Card>
@@ -271,12 +464,12 @@ export function DashboardClient({
               </div>
             </div>
 
-            <Card>
+            <Card className="app-subpanel">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Mức áp lực vận hành</p>
-                    <p className="mt-2 text-4xl font-semibold tracking-tight">{operationalPressure}%</p>
+                    <p className="mt-2 font-heading text-4xl font-semibold tracking-tight">{operationalPressure}%</p>
                     <p className="mt-2 text-sm text-muted-foreground">Tính theo số cảnh báo đang mở và các luồng chưa hoàn tất trong kho.</p>
                   </div>
                   <Badge variant="default">{pressureLabel}</Badge>
@@ -287,11 +480,11 @@ export function DashboardClient({
                 </div>
 
                 <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                  <Card><CardContent className="p-4">
+                  <Card className="app-subpanel"><CardContent className="p-4">
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Giá trị tồn kho</p>
                     <p className="mt-2 text-xl font-semibold">{formatVND(totalStockValue)}đ</p>
                   </CardContent></Card>
-                  <Card><CardContent className="p-4">
+                  <Card className="app-subpanel"><CardContent className="p-4">
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Trạng thái theo dõi</p>
                     <p className="mt-2 text-xl font-semibold">{alertCount === 0 && activeFlowCount === 0 ? "Yên nhịp" : "Đang vận hành"}</p>
                     <p className="mt-1 text-xs text-muted-foreground">{alertCount === 0 && activeFlowCount === 0 ? "Hiện chưa có cảnh báo hoặc luồng chờ xử lý." : "Giữ nhịp xử lý để tránh dồn việc cuối ca."}</p>
@@ -303,6 +496,56 @@ export function DashboardClient({
         </CardContent>
       </Card>
 
+      <Card className="app-panel">
+        <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Hàng đợi tác vụ
+            </p>
+            <CardTitle>Việc cần làm ngay trong ca</CardTitle>
+            <CardDescription>
+              Dashboard ưu tiên các đầu việc theo role/site trước, còn KPI chỉ là lớp phụ để đọc nhịp vận hành.
+            </CardDescription>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href={paths.reports}>
+              Xem báo cáo tổng hợp
+              <ArrowRight className="size-4" />
+            </Link>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {taskQueueItems.length === 0 ? (
+            <Card className="app-subpanel border-success/15 bg-success/5">
+              <CardContent className="p-5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-success">Nhịp ca ổn định</p>
+                <p className="mt-2 text-lg font-semibold">Hiện chưa có đầu việc gấp cần đẩy lên đầu hàng đợi.</p>
+                <p className="mt-2 text-sm text-muted-foreground">Có thể chuyển sang rà soát cảnh báo, tồn kho hoặc chuẩn bị cho ca tiếp theo.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {taskQueueItems.map((item) => (
+                <Link key={item.key} href={item.href} className={cn("group app-subpanel flex h-full flex-col justify-between p-5 transition-transform hover:-translate-y-1", item.panelClassName)}>
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className={cn("flex size-11 items-center justify-center rounded-lg", item.iconClassName)}>{item.icon}</div>
+                      <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{item.eyebrow}</p>
+                      <h3 className="text-lg font-semibold tracking-tight">{item.title}</h3>
+                      <p className="text-sm text-muted-foreground">{item.description}</p>
+                    </div>
+                  </div>
+                  <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary">{item.cta}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* KPI row */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
         {[
@@ -311,10 +554,10 @@ export function DashboardClient({
           { label: "Phiếu điều chuyển", value: String(activeTransfers) },
           { label: "Phiếu kiểm kê", value: String(activeStocktakes) },
         ].map((item) => (
-          <Card key={item.label}>
+          <Card key={item.label} className="app-subpanel">
             <CardContent className="space-y-3 p-5">
               <p className="truncate text-xs font-semibold uppercase tracking-widest text-muted-foreground">{item.label}</p>
-              <span className="text-2xl font-semibold tracking-tight">{item.value}</span>
+              <span className="font-heading text-2xl font-semibold tracking-tight">{item.value}</span>
             </CardContent>
           </Card>
         ))}
@@ -324,13 +567,13 @@ export function DashboardClient({
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">
           {/* Priority board */}
-          <Card>
+          <Card className="app-panel">
             <CardHeader>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Việc cần xử lý trong ca</p>
-                  <CardTitle>Bảng ưu tiên kho vận</CardTitle>
-                  <CardDescription>Gom các tín hiệu quan trọng nhất để vào đúng luồng xử lý, thay vì đi từng màn hình riêng lẻ.</CardDescription>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Lớp hỗ trợ theo dõi</p>
+                  <CardTitle>Cảnh báo và luồng ưu tiên</CardTitle>
+                  <CardDescription>Giữ các tín hiệu quan trọng ở lớp phụ sau hàng đợi công việc, để không làm loãng tác vụ chính trong ca.</CardDescription>
                 </div>
                 <Button asChild variant="outline" size="sm">
                   <Link href={paths.reports}>Mở báo cáo <ArrowRight className="size-4" /></Link>
@@ -339,7 +582,7 @@ export function DashboardClient({
             </CardHeader>
             <CardContent>
               {priorityItems.length === 0 ? (
-                <Card className="border-success/15 bg-success/5">
+                <Card className="app-subpanel border-success/15 bg-success/5">
                   <CardContent className="p-5">
                     <p className="text-xs font-semibold uppercase tracking-widest text-success">Nhịp kho ổn định</p>
                     <p className="mt-2 text-lg font-semibold">Hiện chưa có đầu việc gấp cần đẩy lên đầu hàng đợi.</p>
@@ -349,7 +592,7 @@ export function DashboardClient({
               ) : (
                 <div className="grid gap-4 md:grid-cols-2">
                   {priorityItems.map((item) => (
-                    <Link key={item.key} href={item.href} className={cn("group flex h-full flex-col justify-between rounded-lg border p-5 transition-transform hover:-translate-y-1", item.panelClassName)}>
+                    <Link key={item.key} href={item.href} className={cn("group app-subpanel flex h-full flex-col justify-between p-5 transition-transform hover:-translate-y-1", item.panelClassName)}>
                       <div className="space-y-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className={cn("flex size-11 items-center justify-center rounded-lg", item.iconClassName)}>{item.icon}</div>
@@ -372,7 +615,7 @@ export function DashboardClient({
           {/* Alerts row */}
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Reorder alerts */}
-            <Card>
+            <Card className="app-panel">
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1">
@@ -384,10 +627,10 @@ export function DashboardClient({
               </CardHeader>
               <CardContent className="space-y-3">
                 {reorderAlerts.length === 0 && (
-                  <p className="rounded-lg border bg-background px-4 py-8 text-center text-sm text-muted-foreground">Không có cảnh báo tái đặt hàng.</p>
+                  <p className="app-subpanel px-4 py-8 text-center text-sm text-muted-foreground">Không có cảnh báo tái đặt hàng.</p>
                 )}
                 {reorderAlerts.slice(0, 4).map((item) => (
-                  <Card key={`${item.branchId}:${item.ingredientId}`}>
+                  <Card key={`${item.branchId}:${item.ingredientId}`} className="app-subpanel">
                     <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
                       <div className="flex min-w-0 flex-1 items-start gap-3">
                         <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-sm font-semibold text-destructive">{item.name.charAt(0)}</div>
@@ -406,7 +649,7 @@ export function DashboardClient({
             </Card>
 
             {/* Expiry alerts */}
-            <Card>
+            <Card className="app-panel">
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1">
@@ -418,11 +661,11 @@ export function DashboardClient({
               </CardHeader>
               <CardContent className="space-y-3">
                 {expiryAlerts.length === 0 && (
-                  <p className="rounded-lg border bg-background px-4 py-8 text-center text-sm text-muted-foreground">Không có hàng sắp hết hạn.</p>
+                  <p className="app-subpanel px-4 py-8 text-center text-sm text-muted-foreground">Không có hàng sắp hết hạn.</p>
                 )}
                 {expiryAlerts.slice(0, 4).map((item) => (
                   <Link href={paths.expiry} key={item.id}>
-                    <Card className="transition-colors hover:bg-accent/50">
+                    <Card className="app-subpanel transition-colors hover:bg-accent/50">
                       <CardContent className="flex items-center gap-4 p-4">
                         <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
                           <Hourglass className="size-5" />
@@ -449,7 +692,7 @@ export function DashboardClient({
         {/* Right sidebar */}
         <div className="space-y-6">
           {/* Quick actions */}
-          <Card>
+          <Card className="app-panel">
             <CardHeader>
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Thao tác nhanh</p>
               <CardTitle>Đi thẳng vào quy trình</CardTitle>
@@ -458,7 +701,7 @@ export function DashboardClient({
             <CardContent>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 {quickActions.map((action) => (
-                  <Link key={action.label} href={action.href} className={cn("group flex h-full flex-col gap-4 rounded-lg border p-4 transition-transform hover:-translate-y-1", action.hoverClassName)}>
+                  <Link key={action.label} href={action.href} className={cn("group app-subpanel flex h-full flex-col gap-4 p-4 transition-transform hover:-translate-y-1", action.hoverClassName)}>
                     <div className="flex items-start justify-between gap-3">
                       <span className={cn("transition-transform group-hover:scale-110", action.iconClassName)}>{action.icon}</span>
                       <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
@@ -474,7 +717,7 @@ export function DashboardClient({
           </Card>
 
           {/* Live tracking */}
-          <Card>
+          <Card className="app-panel">
             <CardHeader>
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Luồng đang mở</p>
               <CardTitle>Theo dõi trực tiếp</CardTitle>

@@ -2,46 +2,78 @@
 
 ## Overview
 
-UI cua repo hien tai gom 3 tang ro rang, va phai bam sat shadcn preset dang co:
+UI hien tai cua repo tiep tuc dua tren shadcn preset chung, nhung surface chrome da duoc rebuild lai de bo hẳn khung layout cu.
+
+He thong gom 3 tang:
 
 1. `Foundation`
-   Song trong `apps/web/app/globals.css`
+   - `apps/web/app/globals.css`
 2. `Primitives`
-   Song trong `packages/ui/src/components/*`
+   - `packages/ui/src/components/*`
 3. `App composition`
-   Song trong `apps/web/app/components/patterns.tsx` va cac shell cua app web
-
-Khong co app-local `components/v2` contract trong repo hien tai. Docs khong duoc noi nguoc voi state do.
+   - `apps/web/app/components/*`
+   - route shells trong `apps/web/app/**/layout.tsx` va `*_shell.tsx`
 
 ## Owners
 
-- `apps/web/app/globals.css` - token/runtime foundation
-- `packages/ui/components.json` - shadcn preset config cho package UI
-- `apps/web/components.json` - shadcn preset config cho web app
-- `packages/ui/src/components/*` - primitive layer
-- `apps/web/app/components/patterns.tsx` - composition wrappers dang ton tai
+- `apps/web/app/layout.tsx`
+  - font loading va root runtime wiring
+- `apps/web/app/globals.css`
+  - token, global background, safe-area helpers, shell helper classes
+- `packages/ui/components.json`
+  - UI package preset config
+- `apps/web/components.json`
+  - web preset config
+- `packages/ui/src/components/*`
+  - primitive layer
+- `apps/web/app/components/patterns.tsx`
+  - shared page composition wrappers
+- `apps/web/app/components/workspace-shell.tsx`
+  - shared workspace chrome cho admin/hr/inventory
+
+## Runtime Contracts
+
+### Typography
+
+- `font-sans` = `Be_Vietnam_Pro`
+- `font-heading` = `Lora`
+- `font-code` = `IBM_Plex_Mono`
+
+### Theme direction
+
+- warm taupe background
+- clay/orange `primary`
+- muted green `accent`
+- dark espresso sidebar
+- global gradient + grid texture duoc set o root body
+
+### Shared helper classes
+
+Foundation export cac helper classes sau:
+
+- `safe-top`
+- `safe-bottom`
+- `app-canvas`
+- `app-shell`
+- `app-panel`
+- `app-subpanel`
+- `app-kicker`
+- `app-stat`
+- `app-dock`
+
+Chung duoc dung de xep bo cuc va shell presentation, khong thay the primitive.
 
 ## Public APIs
 
-### Root export
-
-```
-@comtammatu/ui -> cn
-```
-
-`@comtammatu/ui` hien tai chi export `cn`. Khong co design-system helpers public o barrel nay.
-
 ### Primitive layer
 
-Primitive shadcn/ui song o `packages/ui/src/components/*`.
-
-Nhung component duoc dung nhieu nhat trong governance UI:
+Primitive duoc governance chat:
 
 - `button`
-- `table`
-- `sidebar`
 - `card`
+- `sidebar`
 - `badge`
+- `table`
 - `dialog`
 - `sheet`
 - `tabs`
@@ -50,9 +82,7 @@ Nhung component duoc dung nhieu nhat trong governance UI:
 
 ### App composition layer
 
-Composition hien tai song trong app web, khong song trong `packages/ui`.
-
-Contract dang ton tai o `apps/web/app/components/patterns.tsx`:
+Wrapper contract dang ton tai:
 
 - `PageContainer`
 - `PageHeader`
@@ -62,63 +92,35 @@ Contract dang ton tai o `apps/web/app/components/patterns.tsx`:
 - `EmptyStatePanel`
 - `StatusBadge`
 - `ActionIconButton`
+- `RouteStateCard`
+- `WorkspaceShell`
 
-Composition layer nay chi duoc phep sap xep va gom usage nhat quan cua primitive hien co. No khong duoc dinh nghia token, preset, hay primitive behavior moi.
+Wrapper layer nay chi duoc composition lai primitive + token runtime. Khong duoc tu tao theme system rieng.
 
-## Preset Contract
+## Surface Coverage
 
-Preset hien tai cua du an:
+Shell / chrome hien tai da duoc dua ve mot visual language chung cho:
 
-- `style: radix-mira`
-- `baseColor: taupe`
-- `cssVariables: true`
-
-Moi rule UI moi phai phuc tung preset nay. Bat ky wrapper, docs, hoac helper nao vuot qua preset deu la sai governance.
-
-## Surface Model
-
-Surface chinh thuc hien tai:
-
+- `auth`
+- `employee`
 - `admin`
-- `inventory`
 - `hr`
+- `inventory`
 - `pos`
 - `kds`
-- `employee`
-- `auth`
 
-Surface co the khac nhau o content, workflow, va muc do composition. Surface khong duoc tu tao primitive grammar, token system, hoac theme system rieng.
+Moi surface co workflow rieng, nhung van phai bam cung:
+
+- root token contract
+- preset `radix-mira`
+- shared helper classes
+- primitive behavior cua `packages/ui`
 
 ## Governance
 
 - Single source of truth: `components.json` + `globals.css` + `layout.tsx`
-- `docs/spec/design-system.md` la governance doc, nhung phai theo runtime
-- Khong import `theme.css` theo domain/page
-- Khong them static inline style vao foundation, shell, hoac auth/mobile chrome
-- Khong them arbitrary Tailwind dimension value
-- Khong tao custom design system layer moi vuot tren preset
-- Khong mo rong `patterns.tsx` thanh mot preset song song
-
-## Usage Guidance
-
-Nen uu tien:
-
-- dung primitive goc khi nhu cau da duoc primitive dap ung
-- dung `patterns.tsx` khi can page/header/section/filter/empty/status/action co hinh dang lap lai
-
-Khong nen:
-
-- tao wrapper moi chi de doi `p-*`, `m-*`, `gap-*`, `size-*`
-- fork `button`, `table`, `sidebar`, `card`, `badge` theo tung surface
-- viet docs nhu the repo dang dung mot style/theme/preset khac
-
-## Dependencies
-
-- `@radix-ui/*` - accessible primitives
-- `class-variance-authority` - variant composition
-- `tailwind-merge` - class deduplication
-- `clsx` - conditional classes
-- `sonner` - toast notifications
-- `cmdk` - command palette
-- `date-fns` - date utilities
-- `react-day-picker` - calendar
+- Khong import theme file theo domain
+- Khong them inline static styles vao shell/auth/mobile chrome
+- Khong tao `components/v2` hoac primitive fork
+- Khong viet docs marketing khac voi runtime thuc te
+- Khi doi shell helper classes hoac font/token mapping, cap nhat docs cung luc

@@ -15,13 +15,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -48,6 +41,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { FilterBar, PageHeader, SectionCard } from "@/components/patterns";
 import { adjustStock, fetchExpiryAlerts } from "../actions";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import type { BranchOption, ExpiryAlertRow } from "../page";
@@ -187,40 +181,42 @@ export function ExpiryListClient({
 
   function renderTable(items: ExpiryAlertRow[]) {
     return (
-      <Card className="overflow-hidden rounded-lg">
-        <CardContent className="p-4 md:p-5">
-          {/* Search + branch filter bar */}
-          <div className="-m-4 flex flex-wrap items-center gap-3 border-b bg-muted/20 px-4 py-3 md:-m-5 md:px-5">
-            <Search className="size-4 shrink-0 text-muted-foreground" />
-            <Input
-              placeholder="Tìm nguyên liệu, lô hàng, phiếu nhập..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 min-w-0 flex-1 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
-            />
-            {!isBranchLocked && (
-              <Select value={branchFilter} onValueChange={setBranchFilter}>
-                <SelectTrigger className="h-8 w-auto min-w-36 text-sm">
-                  <SelectValue placeholder="Chi nhánh" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả chi nhánh</SelectItem>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={String(b.id)}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {items.length} mục
-            </span>
-          </div>
+      <SectionCard
+        title="Danh sách lô cần xử lý"
+        description="Tìm theo nguyên liệu, lô, phiếu nhập và chi nhánh để thao tác xóa sổ nhanh."
+        className="overflow-hidden rounded-lg"
+        density="compact"
+      >
+        <FilterBar className="mb-4 gap-3">
+          <Search className="size-4 shrink-0 text-muted-foreground" />
+          <Input
+            placeholder="Tìm nguyên liệu, lô hàng, phiếu nhập..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="min-w-0 flex-1 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
+          />
+          {!isBranchLocked && (
+            <Select value={branchFilter} onValueChange={setBranchFilter}>
+              <SelectTrigger className="h-8 w-auto min-w-36 text-sm">
+                <SelectValue placeholder="Chi nhánh" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả chi nhánh</SelectItem>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={String(b.id)}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <span className="shrink-0 text-xs text-muted-foreground">
+            {items.length} mục
+          </span>
+        </FilterBar>
 
-          {/* Mobile: card layout */}
-          {isMobile ? (
-            <div className="divide-y">
+        {isMobile ? (
+          <div className="divide-y">
               {items.length === 0 && (
                 <div className="py-16 text-center">
                   <CheckCircle2 className="mx-auto size-10 text-success/40" />
@@ -240,7 +236,7 @@ export function ExpiryListClient({
                 return (
                   <div
                     key={`${alert.ingredient_id}-${alert.grn_number}-${alert.batch_number ?? ""}-${String(idx)}`}
-                    className="flex items-center justify-between gap-3 px-4 py-3"
+                    className="app-subpanel flex items-center justify-between gap-3 px-4 py-3"
                   >
                     <div className="min-w-0 space-y-1">
                       <div className="flex items-center gap-2">
@@ -273,12 +269,11 @@ export function ExpiryListClient({
                   </div>
                 );
               })}
-            </div>
-          ) : (
-            /* Desktop: table layout */
-            <Table>
+          </div>
+        ) : (
+          <Table>
               <TableHeader>
-                <TableRow className="bg-muted/20 hover:bg-muted/20">
+                <TableRow>
                   <TableHead className="text-xs font-semibold uppercase tracking-wider">
                     Nguyên liệu
                   </TableHead>
@@ -372,20 +367,48 @@ export function ExpiryListClient({
                 ))}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
-      </Card>
+        )}
+      </SectionCard>
     );
   }
 
   return (
     <>
-      <Card className="border-border/70">
-        <CardHeader>
-          <CardTitle className="text-2xl">Hạn sử dụng</CardTitle>
-          <CardDescription>Theo dõi hàng sắp hết hạn.</CardDescription>
-        </CardHeader>
-      </Card>
+      <PageHeader
+        eyebrow="Expiry Policy"
+        title="Hạn sử dụng"
+        description="Theo dõi hàng sắp hết hạn, khóa lô quá hạn và thao tác xóa sổ trực tiếp từ khu vực settings."
+      />
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="app-stat">
+          <p className="app-kicker">Đã hết hạn</p>
+          <p className="mt-3 text-3xl font-semibold text-destructive">
+            {urgencyCounts.expired}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Lô cần khóa và xử lý ngay.
+          </p>
+        </div>
+        <div className="app-stat">
+          <p className="app-kicker">Nguy cấp</p>
+          <p className="mt-3 text-3xl font-semibold text-destructive">
+            {urgencyCounts.critical}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Lô còn rất ít ngày sử dụng.
+          </p>
+        </div>
+        <div className="app-stat">
+          <p className="app-kicker">Sắp hết hạn</p>
+          <p className="mt-3 text-3xl font-semibold text-warning">
+            {urgencyCounts.warning}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Lô cần được điều phối hoặc tiêu thụ sớm.
+          </p>
+        </div>
+      </div>
 
       {/* Urgency count badges */}
       <div className="flex flex-wrap items-center gap-2">

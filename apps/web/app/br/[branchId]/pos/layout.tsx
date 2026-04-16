@@ -40,10 +40,12 @@ export default async function PosLayout({
   return (
     <main
       id="main-content"
-      className="flex h-dvh min-h-screen touch-manipulation overflow-hidden bg-background pt-[max(0px,env(safe-area-inset-top,0px))]"
+      className="app-canvas safe-top flex h-dvh min-h-screen touch-manipulation overflow-hidden"
     >
-      <div className="relative flex min-h-full w-full flex-1">
-        {children}
+      <div className="flex min-h-full w-full flex-1 p-3 md:p-4">
+        <div className="app-shell relative flex min-h-full w-full flex-1 overflow-hidden">
+          {children}
+        </div>
       </div>
     </main>
   );

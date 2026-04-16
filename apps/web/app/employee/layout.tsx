@@ -24,13 +24,13 @@ export default async function EmployeeLayout({
   if (!claims) redirect(buildLoginBlockedStatePath());
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
+    <div className="app-canvas safe-top flex min-h-dvh flex-col">
       <MobileHeader />
       <main
         id="main-content"
         className="mx-auto w-full max-w-6xl flex-1 px-3 py-4 pb-32 sm:px-4 lg:px-6"
       >
-        <div className="space-y-4">{children}</div>
+        <div className="space-y-5">{children}</div>
       </main>
       <BottomNav />
     </div>
