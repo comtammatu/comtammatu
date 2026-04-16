@@ -36,7 +36,9 @@ export default async function TransfersPage() {
     ? ((brRes.data ?? []) as BranchForTransfer[])
     : [];
   const resolvedHqBranchId =
-    hqBranchId ?? branches.find((branch) => branch.is_headquarters)?.id ?? null;
+    hqBranchId ?? branches.find((b) =>
+      b.branch_kind === "warehouse" || b.branch_kind === "headquarters" || b.is_headquarters
+    )?.id ?? null;
   const ingredients: IngredientRow[] = ingRes.success
     ? ((ingRes.data ?? []) as IngredientRow[])
     : [];

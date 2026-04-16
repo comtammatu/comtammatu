@@ -1,4 +1,5 @@
 import { createClient } from "@comtammatu/database/supabase/server";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { extractClaims } from "@comtammatu/shared/auth";
 import { redirect } from "next/navigation";
@@ -38,7 +39,7 @@ export default async function ProductionPage() {
     : null;
 
   const role = claims?.user_role;
-  if (!role || !["owner", "super_manager", "branch_manager"].includes(role)) {
+  if (!role || !["owner", "super_manager", "branch_manager", "warehouse_manager", "production_manager"].includes(role)) {
     redirect("/inventory?forbidden=1&reason=insufficient-permission");
   }
 
@@ -113,9 +114,9 @@ export default async function ProductionPage() {
       <Card>
         <CardContent className="p-5 sm:p-6">
           <div className="space-y-3">
-            <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            <Badge variant="secondary">
               Central Kitchen
-            </span>
+            </Badge>
             <div className="space-y-2">
               <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
                 Bếp trung tâm

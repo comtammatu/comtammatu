@@ -10,6 +10,8 @@ const PRODUCTION_ROLES: readonly StaffRole[] = [
   "owner",
   "super_manager",
   "branch_manager",
+  "warehouse_manager",
+  "production_manager",
 ];
 
 const productionLineSchema = z.object({

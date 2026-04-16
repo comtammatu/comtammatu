@@ -100,10 +100,10 @@ export function TransfersListClient({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
-  const hq = branches.find((b) => b.is_headquarters);
-  const operational = branches.filter((b) => !b.is_headquarters);
-  const isBranchManager = userRole === "branch_manager";
-  const canCreate = !isBranchManager && Boolean(hq && operational.length >= 1);
+  const isBranchManager = userRole === "branch_manager"
+    || userRole === "warehouse_manager"
+    || userRole === "production_manager";
+  const canCreate = branches.length >= 2;
   const branchLabelById = useMemo(
     () =>
       new Map(
@@ -233,7 +233,7 @@ export function TransfersListClient({
               các site.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
+          <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
             <Search className="size-4 shrink-0 text-muted-foreground" />
             <Input
               placeholder="Tìm số phiếu hoặc tên kho…"
@@ -244,7 +244,7 @@ export function TransfersListClient({
             <span className="shrink-0 text-xs text-muted-foreground">
               {filtered.length} / {rows.length}
             </span>
-          </div>
+          </CardContent></Card>
         </CardHeader>
         <CardContent className="p-0">
           {/* Mobile card layout */}

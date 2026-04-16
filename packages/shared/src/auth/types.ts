@@ -7,6 +7,8 @@ export const STAFF_ROLES = [
   "super_manager",
   "area_manager",
   "branch_manager",
+  "warehouse_manager",
+  "production_manager",
   "cashier",
   "waiter",
   "chef",
@@ -21,6 +23,8 @@ export const ADMIN_ROLES: readonly StaffRole[] = [
   "super_manager",
   "area_manager",
   "branch_manager",
+  "warehouse_manager",
+  "production_manager",
 ] as const;
 
 /** Roles that operate at branch level (POS/KDS) */
@@ -42,6 +46,8 @@ export const TENANT_LEVEL_ROLES: readonly StaffRole[] = [
 export const MANAGEABLE_STAFF_ROLES: readonly StaffRole[] = [
   "area_manager",
   "branch_manager",
+  "warehouse_manager",
+  "production_manager",
   "cashier",
   "waiter",
   "chef",
@@ -80,6 +86,8 @@ export const ROLE_LABEL_VI: Record<StaffRole, string> = {
   super_manager: "Quản lý tổng",
   area_manager: "Quản lý khu vực",
   branch_manager: "Quản lý chi nhánh",
+  warehouse_manager: "Quản lý kho tổng",
+  production_manager: "Quản lý sản xuất",
   cashier: "Thu ngân",
   waiter: "Phục vụ",
   chef: "Bếp",

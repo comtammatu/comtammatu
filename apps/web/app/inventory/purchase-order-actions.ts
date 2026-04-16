@@ -6,7 +6,7 @@ import { PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "../_lib/with-action";
 import { getAuthContext } from "./_lib/auth";
-import { fetchHeadquartersBranchId } from "./_lib/headquarters";
+import { fetchProcurementBranches } from "./_lib/procurement-branches";
 
 const ROLES = PROCUREMENT_ROLES;
 
@@ -31,22 +31,40 @@ export async function fetchPurchaseOrders(): Promise<ActionResult> {
 
 const poCreateSchema = z.object({
   supplierId: z.coerce.number().int().positive(),
+  branchId: z.coerce.number().int().positive().optional(),
   notes: z.string().optional(),
 });
 
 export const createPurchaseOrder = withAction(
   { roles: ROLES, schema: poCreateSchema },
   async (data, { supabase, claims, user }) => {
-    const hqId = await fetchHeadquartersBranchId(supabase, claims.tenant_id);
-    if (!hqId) {
-      return { success: false, error: "Chưa cấu hình chi nhánh Trụ sở." };
+    let targetBranchId = data.branchId;
+
+    if (!targetBranchId) {
+      // Fallback: first procurement branch (backward compat)
+      const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
+      targetBranchId = branches[0]?.id;
     }
+
+    if (!targetBranchId) {
+      return { success: false, error: "Chưa cấu hình kho tổng hoặc bếp trung tâm." };
+    }
+
+    // Branch-scoped roles: must match their assigned branch
+    if (
+      (claims.user_role === "warehouse_manager" || claims.user_role === "production_manager") &&
+      claims.branch_id != null &&
+      claims.branch_id !== targetBranchId
+    ) {
+      return { success: false, error: "Bạn chỉ được tạo PO cho kho của mình." };
+    }
+
     const poNumber = `PO-${randomUUID().slice(0, 8)}`;
     const { data: row, error } = await supabase
       .from("purchase_orders")
       .insert({
         tenant_id: claims.tenant_id,
-        branch_id: hqId,
+        branch_id: targetBranchId,
         supplier_id: data.supplierId,
         po_number: poNumber,
         status: "draft",
@@ -257,16 +275,20 @@ export async function fetchPoSuggestions(input?: {
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
 
-  const hqId = await fetchHeadquartersBranchId(supabase, claims.tenant_id);
-  if (!hqId) {
-    return { success: false, error: "Chưa cấu hình chi nhánh Trụ sở." };
+  const procBranches = await fetchProcurementBranches(supabase, claims.tenant_id);
+  const primaryWarehouseId = procBranches.find(
+    (b) => b.branch_kind === "warehouse" || b.branch_kind === "headquarters",
+  )?.id ?? procBranches[0]?.id;
+
+  if (!primaryWarehouseId) {
+    return { success: false, error: "Chưa cấu hình kho tổng." };
   }
 
   const periodDays = parsed.data.periodDays;
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - periodDays);
 
-  // 1. HQ stock levels for active ingredients with reorder_point
+  // 1. Primary warehouse stock levels for active ingredients with reorder_point
   const { data: hqStock, error: e1 } = await supabase
     .from("stock_levels")
     .select(
@@ -279,11 +301,11 @@ export async function fetchPoSuggestions(input?: {
     `,
     )
     .eq("tenant_id", claims.tenant_id)
-    .eq("branch_id", hqId)
+    .eq("branch_id", primaryWarehouseId)
     .eq("ingredients.is_active", true)
     .not("ingredients.reorder_point", "is", null);
 
-  if (e1) return { success: false, error: "Không thể tải tồn kho HQ." };
+  if (e1) return { success: false, error: "Không thể tải tồn kho kho tổng." };
 
   // 2. Consumption data across ALL branches over the period
   const { data: movements, error: e2 } = await supabase

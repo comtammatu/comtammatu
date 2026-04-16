@@ -27,6 +27,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
+import { Progress } from "@comtammatu/ui/components/progress";
 import { formatVND } from "./_lib/format";
 import { getInventoryPaths, type InventoryRouteBase } from "./_lib/paths";
 import {
@@ -79,7 +80,7 @@ function formatTime(d: Date) {
   return `${String(h12).padStart(2, "0")}:${m} ${period}`;
 }
 
-type DashboardSiteKind = "headquarters" | "central_kitchen" | "branch";
+type DashboardSiteKind = "warehouse" | "headquarters" | "central_kitchen" | "branch";
 
 type QuickAction = {
   icon: ReactNode;
@@ -120,7 +121,7 @@ function buildQuickActions(
 ): QuickAction[] {
   const paths = getInventoryPaths(routeBase);
 
-  if (siteKind === "headquarters") {
+  if (siteKind === "warehouse" || siteKind === "headquarters") {
     return [
       {
         icon: <ShoppingCart className="size-7" />,
@@ -382,7 +383,7 @@ function buildTaskQueueItems({
     (transfer) => transfer.fromBranch === siteName,
   );
 
-  if (siteKind === "headquarters") {
+  if (siteKind === "warehouse" || siteKind === "headquarters") {
     if (pendingPO > 0) {
       items.push({
         key: "hq-po",
@@ -704,91 +705,91 @@ export function DashboardClient({
                     desc: "Tái đặt hàng và các lô sắp quá hạn cần xử lý sớm.",
                   },
                 ].map((stat) => (
-                  <div
-                    key={stat.label}
-                    className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm"
-                  >
-                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                      {stat.label}
-                    </p>
-                    <p className="mt-2 font-heading text-3xl font-semibold tracking-tight">
-                      {stat.value}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      {stat.desc}
-                    </p>
-                  </div>
+                  <Card key={stat.label}>
+                    <CardContent>
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                        {stat.label}
+                      </p>
+                      <p className="mt-2 font-heading text-3xl font-semibold tracking-tight">
+                        {stat.value}
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                        {stat.desc}
+                      </p>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             </div>
 
             <div className="grid gap-3">
-              <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                      Mức áp lực vận hành
-                    </p>
-                    <p className="mt-2 font-heading text-4xl font-semibold tracking-tight">
-                      {operationalPressure}%
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      Tính theo số cảnh báo đang mở và các luồng chưa hoàn tất
-                      trong kho.
-                    </p>
+              <Card className="py-0">
+                <CardContent className="p-5 py-0">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                        Mức áp lực vận hành
+                      </p>
+                      <p className="mt-2 font-heading text-4xl font-semibold tracking-tight">
+                        {operationalPressure}%
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                        Tính theo số cảnh báo đang mở và các luồng chưa hoàn tất
+                        trong kho.
+                      </p>
+                    </div>
+                    <Badge
+                      variant={
+                        operationalPressure >= 70
+                          ? "destructive"
+                          : operationalPressure >= 35
+                            ? "warning"
+                            : "success"
+                      }
+                    >
+                      {pressureLabel}
+                    </Badge>
                   </div>
-                  <Badge
-                    variant={
-                      operationalPressure >= 70
-                        ? "destructive"
-                        : operationalPressure >= 35
-                          ? "warning"
-                          : "success"
-                    }
-                  >
-                    {pressureLabel}
-                  </Badge>
-                </div>
 
-                <div className="mt-5 h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{ width: `${operationalPressure}%` }}
-                  />
-                </div>
-              </div>
+                  <Progress value={operationalPressure} className="mt-5 h-2" />
+                </CardContent>
+              </Card>
 
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Giá trị tồn kho
-                  </p>
-                  <p className="mt-2 text-xl font-semibold">
-                    {formatVND(totalStockValue)}đ
-                  </p>
-                </div>
-                <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Trạng thái theo dõi
-                  </p>
-                  <p className="mt-2 text-xl font-semibold">
-                    {alertCount === 0 && activeFlowCount === 0
-                      ? "Yên nhịp"
-                      : "Đang vận hành"}
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    {alertCount === 0 && activeFlowCount === 0
-                      ? "Hiện chưa có cảnh báo hoặc luồng chờ xử lý."
-                      : "Giữ nhịp xử lý để tránh dồn việc cuối ca."}
-                  </p>
-                </div>
+                <Card>
+                  <CardContent>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Giá trị tồn kho
+                    </p>
+                    <p className="mt-2 text-xl font-semibold">
+                      {formatVND(totalStockValue)}đ
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Trạng thái theo dõi
+                    </p>
+                    <p className="mt-2 text-xl font-semibold">
+                      {alertCount === 0 && activeFlowCount === 0
+                        ? "Yên nhịp"
+                        : "Đang vận hành"}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      {alertCount === 0 && activeFlowCount === 0
+                        ? "Hiện chưa có cảnh báo hoặc luồng chờ xử lý."
+                        : "Giữ nhịp xử lý để tránh dồn việc cuối ca."}
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
+      <Card>
         <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1.5">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -809,7 +810,7 @@ export function DashboardClient({
         </CardHeader>
         <CardContent>
           {taskQueueItems.length === 0 ? (
-            <Card className="rounded-lg border bg-muted/30 text-card-foreground border-success/15 bg-success/5">
+            <Card className="ring-success/15 bg-success/5">
               <CardContent className="p-5">
                 <p className="text-xs font-semibold uppercase tracking-widest text-success">
                   Nhịp ca ổn định
@@ -881,7 +882,7 @@ export function DashboardClient({
         ].map((item) => (
           <Card
             key={item.label}
-            className="rounded-lg border bg-muted/30 text-card-foreground"
+            className="bg-muted/30"
           >
             <CardContent className="space-y-3 p-5">
               <p className="truncate text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -899,7 +900,7 @@ export function DashboardClient({
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">
           {/* Priority board */}
-          <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
+          <Card>
             <CardHeader>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
@@ -921,7 +922,7 @@ export function DashboardClient({
             </CardHeader>
             <CardContent>
               {priorityItems.length === 0 ? (
-                <Card className="rounded-lg border bg-muted/30 text-card-foreground border-success/15 bg-success/5">
+                <Card className="ring-success/15 bg-success/5">
                   <CardContent className="p-5">
                     <p className="text-xs font-semibold uppercase tracking-widest text-success">
                       Nhịp kho ổn định
@@ -983,7 +984,7 @@ export function DashboardClient({
           {/* Alerts row */}
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Reorder alerts */}
-            <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
+            <Card>
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1">
@@ -1010,7 +1011,7 @@ export function DashboardClient({
                 {reorderAlerts.slice(0, 4).map((item) => (
                   <Card
                     key={`${item.branchId}:${item.ingredientId}`}
-                    className="rounded-lg border bg-muted/30 text-card-foreground"
+                    className="bg-muted/30"
                   >
                     <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
                       <div className="flex min-w-0 flex-1 items-start gap-3">
@@ -1041,7 +1042,7 @@ export function DashboardClient({
             </Card>
 
             {/* Expiry alerts */}
-            <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
+            <Card>
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1">
@@ -1065,7 +1066,7 @@ export function DashboardClient({
                 )}
                 {expiryAlerts.slice(0, 4).map((item) => (
                   <Link href={paths.expiry} key={item.id}>
-                    <Card className="rounded-lg border bg-muted/30 text-card-foreground transition-colors hover:bg-accent/50">
+                    <Card className="bg-muted/30 transition-colors hover:bg-accent/50">
                       <CardContent className="flex items-center gap-4 p-4">
                         <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
                           <Hourglass className="size-5" />
@@ -1101,7 +1102,7 @@ export function DashboardClient({
         {/* Right sidebar */}
         <div className="space-y-6">
           {/* Quick actions */}
-          <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
+          <Card>
             <CardHeader>
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Thao tác nhanh
@@ -1148,7 +1149,7 @@ export function DashboardClient({
           </Card>
 
           {/* Live tracking */}
-          <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
+          <Card>
             <CardHeader>
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Luồng đang mở
@@ -1236,12 +1237,7 @@ export function DashboardClient({
                               {s.progress}%
                             </span>
                           </div>
-                          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                            <div
-                              className="h-full rounded-full bg-warning"
-                              style={{ width: `${s.progress}%` }}
-                            />
-                          </div>
+                          <Progress value={s.progress} className="mt-3 h-1.5 [&>[data-slot=progress-indicator]]:bg-warning" />
                         </CardContent>
                       </Card>
                     </Link>

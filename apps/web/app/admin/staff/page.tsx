@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { STAFF_ROLES } from "@comtammatu/shared/auth";
-import type { StaffRole } from "@comtammatu/shared/auth";
 import { StaffTable } from "./staff-table";
 import { StaffFilters } from "./staff-filters";
 import { AddStaffButton } from "./add-staff-button";
@@ -23,7 +22,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   // Fetch branches for filters + form
   const { data: branches } = await supabase
     .from("branches")
-    .select("id, name, is_headquarters")
+    .select("id, name, is_headquarters, branch_kind")
     .eq("is_active", true)
     .order("name");
 
@@ -36,7 +35,8 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
 
   // Apply filters
   if (params.role && (STAFF_ROLES as readonly string[]).includes(params.role)) {
-    query = query.eq("role", params.role as StaffRole);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- DB types not yet regenerated with new roles
+    query = query.eq("role", params.role as any);
   }
   if (params.branch) {
     query = query.eq("branch_id", Number(params.branch));

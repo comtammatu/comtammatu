@@ -11,7 +11,7 @@ import { fetchInventoryValueSystem } from "../inventory-value-actions";
 import { formatDate } from "./format";
 import { fetchInventorySiteContext } from "./headquarters";
 
-type DashboardSiteKind = "headquarters" | "central_kitchen" | "branch";
+type DashboardSiteKind = "warehouse" | "headquarters" | "central_kitchen" | "branch";
 
 type DashboardTransfer = {
   id: number;
@@ -114,8 +114,8 @@ export async function loadInventoryDashboardData(): Promise<InventoryDashboardDa
     claims?.user_role === "owner" ||
     claims?.user_role === "office"
       ? {
-          branchName: "Trụ sở",
-          branchKind: "headquarters" as const,
+          branchName: "Kho tổng",
+          branchKind: "warehouse" as const,
         }
       : {
           branchName: "Điểm vận hành",

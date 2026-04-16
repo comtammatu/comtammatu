@@ -41,8 +41,8 @@ export default async function InventoryLayout({
     claims.user_role === "owner" ||
     claims.user_role === "office"
       ? {
-          branchName: "Trụ sở",
-          branchKind: "headquarters" as const,
+          branchName: "Kho tổng",
+          branchKind: "warehouse" as const,
         }
       : {
           branchName: "Điểm vận hành",

@@ -48,11 +48,26 @@ export function StaffFormDialog({
     selectedRole as (typeof TENANT_LEVEL_ROLES)[number],
   );
 
-  const branchChoices = HQ_EXCLUDED_OPERATIONAL_ROLES.includes(
-    selectedRole as StaffRole,
-  )
-    ? branches.filter((b) => b.is_headquarters !== true)
-    : branches;
+  const branchChoices = (() => {
+    // warehouse_manager can only be at warehouse branches
+    if (selectedRole === "warehouse_manager") {
+      return branches.filter((b) =>
+        b.branch_kind === "warehouse" || (b.branch_kind === "headquarters" && b.is_headquarters === true)
+      );
+    }
+    // production_manager can only be at central_kitchen branches
+    if (selectedRole === "production_manager") {
+      return branches.filter((b) => b.branch_kind === "central_kitchen");
+    }
+    // POS/KDS floor roles cannot be at warehouse/CK branches
+    if (HQ_EXCLUDED_OPERATIONAL_ROLES.includes(selectedRole as StaffRole)) {
+      return branches.filter((b) => {
+        const kind = b.branch_kind;
+        return kind !== "warehouse" && kind !== "central_kitchen" && kind !== "headquarters" && b.is_headquarters !== true;
+      });
+    }
+    return branches;
+  })();
 
   useEffect(() => {
     if (state?.success) {

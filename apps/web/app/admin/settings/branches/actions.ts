@@ -14,13 +14,13 @@ const branchSchema = z.object({
   name: z.string().min(1, { error: "Tên điểm vận hành không được để trống" }),
   address: z.string().optional().default(""),
   phone: z.string().optional().default(""),
-  branchKind: z.enum(["branch", "central_kitchen"]).default("branch"),
+  branchKind: z.enum(["branch", "central_kitchen", "warehouse"]).default("branch"),
 });
 
 const updateBranchSchema = branchSchema.extend({
   id: z.coerce.number().int().positive(),
   branchKind: z
-    .enum(["branch", "central_kitchen", "headquarters"])
+    .enum(["branch", "central_kitchen", "warehouse", "headquarters"])
     .default("branch"),
 });
 
@@ -33,7 +33,7 @@ type BranchWritePayload = {
   name: string;
   address: string | null;
   phone: string | null;
-  branch_kind?: "branch" | "central_kitchen" | "headquarters";
+  branch_kind?: "branch" | "central_kitchen" | "warehouse" | "headquarters";
 };
 
 /* ─── Actions ─── */
@@ -112,12 +112,8 @@ export const updateBranch = withFormAction(
       return { success: false, error: "Điểm vận hành không tồn tại" };
     }
 
-    if (!currentBranch.is_headquarters && data.branchKind === "headquarters") {
-      return {
-        success: false,
-        error: "Vui lòng dùng nút Đặt làm trụ sở chính để gán HQ.",
-      };
-    }
+    // Map legacy "headquarters" to "warehouse"
+    const resolvedKind = data.branchKind === "headquarters" ? "warehouse" : data.branchKind;
 
     const { error } = await supabase
       .from("branches")
@@ -127,9 +123,7 @@ export const updateBranch = withFormAction(
               name: data.name,
               address: data.address || null,
               phone: data.phone || null,
-              branch_kind: currentBranch.is_headquarters
-                ? "headquarters"
-                : data.branchKind,
+              branch_kind: resolvedKind,
             } as BranchWritePayload)
           : ({
               name: data.name,
