@@ -28,6 +28,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
+import {
+  Item,
+  ItemDescription,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { InventoryHeader } from "./_components/inventory-header";
 import { MobileEntryBanner } from "./_components/mobile/mobile-entry-banner";
@@ -210,26 +215,35 @@ export function DashboardClient(props: DashboardProps) {
       <InventoryHeader
         title="Tổng quan"
         description={`${siteName} • ${new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}`}
+        breadcrumbs={["Kho vận", "Tổng quan"]}
       />
 
       <div className="flex-1 overflow-auto p-4">
         <div className="mx-auto max-w-7xl space-y-6">
           <MobileEntryBanner />
           {/* KPI cards */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { label: "Giá trị tồn kho", value: `${formatVND(totalStockValue)}đ` },
-              { label: "PO đang chờ", value: String(pendingPO) },
-              { label: "Transfer đang xử lý", value: String(activeTransfers) },
-              { label: "Cảnh báo hết hạn", value: String(expiryAlerts.length) },
-            ].map((kpi) => (
-              <Card key={kpi.label}>
-                <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground">{kpi.label}</p>
-                  <p className="mt-1 text-2xl font-bold">{kpi.value}</p>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="workspace-highlight-card">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { label: "Giá trị tồn kho", value: `${formatVND(totalStockValue)}đ` },
+                { label: "PO đang chờ", value: String(pendingPO) },
+                { label: "Transfer đang xử lý", value: String(activeTransfers) },
+                { label: "Cảnh báo hết hạn", value: String(expiryAlerts.length) },
+              ].map((kpi) => (
+                <Item
+                  key={kpi.label}
+                  variant="outline"
+                  className="workspace-metric-card flex-col items-start gap-2 px-4 py-3"
+                >
+                  <ItemDescription className="text-xs font-semibold uppercase tracking-widest">
+                    {kpi.label}
+                  </ItemDescription>
+                  <ItemTitle className="text-2xl font-bold">
+                    {kpi.value}
+                  </ItemTitle>
+                </Item>
+              ))}
+            </div>
           </div>
 
           {/* Quick actions */}
