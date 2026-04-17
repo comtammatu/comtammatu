@@ -43,6 +43,28 @@ Primitive source van song tai `packages/ui/src/components/*`, nhung phai tiep tu
 
 Khong fork primitive theo surface.
 
+## Keyboard Shortcuts
+
+Operational surfaces (POS, KDS) support keyboard shortcuts cho power users. Shortcut helper duy nhat: `useKeyboardShortcut` tai `apps/web/app/_lib/use-keyboard-shortcut.ts`.
+
+Convention:
+- Shortcut don phim (`T`, `D`, `/`) mac dinh KHONG fire khi focus dang o input/textarea/contenteditable.
+- Shortcut co meta (`Cmd+Enter`, `Ctrl+K`) co the dung `fireInInput: true` de fire ca khi dang go.
+- `Escape` de clear filter hoac dong dialog (Radix tu lo dong dialog).
+- Hien thi hint voi `<Kbd>` (hoac `<KbdGroup>` khi nhieu phim) canh label button, `className="hidden md:inline-flex"` de an tren mobile.
+- Them `aria-keyshortcuts="T"` tren button/toggle de screen reader doc duoc.
+
+Shortcuts da wire:
+
+- POS cart (`cart-sidebar.tsx`):
+  - `Cmd/Ctrl + Enter` — mo dialog xac nhan gui bep (works khi dang go note)
+  - `T` — chuyen sang Mang ve
+  - `D` — chuyen sang Tai ban
+- KDS (`kds-board.tsx`):
+  - `Escape` — clear het filter (station + status + orderType) neu co filter nao dang bat
+
+Khi them shortcut moi, update bang nay + cau hinh `aria-keyshortcuts` tuong ung.
+
 ## Form Helpers
 
 App-local form helpers song tai `apps/web/app/components/form/`. Dung cho moi dialog/form moi:

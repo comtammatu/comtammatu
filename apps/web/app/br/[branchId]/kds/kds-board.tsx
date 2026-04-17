@@ -22,6 +22,7 @@ import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { OrderCard } from "./order-card";
 import type { KdsStation, KdsTicket, KdsOrderInfo, KdsOrderItem } from "./page";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
 
 /* ─── Types ─── */
 
@@ -427,6 +428,22 @@ export function KdsBoard({
     }
     return list;
   }, [groupedOrders, orderTypeFilter, ticketStatusFilter]);
+
+  // Keyboard shortcuts: Escape clears all filters back to "all"
+  useKeyboardShortcut([
+    {
+      key: "Escape",
+      handler: () => {
+        const hasFilters =
+          activeStationId !== null ||
+          ticketStatusFilter !== "all" ||
+          orderTypeFilter !== "all";
+        if (hasFilters) {
+          replaceQuery({ station: null, status: null, orderType: null });
+        }
+      },
+    },
+  ]);
 
   // Optimistic bump handler
   const handleBump = useCallback(
