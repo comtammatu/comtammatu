@@ -29,6 +29,8 @@ export default async function TransferDetailPage({
       status: string;
       from_branch_id: number;
       to_branch_id: number;
+      from_branch_name: string | null;
+      to_branch_name: string | null;
       created_by: string;
       created_at: string;
       shipped_at: string | null;
@@ -74,8 +76,10 @@ export default async function TransferDetailPage({
     status: d.transfer.status ?? "draft",
     fromBranchId: d.transfer.from_branch_id,
     toBranchId: d.transfer.to_branch_id,
-    fromBranch: `Chi nhánh #${d.transfer.from_branch_id}`,
-    toBranch: `Chi nhánh #${d.transfer.to_branch_id}`,
+    fromBranch:
+      d.transfer.from_branch_name ?? `Chi nhánh #${d.transfer.from_branch_id}`,
+    toBranch:
+      d.transfer.to_branch_name ?? `Chi nhánh #${d.transfer.to_branch_id}`,
     createdBy: "—",
     date: d.transfer.shipped_at
       ? formatDateTime(d.transfer.shipped_at)
