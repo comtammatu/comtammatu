@@ -346,7 +346,7 @@ export async function createGrnFromPo(poId: number): Promise<ActionResult> {
 
   const { data: po, error: poErr } = await supabase
     .from("purchase_orders")
-    .select("id, supplier_id, status")
+    .select("id, supplier_id, status, branch_id")
     .eq("id", id.data)
     .eq("tenant_id", claims.tenant_id)
     .single();
@@ -358,25 +358,31 @@ export async function createGrnFromPo(poId: number): Promise<ActionResult> {
     };
   }
 
-  // Use PO's branch (it already points to a valid procurement branch)
-  const { data: poBranch } = await supabase
-    .from("purchase_orders")
-    .select("branch_id")
-    .eq("id", po.id)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
-
-  let targetBranchId = poBranch?.branch_id;
+  let targetBranchId: number | null = po.branch_id;
   if (!targetBranchId) {
-    // Fallback: first procurement branch
     const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
-    targetBranchId = branches[0]?.id;
+    targetBranchId = branches[0]?.id ?? null;
   }
   if (!targetBranchId)
     return { success: false, error: "Chưa cấu hình kho tổng." };
 
+  const { data: poLines, error: linesErr } = await supabase
+    .from("purchase_order_items")
+    .select("ingredient_id, quantity, unit, unit_price_est")
+    .eq("po_id", po.id)
+    .eq("tenant_id", claims.tenant_id);
+  if (linesErr) {
+    return { success: false, error: "Không thể đọc dòng PO." };
+  }
+  if (!poLines || poLines.length === 0) {
+    return {
+      success: false,
+      error: "PO không có dòng nào để chuyển sang phiếu nhập.",
+    };
+  }
+
   const grnNumber = `GRN-${randomUUID().slice(0, 8)}`;
-  const { data, error } = await supabase
+  const { data: grn, error } = await supabase
     .from("goods_received_notes")
     .insert({
       tenant_id: claims.tenant_id,
@@ -389,8 +395,42 @@ export async function createGrnFromPo(poId: number): Promise<ActionResult> {
     })
     .select("id")
     .single();
-  if (error) return { success: false, error: "Không thể tạo phiếu nhập." };
-  return { success: true, data };
+  if (error || !grn)
+    return { success: false, error: "Không thể tạo phiếu nhập." };
+
+  const grnItems = poLines.map((line) => {
+    const unitCost = Number(line.unit_price_est ?? 0);
+    const qty = Number(line.quantity);
+    return {
+      tenant_id: claims.tenant_id,
+      grn_id: grn.id,
+      ingredient_id: line.ingredient_id,
+      po_quantity: qty,
+      received_quantity: qty,
+      unit: line.unit,
+      unit_cost: unitCost,
+      total_cost: Number((qty * unitCost).toFixed(2)),
+      quality_status: "accepted" as const,
+    };
+  });
+
+  const { error: itemsErr } = await supabase
+    .from("grn_items")
+    .insert(grnItems);
+  if (itemsErr) {
+    // Best-effort rollback to avoid leaving an empty GRN behind.
+    await supabase
+      .from("goods_received_notes")
+      .delete()
+      .eq("id", grn.id)
+      .eq("tenant_id", claims.tenant_id);
+    return {
+      success: false,
+      error: "Không thể sao chép dòng từ PO sang phiếu nhập.",
+    };
+  }
+
+  return { success: true, data: grn };
 }
 
 /* ─── Supplier Invoices ─── */
