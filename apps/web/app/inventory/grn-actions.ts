@@ -513,13 +513,17 @@ export async function recomputeInvoiceMatching(
 
 /* ─── Recipes ─── */
 
-const recipeSchema = z.object({
-  menuItemId: z.coerce.number().int().positive(),
+const recipeLineSchema = z.object({
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
   unit: z.string().min(1),
-  note: z.string().optional(),
+  note: z.string().optional().nullable(),
   yieldFactor: z.coerce.number().positive().default(1.0),
+});
+
+const recipeBatchSchema = z.object({
+  menuItemId: z.coerce.number().int().positive(),
+  lines: z.array(recipeLineSchema),
 });
 
 export async function fetchRecipes(): Promise<ActionResult> {
@@ -527,36 +531,43 @@ export async function fetchRecipes(): Promise<ActionResult> {
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
   const { data, error } = await supabase
-    .from("recipes")
+    .from("menu_items")
     .select(
       `
-      id, menu_item_id, ingredient_id, quantity, unit, note, yield_factor,
-      menu_items ( id, name ),
-      ingredients ( id, name, unit )
+      id, name, updated_at,
+      menu_categories ( name ),
+      recipes (
+        ingredient_id, quantity, unit, note, yield_factor,
+        ingredients ( id, name, unit, unit_cost )
+      )
     `,
     )
     .eq("tenant_id", claims.tenant_id)
-    .order("menu_item_id");
-  if (error) return { success: false, error: "Không thể tải công thức." };
+    .eq("is_active", true)
+    .order("name");
+  if (error) {
+    console.error("fetchRecipes", error);
+    return { success: false, error: "Không thể tải công thức." };
+  }
   return { success: true, data: data ?? [] };
 }
 
-export const upsertRecipe = withAction(
-  { roles: ROLES, schema: recipeSchema },
-  async (data, { supabase, claims }) => {
-    const { error } = await supabase.from("recipes").upsert(
-      {
-        tenant_id: claims.tenant_id,
-        menu_item_id: data.menuItemId,
-        ingredient_id: data.ingredientId,
-        quantity: data.quantity,
-        unit: data.unit,
-        note: data.note ?? null,
-        yield_factor: data.yieldFactor,
-      },
-      { onConflict: "menu_item_id,ingredient_id,tenant_id" },
-    );
+export const upsertRecipeLines = withAction(
+  { roles: ROLES, schema: recipeBatchSchema },
+  async (data, { supabase }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).rpc("upsert_recipe_lines", {
+      p_menu_item_id: data.menuItemId,
+      p_lines: data.lines.map((l) => ({
+        ingredient_id: l.ingredientId,
+        quantity: l.quantity,
+        unit: l.unit,
+        note: l.note ?? null,
+        yield_factor: l.yieldFactor,
+      })),
+    });
     if (error) {
+      console.error("upsertRecipeLines", error);
       return { success: false, error: "Không thể lưu công thức." };
     }
     return { success: true };

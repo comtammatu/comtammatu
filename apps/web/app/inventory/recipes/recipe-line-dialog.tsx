@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { upsertRecipe } from "../procurement-actions";
+import { upsertRecipeLines } from "../procurement-actions";
 
 export interface MenuItemOption {
   id: number;
@@ -34,8 +34,7 @@ export interface IngredientOption {
   unit: string;
 }
 
-export interface EditingLine {
-  menuItemId: number;
+export interface RecipeLineDraft {
   ingredientId: number;
   quantity: number;
   unit: string;
@@ -43,14 +42,44 @@ export interface EditingLine {
   note: string | null;
 }
 
-interface RecipeLineDialogProps {
+interface RecipeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   menuItems: MenuItemOption[];
   ingredients: IngredientOption[];
-  defaultMenuItemId?: number;
-  editingLine?: EditingLine | null;
+  /** Menu item being edited. Undefined = creating a brand-new recipe. */
+  editingMenuItemId?: number;
+  /** Existing lines to prefill when editing. */
+  editingLines?: RecipeLineDraft[];
+  /** Menu item IDs that already have recipes — excluded from the create dropdown. */
+  existingMenuItemIds?: number[];
   onSaved: () => void;
+}
+
+type DraftRow = {
+  key: string;
+  ingredientId: string;
+  quantity: string;
+  unit: string;
+  yieldFactor: string;
+  note: string;
+};
+
+let rowIdCounter = 0;
+function newRowKey() {
+  rowIdCounter += 1;
+  return `r${rowIdCounter}`;
+}
+
+function makeEmptyRow(): DraftRow {
+  return {
+    key: newRowKey(),
+    ingredientId: "",
+    quantity: "",
+    unit: "",
+    yieldFactor: "1",
+    note: "",
+  };
 }
 
 export function RecipeLineDialog({
@@ -58,194 +87,309 @@ export function RecipeLineDialog({
   onOpenChange,
   menuItems,
   ingredients,
-  defaultMenuItemId,
-  editingLine,
+  editingMenuItemId,
+  editingLines,
+  existingMenuItemIds = [],
   onSaved,
-}: RecipeLineDialogProps) {
-  const isEdit = editingLine != null;
+}: RecipeDialogProps) {
+  const isEdit = editingMenuItemId != null;
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [selectedMenuItemId, setSelectedMenuItemId] = useState<string>(
-    editingLine
-      ? String(editingLine.menuItemId)
-      : defaultMenuItemId
-        ? String(defaultMenuItemId)
-        : "",
+    editingMenuItemId ? String(editingMenuItemId) : "",
   );
-  const [selectedIngredientId, setSelectedIngredientId] = useState<string>(
-    editingLine ? String(editingLine.ingredientId) : "",
+  const [rows, setRows] = useState<DraftRow[]>(() =>
+    editingLines && editingLines.length > 0
+      ? editingLines.map((l) => ({
+          key: newRowKey(),
+          ingredientId: String(l.ingredientId),
+          quantity: String(l.quantity),
+          unit: l.unit,
+          yieldFactor: String(l.yieldFactor),
+          note: l.note ?? "",
+        }))
+      : [makeEmptyRow()],
   );
 
-  // Derive unit from selected ingredient
-  const selectedIngredient = ingredients.find(
-    (i) => i.id === Number(selectedIngredientId),
-  );
+  useEffect(() => {
+    if (!open) return;
+    setError(null);
+    setSelectedMenuItemId(editingMenuItemId ? String(editingMenuItemId) : "");
+    setRows(
+      editingLines && editingLines.length > 0
+        ? editingLines.map((l) => ({
+            key: newRowKey(),
+            ingredientId: String(l.ingredientId),
+            quantity: String(l.quantity),
+            unit: l.unit,
+            yieldFactor: String(l.yieldFactor),
+            note: l.note ?? "",
+          }))
+        : [makeEmptyRow()],
+    );
+  }, [open, editingMenuItemId, editingLines]);
+
+  const availableMenuItems = useMemo(() => {
+    if (isEdit) return menuItems;
+    const blocked = new Set(existingMenuItemIds);
+    return menuItems.filter((mi) => !blocked.has(mi.id));
+  }, [menuItems, existingMenuItemIds, isEdit]);
+
+  const ingredientMap = useMemo(() => {
+    const m = new Map<number, IngredientOption>();
+    for (const i of ingredients) m.set(i.id, i);
+    return m;
+  }, [ingredients]);
+
+  function updateRow(key: string, patch: Partial<DraftRow>) {
+    setRows((prev) =>
+      prev.map((r) => (r.key === key ? { ...r, ...patch } : r)),
+    );
+  }
+
+  function handleIngredientChange(rowKey: string, value: string) {
+    const ing = ingredientMap.get(Number(value));
+    updateRow(rowKey, {
+      ingredientId: value,
+      unit:
+        // Only auto-fill unit if the row hasn't got one yet.
+        rows.find((r) => r.key === rowKey)?.unit || ing?.unit || "",
+    });
+  }
+
+  function addRow() {
+    setRows((prev) => [...prev, makeEmptyRow()]);
+  }
+
+  function removeRow(key: string) {
+    setRows((prev) =>
+      prev.length <= 1 ? prev : prev.filter((r) => r.key !== key),
+    );
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
+    setError(null);
 
     const menuItemId = Number(selectedMenuItemId);
-    const ingredientId = Number(selectedIngredientId);
-    const quantity = Number(fd.get("quantity"));
-    const unit = (fd.get("unit") as string) || selectedIngredient?.unit || "";
-    const yieldFactor = Number(fd.get("yield_factor") || 1.0);
-    const note = (fd.get("note") as string) || undefined;
-
-    if (!menuItemId || !ingredientId || !quantity || !unit) {
-      setError("Vui lòng điền đầy đủ thông tin bắt buộc");
+    if (!menuItemId) {
+      setError("Vui lòng chọn thành phẩm.");
       return;
     }
 
-    startTransition(async () => {
-      setError(null);
-      const result = await upsertRecipe({
-        menuItemId,
+    const parsedLines: Array<{
+      ingredientId: number;
+      quantity: number;
+      unit: string;
+      yieldFactor: number;
+      note: string | null;
+    }> = [];
+    const seen = new Set<number>();
+
+    for (const row of rows) {
+      const ingredientId = Number(row.ingredientId);
+      const quantity = Number(row.quantity);
+      const yieldFactor = Number(row.yieldFactor || 1);
+      const unit = row.unit.trim();
+
+      if (!ingredientId) {
+        setError("Mỗi dòng phải chọn nguyên liệu.");
+        return;
+      }
+      if (seen.has(ingredientId)) {
+        setError("Nguyên liệu trùng lặp. Gộp chung vào 1 dòng.");
+        return;
+      }
+      seen.add(ingredientId);
+
+      if (!(quantity > 0)) {
+        setError("Số lượng phải lớn hơn 0.");
+        return;
+      }
+      if (!unit) {
+        setError("Đơn vị không được để trống.");
+        return;
+      }
+      if (!(yieldFactor > 0)) {
+        setError("Yield factor phải lớn hơn 0.");
+        return;
+      }
+
+      parsedLines.push({
         ingredientId,
         quantity,
         unit,
         yieldFactor,
-        note,
+        note: row.note.trim() ? row.note.trim() : null,
       });
+    }
 
+    if (parsedLines.length === 0) {
+      setError("Công thức phải có ít nhất 1 nguyên liệu.");
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await upsertRecipeLines({
+        menuItemId,
+        lines: parsedLines,
+      });
       if (!result.success) {
         setError(result.error ?? "Đã xảy ra lỗi");
         return;
       }
 
       toast.success(
-        isEdit ? "Đã cập nhật dòng công thức" : "Đã thêm dòng công thức",
+        isEdit
+          ? `Đã cập nhật công thức (${parsedLines.length} nguyên liệu)`
+          : `Đã tạo công thức (${parsedLines.length} nguyên liệu)`,
       );
       onOpenChange(false);
       onSaved();
     });
   }
 
-  const dialogKey = isEdit
-    ? `edit-${editingLine.menuItemId}-${editingLine.ingredientId}`
-    : `new-${defaultMenuItemId ?? "any"}`;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" key={dialogKey}>
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? "Sửa dòng công thức" : "Thêm dòng công thức"}
+            {isEdit ? "Sửa công thức" : "Tạo công thức thành phẩm"}
           </DialogTitle>
           <DialogDescription>
-            {isEdit
-              ? "Cập nhật nguyên liệu và định lượng."
-              : "Chọn món ăn và nguyên liệu cần thêm."}
+            Công thức là định mức nguyên liệu để Bếp trung tâm sản xuất 1 phần
+            thành phẩm. Mỗi thành phẩm có thể gồm nhiều nguyên liệu.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Menu item select */}
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Món ăn *</Label>
+            <Label className="text-sm font-medium">Thành phẩm *</Label>
             <Select
               value={selectedMenuItemId}
               onValueChange={setSelectedMenuItemId}
-              disabled={!!defaultMenuItemId || isEdit}
-            >
-              <SelectTrigger className="h-10">
-                <SelectValue placeholder="Chọn món ăn..." />
-              </SelectTrigger>
-              <SelectContent>
-                {menuItems.map((mi) => (
-                  <SelectItem key={mi.id} value={String(mi.id)}>
-                    {mi.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Ingredient select */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Nguyên liệu *</Label>
-            <Select
-              value={selectedIngredientId}
-              onValueChange={setSelectedIngredientId}
               disabled={isEdit}
             >
               <SelectTrigger className="h-10">
-                <SelectValue placeholder="Chọn nguyên liệu..." />
+                <SelectValue placeholder="Chọn thành phẩm..." />
               </SelectTrigger>
               <SelectContent>
-                {ingredients.map((ing) => (
-                  <SelectItem key={ing.id} value={String(ing.id)}>
-                    {ing.name} ({ing.unit})
-                  </SelectItem>
-                ))}
+                {availableMenuItems.length === 0 ? (
+                  <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                    Tất cả thành phẩm đã có công thức.
+                  </div>
+                ) : (
+                  availableMenuItems.map((mi) => (
+                    <SelectItem key={mi.id} value={String(mi.id)}>
+                      {mi.name}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Quantity + Unit */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="recipe-qty" className="text-sm font-medium">
-                Số lượng *
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">
+                Danh sách nguyên liệu *
               </Label>
-              <Input
-                id="recipe-qty"
-                name="quantity"
-                type="number"
-                min={0.001}
-                step={0.001}
-                required
-                defaultValue={editingLine?.quantity ?? ""}
-                placeholder="VD: 0.5"
-                className="h-10"
-              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addRow}
+              >
+                <Plus className="size-4" />
+                Thêm nguyên liệu
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="recipe-unit" className="text-sm font-medium">
-                Đơn vị *
-              </Label>
-              <Input
-                id="recipe-unit"
-                name="unit"
-                required
-                defaultValue={
-                  editingLine?.unit ?? selectedIngredient?.unit ?? ""
-                }
-                placeholder="kg, lít..."
-                className="h-10"
-              />
-            </div>
-          </div>
 
-          {/* Yield factor + note */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="recipe-yield" className="text-sm font-medium">
-                Yield Factor
-              </Label>
-              <Input
-                id="recipe-yield"
-                name="yield_factor"
-                type="number"
-                min={0.01}
-                max={1}
-                step={0.01}
-                defaultValue={editingLine?.yieldFactor ?? 1.0}
-                className="h-10"
-              />
+            <div className="overflow-hidden rounded-md border">
+              <div className="grid grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1.4fr)_auto] items-center gap-2 border-b bg-muted/40 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <div>Nguyên liệu</div>
+                <div>Số lượng</div>
+                <div>Đơn vị</div>
+                <div>Yield</div>
+                <div>Ghi chú</div>
+                <div className="w-8" />
+              </div>
+
+              <div className="divide-y">
+                {rows.map((row) => (
+                  <div
+                    key={row.key}
+                    className="grid grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1.4fr)_auto] items-center gap-2 px-3 py-2"
+                  >
+                    <Select
+                      value={row.ingredientId}
+                      onValueChange={(v) => handleIngredientChange(row.key, v)}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Chọn nguyên liệu..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ingredients.map((ing) => (
+                          <SelectItem key={ing.id} value={String(ing.id)}>
+                            {ing.name} ({ing.unit})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      min={0.001}
+                      step={0.001}
+                      placeholder="VD: 0.5"
+                      value={row.quantity}
+                      onChange={(e) =>
+                        updateRow(row.key, { quantity: e.target.value })
+                      }
+                      className="h-9"
+                    />
+                    <Input
+                      placeholder="kg, lít..."
+                      value={row.unit}
+                      onChange={(e) =>
+                        updateRow(row.key, { unit: e.target.value })
+                      }
+                      className="h-9"
+                    />
+                    <Input
+                      type="number"
+                      min={0.01}
+                      step={0.01}
+                      value={row.yieldFactor}
+                      onChange={(e) =>
+                        updateRow(row.key, { yieldFactor: e.target.value })
+                      }
+                      className="h-9"
+                    />
+                    <Input
+                      placeholder="Tùy chọn"
+                      value={row.note}
+                      onChange={(e) =>
+                        updateRow(row.key, { note: e.target.value })
+                      }
+                      className="h-9"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeRow(row.key)}
+                      disabled={rows.length <= 1}
+                      aria-label="Xoá dòng"
+                    >
+                      <Trash2 className="size-4 text-muted-foreground" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="recipe-note" className="text-sm font-medium">
-                Ghi chú
-              </Label>
-              <Input
-                id="recipe-note"
-                name="note"
-                defaultValue={editingLine?.note ?? ""}
-                placeholder="Tùy chọn..."
-                className="h-10"
-              />
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Yield mặc định 1.0 (không hao hụt). 0.85 = hao 15% khi chế biến.
+            </p>
           </div>
 
           {error && (
@@ -266,7 +410,7 @@ export function RecipeLineDialog({
             </Button>
             <Button type="submit" disabled={isPending} className="h-10">
               {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
-              {isEdit ? "Cập nhật" : "Thêm"}
+              {isEdit ? "Cập nhật công thức" : "Lưu công thức"}
             </Button>
           </DialogFooter>
         </form>

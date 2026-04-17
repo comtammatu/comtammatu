@@ -45,7 +45,7 @@ export {
   fetchSupplierInvoices,
   recomputeInvoiceMatching,
   fetchRecipes,
-  upsertRecipe,
+  upsertRecipeLines,
   fetchMenuItemsForRecipes,
   markInvoicePaid,
 } from "./grn-actions";

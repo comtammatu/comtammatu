@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -25,7 +25,7 @@ import { RecipeLineDialog } from "./recipe-line-dialog";
 import type {
   MenuItemOption,
   IngredientOption,
-  EditingLine,
+  RecipeLineDraft,
 } from "./recipe-line-dialog";
 
 export type RecipeItem = {
@@ -35,6 +35,7 @@ export type RecipeItem = {
   unit: string;
   yieldFactor: number;
   note: string | null;
+  lineCost: number;
 };
 
 export type RecipeRow = {
@@ -48,9 +49,11 @@ export type RecipeRow = {
 };
 
 function YieldBadge({ value }: { value: number }) {
+  // yield_factor is stored as a multiplier (0.85 = 15% loss, 1.0 = no loss)
+  const pct = Math.round(value * 100);
   const variant =
-    value >= 95 ? "success" : value >= 80 ? "warning" : "destructive";
-  return <Badge variant={variant}>{value}%</Badge>;
+    pct >= 95 ? "success" : pct >= 80 ? "warning" : "destructive";
+  return <Badge variant={variant}>{pct}%</Badge>;
 }
 
 export function RecipesClient({
@@ -63,29 +66,35 @@ export function RecipesClient({
   ingredients: IngredientOption[];
 }) {
   const router = useRouter();
-  const [lineDialogOpen, setLineDialogOpen] = useState(false);
-  const [lineDialogMenuItemId, setLineDialogMenuItemId] = useState<
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingMenuItemId, setEditingMenuItemId] = useState<
     number | undefined
   >();
-  const [editingLine, setEditingLine] = useState<EditingLine | null>(null);
+  const [editingLines, setEditingLines] = useState<RecipeLineDraft[]>([]);
 
-  function openAddLine(menuItemId?: number) {
-    setEditingLine(null);
-    setLineDialogMenuItemId(menuItemId);
-    setLineDialogOpen(true);
+  const existingMenuItemIds = useMemo(
+    () => recipes.map((r) => r.menuItemId),
+    [recipes],
+  );
+
+  function openCreate() {
+    setEditingMenuItemId(undefined);
+    setEditingLines([]);
+    setDialogOpen(true);
   }
 
-  function openEditLine(menuItemId: number, item: RecipeItem) {
-    setEditingLine({
-      menuItemId,
-      ingredientId: item.ingredientId,
-      quantity: item.qty,
-      unit: item.unit,
-      yieldFactor: item.yieldFactor,
-      note: item.note,
-    });
-    setLineDialogMenuItemId(menuItemId);
-    setLineDialogOpen(true);
+  function openEdit(recipe: RecipeRow) {
+    setEditingMenuItemId(recipe.menuItemId);
+    setEditingLines(
+      recipe.items.map((item) => ({
+        ingredientId: item.ingredientId,
+        quantity: item.qty,
+        unit: item.unit,
+        yieldFactor: item.yieldFactor,
+        note: item.note,
+      })),
+    );
+    setDialogOpen(true);
   }
 
   function handleSaved() {
@@ -95,127 +104,105 @@ export function RecipesClient({
   return (
     <>
       <InventoryHeader
-        title="Công thức món"
+        title="Công thức thành phẩm"
         actions={
-          <Button type="button" onClick={() => openAddLine()}>
-            + Tạo món mới
+          <Button type="button" onClick={openCreate}>
+            <Plus className="size-4" />
+            Tạo công thức
           </Button>
         }
       />
       <div className="flex-1 overflow-auto p-4">
-      <div className="mx-auto max-w-7xl space-y-4">
+        <div className="mx-auto max-w-7xl space-y-4">
+          {recipes.length === 0 && (
+            <Card>
+              <CardContent className="py-10 text-center">
+                <p className="text-base font-semibold">Chưa có công thức nào</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Công thức là định mức nguyên liệu để Bếp trung tâm sản xuất
+                  thành phẩm. Nhấn &quot;Tạo công thức&quot; để bắt đầu.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
-      {recipes.length === 0 && (
-        <Card>
-          <CardContent className="py-10 text-center">
-            <p className="text-base font-semibold">Chưa có công thức nào</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Nhấn "Tạo món mới" để bắt đầu dựng định mức nguyên liệu.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+          <div className="space-y-4">
+            {recipes.map((recipe) => (
+              <Card key={recipe.id} className="overflow-hidden">
+                <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CardTitle>{recipe.name}</CardTitle>
+                    {recipe.category && (
+                      <Badge variant="success">{recipe.category}</Badge>
+                    )}
+                    <span className="text-sm text-muted-foreground">
+                      {recipe.items.length} nguyên liệu •{" "}
+                      {formatVND(recipe.estimatedCost)} đ/phần
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openEdit(recipe)}
+                  >
+                    <Pencil className="size-4" />
+                    Sửa công thức
+                  </Button>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nguyên liệu</TableHead>
+                        <TableHead>Số lượng</TableHead>
+                        <TableHead>Đơn vị</TableHead>
+                        <TableHead className="text-center">Yield</TableHead>
+                        <TableHead>Ghi chú</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {recipe.items.map((item) => (
+                        <TableRow key={item.ingredientId}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="size-2 rounded-full bg-primary/40" />
+                              <span className="font-semibold">
+                                {item.ingredientName}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono">{item.qty}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {item.unit}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <YieldBadge value={item.yieldFactor} />
+                          </TableCell>
+                          <TableCell className="text-xs italic text-muted-foreground">
+                            {item.note ?? "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-      <div className="space-y-4">
-        {recipes.map((recipe) => (
-          <Card key={recipe.id} className="overflow-hidden">
-            <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex items-center gap-2">
-                <CardTitle>{recipe.name}</CardTitle>
-                <Badge variant="success">{recipe.category}</Badge>
-                <span className="text-sm text-muted-foreground">
-                  {formatVND(recipe.estimatedCost)} đ/phần
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => openAddLine(recipe.menuItemId)}
-                  aria-label={`Sửa ${recipe.name}`}
-                >
-                  <Pencil className="size-4" />
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => openAddLine(recipe.menuItemId)}
-                  variant="outline"
-                  size="sm"
-                >
-                  + Thêm dòng
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nguyên liệu</TableHead>
-                    <TableHead>Số lượng</TableHead>
-                    <TableHead>Đơn vị</TableHead>
-                    <TableHead className="text-center">
-                      Yield Factor (%)
-                    </TableHead>
-                    <TableHead>Ghi chú</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recipe.items.map((item) => (
-                    <TableRow
-                      key={item.ingredientId}
-                      className="cursor-pointer"
-                      onClick={() => openEditLine(recipe.menuItemId, item)}
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="size-2 rounded-full bg-primary/40" />
-                          <span className="font-semibold">
-                            {item.ingredientName}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono">{item.qty}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {item.unit}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <YieldBadge value={item.yieldFactor} />
-                      </TableCell>
-                      <TableCell className="text-xs italic text-muted-foreground">
-                        {item.note ?? "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {recipe.items.length === 0 && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={5}
-                        className="py-8 text-center text-sm text-muted-foreground"
-                      >
-                        Chưa có nguyên liệu. Nhấn &quot;Thêm dòng công
-                        thức&quot; để bắt đầu.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        ))}
+          <RecipeLineDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            menuItems={menuItems}
+            ingredients={ingredients}
+            editingMenuItemId={editingMenuItemId}
+            editingLines={editingLines}
+            existingMenuItemIds={existingMenuItemIds}
+            onSaved={handleSaved}
+          />
+        </div>
       </div>
-
-      <RecipeLineDialog
-        open={lineDialogOpen}
-        onOpenChange={setLineDialogOpen}
-        menuItems={menuItems}
-        ingredients={ingredients}
-        defaultMenuItemId={lineDialogMenuItemId}
-        editingLine={editingLine}
-        onSaved={handleSaved}
-      />
-    </div>
-    </div>
     </>
   );
 }

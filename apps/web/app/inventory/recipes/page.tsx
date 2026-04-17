@@ -5,6 +5,26 @@ import { RecipesClient } from "./recipes-client";
 import type { RecipeRow, RecipeItem } from "./recipes-client";
 import type { MenuItemOption, IngredientOption } from "./recipe-line-dialog";
 
+type MenuItemRow = {
+  id: number;
+  name: string;
+  updated_at: string | null;
+  menu_categories: { name: string } | null;
+  recipes: Array<{
+    ingredient_id: number | null;
+    quantity: number | string | null;
+    unit: string | null;
+    note: string | null;
+    yield_factor: number | string | null;
+    ingredients: {
+      id: number;
+      name: string;
+      unit: string;
+      unit_cost: number | string | null;
+    } | null;
+  }> | null;
+};
+
 export default async function RecipesPage() {
   const [recipesRes, menuItemsRes, ingredientsRes] = await Promise.all([
     fetchRecipes(),
@@ -13,34 +33,38 @@ export default async function RecipesPage() {
   ]);
 
   const dbRows = recipesRes.success
-    ? (recipesRes.data as Array<Record<string, unknown>>)
+    ? (recipesRes.data as MenuItemRow[])
     : [];
 
-  const recipes: RecipeRow[] = dbRows.map((row) => {
-    const lineItems =
-      (row.recipe_items as Array<Record<string, unknown>>) ?? [];
+  const recipes: RecipeRow[] = dbRows
+    .filter((row) => (row.recipes ?? []).length > 0)
+    .map((row) => {
+      const items: RecipeItem[] = (row.recipes ?? []).map((line) => {
+        const qty = Number(line.quantity ?? 0);
+        const unitCost = Number(line.ingredients?.unit_cost ?? 0);
+        return {
+          ingredientId: line.ingredients?.id ?? line.ingredient_id ?? 0,
+          ingredientName: line.ingredients?.name ?? "—",
+          qty,
+          unit: line.unit ?? line.ingredients?.unit ?? "",
+          yieldFactor: Number(line.yield_factor ?? 1),
+          note: line.note ?? null,
+          lineCost: qty * unitCost,
+        };
+      });
 
-    const items: RecipeItem[] = lineItems.map((li) => ({
-      ingredientId:
-        ((li.ingredients as Record<string, unknown>)?.id as number) ?? 0,
-      ingredientName:
-        ((li.ingredients as Record<string, unknown>)?.name as string) ?? "—",
-      qty: Number(li.quantity ?? 0),
-      unit: (li.unit as string) ?? "",
-      yieldFactor: Number(li.yield_factor ?? 100),
-      note: (li.note as string) ?? null,
-    }));
+      const estimatedCost = items.reduce((sum, i) => sum + i.lineCost, 0);
 
-    return {
-      id: row.id as number,
-      menuItemId: (row.menu_item_id as number) ?? 0,
-      name: (row.name as string) ?? "",
-      category: (row.category as string) ?? "",
-      updatedAt: row.updated_at ? formatDate(row.updated_at as string) : "—",
-      estimatedCost: Number(row.estimated_cost ?? 0),
-      items,
-    };
-  });
+      return {
+        id: row.id,
+        menuItemId: row.id,
+        name: row.name,
+        category: row.menu_categories?.name ?? "",
+        updatedAt: row.updated_at ? formatDate(row.updated_at) : "—",
+        estimatedCost,
+        items,
+      };
+    });
 
   const menuItems: MenuItemOption[] = menuItemsRes.success
     ? (menuItemsRes.data as Array<{ id: number; name: string }>).map((mi) => ({
