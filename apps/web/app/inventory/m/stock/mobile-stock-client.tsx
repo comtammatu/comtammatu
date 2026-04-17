@@ -2,7 +2,11 @@
 
 import * as React from "react";
 import { Search } from "lucide-react";
-import { Input } from "@comtammatu/ui/components/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import { cn } from "@comtammatu/ui";
 import { MobileEmptyState } from "../../_components/mobile/mobile-empty-state";
 import { formatQty } from "../../_lib/format";
@@ -119,17 +123,19 @@ export function MobileStockClient({ rows }: { rows: StockRow[] }) {
         />
       </div>
 
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
+      <InputGroup className="h-12 rounded-lg">
+        <InputGroupAddon>
+          <Search />
+        </InputGroupAddon>
+        <InputGroupInput
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Tìm nguyên liệu theo tên hoặc SKU"
-          className="h-12 rounded-lg pl-9 text-base"
+          className="text-base"
           inputMode="search"
         />
-      </div>
+      </InputGroup>
 
       <div className="flex flex-wrap gap-1.5">
         {(Object.keys(FILTER_LABELS) as Filter[]).map((key) => (

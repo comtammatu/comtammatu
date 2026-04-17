@@ -10,7 +10,11 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import { Input } from "@comtammatu/ui/components/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Card } from "@comtammatu/ui/components/card";
 import { Button } from "@comtammatu/ui/components/button";
@@ -352,17 +356,19 @@ export function GrnCreateClient({
         </Card>
       ) : null}
 
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
+      <InputGroup className="h-12 rounded-lg">
+        <InputGroupAddon>
+          <Search />
+        </InputGroupAddon>
+        <InputGroupInput
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Tìm theo tên hoặc mã SKU"
-          className="h-12 rounded-lg pl-9 text-base"
+          className="text-base"
           inputMode="search"
         />
-      </div>
+      </InputGroup>
 
       <div className="flex flex-col gap-2">
         {filtered.length === 0 ? (
