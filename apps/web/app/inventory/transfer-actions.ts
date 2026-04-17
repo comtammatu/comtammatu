@@ -340,3 +340,34 @@ export async function fetchBranchesForTransfer(): Promise<ActionResult> {
   if (error) return { success: false, error: "Không thể tải danh sách kho." };
   return { success: true, data: data ?? [] };
 }
+
+export async function fetchInventoryLocationsForBranch(
+  branchId: number,
+): Promise<ActionResult> {
+  const id = z.coerce.number().int().positive().safeParse(branchId);
+  if (!id.success) return { success: false, error: "ID không hợp lệ" };
+  const ctx = await getAuthContext(ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims } = ctx;
+
+  // Branch-scoped roles may only read their own branch's locations
+  if (
+    claims.branch_id != null &&
+    ["branch_manager", "warehouse_manager", "production_manager"].includes(
+      claims.user_role ?? "",
+    ) &&
+    id.data !== claims.branch_id
+  ) {
+    return { success: false, error: "Không có quyền xem vị trí kho này." };
+  }
+
+  const { data, error } = await supabase
+    .from("inventory_locations")
+    .select("id, name, code, location_kind")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("branch_id", id.data)
+    .eq("is_active", true)
+    .order("sort_order");
+  if (error) return { success: false, error: "Không thể tải vị trí kho." };
+  return { success: true, data: data ?? [] };
+}

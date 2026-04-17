@@ -4,9 +4,11 @@ import { fetchIngredients } from "../actions";
 import {
   fetchStockTransfers,
   fetchBranchesForTransfer,
+  fetchInventoryLocationsForBranch,
 } from "../transfer-actions";
 import type {
   BranchForTransfer,
+  InventoryLocation,
   TransferListRow,
 } from "./transfers-list-client";
 import { TransfersListClient } from "./transfers-list-client";
@@ -21,10 +23,15 @@ export default async function TransfersPage() {
     ? extractClaims(session.user.app_metadata)
     : null;
 
-  const [trRes, brRes, ingRes] = await Promise.all([
+  const userBranchId = claims?.branch_id ?? null;
+
+  const [trRes, brRes, ingRes, locRes] = await Promise.all([
     fetchStockTransfers(),
     fetchBranchesForTransfer(),
     fetchIngredients(),
+    userBranchId != null
+      ? fetchInventoryLocationsForBranch(userBranchId)
+      : Promise.resolve({ success: true as const, data: [] }),
   ]);
 
   const rows: TransferListRow[] = trRes.success
@@ -38,14 +45,18 @@ export default async function TransfersPage() {
   const ingredients: IngredientRow[] = ingRes.success
     ? ((ingRes.data ?? []) as IngredientRow[])
     : [];
+  const locations: InventoryLocation[] = locRes.success
+    ? ((locRes.data ?? []) as InventoryLocation[])
+    : [];
 
   return (
     <TransfersListClient
       initial={rows}
       branches={branches}
       ingredients={ingredients}
+      locations={locations}
       hqBranchId={hqBranchId}
-      userBranchId={claims?.branch_id ?? null}
+      userBranchId={userBranchId}
       userRole={claims?.user_role ?? "branch_manager"}
       basePath="/inventory/transfers"
     />

@@ -43,7 +43,14 @@ export interface BranchForTransfer {
   is_active: boolean;
 }
 
-type SlipKind = "inbound" | "outbound";
+export interface InventoryLocation {
+  id: number;
+  name: string;
+  code: string;
+  location_kind: string;
+}
+
+type SlipKind = "inbound" | "outbound" | "internal";
 type OutboundDest = "hq" | "other_branch";
 
 type DraftLine = {
@@ -59,6 +66,7 @@ export function CreateTransferDialog({
   onOpenChange,
   branches,
   ingredients,
+  locations,
   hqBranchId,
   userBranchId,
   userRole,
@@ -68,6 +76,7 @@ export function CreateTransferDialog({
   onOpenChange: (o: boolean) => void;
   branches: BranchForTransfer[];
   ingredients: IngredientRow[];
+  locations: InventoryLocation[];
   hqBranchId: number | null;
   userBranchId: number | null;
   userRole: StaffRole;
@@ -79,6 +88,8 @@ export function CreateTransferDialog({
   const [inboundFromBranchId, setInboundFromBranchId] = useState("");
   const [inboundToBranchId, setInboundToBranchId] = useState("");
   const [outboundToBranchId, setOutboundToBranchId] = useState("");
+  const [intraFromLocationId, setIntraFromLocationId] = useState("");
+  const [intraToLocationId, setIntraToLocationId] = useState("");
   const [draftLines, setDraftLines] = useState<DraftLine[]>([]);
   const [pickerIngredientId, setPickerIngredientId] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -87,6 +98,7 @@ export function CreateTransferDialog({
     b.branch_kind === "warehouse" || b.branch_kind === "central_kitchen";
   const operational = branches.filter((b) => !isProcurementBranch(b));
   const canBranchToBranch = operational.length >= 2;
+  const canInternalTransfer = userBranchId != null && locations.length >= 2;
 
   const isUserHq =
     hqBranchId != null && userBranchId != null && userBranchId === hqBranchId;
@@ -114,6 +126,8 @@ export function CreateTransferDialog({
     setInboundFromBranchId("");
     setInboundToBranchId("");
     setOutboundToBranchId("");
+    setIntraFromLocationId("");
+    setIntraToLocationId("");
     setDraftLines([]);
     setPickerIngredientId("");
   }
@@ -177,11 +191,15 @@ export function CreateTransferDialog({
     linesPayload: { ingredientId: number; quantity: number; unit: string }[],
     notes?: string,
     vehicleInfo?: string,
+    fromLocationId?: number,
+    toLocationId?: number,
   ) {
     startTransition(async () => {
       const res = await createStockTransfer({
         fromBranchId,
         toBranchId,
+        fromLocationId,
+        toLocationId,
         notes,
         vehicleInfo,
         lines: linesPayload,
@@ -212,18 +230,40 @@ export function CreateTransferDialog({
     // Resolve fromBranchId / toBranchId based on slip direction
     let fromId: number | undefined;
     let toId: number | undefined;
+    let fromLocId: number | undefined;
+    let toLocId: number | undefined;
 
-    if (slipKind === "inbound") {
+    if (slipKind === "internal") {
+      if (!userBranchId) {
+        toast.error("Tài khoản cần gắn với chi nhánh để chuyển nội bộ.");
+        return;
+      }
+      fromLocId = Number(intraFromLocationId) || undefined;
+      toLocId = Number(intraToLocationId) || undefined;
+      if (!fromLocId || !toLocId) {
+        toast.error("Chọn vị trí kho gửi và kho nhận.");
+        return;
+      }
+      if (fromLocId === toLocId) {
+        toast.error("Vị trí gửi và nhận phải khác nhau.");
+        return;
+      }
+      fromId = userBranchId;
+      toId = userBranchId;
+    } else if (slipKind === "inbound") {
       // Inbound: receiving TO user's branch (or selected branch)
       toId = userBranchId ?? (Number(inboundToBranchId) || undefined);
       fromId = (Number(inboundFromBranchId) || hqBranchId) ?? undefined;
     } else {
       // Outbound: sending FROM user's branch (or HQ)
       fromId = userBranchId ?? hqBranchId ?? undefined;
-      if (outboundDest === "hq" && hqBranchId) {
-        toId = hqBranchId;
+      if (isUserOperational) {
+        toId =
+          outboundDest === "hq" && hqBranchId
+            ? hqBranchId
+            : Number(outboundOtherBranchId) || undefined;
       } else {
-        toId = Number(outboundOtherBranchId) || Number(outboundToBranchId) || undefined;
+        toId = Number(outboundToBranchId) || undefined;
       }
     }
 
@@ -232,11 +272,15 @@ export function CreateTransferDialog({
       return;
     }
 
-    doCreate(fromId, toId, linesPayload, notes, vehicleInfo);
+    doCreate(fromId, toId, linesPayload, notes, vehicleInfo, fromLocId, toLocId);
   }
 
   const submitDisabled =
     isPending ||
+    (slipKind === "internal" &&
+      (!intraFromLocationId ||
+        !intraToLocationId ||
+        intraFromLocationId === intraToLocationId)) ||
     (slipKind === "outbound" &&
       isUserOperational &&
       outboundDest === "other_branch" &&
@@ -272,9 +316,12 @@ export function CreateTransferDialog({
             value={slipKind}
             onValueChange={(v) => setSlipKind(v as SlipKind)}
           >
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className={`grid w-full ${canInternalTransfer ? "grid-cols-3" : "grid-cols-2"}`}>
               <TabsTrigger value="inbound">Phiếu nhập</TabsTrigger>
               <TabsTrigger value="outbound">Phiếu xuất</TabsTrigger>
+              {canInternalTransfer && (
+                <TabsTrigger value="internal">Nội bộ</TabsTrigger>
+              )}
             </TabsList>
             <TabsContent value="inbound" className="space-y-3 pt-2">
               <p className="text-sm text-muted-foreground">
@@ -398,6 +445,49 @@ export function CreateTransferDialog({
                   </Select>
                 </div>
               )}
+            </TabsContent>
+            <TabsContent value="internal" className="space-y-3 pt-2">
+              <p className="text-sm text-muted-foreground">
+                Chuyển hàng giữa hai vị trí kho trong cùng chi nhánh.
+              </p>
+              <div className="space-y-1.5">
+                <Label>Vị trí gửi *</Label>
+                <Select
+                  value={intraFromLocationId}
+                  onValueChange={setIntraFromLocationId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn vị trí kho gửi" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc.id} value={String(loc.id)}>
+                        {loc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Vị trí nhận *</Label>
+                <Select
+                  value={intraToLocationId}
+                  onValueChange={setIntraToLocationId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn vị trí kho nhận" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations
+                      .filter((loc) => String(loc.id) !== intraFromLocationId)
+                      .map((loc) => (
+                        <SelectItem key={loc.id} value={String(loc.id)}>
+                          {loc.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </TabsContent>
           </Tabs>
 

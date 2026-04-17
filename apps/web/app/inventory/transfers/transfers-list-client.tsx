@@ -20,12 +20,12 @@ import {
 import { cn } from "@comtammatu/ui";
 import { fetchStockTransfers } from "../transfer-actions";
 import { CreateTransferDialog } from "./create-transfer-dialog";
-import type { BranchForTransfer } from "./create-transfer-dialog";
+import type { BranchForTransfer, InventoryLocation } from "./create-transfer-dialog";
 import type { IngredientRow } from "../page";
 import { InventoryHeader } from "../_components/inventory-header";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 
-export type { BranchForTransfer };
+export type { BranchForTransfer, InventoryLocation };
 
 export interface TransferListRow {
   id: number;
@@ -56,6 +56,7 @@ export function TransfersListClient({
   initial,
   branches,
   ingredients,
+  locations,
   hqBranchId,
   userBranchId,
   userRole,
@@ -64,6 +65,7 @@ export function TransfersListClient({
   initial: TransferListRow[];
   branches: BranchForTransfer[];
   ingredients: IngredientRow[];
+  locations: InventoryLocation[];
   hqBranchId: number | null;
   userBranchId: number | null;
   userRole: StaffRole;
@@ -75,7 +77,8 @@ export function TransfersListClient({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
-  const canCreate = branches.length >= 2;
+  const canCreate =
+    branches.length >= 2 || (userBranchId != null && locations.length >= 2);
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -253,6 +256,7 @@ export function TransfersListClient({
         onOpenChange={setOpen}
         branches={branches}
         ingredients={ingredients}
+        locations={locations}
         hqBranchId={hqBranchId}
         userBranchId={userBranchId}
         userRole={userRole}
