@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { formatVND } from "@comtammatu/shared/format";
@@ -16,6 +17,7 @@ import {
 } from "@comtammatu/ui/components/alert-dialog";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { Kbd, KbdGroup } from "@comtammatu/ui/components/kbd";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Textarea } from "@comtammatu/ui/components/textarea";
@@ -33,6 +35,7 @@ import {
   X,
 } from "lucide-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
 import type { CartItem, OrderType } from "./types";
 import { calcItemSubtotal } from "./types";
 import type { BranchTable } from "./page";
@@ -78,6 +81,7 @@ export function CartSidebar({
   orderNote,
   onOrderNoteChange,
 }: CartSidebarProps) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const selectedTableNumber =
     selectedTableId != null
       ? tables.find((t) => t.id === selectedTableId)?.number
@@ -89,6 +93,29 @@ export function CartSidebar({
       : selectedTableNumber != null
         ? `Bàn ${selectedTableNumber}`
         : "Chưa chọn bàn";
+
+  useKeyboardShortcut([
+    // Cmd/Ctrl + Enter: open submit confirmation (works even while typing note)
+    {
+      key: "Enter",
+      meta: true,
+      fireInInput: true,
+      preventDefault: true,
+      handler: () => {
+        if (canSubmit && !isSubmitting) setConfirmOpen(true);
+      },
+    },
+    // T: switch to takeaway (ignored while typing)
+    {
+      key: "t",
+      handler: () => onOrderTypeChange("takeaway"),
+    },
+    // D: switch to dine-in
+    {
+      key: "d",
+      handler: () => onOrderTypeChange("dine_in"),
+    },
+  ]);
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-background">
@@ -127,16 +154,20 @@ export function CartSidebar({
               <ToggleGroupItem
                 value="dine_in"
                 className="min-h-11 justify-center gap-2 rounded-lg text-sm font-semibold"
+                aria-keyshortcuts="D"
               >
                 <UtensilsCrossed className="size-4" />
                 Tại bàn
+                <Kbd className="ml-1 hidden md:inline-flex">D</Kbd>
               </ToggleGroupItem>
               <ToggleGroupItem
                 value="takeaway"
                 className="min-h-11 justify-center gap-2 rounded-lg text-sm font-semibold"
+                aria-keyshortcuts="T"
               >
                 <Package className="size-4" />
                 Mang về
+                <Kbd className="ml-1 hidden md:inline-flex">T</Kbd>
               </ToggleGroupItem>
             </ToggleGroup>
 
@@ -370,7 +401,7 @@ export function CartSidebar({
                   </div>
                 </div>
 
-                <AlertDialog>
+                <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
                   <AlertDialogTrigger asChild>
                     <Button
                       className="min-h-14 min-w-14 h-14 w-full rounded-xl text-base font-bold tracking-wide shadow-md transition-transform hover:-translate-y-0.5"
@@ -383,7 +414,13 @@ export function CartSidebar({
                           Đang xử lý...
                         </>
                       ) : (
-                        "Đặt món"
+                        <>
+                          Đặt món
+                          <KbdGroup className="ml-2 hidden md:inline-flex">
+                            <Kbd>⌘</Kbd>
+                            <Kbd>Enter</Kbd>
+                          </KbdGroup>
+                        </>
                       )}
                     </Button>
                   </AlertDialogTrigger>
