@@ -1,15 +1,11 @@
 "use client";
 
-import {
-  useActionState,
-  useEffect,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { useEffect, useState, useTransition } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Switch } from "@comtammatu/ui/components/switch";
@@ -21,10 +17,45 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+} from "@comtammatu/ui/components/field";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { createStation, updateStation, saveStationCategories } from "./actions";
-import type { StationRow, CategoryOption } from "./stations-client";
+import { TextField, valuesToFormData } from "@/components/form";
+import {
+  createStation,
+  saveStationCategories,
+  updateStation,
+} from "./actions";
+import type { CategoryOption, StationRow } from "./stations-client";
 import { EmptyStatePanel } from "../../components/empty-state-panel";
+
+const stationSchema = z.object({
+  name: z.string().trim().min(1, { error: "Tên trạm không được trống" }),
+  position: z
+    .string()
+    .trim()
+    .refine((v) => {
+      if (!v) return true;
+      const n = Number(v);
+      return Number.isFinite(n) && n >= 0;
+    }, { error: "Thứ tự phải ≥ 0" }),
+  is_active: z.boolean(),
+  category_ids: z.array(z.number()),
+});
+
+type StationFormValues = z.infer<typeof stationSchema>;
+
+function toFormValues(station: StationRow | null): StationFormValues {
+  return {
+    name: station?.name ?? "",
+    position: station?.position != null ? String(station.position) : "0",
+    is_active: station?.is_active ?? true,
+    category_ids: station?.category_ids ?? [],
+  };
+}
 
 interface StationFormDialogProps {
   open: boolean;
@@ -42,65 +73,66 @@ export function StationFormDialog({
   categories,
 }: StationFormDialogProps) {
   const isEdit = !!station;
-  const action = isEdit ? updateStation : createStation;
-  const [state, formAction, isFormPending] = useActionState(action, null);
-  const formRef = useRef<HTMLFormElement>(null);
-  const [selectedCategories, setSelectedCategories] = useState<Set<number>>(
-    new Set(),
-  );
-  const [isSavingCategories, startCategoryTransition] = useTransition();
-  const [isActive, setIsActive] = useState(true);
+  const [isPending, startTransition] = useTransition();
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  // Reset state when dialog opens
+  const form = useForm<StationFormValues, unknown, StationFormValues>({
+    resolver: zodResolver(stationSchema),
+    defaultValues: toFormValues(station),
+  });
+
   useEffect(() => {
     if (open) {
-      setSelectedCategories(new Set(station?.category_ids ?? []));
-      setIsActive(station?.is_active ?? true);
+      form.reset(toFormValues(station));
+      setServerError(null);
     }
-  }, [open, station]);
+  }, [open, station, form]);
 
-  // Handle successful form submission — save categories then close
-  useEffect(() => {
-    // Must run only while dialog is open; stale state.success after close used to re-fire
-    // with empty selectedCategories and wrong stationId for "create" (see dialog key reset).
-    if (!open || !state?.success) {
-      return;
-    }
+  function onValid(values: StationFormValues) {
+    startTransition(async () => {
+      setServerError(null);
 
-    const stationId = isEdit
-      ? station?.id
-      : (state.data as { id: number } | undefined)?.id;
-    const cats = Array.from(selectedCategories);
+      const payload: Record<string, unknown> = {
+        name: values.name,
+        position: values.position || "0",
+      };
+      if (isEdit) {
+        payload.is_active = values.is_active;
+      }
+      const fd = valuesToFormData(payload);
+      fd.set("branch_id", String(branchId));
+      if (isEdit && station) {
+        fd.set("id", String(station.id));
+      }
 
-    if (stationId) {
-      startCategoryTransition(async () => {
-        const catResult = await saveStationCategories({ stationId, categoryIds: cats });
+      const mainResult = isEdit
+        ? await updateStation(null, fd)
+        : await createStation(null, fd);
+
+      if (!mainResult.success) {
+        setServerError(mainResult.error ?? "Đã xảy ra lỗi");
+        return;
+      }
+
+      const stationId = isEdit
+        ? station?.id
+        : (mainResult.data as { id: number } | undefined)?.id;
+
+      if (stationId) {
+        const catResult = await saveStationCategories({
+          stationId,
+          categoryIds: values.category_ids,
+        });
         if (!catResult.success) {
           toast.error(catResult.error ?? "Không thể lưu danh mục");
           return;
         }
-        onOpenChange(false);
-        toast.success(isEdit ? "Đã cập nhật trạm KDS" : "Đã tạo trạm KDS");
-      });
-    } else {
+      }
+
       onOpenChange(false);
       toast.success(isEdit ? "Đã cập nhật trạm KDS" : "Đã tạo trạm KDS");
-    }
-  }, [open, state, isEdit, station, selectedCategories, onOpenChange]);
-
-  const toggleCategory = (categoryId: number) => {
-    setSelectedCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(categoryId)) {
-        next.delete(categoryId);
-      } else {
-        next.add(categoryId);
-      }
-      return next;
     });
-  };
-
-  const isPending = isFormPending || isSavingCategories;
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -116,87 +148,96 @@ export function StationFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form ref={formRef} action={formAction} className="space-y-4">
-          {isEdit && <input type="hidden" name="id" value={station.id} />}
-          <input type="hidden" name="branch_id" value={branchId} />
-
-          <div className="space-y-2">
-            <Label htmlFor="station-name">Tên trạm *</Label>
-            <Input
-              id="station-name"
+        <form onSubmit={form.handleSubmit(onValid)} noValidate>
+          <FieldGroup>
+            <TextField
+              control={form.control}
               name="name"
-              required
-              defaultValue={station?.name ?? ""}
+              label="Tên trạm"
               placeholder="VD: Bếp chính, Bếp phụ, Nước"
+              required
             />
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="station-position">Thứ tự hiển thị</Label>
-            <Input
-              id="station-position"
+            <TextField
+              control={form.control}
               name="position"
+              label="Thứ tự hiển thị"
               type="number"
               min={0}
-              defaultValue={station?.position ?? 0}
             />
-          </div>
 
-          {isEdit && (
-            <div className="flex items-center gap-3">
-              <input
-                type="hidden"
+            {isEdit && (
+              <Controller
+                control={form.control}
                 name="is_active"
-                value={isActive ? "true" : "false"}
+                render={({ field }) => (
+                  <Field orientation="horizontal">
+                    <Switch
+                      id="station-active"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                    <FieldLabel htmlFor="station-active">Hoạt động</FieldLabel>
+                  </Field>
+                )}
               />
-              <Switch
-                id="station-active"
-                checked={isActive}
-                onCheckedChange={setIsActive}
-              />
-              <Label htmlFor="station-active">Hoạt động</Label>
-            </div>
-          )}
+            )}
 
-          {/* Category assignment */}
-          <div className="space-y-2">
-            <Label>Danh mục món ăn</Label>
-            <p className="text-xs text-muted-foreground">
-              Chọn danh mục để trạm này tiếp nhận. Để trống = nhận tất cả món
-              (fallback).
-            </p>
-            <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-3">
-              {categories.map((cat) => (
-                <label
-                  key={cat.id}
-                  className="flex cursor-pointer items-center gap-2"
-                >
-                  <Checkbox
-                    checked={selectedCategories.has(cat.id)}
-                    onCheckedChange={() => toggleCategory(cat.id)}
-                  />
-                  <span className="text-sm">{cat.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    ({cat.type})
-                  </span>
-                </label>
-              ))}
-              {categories.length === 0 && (
-                <EmptyStatePanel
-                  className="bg-transparent py-6"
-                  title="Chưa có danh mục nào"
-                />
-              )}
-            </div>
-          </div>
+            <Controller
+              control={form.control}
+              name="category_ids"
+              render={({ field }) => {
+                const selected = new Set(field.value);
+                const toggle = (id: number) => {
+                  if (selected.has(id)) {
+                    field.onChange(field.value.filter((x) => x !== id));
+                  } else {
+                    field.onChange([...field.value, id]);
+                  }
+                };
+                return (
+                  <div className="space-y-2">
+                    <Label>Danh mục món ăn</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Chọn danh mục để trạm này tiếp nhận. Để trống = nhận tất cả
+                      món (fallback).
+                    </p>
+                    <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-3">
+                      {categories.map((cat) => (
+                        <label
+                          key={cat.id}
+                          className="flex cursor-pointer items-center gap-2"
+                        >
+                          <Checkbox
+                            checked={selected.has(cat.id)}
+                            onCheckedChange={() => toggle(cat.id)}
+                          />
+                          <span className="text-sm">{cat.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({cat.type})
+                          </span>
+                        </label>
+                      ))}
+                      {categories.length === 0 && (
+                        <EmptyStatePanel
+                          className="bg-transparent py-6"
+                          title="Chưa có danh mục nào"
+                        />
+                      )}
+                    </div>
+                  </div>
+                );
+              }}
+            />
 
-          {state?.error && (
-            <p className="text-sm text-destructive" role="alert">
-              {state.error}
-            </p>
-          )}
+            {serverError && (
+              <p className="text-sm text-destructive" role="alert">
+                {serverError}
+              </p>
+            )}
+          </FieldGroup>
 
-          <DialogFooter>
+          <DialogFooter className="pt-6">
             <Button
               type="button"
               variant="outline"

@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Key, MapPin, Copy, RefreshCw, Locate } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
 import {
   Dialog,
   DialogContent,
@@ -13,12 +14,35 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
+import { FieldGroup } from "@comtammatu/ui/components/field";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { TextField, valuesToFormData } from "@/components/form";
 import {
   updateBranchCoordinates,
   generateAttendanceSecret,
   getTodayCode,
 } from "./attendance-actions";
+
+const coordsSchema = z.object({
+  latitude: z
+    .string()
+    .trim()
+    .min(1, { error: "Vĩ độ không được trống" })
+    .refine((v) => {
+      const n = Number(v);
+      return Number.isFinite(n) && n >= -90 && n <= 90;
+    }, { error: "Vĩ độ phải trong khoảng -90 đến 90" }),
+  longitude: z
+    .string()
+    .trim()
+    .min(1, { error: "Kinh độ không được trống" })
+    .refine((v) => {
+      const n = Number(v);
+      return Number.isFinite(n) && n >= -180 && n <= 180;
+    }, { error: "Kinh độ phải trong khoảng -180 đến 180" }),
+});
+
+type CoordsFormValues = z.infer<typeof coordsSchema>;
 
 interface AttendanceConfigDialogProps {
   open: boolean;
@@ -37,33 +61,31 @@ export function AttendanceConfigDialog({
   onOpenChange,
   branch,
 }: AttendanceConfigDialogProps) {
-  const [coordsState, coordsAction, coordsPending] = useActionState(
-    updateBranchCoordinates,
-    null,
-  );
-  const [isPending, startTransition] = useTransition();
+  const [coordsPending, startCoordsTransition] = useTransition();
+  const [secretPending, startSecretTransition] = useTransition();
+  const [coordsError, setCoordsError] = useState<string | null>(null);
   const [todayCode, setTodayCode] = useState<string | null>(null);
   const [todayDate, setTodayDate] = useState<string | null>(null);
-  const [lat, setLat] = useState(branch.latitude?.toString() ?? "");
-  const [lng, setLng] = useState(branch.longitude?.toString() ?? "");
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
 
-  // Toast on coords save success
-  useEffect(() => {
-    if (coordsState?.success) {
-      toast.success("Đã cập nhật tọa độ GPS");
-    }
-  }, [coordsState]);
+  const form = useForm<CoordsFormValues, unknown, CoordsFormValues>({
+    resolver: zodResolver(coordsSchema),
+    defaultValues: {
+      latitude: branch.latitude?.toString() ?? "",
+      longitude: branch.longitude?.toString() ?? "",
+    },
+  });
 
-  // Sync coords when branch changes
   useEffect(() => {
-    setLat(branch.latitude?.toString() ?? "");
-    setLng(branch.longitude?.toString() ?? "");
+    form.reset({
+      latitude: branch.latitude?.toString() ?? "",
+      longitude: branch.longitude?.toString() ?? "",
+    });
     setGeoError(null);
-  }, [branch.id, branch.latitude, branch.longitude]);
+    setCoordsError(null);
+  }, [branch.id, branch.latitude, branch.longitude, form]);
 
-  // Reset code when dialog opens/closes
   useEffect(() => {
     if (!open) {
       setTodayCode(null);
@@ -80,8 +102,12 @@ export function AttendanceConfigDialog({
     setGeoError(null);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setLat(position.coords.latitude.toFixed(7));
-        setLng(position.coords.longitude.toFixed(7));
+        form.setValue("latitude", position.coords.latitude.toFixed(7), {
+          shouldValidate: true,
+        });
+        form.setValue("longitude", position.coords.longitude.toFixed(7), {
+          shouldValidate: true,
+        });
         setGeoLoading(false);
       },
       (err) => {
@@ -96,8 +122,22 @@ export function AttendanceConfigDialog({
     );
   }
 
+  function onValidCoords(values: CoordsFormValues) {
+    startCoordsTransition(async () => {
+      setCoordsError(null);
+      const fd = valuesToFormData(values);
+      fd.set("branchId", String(branch.id));
+      const result = await updateBranchCoordinates(null, fd);
+      if (!result.success) {
+        setCoordsError(result.error ?? "Đã xảy ra lỗi");
+        return;
+      }
+      toast.success("Đã cập nhật tọa độ GPS");
+    });
+  }
+
   function handleGenerateSecret() {
-    startTransition(async () => {
+    startSecretTransition(async () => {
       const result = await generateAttendanceSecret(branch.id);
       if (result.success && result.data) {
         setTodayCode(result.data.code);
@@ -110,7 +150,7 @@ export function AttendanceConfigDialog({
   }
 
   function handleShowCode() {
-    startTransition(async () => {
+    startSecretTransition(async () => {
       const result = await getTodayCode(branch.id);
       if (result.success && result.data) {
         setTodayCode(result.data.code);
@@ -142,63 +182,61 @@ export function AttendanceConfigDialog({
               <MapPin className="size-4" />
               Tọa độ GPS
             </div>
-            <form action={coordsAction} className="space-y-3">
-              <input type="hidden" name="branchId" value={branch.id} />
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="latitude">Vĩ độ (Lat)</Label>
-                  <Input
-                    id="latitude"
+            <form onSubmit={form.handleSubmit(onValidCoords)} noValidate>
+              <FieldGroup>
+                <div className="grid grid-cols-2 gap-3">
+                  <TextField
+                    control={form.control}
                     name="latitude"
+                    label="Vĩ độ (Lat)"
                     type="number"
                     step="0.0000001"
                     placeholder="10.7769"
-                    value={lat}
-                    onChange={(e) => setLat(e.target.value)}
                     required
                   />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="longitude">Kinh độ (Lng)</Label>
-                  <Input
-                    id="longitude"
+                  <TextField
+                    control={form.control}
                     name="longitude"
+                    label="Kinh độ (Lng)"
                     type="number"
                     step="0.0000001"
                     placeholder="106.7009"
-                    value={lng}
-                    onChange={(e) => setLng(e.target.value)}
                     required
                   />
                 </div>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={handleGetLocation}
-                disabled={geoLoading}
-              >
-                {geoLoading ? (
-                  <Spinner className="mr-2" />
-                ) : (
-                  <Locate className="mr-2 size-4" />
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={handleGetLocation}
+                  disabled={geoLoading}
+                >
+                  {geoLoading ? (
+                    <Spinner className="mr-2" />
+                  ) : (
+                    <Locate className="mr-2 size-4" />
+                  )}
+                  Lấy vị trí hiện tại
+                </Button>
+
+                {geoError && (
+                  <p className="text-sm text-destructive" role="alert">
+                    {geoError}
+                  </p>
                 )}
-                Lấy vị trí hiện tại
-              </Button>
-              {geoError && (
-                <p className="text-sm text-destructive">{geoError}</p>
-              )}
-              {coordsState?.error && (
-                <p className="text-sm text-destructive">{coordsState.error}</p>
-              )}
-              <Button type="submit" size="sm" disabled={coordsPending}>
-                {coordsPending && (
-                  <Spinner className="mr-2" />
+                {coordsError && (
+                  <p className="text-sm text-destructive" role="alert">
+                    {coordsError}
+                  </p>
                 )}
-                Lưu tọa độ
-              </Button>
+
+                <Button type="submit" size="sm" disabled={coordsPending}>
+                  {coordsPending && <Spinner className="mr-2" />}
+                  Lưu tọa độ
+                </Button>
+              </FieldGroup>
             </form>
           </div>
 
@@ -214,9 +252,9 @@ export function AttendanceConfigDialog({
                 variant="outline"
                 size="sm"
                 onClick={handleGenerateSecret}
-                disabled={isPending}
+                disabled={secretPending}
               >
-                {isPending ? (
+                {secretPending ? (
                   <Spinner className="mr-2" />
                 ) : (
                   <RefreshCw className="mr-2 size-4" />
@@ -229,7 +267,7 @@ export function AttendanceConfigDialog({
                   variant="outline"
                   size="sm"
                   onClick={handleShowCode}
-                  disabled={isPending}
+                  disabled={secretPending}
                 >
                   Xem mã hôm nay
                 </Button>
