@@ -8,6 +8,7 @@ Nơi lưu các artefact theo dõi tiến độ và adoption.
 ## Inventory
 
 - [inventory/adoption-matrix.md](inventory/adoption-matrix.md): theo dõi trạng thái `doc / code / verify / decision`
+- [inventory/evidence-log.md](inventory/evidence-log.md): log evidence cho từng round QA UI/UX
 - [inventory/inventory-ux-workflow-review.md](inventory/inventory-ux-workflow-review.md): review workflow/IA trước refactor UI
 - [inventory/inventory-ux-contract.md](inventory/inventory-ux-contract.md): contract UX đã chốt cho pilot hiện tại
 

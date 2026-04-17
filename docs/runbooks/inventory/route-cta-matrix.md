@@ -1,0 +1,166 @@
+# Inventory Route CTA Matrix
+
+> Ma trận source of truth cho audit UI/UX theo route, section, và button/CTA.
+>
+> Ghi chú:
+>
+> - `visible for role` mô tả kỳ vọng UX hiện tại, không thay thế ACL source of truth.
+> - `visible on device` là thiết bị phải audit trực tiếp.
+> - `severity if broken` là severity mặc định nếu CTA/surface không đúng kỳ vọng.
+
+Updated: `2026-04-17`
+
+---
+
+## 1. Dashboard và shell
+
+| Route | Section | Button/CTA | Visible for role | Visible on device | Expected behavior | Expected feedback | Expected downstream effect | Severity if broken |
+| ----- | ------- | ---------- | ---------------- | ----------------- | ----------------- | ----------------- | -------------------------- | ------------------ |
+| `/inventory` | Quick actions | `Nhập nguyên liệu` | `super_manager` tại `warehouse` | desktop | Mở procurement hub | Route đổi sang `/inventory/receiving` | Dẫn đúng HQ procurement loop | `P0` |
+| `/inventory` | Quick actions | `Tạo lệnh sản xuất` | `super_manager` tại `central_kitchen` | tablet, desktop | Mở production hub | Route đổi sang `/inventory/production` | Dẫn đúng central kitchen loop | `P0` |
+| `/inventory` | Quick actions | `Nhận transfer` | `branch_manager` tại `branch` | tablet, mobile, desktop | Mở transfer list | Route đổi sang `/inventory/transfers` | Dẫn đúng branch inbound flow | `P0` |
+| `/inventory` | Quick actions | `Cấp bếp` | `branch_manager` tại `branch` | tablet, mobile | Mở issue list | Route đổi sang `/inventory/issues` | Dẫn đúng branch kitchen flow | `P0` |
+| `/inventory` | Task queue | task cards | role phù hợp với site | mixed theo vai trò | Card phải là next best action | Card copy, badge, link rõ | User hiểu bước kế tiếp mà không đoán | `P0` |
+| `/inventory` | Alerts | alert cards | role phù hợp với data scope | mixed theo vai trò | Link sang route xử lý phù hợp | Badge/alert rõ urgency | User đi từ alert sang action thật | `P1` |
+| `/inventory` | Shell nav | `Receiving` | chỉ `super_manager`/procurement roles | desktop, tablet | Hiện như HQ hub, không generic receiving | Nav highlight đúng | Không kéo branch vào procurement | `P0` |
+| `/inventory` | Shell nav | `Production` | chỉ `super_manager` | desktop, tablet | Ẩn hoàn toàn với non-`super_manager` | Không render nav item | Giữ đúng boundary pilot | `P0` |
+| `/inventory` | Shell nav | `Ingredients`, `Suppliers`, `Recipes` | theo nav contract hiện tại | desktop | Chỉ có một cửa vào chính qua `Danh mục` | Không duplicate | Giữ IA gọn và đúng contract | `P1` |
+| `/inventory` | Shell nav | site label / site kind | mọi role vào được inventory | mixed theo vai trò | Hiển thị đúng site context | Header/shell copy đúng | User hiểu mình đang thao tác ở đâu | `P1` |
+
+## 2. Stock
+
+| Route | Section | Button/CTA | Visible for role | Visible on device | Expected behavior | Expected feedback | Expected downstream effect | Severity if broken |
+| ----- | ------- | ---------- | ---------------- | ----------------- | ----------------- | ----------------- | -------------------------- | ------------------ |
+| `/inventory/stock` | Filters | category chips | `super_manager`, `area_manager`, `branch_manager` | tablet, mobile, desktop | Lọc đúng category | Count/table đổi ngay | Giảm thời gian quét tồn | `P2` |
+| `/inventory/stock` | Filters | stock status chips | same as above | tablet, mobile, desktop | Lọc `all/in_stock/low/out` | State selected rõ | User ưu tiên xử lý tồn bất thường | `P1` |
+| `/inventory/stock` | Search | search input | same as above | tablet, mobile, desktop | Tìm theo tên/SKU | Kết quả và counter đổi rõ | Tìm nguyên liệu nhanh | `P1` |
+| `/inventory/stock` | Row actions | `Điều chỉnh` / pencil | `super_manager`, `branch_manager` theo scope | tablet, desktop | Mở adjust dialog | Dialog rõ target ingredient | Có thể ghi adjustment đúng flow | `P0` |
+| `/inventory/stock` | Row state | badges `low/out/reorder` | same as above | mixed theo vai trò | Dễ hiểu, không chỉ dựa vào màu | Badge text rõ | User quyết định reorder/adjust | `P1` |
+
+## 3. Receiving
+
+| Route | Section | Button/CTA | Visible for role | Visible on device | Expected behavior | Expected feedback | Expected downstream effect | Severity if broken |
+| ----- | ------- | ---------- | ---------------- | ----------------- | ----------------- | ----------------- | -------------------------- | ------------------ |
+| `/inventory/receiving` | Header | `Tạo PO nhanh` | `super_manager` | desktop | Đi tới tạo PO mới | Route đổi rõ | Bắt đầu HQ procurement loop | `P0` |
+| `/inventory/receiving` | Header | `Mở GRN` | `super_manager` | desktop | Mở GRN list | Route đổi rõ | Cho phép nhảy thẳng vào bước kiểm nhận | `P1` |
+| `/inventory/receiving` | Step cards | `Quản lý PO` | `super_manager` | desktop | Mở PO list | Card/button active | Dẫn đúng step 1 | `P1` |
+| `/inventory/receiving` | Step cards | `Mở GRN` | `super_manager` | desktop | Mở GRN list | Card/button active | Dẫn đúng step 2 | `P1` |
+| `/inventory/receiving` | Step cards | `Đối soát hóa đơn` | `super_manager` | desktop | Mở supplier invoices | Card/button active | Dẫn đúng step 3 | `P1` |
+| `/inventory/receiving` | Recent activity | row deep link | `super_manager` | desktop | Mở PO/GRN/invoice detail tương ứng | Link rõ entity | Giảm quay lại dashboard thủ công | `P2` |
+
+## 4. Purchase Orders
+
+| Route | Section | Button/CTA | Visible for role | Visible on device | Expected behavior | Expected feedback | Expected downstream effect | Severity if broken |
+| ----- | ------- | ---------- | ---------------- | ----------------- | ----------------- | ----------------- | -------------------------- | ------------------ |
+| `/inventory/purchase-orders` | Header | `Tạo PO` | `super_manager` khi có supplier | desktop, mobile | Mở form tạo PO | Route/dialog rõ | Bắt đầu purchase flow | `P0` |
+| `/inventory/purchase-orders` | Filters | status pills | `super_manager` | desktop, mobile | Lọc đúng trạng thái | Selected state rõ | Quét backlog procurement | `P2` |
+| `/inventory/purchase-orders` | Filters | supplier dropdown | `super_manager` | desktop | Lọc đúng supplier | Counter/table cập nhật | Tìm nhanh PO liên quan NCC | `P2` |
+| `/inventory/purchase-orders` | Row action | `Xem chi tiết` | `super_manager` | desktop, mobile | Mở PO detail | Route đổi đúng | Đi tiếp sang send/cancel/GRN | `P1` |
+| `/inventory/purchase-orders/[id]` | Footer | `Gửi PO cho NCC` | `super_manager`, PO `draft` | desktop, mobile | Đổi PO `draft -> sent` | Toast + badge + refresh khớp | Mở đường sang GRN | `P0` |
+| `/inventory/purchase-orders/[id]` | Footer | `Hủy PO` | `super_manager`, PO `draft` | desktop, mobile | Đổi PO thành `cancelled` | Toast + badge + disabled state | Ngăn PO sai tiếp tục đi | `P1` |
+| `/inventory/purchase-orders/[id]` | Footer | `Sang bước tạo GRN` | `super_manager`, PO `sent/partially_received` | desktop, mobile | Tạo GRN từ PO và redirect | Toast + route sang GRN detail | Nối liền PO -> GRN | `P0` |
+| `/inventory/purchase-orders/new` | Form | submit create/save draft flow | `super_manager` | desktop | Chặn form thiếu supplier/line hợp lệ | Validation rõ | Không tạo draft rác | `P0` |
+
+## 5. GRN
+
+| Route | Section | Button/CTA | Visible for role | Visible on device | Expected behavior | Expected feedback | Expected downstream effect | Severity if broken |
+| ----- | ------- | ---------- | ---------------- | ----------------- | ----------------- | ----------------- | -------------------------- | ------------------ |
+| `/inventory/grn` | Header | `Chọn PO để tạo GRN` | `super_manager` | desktop | Quay về PO list | Route đổi rõ | Tạo mới đúng từ PO | `P1` |
+| `/inventory/grn` | List row | GRN code link | `super_manager` | desktop | Mở GRN detail | Route đổi đúng | Vào bước confirm | `P1` |
+| `/inventory/grn/[id]` | Detail table | actual/required/QC/lot/expiry | `super_manager` | desktop, tablet | Hiển thị đủ để ra quyết định confirm | Table/card readable | User hiểu chất lượng hàng nhận | `P0` |
+| `/inventory/grn/[id]` | Footer | `Chốt nhập kho` | `super_manager`, GRN `draft` | desktop, tablet | Confirm GRN | Toast + badge + refresh | Tăng tồn HQ, cập nhật WAC | `P0` |
+| `/inventory/grn/[id]` | Linked PO | PO code link | `super_manager` | desktop | Mở PO gốc | Link rõ | Giảm lạc ngữ cảnh procurement | `P2` |
+
+## 6. Supplier Invoices
+
+| Route | Section | Button/CTA | Visible for role | Visible on device | Expected behavior | Expected feedback | Expected downstream effect | Severity if broken |
+| ----- | ------- | ---------- | ---------------- | ----------------- | ----------------- | ----------------- | -------------------------- | ------------------ |
+| `/inventory/supplier-invoices` | Header/list controls | `Tạo hóa đơn NCC` | `super_manager` | desktop, tablet | Mở create dialog | Dialog rõ supplier/GRN/value | Nối GRN -> invoice | `P0` |
+| `/inventory/supplier-invoices` | Filters | supplier/match/payment/overdue | `super_manager` | desktop, tablet | Lọc đúng | Highlight overdue rõ | Đọc backlog AP nhanh | `P1` |
+| `/inventory/supplier-invoices` | Detail pane | `Tính lại đối soát` | `super_manager` | desktop | Recompute matching | Toast + match status đổi | 3-way matching nhất quán | `P0` |
+| `/inventory/supplier-invoices` | Detail pane | `Ghi nhận thanh toán` | `super_manager` | desktop, tablet | Mở payment dialog và cập nhật paid amount | Toast + payment status đổi | AP aging giảm đúng | `P0` |
+| `/inventory/supplier-invoices` | Visual state | overdue emphasis | `super_manager` | desktop, tablet | Invoice overdue nổi bật nhưng không gây hiểu sai | Badge/copy rõ | Ưu tiên công nợ đến hạn | `P1` |
+
+## 7. Transfers
+
+| Route | Section | Button/CTA | Visible for role | Visible on device | Expected behavior | Expected feedback | Expected downstream effect | Severity if broken |
+| ----- | ------- | ---------- | ---------------- | ----------------- | ----------------- | ----------------- | -------------------------- | ------------------ |
+| `/inventory/transfers` | Header | `Tạo phiếu` | `super_manager`; branch role chỉ khi runtime cho phép nhưng không là action mặc định | desktop, tablet | Mở create transfer dialog | Dialog rõ from/to/item | Bắt đầu transfer flow | `P0` |
+| `/inventory/transfers` | Filters | status chips | roles vào được transfers | tablet, mobile, desktop | Lọc đúng trạng thái | Count/selected state rõ | User quét phiếu cần xử lý | `P1` |
+| `/inventory/transfers` | Search | search input | same as above | tablet, mobile, desktop | Tìm theo mã/kho gửi/kho nhận | Counter/table đổi rõ | Tìm nhanh phiếu liên quan | `P2` |
+| `/inventory/transfers/[id]` | Primary action | `Xác nhận xuất kho` | sender role hợp lệ | desktop, tablet | `draft -> confirmed_ship` | Toast + stepper + badge đổi | Trừ tồn kho gửi | `P0` |
+| `/inventory/transfers/[id]` | Primary action | `Chuyển sang đang vận chuyển` | sender role hợp lệ | desktop, tablet | `confirmed_ship -> in_transit` | Toast + stepper + badge đổi | Mở bước nhận hàng | `P1` |
+| `/inventory/transfers/[id]` | Primary action | `Bắt đầu kiểm nhận` | receiver role hợp lệ | tablet, mobile, desktop | `in_transit -> confirmed_receive` | Toast + stepper + badge đổi | Mở bước receive cuối | `P0` |
+| `/inventory/transfers/[id]` | Primary action | `Xác nhận nhận hàng` | receiver role hợp lệ | tablet, mobile, desktop | `confirmed_receive -> received` | Toast + stepper + badge đổi | Cộng tồn kho nhận | `P0` |
+| `/inventory/transfers/[id]` | Timeline | stepper states | roles vào được detail | tablet, desktop | User biết đang ở bước nào | Progress/state rõ | Giảm sai thao tác trạng thái | `P1` |
+
+## 8. Issues / Cấp bếp
+
+| Route | Section | Button/CTA | Visible for role | Visible on device | Expected behavior | Expected feedback | Expected downstream effect | Severity if broken |
+| ----- | ------- | ---------- | ---------------- | ----------------- | ----------------- | ----------------- | -------------------------- | ------------------ |
+| `/inventory/issues` | Header | `Tạo phiếu cấp bếp` | `branch_manager`, `area_manager`, `super_manager` theo scope | tablet, mobile, desktop | Mở dialog tạo phiếu | Toast sau create + redirect detail | Bắt đầu flow `kitchen_use` | `P0` |
+| `/inventory/issues` | Header | `Xuất báo cáo (sắp mở)` | roles vào được page | desktop | Rõ là placeholder, không giả workflow thật | Disabled/label rõ | Không gây hiểu nhầm là live export | `P1` |
+| `/inventory/issues` | Filters | status/type filters | roles vào được page | tablet, mobile, desktop | Lọc đúng phiếu | Counter/table đổi rõ | Tìm nhanh phiếu vận hành | `P2` |
+| `/inventory/issues/[id]` | Header/table | `Thêm nguyên liệu` | creator role hợp lệ, issue `draft` | tablet, desktop | Mở add-line dialog | Dialog/row update rõ | Chuẩn bị phiếu đủ line để confirm | `P0` |
+| `/inventory/issues/[id]` | Table row | delete line | creator role hợp lệ, issue `draft` | tablet, mobile, desktop | Xóa line với confirm hợp lý | Toast + table refresh | Giảm line sai trước confirm | `P1` |
+| `/inventory/issues/[id]` | Footer/dialog | `Xác nhận cấp bếp` / confirm issue | creator role hợp lệ | tablet, mobile, desktop | Confirm issue và trừ tồn | Toast + badge/status + stock impact | Ghi nhận `kitchen_use` rõ ràng | `P0` |
+| `/inventory/issues/[id]` | Footer/dialog | `Hủy phiếu xuất` | creator role hợp lệ | tablet, mobile, desktop | Cancel issue | Toast + badge/status | Ngăn phiếu nháp sai đi tiếp | `P1` |
+| `/inventory/issues/[id]` | Line fields | reason visibility | roles vào được detail | tablet, mobile, desktop | User nhìn ra lý do xuất | Field/value readable | Audit trail có nghĩa | `P1` |
+
+## 9. Stocktake
+
+| Route | Section | Button/CTA | Visible for role | Visible on device | Expected behavior | Expected feedback | Expected downstream effect | Severity if broken |
+| ----- | ------- | ---------- | ---------------- | ----------------- | ----------------- | ----------------- | -------------------------- | ------------------ |
+| `/inventory/stocktake` | Header | `Mở phiên kiểm kê` | `super_manager`, `area_manager`, `branch_manager` theo scope | tablet, mobile, desktop | Mở dialog chọn branch rồi redirect detail | Toast + route đổi | Bắt đầu end-of-shift control flow | `P0` |
+| `/inventory/stocktake` | Filters | status filters | roles vào được page | tablet, mobile, desktop | Lọc đúng | Selected state rõ | Tìm session đang mở nhanh | `P2` |
+| `/inventory/stocktake/[id]` | Counting phase | counted qty input blur-save | roles hợp lệ, session `in_progress` | tablet, mobile, desktop | Lưu line khi blur | Saved indicator/toast/refresh rõ | Tiến độ đếm tăng | `P0` |
+| `/inventory/stocktake/[id]` | Counting phase | variance reason blur-save | same as above | tablet, mobile, desktop | Lưu reason lệch | Feedback rõ | Audit variance có đủ context | `P1` |
+| `/inventory/stocktake/[id]` | Header/footer | `Hoàn tất kiểm kê` | roles hợp lệ, session `in_progress` | tablet, mobile, desktop | Complete session | Confirm dialog + toast + result view | Sinh `count_adjustment` | `P0` |
+| `/inventory/stocktake/[id]` | Header/footer | `Hủy kiểm kê` | roles hợp lệ, session `in_progress` | tablet, mobile, desktop | Cancel session | Confirm dialog + toast + cancelled state | Ngăn session dở dang | `P1` |
+| `/inventory/stocktake/[id]` | Results phase | variance/result comprehension | roles vào được detail | tablet, mobile, desktop | User hiểu variance và kết quả cuối | Result view rõ | Hỗ trợ end-of-shift review | `P1` |
+
+## 10. Expiry
+
+| Route | Section | Button/CTA | Visible for role | Visible on device | Expected behavior | Expected feedback | Expected downstream effect | Severity if broken |
+| ----- | ------- | ---------- | ---------------- | ----------------- | ----------------- | ----------------- | -------------------------- | ------------------ |
+| `/inventory/expiry` | Tabs | urgency tabs | roles vào được page | tablet, mobile, desktop | Lọc đúng `expired/critical/warning` | Count/state rõ | Ưu tiên xử lý đúng lô | `P1` |
+| `/inventory/expiry` | Row action | `Hủy hàng` | roles có quyền xử lý, hiện tại nếu render | tablet, desktop | Nếu chưa live đủ thì phải rõ boundary | Button state/copy rõ | Không hứa sai workflow | `P1` |
+| `/inventory/expiry` | Row action | `Chi tiết` | roles vào được page | tablet, mobile, desktop | Mở thêm ngữ cảnh hoặc rõ là placeholder | Feedback rõ | Giúp user quyết định xử lý | `P2` |
+| `/inventory/expiry` | Table content | lot/date/site context | roles vào được page | tablet, mobile, desktop | Hiển thị đủ lot, ngày, chi nhánh | Badge urgency rõ | Không xử lý nhầm lô | `P1` |
+
+## 11. Reports
+
+| Route | Section | Button/CTA | Visible for role | Visible on device | Expected behavior | Expected feedback | Expected downstream effect | Severity if broken |
+| ----- | ------- | ---------- | ---------------- | ----------------- | ----------------- | ----------------- | -------------------------- | ------------------ |
+| `/inventory/reports` | AP aging card | `Mở công nợ NCC` | roles thấy report phù hợp, hiện chủ yếu oversight/HQ roles | desktop | Mở supplier invoices | Route đổi đúng | Nối report với hành động AP thật | `P1` |
+| `/inventory/reports` | Widgets | movement/AP/variance/food cost cards | roles vào được page | desktop, tablet | Dễ hiểu snapshot, không cần giải nghĩa ngoài UI | Labels, legends, empty states rõ | Hỗ trợ quyết định giám sát | `P1` |
+| `/inventory/reports` | Report catalog | cards `Sắp mở` | roles vào được page | desktop | Rõ là placeholder, không trông như link live | Badge/copy rõ | Không tạo false promise | `P1` |
+
+## 12. Catalog
+
+| Route | Section | Button/CTA | Visible for role | Visible on device | Expected behavior | Expected feedback | Expected downstream effect | Severity if broken |
+| ----- | ------- | ---------- | ---------------- | ----------------- | ----------------- | ----------------- | -------------------------- | ------------------ |
+| `/inventory/ingredients` | Header | `Tạo nguyên liệu` | `super_manager` | desktop | Mở ingredient dialog | Dialog rõ field groups | Nuôi downstream procurement/stock/production | `P1` |
+| `/inventory/ingredients` | Search/filter | search + category + preservation | `super_manager` | desktop | Lọc/tìm đúng | Counter/table đổi | Quản trị master data nhanh | `P2` |
+| `/inventory/ingredients` | Row action | edit pencil | `super_manager` | desktop | Mở edit dialog | Dialog prefill đúng | Sửa catalog không lạc ngữ cảnh | `P1` |
+| `/inventory/suppliers` | Header | `Thêm nhà cung cấp` | `super_manager` | desktop | Mở supplier dialog | Dialog rõ | Bật điều kiện tạo PO | `P1` |
+| `/inventory/suppliers` | Row action | edit/delete | `super_manager` | desktop | Edit hoặc delete đúng flow | Confirm/toast rõ | Giữ supplier master sạch | `P1` |
+| `/inventory/recipes` | Header | `Tạo món mới` | `super_manager` | desktop | Mở recipe line dialog | Dialog rõ menu item/ingredient/yield | Nuôi bridge recipe consumption | `P1` |
+| `/inventory/recipes` | Card/table | `+ Thêm dòng` / row click edit | `super_manager` | desktop | Thêm/sửa line công thức | Refresh rõ | Bảo trì recipe dễ hiểu | `P1` |
+
+## 13. Production
+
+| Route | Section | Button/CTA | Visible for role | Visible on device | Expected behavior | Expected feedback | Expected downstream effect | Severity if broken |
+| ----- | ------- | ---------- | ---------------- | ----------------- | ----------------- | ----------------- | -------------------------- | ------------------ |
+| `/inventory/production` | Header/form trigger | `Tạo lệnh sản xuất` | chỉ `super_manager` | tablet, desktop | Mở dialog tạo order | Dialog rõ branch/lines/notes | Bắt đầu production flow | `P0` |
+| `/inventory/production` | Readiness state | readiness message | chỉ `super_manager` | tablet, desktop | Giải thích dependency thiếu | Copy rõ nguyên nhân | User biết phải cấu hình gì | `P0` |
+| `/inventory/production` | Order list | `Xác nhận` | chỉ `super_manager`, order `draft` | tablet, desktop | Confirm order | Toast + status đổi | Sinh `production_consumption/output` | `P0` |
+| `/inventory/production` | Order list | `Hủy` | chỉ `super_manager`, order `draft` | tablet, desktop | Cancel order | Toast + status đổi | Ngăn order sai đi tiếp | `P1` |
+
+## 14. Hygiene và boundary
+
+| Route | Section | Button/CTA | Visible for role | Visible on device | Expected behavior | Expected feedback | Expected downstream effect | Severity if broken |
+| ----- | ------- | ---------- | ---------------- | ----------------- | ----------------- | ----------------- | -------------------------- | ------------------ |
+| `/admin/inventory*` | route boundary | old inventory URLs | mọi role | desktop | Phải fail như unsupported route, không behave như live surface | Redirect/404/forbidden rõ | Không giữ alias gây nhiễu | `P0` |
+| `/inventory/settings/*` | nav/route hygiene | legacy settings catalog routes | roles theo route | desktop | Không render duplicate entry trong nav chính | Nav sạch | Giữ contract `Danh mục` là cửa vào chính | `P1` |
+

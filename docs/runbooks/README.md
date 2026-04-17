@@ -8,6 +8,9 @@ Checklist vận hành và readiness gates.
 ## Inventory
 
 - [inventory/pre-release-qa.md](inventory/pre-release-qa.md): smoke + readiness checklist cho Inventory
+- [inventory/ui-ux-rubric.md](inventory/ui-ux-rubric.md): rubric chấm UI/UX theo operator và thiết bị thật
+- [inventory/operator-journeys.md](inventory/operator-journeys.md): kịch bản đóng vai nhân viên vận hành mỗi ngày
+- [inventory/route-cta-matrix.md](inventory/route-cta-matrix.md): ma trận route, section, CTA, role, device, severity
 
 ## Cách dùng
 

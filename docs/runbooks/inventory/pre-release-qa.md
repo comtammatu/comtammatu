@@ -7,8 +7,38 @@
 > - thay đổi docs ảnh hưởng Inventory scope
 > - thay đổi route / server action / RPC / RLS / migrations liên quan Inventory
 > - chốt một flow pilot mới như stocktake, transfer, production, expiry, AP readouts
+> - chạy audit UI/UX theo vai trò và thiết bị thật
 
 ---
+
+## 0. Companion Docs
+
+Chạy runbook này cùng với:
+
+- [ui-ux-rubric.md](./ui-ux-rubric.md)
+- [operator-journeys.md](./operator-journeys.md)
+- [route-cta-matrix.md](./route-cta-matrix.md)
+- [../../worklog/inventory/evidence-log.md](../../worklog/inventory/evidence-log.md)
+
+Thiết bị ưu tiên:
+
+- `HQ / super_manager`: desktop-first
+- `Bếp trung tâm`: tablet + desktop
+- `Chi nhánh / branch_manager`: tablet + mobile trước, desktop sau
+
+## 0b. Wave 0 — Kickoff bắt buộc
+
+Trước khi bắt đầu round QA:
+
+1. Chốt scope theo 4 lens bắt buộc của repo:
+   - `PM`: acceptance criteria + phạm vi sign-off
+   - `BA`: business rules + edge cases
+   - `Senior Dev`: blast radius + affected routes/CTA
+   - `QA/QC`: gate + evidence cần lưu
+2. Chọn journey và device tương ứng từ [operator-journeys.md](./operator-journeys.md)
+3. Mở [evidence-log.md](../../worklog/inventory/evidence-log.md) và điền kickoff block
+4. Dùng [route-cta-matrix.md](./route-cta-matrix.md) làm source of truth cho route/button phải audit
+5. Chấm finding theo [ui-ux-rubric.md](./ui-ux-rubric.md), không theo cảm tính
 
 ## 1. Required Gates
 
@@ -38,6 +68,14 @@ Kiểm tra ít nhất các surface sau còn mở được:
 - `/inventory/production` nếu flow production bị ảnh hưởng
 - verify old `/admin/inventory*` URLs fail as unsupported routes and no longer behave like a live surface
 
+### Gate C — UI/UX scope sanity
+
+- nav phản ánh đúng role, không chỉ chặn ở page-level
+- quick actions và task queue trên dashboard phải phản ánh đúng site kind
+- action chính trên thiết bị mục tiêu không phụ thuộc hover
+- placeholder CTA/card `sắp mở` phải được phân loại rõ `accepted placeholder` hoặc `bug`
+- không có route live nào thiếu row tương ứng trong `route-cta-matrix.md`
+
 ---
 
 ## 2. ACL Smoke
@@ -60,10 +98,29 @@ Kiểm theo đúng [inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md
 - `Production` phải ẩn khỏi non-`super_manager` ngay từ nav
 - `Ingredients / Suppliers / Recipes` không xuất hiện duplicate giữa menu chính và `Settings`
 - không có page nào “vào được nhưng dữ liệu null im lặng” do thiếu `GRANT` hoặc RLS sai
+- `owner` không được UX dẫn như inventory operator hằng ngày
+- `Receiving` không được xuất hiện như nhãn generic cho branch receiving
+- `Cấp bếp` không được bị cảm nhận như flow phụ hoặc flow lỗi
 
 ---
 
 ## 3. Flow Smoke Checklist
+
+### 3.0 Journey-first execution
+
+Chạy flow smoke theo persona + device, không chỉ theo route rời rạc:
+
+- HQ procurement: desktop
+- Bếp trung tâm: tablet trước, desktop đối chiếu
+- Chi nhánh: tablet trước, mobile ergonomics riêng
+- Oversight (`area_manager`, `owner`): desktop
+
+Mỗi flow phải log:
+
+- CTA nào đã bấm
+- UI phản hồi ra sao
+- step kế tiếp user có hiểu được không
+- tác động dữ liệu/downstream có quan sát được không
 
 ### 3.1 Procurement at HQ
 
@@ -76,6 +133,7 @@ Kiểm theo đúng [inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md
 - Recompute matching
 - Ghi nhận thanh toán
 - Kiểm tra 3-way matching không drift vocabulary giữa UI và doc
+- Kiểm dashboard và `Receiving` có dẫn đúng từng bước, không bắt user tự đoán PO -> GRN -> invoice
 
 ### 3.2 HQ outbound transfer
 
@@ -88,6 +146,7 @@ Kiểm theo đúng [inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md
 - Confirm receive
 - Receive
 - Kiểm tra `transfer_out` / `transfer_in` và tồn hai đầu
+- Kiểm stepper/status/primary action có làm user hiểu đúng bước kế tiếp
 
 ### 3.3 Production
 
@@ -96,12 +155,14 @@ Kiểm theo đúng [inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md
 - Fail đúng khi thiếu BOM hoặc thiếu nguyên liệu
 - Confirm thành công khi đủ điều kiện
 - Kiểm tra `production_consumption` + `production_output`
+- Kiểm readiness/empty states có chỉ user đúng dependency đang thiếu
 
 ### 3.4 Bếp trung tâm -> Kho chi nhánh transfer
 
 - Tạo transfer thành phẩm
 - Confirm receipt ở chi nhánh
 - Kiểm tra short-receipt / discrepancy flow nếu scope có hỗ trợ
+- Kiểm branch dashboard sau khi nhận hàng có dẫn đủ rõ sang `Cấp bếp`
 
 ### 3.5 Kho chi nhánh -> Bếp chi nhánh
 
@@ -109,6 +170,7 @@ Kiểm theo đúng [inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md
 - Xác nhận branch dashboard dẫn đúng sang `transfers` và `issues`, không dẫn sang `receiving`
 - Xác nhận luồng này không bị bỏ quên trong SOP / UI / báo cáo
 - Nếu hiện đang hạch toán trong cùng `branch`, ghi rõ evidence và boundary
+- Sau `kitchen_use`, user phải hiểu tồn kho đã thay đổi vì cấp phát nội bộ
 
 ### 3.6 Stocktake
 
@@ -116,6 +178,7 @@ Kiểm theo đúng [inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md
 - Nhập số đếm
 - Complete session
 - Kiểm tra `count_adjustment` và tồn mới
+- Kiểm blur-save feedback, progress visibility, result comprehension
 
 ### 3.7 Alerts and reports
 
@@ -123,6 +186,14 @@ Kiểm theo đúng [inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md
 - Expiry alert hiển thị đúng theo window tài liệu quy định
 - Nếu surface có `AP aging` hoặc inventory value, số liệu không lỗi obvious
 - Các CTA chưa mở phải được ghi rõ `sắp mở` hoặc chuyển thành điều hướng thật; không để disabled button gây hiểu nhầm là đã có workflow
+- Report cards `sắp mở` không được trông giống feature live
+- AP aging link phải dẫn đúng sang công nợ NCC
+
+### 3.8 POS/KDS bridge
+
+- Với branch flow có scope tiêu hao, đối chiếu `POS/KDS completed -> recipe consumption`
+- Kiểm user có hiểu vì sao tồn kho giảm sau khi order hoàn tất
+- Nếu bridge chưa chứng minh được bằng UI/evidence downstream, không mark branch journey là pass
 
 ---
 
@@ -136,6 +207,8 @@ Kiểm theo đúng [inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md
 | HQ-only procurement | Chỉ cần một route/guard sai là chi nhánh có thể đi lệch pilot flow |
 | Production permissions | Chưa có role riêng cho central kitchen, nên quyền đang phải giữ hẹp |
 | False-promise CTA | UI rất dễ để lại nút giả sau refactor workflow, khiến docs và hành vi lệch nhau |
+| Hover-only actions | Desktop có thể pass nhưng mobile/tablet fail nặng |
+| Step-to-step mental model | Sau mỗi thao tác, user có thể không biết phải làm gì tiếp dù backend đúng |
 
 ---
 
@@ -143,8 +216,11 @@ Kiểm theo đúng [inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md
 
 - Lệnh verify cuối cùng và kết quả
 - Role nào đã smoke
+- Device nào đã smoke
 - Flow nào đã smoke
+- CTA nào đã smoke
 - Bất kỳ deviation nào giữa docs và code
+- Ảnh/chứng cứ cho mọi `P0` và `P1`
 
 Nếu có chỗ phải defer:
 
@@ -161,4 +237,8 @@ Chỉ coi lát Inventory là ready khi:
 - verify repo-wide xanh
 - ACL smoke đúng với doc
 - flow smoke đúng với scope thay đổi
+- route live có coverage tương ứng trong `route-cta-matrix.md`
+- persona chính có ít nhất 1 journey hoàn chỉnh theo đúng thiết bị mục tiêu
+- mọi `P0` đã xử lý
+- mọi `P1` đã xử lý hoặc được chấp nhận rõ ràng trong evidence log
 - không còn mâu thuẫn giữa [inventory.md](../../ref/inventory.md), [inventory-sop.md](../../ref/inventory-sop.md), và [inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md)
