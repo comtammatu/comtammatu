@@ -14,6 +14,13 @@ import {
 } from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
+import {
   Table,
   TableBody,
   TableCell,
@@ -123,15 +130,14 @@ export function IngredientTable({
                 </div>
               )}
               {filtered.map((ing) => (
-                <Card
+                <Item
                   key={ing.id}
-                  className="bg-muted/30 flex items-center justify-between gap-3 px-4 py-3"
+                  size="sm"
+                  className="justify-between bg-muted/30"
                 >
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium">
-                        {ing.name}
-                      </span>
+                  <ItemContent>
+                    <ItemTitle className="text-sm font-medium">
+                      <span className="truncate">{ing.name}</span>
                       {!ing.is_active && (
                         <Badge variant="outline" className="text-xs shrink-0">
                           {ACTIVE_STATE_LABELS_VI.inactive}
@@ -140,8 +146,8 @@ export function IngredientTable({
                       <Badge variant="secondary" className="text-xs shrink-0">
                         {ITEM_KIND_LABELS[ing.item_kind] ?? ing.item_kind}
                       </Badge>
-                    </div>
-                    <p className="truncate text-xs text-muted-foreground">
+                    </ItemTitle>
+                    <ItemDescription className="truncate">
                       {ing.sku && <>{ing.sku} · </>}
                       Nhập {ing.purchase_unit} · Tính {ing.measure_unit}
                       {ing.category && <> · {ing.category}</>}
@@ -150,20 +156,22 @@ export function IngredientTable({
                       )}
                       {" · "}
                       {STORAGE_LABELS[ing.storage_type] ?? ing.storage_type}
-                    </p>
-                  </div>
+                    </ItemDescription>
+                  </ItemContent>
                   {canManageCatalog && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 shrink-0"
-                      aria-label={`Chỉnh sửa ${ing.name}`}
-                      onClick={() => setEditItem(ing)}
-                    >
-                      <Pencil className="size-4" />
-                    </Button>
+                    <ItemActions>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 shrink-0"
+                        aria-label={`Chỉnh sửa ${ing.name}`}
+                        onClick={() => setEditItem(ing)}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                    </ItemActions>
                   )}
-                </Card>
+                </Item>
               ))}
             </div>
           ) : (
