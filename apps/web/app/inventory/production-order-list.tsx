@@ -121,7 +121,7 @@ export function ProductionOrderList({
                   </Badge>
                 </TableCell>
                 <TableCell className="font-mono tabular-nums">
-                  {order.total_cost.toLocaleString("vi-VN")} ₫
+                  {order.total_cost.toLocaleString("vi-VN")}đ
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-2">

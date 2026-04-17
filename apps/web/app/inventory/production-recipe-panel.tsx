@@ -641,24 +641,13 @@ export function ProductionRecipePanel({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="recipeFinishedGood">Thành phẩm</Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setQuickFinishedGoodDialogOpen(true)}
-                  >
-                    <Plus className="mr-2 size-4" />
-                    Tạo thành phẩm
-                  </Button>
-                </div>
+                <Label htmlFor="recipeFinishedGood">Thành phẩm</Label>
                 <Select
                   value={recipeFinishedGoodId}
                   onValueChange={setRecipeFinishedGoodId}
                   disabled={editingRecipe != null}
                 >
-                  <SelectTrigger id="recipeFinishedGood">
+                  <SelectTrigger id="recipeFinishedGood" className="w-full">
                     <SelectValue placeholder="Chọn thành phẩm" />
                   </SelectTrigger>
                   <SelectContent>
@@ -669,24 +658,22 @@ export function ProductionRecipePanel({
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  Nếu chưa thấy món cần lập BOM, tạo thêm một bản ghi loại
-                  <strong> Thành phẩm</strong> ngay tại đây.
-                </p>
+                {!editingRecipe && (
+                  <p className="text-xs text-muted-foreground">
+                    Chưa có trong danh sách?{" "}
+                    <button
+                      type="button"
+                      onClick={() => setQuickFinishedGoodDialogOpen(true)}
+                      className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                    >
+                      <Plus className="size-3.5" />
+                      Tạo thành phẩm mới
+                    </button>
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="recipeIngredient">Nguyên liệu</Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setQuickRawIngredientDialogOpen(true)}
-                  >
-                    <Plus className="mr-2 size-4" />
-                    Tạo nguyên liệu
-                  </Button>
-                </div>
+                <Label htmlFor="recipeIngredient">Nguyên liệu</Label>
                 <Select
                   value={recipeIngredientId}
                   onValueChange={(value) => {
@@ -698,7 +685,7 @@ export function ProductionRecipePanel({
                   }}
                   disabled={editingRecipe != null}
                 >
-                  <SelectTrigger id="recipeIngredient">
+                  <SelectTrigger id="recipeIngredient" className="w-full">
                     <SelectValue placeholder="Chọn nguyên liệu" />
                   </SelectTrigger>
                   <SelectContent>
@@ -711,8 +698,15 @@ export function ProductionRecipePanel({
                 </Select>
                 {!editingRecipe && (
                   <p className="text-xs text-muted-foreground">
-                    Nếu thiếu nguyên liệu đầu vào, tạo mới ngay tại đây rồi chọn
-                    lại dòng BOM.
+                    Thiếu nguyên liệu đầu vào?{" "}
+                    <button
+                      type="button"
+                      onClick={() => setQuickRawIngredientDialogOpen(true)}
+                      className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                    >
+                      <Plus className="size-3.5" />
+                      Tạo nguyên liệu mới
+                    </button>
                   </p>
                 )}
                 {editingRecipe && (
