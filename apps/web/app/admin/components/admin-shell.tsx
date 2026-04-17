@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { Fragment, useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -27,6 +27,13 @@ import {
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { Badge } from "@comtammatu/ui/components/badge";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@comtammatu/ui/components/breadcrumb";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
@@ -131,7 +138,8 @@ export function AdminShell({
     () => buildContext(pathname, navGroups),
     [navGroups, pathname],
   );
-  const trail = pageContext.trail.slice(0, -1).join(" · ");
+  const breadcrumbSegments = pageContext.trail.slice(0, -1);
+  const trail = breadcrumbSegments.join(" · ");
 
   return (
     <SidebarProvider>
@@ -139,7 +147,7 @@ export function AdminShell({
         {...workspaceThemeProps("admin")}
         className="workspace-shell flex min-h-dvh w-full"
       >
-        <Sidebar variant="inset">
+        <Sidebar variant="inset" collapsible="icon">
           <SidebarHeader className="gap-4 p-4">
             <div className="workspace-sidebar-card">
               <div className="flex items-center gap-3">
@@ -236,10 +244,29 @@ export function AdminShell({
               <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <SidebarTrigger className="md:hidden" />
-                    <span className="workspace-context-pill">
-                      {trail || APP_COPY_VI.adminFoundation}
-                    </span>
+                    <SidebarTrigger />
+                    {breadcrumbSegments.length > 0 ? (
+                      <Breadcrumb>
+                        <BreadcrumbList>
+                          {breadcrumbSegments.map((segment, idx) => (
+                            <Fragment key={`${segment}-${String(idx)}`}>
+                              <BreadcrumbItem>
+                                <BreadcrumbPage className="font-normal text-muted-foreground">
+                                  {segment}
+                                </BreadcrumbPage>
+                              </BreadcrumbItem>
+                              {idx < breadcrumbSegments.length - 1 && (
+                                <BreadcrumbSeparator />
+                              )}
+                            </Fragment>
+                          ))}
+                        </BreadcrumbList>
+                      </Breadcrumb>
+                    ) : (
+                      <span className="workspace-context-pill">
+                        {APP_COPY_VI.adminFoundation}
+                      </span>
+                    )}
                     <Badge variant="secondary">{ROLE_LABEL_VI[role]}</Badge>
                   </div>
 
