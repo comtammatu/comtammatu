@@ -1,12 +1,7 @@
-import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { createClient } from "@comtammatu/database/supabase/server";
-import {
-  buildLoginBlockedStatePath,
-  extractClaims,
-  isAdminRole,
-} from "@comtammatu/shared/auth";
+import { isAdminRole } from "@comtammatu/shared/auth";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { loadAuthState } from "../../_lib/auth";
 import { SettingsNav } from "./settings-nav";
 
 export default async function SettingsLayout({
@@ -14,16 +9,7 @@ export default async function SettingsLayout({
 }: {
   children: ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.user) redirect("/login");
-
-  const claims = extractClaims(session.user.app_metadata);
-  if (!claims) redirect(buildLoginBlockedStatePath());
-
+  const { claims } = await loadAuthState();
   const isOwner = claims.user_role === "owner";
 
   return (

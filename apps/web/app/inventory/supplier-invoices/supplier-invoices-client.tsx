@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { AlertTriangle, CheckCircle2, Search } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
   Table,
   TableBody,
@@ -242,6 +243,24 @@ export function SupplierInvoicesClient({
   const vatAmount = Math.round(numericSubtotal * numericVatRate) / 100;
   const totalAmount = numericSubtotal + vatAmount;
 
+  function resetCreateForm() {
+    setSupplierId("");
+    setGrnId("none");
+    setInvoiceNumber("");
+    setInvoiceDate(new Date().toISOString().slice(0, 10));
+    setSubtotal("");
+    setVatRate("8");
+    setMatchingNotes("");
+  }
+
+  useEffect(() => {
+    if (createOpen) {
+      return;
+    }
+
+    resetCreateForm();
+  }, [createOpen]);
+
   async function reloadInvoices(nextSelectedId?: number | null) {
     const again = await fetchSupplierInvoices();
     if (!again.success) return;
@@ -316,12 +335,6 @@ export function SupplierInvoicesClient({
       const created = res.data as { id: number };
       toast.success("Đã ghi nhận hóa đơn NCC.");
       setCreateOpen(false);
-      setSupplierId("");
-      setGrnId("none");
-      setInvoiceNumber("");
-      setSubtotal("");
-      setVatRate("8");
-      setMatchingNotes("");
       await reloadInvoices(created.id);
     });
   }
@@ -922,7 +935,10 @@ export function SupplierInvoicesClient({
               <div className="grid gap-2">
                 <Label>Tạm tính</Label>
                 <Input
+                  type="number"
                   inputMode="decimal"
+                  min="0"
+                  step="1000"
                   value={subtotal}
                   onChange={(event) => setSubtotal(event.target.value)}
                   placeholder="0"
@@ -931,7 +947,10 @@ export function SupplierInvoicesClient({
               <div className="grid gap-2">
                 <Label>VAT %</Label>
                 <Input
+                  type="number"
                   inputMode="decimal"
+                  min="0"
+                  step="0.1"
                   value={vatRate}
                   onChange={(event) => setVatRate(event.target.value)}
                   placeholder="8"
@@ -954,10 +973,12 @@ export function SupplierInvoicesClient({
 
             <div className="grid gap-2">
               <Label>Ghi chú đối soát</Label>
-              <Input
+              <Textarea
                 value={matchingNotes}
                 onChange={(event) => setMatchingNotes(event.target.value)}
+                rows={3}
                 placeholder="Ghi chú thêm cho bước matching"
+                className="min-h-24"
               />
             </div>
           </div>

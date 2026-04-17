@@ -71,7 +71,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     label: getModuleLabelVi("crm"),
   },
   finance: {
-    path: "/admin/finance",
+    path: "/finance",
     allowedRoles: ["owner", "super_manager"],
     label: getModuleLabelVi("finance"),
   },

@@ -8,7 +8,7 @@ export default function CrmPage() {
         <CardContent className="p-5 sm:p-6">
           <div className="space-y-3">
             <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-              Phân hệ ERP
+              Khách hàng
             </span>
             <div className="space-y-2">
               <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
@@ -25,8 +25,12 @@ export default function CrmPage() {
           </div>
           <div className="space-y-1.5">
             <h3 className="text-2xl font-semibold">
-              Tính năng đang phát triển
+              Chưa có dữ liệu khách hàng
             </h3>
+            <p className="max-w-md text-sm leading-6 text-muted-foreground">
+              Mục này sẽ dùng khi cửa hàng bắt đầu quản lý khách quen và lịch
+              sử mua hàng.
+            </p>
           </div>
         </CardContent>
       </Card>

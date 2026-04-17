@@ -1,22 +1,10 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@comtammatu/database/supabase/server";
-import {
-  buildLoginBlockedStatePath,
-  canManageBranchFloorSettings,
-  extractClaims,
-} from "@comtammatu/shared/auth";
+import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
+import { loadAuthState } from "@/_lib/auth";
 import { TablesClient } from "./tables-client";
 
 export default async function TablesPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session?.user) redirect("/login");
-
-  const claims = extractClaims(session.user.app_metadata);
-  if (!claims) redirect(buildLoginBlockedStatePath());
+  const { supabase, claims } = await loadAuthState();
 
   if (!canManageBranchFloorSettings(claims.user_role)) {
     redirect("/admin/settings");

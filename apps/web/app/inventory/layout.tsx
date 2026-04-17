@@ -1,11 +1,5 @@
-import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
-import { createClient } from "@comtammatu/database/supabase/server";
-import {
-  buildLoginBlockedStatePath,
-  canAccess,
-  extractClaims,
-} from "@comtammatu/shared/auth";
+import { loadAuthState } from "../_lib/auth";
 import { InventoryShell } from "./_components/inventory-shell";
 import { fetchInventorySiteContext } from "./_lib/procurement-branches";
 
@@ -14,22 +8,7 @@ export default async function InventoryLayout({
 }: {
   children: ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.user) redirect("/login");
-
-  const claims = extractClaims(session.user.app_metadata);
-  if (!claims) {
-    redirect(buildLoginBlockedStatePath());
-  }
-
-  if (!canAccess(claims.user_role, "inventory")) {
-    redirect("/employee?forbidden=1&reason=insufficient-permission");
-  }
-
+  const { supabase, session, claims } = await loadAuthState();
   const siteContext = await fetchInventorySiteContext(
     supabase,
     claims.tenant_id,

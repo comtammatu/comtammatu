@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   createPurchaseOrder,
@@ -376,11 +377,13 @@ function SupplierSection({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="notes">Ghi chú</Label>
-            <Input
+            <Textarea
               id="notes"
               value={notes}
               onChange={(e) => onNotesChange(e.target.value)}
+              rows={3}
               placeholder="Ghi chú đơn hàng…"
+              className="min-h-24"
             />
           </div>
         </div>

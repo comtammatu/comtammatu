@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
   Tabs,
   TabsContent,
@@ -462,6 +463,7 @@ export function CreateTransferDialog({
                     </span>
                     <Input
                       type="number"
+                      inputMode="decimal"
                       step="any"
                       min="0"
                       className="h-8 w-20"
@@ -502,7 +504,13 @@ export function CreateTransferDialog({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="notes">Ghi chú</Label>
-            <Input id="notes" name="notes" />
+            <Textarea
+              id="notes"
+              name="notes"
+              rows={3}
+              placeholder="Ghi chú thêm cho phiếu luân chuyển"
+              className="min-h-24"
+            />
           </div>
 
           {isBranchManager && (

@@ -68,7 +68,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
           <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div className="space-y-3">
               <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                Nền tảng ERP
+                Quản lý nhân viên
               </span>
               <div className="space-y-2">
                 <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">

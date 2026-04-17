@@ -1,7 +1,7 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
-import { fetchDailyRevenue } from "../../finance/actions";
+import { fetchDailyRevenue } from "../../../finance/actions";
 import { RevenueReportClient } from "./revenue-report-client";
 
 export default async function RevenueReportPage() {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
@@ -43,6 +43,15 @@ export function ShiftFormDialog({
   const [branchId, setBranchId] = useState<string>(
     defaultBranchId?.toString() ?? "",
   );
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setError(null);
+    setBranchId(defaultBranchId?.toString() ?? "");
+  }, [open, defaultBranchId]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

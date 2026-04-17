@@ -27,7 +27,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 px-3 pb-3 sm:px-4 lg:px-6"
+      className="fixed bottom-0 left-0 right-0 z-40 px-3 pb-3 sm:px-4 lg:hidden"
       aria-label="Điều hướng chính"
     >
       <div className="pb-3 mx-auto flex max-w-6xl items-stretch gap-1.5 rounded-3xl border border-border/70 bg-background/92 p-2 shadow-sm backdrop-blur-xl">

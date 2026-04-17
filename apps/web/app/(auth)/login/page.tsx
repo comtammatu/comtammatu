@@ -24,7 +24,7 @@ function BrandPanel() {
             variant="outline"
             className="border-sidebar-border text-sidebar-foreground/70"
           >
-            Hệ điều hành nhà hàng
+            Hệ thống nhà hàng
           </Badge>
           <div className="space-y-4">
             <div className="flex size-16 items-center justify-center rounded-3xl bg-sidebar-primary text-sidebar-primary-foreground shadow-sm">
@@ -35,11 +35,11 @@ function BrandPanel() {
                 Đăng nhập theo vai trò
               </p>
               <h1 className="max-w-xl font-heading text-4xl font-semibold leading-tight sm:text-5xl">
-                Đập lại từ đầu để bước vào ca bằng một trải nghiệm mới.
+                Đăng nhập để vào đúng khu vực làm việc.
               </h1>
               <p className="max-w-xl text-sm leading-7 text-sidebar-foreground/70">
-                Một lớp giao diện mới cho quản trị, kho hàng, nhân sự, POS và
-                KDS, nhưng vẫn giữ nguyên route, phân quyền và logic nghiệp vụ.
+                Dùng một tài khoản để vào đúng màn hình quản lý, kho, nhân sự,
+                POS hoặc bếp theo vai trò của bạn.
               </p>
             </div>
           </div>
@@ -142,11 +142,11 @@ export default async function LoginPage({
                   <Badge variant="secondary">Cổng nhân viên</Badge>
                 </div>
                 <CardTitle className="font-heading text-3xl sm:text-4xl">
-                  Sẵn sàng vào ca, đúng vai trò
+                  Sẵn sàng vào ca
                 </CardTitle>
                 <CardDescription>
-                  Toàn bộ UI đã được dựng lại để tách khỏi bố cục cũ, nhưng
-                  logic quyền và đường dẫn vẫn giữ nguyên.
+                  Đăng nhập để mở đúng khu vực làm việc theo vai trò và chi
+                  nhánh của bạn.
                 </CardDescription>
               </CardHeader>
               <CardContent>

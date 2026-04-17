@@ -31,10 +31,12 @@ interface IngredientFormDialogProps {
 }
 
 function IngredientFormContent({
+  open,
   ingredient,
   onOpenChange,
   onSaved,
 }: {
+  open: boolean;
   ingredient: IngredientRow | null;
   onOpenChange: (open: boolean) => void;
   onSaved: (saved: IngredientRow) => void;
@@ -50,10 +52,14 @@ function IngredientFormContent({
   );
 
   useEffect(() => {
+    if (!open) {
+      return;
+    }
+
     setStorageType(ingredient?.storage_type ?? "ambient");
     setItemKind(ingredient?.item_kind ?? "raw_material");
     setError(null);
-  }, [ingredient]);
+  }, [open, ingredient]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -363,6 +369,7 @@ export function IngredientFormDialog({
         key={ingredient?.id ?? "new-ingredient"}
       >
         <IngredientFormContent
+          open={open}
           ingredient={ingredient}
           onOpenChange={onOpenChange}
           onSaved={onSaved}

@@ -1,6 +1,11 @@
 import type { ModuleKey } from "./module-acl";
 
-export const PUBLIC_APP_PATHS = ["/api/health", "/api/webhooks", "/sw.js"] as const;
+export const PUBLIC_APP_PATHS = [
+  "/api/health",
+  "/api/webhooks",
+  "/sw.js",
+  "/access-denied",
+] as const;
 export const BETA_ROUTE_PREFIX = "/beta" as const;
 
 export const INVENTORY_PROCUREMENT_PREFIXES = [
@@ -42,7 +47,6 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (resolvedPathname.startsWith("/admin/orders")) return "orders";
   if (resolvedPathname.startsWith("/admin/staff")) return "staff";
   if (resolvedPathname.startsWith("/admin/crm")) return "crm";
-  if (resolvedPathname.startsWith("/admin/finance")) return "finance";
   if (resolvedPathname.startsWith("/admin/reports")) return "reports";
   if (resolvedPathname.startsWith("/admin/settings")) return "settings";
 
@@ -53,6 +57,7 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   }
 
   if (resolvedPathname.startsWith("/inventory")) return "inventory";
+  if (resolvedPathname.startsWith("/finance")) return "finance";
   if (resolvedPathname.startsWith("/hr")) return "hr";
   if (/^\/br\/\d+\/pos/.test(resolvedPathname)) return "pos";
   if (/^\/br\/\d+\/kds/.test(resolvedPathname)) return "kds";

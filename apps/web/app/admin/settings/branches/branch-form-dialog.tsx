@@ -36,6 +36,10 @@ export function BranchFormDialog({
   );
 
   useEffect(() => {
+    if (!open) {
+      return;
+    }
+
     setBranchKind(
       branch?.branch_kind === "central_kitchen"
         ? "central_kitchen"
@@ -43,7 +47,7 @@ export function BranchFormDialog({
           ? "warehouse"
           : "branch",
     );
-  }, [branch]);
+  }, [open, branch]);
 
   return (
     <CrudDialog

@@ -45,6 +45,18 @@ pnpm db:types     # Regenerate Supabase types (after migration merged & applied)
   - Components: https://ui.shadcn.com/docs/components/
   - Preset command: `pnpm dlx shadcn@latest init --preset b1GfmQMCm --template next`
 
+### Operational UI Philosophy
+
+- Treat `/br/[branchId]/pos` and `/br/[branchId]/kds` as frontline operational surfaces, not dashboards.
+- Mobile-first for operational routes: the first viewport must show the next safe action or the live queue, not decorative hero/status chrome.
+- Once staff lock context (session, table, station, order), the UI MUST compact and give space back to the primary task.
+- One workflow state should have one visual source of truth. Do not repeat the same state in header, rail, sidebar, gate, and board.
+- Cart is for creating a new order only. After submit, order mutations MUST happen from order detail / order history flows.
+- Desktop may add density, secondary insight, or faster scan surfaces, but MUST NOT create a different IA from mobile.
+- Prefer real shadcn primitives (`Tabs`, `Badge`, `Button`, `Card`, `Sheet`, `Select`, `Table`, `Dialog`) before styling raw `div`/`button` controls.
+- Use a single vocabulary for the same workflow state across POS and KDS. Do not rename the same concept per surface.
+- Keep destructive actions visually separated from primary actions and always require confirmation or a safe recovery path.
+
 ## Architecture
 
 ```

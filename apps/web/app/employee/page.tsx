@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import {
   ArrowRight,
   BarChart3,
@@ -14,13 +13,8 @@ import {
   UserRound,
   Warehouse,
 } from "lucide-react";
-import { createClient } from "@comtammatu/database/supabase/server";
-import {
-  buildLoginBlockedStatePath,
-  ROLE_LABEL_VI,
-  extractClaims,
-  canAccess,
-} from "@comtammatu/shared/auth";
+import { ROLE_LABEL_VI, canAccess } from "@comtammatu/shared/auth";
+import { loadAuthState } from "@/_lib/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -125,15 +119,7 @@ function ActionNotice({
 }
 
 export default async function EmployeePage() {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.user) redirect("/login");
-
-  const claims = extractClaims(session.user.app_metadata);
-  if (!claims) redirect(buildLoginBlockedStatePath());
+  const { supabase, claims } = await loadAuthState();
 
   const canPos = canAccess(claims.user_role, "pos");
   const canKds = canAccess(claims.user_role, "kds");
@@ -207,12 +193,11 @@ export default async function EmployeePage() {
               </span>
               <div className="space-y-3">
                 <CardTitle className="font-heading text-3xl sm:text-4xl">
-                  Bắt đầu ca làm việc bằng một mặt bằng UI hoàn toàn mới.
+                  Bắt đầu ca làm nhanh chóng.
                 </CardTitle>
                 <p className="max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
-                  Không dùng lại khung cũ. Các tác vụ hằng ngày, lối vào
-                  workspace và trạng thái vận hành giờ nằm trong một flow mới,
-                  rõ hơn và giàu nhịp hơn.
+                  Xem lịch, chấm công, mở POS hoặc KDS và vào các mục công việc
+                  được phân quyền cho bạn.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -312,7 +297,7 @@ export default async function EmployeePage() {
               href={posHref}
               title="POS"
               description={
-                posDisabled ? "Vô hiệu hóa theo vai trò/chi nhánh" : undefined
+                posDisabled ? "Không dùng tại vai trò hoặc chi nhánh này" : undefined
               }
               icon={<Monitor className="size-5" />}
               badge={posDisabled ? undefined : "Vận hành"}
@@ -322,7 +307,7 @@ export default async function EmployeePage() {
               href={kdsHref}
               title="KDS"
               description={
-                kdsDisabled ? "Vô hiệu hóa theo vai trò/chi nhánh" : undefined
+                kdsDisabled ? "Không dùng tại vai trò hoặc chi nhánh này" : undefined
               }
               icon={<ChefHat className="size-5" />}
               badge={kdsDisabled ? undefined : "Bếp"}

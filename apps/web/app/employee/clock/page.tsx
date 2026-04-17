@@ -1,21 +1,8 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@comtammatu/database/supabase/server";
-import {
-  buildLoginBlockedStatePath,
-  extractClaims,
-} from "@comtammatu/shared/auth";
+import { loadAuthState } from "@/_lib/auth";
 import { ClockClient } from "./clock-client";
 
 export default async function ClockPage() {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.user) redirect("/login");
-
-  const claims = extractClaims(session.user.app_metadata);
-  if (!claims) redirect(buildLoginBlockedStatePath());
+  const { supabase, session, claims } = await loadAuthState();
 
   // Find employee record
   const { data: employee } = await supabase

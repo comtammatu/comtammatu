@@ -63,7 +63,7 @@ export function TerminalFormDialog({
           id="terminal-device"
           name="device_id"
           defaultValue={terminal?.device_id ?? ""}
-          placeholder="Nhận diện thiết bị / tablet"
+          placeholder="VD: tablet-thungan-01"
         />
       </div>
 

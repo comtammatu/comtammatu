@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import {
   ArrowDown,
   ArrowUp,
@@ -13,9 +12,9 @@ import {
   ShieldCheck,
   TrendingUp,
   UtensilsCrossed,
+  Wallet,
   Warehouse,
 } from "lucide-react";
-import { createClient } from "@comtammatu/database/supabase/server";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -25,13 +24,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
-import {
-  buildLoginBlockedStatePath,
-  canAccess,
-  extractClaims,
-} from "@comtammatu/shared/auth";
-import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { canAccess } from "@comtammatu/shared/auth";
 import { formatVND } from "@comtammatu/shared/format";
+import { loadAuthState } from "@/_lib/auth";
+import {
+  SurfaceLinkCard,
+  type SurfaceLinkCardProps,
+} from "../../components/surface-link-card";
 import { fetchDashboardStats } from "./actions";
 
 interface StatCardProps {
@@ -41,19 +40,11 @@ interface StatCardProps {
   icon: React.ElementType;
 }
 
-interface SurfaceCardProps {
-  title: string;
-  description?: string;
-  href: string;
-  badge: string;
-  icon: React.ElementType;
-}
-
 function StatCard({ title, value, change, icon: Icon }: StatCardProps) {
   const isPositive = change >= 0;
 
   return (
-    <Card className="rounded-lg border bg-muted/30 text-card-foreground transition-all hover:-translate-y-0.5 hover:shadow-md">
+    <Card className="rounded-lg border bg-muted/30 text-card-foreground transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-md">
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}
@@ -79,43 +70,6 @@ function StatCard({ title, value, change, icon: Icon }: StatCardProps) {
         </Badge>
       </CardContent>
     </Card>
-  );
-}
-
-function SurfaceCard({
-  title,
-  description,
-  href,
-  badge,
-  icon: Icon,
-}: SurfaceCardProps) {
-  return (
-    <Link
-      href={href}
-      className="rounded-lg border bg-muted/30 text-card-foreground group flex h-full flex-col justify-between p-5 transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-md"
-    >
-      <div className="space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <Icon className="size-5" />
-          </div>
-          <Badge variant="secondary" className="rounded-full px-3 py-1">
-            {badge}
-          </Badge>
-        </div>
-        <div>
-          <p className="text-base font-semibold tracking-tight">{title}</p>
-          {description ? (
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              {description}
-            </p>
-          ) : null}
-        </div>
-      </div>
-      <span className="mt-5 text-sm font-medium text-primary transition-transform group-hover:translate-x-1">
-        Mở phân hệ
-      </span>
-    </Link>
   );
 }
 
@@ -151,19 +105,7 @@ function formatTime(iso: string): string {
 }
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.user) {
-    redirect("/login");
-  }
-
-  const claims = extractClaims(session.user.app_metadata);
-  if (!claims) {
-    redirect(buildLoginBlockedStatePath());
-  }
+  const { claims } = await loadAuthState();
 
   const stats = await fetchDashboardStats();
   const revenueChange = computeChange(
@@ -177,30 +119,30 @@ export default async function DashboardPage() {
       : 0;
   const avgChange = computeChange(stats.avgOrderValue, yesterdayAvg);
 
-  const foundationCards: SurfaceCardProps[] = [];
+  const foundationCards: SurfaceLinkCardProps[] = [];
   if (canAccess(claims.user_role, "settings")) {
     foundationCards.push({
       title: "Thiết lập hệ thống",
       href: "/admin/settings",
-      badge: "Nền tảng",
+      badge: "Quản lý",
       icon: Settings,
     });
   }
   if (canAccess(claims.user_role, "staff")) {
     foundationCards.push({
-      title: "Nhân sự nền",
+      title: "Nhân viên",
       href: "/admin/staff",
-      badge: "Nền tảng",
+      badge: "Quản lý",
       icon: ShieldCheck,
     });
   }
 
-  const domainCards: SurfaceCardProps[] = [];
+  const domainCards: SurfaceLinkCardProps[] = [];
   if (canAccess(claims.user_role, "menu")) {
     domainCards.push({
       title: "Thực đơn",
       href: "/admin/menu",
-      badge: "Phân hệ ERP",
+      badge: "Vận hành",
       icon: LayoutTemplate,
     });
   }
@@ -208,15 +150,23 @@ export default async function DashboardPage() {
     domainCards.push({
       title: "Điều hành kho",
       href: "/inventory",
-      badge: "Phân hệ ERP",
+      badge: "Vận hành",
       icon: Warehouse,
+    });
+  }
+  if (canAccess(claims.user_role, "finance")) {
+    domainCards.push({
+      title: "Tài chính",
+      href: "/finance",
+      badge: "Vận hành",
+      icon: Wallet,
     });
   }
   if (canAccess(claims.user_role, "hr")) {
     domainCards.push({
       title: "Nhân sự & lương",
       href: "/hr",
-      badge: "Phân hệ ERP",
+      badge: "Vận hành",
       icon: Briefcase,
     });
   }
@@ -224,7 +174,7 @@ export default async function DashboardPage() {
     domainCards.push({
       title: `POS chi nhánh #${claims.branch_id}`,
       href: `/br/${claims.branch_id}/pos`,
-      badge: "Phân hệ ERP",
+      badge: "Vận hành",
       icon: Monitor,
     });
   }
@@ -232,44 +182,116 @@ export default async function DashboardPage() {
     domainCards.push({
       title: `KDS chi nhánh #${claims.branch_id}`,
       href: `/br/${claims.branch_id}/kds`,
-      badge: "Phân hệ ERP",
+      badge: "Vận hành",
       icon: UtensilsCrossed,
     });
   }
 
+  const hasQuickAccess = foundationCards.length > 0 || domainCards.length > 0;
+
+  const recentOrdersCard = stats.recentOrders.length > 0 ? (
+    <Card>
+      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <CardTitle>Tín hiệu bán hàng gần đây</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Luồng đơn mới nhất để đọc nhanh các nhịp bán hàng đang diễn ra.
+          </p>
+        </div>
+        <Badge variant="success" className="rounded-full px-3 py-1.5">
+          Tín hiệu
+        </Badge>
+      </CardHeader>
+      <CardContent>
+        <Card className="overflow-hidden rounded-lg border bg-muted/30 text-card-foreground shadow-none">
+          <CardContent className="p-0">
+            <ul className="divide-y divide-border/60">
+              {stats.recentOrders.map((order) => (
+                <li
+                  key={order.id}
+                  className="flex flex-col gap-3 px-5 py-4 transition-colors hover:bg-muted/40 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">
+                      #{order.order_number}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {order.branch_name} · {formatTime(order.created_at)}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                    <Badge
+                      variant={
+                        order.status === "cancelled"
+                          ? "destructive"
+                          : order.status === "ready"
+                            ? "success"
+                            : order.status === "in_progress"
+                              ? "info"
+                              : "secondary"
+                      }
+                      className={cn(
+                        ORDER_STATUS_VARIANT[order.status] === "outline" &&
+                          "bg-background text-foreground",
+                      )}
+                    >
+                      {ORDER_STATUS_LABELS[order.status] ?? order.status}
+                    </Badge>
+                    <span className="text-sm font-semibold tabular-nums sm:min-w-20 sm:text-right">
+                      {formatVND(order.total_amount)}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      </CardContent>
+    </Card>
+  ) : (
+    <Card>
+      <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+        <div className="flex size-14 items-center justify-center rounded-full border bg-muted text-primary">
+          <CircleAlert className="size-5" />
+        </div>
+        <div className="space-y-1.5">
+          <h3 className="text-2xl font-semibold">Chưa có tín hiệu bán hàng mới</h3>
+        </div>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/reports/revenue">Mở báo cáo doanh thu</Link>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <div className="space-y-5 lg:space-y-6">
-      <Card>
-        <CardContent className="p-5 sm:p-6">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div className="space-y-3">
-              <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                {APP_COPY_VI.adminFoundation}
-              </span>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                  Admin
-                </h2>
-                <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                  Buồng lái quản trị đã chuyển sang bố cục mới. Tại đây, các tín
-                  hiệu bán hàng và lối vào phân hệ được gom lại theo nhịp điều
-                  hành thay vì theo khối cũ.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 self-start">
-              <Button asChild variant="outline" size="sm">
-                <Link href="/admin/settings">Nền tảng</Link>
-              </Button>
-              <Button asChild size="sm">
-                <Link href="/admin/reports">
-                  {APP_COPY_VI.executiveReporting}
-                </Link>
-              </Button>
-            </div>
+    <div className="space-y-6">
+      <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Trung tâm điều hành
+          </p>
+          <div className="space-y-1">
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              Tổng quan vận hành hôm nay
+            </h2>
+            <p className="max-w-3xl text-sm leading-7 text-muted-foreground">
+              Doanh thu, đơn bán và các mục quản lý quan trọng được đặt cùng
+              một chỗ để theo dõi và mở nhanh trong ngày.
+            </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="secondary" className="rounded-full px-3 py-1.5">
+            {foundationCards.length} mục quản lý
+          </Badge>
+          <Badge variant="info" className="rounded-full px-3 py-1.5">
+            {domainCards.length} mục vận hành
+          </Badge>
+        </div>
+      </section>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
@@ -292,132 +314,75 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {foundationCards.length > 0 ? (
-        <Card>
-          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1">
-              <CardTitle>Nền tảng</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Những lớp cấu hình và vận hành lõi đang quyết định nhịp toàn hệ
-                thống.
-              </p>
-            </div>
-            <Badge variant="secondary" className="rounded-full px-3 py-1.5">
-              {foundationCards.length} mục
-            </Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 lg:grid-cols-2">
-              {foundationCards.map((card) => (
-                <SurfaceCard key={card.href} {...card} />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
+      <div
+        className={cn(
+          "grid gap-4",
+          hasQuickAccess && "xl:grid-cols-[minmax(0,1.7fr)_minmax(20rem,1fr)]",
+        )}
+      >
+        <div className="space-y-4">{recentOrdersCard}</div>
 
-      {domainCards.length > 0 ? (
-        <Card>
-          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1">
-              <CardTitle>Phân hệ ERP</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Các tuyến thao tác chính để đi tiếp sang kho, nhân sự, POS, KDS
-                và thực đơn.
-              </p>
-            </div>
-            <Badge variant="info" className="rounded-full px-3 py-1.5">
-              {domainCards.length} phân hệ
-            </Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {domainCards.map((card) => (
-                <SurfaceCard key={card.href} {...card} />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
+        {hasQuickAccess ? (
+          <div className="space-y-4">
+            {foundationCards.length > 0 ? (
+              <Card>
+                <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-1">
+                    <CardTitle>Quản lý</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Các mục cấu hình và quản lý dùng hằng ngày.
+                    </p>
+                  </div>
+                  <Badge
+                    variant="secondary"
+                    className="rounded-full px-3 py-1.5"
+                  >
+                    {foundationCards.length} mục
+                  </Badge>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4">
+                    {foundationCards.map((card) => (
+                      <SurfaceLinkCard
+                        key={card.href}
+                        {...card}
+                        ctaLabel="Mở mục này"
+                      />
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
 
-      {stats.recentOrders.length > 0 ? (
-        <Card>
-          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1">
-              <CardTitle>Tín hiệu bán hàng gần đây</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Luồng đơn mới nhất để đọc nhanh các nhịp bán hàng đang diễn ra.
-              </p>
-            </div>
-            <Badge variant="success" className="rounded-full px-3 py-1.5">
-              Tín hiệu
-            </Badge>
-          </CardHeader>
-          <CardContent>
-            <Card className="rounded-lg border bg-muted/30 text-card-foreground overflow-hidden shadow-none">
-              <CardContent className="p-0">
-                <ul className="divide-y divide-border/60">
-                  {stats.recentOrders.map((order) => (
-                    <li
-                      key={order.id}
-                      className="flex items-center justify-between gap-4 px-6 py-4 transition-colors hover:bg-muted/40"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">
-                          #{order.order_number}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {order.branch_name} · {formatTime(order.created_at)}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-3">
-                        <Badge
-                          variant={
-                            order.status === "cancelled"
-                              ? "destructive"
-                              : order.status === "ready"
-                                ? "success"
-                                : order.status === "in_progress"
-                                  ? "info"
-                                  : "secondary"
-                          }
-                          className={cn(
-                            ORDER_STATUS_VARIANT[order.status] === "outline" &&
-                              "bg-background text-foreground",
-                          )}
-                        >
-                          {ORDER_STATUS_LABELS[order.status] ?? order.status}
-                        </Badge>
-                        <span className="min-w-20 text-right text-sm font-semibold tabular-nums">
-                          {formatVND(order.total_amount)}
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
-            <div className="flex size-14 items-center justify-center rounded-full border bg-muted text-primary">
-              <CircleAlert className="size-5" />
-            </div>
-            <div className="space-y-1.5">
-              <h3 className="text-2xl font-semibold">
-                Chưa có tín hiệu bán hàng mới
-              </h3>
-            </div>
-            <div className="flex flex-wrap justify-center gap-2">
-              <Button asChild variant="outline" size="sm">
-                <Link href="/admin/reports/revenue">Mở báo cáo doanh thu</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            {domainCards.length > 0 ? (
+              <Card>
+                <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-1">
+                    <CardTitle>Vận hành</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Mở nhanh kho, nhân sự, POS, KDS và thực đơn.
+                    </p>
+                  </div>
+                  <Badge variant="info" className="rounded-full px-3 py-1.5">
+                    {domainCards.length} mục
+                  </Badge>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4">
+                    {domainCards.map((card) => (
+                      <SurfaceLinkCard
+                        key={card.href}
+                        {...card}
+                        ctaLabel="Mở mục này"
+                      />
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

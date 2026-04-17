@@ -288,8 +288,7 @@ export function OrdersClient({
         <CardHeader>
           <CardTitle>Danh sách đơn</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Trạng thái, thanh toán và tổng tiền được gom vào cùng một bề mặt
-            điều phối.
+            Theo dõi trạng thái, thanh toán và tổng tiền của từng đơn hàng.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">

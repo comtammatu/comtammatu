@@ -1,7 +1,13 @@
 import { canAccess } from "./module-acl";
-import { isBetaPath, resolveModuleFromPath, stripBetaPrefix } from "./route-resolution";
+import {
+  isBetaPath,
+  resolveModuleFromPath,
+  stripBetaPrefix,
+} from "./route-resolution";
 import type { JwtClaims, ScopeIds, StaffRole } from "./types";
 import { ADMIN_ROLES, BRANCH_ROLES } from "./types";
+
+export type AuthSurface = "legacy" | "beta";
 
 /** Extract claims from Supabase user app_metadata */
 export function extractClaims(
@@ -93,59 +99,57 @@ export function getSafeInternalReturnTo(
   }
 }
 
-/** Prefer returning users to their original workspace when it is still valid. */
+function getSurfaceDefaultRedirect(
+  claims: JwtClaims,
+  surface: AuthSurface,
+): string {
+  return surface === "beta"
+    ? getBetaDefaultRedirect(claims)
+    : getDefaultRedirect(claims);
+}
+
+/**
+ * Resolve the post-login destination for a user.
+ *
+ * Preference order:
+ *  1. Caller-supplied `returnTo`, when it is safe, resolves to a module the
+ *     role can access, and — for branch-scoped modules — matches the user's
+ *     branch.
+ *  2. Role's default landing page (`getDefaultRedirect` /
+ *     `getBetaDefaultRedirect`).
+ *
+ * Surface is carried through so beta users stay on `/beta/*` and legacy users
+ * stay on root paths.
+ */
 export function resolvePostLoginRedirect(
   claims: JwtClaims,
   returnTo: string | null | undefined,
+  options?: { surface?: AuthSurface },
 ): string {
-  const fallback = getDefaultRedirect(claims);
+  const surface: AuthSurface = options?.surface ?? "legacy";
+  const fallback = getSurfaceDefaultRedirect(claims, surface);
   const safeReturnTo = getSafeInternalReturnTo(returnTo);
 
   if (!safeReturnTo) {
     return fallback;
   }
 
-  const url = new URL(safeReturnTo, "http://localhost");
-  const moduleKey = resolveModuleFromPath(url.pathname);
+  const targetPath =
+    surface === "beta" ? toBetaPath(safeReturnTo) : safeReturnTo;
+  const targetUrl = new URL(targetPath, "http://localhost");
 
-  if (!moduleKey || !canAccess(claims.user_role, moduleKey)) {
+  // Guard against bouncing the user back to the login route itself.
+  if (targetUrl.pathname === "/login" || targetUrl.pathname === "/beta/login") {
     return fallback;
   }
 
-  if (moduleKey === "pos" || moduleKey === "kds") {
-    const branchMatch = url.pathname.match(/^\/br\/(\d+)\//);
-    const routeBranchId = branchMatch ? Number(branchMatch[1]) : null;
+  const moduleKey = resolveModuleFromPath(targetUrl.pathname);
 
-    if (routeBranchId === null || claims.branch_id !== routeBranchId) {
-      return fallback;
-    }
-  }
-
-  return `${url.pathname}${url.search}${url.hash}`;
-}
-
-export function resolveBetaPostLoginRedirect(
-  claims: JwtClaims,
-  returnTo: string | null | undefined,
-): string {
-  const fallback = getBetaDefaultRedirect(claims);
-  const safeReturnTo = getSafeInternalReturnTo(returnTo);
-
-  if (!safeReturnTo) {
-    return fallback;
-  }
-
-  const betaReturnTo = toBetaPath(safeReturnTo);
-  const url = new URL(betaReturnTo, "http://localhost");
-
-  if (url.pathname === "/beta/login") {
-    return fallback;
-  }
-
-  const moduleKey = resolveModuleFromPath(url.pathname);
-
+  // Non-module paths (e.g. /beta home) are allowed when surface matches.
   if (!moduleKey) {
-    return `${url.pathname}${url.search}${url.hash}`;
+    return surface === "beta"
+      ? `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`
+      : fallback;
   }
 
   if (!canAccess(claims.user_role, moduleKey)) {
@@ -153,7 +157,7 @@ export function resolveBetaPostLoginRedirect(
   }
 
   if (moduleKey === "pos" || moduleKey === "kds") {
-    const routePath = stripBetaPrefix(url.pathname);
+    const routePath = stripBetaPrefix(targetUrl.pathname);
     const branchMatch = routePath.match(/^\/br\/(\d+)\//);
     const routeBranchId = branchMatch ? Number(branchMatch[1]) : null;
 
@@ -162,7 +166,7 @@ export function resolveBetaPostLoginRedirect(
     }
   }
 
-  return `${url.pathname}${url.search}${url.hash}`;
+  return `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
 }
 
 /** Check if a role is admin-level */

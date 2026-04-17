@@ -10,7 +10,7 @@
 
 ```
 apps/web/app/
-├── layout.tsx              # Root: HTML, fonts (Be Vietnam Pro), metadata
+├── layout.tsx              # Root: HTML, fonts (Inter), metadata
 ├── page.tsx                # / → redirect to role default
 ├── globals.css             # Tailwind 4.2 base styles
 │

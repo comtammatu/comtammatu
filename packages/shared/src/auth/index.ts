@@ -12,6 +12,7 @@ export {
 } from "./types";
 export type { ModuleKey } from "./module-acl";
 export { MODULE_ACL, canAccess, getAccessibleModules } from "./module-acl";
+export type { AuthSurface } from "./scope";
 export {
   extractClaims,
   getBetaDefaultRedirect,
@@ -20,7 +21,6 @@ export {
   getSafeInternalReturnTo,
   isAdminRole,
   isBranchRole,
-  resolveBetaPostLoginRedirect,
   resolvePostLoginRedirect,
   toBetaPath,
 } from "./scope";
@@ -88,7 +88,7 @@ export type {
   ResolvedBlockedState,
 } from "./blocked-state";
 export {
-  buildLoginBlockedStatePath,
+  buildAccessDeniedPath,
   isBlockedStateReasonCode,
   readBlockedStateFromSearchParams,
   resolveBlockedState,

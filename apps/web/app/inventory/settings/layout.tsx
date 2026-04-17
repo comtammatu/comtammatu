@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
-import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { loadAuthState } from "../../_lib/auth";
 import { InventoryHeader } from "../_components/inventory-header";
 import { SettingsSectionNav } from "./settings-section-nav";
 
@@ -11,14 +10,7 @@ export default async function InventorySettingsLayout({
 }: {
   children: ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const claims = session?.user
-    ? extractClaims(session.user.app_metadata)
-    : null;
-  const role = claims?.user_role ?? "branch_manager";
+  const { claims } = await loadAuthState();
 
   return (
     <>
@@ -45,7 +37,7 @@ export default async function InventorySettingsLayout({
               Policy layer
             </Badge>
           </div>
-          <SettingsSectionNav role={role} />
+          <SettingsSectionNav role={claims.user_role} />
         </CardContent>
       </Card>
       <div>{children}</div>

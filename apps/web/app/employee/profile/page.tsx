@@ -1,11 +1,5 @@
-import { redirect } from "next/navigation";
 import { BadgeCheck, Building2, CalendarDays, LogOut, User } from "lucide-react";
-import { createClient } from "@comtammatu/database/supabase/server";
-import {
-  buildLoginBlockedStatePath,
-  extractClaims,
-  ROLE_LABEL_VI,
-} from "@comtammatu/shared/auth";
+import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -14,17 +8,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
+import { loadAuthState } from "@/_lib/auth";
 
 export default async function ProfilePage() {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.user) redirect("/login");
-
-  const claims = extractClaims(session.user.app_metadata);
-  if (!claims) redirect(buildLoginBlockedStatePath());
+  const { supabase, session, claims } = await loadAuthState();
 
   const roleLabel = ROLE_LABEL_VI[claims.user_role] ?? claims.user_role;
 

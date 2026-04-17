@@ -4,27 +4,18 @@ import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ArrowLeft,
   BarChart3,
-  Briefcase,
-  ChefHat,
-  LayoutDashboard,
+  BookOpen,
+  CalendarDays,
+  FileText,
   LogOut,
-  Monitor,
-  Package,
   Receipt,
-  Settings,
-  ShieldCheck,
-  Users,
-  UtensilsCrossed,
+  Settings2,
   Wallet,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
-import {
-  ROLE_LABEL_VI,
-  resolveAdminNavGroups,
-  type ResolvedNavGroup as SharedResolvedNavGroup,
-} from "@comtammatu/shared/auth";
-import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -45,51 +36,51 @@ import {
 } from "@comtammatu/ui/components/sidebar";
 import {
   findActiveNavItem,
-  isNavItemActive,
   formatPathSegment,
   getInitials,
+  isNavItemActive,
   type ShellNavGroup,
 } from "@/lib/shell-primitives";
 
-const ADMIN_ICON_MAP: Record<string, React.ElementType> = {
-  LayoutDashboard,
-  BarChart3,
-  Users,
-  Wallet,
-  Package,
-  Briefcase,
-  Monitor,
-  Settings,
-  ChefHat,
-  Receipt,
-  UtensilsCrossed,
-};
+const NAV_GROUPS: ShellNavGroup[] = [
+  {
+    title: "Tổng quan",
+    items: [{ href: "/finance", label: "Tài chính", icon: Wallet }],
+  },
+  {
+    title: "Kế toán",
+    items: [
+      {
+        href: "/finance/chart-of-accounts",
+        label: "Hệ thống tài khoản",
+        icon: BookOpen,
+      },
+      { href: "/finance/journal", label: "Sổ nhật ký", icon: FileText },
+      {
+        href: "/finance/posting-rules",
+        label: "Quy tắc hạch toán",
+        icon: Settings2,
+      },
+    ],
+  },
+  {
+    title: "Báo cáo",
+    items: [
+      { href: "/finance/statements", label: "Báo cáo tài chính", icon: BarChart3 },
+      { href: "/finance/food-cost", label: "Giá vốn món", icon: Receipt },
+    ],
+  },
+  {
+    title: "Chu kỳ",
+    items: [
+      { href: "/finance/periods", label: "Kỳ kế toán", icon: CalendarDays },
+    ],
+  },
+];
 
-function mapResolvedNavGroups(
-  groups: SharedResolvedNavGroup[],
-): ShellNavGroup[] {
-  return groups.map((group) => ({
-    title: group.title,
-    items: group.items.map((item) => ({
-      href: item.href,
-      label: item.label,
-      icon: (ADMIN_ICON_MAP[item.icon] ??
-        LayoutDashboard) as typeof LayoutDashboard,
-    })),
-  }));
-}
-
-function buildContext(
-  pathname: string,
-  groups: ShellNavGroup[],
-): { title: string; trail: string[] } {
-  const active = findActiveNavItem(groups, pathname);
-  if (!active) {
-    return {
-      title: APP_COPY_VI.adminSurface,
-      trail: [APP_COPY_VI.adminSurface],
-    };
-  }
+function resolveTitle(pathname: string) {
+  const active = findActiveNavItem(NAV_GROUPS, pathname);
+  if (!active) return "Tài chính";
 
   const pathTail = pathname
     .slice(active.href.length)
@@ -97,34 +88,22 @@ function buildContext(
     .filter(Boolean)
     .map((segment) => formatPathSegment(segment));
 
-  return {
-    title: pathTail[pathTail.length - 1] ?? active.label,
-    trail: [APP_COPY_VI.adminSurface, active.label, ...pathTail],
-  };
+  return pathTail[pathTail.length - 1] ?? active.label;
 }
 
-export function AdminShell({
-  user,
-  role,
-  branchId: _branchId,
-  children,
-}: {
+export interface FinanceShellProps {
+  children: ReactNode;
   user: { name: string };
   role: StaffRole;
-  branchId: number | null;
-  children: ReactNode;
-}) {
-  const pathname = usePathname();
+}
 
-  const navGroups = useMemo(
-    () => mapResolvedNavGroups(resolveAdminNavGroups(role)),
-    [role],
+export function FinanceShell({ children, user, role }: FinanceShellProps) {
+  const pathname = usePathname();
+  const pageTitle = useMemo(() => resolveTitle(pathname), [pathname]);
+  const navItemCount = useMemo(
+    () => NAV_GROUPS.reduce((acc, group) => acc + group.items.length, 0),
+    [],
   );
-  const pageContext = useMemo(
-    () => buildContext(pathname, navGroups),
-    [navGroups, pathname],
-  );
-  const trail = pageContext.trail.slice(0, -1).join(" · ");
 
   return (
     <SidebarProvider>
@@ -132,34 +111,33 @@ export function AdminShell({
         <Sidebar variant="inset">
           <SidebarHeader className="gap-4 p-4">
             <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-4 text-sidebar-foreground">
-              <div className="flex items-center gap-3">
+              <Link
+                href="/admin/dashboard"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground"
+              >
+                <ArrowLeft className="size-3.5" />
+                Quản trị
+              </Link>
+              <div className="mt-4 flex items-center gap-3">
                 <div className="flex size-12 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-                  <ShieldCheck className="size-5" />
+                  <Wallet className="size-5" />
                 </div>
-                <div className="min-w-0 flex-1 space-y-1">
+                <div className="space-y-1">
                   <p className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/55">
-                    Cơm Tấm Má Tư
+                    Chuyên trách
                   </p>
-                  <p className="text-xl font-semibold leading-none">Quản trị</p>
-                  <p className="text-sm leading-6 text-sidebar-foreground/70">
-                    Truy cập báo cáo, cài đặt, nhân viên và các mục quản lý theo
-                    đúng quyền được cấp.
-                  </p>
+                  <p className="text-xl font-semibold">Tài chính</p>
                 </div>
               </div>
-              <div className="mt-4 grid gap-3 text-xs text-sidebar-foreground/75">
-                <div className="rounded-md border border-sidebar-border bg-sidebar px-3 py-2.5">
-                  <p className="font-semibold">{APP_COPY_VI.quickAccess}</p>
-                  <p className="mt-1 leading-5">
-                    Các mục quan trọng được gom theo nhóm để thao tác nhanh hơn.
-                  </p>
-                </div>
-              </div>
+              <p className="mt-4 text-sm leading-6 text-sidebar-foreground/72">
+                Điều hành kế toán, báo cáo tài chính và HĐĐT theo cùng một
+                tuyến thao tác.
+              </p>
             </div>
           </SidebarHeader>
 
           <SidebarContent className="px-2 pb-4">
-            {navGroups.map((group) => (
+            {NAV_GROUPS.map((group) => (
               <SidebarGroup key={group.title} className="px-0 py-1">
                 <SidebarGroupLabel className="px-2 pb-1 text-xs font-medium text-sidebar-foreground/70">
                   {group.title}
@@ -223,87 +201,89 @@ export function AdminShell({
         <SidebarInset className="min-h-dvh bg-background">
           <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
             <header className="rounded-lg border bg-card p-4 sm:p-6">
-              <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <SidebarTrigger className="md:hidden" />
                     <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                      {trail || APP_COPY_VI.adminFoundation}
+                      Kế toán · Tài chính
                     </span>
                     <Badge variant="secondary">{ROLE_LABEL_VI[role]}</Badge>
                   </div>
 
                   <div className="space-y-2">
                     <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                      {pageContext.title}
+                      {pageTitle}
                     </h1>
                     <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                      Quản lý cửa hàng theo đúng quyền được cấp cho vai trò hiện
-                      tại.
+                      Tập trung sổ sách, báo cáo và HĐĐT trong cùng cấu trúc
+                      điều hướng.
                     </p>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
                   <Button asChild variant="outline" size="sm">
-                    <Link href="/employee">Cổng nhân viên</Link>
+                    <Link href="/admin/dashboard">Quản trị</Link>
                   </Button>
                   <Button asChild size="sm">
-                    <Link href="/admin/reports">
-                      {APP_COPY_VI.executiveReporting}
-                    </Link>
+                    <Link href="/finance/statements">Báo cáo tài chính</Link>
                   </Button>
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="mt-4 rounded-lg border bg-muted/30 p-4">
+                <div className="grid gap-3 md:grid-cols-2 md:items-start">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <Card>
+                      <CardContent className="space-y-2 p-4">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                          Vai trò
+                        </p>
+                        <p className="text-lg font-semibold">
+                          {ROLE_LABEL_VI[role]}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="space-y-2 p-4">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                          Khu làm việc
+                        </p>
+                        <p className="text-sm leading-6 text-foreground">
+                          Tuyến nghiệp vụ tài chính tập trung
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="space-y-2 p-4">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                          Điều hướng
+                        </p>
+                        <p className="text-sm leading-6 text-foreground">
+                          {navItemCount} điểm vào chính
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
                   <Card>
-                    <CardContent className="space-y-2 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                        Vai trò
-                      </p>
-                      <p className="text-lg font-semibold">
-                        {ROLE_LABEL_VI[role]}
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="space-y-2 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                        Điều hướng
-                      </p>
-                      <p className="text-sm leading-6 text-foreground">
-                        {navGroups.length} nhóm chức năng
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="space-y-2 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                        Ngữ cảnh
-                      </p>
-                      <p className="text-sm leading-6 text-foreground">
-                        {trail || APP_COPY_VI.adminSurface}
-                      </p>
+                    <CardContent className="flex items-center gap-3 p-4">
+                      <Avatar size="sm">
+                        <AvatarFallback>
+                          {getInitials(user.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">
+                          {user.name}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {ROLE_LABEL_VI[role]}
+                        </p>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
-                <Card>
-                  <CardContent className="flex h-full items-center gap-3 p-4">
-                    <Avatar size="sm">
-                      <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">
-                        {user.name}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {ROLE_LABEL_VI[role]}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
             </header>
 

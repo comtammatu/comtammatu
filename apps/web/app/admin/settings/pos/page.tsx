@@ -1,23 +1,11 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@comtammatu/database/supabase/server";
-import {
-  buildLoginBlockedStatePath,
-  canManageBranchFloorSettings,
-  extractClaims,
-} from "@comtammatu/shared/auth";
+import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
+import { loadAuthState } from "@/_lib/auth";
 import { TerminalsClient } from "./terminals-client";
 import type { TerminalRow, BranchOption } from "./terminals-client";
 
 export default async function PosSettingsPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session?.user) redirect("/login");
-
-  const claims = extractClaims(session.user.app_metadata);
-  if (!claims) redirect(buildLoginBlockedStatePath());
+  const { supabase, claims } = await loadAuthState();
 
   if (!canManageBranchFloorSettings(claims.user_role)) {
     redirect("/admin/settings");
@@ -57,8 +45,7 @@ export default async function PosSettingsPage() {
       <div>
         <h2 className="text-xl font-semibold">POS</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Quản lý máy bán hàng (terminal) theo chi nhánh — dùng khi mở ca và
-          chọn máy tại quầy
+          Quản lý máy POS theo chi nhánh để mở ca và chọn đúng quầy làm việc.
         </p>
       </div>
 

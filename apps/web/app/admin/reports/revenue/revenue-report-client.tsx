@@ -19,7 +19,7 @@ import {
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
-import { fetchDailyRevenue } from "../../finance/actions";
+import { fetchDailyRevenue } from "../../../finance/actions";
 import type { DailyRevenueRow } from "./page";
 
 interface Props {

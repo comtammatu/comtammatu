@@ -38,6 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
   Table,
   TableBody,
@@ -760,6 +761,7 @@ function AddIssueLineDialog({
               <Input
                 id="issue-line-qty"
                 type="number"
+                inputMode="decimal"
                 step="any"
                 min="0.001"
                 value={quantity}
@@ -792,6 +794,7 @@ function AddIssueLineDialog({
             <Input
               id="issue-line-cost"
               type="number"
+              inputMode="decimal"
               step="any"
               min="0"
               value={unitCostOverride}
@@ -802,11 +805,13 @@ function AddIssueLineDialog({
 
           <div className="space-y-1.5">
             <Label htmlFor="issue-line-reason">Lý do xuất *</Label>
-            <Input
+            <Textarea
               id="issue-line-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
+              rows={3}
               placeholder="Ví dụ: cấp phát cho bếp chuẩn bị ca chiều"
+              className="min-h-24"
             />
           </div>
 

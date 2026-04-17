@@ -2,6 +2,9 @@
 
 import { useMemo } from "react";
 import { cn } from "@comtammatu/ui";
+import { Badge } from "@comtammatu/ui/components/badge";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { Progress } from "@comtammatu/ui/components/progress";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Armchair, LayoutGrid, MapPinned } from "lucide-react";
 import type { BranchTable } from "./page";
@@ -11,6 +14,83 @@ interface PosTableGateProps {
   selectedTableId: number | null;
   onTableSelect: (tableId: number | null) => void;
   className?: string;
+}
+
+function TableGateMetricCard({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: string | number;
+  tone?: "default" | "primary";
+}) {
+  return (
+    <Card
+      size="sm"
+      className={cn(
+        "border shadow-sm transition-[transform,box-shadow,border-color] hover:-translate-y-0.5 hover:shadow-md",
+        tone === "primary" ? "border-primary/20 bg-primary/5" : "bg-card",
+      )}
+    >
+      <CardContent className="space-y-2 p-3">
+        <p
+          className={cn(
+            "text-xs font-semibold uppercase tracking-wide",
+            tone === "primary" ? "text-primary" : "text-muted-foreground",
+          )}
+        >
+          {label}
+        </p>
+        <p className="text-2xl font-semibold tabular-nums text-foreground">
+          {value}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TableGateStepCard({
+  step,
+  title,
+  description,
+  state,
+}: {
+  step: number;
+  title: string;
+  description: string;
+  state: "done" | "current" | "todo";
+}) {
+  return (
+    <Card
+      size="sm"
+      className={cn(
+        "border bg-card shadow-sm",
+        state === "current" && "border-primary/20 bg-primary/5",
+      )}
+    >
+      <CardContent className="flex items-start gap-3 p-3">
+        <Badge
+          variant={
+            state === "done"
+              ? "success"
+              : state === "current"
+                ? "default"
+                : "outline"
+          }
+          className="size-7 shrink-0 justify-center rounded-full px-0 font-bold"
+        >
+          {step}
+        </Badge>
+        <div>
+          <p className="text-sm font-semibold text-foreground">{title}</p>
+          <p className="text-xs leading-5 text-muted-foreground">
+            {description}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export function PosTableGate({
@@ -51,49 +131,41 @@ export function PosTableGate({
       )}
     >
       <div className="border-b border-border bg-background px-4 py-4 sm:px-6">
-        <div className="rounded-xl border bg-card shadow-sm p-5">
-          <div className="relative space-y-4">
+        <Card className="border bg-card shadow-sm">
+          <CardContent className="space-y-4 p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-primary">
                   <LayoutGrid className="size-5" />
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Ngữ cảnh phục vụ</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Ngữ cảnh phục vụ
+                  </p>
                 </div>
                 <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
                   Chọn đúng bàn trước khi bắt đầu đơn tại chỗ.
                 </h1>
                 <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-                  Chạm đúng bàn để menu và giỏ hàng vào đúng ngữ cảnh phục vụ. Nếu khách mang về, đổi sang chế độ mang về ở khu điều phối đơn.
+                  Chạm đúng bàn để menu và giỏ hàng vào đúng ngữ cảnh phục vụ.
+                  Nếu khách mang về, đổi sang chế độ mang về ở khu điều phối
+                  đơn.
                 </p>
               </div>
 
               <div className="grid gap-2 sm:grid-cols-3">
-                <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-3 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Bàn trống
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">
-                    {availableCount}
-                  </p>
-                </div>
-                <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-3 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Đang sử dụng
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">
-                    {occupiedCount}
-                  </p>
-                </div>
-                <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-primary/20 bg-primary/8 p-3 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                    Bàn đang chọn
-                  </p>
-                  <p className="mt-2 text-lg font-semibold text-foreground">
-                    {selectedTable != null
+                <TableGateMetricCard label="Bàn trống" value={availableCount} />
+                <TableGateMetricCard
+                  label="Đang sử dụng"
+                  value={occupiedCount}
+                />
+                <TableGateMetricCard
+                  label="Bàn đang chọn"
+                  value={
+                    selectedTable != null
                       ? `Bàn ${selectedTable.number}`
-                      : "Chưa chọn"}
-                  </p>
-                </div>
+                      : "Chưa chọn"
+                  }
+                  tone="primary"
+                />
               </div>
             </div>
 
@@ -106,57 +178,31 @@ export function PosTableGate({
                     : "Sẵn sàng mở menu"}
                 </span>
               </div>
-              <div className="h-2 w-full rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${selectionProgress}%` }}
-                />
-              </div>
+              <Progress value={selectionProgress} className="h-2" />
             </div>
 
             <div className="grid gap-3 lg:grid-cols-3">
-              <div className="rounded-lg border bg-card shadow-sm p-3" data-state="done">
-                <div className="flex items-start gap-3">
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">1</div>
-                  <div>
-                    <p className="text-sm font-semibold">Chế độ phục vụ</p>
-                    <p className="text-xs leading-5 text-muted-foreground">
-                      Đơn tại chỗ cần gán đúng bàn trước khi thêm món.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div
-                className="rounded-lg border bg-card shadow-sm p-3"
-                data-state={selectedTableId == null ? "current" : "done"}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">2</div>
-                  <div>
-                    <p className="text-sm font-semibold">Chọn bàn đang phục vụ</p>
-                    <p className="text-xs leading-5 text-muted-foreground">
-                      Hệ thống sẽ đưa menu và giỏ hàng vào đúng bàn.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div
-                className="rounded-lg border bg-card shadow-sm p-3"
-                data-state={selectedTableId == null ? "todo" : "done"}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">3</div>
-                  <div>
-                    <p className="text-sm font-semibold">Bắt đầu lên món</p>
-                    <p className="text-xs leading-5 text-muted-foreground">
-                      Menu mở ngay khi bàn hợp lệ được chọn.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <TableGateStepCard
+                step={1}
+                title="Chế độ phục vụ"
+                description="Đơn tại chỗ cần gán đúng bàn trước khi thêm món."
+                state="done"
+              />
+              <TableGateStepCard
+                step={2}
+                title="Chọn bàn đang phục vụ"
+                description="Hệ thống sẽ đưa menu và giỏ hàng vào đúng bàn."
+                state={selectedTableId == null ? "current" : "done"}
+              />
+              <TableGateStepCard
+                step={3}
+                title="Bắt đầu lên món"
+                description="Menu mở ngay khi bàn hợp lệ được chọn."
+                state={selectedTableId == null ? "todo" : "done"}
+              />
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {tables.length === 0 ? (
@@ -184,13 +230,13 @@ export function PosTableGate({
                       </p>
                     </div>
                   </div>
-                  <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
+                  <Badge variant="outline" className="rounded-full px-3 py-1">
                     {
                       zoneTables.filter((table) => table.status === "available")
                         .length
                     }{" "}
                     bàn trống
-                  </span>
+                  </Badge>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
@@ -209,7 +255,7 @@ export function PosTableGate({
                             : `Bàn ${String(table.number)} — đang sử dụng`
                         }
                         className={cn(
-                          "transition-all hover:-translate-y-0.5 hover:shadow-md flex min-h-28 flex-col items-start justify-between rounded-xl border p-4 text-left",
+                          "flex min-h-28 flex-col items-start justify-between rounded-xl border p-4 text-left transition-[transform,box-shadow,border-color,background-color,color] hover:-translate-y-0.5 hover:shadow-md",
                           isSelected
                             ? "border-primary/30 bg-primary text-primary-foreground shadow-md"
                             : isAvailable
@@ -227,14 +273,18 @@ export function PosTableGate({
                               {table.number}
                             </p>
                           </div>
-                          <div
+                          <Badge
+                            variant={
+                              isSelected
+                                ? "outline"
+                                : isAvailable
+                                  ? "success"
+                                  : "secondary"
+                            }
                             className={cn(
                               "rounded-full px-2.5 py-1 text-xs font-semibold",
-                              isSelected
-                                ? "bg-primary-foreground/15 text-primary-foreground"
-                                : isAvailable
-                                  ? "bg-success/10 text-success"
-                                  : "bg-muted text-muted-foreground",
+                              isSelected &&
+                                "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground",
                             )}
                           >
                             {isSelected
@@ -242,7 +292,7 @@ export function PosTableGate({
                               : isAvailable
                                 ? "Sẵn sàng"
                                 : "Đang dùng"}
-                          </div>
+                          </Badge>
                         </div>
 
                         <div className="space-y-1">

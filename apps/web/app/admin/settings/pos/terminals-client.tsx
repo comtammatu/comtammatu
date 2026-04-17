@@ -119,7 +119,7 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-50">Tên máy</TableHead>
-                  <TableHead>Thiết bị (device_id)</TableHead>
+                  <TableHead>Mã thiết bị</TableHead>
                   <TableHead className="w-25 text-center">Trạng thái</TableHead>
                   <TableHead className="w-20" />
                 </TableRow>

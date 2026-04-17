@@ -75,8 +75,12 @@ export function StaffFormDialog({
   }, [state, isEdit, onOpenChange]);
 
   useEffect(() => {
+    if (!open) {
+      return;
+    }
+
     setSelectedRole(staff?.role ?? "waiter");
-  }, [staff]);
+  }, [open, staff]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

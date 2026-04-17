@@ -31,6 +31,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import { InventoryHeader } from "../_components/inventory-header";
 import { SearchableSelect } from "../_components/searchable-select";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
@@ -282,8 +283,10 @@ export function IssuesClient({
         open={createOpen}
         onOpenChange={(open) => {
           setCreateOpen(open);
-          if (open && defaultBranchId && !branchId) {
-            setBranchId(String(defaultBranchId));
+          if (open) {
+            setBranchId(defaultBranchId ? String(defaultBranchId) : "");
+            setIssueType("consumption");
+            setNotes("");
           }
         }}
       >
@@ -329,12 +332,11 @@ export function IssuesClient({
 
             <div className="space-y-1.5">
               <Label htmlFor="issue-notes">Ghi chú</Label>
-              <textarea
+              <Textarea
                 id="issue-notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                className="w-full rounded-2xl border border-input bg-background px-4 py-3 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 placeholder="Nhập ghi chú cho phiếu xuất"
               />
             </div>

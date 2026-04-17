@@ -64,6 +64,7 @@ export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
 /** Adjacent product surfaces accessible from the admin workspace */
 export const DOMAIN_WORKSPACE_ITEMS: WorkspaceNavItemConfig[] = [
   { moduleKey: "inventory", icon: "Package", label: "Kho hàng" },
+  { moduleKey: "finance", icon: "Wallet", label: "Tài chính" },
   { moduleKey: "hr", icon: "Briefcase", label: APP_COPY_VI.hrWorkspace },
 ];
 

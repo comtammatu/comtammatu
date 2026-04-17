@@ -1,24 +1,11 @@
-import { redirect } from "next/navigation";
 import { Sparkles } from "lucide-react";
-import { createClient } from "@comtammatu/database/supabase/server";
-import {
-  buildLoginBlockedStatePath,
-  extractClaims,
-  ROLE_LABEL_VI,
-} from "@comtammatu/shared/auth";
+import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { loadAuthState } from "@/_lib/auth";
 
 export async function MobileHeader() {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.user) redirect("/login");
-
-  const claims = extractClaims(session.user.app_metadata);
-  if (!claims) redirect(buildLoginBlockedStatePath());
+  const { supabase, claims } = await loadAuthState();
 
   const roleLabel = ROLE_LABEL_VI[claims.user_role] ?? claims.user_role;
 
@@ -49,7 +36,7 @@ export async function MobileHeader() {
                     {branchName ?? "Không gian cá nhân"}
                   </p>
                   <p className="text-sm leading-6 text-muted-foreground">
-                    Bắt đầu ca làm, xem lịch, chấm công và mở đúng workspace
+                    Bắt đầu ca làm, xem lịch, chấm công và mở đúng chức năng
                     theo vai trò hiện tại.
                   </p>
                 </div>

@@ -85,16 +85,16 @@ export default async function KdsPage({
                 </div>
                 <div className="space-y-1.5">
                   <h2 className="text-3xl font-semibold tracking-tight">
-                    Không thể dựng bảng điều phối bếp
+                    Không mở được màn hình bếp
                   </h2>
                   <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
-                    Không tải được trạm KDS.
+                    Không tải được danh sách trạm bếp.
                   </p>
                 </div>
               </div>
               <Badge variant="destructive">
                 <TriangleAlert className="size-3.5" />
-                <span>Lỗi tải trạm KDS</span>
+                <span>Lỗi tải trạm bếp</span>
               </Badge>
             </div>
             <ol className="grid gap-3 lg:grid-cols-3">
@@ -172,16 +172,16 @@ export default async function KdsPage({
                 </div>
                 <div className="space-y-1.5">
                   <h2 className="text-3xl font-semibold tracking-tight">
-                    Không thể dựng bảng điều phối bếp
+                    Không mở được màn hình bếp
                   </h2>
                   <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
-                    Không tải được vé bếp.
+                    Không tải được món chờ chế biến.
                   </p>
                 </div>
               </div>
               <Badge variant="destructive">
                 <TriangleAlert className="size-3.5" />
-                <span>Lỗi tải vé bếp</span>
+                <span>Lỗi tải món bếp</span>
               </Badge>
             </div>
             <ol className="grid gap-3 lg:grid-cols-3">
@@ -225,7 +225,7 @@ export default async function KdsPage({
                       Hiển thị đơn đang chạy
                     </h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Không thể tải vé bếp.
+                      Không thể tải món chờ chế biến.
                     </p>
                   </CardContent>
                 </Card>
@@ -279,7 +279,7 @@ export default async function KdsPage({
                   </div>
                   <div className="space-y-1.5">
                     <h2 className="text-3xl font-semibold tracking-tight">
-                      Đang dựng bảng điều phối bếp
+                      Đang mở màn hình bếp
                     </h2>
                     <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
                       Đang nạp trạm và đơn.
@@ -288,7 +288,7 @@ export default async function KdsPage({
                 </div>
                 <Badge variant="info">
                   <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
-                  <span>Đồng bộ ticket nhà bếp</span>
+                  <span>Đang tải phiếu bếp</span>
                 </Badge>
               </div>
               <ol className="grid gap-3 lg:grid-cols-3">
@@ -298,9 +298,9 @@ export default async function KdsPage({
                       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                         Bước 1
                       </p>
-                      <h3 className="mt-2 text-base font-semibold">
-                        Station sẵn sàng
-                      </h3>
+                    <h3 className="mt-2 text-base font-semibold">
+                        Trạm bếp sẵn sàng
+                    </h3>
                       <p className="mt-1 text-sm text-muted-foreground">
                         Danh sách trạm đã sẵn sàng.
                       </p>
@@ -313,9 +313,9 @@ export default async function KdsPage({
                       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                         Bước 2
                       </p>
-                      <h3 className="mt-2 text-base font-semibold">
-                        Ghép ticket và đơn
-                      </h3>
+                    <h3 className="mt-2 text-base font-semibold">
+                        Đang tải món đang làm
+                    </h3>
                       <p className="mt-1 text-sm text-muted-foreground">
                         Đang ghép món và trạng thái.
                       </p>

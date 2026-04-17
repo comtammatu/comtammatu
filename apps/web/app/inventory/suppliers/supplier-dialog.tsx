@@ -11,6 +11,7 @@ import {
 } from "@comtammatu/ui/components/dialog";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { createSupplier, updateSupplier } from "../procurement-actions";
@@ -131,10 +132,12 @@ export function SupplierDialog({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="notes">Ghi chú</Label>
-            <Input
+            <Textarea
               id="notes"
               name="notes"
+              rows={3}
               defaultValue={supplier?.notes ?? ""}
+              className="min-h-24"
             />
           </div>
           <DialogFooter>

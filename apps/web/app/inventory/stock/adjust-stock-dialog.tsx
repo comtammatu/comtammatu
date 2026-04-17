@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,15 @@ export function AdjustStockDialog({
   const [adjustType, setAdjustType] = useState<
     "adjustment" | "count_adjustment"
   >("adjustment");
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setError(null);
+    setAdjustType("adjustment");
+  }, [open, ingredientId]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -126,6 +136,7 @@ export function AdjustStockDialog({
               id="adjust-qty"
               name="quantity_change"
               type="number"
+              inputMode="decimal"
               step={0.01}
               required
               placeholder="VD: 10 hoặc -5"
@@ -138,11 +149,12 @@ export function AdjustStockDialog({
             <Label htmlFor="adjust-reason" className="text-sm font-medium">
               Lý do (tùy chọn)
             </Label>
-            <Input
+            <Textarea
               id="adjust-reason"
               name="reason"
+              rows={3}
               placeholder="VD: Nhập hàng sáng, Hao hụt..."
-              className="h-11"
+              className="min-h-24"
             />
           </div>
 

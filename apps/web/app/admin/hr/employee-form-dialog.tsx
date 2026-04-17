@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
@@ -34,6 +34,15 @@ export function EmployeeFormDialog({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [contractType, setContractType] = useState<string>("");
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setError(null);
+    setContractType("");
+  }, [open]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

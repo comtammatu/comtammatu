@@ -15,9 +15,10 @@ Authentication and authorization for the entire system. Every request passes thr
 | `packages/shared/src/auth/scope.ts`                | `extractClaims()` (reads `user_role` or `role` fallback), `getScope()`, `getDefaultRedirect()` | JWT claim extraction       |
 | `packages/shared/src/auth/nav-config.ts`           | Admin sidebar navigation groups filtered by role                                               | UI navigation              |
 | `packages/shared/src/auth/app-discovery.ts`        | Shared app discovery metadata derived from ACL + nav config                                    | Shell discovery contract   |
-| `packages/shared/src/auth/blocked-state.ts`        | Canonical blocked-state reasons and user-facing copy                                           | Access-state contract      |
-| `apps/web/app/components/foundation/blocked-state-flash.tsx` | Shared auth-adjacent UI helper for `forbidden` copy/toast                              | Access-state presentation  |
-| `apps/web/proxy.ts`                                | Next.js middleware — auth check + ACL enforcement                                              | Request gateway            |
+| `packages/shared/src/auth/blocked-state.ts`        | Canonical blocked-state reasons, user-facing copy, `buildAccessDeniedPath()`                   | Access-state contract      |
+| `apps/web/app/access-denied/page.tsx`              | Single presentation route for "authenticated but blocked" (renders copy from blocked-state)    | Access-state view          |
+| `apps/web/app/_lib/auth.ts`                        | `loadAuthState()` — shared claims reader for layouts/pages; throws if proxy invariant violated | Layout claims helper       |
+| `apps/web/proxy.ts`                                | Next.js middleware — **single auth gate**: session + claims + module ACL + branch scope        | Request gateway            |
 | `supabase/migrations/*_jwt_custom_claims_hook.sql` | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth              |
 
 ## Role Hierarchy
@@ -77,15 +78,26 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 - `/admin/settings/general` — owner, super_manager only (page-level redirect)
 - `/admin/settings/tables` — all settings roles (area_manager, branch_manager see only their branch data)
 
-## Proxy Routing Logic
+## Proxy Routing Logic — Single Gate
 
-`apps/web/proxy.ts` — the `proxy(request)` function:
+`apps/web/proxy.ts` is the **only** file that runs auth / ACL / branch-scope redirects. Layouts and pages trust the proxy; they call `loadAuthState()` (`apps/web/app/_lib/auth.ts`) to read claims but never re-check them. If anything below is missing, the proxy has a gap — not the layout.
 
-1. **Public paths bypass auth:** `/api/health`, `/api/webhooks` (`proxy.ts:isPublic()`)
-2. **Login page:** authenticated users redirect to role default; unauthenticated see login
-3. **Protected routes:** `resolveModule(pathname)` maps URL → `ModuleKey`, then `canAccess(role, moduleKey)` checks ACL
-4. **No inventory aliasing:** `/inventory*` is the only live inventory route space; `/admin/inventory*` is no longer rewritten or redirected
-5. **Forbidden:** redirects to role default with `?forbidden=1`, optionally kèm `reason=<code>` để shell map copy nhất quán
+The `proxy(request)` function evaluates in order:
+
+1. **Public paths bypass auth:** `/api/health`, `/api/webhooks`, `/sw.js`, `/access-denied` (`route-resolution.ts:isPublicAppPath`). The access-denied page is public so a blocked-but-authenticated user can read the copy without re-entering the ACL loop.
+2. **Login page:** authenticated users bounce to `resolvePostLoginRedirect(claims, returnTo, { surface })`; unauthenticated users see the form.
+3. **Unauthenticated → `/login?returnTo=<current-url>`** (surface-aware: beta users go to `/beta/login`).
+4. **Claims extraction:** if `extractClaims()` returns null, proxy redirects to `/access-denied?reason=missing-auth-context&from=<path>`. Proxy **does not** fabricate claims.
+5. **Module ACL:** `resolveModuleFromPath(pathname)` maps URL → `ModuleKey`; `canAccess(role, moduleKey)` gates. Failure → `/access-denied?reason=insufficient-permission&from=<path>`.
+6. **Branch-scope for POS/KDS:** if `claims.branch_id !== urlBranchId` → `/access-denied?reason=branch-scope-mismatch`. If the matched branch is `warehouse`/`central_kitchen` → `/access-denied?reason=warehouse-branch-restricted`. Both checks live in proxy; POS/KDS layouts no longer verify them.
+
+The resolver `resolvePostLoginRedirect(claims, returnTo, { surface?: "legacy" | "beta" })` (`packages/shared/src/auth/scope.ts`) is the **single** post-login destination function. Surface controls beta-prefix wrapping; the underlying ACL + branch-scope rules are shared. Unit tests live in `packages/shared/src/auth/__tests__/scope.test.ts` (run `pnpm --filter @comtammatu/shared test`).
+
+### Invariant
+
+> *After `proxy()` returns, any layout or page downstream can assume: the user is authenticated, claims are valid, the role has module access, and — for `/br/[branchId]/{pos,kds}` — branch scope matches.*
+
+`loadAuthState()` throws if the invariant is violated. This surfaces proxy gaps via `error.tsx` rather than masking them with silent redirects.
 
 ## Failure Modes
 
@@ -98,25 +110,27 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 
 ## Blocked-State Reasons
 
-`packages/shared/src/auth/blocked-state.ts` chốt reason codes tối thiểu cho flow `forbidden` hiện tại:
+`packages/shared/src/auth/blocked-state.ts` chốt reason codes của flow "authenticated but blocked":
 
 - `insufficient-permission` — role hiện tại không vào được module/route đó
 - `missing-auth-context` — session có user nhưng không resolve được claims cần thiết để authorize
-- `headquarters-branch-restricted` — POS/KDS bị chặn trên chi nhánh trụ sở
+- `branch-scope-mismatch` — URL có `branchId` nhưng `claims.branch_id` khác hoặc null (POS/KDS)
+- `warehouse-branch-restricted` — POS/KDS mở trên branch thuộc kind `warehouse` / `central_kitchen`
+- `headquarters-branch-restricted` — reserved cho future use (không emit hiện tại)
 
-Nếu reason code bị thiếu hoặc lạ, shell phải fallback về copy generic thay vì crash hoặc lộ raw error.
+Nếu reason code bị thiếu hoặc lạ, `/access-denied` fallback về copy generic (`DEFAULT_BLOCKED_STATE_COPY`) thay vì crash.
 
-`buildLoginBlockedStatePath()` chuẩn hóa fallback `/login?forbidden=1&reason=missing-auth-context` cho các host/layout-level entry points khi session còn tồn tại nhưng claims/context không resolve được. Case `unauthenticated` vẫn dùng `/login` trơn.
+### `buildAccessDeniedPath(reason, { from? })`
 
-`blocked-state-flash.tsx` là presentation helper dùng lại contract này cho các surface auth-adjacent. Helper chỉ đọc `forbidden/reason` và render hoặc toast copy tương ứng; nó không được phép tự quyết định auth policy hay redirect target. Implementation gốc lives in `packages/ui/src/components/blocked-state-flash.tsx`, còn file trong `apps/web/app/components/foundation/` chỉ là adapter.
+Single canonical helper cho "send blocked user somewhere they can read what happened." Output: `/access-denied?reason=<code>&from=<encoded-path>`. Proxy là consumer duy nhất hiện tại.
 
-`tone` trong shared blocked-state contract giờ cũng được helper này consume trực tiếp để phân biệt visual severity, toast severity, và accessibility semantics (`role` / `aria-live`) giữa `neutral`, `warning`, và `danger`, nhưng vẫn chỉ ở tầng presentation.
+### `/access-denied` page
 
-Current blocked-state hosts:
-
-- `/admin/dashboard` via `AdminShell` toast flow cho admin-level fallback redirects
-- `/login` via inline helper, render copy rồi auto-clear `forbidden/reason`
-- `/employee` via inline helper cho non-admin default redirects, cũng auto-clear `forbidden/reason` sau render đầu tiên
+- Public path (bypasses `updateSession`) — bất kỳ user nào truy cập được.
+- Chỉ đọc `searchParams.reason` + `searchParams.from` → render copy qua `resolveBlockedState()`.
+- Không tự check auth, không tự redirect. Tuân thủ **BLOCKED-STATE-UI-IS-PRESENTATION-ONLY**.
+- Dùng shadcn `Card` + `Button` primitives (tuân **NO-FAKE-PRIMITIVES**).
+- Hai action: "Về phân hệ mặc định" (link to `/`) và "Đăng nhập lại" (link to `/login`).
 
 ## Blast Radius
 
@@ -131,6 +145,7 @@ Current blocked-state hosts:
 - **JWT claims over DB lookup per request:** Performance. Claims are verified cryptographically without a DB round-trip. Trade-off: stale data until token refresh.
 - **SECURITY DEFINER on hook:** Required by Supabase — the auth hook must read `profiles` which RLS would block during token minting.
 - **Single ACL source:** `module-acl.ts` prevents drift between proxy, nav, and layout guards.
+- **Single gate = proxy:** layouts and pages must not re-check session/claims/ACL. The 2026-04-17 cleanup removed duplicate guards from 8 layouts + 12 pages; those checks now live only in `proxy.ts`. `loadAuthState()` throws (not redirects) if claims are missing — silent redirects previously hid proxy bugs for months.
 - **Invite-only (no self-signup):** Business requirement — staff are added by managers via Admin API with pre-set `tenant_id` + `role`.
 
 <!-- ORACLE-META

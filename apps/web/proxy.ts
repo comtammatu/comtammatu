@@ -1,17 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@comtammatu/database/supabase/middleware";
 import {
-  extractClaims,
+  buildAccessDeniedPath,
   canAccess,
+  extractClaims,
   isBetaPath,
   isPublicAppPath,
-  resolveBetaPostLoginRedirect,
+  resolveModuleFromPath,
   resolvePostLoginRedirect,
   stripBetaPrefix,
+  type AuthSurface,
   type BlockedStateReasonCode,
-  resolveModuleFromPath,
+  type ModuleKey,
 } from "@comtammatu/shared/auth";
-import type { ModuleKey } from "@comtammatu/shared/auth";
 
 /** Create a redirect that preserves Set-Cookie from updateSession response */
 function redirectWithCookies(
@@ -25,24 +26,25 @@ function redirectWithCookies(
   return redirect;
 }
 
-function redirectToBlockedDefault(
+function redirectToAccessDenied(
   request: NextRequest,
   sessionResponse: NextResponse,
-  pathname: string,
   reason: BlockedStateReasonCode,
 ): NextResponse {
-  const url = request.nextUrl.clone();
-  url.pathname = pathname;
-  url.searchParams.set("forbidden", "1");
-  url.searchParams.set("reason", reason);
+  const from = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  const url = new URL(
+    buildAccessDeniedPath(reason, { from }),
+    request.nextUrl.origin,
+  );
   return redirectWithCookies(url, sessionResponse);
 }
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const betaSurface = isBetaPath(pathname);
+  const surface: AuthSurface = isBetaPath(pathname) ? "beta" : "legacy";
 
-  // Public paths — skip auth
+  // Public paths — skip auth. Includes `/access-denied` so the page can render
+  // for any authenticated-but-blocked user without re-entering the ACL loop.
   if (isPublicAppPath(pathname)) {
     return NextResponse.next();
   }
@@ -50,17 +52,15 @@ export async function proxy(request: NextRequest) {
   // Refresh session + get user
   const { user, response, supabase } = await updateSession(request);
 
-  // Login page: special handling
+  // Login page: special handling.
   if (pathname === "/login" || pathname === "/beta/login") {
     if (!user) return response; // unauthenticated → show login
-    // authenticated → redirect away from login to role's default
+    // Authenticated → bounce to role's post-login destination.
     const claims = extractClaims(user.app_metadata);
     if (claims) {
       const returnTo = request.nextUrl.searchParams.get("returnTo");
       const url = new URL(
-        betaSurface
-          ? resolveBetaPostLoginRedirect(claims, returnTo)
-          : resolvePostLoginRedirect(claims, returnTo),
+        resolvePostLoginRedirect(claims, returnTo, { surface }),
         request.nextUrl.origin,
       );
       return redirectWithCookies(url, response);
@@ -68,10 +68,10 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  // Not authenticated → login
+  // Not authenticated → send to login with returnTo preserved.
   if (!user) {
     const url = request.nextUrl.clone();
-    url.pathname = betaSurface ? "/beta/login" : "/login";
+    url.pathname = surface === "beta" ? "/beta/login" : "/login";
     url.search = "";
     url.searchParams.set(
       "returnTo",
@@ -80,34 +80,46 @@ export async function proxy(request: NextRequest) {
     return redirectWithCookies(url, response);
   }
 
-  // Module ACL check
+  // Authenticated — verify claims + module ACL. Any failure below routes to
+  // `/access-denied` (authenticated but blocked) rather than bouncing through
+  // login. Proxy is the single gate: layouts and pages downstream MUST NOT
+  // re-check these invariants.
+  const claims = extractClaims(user.app_metadata);
+  if (!claims) {
+    return redirectToAccessDenied(
+      request,
+      response,
+      "missing-auth-context",
+    );
+  }
+
   const moduleKey: ModuleKey | null = resolveModuleFromPath(pathname);
   if (moduleKey) {
-    const claims = extractClaims(user.app_metadata);
-    if (!claims || !canAccess(claims.user_role, moduleKey)) {
-      const fallbackClaims = claims ?? {
-        tenant_id: 0,
-        branch_id: null,
-        area_id: null,
-        user_role: "office" as const,
-      };
-      const fallbackPath = betaSurface
-        ? resolveBetaPostLoginRedirect(fallbackClaims, null)
-        : resolvePostLoginRedirect(fallbackClaims, null);
-      return redirectToBlockedDefault(
+    if (!canAccess(claims.user_role, moduleKey)) {
+      return redirectToAccessDenied(
         request,
         response,
-        fallbackPath,
-        claims ? "insufficient-permission" : "missing-auth-context",
+        "insufficient-permission",
       );
     }
 
-    // POS/KDS are not available on warehouse or central_kitchen branches
-    if ((moduleKey === "pos" || moduleKey === "kds") && claims) {
-      const routePath = betaSurface ? stripBetaPrefix(pathname) : pathname;
+    // POS/KDS are branch-scoped. Enforce two rules in proxy so layouts stay dumb:
+    //   1. URL branchId must match the user's assigned branch_id.
+    //   2. Branch must be operational (not warehouse / central_kitchen).
+    if (moduleKey === "pos" || moduleKey === "kds") {
+      const routePath = surface === "beta" ? stripBetaPrefix(pathname) : pathname;
       const pathMatch = routePath.match(/^\/br\/(\d+)\//);
       if (pathMatch) {
         const routeBranchId = Number(pathMatch[1]);
+
+        if (claims.branch_id === null || claims.branch_id !== routeBranchId) {
+          return redirectToAccessDenied(
+            request,
+            response,
+            "branch-scope-mismatch",
+          );
+        }
+
         const { data: branchRow } = await supabase
           .from("branches")
           .select("id, branch_kind")
@@ -115,14 +127,13 @@ export async function proxy(request: NextRequest) {
           .eq("tenant_id", claims.tenant_id)
           .maybeSingle();
         const kind = branchRow?.branch_kind;
-        const isBlocked =
-          kind === "warehouse" ||
-          kind === "central_kitchen";
-        if (branchRow && isBlocked) {
-          return redirectToBlockedDefault(
+        if (
+          branchRow &&
+          (kind === "warehouse" || kind === "central_kitchen")
+        ) {
+          return redirectToAccessDenied(
             request,
             response,
-            resolvePostLoginRedirect(claims, null),
             "warehouse-branch-restricted",
           );
         }

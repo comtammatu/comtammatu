@@ -47,7 +47,7 @@ export default async function PosPage({
                 </div>
                 <div className="space-y-1.5">
                   <h2 className="text-3xl font-semibold tracking-tight">
-                    Không thể dựng phiên POS
+                    Không mở được POS
                   </h2>
                   <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
                     {sessionResult.error ?? "Chưa lấy được ca làm hiện tại."}
@@ -82,7 +82,7 @@ export default async function PosPage({
                       Bước 2
                     </p>
                     <h3 className="mt-2 text-base font-semibold">
-                      Đồng bộ thiết bị
+                      Tải máy POS
                     </h3>
                     <p className="mt-1 text-sm text-muted-foreground">
                       Đang tải máy POS.
@@ -97,7 +97,7 @@ export default async function PosPage({
                       Bước 3
                     </p>
                     <h3 className="mt-2 text-base font-semibold">
-                      Khởi tạo bán hàng
+                      Mở màn hình bán hàng
                     </h3>
                     <p className="mt-1 text-sm text-muted-foreground">
                       Mở quầy bán hàng.
@@ -132,14 +132,14 @@ export default async function PosPage({
                     </h2>
                     <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
                       {terminalsResult.error ??
-                        "Chưa đồng bộ được danh sách thiết bị."}
+                        "Chưa tải được danh sách máy POS."}
                     </p>
                   </div>
                 </div>
-                <Badge variant="warning">
-                  <TriangleAlert className="size-3.5" />
-                  <span>Gián đoạn đồng bộ thiết bị</span>
-                </Badge>
+              <Badge variant="warning">
+                <TriangleAlert className="size-3.5" />
+                <span>Lỗi tải máy POS</span>
+              </Badge>
               </div>
               <ol className="grid gap-3 lg:grid-cols-3">
                 <li>
@@ -163,12 +163,12 @@ export default async function PosPage({
                       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                         Bước 2
                       </p>
-                      <h3 className="mt-2 text-base font-semibold">
-                        Đồng bộ thiết bị
-                      </h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Đang tải terminal.
-                      </p>
+                    <h3 className="mt-2 text-base font-semibold">
+                      Tải máy POS
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Đang tải máy POS.
+                    </p>
                     </CardContent>
                   </Card>
                 </li>

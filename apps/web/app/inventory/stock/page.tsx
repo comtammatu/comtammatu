@@ -1,9 +1,5 @@
-import { createClient } from "@comtammatu/database/supabase/server";
-import {
-  buildLoginBlockedStatePath,
-  extractClaims,
-} from "@comtammatu/shared/auth";
 import { redirect } from "next/navigation";
+import { loadAuthState } from "@/_lib/auth";
 import { fetchIngredients } from "../actions";
 import { fetchProcurementBranches } from "../_lib/procurement-branches";
 import { formatDate } from "../_lib/format";
@@ -29,14 +25,7 @@ function storageTemp(type: string | null): string | null {
 }
 
 export default async function StockPage() {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.user) redirect("/login");
-  const claims = extractClaims(session.user.app_metadata);
-  if (!claims) redirect(buildLoginBlockedStatePath());
+  const { supabase, claims } = await loadAuthState();
 
   // Resolve branch: use user's branch if set, otherwise first warehouse
   const procBranches = claims.branch_id

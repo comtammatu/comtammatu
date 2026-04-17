@@ -40,23 +40,23 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
 
 export const NAV_GROUP_LABELS_VI = {
   operations: "Điều hành",
-  foundation: "Nền tảng",
-  workspaces: "Phân hệ",
+  foundation: "Quản lý",
+  workspaces: "Công việc",
   branchOperations: "Theo chi nhánh",
 } as const;
 
 export const APP_COPY_VI = {
   adminSurface: "Quản trị",
-  adminFoundation: "Nền tảng quản trị",
-  executiveReporting: "Báo cáo điều hành",
-  erpCockpit: "Buồng lái ERP",
-  foundationalStaff: "Nhân sự nền",
+  adminFoundation: "Quản lý cửa hàng",
+  executiveReporting: "Báo cáo",
+  erpCockpit: "Tổng quan vận hành",
+  foundationalStaff: "Nhân viên",
   systemSetup: "Thiết lập hệ thống",
-  quickAccess: "Truy cập nhanh",
-  quickAccessAria: "Truy cập nhanh phân hệ",
-  employeePortal: "Cổng nhân viên",
+  quickAccess: "Mục nhanh",
+  quickAccessAria: "Truy cập nhanh chức năng",
+  employeePortal: "Trang nhân viên",
   hrWorkspace: "Nhân sự & tiền lương",
-  hrWorkspaceSubtitle: "Không gian chuyên trách",
+  hrWorkspaceSubtitle: "Ca làm và tiền lương",
   branchOperationsKds: "Bếp (KDS)",
   loading: "Đang tải…",
   refresh: "Làm mới",

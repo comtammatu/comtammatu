@@ -1,12 +1,16 @@
 import type { ReactNode } from "react";
 import { loadAuthState } from "../_lib/auth";
-import { HRShell } from "./components/hr-shell";
+import { FinanceShell } from "./components/finance-shell";
 
-export default async function HRLayout({ children }: { children: ReactNode }) {
+export default async function FinanceLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const { session, claims } = await loadAuthState();
 
   return (
-    <HRShell
+    <FinanceShell
       user={{
         name:
           session.user.user_metadata?.["display_name"] ??
@@ -16,6 +20,6 @@ export default async function HRLayout({ children }: { children: ReactNode }) {
       role={claims.user_role}
     >
       {children}
-    </HRShell>
+    </FinanceShell>
   );
 }

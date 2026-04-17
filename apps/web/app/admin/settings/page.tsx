@@ -1,20 +1,8 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@comtammatu/database/supabase/server";
-import {
-  buildLoginBlockedStatePath,
-  extractClaims,
-} from "@comtammatu/shared/auth";
+import { loadAuthState } from "@/_lib/auth";
 
 export default async function SettingsPage() {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.user) redirect("/login");
-
-  const claims = extractClaims(session.user.app_metadata);
-  if (!claims) redirect(buildLoginBlockedStatePath());
+  const { claims } = await loadAuthState();
 
   if (
     claims.user_role === "branch_manager" ||

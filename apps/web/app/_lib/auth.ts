@@ -1,6 +1,7 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims } from "@comtammatu/shared/auth";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import type { JwtClaims, StaffRole } from "@comtammatu/shared/auth";
+import type { Session } from "@supabase/supabase-js";
 
 /**
  * Get authenticated user context with role authorization.
@@ -27,4 +28,42 @@ export async function getAuthContext(allowedRoles: readonly StaffRole[]) {
   if (!allowedRoles.includes(claims.user_role)) return null;
 
   return { supabase, claims, user };
+}
+
+type LoadedAuthState = {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  session: Session;
+  claims: JwtClaims;
+};
+
+/**
+ * Read auth state for a layout or page. Trusts the proxy (`apps/web/proxy.ts`)
+ * as the single auth gate — callers MUST NOT re-check session, claims, or
+ * module ACL. If anything is missing here, the proxy invariant is broken.
+ *
+ * Throws instead of silently redirecting so the failure surfaces via
+ * `error.tsx` boundaries rather than masking the bug.
+ *
+ * Returns the Supabase client so callers can avoid creating a second one.
+ */
+export async function loadAuthState(): Promise<LoadedAuthState> {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.user) {
+    throw new Error(
+      "loadAuthState: session missing — proxy (apps/web/proxy.ts) should have redirected to /login before reaching this layout.",
+    );
+  }
+
+  const claims = extractClaims(session.user.app_metadata);
+  if (!claims) {
+    throw new Error(
+      "loadAuthState: claims missing — proxy should have redirected to /access-denied (missing-auth-context).",
+    );
+  }
+
+  return { supabase, session, claims };
 }

@@ -115,9 +115,8 @@ export default async function OrdersPage() {
                   Đơn hàng
                 </h2>
                 <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                  Màn điều phối đơn và hoàn tiền đã được dựng lại theo cùng nhịp
-                  visual mới, ưu tiên đọc trạng thái và thao tác nhanh hơn bố
-                  cục cũ.
+                  Theo dõi đơn bán và hoàn tiền trong cùng một nơi để xử lý
+                  nhanh.
                 </p>
               </div>
             </div>
@@ -133,8 +132,7 @@ export default async function OrdersPage() {
         <CardHeader>
           <CardTitle>Điều phối giao dịch</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Theo dõi luồng đơn bán và hoàn tiền trong cùng một mặt bằng thao
-            tác.
+            Theo dõi trạng thái đơn bán và các yêu cầu hoàn tiền.
           </p>
         </CardHeader>
         <CardContent>

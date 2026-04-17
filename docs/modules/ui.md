@@ -63,3 +63,21 @@ Quy tac review:
 - neu UI trong giong `button` thi phai dung `Button`
 - neu UI trong giong bang du lieu thi phai dung `Table`
 - neu khong co primitive phu hop, dung lai va thong nhat truoc khi them pattern moi
+
+## Operational Surfaces
+
+POS va KDS la surface van hanh, khong phai dashboard.
+
+Dieu nay co nghia:
+
+- first viewport tren mobile phai uu tien action chinh hoac hang doi song
+- sau khi khoa context (ca, ban, tram, don), shell phai co gon de nhuong cho tac vu chinh
+- analytics, hero copy, progress block chi la secondary content; khong duoc day queue/cart xuong duoi fold
+- desktop co the them mat do thong tin, nhung khong duoc tao IA khac mobile
+- neu control trong giong `Tabs`, `Badge`, `Button`, `Card`, `Sheet`, `Select`, `Progress` thi phai dung primitive that, khong tu style raw `div` / `button`
+
+Review heuristic:
+
+- POS/KDS truoc het phai giup nhan vien lam thao tac tiep theo nhanh hon
+- mot workflow state chi nen co mot noi the hien chinh
+- destructive action phai tach khoi primary action va co confirm / recovery

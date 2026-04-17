@@ -6,7 +6,6 @@ import { headers } from "next/headers";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
   extractClaims,
-  resolveBetaPostLoginRedirect,
   resolvePostLoginRedirect,
 } from "@comtammatu/shared/auth";
 import { loginRateLimit } from "@comtammatu/security";
@@ -83,9 +82,5 @@ export async function login(
     return { error: "Tài khoản chưa được phân quyền. Liên hệ quản lý." };
   }
 
-  redirect(
-    surface === "beta"
-      ? resolveBetaPostLoginRedirect(claims, returnTo)
-      : resolvePostLoginRedirect(claims, returnTo),
-  );
+  redirect(resolvePostLoginRedirect(claims, returnTo, { surface }));
 }

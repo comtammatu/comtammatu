@@ -1,6 +1,7 @@
 export type BlockedStateReasonCode =
   | "insufficient-permission"
   | "missing-auth-context"
+  | "branch-scope-mismatch"
   | "headquarters-branch-restricted"
   | "warehouse-branch-restricted";
 
@@ -41,6 +42,15 @@ const BLOCKED_STATE_REASON_COPY: Record<
     toastMessage: "Không thể xác định quyền truy cập. Vui lòng đăng nhập lại.",
     tone: "danger",
   },
+  "branch-scope-mismatch": {
+    title: "Không thuộc chi nhánh này",
+    description:
+      "Tài khoản của bạn không được phân công cho chi nhánh trong đường dẫn. POS và KDS chỉ mở trên chi nhánh đã được gán.",
+    nextStep:
+      "Quay lại phân hệ mặc định hoặc liên hệ quản lý để đổi chi nhánh phân công.",
+    toastMessage: "Bạn không có quyền trên chi nhánh này.",
+    tone: "warning",
+  },
   "headquarters-branch-restricted": {
     title: "Khu vực này không mở trên kho tổng",
     description:
@@ -71,6 +81,7 @@ export function isBlockedStateReasonCode(
   return (
     value === "insufficient-permission" ||
     value === "missing-auth-context" ||
+    value === "branch-scope-mismatch" ||
     value === "headquarters-branch-restricted" ||
     value === "warehouse-branch-restricted"
   );
@@ -99,12 +110,23 @@ export function readBlockedStateFromSearchParams(
   return resolveBlockedState(searchParams.get("reason"));
 }
 
-export function buildLoginBlockedStatePath(
-  reason: BlockedStateReasonCode = "missing-auth-context",
+/**
+ * Build the canonical access-denied URL. Proxy and server actions redirect
+ * here when a request is blocked by ACL or branch-scope — it is the single
+ * destination for "authenticated but not allowed".
+ *
+ * There is one `/access-denied` route; the beta surface shares it today. If
+ * beta grows its own shell, introduce `/beta/access-denied` and branch here.
+ */
+export function buildAccessDeniedPath(
+  reason: BlockedStateReasonCode,
   options?: {
-    surface?: "legacy" | "beta";
+    from?: string | null;
   },
 ): string {
-  const pathname = options?.surface === "beta" ? "/beta/login" : "/login";
-  return `${pathname}?forbidden=1&reason=${reason}`;
+  const params = new URLSearchParams({ reason });
+  if (options?.from) {
+    params.set("from", options.from);
+  }
+  return `/access-denied?${params.toString()}`;
 }

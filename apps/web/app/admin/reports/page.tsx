@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import {
   ArrowLeftRight,
   BookOpen,
@@ -11,7 +10,6 @@ import {
   TrendingUp,
   Wallet,
 } from "lucide-react";
-import { createClient } from "@comtammatu/database/supabase/server";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -20,107 +18,40 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
-import {
-  buildLoginBlockedStatePath,
-  canAccess,
-  extractClaims,
-} from "@comtammatu/shared/auth";
+import { canAccess } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
-
-interface ReportCardProps {
-  title: string;
-  description?: string;
-  href: string;
-  icon: React.ElementType;
-  tone: "primary" | "success" | "info";
-  badge: string;
-}
-
-function ReportCard({
-  title,
-  description,
-  href,
-  icon: Icon,
-  tone,
-  badge,
-}: ReportCardProps) {
-  const toneClassName =
-    tone === "success"
-      ? "bg-success/12 text-success"
-      : tone === "info"
-        ? "bg-info/12 text-info"
-        : "bg-primary/10 text-primary";
-
-  return (
-    <Link
-      href={href}
-      className="rounded-lg border bg-muted/30 text-card-foreground group flex h-full flex-col justify-between p-5 transition-all duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-md"
-    >
-      <div className="space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div
-            className={`flex size-11 items-center justify-center rounded-2xl ${toneClassName}`}
-          >
-            <Icon className="size-5" />
-          </div>
-          <Badge variant="secondary" className="rounded-full px-3 py-1">
-            {badge}
-          </Badge>
-        </div>
-        <div>
-          <p className="text-base font-semibold tracking-tight">{title}</p>
-          {description ? (
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              {description}
-            </p>
-          ) : null}
-        </div>
-      </div>
-      <span className="mt-5 text-sm font-medium text-primary transition-transform group-hover:translate-x-1">
-        Mở báo cáo
-      </span>
-    </Link>
-  );
-}
+import { loadAuthState } from "@/_lib/auth";
+import {
+  SurfaceLinkCard,
+  type SurfaceLinkCardProps,
+} from "../../components/surface-link-card";
 
 export default async function ReportsPage() {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const { claims } = await loadAuthState();
 
-  if (!session?.user) {
-    redirect("/login");
-  }
-
-  const claims = extractClaims(session.user.app_metadata);
-  if (!claims) {
-    redirect(buildLoginBlockedStatePath());
-  }
-
-  const executiveCards: ReportCardProps[] = [
+  const executiveCards: SurfaceLinkCardProps[] = [
     {
-      title: "Cockpit doanh thu",
+      title: "Doanh thu",
       href: "/admin/reports/revenue",
       icon: TrendingUp,
       tone: "primary" as const,
-      badge: "Điều hành lõi",
+      badge: "Tổng hợp",
     },
     {
       title: "Giá trị tồn kho",
       href: "/admin/reports/inventory-value",
       icon: Package,
       tone: "info" as const,
-      badge: "Điều hành lõi",
+      badge: "Tổng hợp",
     },
   ];
   if (canAccess(claims.user_role, "finance")) {
     executiveCards.push({
       title: "Báo cáo tài chính",
-      href: "/admin/finance/statements",
+      href: "/finance/statements",
       icon: Wallet,
       tone: "success",
-      badge: "Điều hành lõi",
+      badge: "Tổng hợp",
     });
   }
   if (canAccess(claims.user_role, "hr")) {
@@ -129,33 +60,33 @@ export default async function ReportsPage() {
       href: "/hr/payroll",
       icon: Briefcase,
       tone: "info",
-      badge: "Điều hành lõi",
+      badge: "Tổng hợp",
     });
   }
 
-  const deepDiveCards: ReportCardProps[] = [
+  const deepDiveCards: SurfaceLinkCardProps[] = [
     {
       title: "Biến động tồn kho",
       href: "/admin/reports/stock-movement",
       icon: ArrowLeftRight,
       tone: "info" as const,
-      badge: "Tín hiệu ops",
+      badge: "Vận hành",
     },
   ];
   if (canAccess(claims.user_role, "finance")) {
     deepDiveCards.push({
       title: "Hệ thống tài khoản",
-      href: "/admin/finance/chart-of-accounts",
+      href: "/finance/chart-of-accounts",
       icon: BookOpen,
       tone: "success",
-      badge: "Tuân thủ",
+      badge: "Kế toán",
     });
     deepDiveCards.push({
       title: "Tài chính",
-      href: "/admin/finance",
+      href: "/finance",
       icon: Receipt,
       tone: "success",
-      badge: "Phân hệ",
+      badge: "Chi tiết",
     });
   }
   if (canAccess(claims.user_role, "inventory")) {
@@ -164,7 +95,7 @@ export default async function ReportsPage() {
       href: "/inventory/reports",
       icon: ClipboardList,
       tone: "info",
-      badge: "Phân hệ",
+      badge: "Chi tiết",
     });
   }
   if (canAccess(claims.user_role, "hr")) {
@@ -173,7 +104,7 @@ export default async function ReportsPage() {
       href: "/hr",
       icon: ShieldCheck,
       tone: "info",
-      badge: "Phân hệ",
+      badge: "Chi tiết",
     });
   }
 
@@ -191,8 +122,8 @@ export default async function ReportsPage() {
                   Báo cáo điều hành
                 </h2>
                 <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                  Mỗi báo cáo và lối vào phân hệ nguồn giờ dùng cùng một grammar
-                  bề mặt mới, thay cho cụm card cũ.
+                  Xem nhanh các báo cáo quan trọng về doanh thu, tồn kho, tài
+                  chính và tiền lương.
                 </p>
               </div>
             </div>
@@ -201,7 +132,7 @@ export default async function ReportsPage() {
                 <Link href="/admin/dashboard">Về Admin</Link>
               </Button>
               <Button asChild size="sm">
-                <Link href="/admin/settings">Mở nền tảng</Link>
+                <Link href="/admin/settings">Mở cài đặt</Link>
               </Button>
             </div>
           </div>
@@ -211,11 +142,11 @@ export default async function ReportsPage() {
       <Card>
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
-            <CardTitle>Báo cáo lõi</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Những góc nhìn tổng hợp nhất cho vận hành, doanh thu, tồn kho và
-              tài chính.
-            </p>
+              <CardTitle>Báo cáo tổng hợp</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Các chỉ số quan trọng cho doanh thu, tồn kho, tài chính và
+                lương.
+              </p>
           </div>
           <Badge variant="secondary" className="rounded-full px-3 py-1.5">
             Điều hành
@@ -224,7 +155,11 @@ export default async function ReportsPage() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {executiveCards.map((card) => (
-              <ReportCard key={card.href} {...card} />
+              <SurfaceLinkCard
+                key={card.href}
+                {...card}
+                ctaLabel="Mở báo cáo"
+              />
             ))}
           </div>
         </CardContent>
@@ -234,20 +169,24 @@ export default async function ReportsPage() {
         <Card>
           <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
-              <CardTitle>Phân hệ nguồn</CardTitle>
+              <CardTitle>Mở nhanh mục liên quan</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Đi sâu từ báo cáo điều hành sang các nguồn dữ liệu và bề mặt
-                chuyên môn.
+                Đi từ báo cáo sang các mục liên quan để xem chi tiết và xử lý
+                công việc.
               </p>
             </div>
             <Badge variant="info" className="rounded-full px-3 py-1.5">
-              Phân hệ
+              Chi tiết
             </Badge>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {deepDiveCards.map((card) => (
-                <ReportCard key={card.href} {...card} />
+                <SurfaceLinkCard
+                  key={card.href}
+                  {...card}
+                  ctaLabel="Mở báo cáo"
+                />
               ))}
             </div>
           </CardContent>
