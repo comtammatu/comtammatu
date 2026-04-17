@@ -195,56 +195,63 @@ export function GrnCreateClient({
     if (!draft || draft.lines.length === 0) return;
     setSubmitting(true);
     setSubmitError(null);
-    const createRes = await createGrnDraft({
-      supplierId: supplier.id,
-      branchId: branchId ?? undefined,
-    });
-    if (!createRes.success) {
-      setSubmitError(createRes.error ?? "Không thể tạo phiếu nhập.");
-      setSubmitting(false);
-      return;
-    }
-    const grn = createRes.data as { id: number } | undefined;
-    if (!grn?.id) {
-      setSubmitError("Không thể tạo phiếu nhập.");
-      setSubmitting(false);
-      return;
-    }
-    for (const line of draft.lines) {
-      const lineRes = await upsertGrnLine({
-        grnId: grn.id,
-        ingredientId: line.ingredientId,
-        receivedQuantity: line.quantity,
-        unit: line.unit,
-        unitCost: line.unitCost,
-        qualityStatus: "accepted",
+    try {
+      const createRes = await createGrnDraft({
+        supplierId: supplier.id,
+        branchId: branchId ?? undefined,
       });
-      if (!lineRes.success) {
-        setSubmitError(
-          lineRes.error ??
-            `Không lưu được dòng ${line.ingredientName}. Phiếu đã lưu nháp.`,
-        );
-        setSubmitting(false);
+      if (!createRes.success) {
+        setSubmitError(createRes.error ?? "Không thể tạo phiếu nhập.");
         return;
       }
-    }
-    const confirmRes = await confirmGrn(grn.id);
-    if (!confirmRes.success) {
+      const grn = createRes.data as { id: number } | undefined;
+      if (!grn?.id) {
+        setSubmitError("Không thể tạo phiếu nhập.");
+        return;
+      }
+      for (const line of draft.lines) {
+        const lineRes = await upsertGrnLine({
+          grnId: grn.id,
+          ingredientId: line.ingredientId,
+          receivedQuantity: line.quantity,
+          unit: line.unit,
+          unitCost: line.unitCost,
+          qualityStatus: "accepted",
+        });
+        if (!lineRes.success) {
+          setSubmitError(
+            lineRes.error ??
+              `Không lưu được dòng ${line.ingredientName}. Phiếu đã lưu nháp.`,
+          );
+          return;
+        }
+      }
+      const confirmRes = await confirmGrn(grn.id);
+      if (!confirmRes.success) {
+        setSubmitError(
+          confirmRes.error ??
+            "Đã lưu phiếu nhưng chưa xác nhận được. Vào chi tiết để hoàn tất.",
+        );
+        return;
+      }
+      removeDraft(userKey, draft.draftId);
+      try {
+        window.localStorage.removeItem(`active-grn:${userKey}:${supplier.id}`);
+      } catch {
+        /* ignore */
+      }
+      router.push(`/inventory/grn/${grn.id}?m=1`);
+      router.refresh();
+    } catch (err) {
+      console.error("submit GRN", err);
       setSubmitError(
-        confirmRes.error ??
-          "Đã lưu phiếu nhưng chưa xác nhận được. Vào chi tiết để hoàn tất.",
+        err instanceof Error && err.message
+          ? err.message
+          : "Không thể gửi phiếu. Vui lòng thử lại.",
       );
+    } finally {
       setSubmitting(false);
-      return;
     }
-    removeDraft(userKey, draft.draftId);
-    try {
-      window.localStorage.removeItem(`active-grn:${userKey}:${supplier.id}`);
-    } catch {
-      /* ignore */
-    }
-    router.push(`/inventory/grn/${grn.id}?m=1`);
-    router.refresh();
   }
 
   if (!draft) {
