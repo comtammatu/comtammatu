@@ -235,7 +235,10 @@ export function InventoryShell({
         {...workspaceThemeProps("inventory")}
         className="workspace-shell flex min-h-dvh w-full"
       >
-        <Sidebar className="bg-sidebar/90 backdrop-blur-sm">
+        <Sidebar
+          collapsible="icon"
+          className="bg-sidebar/90 backdrop-blur-sm"
+        >
           <SidebarHeader className="border-b border-sidebar-border p-3">
             <div className="workspace-sidebar-card space-y-3 p-3">
               <div className="flex items-center gap-2">
