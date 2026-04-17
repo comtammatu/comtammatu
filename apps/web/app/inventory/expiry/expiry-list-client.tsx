@@ -17,6 +17,13 @@ import {
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
 import { Input } from "@comtammatu/ui/components/input";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
@@ -204,13 +211,14 @@ export function ExpiryListClient({
                   className: "bg-muted text-muted-foreground",
                 };
                 return (
-                  <Card
+                  <Item
                     key={`${alert.ingredient_id}-${alert.grn_number}-${alert.batch_number ?? ""}-${String(idx)}`}
-                    className="bg-muted/30 py-0"
-                  ><CardContent className="flex items-center justify-between gap-3 px-4 py-3">
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium truncate">
+                    size="sm"
+                    className="justify-between bg-muted/30"
+                  >
+                    <ItemContent>
+                      <ItemTitle className="text-sm font-medium">
+                        <span className="truncate">
                           {alert.ingredient_name}
                         </span>
                         <Badge
@@ -220,23 +228,25 @@ export function ExpiryListClient({
                             ? "Đã hết hạn"
                             : `${alert.days_remaining} ngày`}
                         </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground truncate">
+                      </ItemTitle>
+                      <ItemDescription className="truncate">
                         Lô: {alert.batch_number ?? "—"} · GRN:{" "}
                         {alert.grn_number} · {alert.branch_name}
-                      </p>
-                    </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="h-7 gap-1.5 text-xs shrink-0"
-                      onClick={() => openWriteOff(alert)}
-                      disabled={isPending}
-                    >
-                      <Trash2 className="size-3.5" />
-                      Xóa sổ
-                    </Button>
-                  </CardContent></Card>
+                      </ItemDescription>
+                    </ItemContent>
+                    <ItemActions>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="h-7 gap-1.5 text-xs shrink-0"
+                        onClick={() => openWriteOff(alert)}
+                        disabled={isPending}
+                      >
+                        <Trash2 className="size-3.5" />
+                        Xóa sổ
+                      </Button>
+                    </ItemActions>
+                  </Item>
                 );
               })}
             </div>
