@@ -13,6 +13,7 @@ type Ingredient = {
   name: string;
   sku: string | null;
   unit: string;
+  purchase_unit: string | null;
   unit_cost: number | null;
   category: string | null;
 };
@@ -51,7 +52,7 @@ export default async function MobileGrnCreatePage({
       .maybeSingle(),
     supabase
       .from("ingredients")
-      .select("id, name, sku, unit, unit_cost, category")
+      .select("id, name, sku, unit, purchase_unit, unit_cost, category")
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
       .order("name")
@@ -66,7 +67,12 @@ export default async function MobileGrnCreatePage({
       ? claims.branch_id
       : (branches[0]?.id ?? null);
 
-  const ingredients = (ingredientsRes.data ?? []) as Ingredient[];
+  const ingredients = ((ingredientsRes.data ?? []) as Ingredient[]).map(
+    (ingredient) => ({
+      ...ingredient,
+      unit: ingredient.purchase_unit ?? ingredient.unit,
+    }),
+  );
 
   return (
     <GrnCreateClient

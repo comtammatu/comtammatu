@@ -12,21 +12,67 @@ import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compa
 
 /* ─── Schemas ─── */
 
-const ingredientSchema = z.object({
-  name: z.string().min(1, { error: "Tên nguyên liệu không được để trống" }),
-  unit: z.string().min(1, { error: "Đơn vị không được để trống" }),
-  sku: z.string().optional(),
-  unit_cost: z.coerce.number().min(0).optional(),
-  category: z.string().optional(),
-  item_kind: z.enum(["raw_material", "finished_good"]).default("raw_material"),
-  min_stock_level: z.coerce.number().min(0).default(0),
-  max_stock_level: z.coerce.number().min(0).optional(),
-  reorder_point: z.coerce.number().min(0).optional(),
-  storage_type: z
-    .enum(["ambient", "refrigerated", "frozen"])
-    .default("ambient"),
-  shelf_life_days: z.coerce.number().int().positive().optional(),
-});
+const ingredientSchema = z
+  .object({
+    name: z.string().min(1, { error: "Tên nguyên liệu không được để trống" }),
+    purchase_unit: z
+      .string()
+      .trim()
+      .min(1, { error: "Đơn vị nhập không được để trống" })
+      .optional(),
+    measure_unit: z
+      .string()
+      .trim()
+      .min(1, { error: "Đơn vị tính không được để trống" })
+      .optional(),
+    unit: z
+      .string()
+      .trim()
+      .min(1, { error: "Đơn vị không được để trống" })
+      .optional(),
+    sku: z.string().optional(),
+    unit_cost: z.coerce.number().min(0).optional(),
+    category: z.string().optional(),
+    item_kind: z
+      .enum(["raw_material", "finished_good"])
+      .default("raw_material"),
+    min_stock_level: z.coerce.number().min(0).default(0),
+    max_stock_level: z.coerce.number().min(0).optional(),
+    reorder_point: z.coerce.number().min(0).optional(),
+    storage_type: z
+      .enum(["ambient", "refrigerated", "frozen"])
+      .default("ambient"),
+    shelf_life_days: z.coerce.number().int().positive().optional(),
+  })
+  .superRefine((data, ctx) => {
+    const legacyUnit = data.unit?.trim();
+    const purchaseUnit = data.purchase_unit?.trim() ?? legacyUnit;
+    const measureUnit = data.measure_unit?.trim() ?? legacyUnit;
+
+    if (!purchaseUnit) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["purchase_unit"],
+        message: "Đơn vị nhập không được để trống",
+      });
+    }
+
+    if (!measureUnit) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["measure_unit"],
+        message: "Đơn vị tính không được để trống",
+      });
+    }
+  });
+
+function resolveMeasureUnit(input: Partial<z.infer<typeof ingredientSchema>>) {
+  return input.measure_unit?.trim() || input.unit?.trim() || null;
+}
+
+function resolvePurchaseUnit(input: Partial<z.infer<typeof ingredientSchema>>) {
+  return input.purchase_unit?.trim() || input.unit?.trim() || null;
+}
 
 /* ─── fetchIngredients (full catalog — SM quản lý danh mục; ops xem theo nghiệp vụ) ─── */
 
@@ -56,11 +102,21 @@ export async function fetchIngredients(limit = 2000): Promise<ActionResult> {
 export const createIngredient = withAction(
   { roles: INVENTORY_CATALOG_ROLES, schema: ingredientSchema },
   async (data, { supabase, claims }) => {
+    const measureUnit = resolveMeasureUnit(data);
+    const purchaseUnit = resolvePurchaseUnit(data) ?? measureUnit;
+
+    if (!measureUnit || !purchaseUnit) {
+      return { success: false, error: "Thiếu đơn vị nguyên liệu." };
+    }
+
     const { data: result, error } = await supabase
       .from("ingredients")
       .insert({
         tenant_id: claims.tenant_id,
         ...data,
+        purchase_unit: purchaseUnit,
+        measure_unit: measureUnit,
+        unit: measureUnit,
       })
       .select("id")
       .single();
@@ -99,9 +155,29 @@ export async function updateIngredient(
 
   const { supabase, claims } = ctx;
 
+  const normalizedInput: Partial<z.infer<typeof ingredientSchema>> = {
+    ...parsedInput.data,
+  };
+  const measureUnit = resolveMeasureUnit(parsedInput.data);
+  const purchaseUnit = resolvePurchaseUnit(parsedInput.data);
+
+  if (measureUnit) {
+    normalizedInput.measure_unit = measureUnit;
+    normalizedInput.unit = measureUnit;
+  } else {
+    delete normalizedInput.measure_unit;
+    delete normalizedInput.unit;
+  }
+
+  if (purchaseUnit) {
+    normalizedInput.purchase_unit = purchaseUnit;
+  } else {
+    delete normalizedInput.purchase_unit;
+  }
+
   const { error } = await supabase
     .from("ingredients")
-    .update(parsedInput.data)
+    .update(normalizedInput)
     .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id);
 

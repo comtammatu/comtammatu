@@ -172,7 +172,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
               <TableRow>
                 <TableHead className="min-w-52">Nguyên liệu</TableHead>
                 <TableHead className="min-w-28">SKU</TableHead>
-                <TableHead className="min-w-28">Đơn vị</TableHead>
+                <TableHead className="min-w-40">Đơn vị</TableHead>
                 <TableHead className="min-w-36">Bảo quản</TableHead>
                 <TableHead className="min-w-32">Giá tham chiếu</TableHead>
                 <TableHead className="min-w-44">Ngưỡng tồn</TableHead>
@@ -223,7 +223,14 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
                     <TableCell className="font-mono text-sm text-muted-foreground">
                       {item.sku || "—"}
                     </TableCell>
-                    <TableCell>{item.unit}</TableCell>
+                    <TableCell>
+                      <div className="space-y-1 text-sm">
+                        <p>Nhập: {item.purchase_unit}</p>
+                        <p className="text-muted-foreground">
+                          Tính: {item.measure_unit}
+                        </p>
+                      </div>
+                    </TableCell>
                     <TableCell>{storageLabel(item.storage_type)}</TableCell>
                     <TableCell className="font-mono">
                       {item.unit_cost ? `${formatVND(item.unit_cost)}đ` : "—"}

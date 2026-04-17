@@ -296,7 +296,7 @@ export async function fetchPoSuggestions(input?: {
       ingredient_id,
       current_quantity,
       ingredients!inner (
-        id, name, unit, reorder_point, max_stock_level, is_active
+        id, name, unit, purchase_unit, reorder_point, max_stock_level, is_active
       )
     `,
     )
@@ -333,6 +333,7 @@ export async function fetchPoSuggestions(input?: {
       id: number;
       name: string;
       unit: string;
+      purchase_unit: string | null;
       reorder_point: number;
       max_stock_level: number | null;
     };
@@ -351,7 +352,7 @@ export async function fetchPoSuggestions(input?: {
     suggestions.push({
       ingredient_id: ing.id,
       ingredient_name: ing.name,
-      unit: ing.unit,
+      unit: ing.purchase_unit ?? ing.unit,
       hq_current_qty: currentQty,
       reorder_point: ing.reorder_point,
       max_stock_level: maxStock,

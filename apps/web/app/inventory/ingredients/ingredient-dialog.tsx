@@ -28,6 +28,8 @@ export interface IngredientRow {
   name: string;
   sku: string | null;
   unit: string;
+  purchase_unit: string;
+  measure_unit: string;
   category: string | null;
   item_kind: string;
   unit_cost: number | null;
@@ -102,7 +104,8 @@ function IngredientFormContent({
 
     const raw = {
       name: fd.get("name") as string,
-      unit: fd.get("unit") as string,
+      purchase_unit: fd.get("purchase_unit") as string,
+      measure_unit: fd.get("measure_unit") as string,
       sku: (fd.get("sku") as string) || undefined,
       unit_cost: unitCost ? Number(unitCost) : undefined,
       category: (fd.get("category") as string) || undefined,
@@ -126,7 +129,8 @@ function IngredientFormContent({
       } else {
         const result = await createIngredient({
           name: raw.name,
-          unit: raw.unit,
+          purchase_unit: raw.purchase_unit,
+          measure_unit: raw.measure_unit,
           sku: raw.sku,
           unit_cost: raw.unit_cost,
           category: raw.category,
@@ -157,7 +161,7 @@ function IngredientFormContent({
       </DialogHeader>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Row 1: name + unit */}
+        {/* Row 1: name + purchase unit */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="ing-name" className="text-sm font-medium">
@@ -173,22 +177,35 @@ function IngredientFormContent({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="ing-unit" className="text-sm font-medium">
-              Đơn vị *
+            <Label htmlFor="ing-purchase-unit" className="text-sm font-medium">
+              Đơn vị nhập *
             </Label>
             <Input
-              id="ing-unit"
-              name="unit"
+              id="ing-purchase-unit"
+              name="purchase_unit"
               required
-              defaultValue={ingredient?.unit ?? ""}
-              placeholder="kg, lít, cái..."
+              defaultValue={ingredient?.purchase_unit ?? ingredient?.unit ?? ""}
+              placeholder="thùng, bao, chai..."
               className="h-10"
             />
           </div>
         </div>
 
-        {/* Row 2: sku + category */}
+        {/* Row 2: measure unit + sku */}
         <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="ing-measure-unit" className="text-sm font-medium">
+              Đơn vị tính *
+            </Label>
+            <Input
+              id="ing-measure-unit"
+              name="measure_unit"
+              required
+              defaultValue={ingredient?.measure_unit ?? ingredient?.unit ?? ""}
+              placeholder="kg, ml, cái..."
+              className="h-10"
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="ing-sku" className="text-sm font-medium">
               Mã SKU
@@ -201,6 +218,10 @@ function IngredientFormContent({
               className="h-10"
             />
           </div>
+        </div>
+
+        {/* Row 3: category + unit_cost */}
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="ing-category" className="text-sm font-medium">
               Danh mục
@@ -213,13 +234,9 @@ function IngredientFormContent({
               className="h-10"
             />
           </div>
-        </div>
-
-        {/* Row 3: unit_cost + storage_type */}
-        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="ing-unit-cost" className="text-sm font-medium">
-              Giá nhập (VND)
+              Giá nhập tham chiếu (VND)
             </Label>
             <FormattedNumberInput
               id="ing-unit-cost"
@@ -230,6 +247,9 @@ function IngredientFormContent({
               className="h-10"
             />
           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="ing-storage" className="text-sm font-medium">
               Kiểu lưu trữ
@@ -245,21 +265,20 @@ function IngredientFormContent({
               </SelectContent>
             </Select>
           </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="ing-kind" className="text-sm font-medium">
-            Loại hàng
-          </Label>
-          <Select value={itemKind} onValueChange={setItemKind}>
-            <SelectTrigger id="ing-kind" className="h-10">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="raw_material">Nguyên liệu</SelectItem>
-              <SelectItem value="finished_good">Thành phẩm</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <Label htmlFor="ing-kind" className="text-sm font-medium">
+              Loại hàng
+            </Label>
+            <Select value={itemKind} onValueChange={setItemKind}>
+              <SelectTrigger id="ing-kind" className="h-10">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="raw_material">Nguyên liệu</SelectItem>
+                <SelectItem value="finished_good">Thành phẩm</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Row 4: min / max / reorder */}

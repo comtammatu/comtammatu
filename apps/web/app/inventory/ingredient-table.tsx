@@ -143,7 +143,7 @@ export function IngredientTable({
                     </div>
                     <p className="truncate text-xs text-muted-foreground">
                       {ing.sku && <>{ing.sku} · </>}
-                      {ing.unit}
+                      Nhập {ing.purchase_unit} · Tính {ing.measure_unit}
                       {ing.category && <> · {ing.category}</>}
                       {ing.unit_cost != null && (
                         <> · {formatVND(ing.unit_cost)}</>
@@ -212,7 +212,14 @@ export function IngredientTable({
                     <TableCell className="font-mono text-sm text-muted-foreground">
                       {ing.sku ?? "—"}
                     </TableCell>
-                    <TableCell>{ing.unit}</TableCell>
+                    <TableCell>
+                      <div className="space-y-1 text-sm">
+                        <p>Nhập: {ing.purchase_unit}</p>
+                        <p className="text-muted-foreground">
+                          Tính: {ing.measure_unit}
+                        </p>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right font-mono">
                       {ing.unit_cost != null ? formatVND(ing.unit_cost) : "—"}
                     </TableCell>

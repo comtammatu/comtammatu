@@ -20,6 +20,7 @@ type MenuItemRow = {
       id: number;
       name: string;
       unit: string;
+      measure_unit?: string | null;
       unit_cost: number | string | null;
     } | null;
   }> | null;
@@ -46,7 +47,11 @@ export default async function RecipesPage() {
           ingredientId: line.ingredients?.id ?? line.ingredient_id ?? 0,
           ingredientName: line.ingredients?.name ?? "—",
           qty,
-          unit: line.unit ?? line.ingredients?.unit ?? "",
+          unit:
+            line.unit ??
+            line.ingredients?.measure_unit ??
+            line.ingredients?.unit ??
+            "",
           yieldFactor: Number(line.yield_factor ?? 1),
           note: line.note ?? null,
           lineCost: qty * unitCost,
@@ -75,11 +80,16 @@ export default async function RecipesPage() {
 
   const ingredients: IngredientOption[] = ingredientsRes.success
     ? (
-        ingredientsRes.data as Array<{ id: number; name: string; unit: string }>
+        ingredientsRes.data as Array<{
+          id: number;
+          name: string;
+          unit: string;
+          measure_unit?: string;
+        }>
       ).map((i) => ({
         id: i.id,
         name: i.name,
-        unit: i.unit,
+        unit: i.measure_unit ?? i.unit,
       }))
     : [];
 

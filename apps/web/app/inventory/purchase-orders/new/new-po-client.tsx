@@ -682,7 +682,7 @@ function LineItemsSection({
     setIngredientId(val);
     setAddRowDeviation(null);
     const ing = ingredients.find((x) => String(x.id) === val);
-    if (ing) setUnit(ing.unit);
+    if (ing) setUnit(ing.purchase_unit ?? ing.unit);
     setTimeout(() => qtyRef.current?.focus(), 0);
   }
 
@@ -694,7 +694,8 @@ function LineItemsSection({
       return;
     }
     const ing = ingredients.find((x) => x.id === iid);
-    const resolvedUnit = unit || ing?.unit || "";
+    const resolvedUnit =
+      unit || ing?.purchase_unit || ing?.measure_unit || ing?.unit || "";
     const qty = Number(qtyInput);
     const priceRaw = unitPriceInput.trim();
     const unitPriceEst = priceRaw === "" ? null : Number(priceRaw);
@@ -822,7 +823,7 @@ function LineItemsSection({
                 <SelectContent>
                   {ingredients.map((i) => (
                     <SelectItem key={i.id} value={String(i.id)}>
-                      {i.name} ({i.unit})
+                      {i.name} ({i.purchase_unit ?? i.unit})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -992,7 +993,7 @@ function LineItemsSection({
                 <SelectContent>
                   {ingredients.map((i) => (
                     <SelectItem key={i.id} value={String(i.id)}>
-                      {i.name} ({i.unit})
+                      {i.name} ({i.purchase_unit ?? i.unit})
                     </SelectItem>
                   ))}
                 </SelectContent>

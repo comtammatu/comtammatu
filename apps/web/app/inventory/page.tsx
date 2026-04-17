@@ -13,6 +13,8 @@ export interface IngredientRow {
   name: string;
   sku: string | null;
   unit: string;
+  purchase_unit: string;
+  measure_unit: string;
   item_kind: string;
   unit_cost: number | null;
   category: string | null;

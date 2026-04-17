@@ -810,8 +810,10 @@ export type Database = {
           is_active: boolean
           item_kind: string
           max_stock_level: number | null
+          measure_unit: string
           min_stock_level: number
           name: string
+          purchase_unit: string
           reorder_point: number | null
           shelf_life_days: number | null
           sku: string | null
@@ -828,8 +830,10 @@ export type Database = {
           is_active?: boolean
           item_kind?: string
           max_stock_level?: number | null
+          measure_unit: string
           min_stock_level?: number
           name: string
+          purchase_unit: string
           reorder_point?: number | null
           shelf_life_days?: number | null
           sku?: string | null
@@ -846,8 +850,10 @@ export type Database = {
           is_active?: boolean
           item_kind?: string
           max_stock_level?: number | null
+          measure_unit?: string
           min_stock_level?: number
           name?: string
+          purchase_unit?: string
           reorder_point?: number | null
           shelf_life_days?: number | null
           sku?: string | null
