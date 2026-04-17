@@ -21,7 +21,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { approveRefund, fetchRefunds } from "./refund-actions";
 import type { RefundRow } from "./refund-actions";
-import { TableEmptyStateRow } from "../components/table-empty-state-row";
+import { TableEmptyStateRow } from "@/admin/components/table-empty-state-row";
 
 /* ─── Status helpers ─── */
 

@@ -51,7 +51,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     label: getModuleLabelVi("inventory_procurement"),
   },
   orders: {
-    path: "/admin/orders",
+    path: "/orders",
     allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
     label: getModuleLabelVi("orders"),
   },

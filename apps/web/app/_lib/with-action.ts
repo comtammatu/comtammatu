@@ -65,7 +65,7 @@ export function withAction<TSchema extends z.ZodType>(
  *   async (data, { supabase, claims }) => {
  *     const { error } = await supabase.from("menu_categories").insert({...});
  *     if (error) return { success: false, error: mapDbError(error.code) };
- *     revalidatePath("/admin/menu");
+ *     revalidatePath("/menu");
  *     return { success: true };
  *   },
  * );

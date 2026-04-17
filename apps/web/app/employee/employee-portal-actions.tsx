@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Loader2, LogIn, LogOut } from "lucide-react";
-import { checkIn, checkOut } from "../admin/hr/actions";
+import { checkIn, checkOut } from "../hr/actions";
 import {
   Card,
   CardContent,

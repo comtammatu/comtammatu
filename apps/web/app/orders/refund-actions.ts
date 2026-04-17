@@ -4,7 +4,7 @@
 
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "../_lib/auth";
+import { getAuthContext } from "@/_lib/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
 
 /* ─── Allowed roles ─── */

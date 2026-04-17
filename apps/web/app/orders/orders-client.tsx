@@ -31,7 +31,7 @@ import {
 import { fetchOrders } from "./actions";
 import { OrderDetailSheet } from "./order-detail-sheet";
 import type { OrderRow, FetchOrdersFilters } from "./actions";
-import { TableEmptyStateRow } from "../components/table-empty-state-row";
+import { TableEmptyStateRow } from "@/admin/components/table-empty-state-row";
 
 /* ─── Status config ─── */
 

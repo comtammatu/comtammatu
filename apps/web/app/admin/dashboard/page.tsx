@@ -141,7 +141,7 @@ export default async function DashboardPage() {
   if (canAccess(claims.user_role, "menu")) {
     domainCards.push({
       title: "Thực đơn",
-      href: "/admin/menu",
+      href: "/menu",
       badge: "Vận hành",
       icon: LayoutTemplate,
     });

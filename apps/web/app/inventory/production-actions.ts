@@ -6,13 +6,7 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
 
-const PRODUCTION_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "branch_manager",
-  "warehouse_manager",
-  "production_manager",
-];
+const PRODUCTION_ROLES: readonly StaffRole[] = ["super_manager"];
 
 const productionLineSchema = z.object({
   finishedGoodId: z.coerce.number().int().positive(),
@@ -400,27 +394,27 @@ export const upsertProductionRecipe = withAction(
   { roles: PRODUCTION_ROLES, schema: productionRecipeSchema },
   async (data, ctx) => {
     const { supabase, claims } = ctx;
-  if (claims.user_role === "branch_manager") {
-    if (claims.branch_id == null) {
-      return {
-        success: false,
-        error: "Tài khoản chưa được gán bếp trung tâm.",
-      };
+    if (claims.user_role === "branch_manager") {
+      if (claims.branch_id == null) {
+        return {
+          success: false,
+          error: "Tài khoản chưa được gán bếp trung tâm.",
+        };
+      }
+      const access = await requireCentralKitchenBranch(
+        supabase,
+        claims.tenant_id,
+        claims.branch_id,
+      );
+      if (!access.ok) {
+        return { success: false, error: access.error };
+      }
     }
-    const access = await requireCentralKitchenBranch(
-      supabase,
-      claims.tenant_id,
-      claims.branch_id,
-    );
-    if (!access.ok) {
-      return { success: false, error: access.error };
-    }
-  }
-  const { data: ingredients, error: ingredientError } = await supabase
-    .from("ingredients")
-    .select("id, item_kind")
-    .eq("tenant_id", claims.tenant_id)
-    .in("id", [data.finishedGoodId, data.ingredientId]);
+    const { data: ingredients, error: ingredientError } = await supabase
+      .from("ingredients")
+      .select("id, item_kind")
+      .eq("tenant_id", claims.tenant_id)
+      .in("id", [data.finishedGoodId, data.ingredientId]);
 
     if (ingredientError) {
       return { success: false, error: "Không thể kiểm tra nguyên liệu." };
@@ -433,7 +427,10 @@ export const upsertProductionRecipe = withAction(
       (item) => item.id === data.ingredientId,
     );
 
-    if (finishedGood?.item_kind !== "finished_good" || ingredient?.item_kind !== "raw_material") {
+    if (
+      finishedGood?.item_kind !== "finished_good" ||
+      ingredient?.item_kind !== "raw_material"
+    ) {
       return {
         success: false,
         error: "Công thức phải nối thành phẩm với nguyên liệu.",

@@ -29,7 +29,7 @@ import { toggleCategoryActive } from "./actions";
 import { CategoryFormDialog } from "./category-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { CATEGORY_TYPE_LABELS } from "./category-labels";
-import { TableEmptyStateRow } from "../components/table-empty-state-row";
+import { TableEmptyStateRow } from "@/admin/components/table-empty-state-row";
 
 export interface CategoryRow {
   id: number;

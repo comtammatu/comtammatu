@@ -39,12 +39,80 @@ export type ProductionRecipeGroup = {
   lines: ProductionRecipeRow[];
 };
 
+export type ProductionReadinessState =
+  | "missing-central-kitchen"
+  | "missing-finished-good"
+  | "missing-raw-material"
+  | "missing-recipe"
+  | null;
+
+export interface ProductionReadinessSummary {
+  readinessState: ProductionReadinessState;
+  readinessMessage: string | null;
+  actionsEnabled: boolean;
+  sortedFinishedGoods: FinishedGoodOption[];
+  sortedRawIngredients: RawIngredientOption[];
+}
+
 export function sortFinishedGoods(items: FinishedGoodOption[]) {
   return [...items].sort((a, b) => a.name.localeCompare(b.name, "vi"));
 }
 
 export function sortRawIngredients(items: RawIngredientOption[]) {
   return [...items].sort((a, b) => a.name.localeCompare(b.name, "vi"));
+}
+
+export function getProductionReadinessSummary({
+  centralKitchenBranches,
+  ingredients,
+  finishedGoods,
+  recipes,
+}: {
+  centralKitchenBranches: BranchOption[];
+  ingredients: IngredientOption[];
+  finishedGoods: FinishedGoodOption[];
+  recipes?: ProductionRecipeRow[];
+}): ProductionReadinessSummary {
+  const sortedFinishedGoods = sortFinishedGoods(finishedGoods);
+  const sortedRawIngredients = sortRawIngredients(
+    ingredients
+      .filter((ingredient) => ingredient.item_kind === "raw_material")
+      .map((ingredient) => ({
+        id: ingredient.id,
+        name: ingredient.name,
+        unit: ingredient.unit,
+      })),
+  );
+
+  const readinessState: ProductionReadinessState =
+    centralKitchenBranches.length === 0
+      ? "missing-central-kitchen"
+      : sortedFinishedGoods.length === 0
+        ? "missing-finished-good"
+        : sortedRawIngredients.length === 0
+          ? "missing-raw-material"
+          : (recipes?.length ?? 0) === 0
+            ? "missing-recipe"
+            : null;
+
+  const readinessMessage =
+    readinessState === "missing-central-kitchen"
+      ? "Chưa có bếp trung tâm nào được cấu hình."
+      : readinessState === "missing-finished-good"
+        ? "Chưa có thành phẩm nào được gắn `item_kind = finished_good`, nên chưa thể tạo lệnh sản xuất."
+        : readinessState === "missing-raw-material"
+          ? "Chưa có nguyên liệu nào được gắn `item_kind = raw_material`, nên chưa thể lập công thức."
+          : readinessState === "missing-recipe"
+            ? "Chưa có BOM sản xuất nào được cấu hình, nên chưa thể xác nhận lệnh."
+            : null;
+
+  return {
+    readinessState,
+    readinessMessage,
+    actionsEnabled: readinessState === null,
+    sortedFinishedGoods,
+    sortedRawIngredients,
+  };
 }
 
 export function orderStatusLabel(status: string) {

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getAuthContext } from "../_lib/auth";
+import { getAuthContext } from "@/_lib/auth";
 import { fetchOrders } from "./actions";
 import { fetchRefunds } from "./refund-actions";
 import { OrdersClient } from "./orders-client";

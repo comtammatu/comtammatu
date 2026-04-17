@@ -23,7 +23,7 @@ import { SIDE_DISH_TYPE } from "./category-labels";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { createClient } from "@comtammatu/database/supabase/client";
 import type { ItemRow } from "./item-table";
-import { EmptyStatePanel } from "../components/empty-state-panel";
+import { EmptyStatePanel } from "@/admin/components/empty-state-panel";
 
 /* ─── Local Types ─── */
 

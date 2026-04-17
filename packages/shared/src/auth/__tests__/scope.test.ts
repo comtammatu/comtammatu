@@ -233,8 +233,8 @@ test("resolvePostLoginRedirect → beta surface + own-branch POS → allowed", (
 test("getSafeInternalReturnTo → accepts internal paths", () => {
   assert.equal(getSafeInternalReturnTo("/admin/dashboard"), "/admin/dashboard");
   assert.equal(
-    getSafeInternalReturnTo("/admin/orders?x=1#y"),
-    "/admin/orders?x=1#y",
+    getSafeInternalReturnTo("/orders?x=1#y"),
+    "/orders?x=1#y",
   );
 });
 

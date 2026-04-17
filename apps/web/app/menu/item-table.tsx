@@ -33,7 +33,7 @@ import { ItemFormDialog } from "./item-form-dialog";
 import { ItemDetailDialog } from "./item-detail-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import type { CategoryRow } from "./category-table";
-import { TableEmptyStateRow } from "../components/table-empty-state-row";
+import { TableEmptyStateRow } from "@/admin/components/table-empty-state-row";
 
 export interface ItemRow {
   id: number;

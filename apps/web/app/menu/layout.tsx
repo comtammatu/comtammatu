@@ -1,0 +1,25 @@
+import type { ReactNode } from "react";
+import { loadAuthState } from "../_lib/auth";
+import { MenuShell } from "./components/menu-shell";
+
+export default async function MenuLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const { session, claims } = await loadAuthState();
+
+  return (
+    <MenuShell
+      user={{
+        name:
+          session.user.user_metadata?.["display_name"] ??
+          session.user.email ??
+          "",
+      }}
+      role={claims.user_role}
+    >
+      {children}
+    </MenuShell>
+  );
+}

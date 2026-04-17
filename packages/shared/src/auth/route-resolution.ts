@@ -43,8 +43,6 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   const resolvedPathname = stripBetaPrefix(pathname);
 
   if (resolvedPathname.startsWith("/admin/dashboard")) return "dashboard";
-  if (resolvedPathname.startsWith("/admin/menu")) return "menu";
-  if (resolvedPathname.startsWith("/admin/orders")) return "orders";
   if (resolvedPathname.startsWith("/admin/staff")) return "staff";
   if (resolvedPathname.startsWith("/admin/crm")) return "crm";
   if (resolvedPathname.startsWith("/admin/reports")) return "reports";
@@ -58,6 +56,8 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
 
   if (resolvedPathname.startsWith("/inventory")) return "inventory";
   if (resolvedPathname.startsWith("/finance")) return "finance";
+  if (resolvedPathname.startsWith("/menu")) return "menu";
+  if (resolvedPathname.startsWith("/orders")) return "orders";
   if (resolvedPathname.startsWith("/hr")) return "hr";
   if (/^\/br\/\d+\/pos/.test(resolvedPathname)) return "pos";
   if (/^\/br\/\d+\/kds/.test(resolvedPathname)) return "kds";

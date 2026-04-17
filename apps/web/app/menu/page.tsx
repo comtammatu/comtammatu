@@ -10,6 +10,7 @@ import { CategoryTable } from "./category-table";
 import { AddCategoryButton } from "./add-category-button";
 import { ItemTable } from "./item-table";
 import { AddItemButton } from "./add-item-button";
+import { MenuImportExportMenu } from "./import-export-menu";
 
 export default async function MenuPage() {
   const supabase = await createClient();
@@ -49,13 +50,16 @@ export default async function MenuPage() {
     <div className="space-y-5 lg:space-y-6">
       <Card>
         <CardContent className="p-5 sm:p-6">
-          <div className="space-y-3">
-            <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-              Danh mục kinh doanh
-            </span>
-            <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-              Thực đơn
-            </h2>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-3">
+              <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                Danh mục kinh doanh
+              </span>
+              <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                Thực đơn
+              </h2>
+            </div>
+            <MenuImportExportMenu />
           </div>
         </CardContent>
       </Card>

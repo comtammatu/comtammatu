@@ -18,6 +18,11 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: resolve(import.meta.dirname, "../.."),
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "4mb",
+    },
+  },
 };
 
 export default withSerwist(nextConfig);

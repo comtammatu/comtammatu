@@ -5,6 +5,8 @@ export const WORKSPACE_THEMES = [
   "finance",
   "hr",
   "inventory",
+  "menu",
+  "orders",
 ] as const;
 
 export type WorkspaceTheme = (typeof WORKSPACE_THEMES)[number];

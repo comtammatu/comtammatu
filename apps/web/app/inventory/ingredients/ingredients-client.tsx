@@ -27,6 +27,7 @@ import { formatVND } from "../_lib/format";
 import { fetchIngredients } from "../actions";
 import { IngredientDialog } from "./ingredient-dialog";
 import type { IngredientRow } from "./ingredient-dialog";
+import { IngredientImportExportMenu } from "./import-export-menu";
 
 export type { IngredientRow };
 
@@ -113,9 +114,12 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
       <InventoryHeader
         title="Nguyên liệu"
         actions={
-          <Button type="button" onClick={openCreate}>
-            Tạo nguyên liệu
-          </Button>
+          <div className="flex items-center gap-2">
+            <IngredientImportExportMenu onImported={reload} />
+            <Button type="button" onClick={openCreate}>
+              Tạo nguyên liệu
+            </Button>
+          </div>
         }
       />
       <div className="flex-1 overflow-auto p-4">
