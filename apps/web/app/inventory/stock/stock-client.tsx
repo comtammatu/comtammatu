@@ -6,7 +6,11 @@ import { MoreHorizontal, Pencil, Search } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
-import { Input } from "@comtammatu/ui/components/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import {
   Table,
   TableBody,
@@ -155,15 +159,16 @@ export function StockClient({
       {/* Search */}
       <Card className="py-0">
         <CardContent className="flex flex-wrap items-center gap-3 p-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
+          <InputGroup className="h-10 flex-1">
+            <InputGroupAddon>
+              <Search />
+            </InputGroupAddon>
+            <InputGroupInput
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Tìm tên hoặc SKU"
-              className="pl-10"
             />
-          </div>
+          </InputGroup>
           <Badge variant="outline" className="rounded-full">
             {filtered.length} / {ingredients.length}
           </Badge>
