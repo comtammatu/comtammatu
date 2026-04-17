@@ -11,6 +11,7 @@ import {
   FileText,
   Hourglass,
   LayoutDashboard,
+  LogOut,
   Package,
   PackageOpen,
   Receipt,
@@ -26,6 +27,7 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Sidebar,
   SidebarContent,
@@ -271,6 +273,18 @@ export function InventoryShell({
                 {ROLE_LABEL_VI[userRole]}
               </p>
             </div>
+            <form action="/api/auth/signout" method="post">
+              <Button
+                type="submit"
+                variant="ghost"
+                size="icon"
+                className="size-7 text-sidebar-foreground/75 hover:text-sidebar-foreground"
+                aria-label="Đăng xuất"
+                title="Đăng xuất"
+              >
+                <LogOut className="size-4" />
+              </Button>
+            </form>
           </div>
         </SidebarFooter>
       </Sidebar>
