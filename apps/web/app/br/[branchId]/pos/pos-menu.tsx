@@ -111,6 +111,7 @@ export function PosMenu({
     orderNumber: string;
   } | null>(null);
   const [localTables, setLocalTables] = useState<BranchTable[]>(initialTables);
+  const [operationalRefreshTick, setOperationalRefreshTick] = useState(0);
   const [sessionOrders, setSessionOrders] = useState<SessionOrder[]>([]);
   const [showOrders, setShowOrders] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
@@ -167,13 +168,20 @@ export function PosMenu({
       fetchSessionOrders(branchId, session.id),
       fetchTablesForBranch(branchId),
     ]);
+    let didRefresh = false;
 
     if (ordersResult.success && ordersResult.data) {
       setSessionOrders(ordersResult.data as SessionOrder[]);
+      didRefresh = true;
     }
 
     if (tablesResult.success && tablesResult.data) {
       setLocalTables(tablesResult.data as BranchTable[]);
+      didRefresh = true;
+    }
+
+    if (didRefresh) {
+      setOperationalRefreshTick((tick) => tick + 1);
     }
   }, [branchId, session.id]);
 
@@ -466,6 +474,27 @@ export function PosMenu({
       ),
     [sessionOrders],
   );
+  const hasAwaitingPaymentOrder = useMemo(
+    () =>
+      sessionOrders.some(
+        (order) => order.status === "served" && order.payment_status !== "paid",
+      ),
+    [sessionOrders],
+  );
+
+  useEffect(() => {
+    if (!hasAwaitingPaymentOrder || billOrderId !== null) return;
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      void refreshOperationalData();
+    }, 4000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [billOrderId, hasAwaitingPaymentOrder, refreshOperationalData]);
+
   const serviceModeSelector = (
     <Card className="shadow-sm">
       <CardContent className="space-y-3 p-3">
@@ -691,6 +720,7 @@ export function PosMenu({
 
       <OrderDetailSheet
         orderId={orderDetailId}
+        refreshToken={operationalRefreshTick}
         onClose={() => setOrderDetailId(null)}
         onOpenBill={(id) => {
           setOrderDetailId(null);

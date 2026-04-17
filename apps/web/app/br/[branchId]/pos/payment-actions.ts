@@ -46,6 +46,24 @@ interface OrderPaymentData {
   created_at: string;
 }
 
+function mapPaymentRpcError(message: string): string | null {
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("posting_rule_not_found") ||
+    normalized.includes("gl_account_not_found") ||
+    normalized.includes("fiscal_period_closed")
+  ) {
+    return "Thanh toán tạm thời chưa thể hoàn tất do cấu hình kế toán chưa sẵn sàng. Vui lòng liên hệ quản lý.";
+  }
+
+  if (normalized.includes("tenant_mismatch")) {
+    return "Không thể xử lý thanh toán cho chi nhánh này.";
+  }
+
+  return null;
+}
+
 function truthySetting(v: string | undefined): boolean {
   return v === "true" || v === "1";
 }
@@ -256,6 +274,11 @@ export async function createPayment(
         error: "Đơn hàng đang có thanh toán chờ xử lý.",
       };
     }
+    const mappedError = mapPaymentRpcError(msg);
+    if (mappedError) {
+      console.error("[createPayment] rpc failed:", msg);
+      return { success: false, error: mappedError };
+    }
     return { success: false, error: "Không thể tạo thanh toán." };
   }
 
@@ -359,6 +382,11 @@ export async function confirmPayment(
     }
     if (msg.includes("payment_not_pending")) {
       return { success: false, error: "Thanh toán không ở trạng thái chờ." };
+    }
+    const mappedError = mapPaymentRpcError(msg);
+    if (mappedError) {
+      console.error("[confirmPayment] rpc failed:", msg);
+      return { success: false, error: mappedError };
     }
     return { success: false, error: "Không thể xác nhận thanh toán." };
   }

@@ -147,6 +147,7 @@ export function OrderHistory({
                   return (
                     <div
                       key={order.id}
+                      data-testid={`pos-order-card-${order.id}`}
                       className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-4 shadow-sm"
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -208,6 +209,7 @@ export function OrderHistory({
 
                       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
                         <Button
+                          data-testid={`pos-order-detail-${order.id}`}
                           variant={waitingPayment || readyToCloseTable ? "secondary" : "outline"}
                           size="sm"
                           className="h-10 rounded-full px-4 text-xs"
@@ -216,6 +218,7 @@ export function OrderHistory({
                           {readyToCloseTable ? "Hoàn tất" : "Điều phối"}
                         </Button>
                         <Button
+                          data-testid={`pos-order-bill-${order.id}`}
                           variant={waitingPayment || readyToCloseTable ? "default" : "ghost"}
                           size="sm"
                           className="h-10 rounded-full px-4 text-xs"

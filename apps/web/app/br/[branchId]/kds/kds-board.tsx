@@ -98,6 +98,16 @@ function getElapsedMinutes(createdAt: string): number {
   );
 }
 
+function buildOrderItemMap(items: KdsOrderItem[]): Map<number, KdsOrderItem[]> {
+  const map = new Map<number, KdsOrderItem[]>();
+  for (const item of items) {
+    const existing = map.get(item.order_id) ?? [];
+    existing.push(item);
+    map.set(item.order_id, existing);
+  }
+  return map;
+}
+
 /* ─── Audio beep helper (reuses single AudioContext) ─── */
 
 let _audioCtx: AudioContext | null = null;
@@ -142,19 +152,12 @@ export function KdsBoard({
     () => new Map(initialOrders.map((o) => [o.id, o])),
   );
   const [orderItems, setOrderItems] = useState<Map<number, KdsOrderItem[]>>(
-    () => {
-      const map = new Map<number, KdsOrderItem[]>();
-      for (const item of initialOrderItems) {
-        const existing = map.get(item.order_id) ?? [];
-        existing.push(item);
-        map.set(item.order_id, existing);
-      }
-      return map;
-    },
+    () => buildOrderItemMap(initialOrderItems),
   );
   const supabaseRef = useRef(createClient());
   const prevTicketCountRef = useRef(tickets.length);
   const ordersRef = useRef(orders);
+  const lastSnapshotSyncRef = useRef(Date.now());
 
   const replaceQuery = useCallback(
     (updates: Record<string, string | null>) => {
@@ -236,6 +239,85 @@ export function KdsBoard({
     }
   }, []);
 
+  const syncOrderItemStatusFromTicket = useCallback((ticket: KdsTicket) => {
+    setOrderItems((prev) => {
+      const items = prev.get(ticket.order_id);
+      if (!items) return prev;
+
+      let changed = false;
+      const nextItems = items.map((item) => {
+        if (item.id !== ticket.order_item_id || item.status === ticket.status) {
+          return item;
+        }
+        changed = true;
+        return { ...item, status: ticket.status };
+      });
+
+      if (!changed) return prev;
+
+      const next = new Map(prev);
+      next.set(ticket.order_id, nextItems);
+      return next;
+    });
+  }, []);
+
+  const refreshBoardSnapshot = useCallback(async () => {
+    const supabase = supabaseRef.current;
+
+    const { data: freshTickets, error: ticketsError } = await supabase
+      .from("kds_tickets")
+      .select(
+        "id, station_id, order_id, order_item_id, status, bumped_at, created_at",
+      )
+      .eq("branch_id", branchId)
+      .in("status", ["pending", "preparing", "ready"])
+      .order("created_at");
+
+    if (ticketsError || !freshTickets) return;
+
+    const nextTickets = freshTickets as KdsTicket[];
+    const orderIds = [...new Set(nextTickets.map((ticket) => ticket.order_id))];
+
+    if (orderIds.length === 0) {
+      setTickets(nextTickets);
+      setOrders(new Map());
+      setOrderItems(new Map());
+      lastSnapshotSyncRef.current = Date.now();
+      return;
+    }
+
+    const [orderRes, itemsRes] = await Promise.all([
+      supabase
+        .from("orders")
+        .select(
+          "id, order_number, order_type, table_id, created_at, tables(number)",
+        )
+        .in("id", orderIds),
+      supabase
+        .from("order_items")
+        .select(
+          "id, order_id, item_name, variant_name, quantity, unit_price, status",
+        )
+        .in("order_id", orderIds),
+    ]);
+
+    if (orderRes.error || itemsRes.error) return;
+
+    setTickets(nextTickets);
+    setOrders(
+      new Map(
+        ((orderRes.data ?? []) as unknown as KdsOrderInfo[]).map((order) => [
+          order.id,
+          order,
+        ]),
+      ),
+    );
+    setOrderItems(
+      buildOrderItemMap((itemsRes.data ?? []) as unknown as KdsOrderItem[]),
+    );
+    lastSnapshotSyncRef.current = Date.now();
+  }, [branchId]);
+
   // Subscribe to kds_tickets realtime
   useEffect(() => {
     const supabase = supabaseRef.current;
@@ -254,6 +336,8 @@ export function KdsBoard({
           if (payload.eventType === "INSERT") {
             const newTicket = payload.new as KdsTicket;
             setTickets((prev) => [...prev, newTicket]);
+            syncOrderItemStatusFromTicket(newTicket);
+            lastSnapshotSyncRef.current = Date.now();
 
             // Fetch order info if we don't have it
             const orderId = newTicket.order_id;
@@ -265,9 +349,12 @@ export function KdsBoard({
             setTickets((prev) =>
               prev.map((t) => (t.id === updated.id ? updated : t)),
             );
+            syncOrderItemStatusFromTicket(updated);
+            lastSnapshotSyncRef.current = Date.now();
           } else if (payload.eventType === "DELETE") {
             const deleted = payload.old as { id: number };
             setTickets((prev) => prev.filter((t) => t.id !== deleted.id));
+            lastSnapshotSyncRef.current = Date.now();
           }
         },
       )
@@ -276,7 +363,20 @@ export function KdsBoard({
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [branchId, fetchOrderInfo]);
+  }, [branchId, fetchOrderInfo, syncOrderItemStatusFromTicket]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      const staleMs = Date.now() - lastSnapshotSyncRef.current;
+      if (staleMs < 12000) return;
+      void refreshBoardSnapshot();
+    }, 12000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [refreshBoardSnapshot]);
 
   // Filter tickets by station
   const filteredTickets = useMemo(() => {
@@ -353,22 +453,10 @@ export function KdsBoard({
 
       if (error) {
         toast.error("Không thể cập nhật trạng thái món. Vui lòng thử lại.");
-        // Revert optimistic update — refetch all active tickets
-        const { data: freshTickets } = await sb
-          .from("kds_tickets")
-          .select(
-            "id, station_id, order_id, order_item_id, status, bumped_at, created_at",
-          )
-          .eq("branch_id", branchId)
-          .in("status", ["pending", "preparing", "ready"])
-          .order("created_at");
-
-        if (freshTickets) {
-          setTickets(freshTickets as KdsTicket[]);
-        }
+        await refreshBoardSnapshot();
       }
     },
-    [branchId],
+    [refreshBoardSnapshot],
   );
 
   // Optimistic recall handler
@@ -395,22 +483,10 @@ export function KdsBoard({
 
       if (error) {
         toast.error("Không thể thu hồi trạng thái món. Vui lòng thử lại.");
-        // Revert — refetch
-        const { data: freshTickets } = await sb
-          .from("kds_tickets")
-          .select(
-            "id, station_id, order_id, order_item_id, status, bumped_at, created_at",
-          )
-          .eq("branch_id", branchId)
-          .in("status", ["pending", "preparing", "ready"])
-          .order("created_at");
-
-        if (freshTickets) {
-          setTickets(freshTickets as KdsTicket[]);
-        }
+        await refreshBoardSnapshot();
       }
     },
-    [branchId],
+    [refreshBoardSnapshot],
   );
 
   // Count tickets per station (for badge)

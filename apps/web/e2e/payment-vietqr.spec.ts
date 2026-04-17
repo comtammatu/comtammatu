@@ -33,9 +33,6 @@ function createServiceClient() {
   );
 }
 
-const branchId = () => Number(process.env.E2E_TEST_BRANCH_ID ?? "0");
-const tenantId = () => Number(process.env.E2E_TEST_TENANT_ID ?? "0");
-
 test.describe("VietQR confirmPayment flow", () => {
   test("confirming a pending VietQR payment marks order as paid and deducts stock", async ({
     page,
@@ -56,13 +53,13 @@ test.describe("VietQR confirmPayment flow", () => {
       const { data: payment, error: payErr } = await supabase
         .from("payments")
         .insert({
-          tenant_id: tenantId(),
-          branch_id: branchId(),
+          tenant_id: testOrder.tenantId,
+          branch_id: testOrder.branchId,
           order_id: testOrder.orderId,
           created_by: cashier.id,
           method: "vietqr",
           status: "pending",
-          amount: 1, // minimal valid amount (check constraint: amount > 0)
+          amount: testOrder.totalAmount,
           provider_ref: null,
         })
         .select("id")
@@ -73,7 +70,7 @@ test.describe("VietQR confirmPayment flow", () => {
       }
 
       // Navigate to POS (auth cookies are loaded from saved state)
-      await page.goto(`/br/${branchId()}/pos`);
+      await page.goto(`/br/${String(testOrder.branchId)}/pos`);
       await page.waitForLoadState("networkidle");
 
       // Call confirmPayment via the test route
@@ -103,13 +100,13 @@ test.describe("VietQR confirmPayment flow", () => {
             paid_at: new Date().toISOString(),
           })
           .eq("id", payment.id)
-          .eq("tenant_id", tenantId());
+          .eq("tenant_id", testOrder.tenantId);
 
         await supabase
           .from("orders")
           .update({ payment_status: "paid" })
           .eq("id", testOrder.orderId)
-          .eq("tenant_id", tenantId());
+          .eq("tenant_id", testOrder.tenantId);
 
         console.log(
           "[e2e] /api/test/confirm-payment not found — used direct DB update as fallback",
@@ -136,12 +133,12 @@ test.describe("VietQR confirmPayment flow", () => {
         .from("stock_movements")
         .delete()
         .eq("order_id", testOrder.orderId)
-        .eq("tenant_id", tenantId());
+        .eq("tenant_id", testOrder.tenantId);
       await supabase
         .from("payments")
         .delete()
         .eq("order_id", testOrder.orderId)
-        .eq("tenant_id", tenantId());
+        .eq("tenant_id", testOrder.tenantId);
       await testOrder.cleanup();
     }
   });

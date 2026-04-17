@@ -219,6 +219,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
 
   return (
     <Card
+      data-testid={`kds-order-card-${order.orderId}`}
       className={cn(
         "rounded-lg border bg-card text-card-foreground shadow-sm flex flex-col overflow-hidden border border-l-2 transition-all hover:-translate-y-0.5 hover:shadow-md",
         borderClass,
@@ -339,6 +340,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
           return (
             <div
               key={item.id}
+              data-testid={`kds-order-item-${item.id}`}
               className={cn(
                 "relative flex items-center gap-2 px-3 py-3 md:gap-3 md:px-4",
                 status === "ready" && "opacity-50",
@@ -396,6 +398,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
               <div className="flex shrink-0 gap-1">
                 {ticket && canRecall && (
                   <Button
+                    data-testid={`kds-recall-${ticket.id}`}
                     variant="outline"
                     size="icon"
                     className="size-11 min-h-11 min-w-11 rounded-xl border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:size-14 md:min-h-14 md:min-w-14"
@@ -407,6 +410,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                 )}
                 {ticket && canBump && (
                   <Button
+                    data-testid={`kds-bump-${ticket.id}`}
                     variant="outline"
                     size="icon"
                     className={cn(
@@ -462,6 +466,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                 <div className="flex shrink-0 gap-1">
                   {canRecall && (
                     <Button
+                      data-testid={`kds-recall-${ticket.id}`}
                       variant="outline"
                       size="icon"
                       className="size-11 min-h-11 min-w-11 rounded-xl border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:size-14 md:min-h-14 md:min-w-14"
@@ -473,6 +478,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                   )}
                   {canBump && (
                     <Button
+                      data-testid={`kds-bump-${ticket.id}`}
                       variant="outline"
                       size="icon"
                       className="size-11 min-h-11 min-w-11 rounded-xl border-warning/30 bg-warning/20 text-warning hover:bg-warning/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:size-14 md:min-h-14 md:min-w-14"
