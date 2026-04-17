@@ -11,13 +11,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
+import { Combobox } from "@/components/form";
 import {
   Table,
   TableBody,
@@ -191,21 +185,21 @@ export function PurchaseOrdersClient({
           />
         </InputGroup>
 
-        <Select value={supplierFilter} onValueChange={setSupplierFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Nhà cung cấp" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_FILTER_VALUE}>
-              Tất cả nhà cung cấp
-            </SelectItem>
-            {suppliers.map((supplier) => (
-              <SelectItem key={supplier.id} value={String(supplier.id)}>
-                {supplier.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Combobox
+          value={supplierFilter}
+          onValueChange={setSupplierFilter}
+          options={[
+            { value: ALL_FILTER_VALUE, label: "Tất cả nhà cung cấp" },
+            ...suppliers.map((supplier) => ({
+              value: String(supplier.id),
+              label: supplier.name,
+            })),
+          ]}
+          placeholder="Nhà cung cấp"
+          searchPlaceholder="Tìm nhà cung cấp..."
+          aria-label="Lọc theo nhà cung cấp"
+          triggerClassName="h-10 w-48"
+        />
 
         <Badge variant="outline" className="rounded-full">
           {filteredRows.length} / {rows.length} PO

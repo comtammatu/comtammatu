@@ -9,5 +9,12 @@ export type {
 } from "./select-field";
 export { TextareaField } from "./textarea-field";
 export type { TextareaFieldProps } from "./textarea-field";
+export { ComboboxField } from "./combobox-field";
+export type {
+  ComboboxFieldOption,
+  ComboboxFieldProps,
+} from "./combobox-field";
+export { Combobox } from "./combobox";
+export type { ComboboxProps } from "./combobox";
 export { FormDialog, valuesToFormData } from "./form-dialog";
 export type { FormDialogProps } from "./form-dialog";

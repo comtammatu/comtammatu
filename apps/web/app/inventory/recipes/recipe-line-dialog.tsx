@@ -16,6 +16,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
+import { Combobox } from "@/components/form";
 import {
   Dialog,
   DialogContent,
@@ -127,29 +128,25 @@ function LineRowCells({
           control={control}
           name={`lines.${index}.ingredient_id`}
           render={({ field }) => (
-            <Select
+            <Combobox
               value={field.value}
               onValueChange={(v) => {
                 field.onChange(v);
                 onIngredientChange(v);
               }}
-            >
-              <SelectTrigger
-                className={cn("h-9", rowError?.ingredient_id && "border-destructive")}
-                aria-invalid={!!rowError?.ingredient_id}
-                onBlur={field.onBlur}
-                ref={field.ref}
-              >
-                <SelectValue placeholder="Chọn nguyên liệu..." />
-              </SelectTrigger>
-              <SelectContent>
-                {ingredients.map((ing) => (
-                  <SelectItem key={ing.id} value={String(ing.id)}>
-                    {ing.name} ({ing.unit})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={ingredients.map((ing) => ({
+                value: String(ing.id),
+                label: ing.name,
+                hint: ing.unit,
+              }))}
+              placeholder="Chọn nguyên liệu..."
+              searchPlaceholder="Tìm theo tên..."
+              aria-invalid={!!rowError?.ingredient_id}
+              triggerClassName={cn(
+                "h-9",
+                rowError?.ingredient_id && "border-destructive",
+              )}
+            />
           )}
         />
 

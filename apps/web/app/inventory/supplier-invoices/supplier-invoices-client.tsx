@@ -43,6 +43,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
+import { Combobox } from "@/components/form";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { InventoryHeader } from "../_components/inventory-header";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
@@ -411,21 +412,18 @@ export function SupplierInvoicesClient({
               />
             </InputGroup>
 
-            <Select value={supplierFilter} onValueChange={setSupplierFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Nhà cung cấp" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_FILTER_VALUE}>
-                  Tất cả nhà cung cấp
-                </SelectItem>
-                {supplierOptions.map((supplier) => (
-                  <SelectItem key={supplier.value} value={supplier.value}>
-                    {supplier.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              value={supplierFilter}
+              onValueChange={setSupplierFilter}
+              options={[
+                { value: ALL_FILTER_VALUE, label: "Tất cả nhà cung cấp" },
+                ...supplierOptions,
+              ]}
+              placeholder="Nhà cung cấp"
+              searchPlaceholder="Tìm nhà cung cấp..."
+              aria-label="Lọc theo nhà cung cấp"
+              triggerClassName="h-10 w-48"
+            />
 
             <Select
               value={matchStatusFilter}
