@@ -18,7 +18,6 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { cn } from "@comtammatu/ui";
-import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
 import { fetchStockTransfers } from "../transfer-actions";
 import { CreateTransferDialog } from "./create-transfer-dialog";
 import type { BranchForTransfer } from "./create-transfer-dialog";
@@ -77,10 +76,6 @@ export function TransfersListClient({
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   const canCreate = branches.length >= 2;
-  const branchLabelById = useMemo(
-    () => new Map(branches.map((b) => [b.id, formatBranchSiteLabel(b)])),
-    [branches],
-  );
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -216,9 +211,9 @@ export function TransfersListClient({
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5 text-sm">
-                            <span>{branchLabelById.get(r.from_branch_id) ?? r.from_branch_name}</span>
+                            <span>{r.from_branch_name}</span>
                             <MoveRight className="size-3 text-muted-foreground" />
-                            <span>{branchLabelById.get(r.to_branch_id) ?? r.to_branch_name}</span>
+                            <span>{r.to_branch_name}</span>
                           </div>
                         </TableCell>
                         <TableCell>

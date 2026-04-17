@@ -81,12 +81,12 @@ export function TransferDetailClient({
   ).length;
   const transferSteps = [
     {
-      label: "Nhap",
+      label: "Nháp",
       completed: transfer.status !== "draft",
       active: transfer.status === "draft",
     },
     {
-      label: "Da xuat kho",
+      label: "Đã xuất kho",
       completed:
         transfer.status === "confirmed_ship" ||
         transfer.status === "in_transit" ||
@@ -95,7 +95,7 @@ export function TransferDetailClient({
       active: transfer.status === "confirmed_ship",
     },
     {
-      label: "Dang kiem nhan",
+      label: "Đang kiểm nhận",
       completed:
         transfer.status === "confirmed_receive" ||
         transfer.status === "received",
@@ -104,7 +104,7 @@ export function TransferDetailClient({
         transfer.status === "confirmed_receive",
     },
     {
-      label: "Da nhan",
+      label: "Đã nhận",
       completed: transfer.status === "received",
       active: false,
     },
@@ -208,14 +208,14 @@ export function TransferDetailClient({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">
           <p className="text-sm font-medium text-muted-foreground">
-            Dieu chuyen noi bo
+            Điều chuyển nội bộ
           </p>
           <div className="space-y-1">
             <h1 className="text-3xl font-semibold tracking-tight">
               {transfer.code}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {`Lo trinh ${transfer.fromBranch} -> ${transfer.toBranch} • Moc gan nhat ${transfer.date}`}
+              {`Lộ trình ${transfer.fromBranch} → ${transfer.toBranch} • Mốc gần nhất ${transfer.date}`}
             </p>
           </div>
         </div>
@@ -256,8 +256,8 @@ export function TransferDetailClient({
             icon: <MapPin className="size-3 text-info" />,
           },
           {
-            label: "Đã ghi nhận nhận",
-            value: String(receivedCount).padStart(2, "0"),
+            label: "Đã ghi nhận",
+            value: `${String(receivedCount).padStart(2, "0")}/${String(transfer.items.length).padStart(2, "0")}`,
             icon: null,
           },
         ].map((info) => (
@@ -293,7 +293,7 @@ export function TransferDetailClient({
                 <CardTitle>{tTerm("ingredientsList")}</CardTitle>
               </div>
               <span className="text-xs font-medium text-muted-foreground">
-                Nhan toan bo theo so luong gui tren tung dong
+                Nhận toàn bộ theo số lượng gửi trên từng dòng
               </span>
             </CardHeader>
             <CardContent className="p-0">
@@ -320,7 +320,13 @@ export function TransferDetailClient({
                       <div>
                         <p className="text-muted-foreground">SL nhận</p>
                         <p className="font-semibold">
-                          {item.received != null ? item.received : "Đang vận"}
+                          {item.received != null ? (
+                            item.received
+                          ) : (
+                            <span className="italic text-muted-foreground">
+                              Chưa nhận
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div>
@@ -394,9 +400,7 @@ export function TransferDetailClient({
                           {formatVND(item.total)}
                         </TableCell>
                         <TableCell className="px-6 py-4 text-right italic text-muted-foreground">
-                          {item.received != null
-                            ? item.received
-                            : "Đang vận..."}
+                          {item.received != null ? item.received : "Chưa nhận"}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -407,7 +411,7 @@ export function TransferDetailClient({
                         colSpan={4}
                         className="px-6 py-3 text-right text-sm text-muted-foreground"
                       >
-                        Tạm tính
+                        Giá trị nguyên liệu
                       </TableCell>
                       <TableCell className="px-6 py-3 text-right font-mono tabular-nums">
                         {formatVND(transfer.subtotal)}đ
@@ -431,7 +435,7 @@ export function TransferDetailClient({
                         colSpan={4}
                         className="px-6 py-3 text-right text-sm font-bold"
                       >
-                        Tổng thanh toán
+                        Tổng giá trị
                       </TableCell>
                       <TableCell className="px-6 py-3 text-right font-mono tabular-nums font-bold text-primary">
                         {formatVND(transfer.total)}đ
@@ -452,7 +456,7 @@ export function TransferDetailClient({
               Tổng giá trị luân chuyển
             </p>
             <p className="text-2xl font-black tabular-nums text-primary">
-              {formatVND(transfer.total)} VNĐ
+              {formatVND(transfer.total)}đ
             </p>
             <Card>
               <CardContent className="space-y-1 pt-6">
