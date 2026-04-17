@@ -133,7 +133,13 @@ export function ClockClient({
   } | null>(null);
   const [manualCode, setManualCode] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(
-    defaultBranchId ?? branches[0]?.id ?? null,
+    () => {
+      // Prefer the user's assigned branch, but only if it exists in the GPS-enabled list
+      if (defaultBranchId != null && branches.some((b) => b.id === defaultBranchId)) {
+        return defaultBranchId;
+      }
+      return branches[0]?.id ?? null;
+    },
   );
   const [isPending, startTransition] = useTransition();
   const scannerRef = useRef<HTMLDivElement>(null);
@@ -377,6 +383,24 @@ export function ClockClient({
         {error && (
           <p className="text-center text-sm text-destructive">{error}</p>
         )}
+      </div>
+    );
+  }
+
+  // ── No branches configured with GPS — clock-in cannot proceed ──
+  if (branches.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-6 py-8 text-center">
+        <div className="flex size-24 items-center justify-center rounded-full bg-destructive/12">
+          <XCircle className="size-12 text-destructive" />
+        </div>
+        <div className="max-w-xs">
+          <h2 className="text-lg font-semibold">Chưa thể chấm công</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Chi nhánh chưa được thiết lập toạ độ GPS. Liên hệ quản lý để cấu
+            hình vị trí chi nhánh trong mục Thiết lập.
+          </p>
+        </div>
       </div>
     );
   }

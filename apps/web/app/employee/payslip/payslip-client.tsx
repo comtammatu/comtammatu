@@ -32,7 +32,9 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">
-                  Tháng {period?.period_month}/{period?.period_year}
+                  {period?.period_month && period?.period_year
+                    ? `Tháng ${period.period_month}/${period.period_year}`
+                    : "Kỳ lương"}
                 </CardTitle>
                 <Badge variant={isPaid ? "default" : "secondary"}>
                   {isPaid ? "Đã trả" : (period?.status ?? "—")}

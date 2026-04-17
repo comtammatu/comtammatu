@@ -1,9 +1,4 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@comtammatu/database/supabase/server";
-import {
-  buildLoginBlockedStatePath,
-  extractClaims,
-} from "@comtammatu/shared/auth";
+import { loadAuthState } from "@/_lib/auth";
 import { ScheduleClient } from "./schedule-client";
 import type { ScheduleShift } from "./actions";
 
@@ -12,19 +7,14 @@ function getMonday(date: Date): string {
   const day = d.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
-  return d.toISOString().split("T")[0]!;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dayStr = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dayStr}`;
 }
 
 export default async function SchedulePage() {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.user) redirect("/login");
-
-  const claims = extractClaims(session.user.app_metadata);
-  if (!claims) redirect(buildLoginBlockedStatePath());
+  const { supabase, session, claims } = await loadAuthState();
 
   // Find employee record for current user
   const { data: employee } = await supabase
@@ -53,7 +43,10 @@ export default async function SchedulePage() {
   const weekStart = getMonday(new Date());
   const weekEnd = new Date(weekStart + "T00:00:00");
   weekEnd.setDate(weekEnd.getDate() + 6);
-  const weekEndStr = weekEnd.toISOString().split("T")[0]!;
+  const wy = weekEnd.getFullYear();
+  const wm = String(weekEnd.getMonth() + 1).padStart(2, "0");
+  const wd = String(weekEnd.getDate()).padStart(2, "0");
+  const weekEndStr = `${wy}-${wm}-${wd}`;
 
   const { data } = await supabase
     .from("shift_assignments")
