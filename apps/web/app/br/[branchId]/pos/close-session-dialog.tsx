@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
 import { Separator } from "@comtammatu/ui/components/separator";
 import {
   Dialog,
@@ -16,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
+import { FieldGroup } from "@comtammatu/ui/components/field";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   AlertTriangle,
@@ -24,7 +26,25 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import { NumberField, TextField } from "@/components/form";
 import { closePosSession } from "./actions";
+
+const closeSessionSchema = z.object({
+  closing_cash: z
+    .string()
+    .trim()
+    .min(1, { error: "Tiền mặt cuối ca không được trống" })
+    .refine(
+      (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) && n >= 0;
+      },
+      { error: "Số tiền đóng ca không hợp lệ" },
+    ),
+  note: z.string().optional(),
+});
+
+type CloseSessionFormValues = z.infer<typeof closeSessionSchema>;
 
 interface CloseSummary {
   opening_cash: number;
@@ -48,53 +68,56 @@ export function CloseSessionDialog({
   onOpenChange,
 }: CloseSessionDialogProps) {
   const router = useRouter();
-  const [closingCash, setClosingCash] = useState<string>("");
-  const [note, setNote] = useState<string>("");
   const [summary, setSummary] = useState<CloseSummary | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const handleClose = useCallback(() => {
-    const cash = Number(closingCash);
-    if (Number.isNaN(cash) || cash < 0) {
-      toast.error("Số tiền đóng ca không hợp lệ");
-      return;
-    }
+  const form = useForm<CloseSessionFormValues>({
+    resolver: zodResolver(closeSessionSchema),
+    defaultValues: { closing_cash: "", note: "" },
+  });
 
-    startTransition(async () => {
-      const result = await closePosSession(sessionId, cash, note || undefined);
+  const closingCashValue = form.watch("closing_cash");
 
-      if (result.success && result.data) {
-        setSummary(result.data as CloseSummary);
-      } else {
-        toast.error(result.error ?? "Không thể đóng ca");
-      }
-    });
-  }, [sessionId, closingCash, note]);
+  const handleClose = useCallback(
+    (values: CloseSessionFormValues) => {
+      const cash = Number(values.closing_cash);
+      startTransition(async () => {
+        const result = await closePosSession(
+          sessionId,
+          cash,
+          values.note || undefined,
+        );
+        if (result.success && result.data) {
+          setSummary(result.data as CloseSummary);
+        } else {
+          toast.error(result.error ?? "Không thể đóng ca");
+        }
+      });
+    },
+    [sessionId],
+  );
 
   const handleConfirm = useCallback(() => {
     toast.success("Đóng ca thành công");
     onOpenChange(false);
     setSummary(null);
-    setClosingCash("");
-    setNote("");
+    form.reset();
     router.refresh();
-  }, [onOpenChange, router]);
+  }, [onOpenChange, router, form]);
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (!nextOpen && summary) {
-        // If summary is showing, confirm closes instead
         handleConfirm();
         return;
       }
       if (!nextOpen) {
         setSummary(null);
-        setClosingCash("");
-        setNote("");
+        form.reset();
       }
       onOpenChange(nextOpen);
     },
-    [summary, handleConfirm, onOpenChange],
+    [summary, handleConfirm, onOpenChange, form],
   );
 
   const diffColor = (diff: number) => {
@@ -102,11 +125,12 @@ export function CloseSessionDialog({
     if (Math.abs(diff) <= 50000) return "text-warning";
     return "text-destructive";
   };
+
   const closeProgressPercent = summary
     ? 100
     : isPending
       ? 72
-      : closingCash !== ""
+      : closingCashValue !== ""
         ? 46
         : 18;
 
@@ -130,7 +154,9 @@ export function CloseSessionDialog({
               <div className="relative space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tổng kết ca</p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Tổng kết ca
+                    </p>
                     <p className="mt-1 text-base font-semibold">
                       Ca đã được đối soát, chỉ còn bước xác nhận cuối.
                     </p>
@@ -219,12 +245,18 @@ export function CloseSessionDialog({
             </DialogFooter>
           </div>
         ) : (
-          <div className="flex flex-col gap-4">
+          <form
+            onSubmit={form.handleSubmit(handleClose)}
+            noValidate
+            className="flex flex-col gap-4"
+          >
             <div className="rounded-lg border bg-card shadow-sm p-4">
               <div className="relative space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Đóng ca</p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Đóng ca
+                    </p>
                     <p className="mt-1 text-base font-semibold">
                       Nhập tiền mặt cuối ca để hệ thống đối chiếu và chốt phiên.
                     </p>
@@ -237,13 +269,17 @@ export function CloseSessionDialog({
                   <div
                     className="h-full rounded-full bg-primary transition-all"
                     data-indeterminate={isPending ? "true" : undefined}
-                    style={isPending ? undefined : { width: `${closeProgressPercent}%` }}
+                    style={
+                      isPending
+                        ? undefined
+                        : { width: `${closeProgressPercent}%` }
+                    }
                   />
                 </div>
                 <div className="grid gap-2 sm:grid-cols-3">
                   <div
                     className="rounded-lg border bg-card shadow-sm p-3"
-                    data-state={closingCash !== "" ? "done" : "current"}
+                    data-state={closingCashValue !== "" ? "done" : "current"}
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">
@@ -259,7 +295,13 @@ export function CloseSessionDialog({
                   </div>
                   <div
                     className="rounded-lg border bg-card shadow-sm p-3"
-                    data-state={isPending ? "current" : closingCash !== "" ? "done" : "todo"}
+                    data-state={
+                      isPending
+                        ? "current"
+                        : closingCashValue !== ""
+                          ? "done"
+                          : "todo"
+                    }
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">
@@ -293,32 +335,27 @@ export function CloseSessionDialog({
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="closing-cash">Tiền mặt cuối ca (VNĐ)</Label>
-              <Input
-                id="closing-cash"
-                type="number"
-                min="0"
-                step="1000"
-                value={closingCash}
-                onChange={(e) => setClosingCash(e.target.value)}
+            <FieldGroup>
+              <NumberField
+                control={form.control}
+                name="closing_cash"
+                label="Tiền mặt cuối ca (VNĐ)"
+                maxFractionDigits={0}
                 placeholder="0"
                 autoFocus
+                required
               />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="close-note">Ghi chú (tùy chọn)</Label>
-              <Input
-                id="close-note"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
+              <TextField
+                control={form.control}
+                name="note"
+                label="Ghi chú (tùy chọn)"
                 placeholder="Ghi chú ca..."
               />
-            </div>
+            </FieldGroup>
 
             <DialogFooter>
               <Button
+                type="button"
                 variant="outline"
                 className="rounded-lg"
                 onClick={() => onOpenChange(false)}
@@ -327,9 +364,9 @@ export function CloseSessionDialog({
                 Hủy
               </Button>
               <Button
+                type="submit"
                 className="rounded-lg"
-                onClick={handleClose}
-                disabled={isPending || closingCash === ""}
+                disabled={isPending || closingCashValue === ""}
               >
                 {isPending ? (
                   <>
@@ -341,7 +378,7 @@ export function CloseSessionDialog({
                 )}
               </Button>
             </DialogFooter>
-          </div>
+          </form>
         )}
       </DialogContent>
     </Dialog>

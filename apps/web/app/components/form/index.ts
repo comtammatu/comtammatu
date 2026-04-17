@@ -9,3 +9,5 @@ export type {
 } from "./select-field";
 export { TextareaField } from "./textarea-field";
 export type { TextareaFieldProps } from "./textarea-field";
+export { FormDialog, valuesToFormData } from "./form-dialog";
+export type { FormDialogProps } from "./form-dialog";

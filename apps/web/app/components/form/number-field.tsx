@@ -23,6 +23,7 @@ export interface NumberFieldProps<TFieldValues extends FieldValues> {
   className?: string;
   id?: string;
   required?: boolean;
+  autoFocus?: boolean;
 }
 
 export function NumberField<TFieldValues extends FieldValues>({
@@ -37,6 +38,7 @@ export function NumberField<TFieldValues extends FieldValues>({
   className,
   id,
   required,
+  autoFocus,
 }: NumberFieldProps<TFieldValues>) {
   const { field, fieldState } = useController({ control, name });
   const fieldId = id ?? `field-${String(name)}`;
@@ -65,6 +67,7 @@ export function NumberField<TFieldValues extends FieldValues>({
         allowNegative={allowNegative}
         placeholder={placeholder}
         disabled={disabled}
+        autoFocus={autoFocus}
         aria-invalid={hasError}
         className={cn("h-10", className)}
       />
