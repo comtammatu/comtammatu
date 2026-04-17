@@ -39,8 +39,8 @@ import { cn } from "@comtammatu/ui";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
+  ComboboxField,
   NumberField,
-  SelectField,
   TextField,
   TextareaField,
 } from "@/components/form";
@@ -390,12 +390,13 @@ export function ProductionRecipePanel({
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <SelectField
+                  <ComboboxField
                     control={form.control}
                     name="finished_good_id"
                     label="Thành phẩm"
                     options={finishedGoodOptions}
                     placeholder="Chọn thành phẩm"
+                    searchPlaceholder="Tìm thành phẩm..."
                     disabled={editingRecipe != null}
                     required
                   />
@@ -422,12 +423,13 @@ export function ProductionRecipePanel({
                     )}
                 </div>
                 <div className="space-y-2">
-                  <SelectField
+                  <ComboboxField
                     control={form.control}
                     name="ingredient_id"
                     label="Nguyên liệu"
                     options={ingredientOptions}
                     placeholder="Chọn nguyên liệu"
+                    searchPlaceholder="Tìm nguyên liệu..."
                     disabled={editingRecipe != null}
                     required
                   />

@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import { Combobox } from "@/components/form";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { FormattedNumberInput } from "./_components/formatted-number-input";
 import { createProductionOrder } from "./production-actions";
@@ -103,29 +104,24 @@ function LineRowCells({
           control={control}
           name={`lines.${index}.finished_good_id`}
           render={({ field }) => (
-            <Select
+            <Combobox
               value={field.value}
               onValueChange={(v) => {
                 field.onChange(v);
                 onFinishedGoodChange(v);
               }}
-            >
-              <SelectTrigger
-                className={cn(rowError?.finished_good_id && "border-destructive")}
-                aria-invalid={!!rowError?.finished_good_id}
-                onBlur={field.onBlur}
-                ref={field.ref}
-              >
-                <SelectValue placeholder="Chọn thành phẩm" />
-              </SelectTrigger>
-              <SelectContent>
-                {finishedGoods.map((good) => (
-                  <SelectItem key={good.id} value={String(good.id)}>
-                    {good.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={finishedGoods.map((good) => ({
+                value: String(good.id),
+                label: good.name,
+                hint: good.unit,
+              }))}
+              placeholder="Chọn thành phẩm"
+              searchPlaceholder="Tìm thành phẩm..."
+              aria-invalid={!!rowError?.finished_good_id}
+              triggerClassName={cn(
+                rowError?.finished_good_id && "border-destructive",
+              )}
+            />
           )}
         />
 
