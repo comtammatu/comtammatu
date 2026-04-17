@@ -30,6 +30,7 @@ import {
 } from "@comtammatu/ui/components/card";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { InventoryHeader } from "./_components/inventory-header";
+import { MobileEntryBanner } from "./_components/mobile/mobile-entry-banner";
 import { formatVND } from "./_lib/format";
 import { getInventoryPaths, type InventoryRouteBase } from "./_lib/paths";
 import {
@@ -213,6 +214,7 @@ export function DashboardClient(props: DashboardProps) {
 
       <div className="flex-1 overflow-auto p-4">
         <div className="mx-auto max-w-7xl space-y-6">
+          <MobileEntryBanner />
           {/* KPI cards */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[

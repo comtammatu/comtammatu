@@ -48,6 +48,7 @@ import {
   type ShellNavGroup,
 } from "@/lib/shell-primitives";
 import { tNav } from "../_lib/dictionary";
+import { MobileTopBar } from "./mobile/mobile-top-bar";
 
 interface InventoryShellProps {
   children: ReactNode;
@@ -206,6 +207,16 @@ export function InventoryShell({
     () => buildInventoryGroups({ showProcurement, userRole, siteKind }),
     [showProcurement, siteKind, userRole],
   );
+
+  const isMobileRoute = pathname?.startsWith("/inventory/m") ?? false;
+  if (isMobileRoute) {
+    return (
+      <div className="flex min-h-dvh flex-col bg-background">
+        <MobileTopBar siteName={siteName} />
+        <main className="flex-1 pb-24">{children}</main>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>
