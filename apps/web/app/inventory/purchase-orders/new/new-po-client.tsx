@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
+  ArrowLeft,
   ChevronDown,
   Lightbulb,
   Package,
@@ -39,6 +40,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
+import { InventoryHeader } from "../../_components/inventory-header";
 import {
   createPurchaseOrder,
   fetchPoSuggestions,
@@ -242,13 +244,24 @@ export function NewPoClient({
   ).length;
 
   return (
-    <div className="max-w-4xl space-y-5">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">
-            Procurement Draft
-          </p>
+    <>
+      <InventoryHeader
+        title="Tạo đơn đặt hàng"
+        actions={
+          <Link
+            href={poBasePath}
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+          >
+            <ArrowLeft className="size-4" /> Danh sách PO
+          </Link>
+        }
+      />
+      <div className="flex-1 overflow-auto p-4">
+        <div className="mx-auto max-w-4xl space-y-5">
           <div className="space-y-1">
+            <p className="text-sm font-medium text-muted-foreground">
+              Procurement Draft
+            </p>
             <h1 className="text-3xl font-semibold tracking-tight">
               Tạo đơn đặt hàng
             </h1>
@@ -257,79 +270,80 @@ export function NewPoClient({
               khảo trong cùng một màn hình.
             </p>
           </div>
+
+          {/* PO header */}
+          <SupplierSection
+            suppliers={suppliers}
+            supplierId={supplierId}
+            onSupplierChange={setSupplierId}
+            notes={notes}
+            onNotesChange={setNotes}
+          />
+
+          {/* Suggestions panel */}
+          <SuggestionsPanel
+            suggestions={sortedSuggestions}
+            suggestionsOpen={suggestionsOpen}
+            onOpenChange={setSuggestionsOpen}
+            periodDays={periodDays}
+            onPeriodChange={handlePeriodChange}
+            isLoading={isLoadingSuggestions}
+            addableCount={addableCount}
+            lineIngredientIds={lineIngredientIds}
+            onAddSuggestion={addSuggestionToLines}
+            onAddAll={addAllSuggestions}
+            isMobile={isMobile}
+          />
+
+          {/* Line items */}
+          <LineItemsSection
+            lines={lines}
+            lineDeviations={lineDeviations}
+            ingredients={ingredients}
+            supplierId={supplierId}
+            totalValue={totalValue}
+            hasValue={hasValue}
+            isMobile={isMobile}
+            onRemoveLine={removeLine}
+            onAddLine={(line) => {
+              if (lines.some((l) => l.ingredientId === line.ingredientId)) {
+                toast.error("Nguyên liệu đã có trong danh sách");
+                return;
+              }
+              setLines((prev) => [...prev, line]);
+              if (line.unitPriceEst != null && line.unitPriceEst > 0) {
+                checkPriceDeviation(
+                  line.ingredientId,
+                  line.unitPriceEst,
+                  "line",
+                );
+              }
+            }}
+          />
+
+          {/* Footer */}
+          <div className="flex items-center justify-between pt-1">
+            <Button variant="ghost" asChild>
+              <Link href={poBasePath}>Hủy</Link>
+            </Button>
+            <div className="flex items-center gap-3">
+              {lines.length > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  {lines.length} dòng
+                  {hasValue && ` · ${totalValue.toLocaleString("vi-VN")} ₫`}
+                </span>
+              )}
+              <Button
+                onClick={submit}
+                disabled={isPending || !supplierId || lines.length === 0}
+              >
+                {isPending ? "Đang tạo…" : "Tạo PO"}
+              </Button>
+            </div>
+          </div>
         </div>
-        <Button variant="ghost" size="sm" asChild className="-mr-2">
-          <Link href={poBasePath}>← Danh sách PO</Link>
-        </Button>
       </div>
-
-      {/* PO header */}
-      <SupplierSection
-        suppliers={suppliers}
-        supplierId={supplierId}
-        onSupplierChange={setSupplierId}
-        notes={notes}
-        onNotesChange={setNotes}
-      />
-
-      {/* Suggestions panel */}
-      <SuggestionsPanel
-        suggestions={sortedSuggestions}
-        suggestionsOpen={suggestionsOpen}
-        onOpenChange={setSuggestionsOpen}
-        periodDays={periodDays}
-        onPeriodChange={handlePeriodChange}
-        isLoading={isLoadingSuggestions}
-        addableCount={addableCount}
-        lineIngredientIds={lineIngredientIds}
-        onAddSuggestion={addSuggestionToLines}
-        onAddAll={addAllSuggestions}
-        isMobile={isMobile}
-      />
-
-      {/* Line items */}
-      <LineItemsSection
-        lines={lines}
-        lineDeviations={lineDeviations}
-        ingredients={ingredients}
-        supplierId={supplierId}
-        totalValue={totalValue}
-        hasValue={hasValue}
-        isMobile={isMobile}
-        onRemoveLine={removeLine}
-        onAddLine={(line) => {
-          if (lines.some((l) => l.ingredientId === line.ingredientId)) {
-            toast.error("Nguyên liệu đã có trong danh sách");
-            return;
-          }
-          setLines((prev) => [...prev, line]);
-          if (line.unitPriceEst != null && line.unitPriceEst > 0) {
-            checkPriceDeviation(line.ingredientId, line.unitPriceEst, "line");
-          }
-        }}
-      />
-
-      {/* Footer */}
-      <div className="flex items-center justify-between pt-1">
-        <Button variant="ghost" asChild>
-          <Link href={poBasePath}>Hủy</Link>
-        </Button>
-        <div className="flex items-center gap-3">
-          {lines.length > 0 && (
-            <span className="text-sm text-muted-foreground">
-              {lines.length} dòng
-              {hasValue && ` · ${totalValue.toLocaleString("vi-VN")} ₫`}
-            </span>
-          )}
-          <Button
-            onClick={submit}
-            disabled={isPending || !supplierId || lines.length === 0}
-          >
-            {isPending ? "Đang tạo…" : "Tạo PO"}
-          </Button>
-        </div>
-      </div>
-    </div>
+    </>
   );
 }
 
