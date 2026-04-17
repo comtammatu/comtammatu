@@ -19,7 +19,13 @@ import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import {
   Sidebar,
   SidebarContent,
@@ -243,54 +249,60 @@ export function FinanceShell({ children, user, role }: FinanceShellProps) {
               <div className="workspace-highlight-card mt-4">
                 <div className="grid gap-3 md:grid-cols-2 md:items-start">
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <Card className="workspace-metric-card">
-                      <CardContent className="space-y-2 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                          Vai trò
-                        </p>
-                        <p className="text-lg font-semibold">
-                          {ROLE_LABEL_VI[role]}
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card className="workspace-metric-card">
-                      <CardContent className="space-y-2 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                          Khu làm việc
-                        </p>
-                        <p className="text-sm leading-6 text-foreground">
-                          Tuyến nghiệp vụ tài chính tập trung
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card className="workspace-metric-card">
-                      <CardContent className="space-y-2 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                          Điều hướng
-                        </p>
-                        <p className="text-sm leading-6 text-foreground">
-                          {navItemCount} điểm vào chính
-                        </p>
-                      </CardContent>
-                    </Card>
+                    <Item
+                      variant="outline"
+                      className="workspace-metric-card flex-col items-start gap-2 px-4 py-3"
+                    >
+                      <ItemDescription className="text-xs font-semibold uppercase tracking-widest">
+                        Vai trò
+                      </ItemDescription>
+                      <ItemTitle className="text-lg font-semibold">
+                        {ROLE_LABEL_VI[role]}
+                      </ItemTitle>
+                    </Item>
+                    <Item
+                      variant="outline"
+                      className="workspace-metric-card flex-col items-start gap-2 px-4 py-3"
+                    >
+                      <ItemDescription className="text-xs font-semibold uppercase tracking-widest">
+                        Khu làm việc
+                      </ItemDescription>
+                      <ItemTitle className="text-sm font-normal leading-6 text-foreground">
+                        Tuyến nghiệp vụ tài chính tập trung
+                      </ItemTitle>
+                    </Item>
+                    <Item
+                      variant="outline"
+                      className="workspace-metric-card flex-col items-start gap-2 px-4 py-3"
+                    >
+                      <ItemDescription className="text-xs font-semibold uppercase tracking-widest">
+                        Điều hướng
+                      </ItemDescription>
+                      <ItemTitle className="text-sm font-normal leading-6 text-foreground">
+                        {navItemCount} điểm vào chính
+                      </ItemTitle>
+                    </Item>
                   </div>
-                  <Card className="workspace-metric-card">
-                    <CardContent className="flex items-center gap-3 p-4">
+                  <Item
+                    variant="outline"
+                    className="workspace-metric-card items-center gap-3 px-4 py-3"
+                  >
+                    <ItemMedia>
                       <Avatar size="sm">
                         <AvatarFallback>
                           {getInitials(user.name)}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">
-                          {user.name}
-                        </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {ROLE_LABEL_VI[role]}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    </ItemMedia>
+                    <ItemContent>
+                      <ItemTitle className="truncate text-sm font-semibold">
+                        {user.name}
+                      </ItemTitle>
+                      <ItemDescription className="truncate text-xs">
+                        {ROLE_LABEL_VI[role]}
+                      </ItemDescription>
+                    </ItemContent>
+                  </Item>
                 </div>
               </div>
             </header>
