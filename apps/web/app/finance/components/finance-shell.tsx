@@ -20,13 +20,6 @@ import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Item,
-  ItemContent,
-  ItemDescription,
-  ItemMedia,
-  ItemTitle,
-} from "@comtammatu/ui/components/item";
-import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -47,7 +40,6 @@ import {
   isNavItemActive,
   type ShellNavGroup,
 } from "@/lib/shell-primitives";
-import { workspaceThemeProps } from "@/lib/workspace-theme";
 
 const NAV_GROUPS: ShellNavGroup[] = [
   {
@@ -111,208 +103,123 @@ export interface FinanceShellProps {
 export function FinanceShell({ children, user, role }: FinanceShellProps) {
   const pathname = usePathname();
   const pageTitle = useMemo(() => resolveTitle(pathname), [pathname]);
-  const navItemCount = useMemo(
-    () => NAV_GROUPS.reduce((acc, group) => acc + group.items.length, 0),
-    [],
-  );
 
   return (
     <SidebarProvider>
-      <div
-        {...workspaceThemeProps("finance")}
-        className="workspace-shell flex min-h-dvh w-full"
-      >
-        <Sidebar variant="inset">
-          <SidebarHeader className="gap-4 p-4">
-            <div className="workspace-sidebar-card">
-              <Link
-                href="/admin/dashboard"
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground"
-              >
-                <ArrowLeft className="size-3.5" />
-                Quản trị
-              </Link>
-              <div className="mt-4 flex items-center gap-3">
-                <div className="flex size-12 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-                  <Wallet className="size-5" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground/55">
-                    Chuyên trách
-                  </p>
-                  <p className="text-xl font-semibold">Tài chính</p>
-                </div>
-              </div>
-              <p className="mt-4 text-sm leading-6 text-sidebar-foreground/72">
-                Điều hành kế toán, báo cáo tài chính và HĐĐT theo cùng một tuyến
-                thao tác.
+      <Sidebar variant="inset">
+        <SidebarHeader className="gap-3 p-4">
+          <Link
+            href="/admin/dashboard"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground group-data-[collapsible=icon]:hidden"
+          >
+            <ArrowLeft className="size-3.5" />
+            Quản trị
+          </Link>
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
+              <Wallet className="size-5" />
+            </div>
+            <div className="min-w-0 space-y-0.5 group-data-[collapsible=icon]:hidden">
+              <p className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
+                Chuyên trách
+              </p>
+              <p className="text-lg font-semibold leading-none">Tài chính</p>
+            </div>
+          </div>
+        </SidebarHeader>
+
+        <SidebarContent className="px-2 pb-4">
+          {NAV_GROUPS.map((group) => (
+            <SidebarGroup key={group.title} className="px-0 py-1">
+              <SidebarGroupLabel className="px-2 pb-1 text-xs font-medium text-sidebar-foreground/70">
+                {group.title}
+              </SidebarGroupLabel>
+              <SidebarMenu>
+                {group.items.map((item) => {
+                  const active = isNavItemActive(item, pathname);
+                  const Icon = item.icon;
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={active}
+                        size="lg"
+                        tooltip={item.label}
+                        className="rounded-md"
+                      >
+                        <Link href={item.href}>
+                          <Icon />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroup>
+          ))}
+        </SidebarContent>
+
+        <SidebarFooter className="p-2">
+          <div className="flex items-center gap-2 px-1 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-1 group-data-[collapsible=icon]:px-0">
+            <Avatar size="sm">
+              <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+              <p className="truncate text-sm font-medium text-sidebar-foreground">
+                {user.name}
+              </p>
+              <p className="truncate text-xs text-sidebar-foreground/65">
+                {ROLE_LABEL_VI[role]}
               </p>
             </div>
-          </SidebarHeader>
-
-          <SidebarContent className="px-2 pb-4">
-            {NAV_GROUPS.map((group) => (
-              <SidebarGroup key={group.title} className="px-0 py-1">
-                <SidebarGroupLabel className="px-2 pb-1 text-xs font-medium text-sidebar-foreground/70">
-                  {group.title}
-                </SidebarGroupLabel>
-                <SidebarMenu>
-                  {group.items.map((item) => {
-                    const active = isNavItemActive(item, pathname);
-                    const Icon = item.icon;
-                    return (
-                      <SidebarMenuItem key={item.href}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={active}
-                          size="lg"
-                          tooltip={item.label}
-                          className="rounded-md"
-                        >
-                          <Link href={item.href}>
-                            <Icon />
-                            <span>{item.label}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroup>
-            ))}
-          </SidebarContent>
-
-          <SidebarFooter className="p-4 group-data-[collapsible=icon]:p-2">
-            <div className="workspace-sidebar-card p-3 group-data-[collapsible=icon]:p-2">
-              <div className="flex items-center gap-3 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-2">
-                <Avatar size="sm">
-                  <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                  <p className="truncate text-sm font-medium text-sidebar-foreground">
-                    {user.name}
-                  </p>
-                  <p className="truncate text-xs text-sidebar-foreground/65">
-                    {ROLE_LABEL_VI[role]}
-                  </p>
-                </div>
-                <form action="/api/auth/signout" method="post">
-                  <Button
-                    type="submit"
-                    variant="ghost"
-                    size="icon-lg"
-                    className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
-                    aria-label="Đăng xuất"
-                  >
-                    <LogOut className="size-4" />
-                  </Button>
-                </form>
-              </div>
-            </div>
-          </SidebarFooter>
-        </Sidebar>
-
-        <SidebarInset className="min-h-dvh bg-background/70 backdrop-blur-[2px]">
-          <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
-            <header className="workspace-header-card">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <SidebarTrigger className="md:hidden" />
-                    <span className="workspace-context-pill">
-                      Kế toán · Tài chính
-                    </span>
-                    <Badge variant="secondary">{ROLE_LABEL_VI[role]}</Badge>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                      {pageTitle}
-                    </h1>
-                    <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                      Tập trung sổ sách, báo cáo và HĐĐT trong cùng cấu trúc
-                      điều hướng.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button asChild variant="outline" size="sm">
-                    <Link href="/admin/dashboard">Quản trị</Link>
-                  </Button>
-                  <Button asChild size="sm">
-                    <Link href="/finance/statements">Báo cáo tài chính</Link>
-                  </Button>
-                </div>
-              </div>
-
-              <div className="workspace-highlight-card mt-4">
-                <div className="grid gap-3 md:grid-cols-2 md:items-start">
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <Item
-                      variant="outline"
-                      className="workspace-metric-card flex-col items-start gap-2 px-4 py-3"
-                    >
-                      <ItemDescription className="text-xs font-semibold uppercase tracking-widest">
-                        Vai trò
-                      </ItemDescription>
-                      <ItemTitle className="text-lg font-semibold">
-                        {ROLE_LABEL_VI[role]}
-                      </ItemTitle>
-                    </Item>
-                    <Item
-                      variant="outline"
-                      className="workspace-metric-card flex-col items-start gap-2 px-4 py-3"
-                    >
-                      <ItemDescription className="text-xs font-semibold uppercase tracking-widest">
-                        Khu làm việc
-                      </ItemDescription>
-                      <ItemTitle className="text-sm font-normal leading-6 text-foreground">
-                        Tuyến nghiệp vụ tài chính tập trung
-                      </ItemTitle>
-                    </Item>
-                    <Item
-                      variant="outline"
-                      className="workspace-metric-card flex-col items-start gap-2 px-4 py-3"
-                    >
-                      <ItemDescription className="text-xs font-semibold uppercase tracking-widest">
-                        Điều hướng
-                      </ItemDescription>
-                      <ItemTitle className="text-sm font-normal leading-6 text-foreground">
-                        {navItemCount} điểm vào chính
-                      </ItemTitle>
-                    </Item>
-                  </div>
-                  <Item
-                    variant="outline"
-                    className="workspace-metric-card items-center gap-3 px-4 py-3"
-                  >
-                    <ItemMedia>
-                      <Avatar size="sm">
-                        <AvatarFallback>
-                          {getInitials(user.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </ItemMedia>
-                    <ItemContent>
-                      <ItemTitle className="truncate text-sm font-semibold">
-                        {user.name}
-                      </ItemTitle>
-                      <ItemDescription className="truncate text-xs">
-                        {ROLE_LABEL_VI[role]}
-                      </ItemDescription>
-                    </ItemContent>
-                  </Item>
-                </div>
-              </div>
-            </header>
-
-            <main id="main-content" className="flex-1">
-              <div className="space-y-4">{children}</div>
-            </main>
+            <form action="/api/auth/signout" method="post">
+              <Button
+                type="submit"
+                variant="ghost"
+                size="icon-sm"
+                className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
+                aria-label="Đăng xuất"
+              >
+                <LogOut className="size-4" />
+              </Button>
+            </form>
           </div>
-        </SidebarInset>
-      </div>
+        </SidebarFooter>
+      </Sidebar>
+
+      <SidebarInset>
+        <header className="flex flex-col gap-4 border-b p-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="flex-1 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <SidebarTrigger className="md:hidden" />
+              <Badge variant="outline">Kế toán · Tài chính</Badge>
+              <Badge variant="secondary">{ROLE_LABEL_VI[role]}</Badge>
+            </div>
+            <div className="space-y-1.5">
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                {pageTitle}
+              </h1>
+              <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
+                Tập trung sổ sách, báo cáo và HĐĐT trong cùng cấu trúc điều
+                hướng.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/dashboard">Quản trị</Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href="/finance/statements">Báo cáo tài chính</Link>
+            </Button>
+          </div>
+        </header>
+
+        <main id="main-content" className="flex-1 p-4">
+          <div className="space-y-4">{children}</div>
+        </main>
+      </SidebarInset>
     </SidebarProvider>
   );
 }

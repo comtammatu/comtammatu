@@ -13,7 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
-import { workspaceThemeProps } from "@/lib/workspace-theme";
 import { LoginForm } from "./login-form";
 
 function BrandPanel() {
@@ -129,9 +128,8 @@ export default async function LoginPage({
 
   return (
     <main
-      {...workspaceThemeProps("auth")}
       id="main-content"
-      className="workspace-shell min-h-dvh w-full p-4 sm:p-6"
+      className="min-h-dvh w-full bg-background p-4 sm:p-6"
     >
       <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-2 lg:items-stretch">
         <BrandPanel />
