@@ -244,6 +244,74 @@ export async function updatePurchaseOrderStatus(
   return { success: true };
 }
 
+/* ─── fetchOpenPurchaseOrdersForReceiving ─── */
+
+export interface OpenPurchaseOrderRow {
+  id: number;
+  po_number: string;
+  status: "sent" | "partially_received";
+  ordered_at: string | null;
+  supplier_id: number;
+  supplier_name: string;
+  line_count: number;
+  total_est: number | null;
+}
+
+export async function fetchOpenPurchaseOrdersForReceiving(): Promise<
+  ActionResult<OpenPurchaseOrderRow[]>
+> {
+  const ctx = await getAuthContext(ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims } = ctx;
+
+  let query = supabase
+    .from("purchase_orders")
+    .select(
+      "id, po_number, status, ordered_at, branch_id, supplier_id, suppliers ( name ), purchase_order_items ( line_total )",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .in("status", ["sent", "partially_received"])
+    .order("ordered_at", { ascending: false });
+
+  if (
+    (claims.user_role === "warehouse_manager" ||
+      claims.user_role === "production_manager") &&
+    claims.branch_id != null
+  ) {
+    query = query.eq("branch_id", claims.branch_id);
+  }
+
+  const { data, error } = await query;
+  if (error) return { success: false, error: "Không thể tải PO chờ nhận." };
+
+  const rows: OpenPurchaseOrderRow[] = (data ?? [])
+    .map((po) => {
+      const lines =
+        (po.purchase_order_items as Array<{
+          line_total: number | null;
+        }> | null) ?? [];
+      const hasAllPrices =
+        lines.length > 0 && lines.every((l) => l.line_total != null);
+      const total = hasAllPrices
+        ? lines.reduce((s, l) => s + Number(l.line_total), 0)
+        : null;
+      return {
+        id: po.id,
+        po_number: po.po_number,
+        status: po.status as "sent" | "partially_received",
+        ordered_at: po.ordered_at,
+        supplier_id: po.supplier_id,
+        supplier_name:
+          (po.suppliers as { name: string } | null)?.name ?? "Không rõ NCC",
+        line_count: lines.length,
+        total_est: total,
+      };
+    })
+    .filter((row) => row.line_count > 0);
+
+  return { success: true, data: rows };
+}
+
 /* ─── PO Suggestions ─── */
 
 const poSuggestionsSchema = z.object({

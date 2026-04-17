@@ -2,7 +2,8 @@
 
 import { useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -16,6 +17,7 @@ import {
   CheckCircle,
   CheckCircle2,
   AlertTriangle,
+  Info,
   X,
 } from "lucide-react";
 import {
@@ -62,6 +64,9 @@ export type GRNDetail = {
 
 export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isMobile = searchParams.get("m") === "1";
+  const isReview = searchParams.get("review") === "1";
   const [isPending, startTransition] = useTransition();
   const qcPassed = grn.items.filter((i) => i.status === "pass").length;
   const qcWarning = grn.items.filter((i) => i.status === "warning").length;
@@ -75,7 +80,9 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
         return;
       }
       toast.success("Đã chốt nhập kho.");
-      if (grn.poId) {
+      if (isMobile) {
+        router.push("/inventory/m/grn");
+      } else if (grn.poId) {
         router.push(`/inventory/purchase-orders/${grn.poId}`);
       } else {
         router.push("/inventory/grn");
@@ -89,15 +96,25 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
         title="Chi tiết phiếu nhập"
         actions={
           <Link
-            href="/inventory/grn"
+            href={isMobile ? "/inventory/m/grn" : "/inventory/grn"}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
           >
-            <ArrowLeft className="size-4" /> {tRoute("/inventory/grn", "heading")}
+            <ArrowLeft className="size-4" />{" "}
+            {isMobile ? "Quay lại" : tRoute("/inventory/grn", "heading")}
           </Link>
         }
       />
       <div className="flex-1 overflow-auto p-4">
       <div className="mx-auto max-w-7xl space-y-6">
+      {isReview && canConfirm ? (
+        <Alert>
+          <Info className="size-4" />
+          <AlertDescription>
+            Đã lưu phiếu nháp. Kiểm tra lại số lượng, đơn giá rồi nhấn{" "}
+            <strong>Chốt nhập kho</strong> ở cuối trang để cập nhật tồn kho.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">
@@ -371,9 +388,21 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
           </Button>
         ) : (
           <Button asChild variant="ghost" className="justify-center">
-            <Link href={grn.poId ? `/inventory/purchase-orders/${grn.poId}` : "/inventory/grn"}>
+            <Link
+              href={
+                isMobile
+                  ? "/inventory/m/grn"
+                  : grn.poId
+                    ? `/inventory/purchase-orders/${grn.poId}`
+                    : "/inventory/grn"
+              }
+            >
               <ArrowLeft className="size-5" />
-              {grn.poId ? "Về đơn đặt hàng" : "Về danh sách GRN"}
+              {isMobile
+                ? "Về trang nhập hàng"
+                : grn.poId
+                  ? "Về đơn đặt hàng"
+                  : "Về danh sách GRN"}
             </Link>
           </Button>
         )}

@@ -41,11 +41,7 @@ import {
   type GrnDraftLine,
 } from "../../../../_lib/mobile-draft";
 import { formatVND } from "../../../../_lib/format";
-import {
-  createGrnDraft,
-  upsertGrnLine,
-  confirmGrn,
-} from "../../../../grn-actions";
+import { createGrnDraft, upsertGrnLine } from "../../../../grn-actions";
 
 type Ingredient = {
   id: number;
@@ -230,21 +226,13 @@ export function GrnCreateClient({
           return;
         }
       }
-      const confirmRes = await confirmGrn(grn.id);
-      if (!confirmRes.success) {
-        setSubmitError(
-          confirmRes.error ??
-            "Đã lưu phiếu nhưng chưa xác nhận được. Vào chi tiết để hoàn tất.",
-        );
-        return;
-      }
       removeDraft(userKey, draft.draftId);
       try {
         window.localStorage.removeItem(`active-grn:${userKey}:${supplier.id}`);
       } catch {
         /* ignore */
       }
-      router.push(`/inventory/grn/${grn.id}?m=1`);
+      router.push(`/inventory/grn/${grn.id}?m=1&review=1`);
       router.refresh();
     } catch (err) {
       console.error("submit GRN", err);
@@ -282,7 +270,7 @@ export function GrnCreateClient({
         backLabel="Đổi nhà cung cấp"
         eyebrow="Phiếu nhập mới"
         title={supplier.name}
-        description="Thêm nguyên liệu rồi xác nhận phiếu."
+        description="Thêm nguyên liệu rồi lưu nháp. Bước chốt nhập kho nằm ở màn hình chi tiết."
         action={
           lineCount > 0 ? (
             <Button
@@ -430,13 +418,13 @@ export function GrnCreateClient({
           {submitting ? (
             <>
               <Spinner className="size-5" />
-              Đang gửi...
+              Đang lưu...
             </>
           ) : lineCount === 0 ? (
             "Thêm mặt hàng để tiếp tục"
           ) : (
             <>
-              Xác nhận nhập {lineCount} mặt hàng · {formatVND(total)} đ
+              Lưu phiếu nháp · {lineCount} mặt hàng · {formatVND(total)} đ
             </>
           )}
         </TouchButton>

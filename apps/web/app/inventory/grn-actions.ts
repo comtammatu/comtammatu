@@ -2,6 +2,7 @@
 
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
@@ -291,17 +292,57 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
   // the confirm_goods_receipt_note RPC to be fully atomic.
   const poId = grnMeta?.po_id ?? null;
   if (poId) {
-    const { data: siblings } = await supabase
-      .from("goods_received_notes")
-      .select("status")
-      .eq("po_id", poId)
-      .eq("tenant_id", claims.tenant_id)
-      .neq("status", "cancelled");
-    if (siblings && siblings.length > 0) {
-      const allConfirmed = siblings.every((g) => g.status === "confirmed");
+    const [poItemsRes, grnItemsRes] = await Promise.all([
+      supabase
+        .from("purchase_order_items")
+        .select("ingredient_id, quantity")
+        .eq("po_id", poId)
+        .eq("tenant_id", claims.tenant_id),
+      supabase
+        .from("grn_items")
+        .select(
+          "ingredient_id, received_quantity, goods_received_notes!inner ( po_id, status )",
+        )
+        .eq("tenant_id", claims.tenant_id)
+        .eq("goods_received_notes.po_id", poId)
+        .eq("goods_received_notes.status", "confirmed"),
+    ]);
+
+    const poItems = poItemsRes.data ?? [];
+    const grnItemsForPo = grnItemsRes.data ?? [];
+
+    if (poItems.length > 0) {
+      const orderedByIngredient = new Map<number, number>();
+      for (const item of poItems) {
+        const prev = orderedByIngredient.get(item.ingredient_id) ?? 0;
+        orderedByIngredient.set(
+          item.ingredient_id,
+          prev + Number(item.quantity ?? 0),
+        );
+      }
+
+      const receivedByIngredient = new Map<number, number>();
+      for (const item of grnItemsForPo) {
+        const prev = receivedByIngredient.get(item.ingredient_id) ?? 0;
+        receivedByIngredient.set(
+          item.ingredient_id,
+          prev + Number(item.received_quantity ?? 0),
+        );
+      }
+
+      // Tolerance ±5% per docs/ref/inventory.md §7 (PO ↔ GRN dung sai).
+      const TOLERANCE = 0.95;
+      const allFulfilled = Array.from(orderedByIngredient.entries()).every(
+        ([ingredientId, orderedQty]) => {
+          if (orderedQty <= 0) return true;
+          const receivedQty = receivedByIngredient.get(ingredientId) ?? 0;
+          return receivedQty >= orderedQty * TOLERANCE;
+        },
+      );
+
       await supabase
         .from("purchase_orders")
-        .update({ status: allConfirmed ? "received" : "partially_received" })
+        .update({ status: allFulfilled ? "received" : "partially_received" })
         .eq("id", poId)
         .eq("tenant_id", claims.tenant_id)
         .in("status", ["sent", "partially_received"]);
@@ -370,6 +411,18 @@ export async function createGrnFromPo(poId: number): Promise<ActionResult> {
   if (!targetBranchId)
     return { success: false, error: "Chưa cấu hình kho tổng." };
 
+  if (
+    (claims.user_role === "warehouse_manager" ||
+      claims.user_role === "production_manager") &&
+    claims.branch_id != null &&
+    claims.branch_id !== targetBranchId
+  ) {
+    return {
+      success: false,
+      error: "Bạn chỉ được nhận hàng cho kho của mình.",
+    };
+  }
+
   const { data: poLines, error: linesErr } = await supabase
     .from("purchase_order_items")
     .select("ingredient_id, quantity, unit, unit_price_est")
@@ -383,6 +436,40 @@ export async function createGrnFromPo(poId: number): Promise<ActionResult> {
       success: false,
       error: "PO không có dòng nào để chuyển sang phiếu nhập.",
     };
+  }
+
+  const { data: receivedRows, error: receivedErr } = await supabase
+    .from("grn_items")
+    .select(
+      "ingredient_id, received_quantity, goods_received_notes!inner ( po_id, status )",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .eq("goods_received_notes.po_id", po.id)
+    .eq("goods_received_notes.status", "confirmed");
+  if (receivedErr) {
+    return { success: false, error: "Không thể đọc lịch sử nhận hàng." };
+  }
+
+  const receivedByIngredient = new Map<number, number>();
+  for (const row of receivedRows ?? []) {
+    const prev = receivedByIngredient.get(row.ingredient_id) ?? 0;
+    receivedByIngredient.set(
+      row.ingredient_id,
+      prev + Number(row.received_quantity ?? 0),
+    );
+  }
+
+  const remainingLines = poLines
+    .map((line) => {
+      const orderedQty = Number(line.quantity);
+      const receivedQty = receivedByIngredient.get(line.ingredient_id) ?? 0;
+      const remaining = Number((orderedQty - receivedQty).toFixed(3));
+      return { line, orderedQty, remaining };
+    })
+    .filter((entry) => entry.remaining > 0);
+
+  if (remainingLines.length === 0) {
+    return { success: false, error: "PO đã nhận đủ hàng." };
   }
 
   const grnNumber = `GRN-${randomUUID().slice(0, 8)}`;
@@ -402,18 +489,17 @@ export async function createGrnFromPo(poId: number): Promise<ActionResult> {
   if (error || !grn)
     return { success: false, error: "Không thể tạo phiếu nhập." };
 
-  const grnItems = poLines.map((line) => {
+  const grnItems = remainingLines.map(({ line, orderedQty, remaining }) => {
     const unitCost = Number(line.unit_price_est ?? 0);
-    const qty = Number(line.quantity);
     return {
       tenant_id: claims.tenant_id,
       grn_id: grn.id,
       ingredient_id: line.ingredient_id,
-      po_quantity: qty,
-      received_quantity: qty,
+      po_quantity: orderedQty,
+      received_quantity: remaining,
       unit: line.unit,
       unit_cost: unitCost,
-      total_cost: Number((qty * unitCost).toFixed(2)),
+      total_cost: Number((remaining * unitCost).toFixed(2)),
       quality_status: "accepted" as const,
     };
   });
@@ -435,6 +521,20 @@ export async function createGrnFromPo(poId: number): Promise<ActionResult> {
   }
 
   return { success: true, data: grn };
+}
+
+/* ─── startGrnFromPo (mobile form-action wrapper) ─── */
+
+export async function startGrnFromPo(formData: FormData): Promise<void> {
+  const poIdRaw = formData.get("poId");
+  const res = await createGrnFromPo(Number(poIdRaw));
+  if (!res.success) {
+    redirect(
+      `/inventory/m/grn?error=${encodeURIComponent(res.error ?? "Không thể tạo phiếu nhập từ PO.")}`,
+    );
+  }
+  const grn = res.data as { id: number };
+  redirect(`/inventory/grn/${grn.id}?m=1&review=1`);
 }
 
 /* ─── Supplier Invoices ─── */

@@ -1,6 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronRight, Phone, Receipt, Users } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronRight,
+  FileClock,
+  Phone,
+  Receipt,
+  Users,
+} from "lucide-react";
+import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
   canAccess,
@@ -11,6 +20,12 @@ import { MobilePage } from "../../_components/mobile/mobile-page";
 import { MobileSectionHeader } from "../../_components/mobile/mobile-section-header";
 import { InteractiveCard } from "../../_components/mobile/interactive-card";
 import { MobileEmptyState } from "../../_components/mobile/mobile-empty-state";
+import {
+  fetchOpenPurchaseOrdersForReceiving,
+  type OpenPurchaseOrderRow,
+} from "../../purchase-order-actions";
+import { startGrnFromPo } from "../../grn-actions";
+import { formatVND } from "../../_lib/format";
 
 type SupplierRow = {
   id: number;
@@ -100,7 +115,24 @@ function formatLastGrn(iso: string | null): string | null {
   return date.toLocaleDateString("vi-VN");
 }
 
-export default async function MobileGrnSupplierList() {
+function formatOrderedAt(iso: string | null): string {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  const now = new Date();
+  const days = Math.floor(
+    (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
+  );
+  if (days <= 0) return "Hôm nay";
+  if (days === 1) return "Hôm qua";
+  if (days < 7) return `${days} ngày trước`;
+  return date.toLocaleDateString("vi-VN");
+}
+
+export default async function MobileGrnSupplierList({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const supabase = await createClient();
   const {
     data: { session },
@@ -115,27 +147,108 @@ export default async function MobileGrnSupplierList() {
     redirect("/inventory/m?forbidden=1");
   }
 
-  const suppliers = await loadSuppliers();
+  const { error } = await searchParams;
+
+  const [suppliers, openPosRes] = await Promise.all([
+    loadSuppliers(),
+    fetchOpenPurchaseOrdersForReceiving(),
+  ]);
+
+  const openPos: OpenPurchaseOrderRow[] = openPosRes.success
+    ? (openPosRes.data ?? [])
+    : [];
 
   return (
     <MobilePage>
       <MobileSectionHeader
         backHref="/inventory/m"
         backLabel="Trang chính"
-        eyebrow="Phiếu nhập"
-        title="Chọn nhà cung cấp"
-        description="Nhà cung cấp gần đây hiển thị trước."
+        eyebrow="Nhập hàng"
+        title="Chọn nguồn nhập"
+        description="Nhận hàng theo đơn đặt hàng (PO) đã gửi hoặc nhập ad-hoc."
       />
 
-      {suppliers.length === 0 ? (
-        <MobileEmptyState
-          icon={Users}
-          title="Chưa có nhà cung cấp"
-          description="Thêm nhà cung cấp ở mục Quản lý trước khi tạo phiếu nhập."
-        />
-      ) : (
-        <div className="flex flex-col gap-2">
-          {suppliers.map((supplier) => {
+      {error ? (
+        <Alert variant="destructive">
+          <AlertTriangle className="size-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {openPos.length > 0 ? (
+        <section className="flex flex-col gap-2">
+          <div className="flex items-center justify-between px-1">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Từ PO chờ nhận
+            </p>
+            <Badge variant="secondary" className="h-5 px-2 text-[10px]">
+              {openPos.length}
+            </Badge>
+          </div>
+          {openPos.map((po) => (
+            <form
+              key={po.id}
+              action={startGrnFromPo}
+              className="contents"
+            >
+              <input type="hidden" name="poId" value={po.id} />
+              <InteractiveCard
+                asChild
+                minHeight="mobile"
+                padding="default"
+                className="h-auto"
+              >
+                <button type="submit" className="w-full text-left">
+                  <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <FileClock className="size-6" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-base font-semibold leading-tight">
+                        {po.po_number}
+                      </p>
+                      {po.status === "partially_received" ? (
+                        <Badge
+                          variant="outline"
+                          className="h-5 px-1.5 text-[10px]"
+                        >
+                          Nhận một phần
+                        </Badge>
+                      ) : null}
+                    </div>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {po.supplier_name}
+                    </p>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                      <span>{po.line_count} mặt hàng</span>
+                      {po.total_est != null ? (
+                        <span>~{formatVND(po.total_est)} đ</span>
+                      ) : null}
+                      <span>{formatOrderedAt(po.ordered_at)}</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
+                </button>
+              </InteractiveCard>
+            </form>
+          ))}
+        </section>
+      ) : null}
+
+      <section className="flex flex-col gap-2">
+        <div className="flex items-center justify-between px-1">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Nhập ad-hoc theo nhà cung cấp
+          </p>
+        </div>
+        {suppliers.length === 0 ? (
+          <MobileEmptyState
+            icon={Users}
+            title="Chưa có nhà cung cấp"
+            description="Thêm nhà cung cấp ở mục Quản lý trước khi tạo phiếu nhập."
+          />
+        ) : (
+          suppliers.map((supplier) => {
             const initials = supplier.name.slice(0, 2).toUpperCase();
             const lastLabel = formatLastGrn(supplier.last_grn_at);
             return (
@@ -147,7 +260,7 @@ export default async function MobileGrnSupplierList() {
                 className="h-auto"
               >
                 <Link href={`/inventory/m/grn/new/${supplier.id}`}>
-                  <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold uppercase text-primary">
+                  <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold uppercase text-muted-foreground">
                     {initials}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -174,9 +287,9 @@ export default async function MobileGrnSupplierList() {
                 </Link>
               </InteractiveCard>
             );
-          })}
-        </div>
-      )}
+          })
+        )}
+      </section>
     </MobilePage>
   );
 }

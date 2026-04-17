@@ -87,7 +87,8 @@ async function fetchHubCounts(): Promise<{
   const canOpenProduction =
     canAccessProductionSurface(claims.user_role) &&
     (currentBranchKind === "central_kitchen" ||
-      (currentBranchKind === null && !hasCentralKitchen));
+      currentBranchKind === null ||
+      !hasCentralKitchen);
 
   const draftProductionRes = canOpenProduction
     ? await (currentBranchKind === "central_kitchen" && claims.branch_id != null
