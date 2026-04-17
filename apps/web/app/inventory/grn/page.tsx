@@ -17,8 +17,11 @@ export default async function GRNListPage() {
     poCode:
       ((row.purchase_orders as Record<string, unknown>)?.po_number as string) ??
       "—",
-    date: row.received_at ? formatDate(row.received_at as string) : "—",
-    total: Number(row.total_amount ?? 0),
+    date: row.received_date ? formatDate(row.received_date as string) : "—",
+    total: ((row.grn_items as Array<{ total_cost: number }>) ?? []).reduce(
+      (sum, item) => sum + Number(item.total_cost ?? 0),
+      0,
+    ),
     status: (row.status as string) ?? "pending",
   }));
 
