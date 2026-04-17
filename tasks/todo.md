@@ -3,9 +3,20 @@
 > Active work items for the current session/phase.
 > Update during work, clear completed items regularly.
 
-## Module Status (updated 2026-04-16 inventory docs sync)
+## Module Status (updated 2026-04-17 shadcn + form migration)
 
 M0-M3, M5 SHIPPED. M5-Ext central kitchen production is live. M4/M6/M7 PARTIAL where blocked on credentials or incomplete accounting/payroll calc.
+
+**Shadcn primitive rollout (2026-04-17):**
+- M1 Empty consolidation ✅ — 4 custom wrappers use shadcn `Empty` internally; POS page 4 error/loading states extracted to `PosStatusShell`
+- M2 Spinner rollout ✅ — 37 files, `Loader2 + animate-spin` → `<Spinner />`
+- M3 Form migration ✅ — 21/24 dialogs migrated to RHF + zod + Field via new `apps/web/app/components/form/` helpers (TextField, NumberField, SelectField, TextareaField, FormDialog, valuesToFormData). Intentionally skipped: 2 import-export-menu + grn-create-client.tsx (wizard, out of scope)
+- M4 Item primitive rollout ⏳ — target: admin-shell metric cards, mobile list rows
+- M5 Input Group rollout ⏳ — target: search boxes with counter/filter addons (ingredient-table, POS menu, KDS filter, stock)
+- M6 Button Group rollout ⏳ — target: order type toggle, save/cancel clusters, segmented actions
+- M7 Combobox migration ⏳ — target: supplier/ingredient pickers when options >20
+- M8 Sidebar polish ⏳ — target: `collapsible="icon"` default for ≥1280px + replace ad-hoc context trail with proper `Breadcrumb`
+- M9 Kbd + shortcuts ⏳ — target: define POS/KDS keyboard shortcut map, add Kbd hints
 
 ## Documentation Status
 

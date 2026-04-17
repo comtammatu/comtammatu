@@ -36,8 +36,27 @@ Primitive source van song tai `packages/ui/src/components/*`, nhung phai tiep tu
 - `tabs`
 - `input`
 - `select`
+- `empty` — tat ca empty-state UI (no-data, no-results, error, inline)
+- `field` + `field-group` — form field composition (label, control, error, description)
+- `item` + `item-group` — list rows with media/title/description/actions
+- `spinner` — loading indicator (thay cho `Loader2 + animate-spin`)
 
 Khong fork primitive theo surface.
+
+## Form Helpers
+
+App-local form helpers song tai `apps/web/app/components/form/`. Dung cho moi dialog/form moi:
+
+- `TextField` — text Input + RHF useController
+- `NumberField` — `FormattedNumberInput` (VND format) + RHF
+- `SelectField` — Select voi `options={[{value, label}]}`
+- `TextareaField` — Textarea + RHF
+- `FormDialog` — generic Dialog + `useForm` + `zodResolver` + `useTransition`
+- `valuesToFormData` — adapter de goi server actions `withFormAction`-wrapped
+
+Import: `import { TextField, FormDialog, ... } from "@/components/form"`.
+
+Schema: luon dung Zod 4 voi `{ error: "..." }` (khong dung `{ message }`).
 
 ## Composition Rules
 
@@ -62,6 +81,10 @@ Quy tac review:
 - neu UI trong giong `badge/chip` thi phai dung `Badge`
 - neu UI trong giong `button` thi phai dung `Button`
 - neu UI trong giong bang du lieu thi phai dung `Table`
+- neu UI la empty/error state thi phai dung `Empty` (hoac wrapper `EmptyStatePanel`/`TableEmptyStateRow`)
+- neu UI la loading spinner thi phai dung `Spinner` (khong tu style `Loader2 + animate-spin`)
+- neu UI la form field thi phai dung helpers tu `@/components/form` (`TextField`, `NumberField`, `SelectField`, `TextareaField`)
+- neu UI la form dialog CRUD thi phai dung `FormDialog` wrapper
 - neu khong co primitive phu hop, dung lai va thong nhat truoc khi them pattern moi
 
 ## Operational Surfaces
