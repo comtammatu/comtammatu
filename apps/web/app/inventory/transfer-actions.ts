@@ -35,7 +35,20 @@ export async function fetchStockTransferDetail(
     .eq("transfer_id", id.data)
     .eq("tenant_id", claims.tenant_id);
   if (e2) return { success: false, error: "Không tải được dòng chuyển." };
-  return { success: true, data: { transfer: tr, lines: lines ?? [] } };
+  const { data: branches } = await supabase
+    .from("branches")
+    .select("id, name")
+    .eq("tenant_id", claims.tenant_id)
+    .in("id", [tr.from_branch_id, tr.to_branch_id]);
+  const nameById = new Map(
+    (branches ?? []).map((b) => [b.id, b.name] as const),
+  );
+  const enriched = {
+    ...tr,
+    from_branch_name: nameById.get(tr.from_branch_id) ?? null,
+    to_branch_name: nameById.get(tr.to_branch_id) ?? null,
+  };
+  return { success: true, data: { transfer: enriched, lines: lines ?? [] } };
 }
 
 export async function fetchStockTransfers(): Promise<ActionResult> {
@@ -101,7 +114,7 @@ async function loadBranchKind(
     .select("branch_kind")
     .eq("tenant_id", tenantId)
     .eq("id", branchId)
-    .single();
+    .maybeSingle();
   if (error || !data) return null;
   return data.branch_kind;
 }
