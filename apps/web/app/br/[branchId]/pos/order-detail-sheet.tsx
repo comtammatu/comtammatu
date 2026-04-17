@@ -5,6 +5,7 @@ import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
+import { Progress } from "@comtammatu/ui/components/progress";
 import {
   Sheet,
   SheetContent,
@@ -72,6 +73,7 @@ interface OrderDetailData {
   order_number: string;
   order_type: string;
   status: string;
+  payment_status: string | null;
   subtotal: number;
   tax_amount: number;
   total_amount: number;
@@ -148,7 +150,7 @@ export interface OrderDetailSheetProps {
   onStartAppend: (orderId: number, orderNumber: string) => void;
   onReorderToCart: (items: CartItem[], skippedCount: number) => void;
   tables: BranchTable[];
-  onTablesChange?: (tables: BranchTable[]) => void;
+  onOrderUpdated?: () => void | Promise<void>;
 }
 
 export function OrderDetailSheet({
@@ -158,7 +160,7 @@ export function OrderDetailSheet({
   onStartAppend,
   onReorderToCart,
   tables,
-  onTablesChange,
+  onOrderUpdated,
 }: OrderDetailSheetProps) {
   const [data, setData] = useState<OrderDetailData | null>(null);
   const [canManage, setCanManage] = useState(false);
@@ -226,6 +228,7 @@ export function OrderDetailSheet({
         toast.success("Đã hủy đơn");
         setShowCancel(false);
         setCancelReason("");
+        await onOrderUpdated?.();
         onClose();
       } else {
         toast.error(r.error ?? "Không thể hủy đơn");
@@ -243,9 +246,7 @@ export function OrderDetailSheet({
         toast.success("Đã chuyển bàn");
         setShowTransfer(false);
         setTransferTableId("");
-        onTablesChange?.(
-          tables.map((t) => (t.id === tid ? { ...t, status: "occupied" } : t)),
-        );
+        await onOrderUpdated?.();
         load();
       } else {
         toast.error(r.error ?? "Không thể chuyển bàn");
@@ -261,6 +262,7 @@ export function OrderDetailSheet({
         toast.success(
           next === "served" ? "Đã đánh dấu phục vụ" : "Đã hoàn thành",
         );
+        await onOrderUpdated?.();
         load();
       } else {
         toast.error(r.error ?? "Không thể cập nhật");
@@ -294,62 +296,11 @@ export function OrderDetailSheet({
           ? 70
           : data.status === "preparing"
             ? 52
-            : data.status === "confirmed"
+      : data.status === "confirmed"
               ? 38
               : data.status === "cancelled"
                 ? 100
                 : 22;
-
-  const orderSteps = !data
-    ? []
-    : [
-        {
-          label: "Ghi nhận",
-          meta: `Đơn #${data.order_number}`,
-          state: "done",
-        },
-        {
-          label: "Đang bếp xử lý",
-          meta:
-            ["preparing", "ready", "served", "completed"].includes(data.status)
-              ? "Món đang hoặc đã qua bếp"
-              : "Chờ bếp nhận xử lý",
-          state:
-            ["preparing", "ready", "served", "completed"].includes(data.status)
-              ? "done"
-              : data.status === "confirmed" || data.status === "new"
-                ? "current"
-                : "todo",
-        },
-        {
-          label: "Phục vụ",
-          meta:
-            data.status === "served" || data.status === "completed"
-              ? "Đã phục vụ"
-              : data.status === "ready"
-                ? "Sẵn sàng phục vụ"
-                : "Chưa phục vụ",
-          state:
-            data.status === "served" || data.status === "completed"
-              ? "done"
-              : data.status === "ready"
-                ? "current"
-                : "todo",
-        },
-        {
-          label: "Hoàn tất",
-          meta:
-            data.status === "completed"
-              ? "Đơn đã kết thúc"
-              : data.status === "cancelled"
-                ? "Đơn đã hủy"
-                : "Chưa hoàn tất",
-          state:
-            data.status === "completed" || data.status === "cancelled"
-              ? "done"
-              : "todo",
-        },
-      ] as const;
 
   const availableTables = tables.filter(
     (t) => t.status === "available" || t.id === data?.table_id,
@@ -400,74 +351,61 @@ export function OrderDetailSheet({
             <>
               <div className="border-b pb-3">
                 <div className="rounded-lg border bg-card shadow-sm p-4">
-                  <div className="relative space-y-4">
+                  <div className="space-y-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge variant="secondary">{orderStatusLabel}</Badge>
-                          {data.order_type === "dine_in" && (
-                            <span className="text-sm text-muted-foreground">
-                              Bàn {data.tables?.number ?? "—"}
-                            </span>
-                          )}
-                          {data.order_type === "takeaway" && (
-                            <span className="text-sm text-muted-foreground">
-                              Mang về
-                            </span>
-                          )}
+                          <Badge variant="outline">
+                            {data.order_type === "dine_in"
+                              ? `Bàn ${data.tables?.number ?? "—"}`
+                              : "Mang về"}
+                          </Badge>
+                          <Badge variant="outline">
+                            {data.order_items.length} món
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              data.payment_status === "paid"
+                                ? "border-success/20 bg-success/10 text-success"
+                                : "border-warning/20 bg-warning/10 text-warning",
+                            )}
+                          >
+                            {data.payment_status === "paid"
+                              ? "Đã thanh toán"
+                              : "Chưa thanh toán"}
+                          </Badge>
                         </div>
                         <p className="text-lg font-semibold tracking-tight">
-                          Điều phối đơn theo đúng bước phục vụ.
+                          #{data.order_number}
                         </p>
                         <p className="text-sm leading-6 text-muted-foreground">
-                          Theo dõi trạng thái, thêm món hoặc cập nhật phục vụ mà không bị rối thao tác.
+                          {data.status === "served"
+                            ? "Đơn đã phục vụ, có thể chuyển sang thanh toán hoặc hoàn tất."
+                            : data.status === "completed"
+                              ? "Đơn đã kết thúc, kiểm tra hóa đơn hoặc tra cứu lại khi cần."
+                              : data.status === "cancelled"
+                                ? "Đơn đã hủy, chỉ còn thao tác tra cứu và đối soát."
+                                : "Theo dõi món, thêm món hoặc cập nhật phục vụ trong cùng một màn hình."}
                         </p>
                       </div>
-                      <div
-                        className={cn(
-                          "rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm",
-                          data.status === "completed"
-                            ? "border-success/15 bg-success/10 text-success"
-                            : data.status === "cancelled"
-                              ? "border-destructive/15 bg-destructive/10 text-destructive"
-                              : "border-primary/15 bg-card text-primary",
-                        )}
-                      >
-                        {String(Math.round(orderProgressPercent))}%
+                      <div className="text-right">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          Tổng đơn
+                        </p>
+                        <p className="mt-1 text-2xl font-bold text-primary tabular-nums">
+                          {formatVND(data.total_amount)}
+                        </p>
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <div className="h-2 w-full rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-primary transition-all"
-                          style={{ width: `${orderProgressPercent}%` }}
-                        />
+                      <div className="flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground">
+                        <span>Tiến độ phục vụ</span>
+                        <span>{String(Math.round(orderProgressPercent))}%</span>
                       </div>
-                    </div>
-
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {orderSteps.map((step, index) => (
-                        <div
-                          key={step.label}
-                          data-state={step.state}
-                          className="rounded-lg border bg-card shadow-sm p-3"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">
-                              {index + 1}
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-sm font-semibold">
-                                {step.label}
-                              </p>
-                              <p className="text-xs leading-5 text-muted-foreground">
-                                {step.meta}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                      <Progress value={orderProgressPercent} className="h-2" />
                     </div>
                   </div>
                 </div>
@@ -570,10 +508,26 @@ export function OrderDetailSheet({
               </div>
 
               <div className="mt-auto flex flex-col gap-2 border-t pt-3">
-                {canAppendOrderStatus(data.status) && (
+                {data.status !== "cancelled" && (
                   <Button
                     type="button"
                     size="lg"
+                    className="min-h-11 w-full rounded-lg shadow-sm transition-transform hover:translate-y-[-1px]"
+                    onClick={() => {
+                      onOpenBill(data.id);
+                      onClose();
+                    }}
+                  >
+                    {data.payment_status === "paid"
+                      ? "Xem hóa đơn"
+                      : "Hóa đơn / thanh toán"}
+                  </Button>
+                )}
+
+                {canAppendOrderStatus(data.status) && (
+                  <Button
+                    type="button"
+                    variant="outline"
                     className="min-h-11 w-full rounded-lg shadow-sm transition-transform hover:translate-y-[-1px]"
                     onClick={() => {
                       onStartAppend(data.id, data.order_number);
@@ -597,7 +551,7 @@ export function OrderDetailSheet({
                       Phục vụ
                     </Button>
                   )}
-                  {data.status === "served" && (
+                  {data.status === "served" && data.payment_status === "paid" && (
                     <Button
                       type="button"
                       variant="secondary"
@@ -605,10 +559,18 @@ export function OrderDetailSheet({
                       disabled={isPending}
                       onClick={() => void handleStatus("completed")}
                     >
-                      Hoàn thành
+                      {data.order_type === "dine_in"
+                        ? "Hoàn tất và trả bàn"
+                        : "Hoàn tất đơn"}
                     </Button>
                   )}
                 </div>
+
+                {data.status === "served" && data.payment_status !== "paid" && (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Thanh toán trước khi hoàn tất đơn và trả bàn.
+                  </p>
+                )}
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

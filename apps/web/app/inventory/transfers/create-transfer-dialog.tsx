@@ -30,6 +30,7 @@ import {
 } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
 import { createStockTransfer } from "../transfer-actions";
 import type { IngredientRow } from "../page";
@@ -461,17 +462,12 @@ export function CreateTransferDialog({
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">
                       {l.name}
                     </span>
-                    <Input
-                      type="number"
-                      inputMode="decimal"
-                      step="any"
-                      min="0"
+                    <FormattedNumberInput
                       className="h-8 w-20"
                       placeholder="SL"
                       value={l.quantity}
-                      onChange={(e) =>
-                        updateLine(l.key, { quantity: e.target.value })
-                      }
+                      onValueChange={(value) => updateLine(l.key, { quantity: value })}
+                      maxFractionDigits={3}
                       required
                     />
                     <Input

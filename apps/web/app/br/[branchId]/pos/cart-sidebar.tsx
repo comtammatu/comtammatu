@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@comtammatu/ui";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { formatVND } from "@comtammatu/shared/format";
 import {
   AlertDialog,
@@ -14,10 +15,15 @@ import {
   AlertDialogTrigger,
 } from "@comtammatu/ui/components/alert-dialog";
 import { Button } from "@comtammatu/ui/components/button";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { Progress } from "@comtammatu/ui/components/progress";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
-  CheckCircle2,
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@comtammatu/ui/components/toggle-group";
+import {
   Loader2,
   Minus,
   Package,
@@ -40,11 +46,6 @@ interface CartSidebarProps {
   progressPercent: number;
   progressHeadline: string;
   progressHint: string;
-  steps: ReadonlyArray<{
-    label: string;
-    meta: string;
-    state: "done" | "current" | "todo";
-  }>;
   canSubmit: boolean;
   isSubmitting: boolean;
   onUpdateQuantity: (key: string, delta: number) => void;
@@ -57,29 +58,6 @@ interface CartSidebarProps {
   onOrderNoteChange: (note: string) => void;
 }
 
-function StepDot({ state }: { state: "done" | "current" | "todo" }) {
-  if (state === "done") {
-    return (
-      <span className="flex size-8 items-center justify-center rounded-full border border-success/25 bg-success text-white">
-        <CheckCircle2 className="size-4" />
-      </span>
-    );
-  }
-
-  return (
-    <span
-      className={cn(
-        "flex size-8 items-center justify-center rounded-full border text-xs font-bold",
-        state === "current"
-          ? "border-primary/25 bg-primary text-white"
-          : "border-border/70 bg-white text-muted-foreground",
-      )}
-    >
-      •
-    </span>
-  );
-}
-
 export function CartSidebar({
   items,
   total,
@@ -89,7 +67,6 @@ export function CartSidebar({
   progressPercent,
   progressHeadline,
   progressHint,
-  steps,
   canSubmit,
   isSubmitting,
   onUpdateQuantity,
@@ -106,15 +83,23 @@ export function CartSidebar({
       ? tables.find((t) => t.id === selectedTableId)?.number
       : undefined;
   const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+  const contextLabel =
+    orderType === "takeaway"
+      ? "Mang về"
+      : selectedTableNumber != null
+        ? `Bàn ${selectedTableNumber}`
+        : "Chưa chọn bàn";
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-background">
       <div className="border-b border-border/60 px-4 py-4">
-        <div className="rounded-xl border bg-card shadow-sm p-4">
-          <div className="relative space-y-4">
+        <Card className="shadow-sm">
+          <CardContent className="space-y-4 p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Điều phối đơn</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Đơn mới
+                </p>
                 <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
                   {progressHeadline}
                 </h2>
@@ -127,83 +112,55 @@ export function CartSidebar({
               </div>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-3 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Chế độ phục vụ
-                </p>
-                <div
-                  role="radiogroup"
-                  aria-label="Loại đơn hàng"
-                  className="mt-3 grid grid-cols-2 gap-2"
-                >
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={orderType === "dine_in"}
-                    className={cn(
-                      "min-h-11 min-w-11 flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all",
-                      orderType === "dine_in"
-                        ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
-                        : "border-border/70 bg-background text-foreground hover:border-primary/20",
-                    )}
-                    onClick={() => onOrderTypeChange("dine_in")}
-                  >
-                    <UtensilsCrossed className="size-4" />
-                    Tại bàn
-                  </button>
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={orderType === "takeaway"}
-                    className={cn(
-                      "min-h-11 min-w-11 flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all",
-                      orderType === "takeaway"
-                        ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
-                        : "border-border/70 bg-background text-foreground hover:border-primary/20",
-                    )}
-                    onClick={() => onOrderTypeChange("takeaway")}
-                  >
-                    <Package className="size-4" />
-                    Mang về
-                  </button>
-                </div>
-              </div>
+            <ToggleGroup
+              type="single"
+              value={orderType}
+              variant="outline"
+              size="lg"
+              className="grid w-full grid-cols-2 gap-2"
+              onValueChange={(value) => {
+                if (value === "dine_in" || value === "takeaway") {
+                  onOrderTypeChange(value);
+                }
+              }}
+            >
+              <ToggleGroupItem
+                value="dine_in"
+                className="min-h-11 justify-center gap-2 rounded-lg text-sm font-semibold"
+              >
+                <UtensilsCrossed className="size-4" />
+                Tại bàn
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="takeaway"
+                className="min-h-11 justify-center gap-2 rounded-lg text-sm font-semibold"
+              >
+                <Package className="size-4" />
+                Mang về
+              </ToggleGroupItem>
+            </ToggleGroup>
 
-              <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-3 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Ngữ cảnh đơn
-                </p>
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-base font-semibold text-foreground">
-                      {orderType === "takeaway"
-                        ? "Đơn mang về"
-                        : selectedTableNumber != null
-                          ? `Bàn ${selectedTableNumber}`
-                          : "Chưa chọn bàn"}
-                    </p>
-                    <p className="text-xs leading-5 text-muted-foreground">
-                      {orderType === "takeaway"
-                        ? "Bỏ qua bước gán bàn và có thể tạo đơn ngay khi có món."
-                        : selectedTableNumber != null
-                          ? "Đã khoá ngữ cảnh bàn, có thể tiếp tục thêm món."
-                          : "Chọn bàn đúng trước khi gửi món xuống bếp."}
-                    </p>
-                  </div>
-                  {orderType === "dine_in" && selectedTableNumber != null && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-9 rounded-full px-4 text-xs"
-                      type="button"
-                      onClick={onRequestChangeTable}
-                    >
-                      Đổi bàn
-                    </Button>
-                  )}
-                </div>
-              </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="rounded-full px-3 py-1">
+                {contextLabel}
+              </Badge>
+              <Badge variant="outline" className="rounded-full px-3 py-1">
+                {totalQuantity > 0 ? `${totalQuantity} món` : "Chưa có món"}
+              </Badge>
+              <Badge variant="outline" className="rounded-full px-3 py-1">
+                {canSubmit ? "Có thể gửi bếp" : "Chờ hoàn thiện thông tin"}
+              </Badge>
+              {orderType === "dine_in" && selectedTableNumber != null && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 rounded-full px-4 text-xs"
+                  type="button"
+                  onClick={onRequestChangeTable}
+                >
+                  Đổi bàn
+                </Button>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -211,40 +168,10 @@ export function CartSidebar({
                 <span>Tiến độ tạo đơn</span>
                 <span>{Math.round(progressPercent)}%</span>
               </div>
-              <div className="h-2 w-full rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  data-indeterminate={isSubmitting ? "true" : undefined}
-                  style={isSubmitting ? undefined : { width: `${progressPercent}%` }}
-                />
-              </div>
+              <Progress value={isSubmitting ? undefined : progressPercent} className="h-2" />
             </div>
-
-            <div className="space-y-2">
-              {steps.map((step) => (
-                <div
-                  key={step.label}
-                  className={cn(
-                    "transition-all hover:-translate-y-0.5 hover:shadow-md flex items-start gap-3 rounded-xl border px-3 py-3",
-                    step.state === "done" && "border-success/25 bg-success/10",
-                    step.state === "current" && "border-primary/25 bg-primary/8",
-                    step.state === "todo" && "border-border/70 bg-background/80",
-                  )}
-                >
-                  <StepDot state={step.state} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground">
-                      {step.label}
-                    </p>
-                    <p className="text-xs leading-5 text-muted-foreground">
-                      {step.meta}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
@@ -439,7 +366,7 @@ export function CartSidebar({
                         : "border-warning/15 bg-warning/10 text-warning",
                     )}
                   >
-                    {canSubmit ? "Sẵn sàng gửi bếp" : "Chờ hoàn thiện ngữ cảnh"}
+                    {canSubmit ? "Sẵn sàng gửi bếp" : "Chờ hoàn thiện thông tin đơn"}
                   </div>
                 </div>
 

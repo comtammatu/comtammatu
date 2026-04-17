@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
 import type { PaymentMethod } from "@comtammatu/shared/providers";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { Progress } from "@comtammatu/ui/components/progress";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
 import {
@@ -24,8 +27,12 @@ import {
   ScanQrCode,
 } from "lucide-react";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { fetchOrderForBill } from "./actions";
-import { createPayment, fetchPaymentMethodsForPos } from "./payment-actions";
+import { fetchOrderForBill, updateOrderStatus } from "./actions";
+import {
+  createPayment,
+  fetchPaymentForOrder,
+  fetchPaymentMethodsForPos,
+} from "./payment-actions";
 import type { CartModifier, CartSide } from "./types";
 
 interface OrderItem {
@@ -67,31 +74,39 @@ const METHOD_LABELS: Record<string, string> = {
   momo: "MoMo",
 };
 
-type PaymentStepState = "done" | "current" | "todo";
-
 interface BillReceiptProps {
   branchId: number;
   orderId: number | null;
+  onOrderUpdated?: () => void | Promise<void>;
   onClose: () => void;
 }
 
-export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
+export function BillReceipt({
+  branchId,
+  orderId,
+  onOrderUpdated,
+  onClose,
+}: BillReceiptProps) {
   const [order, setOrder] = useState<OrderData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [payPending, startPayTransition] = useTransition();
+  const [completePending, startCompleteTransition] = useTransition();
   const [refreshTick, setRefreshTick] = useState(0);
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [pendingExtras, setPendingExtras] = useState<{
     qr_data?: string;
     redirect_url?: string;
   } | null>(null);
+  const [awaitingAsyncConfirmation, setAwaitingAsyncConfirmation] =
+    useState(false);
 
   useEffect(() => {
     if (orderId === null) {
       setOrder(null);
       setError(null);
       setPendingExtras(null);
+      setAwaitingAsyncConfirmation(false);
       return;
     }
 
@@ -101,9 +116,12 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
       const result = await fetchOrderForBill(orderId);
       if (cancelled) return;
       if (result.success && result.data) {
-        setOrder(result.data as OrderData);
+        const nextOrder = result.data as OrderData;
+        setOrder(nextOrder);
         setError(null);
-        setPendingExtras(null);
+        setPendingExtras((current) =>
+          nextOrder.payment_status === "paid" ? null : current,
+        );
       } else {
         setError(result.error ?? "Không thể tải đơn hàng");
       }
@@ -154,6 +172,7 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
         if (result.success && result.data) {
           if (method === "cash") {
             toast.success("Đã thanh toán tiền mặt");
+            await onOrderUpdated?.();
             setRefreshTick((t) => t + 1);
             return;
           }
@@ -161,6 +180,8 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
             toast.message("Đang chờ thanh toán", {
               description: "Quý khách hoàn tất trên app / chuyển khoản.",
             });
+            await onOrderUpdated?.();
+            setAwaitingAsyncConfirmation(true);
             setPendingExtras({
               qr_data: result.data.qr_data,
               redirect_url: result.data.redirect_url,
@@ -172,8 +193,22 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
         }
       });
     },
-    [branchId, order, orderId],
+    [branchId, onOrderUpdated, order, orderId],
   );
+
+  const handleCompleteOrder = useCallback(() => {
+    if (orderId === null) return;
+    startCompleteTransition(async () => {
+      const result = await updateOrderStatus(orderId, "completed");
+      if (result.success) {
+        toast.success("Đã hoàn tất đơn");
+        await onOrderUpdated?.();
+        onClose();
+      } else {
+        toast.error(result.error ?? "Không thể hoàn tất đơn");
+      }
+    });
+  }, [onClose, onOrderUpdated, orderId]);
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -187,7 +222,13 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
   };
 
   const isPaid = order?.payment_status === "paid";
+  const hasPendingRemotePayment =
+    !isPaid &&
+    (pendingExtras !== null ||
+      order?.payment_method === "vietqr" ||
+      order?.payment_method === "momo");
   const showPaySection = order && !isPaid && methods.length > 0;
+  const canCompleteOrder = order?.status === "served" && isPaid;
   const paymentProgressPercent = isPaid
     ? 100
     : payPending
@@ -198,30 +239,41 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
           ? 46
           : 24;
 
-  const paymentSteps: ReadonlyArray<{
-    label: string;
-    meta: string;
-    state: PaymentStepState;
-  }> = [
-    {
-      label: "Xác nhận đơn",
-      meta: order ? `Đơn #${order.order_number}` : "Đang tải đơn",
-      state: order ? "done" : "current",
-    },
-    {
-      label: "Chọn thanh toán",
-      meta:
-        isPaid || pendingExtras || payPending
-          ? METHOD_LABELS[order?.payment_method ?? ""] ?? "Đã chọn phương thức"
-          : "Chọn tiền mặt, QR hoặc ví điện tử",
-      state: order ? (isPaid || pendingExtras || payPending ? "done" : "current") : "todo",
-    },
-    {
-      label: "Hoàn tất",
-      meta: isPaid ? "Đã thanh toán" : pendingExtras ? "Đang chờ khách hoàn tất" : "Chưa hoàn tất",
-      state: isPaid ? "done" : pendingExtras || payPending ? "current" : "todo",
-    },
-  ];
+  useEffect(() => {
+    if (!awaitingAsyncConfirmation || !isPaid) return;
+    toast.success("Đã xác nhận thanh toán");
+    void onOrderUpdated?.();
+    setAwaitingAsyncConfirmation(false);
+  }, [awaitingAsyncConfirmation, isPaid, onOrderUpdated]);
+
+  useEffect(() => {
+    if (orderId === null || isPaid || !hasPendingRemotePayment) return;
+
+    const intervalId = window.setInterval(() => {
+      void fetchPaymentForOrder(orderId).then((result) => {
+        if (!result.success) return;
+        if (result.data?.status === "completed") {
+          setRefreshTick((tick) => tick + 1);
+          return;
+        }
+        if (
+          result.data?.status === "pending" &&
+          awaitingAsyncConfirmation
+        ) {
+          setRefreshTick((tick) => tick + 1);
+        }
+      });
+    }, 4000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [
+    awaitingAsyncConfirmation,
+    hasPendingRemotePayment,
+    isPaid,
+    orderId,
+  ]);
 
   return (
     <Sheet open={orderId !== null} onOpenChange={handleOpenChange}>
@@ -247,11 +299,11 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
             </SheetHeader>
 
             <div className="border-b px-4 py-3 print:hidden">
-              <div className="rounded-lg border bg-card shadow-sm p-4">
-                <div className="relative space-y-4">
+              <Card className="shadow-sm">
+                <CardContent className="space-y-4 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Payment flow</p>
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Thanh toán</p>
                       <h3 className="text-lg font-semibold tracking-tight">
                         {isPaid
                           ? "Hóa đơn đã hoàn tất, có thể in hoặc gửi khách."
@@ -260,7 +312,7 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
                             : "Chọn phương thức và hoàn tất thanh toán ngay tại quầy."}
                       </h3>
                       <p className="text-sm leading-6 text-muted-foreground">
-                        Trạng thái thanh toán được hiển thị theo từng bước để thu ngân không phải suy đoán.
+                        Thu ngân có thể chốt tiền mặt, mở QR hoặc kiểm tra lại hóa đơn ngay tại đây.
                       </p>
                     </div>
                     <div
@@ -281,41 +333,56 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
                     </div>
                   </div>
 
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline">
+                      {order.order_type === "dine_in"
+                        ? `Bàn ${order.tables?.number ?? "—"}`
+                        : "Mang về"}
+                    </Badge>
+                    <Badge variant="outline">
+                      {order.order_items.length} món
+                    </Badge>
+                    <Badge variant="outline">
+                      {METHOD_LABELS[order.payment_method ?? ""] ??
+                        (pendingExtras ? "Đã chọn phương thức" : "Chưa chọn phương thức")}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-end justify-between gap-3 rounded-lg border bg-card p-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Tổng cần thu
+                      </p>
+                      <p className="mt-1 text-2xl font-bold text-primary tabular-nums">
+                        {formatVND(order.total_amount)}
+                      </p>
+                    </div>
+                    <p className="text-right text-xs leading-5 text-muted-foreground">
+                      {isPaid
+                        ? "Đơn đã thanh toán xong."
+                        : pendingExtras
+                          ? "Đang chờ khách xác nhận giao dịch."
+                          : "Chưa ghi nhận thanh toán."}
+                    </p>
+                  </div>
+
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground">
                       <span>Tiến độ thanh toán</span>
                       <span>{String(Math.round(paymentProgressPercent))}%</span>
                     </div>
-                    <div className="h-2 w-full rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-primary transition-all"
-                        data-indeterminate={payPending ? "true" : undefined}
-                        style={payPending ? undefined : { width: `${paymentProgressPercent}%` }}
-                      />
-                    </div>
+                    <Progress
+                      value={payPending ? undefined : paymentProgressPercent}
+                      className="h-2"
+                    />
+                    {hasPendingRemotePayment && (
+                      <p className="text-xs text-muted-foreground">
+                        Tự động kiểm tra thanh toán mỗi 4 giây.
+                      </p>
+                    )}
                   </div>
-
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    {paymentSteps.map((step, index) => (
-                      <div
-                        key={step.label}
-                        data-state={step.state}
-                        className="rounded-lg border bg-card shadow-sm p-3"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">{index + 1}</div>
-                          <div className="space-y-1">
-                            <p className="text-sm font-semibold">{step.label}</p>
-                            <p className="text-xs leading-5 text-muted-foreground">
-                              {step.meta}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </div>
 
             <ScrollArea className="flex-1">
@@ -451,13 +518,13 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
               {/* Payment actions — not printed */}
               {showPaySection && (
                 <div className="border-t px-4 py-3 print:hidden">
-                  <div className="rounded-lg border bg-card shadow-sm p-4">
-                    <div className="relative space-y-4">
+                  <Card className="shadow-sm">
+                    <CardContent className="space-y-4 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Thanh toán</p>
+                          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Thu ngân</p>
                           <h4 className="mt-1 text-base font-semibold">
-                            Chọn phương thức xử lý tại quầy
+                            Chọn phương thức xử lý ngay tại quầy
                           </h4>
                         </div>
                         <div className="rounded-full border border-primary/15 bg-card px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
@@ -471,7 +538,7 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
                             key={m}
                             type="button"
                             variant={m === "cash" ? "default" : "secondary"}
-                            disabled={payPending}
+                            disabled={payPending || hasPendingRemotePayment}
                             className={cn(
                               "h-12 w-full justify-between rounded-lg px-4 text-sm font-semibold shadow-sm transition-transform hover:translate-y-[-1px]",
                               m === "cash" && "shadow-md",
@@ -532,22 +599,44 @@ export function BillReceipt({ branchId, orderId, onClose }: BillReceiptProps) {
                             {pendingExtras.qr_data}
                           </pre>
                         )}
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 </div>
               )}
             </ScrollArea>
 
             {/* Print button (hidden in print) */}
             <div className="border-t p-4 print:hidden">
-              <Button className="w-full rounded-lg shadow-sm transition-transform hover:translate-y-[-1px]" onClick={handlePrint}>
+              <div className="space-y-2">
+                {canCompleteOrder && (
+                  <Button
+                    className="w-full rounded-lg shadow-sm transition-transform hover:translate-y-[-1px]"
+                    onClick={handleCompleteOrder}
+                    disabled={completePending}
+                  >
+                    {completePending ? (
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="mr-2 size-4" />
+                    )}
+                    {order?.order_type === "dine_in"
+                      ? "Hoàn tất và trả bàn"
+                      : "Hoàn tất đơn"}
+                  </Button>
+                )}
+                <Button
+                  variant={canCompleteOrder ? "outline" : "default"}
+                  className="w-full rounded-lg shadow-sm transition-transform hover:translate-y-[-1px]"
+                  onClick={handlePrint}
+                >
                 {isPaid ? (
                   <CheckCircle2 className="mr-2 size-4" />
                 ) : (
                   <Printer className="mr-2 size-4" />
                 )}
                 In hóa đơn
-              </Button>
+                </Button>
+              </div>
             </div>
           </div>
         ) : null}

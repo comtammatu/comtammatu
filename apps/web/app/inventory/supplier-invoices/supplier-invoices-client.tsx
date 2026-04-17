@@ -38,6 +38,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
+import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { InventoryHeader } from "../_components/inventory-header";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import {
@@ -934,25 +935,19 @@ export function SupplierInvoicesClient({
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label>Tạm tính</Label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="1000"
+                <FormattedNumberInput
                   value={subtotal}
-                  onChange={(event) => setSubtotal(event.target.value)}
+                  onValueChange={setSubtotal}
+                  maxFractionDigits={0}
                   placeholder="0"
                 />
               </div>
               <div className="grid gap-2">
                 <Label>VAT %</Label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="0.1"
+                <FormattedNumberInput
                   value={vatRate}
-                  onChange={(event) => setVatRate(event.target.value)}
+                  onValueChange={setVatRate}
+                  maxFractionDigits={1}
                   placeholder="8"
                 />
               </div>
@@ -1027,10 +1022,10 @@ export function SupplierInvoicesClient({
 
             <div className="grid gap-2">
               <Label>Số tiền thanh toán</Label>
-              <Input
-                inputMode="decimal"
+              <FormattedNumberInput
                 value={paymentAmount}
-                onChange={(event) => setPaymentAmount(event.target.value)}
+                onValueChange={setPaymentAmount}
+                maxFractionDigits={0}
                 placeholder="0"
               />
             </div>

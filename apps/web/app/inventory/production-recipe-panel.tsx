@@ -43,6 +43,7 @@ import {
 import { cn } from "@comtammatu/ui";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { FormattedNumberInput } from "./_components/formatted-number-input";
 import { createIngredient } from "./actions";
 import {
   deleteProductionRecipeGroup,
@@ -721,13 +722,11 @@ export function ProductionRecipePanel({
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="recipeQuantity">Số lượng</Label>
-                <Input
+                <FormattedNumberInput
                   id="recipeQuantity"
-                  type="number"
-                  min={0}
-                  step={0.001}
                   value={recipeQuantity}
-                  onChange={(e) => setRecipeQuantity(e.target.value)}
+                  onValueChange={setRecipeQuantity}
+                  maxFractionDigits={3}
                 />
               </div>
               <div className="space-y-2">
@@ -740,13 +739,11 @@ export function ProductionRecipePanel({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="recipeYieldFactor">Yield</Label>
-                <Input
+                <FormattedNumberInput
                   id="recipeYieldFactor"
-                  type="number"
-                  min={0}
-                  step={0.001}
                   value={recipeYieldFactor}
-                  onChange={(e) => setRecipeYieldFactor(e.target.value)}
+                  onValueChange={setRecipeYieldFactor}
+                  maxFractionDigits={3}
                 />
               </div>
             </div>

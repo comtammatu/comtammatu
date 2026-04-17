@@ -173,8 +173,7 @@ export function RefundsClient({
         <CardHeader>
           <CardTitle>Yêu cầu hoàn tiền</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Duyệt, từ chối và rà soát tất cả yêu cầu hoàn tiền trong cùng một bề
-            mặt điều phối.
+            Duyệt, từ chối và rà soát các yêu cầu hoàn tiền tại một nơi.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">

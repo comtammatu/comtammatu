@@ -38,6 +38,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import {
   createPurchaseOrder,
   fetchPoSuggestions,
@@ -252,8 +253,8 @@ export function NewPoClient({
               Tạo đơn đặt hàng
             </h1>
             <p className="text-sm text-muted-foreground">
-              Lập PO mới từ nhà cung cấp, gợi ý nhu cầu và giá tham chiếu theo
-              cùng một flow vận hành mới.
+              Lập PO từ nhà cung cấp, xem gợi ý nhu cầu và đối chiếu giá tham
+              khảo trong cùng một màn hình.
             </p>
           </div>
         </div>
@@ -670,6 +671,8 @@ function LineItemsSection({
 }) {
   const [ingredientId, setIngredientId] = useState("");
   const [unit, setUnit] = useState("");
+  const [qtyInput, setQtyInput] = useState("");
+  const [unitPriceInput, setUnitPriceInput] = useState("");
   const [addRowDeviation, setAddRowDeviation] =
     useState<SinglePriceDeviation | null>(null);
   const qtyRef = useRef<HTMLInputElement>(null);
@@ -685,16 +688,15 @@ function LineItemsSection({
 
   function handleAddLine(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
     const iid = Number(ingredientId);
     if (!iid) {
       toast.error("Chọn nguyên liệu");
       return;
     }
     const ing = ingredients.find((x) => x.id === iid);
-    const resolvedUnit = String(fd.get("unit") ?? ing?.unit ?? "");
-    const qty = Number(fd.get("qty"));
-    const priceRaw = String(fd.get("unitPriceEst") ?? "").trim();
+    const resolvedUnit = unit || ing?.unit || "";
+    const qty = Number(qtyInput);
+    const priceRaw = unitPriceInput.trim();
     const unitPriceEst = priceRaw === "" ? null : Number(priceRaw);
     if (!resolvedUnit || !Number.isFinite(qty) || qty <= 0) {
       toast.error("Nhập số lượng hợp lệ");
@@ -709,13 +711,13 @@ function LineItemsSection({
     });
     setIngredientId("");
     setUnit("");
+    setQtyInput("");
+    setUnitPriceInput("");
     setAddRowDeviation(null);
-    if (qtyRef.current) qtyRef.current.value = "";
-    if (priceRef.current) priceRef.current.value = "";
   }
 
-  function checkAddRowDeviation(e: React.FocusEvent<HTMLInputElement>) {
-    const price = Number(e.target.value);
+  function checkAddRowDeviation() {
+    const price = Number(unitPriceInput);
     const ingId = Number(ingredientId);
     if (ingId && price > 0 && supplierId) {
       fetchSinglePriceDeviation({
@@ -826,15 +828,14 @@ function LineItemsSection({
                 </SelectContent>
               </Select>
               <div className="grid grid-cols-3 gap-2">
-                <Input
+                <FormattedNumberInput
                   ref={qtyRef}
-                  name="qty"
-                  type="number"
-                  step="any"
-                  min="0.001"
-                  required
                   placeholder="SL"
                   className="h-8 text-sm"
+                  value={qtyInput}
+                  onValueChange={setQtyInput}
+                  maxFractionDigits={3}
+                  required
                 />
                 <Input
                   name="unit"
@@ -844,15 +845,14 @@ function LineItemsSection({
                   required
                   className="h-8 text-sm"
                 />
-                <Input
+                <FormattedNumberInput
                   ref={priceRef}
-                  name="unitPriceEst"
-                  type="number"
-                  step="any"
-                  min="0"
                   placeholder="Giá"
                   className="h-8 text-sm"
+                  value={unitPriceInput}
+                  onValueChange={setUnitPriceInput}
                   onBlur={checkAddRowDeviation}
+                  maxFractionDigits={0}
                 />
               </div>
               <Button
@@ -999,15 +999,14 @@ function LineItemsSection({
               </Select>
             </div>
             <div>
-              <Input
+              <FormattedNumberInput
                 ref={qtyRef}
-                name="qty"
-                type="number"
-                step="any"
-                min="0.001"
-                required
                 placeholder="SL"
                 className="h-8 text-sm text-right"
+                value={qtyInput}
+                onValueChange={setQtyInput}
+                maxFractionDigits={3}
+                required
               />
             </div>
             <div className="pl-2">
@@ -1021,15 +1020,14 @@ function LineItemsSection({
               />
             </div>
             <div className="pl-2">
-              <Input
+              <FormattedNumberInput
                 ref={priceRef}
-                name="unitPriceEst"
-                type="number"
-                step="any"
-                min="0"
                 placeholder="Giá (tùy chọn)"
                 className="h-8 text-sm text-right"
+                value={unitPriceInput}
+                onValueChange={setUnitPriceInput}
                 onBlur={checkAddRowDeviation}
+                maxFractionDigits={0}
               />
             </div>
             <div className="pl-2 flex justify-end">

@@ -23,6 +23,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { FormattedNumberInput } from "./_components/formatted-number-input";
 import { createProductionOrder } from "./production-actions";
 import { defaultProductionNumber } from "./production-types";
 import type {
@@ -262,14 +263,12 @@ export function ProductionOrderForm({
                       ))}
                     </SelectContent>
                   </Select>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={0.001}
+                  <FormattedNumberInput
                     value={line.quantity}
-                    onChange={(e) =>
-                      updateLine(index, { quantity: e.target.value })
+                    onValueChange={(value) =>
+                      updateLine(index, { quantity: value })
                     }
+                    maxFractionDigits={3}
                     placeholder="Số lượng"
                   />
                   <Input

@@ -193,13 +193,13 @@ export default async function DashboardPage() {
     <Card>
       <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
-          <CardTitle>Tín hiệu bán hàng gần đây</CardTitle>
+          <CardTitle>Đơn hàng gần đây</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Luồng đơn mới nhất để đọc nhanh các nhịp bán hàng đang diễn ra.
+            Theo dõi nhanh các đơn vừa phát sinh trong cửa hàng.
           </p>
         </div>
         <Badge variant="success" className="rounded-full px-3 py-1.5">
-          Tín hiệu
+          Mới nhất
         </Badge>
       </CardHeader>
       <CardContent>
@@ -255,7 +255,7 @@ export default async function DashboardPage() {
           <CircleAlert className="size-5" />
         </div>
         <div className="space-y-1.5">
-          <h3 className="text-2xl font-semibold">Chưa có tín hiệu bán hàng mới</h3>
+          <h3 className="text-2xl font-semibold">Chưa có đơn hàng mới</h3>
         </div>
         <div className="flex flex-wrap justify-center gap-2">
           <Button asChild variant="outline" size="sm">

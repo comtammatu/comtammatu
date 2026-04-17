@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { upsertRecipeLines } from "../procurement-actions";
 
 export interface MenuItemOption {
@@ -336,15 +337,13 @@ export function RecipeLineDialog({
                         ))}
                       </SelectContent>
                     </Select>
-                    <Input
-                      type="number"
-                      min={0.001}
-                      step={0.001}
+                    <FormattedNumberInput
                       placeholder="VD: 0.5"
                       value={row.quantity}
-                      onChange={(e) =>
-                        updateRow(row.key, { quantity: e.target.value })
+                      onValueChange={(value) =>
+                        updateRow(row.key, { quantity: value })
                       }
+                      maxFractionDigits={3}
                       className="h-9"
                     />
                     <Input
@@ -355,14 +354,12 @@ export function RecipeLineDialog({
                       }
                       className="h-9"
                     />
-                    <Input
-                      type="number"
-                      min={0.01}
-                      step={0.01}
+                    <FormattedNumberInput
                       value={row.yieldFactor}
-                      onChange={(e) =>
-                        updateRow(row.key, { yieldFactor: e.target.value })
+                      onValueChange={(value) =>
+                        updateRow(row.key, { yieldFactor: value })
                       }
+                      maxFractionDigits={2}
                       className="h-9"
                     />
                     <Input

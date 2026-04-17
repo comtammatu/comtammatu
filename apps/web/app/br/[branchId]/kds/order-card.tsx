@@ -47,11 +47,11 @@ function getStatusConfig(status: string) {
 const ORDER_TYPE_CONFIG: Record<string, { label: string; className: string }> =
   {
     dine_in: {
-      label: "Tại chỗ",
+      label: "Tại bàn",
       className: "bg-info/20 text-info border-info/30",
     },
     takeaway: {
-      label: "Mang đi",
+      label: "Mang về",
       className: "bg-accent/20 text-accent-foreground border-accent/40",
     },
   };

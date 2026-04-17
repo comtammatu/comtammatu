@@ -42,6 +42,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { InventoryHeader } from "../_components/inventory-header";
 import { adjustStock, fetchExpiryAlerts } from "../actions";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
@@ -516,18 +517,16 @@ export function ExpiryListClient({
           </AlertDialogHeader>
           <div className="space-y-3 px-1">
             <Label htmlFor="writeoff-qty">Số lượng xóa sổ</Label>
-            <Input
+            <FormattedNumberInput
               id="writeoff-qty"
-              type="number"
-              min={1}
-              step="any"
               placeholder="Nhập số lượng..."
               value={writeOff?.quantity ?? ""}
-              onChange={(e) =>
+              onValueChange={(value) =>
                 setWriteOff((prev) =>
-                  prev ? { ...prev, quantity: e.target.value } : null,
+                  prev ? { ...prev, quantity: value } : null,
                 )
               }
+              maxFractionDigits={3}
             />
           </div>
           <AlertDialogFooter>

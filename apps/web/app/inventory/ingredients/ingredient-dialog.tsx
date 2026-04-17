@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { createIngredient, updateIngredient } from "../actions";
 
 export interface IngredientRow {
@@ -66,6 +67,11 @@ function IngredientFormContent({
   const [itemKind, setItemKind] = useState<string>(
     ingredient?.item_kind ?? "raw_material",
   );
+  const [unitCost, setUnitCost] = useState("");
+  const [minStockLevel, setMinStockLevel] = useState("");
+  const [maxStockLevel, setMaxStockLevel] = useState("");
+  const [reorderPoint, setReorderPoint] = useState("");
+  const [shelfLifeDays, setShelfLifeDays] = useState("");
 
   useEffect(() => {
     if (!open) {
@@ -74,6 +80,19 @@ function IngredientFormContent({
 
     setStorageType(ingredient?.storage_type ?? "ambient");
     setItemKind(ingredient?.item_kind ?? "raw_material");
+    setUnitCost(ingredient?.unit_cost != null ? String(ingredient.unit_cost) : "");
+    setMinStockLevel(
+      ingredient?.min_stock_level != null ? String(ingredient.min_stock_level) : "",
+    );
+    setMaxStockLevel(
+      ingredient?.max_stock_level != null ? String(ingredient.max_stock_level) : "",
+    );
+    setReorderPoint(
+      ingredient?.reorder_point != null ? String(ingredient.reorder_point) : "",
+    );
+    setShelfLifeDays(
+      ingredient?.shelf_life_days != null ? String(ingredient.shelf_life_days) : "",
+    );
     setError(null);
   }, [open, ingredient]);
 
@@ -85,22 +104,14 @@ function IngredientFormContent({
       name: fd.get("name") as string,
       unit: fd.get("unit") as string,
       sku: (fd.get("sku") as string) || undefined,
-      unit_cost: fd.get("unit_cost") ? Number(fd.get("unit_cost")) : undefined,
+      unit_cost: unitCost ? Number(unitCost) : undefined,
       category: (fd.get("category") as string) || undefined,
       item_kind: itemKind as "raw_material" | "finished_good",
       storage_type: storageType as "ambient" | "refrigerated" | "frozen",
-      min_stock_level: fd.get("min_stock_level")
-        ? Number(fd.get("min_stock_level"))
-        : undefined,
-      max_stock_level: fd.get("max_stock_level")
-        ? Number(fd.get("max_stock_level"))
-        : undefined,
-      reorder_point: fd.get("reorder_point")
-        ? Number(fd.get("reorder_point"))
-        : undefined,
-      shelf_life_days: fd.get("shelf_life_days")
-        ? Number(fd.get("shelf_life_days"))
-        : undefined,
+      min_stock_level: minStockLevel ? Number(minStockLevel) : undefined,
+      max_stock_level: maxStockLevel ? Number(maxStockLevel) : undefined,
+      reorder_point: reorderPoint ? Number(reorderPoint) : undefined,
+      shelf_life_days: shelfLifeDays ? Number(shelfLifeDays) : undefined,
     };
 
     startTransition(async () => {
@@ -210,13 +221,11 @@ function IngredientFormContent({
             <Label htmlFor="ing-unit-cost" className="text-sm font-medium">
               Giá nhập (VND)
             </Label>
-            <Input
+            <FormattedNumberInput
               id="ing-unit-cost"
-              name="unit_cost"
-              type="number"
-              min={0}
-              step={1000}
-              defaultValue={ingredient?.unit_cost ?? ""}
+              value={unitCost}
+              onValueChange={setUnitCost}
+              maxFractionDigits={0}
               placeholder="0"
               className="h-10"
             />
@@ -259,13 +268,11 @@ function IngredientFormContent({
             <Label htmlFor="ing-min" className="text-sm font-medium">
               Tồn tối thiểu
             </Label>
-            <Input
+            <FormattedNumberInput
               id="ing-min"
-              name="min_stock_level"
-              type="number"
-              min={0}
-              step={0.01}
-              defaultValue={ingredient?.min_stock_level ?? 0}
+              value={minStockLevel}
+              onValueChange={setMinStockLevel}
+              maxFractionDigits={2}
               className="h-10"
             />
           </div>
@@ -273,13 +280,11 @@ function IngredientFormContent({
             <Label htmlFor="ing-max" className="text-sm font-medium">
               Tồn tối đa
             </Label>
-            <Input
+            <FormattedNumberInput
               id="ing-max"
-              name="max_stock_level"
-              type="number"
-              min={0}
-              step={0.01}
-              defaultValue={ingredient?.max_stock_level ?? ""}
+              value={maxStockLevel}
+              onValueChange={setMaxStockLevel}
+              maxFractionDigits={2}
               className="h-10"
             />
           </div>
@@ -287,13 +292,11 @@ function IngredientFormContent({
             <Label htmlFor="ing-reorder" className="text-sm font-medium">
               Điểm đặt hàng
             </Label>
-            <Input
+            <FormattedNumberInput
               id="ing-reorder"
-              name="reorder_point"
-              type="number"
-              min={0}
-              step={0.01}
-              defaultValue={ingredient?.reorder_point ?? ""}
+              value={reorderPoint}
+              onValueChange={setReorderPoint}
+              maxFractionDigits={2}
               className="h-10"
             />
           </div>
@@ -304,13 +307,11 @@ function IngredientFormContent({
           <Label htmlFor="ing-shelf" className="text-sm font-medium">
             Hạn sử dụng (ngày)
           </Label>
-          <Input
+          <FormattedNumberInput
             id="ing-shelf"
-            name="shelf_life_days"
-            type="number"
-            min={1}
-            step={1}
-            defaultValue={ingredient?.shelf_life_days ?? ""}
+            value={shelfLifeDays}
+            onValueChange={setShelfLifeDays}
+            maxFractionDigits={0}
             placeholder="VD: 7"
             className="h-10"
           />

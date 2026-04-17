@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
+import { workspaceThemeProps } from "@/lib/workspace-theme";
 import { LoginForm } from "./login-form";
 
 function BrandPanel() {
@@ -94,7 +95,7 @@ function TrustRow() {
             <div className="space-y-1">
               <p className="text-sm font-semibold">Đúng site vận hành</p>
               <p className="text-sm text-muted-foreground">
-                Giữ nguyên ngữ cảnh chi nhánh và tuyến nghiệp vụ hiện có.
+                Giữ đúng chi nhánh và khu vực làm việc của bạn.
               </p>
             </div>
           </div>
@@ -109,7 +110,7 @@ function TrustRow() {
             <div className="space-y-1">
               <p className="text-sm font-semibold">Vào việc nhanh</p>
               <p className="text-sm text-muted-foreground">
-                Không cần chọn lại bối cảnh sau khi xác thực.
+                Không cần chọn lại chi nhánh sau khi đăng nhập.
               </p>
             </div>
           </div>
@@ -127,7 +128,11 @@ export default async function LoginPage({
   const sp = await searchParams;
 
   return (
-    <main id="main-content" className="min-h-dvh w-full  min-h-dvh p-4 sm:p-6">
+    <main
+      {...workspaceThemeProps("auth")}
+      id="main-content"
+      className="workspace-shell min-h-dvh w-full p-4 sm:p-6"
+    >
       <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-2 lg:items-stretch">
         <BrandPanel />
 

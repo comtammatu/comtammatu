@@ -73,7 +73,7 @@ export function RevenueReportClient({
           <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
             <div className="space-y-3">
               <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                Finance Pulse
+                Báo cáo doanh thu
               </span>
               <div className="space-y-2">
                 <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
@@ -180,7 +180,7 @@ export function RevenueReportClient({
             {rows.length > 0 ? averageRevenue.toLocaleString("vi-VN") : "—"} ₫
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Nhịp doanh thu bình quân để so trend theo tuần.
+            Doanh thu trung bình mỗi ngày trong khoảng đang xem.
           </p>
         </div>
       </div>

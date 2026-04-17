@@ -29,7 +29,7 @@ export default async function InventorySettingsLayout({
               </p>
               <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
                 Khu vực này chỉ giữ các cấu hình hành vi hoặc policy của
-                Inventory. Danh mục master data đã được dồn về nhóm `Danh mục`
+                Inventory. Dữ liệu master data đã được dồn về nhóm `Quản lý`
                 để tránh trùng cửa vào.
               </p>
             </div>

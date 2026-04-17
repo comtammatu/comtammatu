@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { cn } from "@comtammatu/ui";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import {
   Select,
@@ -11,9 +11,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { ChefHat, Filter, Flame, PackageCheck } from "lucide-react";
+import { ChefHat, Filter } from "lucide-react";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { OrderCard } from "./order-card";
 import type { KdsStation, KdsTicket, KdsOrderInfo, KdsOrderItem } from "./page";
@@ -56,8 +61,8 @@ const TICKET_STATUS_OPTIONS: { value: TicketStatusFilter; label: string }[] = [
 
 const ORDER_TYPE_OPTIONS: { value: OrderTypeFilter; label: string }[] = [
   { value: "all", label: "Tất cả" },
-  { value: "dine_in", label: "Tại chỗ" },
-  { value: "takeaway", label: "Mang đi" },
+  { value: "dine_in", label: "Tại bàn" },
+  { value: "takeaway", label: "Mang về" },
 ];
 
 function parseTicketStatusFilter(v: string | null): TicketStatusFilter {
@@ -441,201 +446,51 @@ export function KdsBoard({
       ...displayOrders.map((order) => getElapsedMinutes(order.createdAt)),
     );
   }, [displayOrders]);
-  const hotOrders = useMemo(
-    () =>
-      displayOrders
-        .filter(
-          (order) =>
-            order.tickets.some((ticket) => ticket.status === "pending") ||
-            getElapsedMinutes(order.createdAt) >= 8,
-        )
-        .slice(0, 4),
-    [displayOrders],
-  );
-  const stationSummary = useMemo(
-    () =>
-      stations.map((station) => {
-        const stationTickets = tickets.filter(
-          (ticket) => ticket.station_id === station.id,
-        );
-        return {
-          stationId: station.id,
-          stationName: station.name,
-          active: stationTickets.filter((ticket) => ticket.status !== "ready")
-            .length,
-          pending: stationTickets.filter(
-            (ticket) => ticket.status === "pending",
-          ).length,
-          preparing: stationTickets.filter(
-            (ticket) => ticket.status === "preparing",
-          ).length,
-          ready: stationTickets.filter((ticket) => ticket.status === "ready")
-            .length,
-        };
-      }),
-    [stations, tickets],
-  );
 
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
       <div className="border-b border-border/60 px-3 py-3 md:px-4">
         <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-4">
-          <div className="flex items-center gap-2">
-            <EmployeePortalBackControl className="h-8 rounded-full px-2 text-xs" />
-            <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              KDS chi nhánh #{branchId}
-            </span>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <EmployeePortalBackControl className="h-8 rounded-full px-2 text-xs" />
+              <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                KDS chi nhánh #{branchId}
+              </span>
+            </div>
+            <Badge variant={pendingCount > 0 ? "warning" : "outline"} className="rounded-full px-3 py-1">
+              {pendingCount > 0
+                ? `${pendingCount} món cần nhận`
+                : "Không có món chờ"}
+            </Badge>
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-4">
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-5 xl:col-span-3">
-              <div className="relative space-y-4">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                      Điều phối line bếp
-                    </p>
-                    <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground">
-                      Món cần nhận, đang làm, đã xong.
-                    </h1>
-                    <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-                      Ưu tiên món chờ và món đang chạy.
-                    </p>
-                  </div>
-                  <div className="rounded-full border border-warning/15 bg-warning/10 px-3 py-1.5 text-xs font-semibold text-warning shadow-sm">
-                    {pendingCount > 0
-                      ? `${pendingCount} món cần vào bếp ngay`
-                      : "Không có món chờ"}
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
-                  <span className="rounded-full border border-border/70 bg-muted px-3 py-1.5">
-                    {readyCount} món đã xong
-                  </span>
-                  <span className="rounded-full border border-border/70 bg-muted px-3 py-1.5">
-                    {preparingCount} món đang chạy
-                  </span>
-                  <span className="rounded-full border border-border/70 bg-muted px-3 py-1.5">
-                    {pendingCount} món đang chờ nhận
-                  </span>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-warning/20 bg-warning/10 p-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-warning">
-                      Hàng chờ
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">
-                      {pendingCount}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      Chưa vào line.
-                    </p>
-                  </div>
-                  <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-primary/15 bg-primary/8 p-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                      Đang chế biến
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">
-                      {preparingCount}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      Đang xử lý.
-                    </p>
-                  </div>
-                  <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-success/15 bg-success/10 p-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-success">
-                      Khu pass
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">
-                      {readyCount}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      Chờ ra món.
-                    </p>
-                  </div>
-                </div>
-
-                {hotOrders.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-foreground">
-                        Đơn chờ
-                      </p>
-                      <span className="text-xs text-muted-foreground">
-                        Ưu tiên đơn chờ lâu
-                      </span>
-                    </div>
-                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                      {hotOrders.map((order) => (
-                        <div
-                          key={`hot-${order.orderId}`}
-                          className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-warning/20 bg-warning/10 p-4 shadow-sm"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold text-foreground">
-                                {order.orderNumber}
-                              </p>
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                {order.tableNumber != null
-                                  ? `Bàn ${order.tableNumber}`
-                                  : "Mang đi"}
-                              </p>
-                            </div>
-                            <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-warning">
-                              {getElapsedMinutes(order.createdAt)} phút
-                            </span>
-                          </div>
-                          <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                            {
-                              order.tickets.filter(
-                                (ticket) => ticket.status === "pending",
-                              ).length
-                            }{" "}
-                            chờ ·{" "}
-                            {
-                              order.tickets.filter(
-                                (ticket) => ticket.status === "preparing",
-                              ).length
-                            }{" "}
-                            đang làm
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-              <div className="rounded-lg border bg-muted/30 text-card-foreground p-4">
+          <div className="rounded-lg border bg-card px-4 py-3 shadow-sm">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="space-y-1">
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Đơn hiển thị
+                  Màn hình bếp
                 </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {displayOrders.length}
+                <p className="text-sm font-medium text-foreground">
+                  Ưu tiên món chờ mới và đơn chờ lâu, rồi xử lý theo trạm.
                 </p>
               </div>
-              <div className="rounded-lg border bg-muted/30 text-card-foreground p-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Món còn việc
-                </p>
-                <p className="mt-2 flex items-center gap-2 text-2xl font-semibold tabular-nums">
-                  <Flame className="size-5 text-warning" />
-                  {totalActiveCount}
-                </p>
-              </div>
-              <div className="rounded-lg border bg-muted/30 text-card-foreground p-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Order lâu nhất
-                </p>
-                <p className="mt-2 flex items-center gap-2 text-2xl font-semibold tabular-nums">
-                  <PackageCheck className="size-5 text-info" />
-                  {oldestActiveOrderMinutes}m
-                </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="rounded-full px-3 py-1">
+                  {displayOrders.length} đơn hiển thị
+                </Badge>
+                <Badge variant="outline" className="rounded-full px-3 py-1">
+                  {totalActiveCount} món còn việc
+                </Badge>
+                <Badge variant="outline" className="rounded-full px-3 py-1">
+                  {preparingCount} món đang làm
+                </Badge>
+                <Badge variant="outline" className="rounded-full px-3 py-1">
+                  {oldestActiveOrderMinutes} phút lâu nhất
+                </Badge>
+                <Badge variant="outline" className="rounded-full px-3 py-1">
+                  {readyCount} món chờ ra
+                </Badge>
               </div>
             </div>
           </div>
@@ -644,116 +499,39 @@ export function KdsBoard({
 
       <div className="border-b border-border/40 px-3 py-3 md:px-4">
         <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {stationSummary.map((station) => (
-              <button
-                key={`summary-${station.stationId}`}
-                type="button"
-                className={cn(
-                  "transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border p-4 text-left shadow-sm",
-                  activeStationId === station.stationId
-                    ? "border-primary/30 bg-primary/10"
-                    : "border-border/60 bg-background/75",
-                )}
-                onClick={() =>
-                  replaceQuery({
-                    station:
-                      activeStationId === station.stationId
-                        ? null
-                        : String(station.stationId),
-                  })
-                }
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      {station.stationName}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {station.active} món còn việc
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-                    {station.ready} xong
-                  </span>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                  <span className="rounded-full bg-warning/12 px-2.5 py-1 font-semibold text-warning">
-                    {station.pending} chờ
-                  </span>
-                  <span className="rounded-full bg-primary/10 px-2.5 py-1 font-semibold text-primary">
-                    {station.preparing} đang làm
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          <div
-            className={cn(
-              "flex shrink-0 items-stretch border-t border-border/40 pt-3",
-            )}
-          >
+          <div className="flex shrink-0 items-stretch">
             <ScrollArea className="min-w-0 flex-1">
-              <div className="flex gap-1.5">
-                <button
-                  type="button"
-                  className={cn(
-                    "transition-all hover:-translate-y-0.5 hover:shadow-md flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-bold duration-150 md:min-h-14 md:px-5 md:text-base",
-                    activeStationId === null
-                      ? "bg-accent text-accent-foreground shadow-sm"
-                      : "bg-secondary text-secondary-foreground hover:bg-muted",
-                  )}
-                  onClick={() => replaceQuery({ station: null })}
-                >
-                  Tất cả
-                  <span
-                    className={cn(
-                      "flex size-6 items-center justify-center rounded-full text-xs font-black tabular-nums",
-                      activeStationId === null
-                        ? "bg-accent-foreground/15 text-accent-foreground"
-                        : "bg-muted text-muted-foreground",
-                    )}
+              <Tabs
+                value={activeStationId === null ? "all" : String(activeStationId)}
+                onValueChange={(value) =>
+                  replaceQuery({ station: value === "all" ? null : value })
+                }
+                className="gap-0"
+              >
+                <TabsList className="h-auto justify-start gap-2 rounded-lg border bg-card p-2">
+                  <TabsTrigger
+                    value="all"
+                    className="min-h-11 shrink-0 gap-2 px-4 text-sm font-semibold"
                   >
-                    {totalActiveCount}
-                  </span>
-                </button>
-
-                {/* Per-station tabs */}
-                {stations.map((station) => {
-                  const isActive = activeStationId === station.id;
-                  const count = stationCounts.get(station.id) ?? 0;
-                  return (
-                    <button
+                    Tất cả
+                    <span className="rounded-full bg-primary-foreground/15 px-2 py-0.5 text-xs font-semibold text-primary-foreground">
+                      {totalActiveCount}
+                    </span>
+                  </TabsTrigger>
+                  {stations.map((station) => (
+                    <TabsTrigger
                       key={station.id}
-                      type="button"
-                      className={cn(
-                        "transition-all hover:-translate-y-0.5 hover:shadow-md flex min-h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-bold duration-150 md:min-h-14 md:px-5 md:text-base",
-                        isActive
-                          ? "bg-accent text-accent-foreground shadow-sm"
-                          : "bg-secondary text-secondary-foreground hover:bg-muted",
-                      )}
-                      onClick={() =>
-                        replaceQuery({ station: String(station.id) })
-                      }
+                      value={String(station.id)}
+                      className="min-h-11 shrink-0 gap-2 px-4 text-sm font-semibold"
                     >
                       {station.name}
-                      <span
-                        className={cn(
-                          "flex size-6 items-center justify-center rounded-full text-xs font-black tabular-nums",
-                          isActive
-                            ? "bg-accent-foreground/15 text-accent-foreground"
-                            : count > 0
-                              ? "bg-warning/20 text-warning"
-                              : "bg-muted text-muted-foreground",
-                        )}
-                      >
-                        {count}
+                      <span className="rounded-full bg-primary-foreground/15 px-2 py-0.5 text-xs font-semibold text-primary-foreground">
+                        {stationCounts.get(station.id) ?? 0}
                       </span>
-                    </button>
-                  );
-                })}
-              </div>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
             </ScrollArea>
           </div>
         </div>
@@ -835,8 +613,7 @@ export function KdsBoard({
           <div className="mx-auto w-full max-w-screen-2xl p-3 md:p-4">
             <Card>
               <CardContent
-                className="flex min-h-52 flex-col items-center justify-center gap-4 px-6 py-10 text-center"
-                style={{ minHeight: "60vh" }}
+                className="flex min-h-80 flex-col items-center justify-center gap-4 px-6 py-10 text-center md:min-h-96"
               >
                 <div className="flex size-12 items-center justify-center rounded-full border bg-muted/40 text-muted-foreground">
                   <ChefHat className="size-4" />

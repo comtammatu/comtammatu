@@ -50,6 +50,7 @@ import {
   getInitials,
   type ShellNavGroup,
 } from "@/lib/shell-primitives";
+import { workspaceThemeProps } from "@/lib/workspace-theme";
 
 const ADMIN_ICON_MAP: Record<string, React.ElementType> = {
   LayoutDashboard,
@@ -128,10 +129,13 @@ export function AdminShell({
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-dvh w-full">
+      <div
+        {...workspaceThemeProps("admin")}
+        className="workspace-shell flex min-h-dvh w-full"
+      >
         <Sidebar variant="inset">
           <SidebarHeader className="gap-4 p-4">
-            <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-4 text-sidebar-foreground">
+            <div className="workspace-sidebar-card">
               <div className="flex items-center gap-3">
                 <div className="flex size-12 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
                   <ShieldCheck className="size-5" />
@@ -148,7 +152,7 @@ export function AdminShell({
                 </div>
               </div>
               <div className="mt-4 grid gap-3 text-xs text-sidebar-foreground/75">
-                <div className="rounded-md border border-sidebar-border bg-sidebar px-3 py-2.5">
+                <div className="rounded-2xl border border-sidebar-border/80 bg-sidebar/75 px-3 py-2.5 backdrop-blur-sm">
                   <p className="font-semibold">{APP_COPY_VI.quickAccess}</p>
                   <p className="mt-1 leading-5">
                     Các mục quan trọng được gom theo nhóm để thao tác nhanh hơn.
@@ -191,7 +195,7 @@ export function AdminShell({
           </SidebarContent>
 
           <SidebarFooter className="p-4 group-data-[collapsible=icon]:p-2">
-            <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-3 group-data-[collapsible=icon]:p-2">
+            <div className="workspace-sidebar-card p-3 group-data-[collapsible=icon]:p-2">
               <div className="flex items-center gap-3 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-2">
                 <Avatar size="sm">
                   <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
@@ -220,14 +224,14 @@ export function AdminShell({
           </SidebarFooter>
         </Sidebar>
 
-        <SidebarInset className="min-h-dvh bg-background">
+        <SidebarInset className="min-h-dvh bg-background/70 backdrop-blur-[2px]">
           <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
-            <header className="rounded-lg border bg-card p-4 sm:p-6">
+            <header className="workspace-header-card">
               <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <SidebarTrigger className="md:hidden" />
-                    <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                    <span className="workspace-context-pill">
                       {trail || APP_COPY_VI.adminFoundation}
                     </span>
                     <Badge variant="secondary">{ROLE_LABEL_VI[role]}</Badge>
@@ -256,9 +260,9 @@ export function AdminShell({
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+              <div className="workspace-highlight-card mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  <Card>
+                  <Card className="workspace-metric-card">
                     <CardContent className="space-y-2 p-4">
                       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                         Vai trò
@@ -268,7 +272,7 @@ export function AdminShell({
                       </p>
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="workspace-metric-card">
                     <CardContent className="space-y-2 p-4">
                       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                         Điều hướng
@@ -278,7 +282,7 @@ export function AdminShell({
                       </p>
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="workspace-metric-card">
                     <CardContent className="space-y-2 p-4">
                       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                         Ngữ cảnh
@@ -289,7 +293,7 @@ export function AdminShell({
                     </CardContent>
                   </Card>
                 </div>
-                <Card>
+                <Card className="workspace-metric-card">
                   <CardContent className="flex h-full items-center gap-3 p-4">
                     <Avatar size="sm">
                       <AvatarFallback>{getInitials(user.name)}</AvatarFallback>

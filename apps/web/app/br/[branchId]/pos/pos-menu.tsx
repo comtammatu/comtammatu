@@ -11,6 +11,7 @@ import {
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   Drawer,
@@ -33,7 +34,12 @@ import { OrderDetailSheet } from "./order-detail-sheet";
 import { PosSessionHeader } from "./pos-session-header";
 import { PosMenuGrid } from "./pos-menu-grid";
 import { PosSidebarTabs, PosSidebarContent } from "./pos-sidebar-panel";
-import { submitOrder, fetchSessionOrders, appendOrderItems } from "./actions";
+import {
+  submitOrder,
+  fetchSessionOrders,
+  appendOrderItems,
+  fetchTablesForBranch,
+} from "./actions";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import { calcCartTotal } from "./types";
 import type { BranchTable, ActiveSession } from "./page";
@@ -156,6 +162,21 @@ export function PosMenu({
     }
   }, [branchId, session.id]);
 
+  const refreshOperationalData = useCallback(async () => {
+    const [ordersResult, tablesResult] = await Promise.all([
+      fetchSessionOrders(branchId, session.id),
+      fetchTablesForBranch(branchId),
+    ]);
+
+    if (ordersResult.success && ordersResult.data) {
+      setSessionOrders(ordersResult.data as SessionOrder[]);
+    }
+
+    if (tablesResult.success && tablesResult.data) {
+      setLocalTables(tablesResult.data as BranchTable[]);
+    }
+  }, [branchId, session.id]);
+
   const loadedRef = useRef(false);
   useEffect(() => {
     if (loadedRef.current) return;
@@ -180,58 +201,6 @@ export function PosMenu({
   const orderContextComplete =
     orderType === "takeaway" || selectedTableId !== null;
 
-  const flowSteps = useMemo<
-    ReadonlyArray<{
-      label: string;
-      meta: string;
-      state: "done" | "current" | "todo";
-    }>
-  >(
-    () => [
-      {
-        label: "Loại đơn",
-        meta: orderType === "takeaway" ? "Mang về" : "Tại bàn",
-        state: "done",
-      },
-      {
-        label: "Ngữ cảnh bàn",
-        meta:
-          orderType === "takeaway"
-            ? "Đơn mang về"
-            : selectedTableNumber != null
-              ? `Bàn ${selectedTableNumber}`
-              : "Chọn bàn",
-        state: orderContextComplete ? "done" : "current",
-      },
-      {
-        label: "Chọn món",
-        meta:
-          cartItems.length > 0
-            ? `${cartQuantity} món trong giỏ`
-            : "Thêm món",
-        state:
-          cartItems.length > 0
-            ? "done"
-            : orderContextComplete
-              ? "current"
-              : "todo",
-      },
-      {
-        label: "Gửi xuống bếp",
-        meta: canSubmit ? "Sẵn sàng" : "Chưa sẵn sàng",
-        state: canSubmit ? "current" : "todo",
-      },
-    ],
-    [
-      cartItems.length,
-      cartQuantity,
-      canSubmit,
-      orderContextComplete,
-      orderType,
-      selectedTableNumber,
-    ],
-  );
-
   const flowProgressPercent = useMemo(() => {
     let progress = 22;
     if (orderContextComplete) progress += 24;
@@ -244,13 +213,19 @@ export function PosMenu({
     ? "Có thể gửi bếp."
     : orderContextComplete
       ? "Thêm món để hoàn tất."
-      : "Chọn ngữ cảnh trước.";
+      : "Chọn thông tin đơn trước.";
 
   const flowHint = canSubmit
-      ? "Kiểm tra giỏ và gửi bếp."
-      : orderContextComplete
+    ? "Kiểm tra giỏ và gửi bếp."
+    : orderContextComplete
       ? "Thêm món vào giỏ."
       : "Gán bàn cho đơn tại chỗ.";
+
+  const focusOrderWorkflow = useCallback((orderId: number) => {
+    setShowOrders(true);
+    setOrderDetailId(orderId);
+    setCartDrawerOpen(false);
+  }, []);
 
   const addToCart = useCallback(
     (
@@ -367,22 +342,14 @@ export function PosMenu({
           },
         });
 
-        if (orderType === "dine_in" && selectedTableId !== null) {
-          const occupiedTableId = selectedTableId;
-          setLocalTables((prev) =>
-            prev.map((t) =>
-              t.id === occupiedTableId ? { ...t, status: "occupied" } : t,
-            ),
-          );
-        }
-
         setCartItems([]);
         setOrderNote("");
+        focusOrderWorkflow(orderId);
         if (orderType === "takeaway") {
           setSelectedTableId(null);
           syncTableToUrl(null);
         }
-        void loadSessionOrders();
+        void refreshOperationalData();
       } else {
         toast.error(result.error ?? "Không thể tạo đơn hàng");
       }
@@ -391,12 +358,13 @@ export function PosMenu({
     canSubmit,
     branchId,
     cartItems,
-    loadSessionOrders,
     orderType,
     selectedTableId,
     session.id,
     syncTableToUrl,
     orderNote,
+    focusOrderWorkflow,
+    refreshOperationalData,
   ]);
 
   const handleItemTap = useCallback(
@@ -426,7 +394,8 @@ export function PosMenu({
             if (r.success) {
               toast.success(`Đã thêm món vào đơn #${appendTarget.orderNumber}`);
               setAppendTarget(null);
-              void loadSessionOrders();
+              focusOrderWorkflow(appendTarget.orderId);
+              void refreshOperationalData();
             } else {
               toast.error(r.error ?? "Không thể thêm món");
             }
@@ -441,7 +410,7 @@ export function PosMenu({
         addToCart(item);
       }
     },
-    [addToCart, appendTarget, branchId, loadSessionOrders],
+    [addToCart, appendTarget, branchId, focusOrderWorkflow, refreshOperationalData],
   );
 
   const handleCustomizerConfirm = useCallback(
@@ -474,7 +443,8 @@ export function PosMenu({
             toast.success(`Đã thêm món vào đơn #${appendTarget.orderNumber}`);
             setAppendTarget(null);
             setCustomizerItem(null);
-            void loadSessionOrders();
+            focusOrderWorkflow(appendTarget.orderId);
+            void refreshOperationalData();
           } else {
             toast.error(r.error ?? "Không thể thêm món");
           }
@@ -484,7 +454,7 @@ export function PosMenu({
       addToCart(item, variantId, variantName, unitPrice, modifiers, sides);
       setCustomizerItem(null);
     },
-    [addToCart, appendTarget, branchId, loadSessionOrders],
+    [addToCart, appendTarget, branchId, focusOrderWorkflow, refreshOperationalData],
   );
 
   const activeSessionOrders = useMemo(
@@ -496,34 +466,17 @@ export function PosMenu({
       ),
     [sessionOrders],
   );
-  const completedSessionOrders = useMemo(
-    () =>
-      sessionOrders.filter(
-        (order) => !activeSessionOrders.some((active) => active.id === order.id),
-      ),
-    [activeSessionOrders, sessionOrders],
-  );
-  const readySessionOrders = useMemo(
-    () => sessionOrders.filter((order) => order.status === "ready"),
-    [sessionOrders],
-  );
-  const sessionRevenue = useMemo(
-    () =>
-      sessionOrders.reduce((sum, order) => sum + Number(order.total_amount), 0),
-    [sessionOrders],
-  );
-
   const serviceModeSelector = (
-    <div className="rounded-xl border bg-card shadow-sm p-3">
-          <div className="relative space-y-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Loại đơn
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Đổi nhanh giữa tại bàn và mang về trong cùng ca POS.
-              </p>
-            </div>
+    <Card className="shadow-sm">
+      <CardContent className="space-y-3 p-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Loại đơn
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Chọn đúng chế độ phục vụ trước khi thêm món.
+          </p>
+        </div>
         <div
           role="radiogroup"
           aria-label="Loại đơn hàng"
@@ -560,77 +513,8 @@ export function PosMenu({
             Mang về
           </button>
         </div>
-      </div>
-    </div>
-  );
-
-  const workflowRail = (
-    <aside className="hidden xl:flex xl:w-80 xl:shrink-0 xl:flex-col xl:gap-4 xl:border-r xl:border-border/60 xl:bg-background/70 xl:p-4">
-      {serviceModeSelector}
-      <div className="rounded-xl border bg-card shadow-sm p-4">
-          <div className="relative space-y-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Điều phối đơn
-              </p>
-              <p className="mt-1 text-base font-semibold text-foreground">
-                {orderType === "takeaway"
-                ? "Đơn mang về"
-                : selectedTableNumber != null
-                  ? `Bàn ${selectedTableNumber}`
-                  : "Cần gán bàn"}
-            </p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                {orderType === "takeaway"
-                ? "Không cần gán bàn, có thể thêm món và tạo đơn ngay."
-                : selectedTableNumber != null
-                  ? "Ngữ cảnh bàn đã sẵn sàng cho tạo đơn mới hoặc thêm món."
-                  : "Chọn đúng bàn để tránh sai luồng phục vụ."}
-              </p>
-            </div>
-
-          <div className="space-y-2">
-            {flowSteps.map((step, index) => (
-              <div
-                key={step.label}
-                className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card px-3 py-3 shadow-sm"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">{index + 1}</div>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      {step.label}
-                    </p>
-                    <p className="text-xs leading-5 text-muted-foreground">
-                      {step.meta}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-        <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Đơn đang chạy
-          </p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">
-            {activeSessionOrders.length}
-          </p>
-        </div>
-        <div className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-success/15 bg-success/10 p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-success">
-            Sẵn sàng giao
-          </p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">
-            {readySessionOrders.length}
-          </p>
-        </div>
-      </div>
-    </aside>
+      </CardContent>
+    </Card>
   );
 
   const appendBannerRow =
@@ -645,7 +529,7 @@ export function PosMenu({
                 </span>
                 <span className="text-muted-foreground">
                   {" "}
-                  Chọn món trên lưới bên dưới để tiếp tục cùng một flow.
+                  Chọn món trên danh sách bên dưới để tiếp tục thêm vào đơn.
                 </span>
               </p>
               <Button
@@ -676,7 +560,6 @@ export function PosMenu({
     flowProgressPercent,
     flowHeadline,
     flowHint,
-    flowSteps,
     canSubmit,
     isPending,
     sessionOrders,
@@ -688,8 +571,14 @@ export function PosMenu({
     onRequestChangeTable: handleRequestChangeTable,
     onSubmitOrder: handleSubmitOrder,
     onOrderNoteChange: setOrderNote,
-    onViewBill: (id: number) => setBillOrderId(id),
-    onViewDetail: (id: number) => setOrderDetailId(id),
+    onViewBill: (id: number) => {
+      setCartDrawerOpen(false);
+      setBillOrderId(id);
+    },
+    onViewDetail: (id: number) => {
+      setCartDrawerOpen(false);
+      setOrderDetailId(id);
+    },
     onLoadSessionOrders: () => void loadSessionOrders(),
   } as const;
 
@@ -699,27 +588,18 @@ export function PosMenu({
         session={session}
         orderType={orderType}
         selectedTableNumber={selectedTableNumber}
-        flowHeadline={flowHeadline}
-        flowHint={flowHint}
-        flowSteps={flowSteps}
-        flowProgressPercent={flowProgressPercent}
         isPending={isPending}
         canSubmit={canSubmit}
         cartQuantity={cartQuantity}
-        cartTotal={cartTotal}
         activeOrderCount={activeSessionOrders.length}
-        readyOrderCount={readySessionOrders.length}
-        completedOrderCount={completedSessionOrders.length}
-        sessionRevenue={sessionRevenue}
         onShowCloseSession={() => setShowCloseSession(true)}
       />
 
       {!orderContextReady ? (
         <div className="flex min-h-0 flex-1 overflow-hidden bg-background/35">
-          {workflowRail}
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {appendBannerRow}
-            <div className="border-b border-border/60 bg-background/75 p-3 xl:hidden">
+            <div className="border-b border-border/60 bg-background/75 p-3 md:hidden">
               {serviceModeSelector}
             </div>
             <PosTableGate
@@ -729,18 +609,16 @@ export function PosMenu({
               className="min-h-0 flex-1"
             />
           </div>
+          <div className="hidden w-80 shrink-0 flex-col border-l border-border/60 bg-background md:flex lg:w-96">
+            <PosSidebarTabs {...sidebarSharedProps} />
+            <PosSidebarContent {...sidebarSharedProps} />
+          </div>
         </div>
       ) : (
         <>
           <div className="flex min-h-0 flex-1 overflow-hidden bg-background/35">
-            {workflowRail}
-
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               {appendBannerRow}
-
-              <div className="border-b border-border/60 bg-background/80 p-3 xl:hidden">
-                {serviceModeSelector}
-              </div>
 
               <PosMenuGrid
                 categories={categories}
@@ -781,9 +659,9 @@ export function PosMenu({
                 onOpenChange={setCartDrawerOpen}
                 shouldScaleBackground={false}
               >
-                <DrawerContent className="p-0" style={{ maxHeight: "85dvh" }}>
+                <DrawerContent className="max-h-dvh p-0">
                   <DrawerTitle className="sr-only">Giỏ hàng</DrawerTitle>
-                  <div className="flex flex-col overflow-hidden" style={{ maxHeight: "calc(85dvh - 2rem)" }}>
+                  <div className="flex min-h-0 flex-col overflow-hidden">
                     <PosSidebarTabs {...sidebarSharedProps} />
                     <PosSidebarContent
                       {...sidebarSharedProps}
@@ -816,10 +694,12 @@ export function PosMenu({
         onClose={() => setOrderDetailId(null)}
         onOpenBill={(id) => {
           setOrderDetailId(null);
+          setCartDrawerOpen(false);
           setBillOrderId(id);
         }}
         onStartAppend={(oid, onum) => {
           setOrderDetailId(null);
+          setCartDrawerOpen(false);
           setAppendTarget({ orderId: oid, orderNumber: onum });
           setShowOrders(false);
           toast.message("Chọn món trên menu để thêm vào đơn");
@@ -836,7 +716,7 @@ export function PosMenu({
           }
         }}
         tables={localTables}
-        onTablesChange={setLocalTables}
+        onOrderUpdated={() => void refreshOperationalData()}
       />
 
       <CloseSessionDialog
@@ -848,6 +728,7 @@ export function PosMenu({
       <BillReceipt
         branchId={branchId}
         orderId={billOrderId}
+        onOrderUpdated={() => void refreshOperationalData()}
         onClose={() => setBillOrderId(null)}
       />
     </>

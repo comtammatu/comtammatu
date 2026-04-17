@@ -4,6 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
 import { formatVND } from "@comtammatu/shared/format";
 import type { CategoryType } from "@comtammatu/shared";
 import { CATEGORY_TYPE_LABELS } from "@comtammatu/shared/menu";
@@ -68,6 +73,8 @@ export function PosMenuGrid({
   const activeZoneLabel =
     CATEGORY_TYPE_LABELS[effectiveMenuZone] ?? effectiveMenuZone;
   const activeMenuItemCount = activeCategory?.menu_items.length ?? 0;
+  const activeCategoryValue =
+    activeCategoryId != null ? String(activeCategoryId) : undefined;
 
   if (availableMenuZones.length === 0) {
     return (
@@ -84,12 +91,12 @@ export function PosMenuGrid({
     <>
       <div className="border-b border-border/60 px-3 py-3 md:px-4">
         <div className="space-y-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-1">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-1 min-w-0">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Khu thực đơn
               </p>
-              <h2 className="font-heading text-3xl font-semibold tracking-tight text-foreground">
+              <h2 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
                 {activeZoneLabel}
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -97,95 +104,70 @@ export function PosMenuGrid({
                 {activeMenuItemCount} món khả dụng
               </p>
             </div>
-            <div className="grid gap-2 sm:grid-cols-3">
-              <div className="rounded-lg border bg-muted/30 text-card-foreground px-4 py-3 transition-all hover:-translate-y-0.5 hover:shadow-md">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Danh mục
-                </p>
-                <p className="mt-1 text-base font-semibold text-foreground">
-                  {categoriesInActiveZone.length}
-                </p>
-              </div>
-              <div className="rounded-lg border bg-muted/30 text-card-foreground border-primary/15 bg-primary/8 px-4 py-3 transition-all hover:-translate-y-0.5 hover:shadow-md">
-                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                  Giỏ hiện tại
-                </p>
-                <p className="mt-1 text-base font-semibold text-foreground">
-                  {cartQuantity} món
-                </p>
-              </div>
-              <div className="rounded-lg border bg-muted/30 text-card-foreground border-success/15 bg-success/10 px-4 py-3 transition-all hover:-translate-y-0.5 hover:shadow-md">
-                <p className="text-xs font-semibold uppercase tracking-wide text-success">
-                  Tạm tính
-                </p>
-                <p className="mt-1 text-base font-semibold text-foreground">
-                  {formatVND(cartTotal)}
-                </p>
-              </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="rounded-full px-3 py-1">
+                {categoriesInActiveZone.length} danh mục
+              </Badge>
+              <Badge variant="outline" className="rounded-full px-3 py-1">
+                {cartQuantity} món trong giỏ
+              </Badge>
+              <Badge variant="outline" className="rounded-full px-3 py-1">
+                {formatVND(cartTotal)}
+              </Badge>
             </div>
           </div>
 
           <ScrollArea className="w-full">
-            <div
-              className="flex gap-2 pb-1"
-              role="tablist"
-              aria-label="Khu thực đơn"
+            <Tabs
+              value={effectiveMenuZone}
+              onValueChange={(value) => setActiveMenuZone(value as CategoryType)}
+              className="gap-0"
             >
-              {availableMenuZones.map((z) => (
-                <button
-                  key={z}
-                  type="button"
-                  role="tab"
-                  aria-selected={effectiveMenuZone === z}
-                  className={cn(
-                    "min-h-11 min-w-11 flex h-11 shrink-0 cursor-pointer items-center rounded-lg border px-4 text-sm font-semibold transition-all",
-                    effectiveMenuZone === z
-                      ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
-                      : "border-border/70 bg-background/80 text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
-                  onClick={() => setActiveMenuZone(z)}
-                >
-                  {CATEGORY_TYPE_LABELS[z] ?? z}
-                </button>
-              ))}
-            </div>
+              <TabsList
+                aria-label="Khu thực đơn"
+                className="h-auto justify-start gap-2 overflow-x-auto rounded-lg border bg-card p-2"
+              >
+                {availableMenuZones.map((z) => (
+                  <TabsTrigger
+                    key={z}
+                    value={z}
+                    className="min-h-11 shrink-0 px-4 text-sm font-semibold"
+                  >
+                    {CATEGORY_TYPE_LABELS[z] ?? z}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
           </ScrollArea>
 
           {categoriesInActiveZone.length > 1 ? (
             <ScrollArea className="w-full">
-              <div
-                className="flex gap-2 pb-1"
-                role="tablist"
-                aria-label="Danh mục món"
+              <Tabs
+                value={activeCategoryValue}
+                onValueChange={(value) => setActiveCategoryId(Number(value))}
+                className="gap-0"
               >
-                {categoriesInActiveZone.map((cat) => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={activeCategoryId === cat.id}
-                    className={cn(
-                      "min-h-11 min-w-11 flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-all",
-                      activeCategoryId === cat.id
-                        ? "border-primary/25 bg-primary/10 text-primary font-semibold shadow-sm"
-                        : "border-border/70 bg-background/80 text-muted-foreground hover:bg-muted hover:text-foreground",
-                    )}
-                    onClick={() => setActiveCategoryId(cat.id)}
-                  >
-                    {cat.name}
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "text-xs",
-                        activeCategoryId === cat.id &&
-                          "border-primary/30 bg-primary/10 text-primary",
-                      )}
+                <TabsList
+                  aria-label="Danh mục món"
+                  className="h-auto justify-start gap-2 overflow-x-auto rounded-lg border bg-background/80 p-2"
+                >
+                  {categoriesInActiveZone.map((cat) => (
+                    <TabsTrigger
+                      key={cat.id}
+                      value={String(cat.id)}
+                      className="min-h-10 shrink-0 gap-2 px-3 text-sm font-medium"
                     >
-                      {cat.menu_items.length}
-                    </Badge>
-                  </button>
-                ))}
-              </div>
+                      {cat.name}
+                      <Badge
+                        variant="outline"
+                        className="text-xs"
+                      >
+                        {cat.menu_items.length}
+                      </Badge>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
             </ScrollArea>
           ) : null}
         </div>

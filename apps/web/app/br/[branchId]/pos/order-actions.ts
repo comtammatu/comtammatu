@@ -215,6 +215,7 @@ export async function fetchSessionOrders(
       order_number,
       order_type,
       status,
+      payment_status,
       total_amount,
       table_id,
       created_at,

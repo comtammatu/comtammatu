@@ -15,6 +15,7 @@ import {
   Package,
   PackageOpen,
   Receipt,
+  Settings,
   ShoppingCart,
   Store,
   Truck,
@@ -43,10 +44,8 @@ import {
   SidebarProvider,
   SidebarSeparator,
 } from "@comtammatu/ui/components/sidebar";
-import {
-  isNavItemActive,
-  type ShellNavGroup,
-} from "@/lib/shell-primitives";
+import { isNavItemActive, type ShellNavGroup } from "@/lib/shell-primitives";
+import { workspaceThemeProps } from "@/lib/workspace-theme";
 import { tNav } from "../_lib/dictionary";
 import { MobileTopBar } from "./mobile/mobile-top-bar";
 
@@ -164,12 +163,12 @@ function buildInventoryGroups({
   });
 
   groups.push({
-    title: "Danh mục",
+    title: "Quản lý",
     items: [
       {
-        href: "/inventory/ingredients",
-        label: tNav("ingredients", "navigation"),
-        icon: FileText,
+        href: "/inventory/settings",
+        label: tNav("settings", "navigation"),
+        icon: Settings,
       },
       ...(showProcurement
         ? [
@@ -178,6 +177,15 @@ function buildInventoryGroups({
               label: tNav("suppliers", "navigation"),
               icon: Users,
             },
+          ]
+        : []),
+      {
+        href: "/inventory/ingredients",
+        label: tNav("ingredients", "navigation"),
+        icon: FileText,
+      },
+      ...(showProcurement
+        ? [
             {
               href: "/inventory/recipes",
               label: tNav("recipes", "navigation"),
@@ -211,7 +219,10 @@ export function InventoryShell({
   const isMobileRoute = pathname?.startsWith("/inventory/m") ?? false;
   if (isMobileRoute) {
     return (
-      <div className="flex min-h-dvh flex-col bg-background">
+      <div
+        {...workspaceThemeProps("inventory")}
+        className="workspace-shell flex min-h-dvh flex-col bg-background"
+      >
         <MobileTopBar siteName={siteName} />
         <main className="flex-1 pb-24">{children}</main>
       </div>
@@ -220,89 +231,98 @@ export function InventoryShell({
 
   return (
     <SidebarProvider>
-      <Sidebar>
-        <SidebarHeader className="border-b border-sidebar-border">
-          <div className="flex items-center gap-2 px-2 py-1">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
-              MT
+      <div
+        {...workspaceThemeProps("inventory")}
+        className="workspace-shell flex min-h-dvh w-full"
+      >
+        <Sidebar className="bg-sidebar/90 backdrop-blur-sm">
+          <SidebarHeader className="border-b border-sidebar-border p-3">
+            <div className="workspace-sidebar-card space-y-3 p-3">
+              <div className="flex items-center gap-2">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
+                  MT
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold">Cơm Tấm Má Tư</span>
+                  <span className="text-xs text-muted-foreground">
+                    Quản lý kho
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-xl border border-sidebar-border/80 bg-sidebar/75 px-2.5 py-2 text-sm backdrop-blur-sm">
+                <Store className="size-4" />
+                <div className="flex flex-1 flex-col">
+                  <span className="text-xs font-medium">{siteName}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {getInventorySiteKindLabelVi(siteKind)}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold">Cơm Tấm Má Tư</span>
-              <span className="text-xs text-muted-foreground">Quản lý kho</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 rounded-md border border-sidebar-border bg-sidebar-accent/50 px-2 py-1.5 text-sm">
-            <Store className="size-4" />
-            <div className="flex flex-1 flex-col">
-              <span className="text-xs font-medium">{siteName}</span>
-              <span className="text-xs text-muted-foreground">
-                {getInventorySiteKindLabelVi(siteKind)}
-              </span>
-            </div>
-          </div>
-        </SidebarHeader>
+          </SidebarHeader>
 
-        <SidebarContent>
-          {groups.map((group) => (
-            <SidebarGroup key={group.title}>
-              <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {group.items.map((item) => {
-                    const active = isNavItemActive(item, pathname);
-                    const Icon = item.icon;
-                    return (
-                      <SidebarMenuItem key={item.href}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={active}
-                          tooltip={item.label}
-                        >
-                          <Link href={item.href}>
-                            <Icon className="size-4" />
-                            <span>{item.label}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          ))}
-        </SidebarContent>
+          <SidebarContent>
+            {groups.map((group) => (
+              <SidebarGroup key={group.title}>
+                <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {group.items.map((item) => {
+                      const active = isNavItemActive(item, pathname);
+                      const Icon = item.icon;
+                      return (
+                        <SidebarMenuItem key={item.href}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={active}
+                            tooltip={item.label}
+                          >
+                            <Link href={item.href}>
+                              <Icon className="size-4" />
+                              <span>{item.label}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ))}
+          </SidebarContent>
 
-        <SidebarFooter className="group-data-[collapsible=icon]:p-2">
-          <SidebarSeparator />
-          <div className="flex items-center gap-2 px-2 py-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-1 group-data-[collapsible=icon]:px-1 group-data-[collapsible=icon]:py-1">
-            <div className="flex size-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
-              {user.name.charAt(0)}
+          <SidebarFooter className="group-data-[collapsible=icon]:p-2">
+            <SidebarSeparator />
+            <div className="workspace-sidebar-card flex items-center gap-2 p-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-1 group-data-[collapsible=icon]:px-1 group-data-[collapsible=icon]:py-1">
+              <div className="flex size-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                {user.name.charAt(0)}
+              </div>
+              <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+                <p className="truncate text-xs font-medium">{user.name}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {ROLE_LABEL_VI[userRole]}
+                </p>
+              </div>
+              <form action="/api/auth/signout" method="post">
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 text-sidebar-foreground/75 hover:text-sidebar-foreground"
+                  aria-label="Đăng xuất"
+                  title="Đăng xuất"
+                >
+                  <LogOut className="size-4" />
+                </Button>
+              </form>
             </div>
-            <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-              <p className="truncate text-xs font-medium">{user.name}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {ROLE_LABEL_VI[userRole]}
-              </p>
-            </div>
-            <form action="/api/auth/signout" method="post">
-              <Button
-                type="submit"
-                variant="ghost"
-                size="icon"
-                className="size-7 text-sidebar-foreground/75 hover:text-sidebar-foreground"
-                aria-label="Đăng xuất"
-                title="Đăng xuất"
-              >
-                <LogOut className="size-4" />
-              </Button>
-            </form>
-          </div>
-        </SidebarFooter>
-      </Sidebar>
+          </SidebarFooter>
+        </Sidebar>
 
-      <SidebarInset className="flex min-h-dvh flex-col">
-        {children}
-      </SidebarInset>
+        <SidebarInset className="flex min-h-dvh flex-col bg-background/70 backdrop-blur-[2px]">
+          {children}
+        </SidebarInset>
+      </div>
     </SidebarProvider>
   );
 }

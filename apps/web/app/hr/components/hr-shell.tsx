@@ -41,6 +41,7 @@ import {
   isNavItemActive,
   type ShellNavGroup,
 } from "@/lib/shell-primitives";
+import { workspaceThemeProps } from "@/lib/workspace-theme";
 
 const NAV_GROUPS: ShellNavGroup[] = [
   {
@@ -91,10 +92,13 @@ export function HRShell({ children, user, role }: HRShellProps) {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-dvh w-full">
+      <div
+        {...workspaceThemeProps("hr")}
+        className="workspace-shell flex min-h-dvh w-full"
+      >
         <Sidebar variant="inset">
           <SidebarHeader className="gap-4 p-4">
-            <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-4 text-sidebar-foreground">
+            <div className="workspace-sidebar-card">
               <Link
                 href="/admin/dashboard"
                 className="inline-flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground"
@@ -155,7 +159,7 @@ export function HRShell({ children, user, role }: HRShellProps) {
           </SidebarContent>
 
           <SidebarFooter className="p-4 group-data-[collapsible=icon]:p-2">
-            <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-3 group-data-[collapsible=icon]:p-2">
+            <div className="workspace-sidebar-card p-3 group-data-[collapsible=icon]:p-2">
               <div className="flex items-center gap-3 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-2">
                 <Avatar size="sm">
                   <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
@@ -184,14 +188,14 @@ export function HRShell({ children, user, role }: HRShellProps) {
           </SidebarFooter>
         </Sidebar>
 
-        <SidebarInset className="min-h-dvh bg-background">
+        <SidebarInset className="min-h-dvh bg-background/70 backdrop-blur-[2px]">
           <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
-            <header className="rounded-lg border bg-card p-4 sm:p-6">
+            <header className="workspace-header-card">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <SidebarTrigger className="md:hidden" />
-                    <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                    <span className="workspace-context-pill">
                       {APP_COPY_VI.hrWorkspaceSubtitle}
                     </span>
                     <Badge variant="secondary">{ROLE_LABEL_VI[role]}</Badge>
@@ -202,8 +206,7 @@ export function HRShell({ children, user, role }: HRShellProps) {
                       {pageTitle}
                     </h1>
                     <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                      Tập trung điều hướng nhân sự, chấm công và bảng lương theo
-                      cùng một cấu trúc thao tác.
+                      Xử lý nhân sự, chấm công và bảng lương trong cùng một nơi.
                     </p>
                   </div>
                 </div>
@@ -218,10 +221,10 @@ export function HRShell({ children, user, role }: HRShellProps) {
                 </div>
               </div>
 
-              <div className="mt-4 rounded-lg border bg-muted/30 p-4">
+              <div className="workspace-highlight-card mt-4">
                 <div className="grid gap-3 md:grid-cols-2 md:items-start">
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <Card>
+                    <Card className="workspace-metric-card">
                       <CardContent className="space-y-2 p-4">
                         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                           Vai trò
@@ -231,7 +234,7 @@ export function HRShell({ children, user, role }: HRShellProps) {
                         </p>
                       </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="workspace-metric-card">
                       <CardContent className="space-y-2 p-4">
                         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                           Khu làm việc
@@ -241,7 +244,7 @@ export function HRShell({ children, user, role }: HRShellProps) {
                         </p>
                       </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="workspace-metric-card">
                       <CardContent className="space-y-2 p-4">
                         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                           Điều hướng
@@ -252,7 +255,7 @@ export function HRShell({ children, user, role }: HRShellProps) {
                       </CardContent>
                     </Card>
                   </div>
-                  <Card>
+                  <Card className="workspace-metric-card">
                     <CardContent className="flex items-center gap-3 p-4">
                       <Avatar size="sm">
                         <AvatarFallback>

@@ -36,6 +36,16 @@ export interface CreatePaymentSuccessData {
   redirect_url?: string;
 }
 
+interface OrderPaymentData {
+  id: number;
+  method: string;
+  amount: number;
+  status: string;
+  provider_ref: string | null;
+  paid_at: string | null;
+  created_at: string;
+}
+
 function truthySetting(v: string | undefined): boolean {
   return v === "true" || v === "1";
 }
@@ -375,7 +385,7 @@ export async function confirmPayment(
 
 export async function fetchPaymentForOrder(
   orderId: number,
-): Promise<ActionResult> {
+): Promise<ActionResult<OrderPaymentData | null>> {
   const idSchema = z.coerce.number().int().positive();
   const parsedId = idSchema.safeParse(orderId);
   if (!parsedId.success) {

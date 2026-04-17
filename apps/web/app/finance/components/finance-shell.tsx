@@ -41,6 +41,7 @@ import {
   isNavItemActive,
   type ShellNavGroup,
 } from "@/lib/shell-primitives";
+import { workspaceThemeProps } from "@/lib/workspace-theme";
 
 const NAV_GROUPS: ShellNavGroup[] = [
   {
@@ -66,7 +67,11 @@ const NAV_GROUPS: ShellNavGroup[] = [
   {
     title: "Báo cáo",
     items: [
-      { href: "/finance/statements", label: "Báo cáo tài chính", icon: BarChart3 },
+      {
+        href: "/finance/statements",
+        label: "Báo cáo tài chính",
+        icon: BarChart3,
+      },
       { href: "/finance/food-cost", label: "Giá vốn món", icon: Receipt },
     ],
   },
@@ -107,10 +112,13 @@ export function FinanceShell({ children, user, role }: FinanceShellProps) {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-dvh w-full">
+      <div
+        {...workspaceThemeProps("finance")}
+        className="workspace-shell flex min-h-dvh w-full"
+      >
         <Sidebar variant="inset">
           <SidebarHeader className="gap-4 p-4">
-            <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-4 text-sidebar-foreground">
+            <div className="workspace-sidebar-card">
               <Link
                 href="/admin/dashboard"
                 className="inline-flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground"
@@ -130,8 +138,8 @@ export function FinanceShell({ children, user, role }: FinanceShellProps) {
                 </div>
               </div>
               <p className="mt-4 text-sm leading-6 text-sidebar-foreground/72">
-                Điều hành kế toán, báo cáo tài chính và HĐĐT theo cùng một
-                tuyến thao tác.
+                Điều hành kế toán, báo cáo tài chính và HĐĐT theo cùng một tuyến
+                thao tác.
               </p>
             </div>
           </SidebarHeader>
@@ -169,7 +177,7 @@ export function FinanceShell({ children, user, role }: FinanceShellProps) {
           </SidebarContent>
 
           <SidebarFooter className="p-4 group-data-[collapsible=icon]:p-2">
-            <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-3 group-data-[collapsible=icon]:p-2">
+            <div className="workspace-sidebar-card p-3 group-data-[collapsible=icon]:p-2">
               <div className="flex items-center gap-3 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-2">
                 <Avatar size="sm">
                   <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
@@ -198,14 +206,14 @@ export function FinanceShell({ children, user, role }: FinanceShellProps) {
           </SidebarFooter>
         </Sidebar>
 
-        <SidebarInset className="min-h-dvh bg-background">
+        <SidebarInset className="min-h-dvh bg-background/70 backdrop-blur-[2px]">
           <div className="flex min-h-full flex-1 flex-col gap-4 p-4">
-            <header className="rounded-lg border bg-card p-4 sm:p-6">
+            <header className="workspace-header-card">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <SidebarTrigger className="md:hidden" />
-                    <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                    <span className="workspace-context-pill">
                       Kế toán · Tài chính
                     </span>
                     <Badge variant="secondary">{ROLE_LABEL_VI[role]}</Badge>
@@ -232,10 +240,10 @@ export function FinanceShell({ children, user, role }: FinanceShellProps) {
                 </div>
               </div>
 
-              <div className="mt-4 rounded-lg border bg-muted/30 p-4">
+              <div className="workspace-highlight-card mt-4">
                 <div className="grid gap-3 md:grid-cols-2 md:items-start">
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <Card>
+                    <Card className="workspace-metric-card">
                       <CardContent className="space-y-2 p-4">
                         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                           Vai trò
@@ -245,7 +253,7 @@ export function FinanceShell({ children, user, role }: FinanceShellProps) {
                         </p>
                       </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="workspace-metric-card">
                       <CardContent className="space-y-2 p-4">
                         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                           Khu làm việc
@@ -255,7 +263,7 @@ export function FinanceShell({ children, user, role }: FinanceShellProps) {
                         </p>
                       </CardContent>
                     </Card>
-                    <Card>
+                    <Card className="workspace-metric-card">
                       <CardContent className="space-y-2 p-4">
                         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                           Điều hướng
@@ -266,7 +274,7 @@ export function FinanceShell({ children, user, role }: FinanceShellProps) {
                       </CardContent>
                     </Card>
                   </div>
-                  <Card>
+                  <Card className="workspace-metric-card">
                     <CardContent className="flex items-center gap-3 p-4">
                       <Avatar size="sm">
                         <AvatarFallback>

@@ -49,6 +49,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { InventoryHeader } from "../../_components/inventory-header";
+import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatDateTime, formatQty, formatVND } from "../../_lib/format";
@@ -758,14 +759,11 @@ function AddIssueLineDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="issue-line-qty">Số lượng xuất *</Label>
-              <Input
+              <FormattedNumberInput
                 id="issue-line-qty"
-                type="number"
-                inputMode="decimal"
-                step="any"
-                min="0.001"
                 value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
+                onValueChange={setQuantity}
+                maxFractionDigits={3}
                 placeholder="0"
               />
             </div>
@@ -791,14 +789,11 @@ function AddIssueLineDialog({
                 </span>
               ) : null}
             </Label>
-            <Input
+            <FormattedNumberInput
               id="issue-line-cost"
-              type="number"
-              inputMode="decimal"
-              step="any"
-              min="0"
               value={unitCostOverride}
-              onChange={(e) => setUnitCostOverride(e.target.value)}
+              onValueChange={setUnitCostOverride}
+              maxFractionDigits={0}
               placeholder={autoFilledCost > 0 ? formatVND(autoFilledCost) : "0"}
             />
           </div>

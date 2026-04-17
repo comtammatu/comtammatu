@@ -1,14 +1,14 @@
 import type { ReactNode } from "react";
+import { workspaceThemeProps } from "@/lib/workspace-theme";
 import { MobileHeader } from "./components/mobile-header";
 import { BottomNav } from "./components/bottom-nav";
 
-export default function EmployeeLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function EmployeeLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-dvh w-full  flex min-h-dvh flex-col">
+    <div
+      {...workspaceThemeProps("employee")}
+      className="workspace-shell flex min-h-dvh w-full flex-col"
+    >
       <MobileHeader />
       <main
         id="main-content"

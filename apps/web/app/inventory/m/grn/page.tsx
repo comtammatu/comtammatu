@@ -131,7 +131,7 @@ export default async function MobileGrnSupplierList() {
         <MobileEmptyState
           icon={Users}
           title="Chưa có nhà cung cấp"
-          description="Thêm nhà cung cấp ở mục Danh mục trước khi tạo phiếu nhập."
+          description="Thêm nhà cung cấp ở mục Quản lý trước khi tạo phiếu nhập."
         />
       ) : (
         <div className="flex flex-col gap-2">

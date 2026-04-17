@@ -3,7 +3,6 @@
 import { useEffect, useState, useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
@@ -23,6 +22,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { adjustStock } from "../actions";
+import { FormattedNumberInput } from "../_components/formatted-number-input";
 
 interface AdjustStockDialogProps {
   open: boolean;
@@ -48,6 +48,7 @@ export function AdjustStockDialog({
   const [adjustType, setAdjustType] = useState<
     "adjustment" | "count_adjustment"
   >("adjustment");
+  const [quantityChange, setQuantityChange] = useState("");
 
   useEffect(() => {
     if (!open) {
@@ -56,15 +57,16 @@ export function AdjustStockDialog({
 
     setError(null);
     setAdjustType("adjustment");
+    setQuantityChange("");
   }, [open, ingredientId]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const quantityChange = Number(fd.get("quantity_change"));
+    const parsedQuantityChange = Number(quantityChange);
     const reason = (fd.get("reason") as string) || undefined;
 
-    if (isNaN(quantityChange) || quantityChange === 0) {
+    if (isNaN(parsedQuantityChange) || parsedQuantityChange === 0) {
       setError("Số lượng điều chỉnh không được bằng 0");
       return;
     }
@@ -74,7 +76,7 @@ export function AdjustStockDialog({
       const result = await adjustStock({
         branchId,
         ingredientId,
-        quantityChange,
+        quantityChange: parsedQuantityChange,
         type: adjustType,
         reason,
       });
@@ -85,9 +87,9 @@ export function AdjustStockDialog({
       }
 
       toast.success(
-        quantityChange > 0
-          ? `Đã nhập ${quantityChange} ${unit} ${ingredientName}`
-          : `Đã xuất ${Math.abs(quantityChange)} ${unit} ${ingredientName}`,
+        parsedQuantityChange > 0
+          ? `Đã nhập ${parsedQuantityChange} ${unit} ${ingredientName}`
+          : `Đã xuất ${Math.abs(parsedQuantityChange)} ${unit} ${ingredientName}`,
       );
       onOpenChange(false);
       onAdjusted();
@@ -132,12 +134,12 @@ export function AdjustStockDialog({
             <Label htmlFor="adjust-qty" className="text-sm font-medium">
               Số lượng ({unit}) — dương = nhập, âm = xuất
             </Label>
-            <Input
+            <FormattedNumberInput
               id="adjust-qty"
-              name="quantity_change"
-              type="number"
-              inputMode="decimal"
-              step={0.01}
+              value={quantityChange}
+              onValueChange={setQuantityChange}
+              allowNegative
+              maxFractionDigits={2}
               required
               placeholder="VD: 10 hoặc -5"
               autoFocus

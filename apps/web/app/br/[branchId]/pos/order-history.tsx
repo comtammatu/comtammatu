@@ -5,10 +5,7 @@ import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  CheckCircle2,
-  Clock3,
   Package,
-  PackageCheck,
   Receipt,
   UtensilsCrossed,
 } from "lucide-react";
@@ -19,6 +16,7 @@ export interface SessionOrder {
   order_number: string;
   order_type: string;
   status: string;
+  payment_status: string | null;
   total_amount: number;
   table_id: number | null;
   created_at: string;
@@ -87,12 +85,12 @@ export function OrderHistory({
     <div className="flex flex-1 flex-col overflow-hidden bg-background">
       <div className="border-b border-border/60 px-4 py-4">
         <div className="rounded-xl border bg-card shadow-sm p-4">
-          <div className="relative space-y-4">
+          <div className="space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Theo dõi ca</p>
                 <h2 className="mt-1 text-lg font-semibold tracking-tight">
-                  Đơn đang chạy và đơn đã chốt nằm trong cùng một mạch quan sát.
+                  Đơn đang phục vụ và thanh toán nằm trong cùng một luồng thao tác.
                 </h2>
               </div>
               <div className="rounded-full border border-primary/15 bg-card px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
@@ -100,52 +98,16 @@ export function OrderHistory({
               </div>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-3">
-              <div className="rounded-lg border bg-card shadow-sm p-3" data-state="current">
-                <div className="flex items-start gap-3">
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">
-                    <Clock3 className="size-3.5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">Đang vận hành</p>
-                    <p className="text-xs leading-5 text-muted-foreground">
-                      {activeOrders.length} đơn còn trong flow phục vụ
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div
-                className="rounded-lg border bg-card shadow-sm p-3"
-                data-state={archivedOrders.length > 0 ? "done" : "todo"}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">
-                    <CheckCircle2 className="size-3.5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">Đã chốt</p>
-                    <p className="text-xs leading-5 text-muted-foreground">
-                      {archivedOrders.length} đơn đã kết thúc
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div
-                className="rounded-lg border bg-card shadow-sm p-3"
-                data-state={orders.length > 0 ? "done" : "todo"}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">
-                    <PackageCheck className="size-3.5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">Tổng doanh thu ca</p>
-                    <p className="text-xs leading-5 text-muted-foreground">
-                      {formatVND(totalRevenue)}
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="rounded-full px-3 py-1">
+                {activeOrders.length} đơn đang phục vụ
+              </Badge>
+              <Badge variant="outline" className="rounded-full px-3 py-1">
+                {archivedOrders.length} đơn đã chốt
+              </Badge>
+              <Badge variant="outline" className="rounded-full px-3 py-1">
+                Doanh thu ca {formatVND(totalRevenue)}
+              </Badge>
             </div>
           </div>
         </div>
@@ -158,7 +120,7 @@ export function OrderHistory({
               <div>
                 <p className="text-sm font-semibold text-foreground">Đang phục vụ</p>
                 <p className="text-xs text-muted-foreground">
-                  Ưu tiên đơn còn trong flow bếp và bàn.
+                  Ưu tiên các đơn còn đang làm ở bếp hoặc tại bàn.
                 </p>
               </div>
               <span className="rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-xs font-semibold text-primary">
@@ -177,6 +139,10 @@ export function OrderHistory({
                     label: order.status,
                     variant: "outline" as const,
                   };
+                  const waitingPayment =
+                    order.status === "served" && order.payment_status !== "paid";
+                  const readyToCloseTable =
+                    order.status === "served" && order.payment_status === "paid";
 
                   return (
                     <div
@@ -198,6 +164,20 @@ export function OrderHistory({
                             >
                               {statusInfo.label}
                             </Badge>
+                            {order.status === "served" && (
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  waitingPayment
+                                    ? "border-warning/20 bg-warning/10 text-warning"
+                                    : "border-success/20 bg-success/10 text-success",
+                                )}
+                              >
+                                {waitingPayment
+                                  ? "Chờ thanh toán"
+                                  : "Đã thu tiền"}
+                              </Badge>
+                            )}
                           </div>
                           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                             <span>{formatTime(order.created_at)}</span>
@@ -228,21 +208,25 @@ export function OrderHistory({
 
                       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
                         <Button
-                          variant="outline"
+                          variant={waitingPayment || readyToCloseTable ? "secondary" : "outline"}
                           size="sm"
                           className="h-10 rounded-full px-4 text-xs"
                           onClick={() => onViewDetail(order.id)}
                         >
-                          Chi tiết
+                          {readyToCloseTable ? "Hoàn tất" : "Điều phối"}
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant={waitingPayment || readyToCloseTable ? "default" : "ghost"}
                           size="sm"
                           className="h-10 rounded-full px-4 text-xs"
                           onClick={() => onViewBill(order.id)}
                         >
                           <Receipt className="mr-1 size-3.5" />
-                          Hóa đơn
+                          {waitingPayment
+                            ? "Thanh toán"
+                            : readyToCloseTable
+                              ? "Trả bàn"
+                              : "Hóa đơn"}
                         </Button>
                       </div>
                     </div>
@@ -318,6 +302,18 @@ export function OrderHistory({
                         <p className="text-base font-bold text-foreground">
                           {formatVND(order.total_amount)}
                         </p>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-10 rounded-full px-4 text-xs"
+                          onClick={() => onViewBill(order.id)}
+                        >
+                          <Receipt className="mr-1 size-3.5" />
+                          Hóa đơn
+                        </Button>
                       </div>
                     </div>
                   );

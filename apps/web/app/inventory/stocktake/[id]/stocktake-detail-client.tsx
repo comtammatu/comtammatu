@@ -37,6 +37,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { InventoryHeader } from "../../_components/inventory-header";
+import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import {
@@ -474,10 +475,8 @@ function CountingPhase({
                     {line.ingredients?.unit ?? "—"}
                   </p>
                   <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      min={0}
-                      step="any"
+                    <FormattedNumberInput
+                      key={`stocktake-mobile-${line.id}-${line.counted_quantity ?? ""}`}
                       defaultValue={
                         line.counted_quantity != null
                           ? String(line.counted_quantity)
@@ -485,7 +484,8 @@ function CountingPhase({
                       }
                       placeholder="SL thực đếm"
                       className="h-8 flex-1 tabular-nums"
-                      onBlur={(e) => onLineBlur(line.id, e.target.value)}
+                      onValueBlur={(value) => onLineBlur(line.id, value)}
+                      maxFractionDigits={3}
                       disabled={isPending}
                     />
                     <Input
@@ -555,10 +555,8 @@ function CountingPhase({
                     {line.ingredients?.unit ?? "—"}
                   </TableCell>
                   <TableCell>
-                    <Input
-                      type="number"
-                      min={0}
-                      step="any"
+                    <FormattedNumberInput
+                      key={`stocktake-desktop-${line.id}-${line.counted_quantity ?? ""}`}
                       defaultValue={
                         line.counted_quantity != null
                           ? String(line.counted_quantity)
@@ -566,7 +564,8 @@ function CountingPhase({
                       }
                       placeholder="0"
                       className="h-8 w-24 tabular-nums"
-                      onBlur={(e) => onLineBlur(line.id, e.target.value)}
+                      onValueBlur={(value) => onLineBlur(line.id, value)}
+                      maxFractionDigits={3}
                       disabled={isPending}
                     />
                   </TableCell>
