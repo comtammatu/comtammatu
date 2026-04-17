@@ -1,8 +1,18 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CircleSlash, Plus } from "lucide-react";
+import {
+  Controller,
+  useFieldArray,
+  useForm,
+  type Control,
+  type FieldErrors,
+} from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
@@ -30,9 +40,166 @@ import { createProductionOrder } from "../../production-actions";
 import { defaultProductionNumber } from "../../production-types";
 import type {
   BranchOption,
-  DraftLine,
   FinishedGoodOption,
 } from "../../production-types";
+
+/* ─── Schema ─── */
+
+const productionLineRowSchema = z.object({
+  finished_good_id: z
+    .string()
+    .min(1, { error: "Chọn thành phẩm" })
+    .refine((v) => Number(v) > 0, { error: "Thành phẩm không hợp lệ" }),
+  quantity: z
+    .string()
+    .min(1, { error: "Nhập số lượng" })
+    .refine((v) => Number(v) > 0, { error: "Số lượng phải > 0" }),
+  unit: z.string().trim().min(1, { error: "Đơn vị không được trống" }),
+});
+
+const mobileProductionSchema = z.object({
+  branch_id: z.string().min(1, { error: "Vui lòng chọn bếp trung tâm" }),
+  production_number: z
+    .string()
+    .trim()
+    .min(1, { error: "Số lệnh không được trống" }),
+  notes: z.string().optional(),
+  lines: z
+    .array(productionLineRowSchema)
+    .min(1, { error: "Cần ít nhất một thành phẩm hợp lệ" }),
+});
+
+type MobileProductionFormValues = z.infer<typeof mobileProductionSchema>;
+type ProductionLineRow = z.infer<typeof productionLineRowSchema>;
+
+function buildEmptyRow(fallback?: FinishedGoodOption): ProductionLineRow {
+  return {
+    finished_good_id: fallback?.id ? String(fallback.id) : "",
+    quantity: "1",
+    unit: fallback?.unit ?? "",
+  };
+}
+
+/* ─── Row (stacked for mobile) ─── */
+
+function LineRowCard({
+  control,
+  index,
+  finishedGoods,
+  errors,
+  onRemove,
+  canRemove,
+  onFinishedGoodChange,
+}: {
+  control: Control<MobileProductionFormValues>;
+  index: number;
+  finishedGoods: FinishedGoodOption[];
+  errors: FieldErrors<MobileProductionFormValues>;
+  onRemove: () => void;
+  canRemove: boolean;
+  onFinishedGoodChange: (value: string) => void;
+}) {
+  const rowError = errors.lines?.[index];
+
+  return (
+    <div className="space-y-3 rounded-xl border bg-card p-3">
+      <div className="space-y-2">
+        <Label>Thành phẩm</Label>
+        <Controller
+          control={control}
+          name={`lines.${index}.finished_good_id`}
+          render={({ field }) => (
+            <Select
+              value={field.value}
+              onValueChange={(v) => {
+                field.onChange(v);
+                onFinishedGoodChange(v);
+              }}
+            >
+              <SelectTrigger
+                className={cn(rowError?.finished_good_id && "border-destructive")}
+                aria-invalid={!!rowError?.finished_good_id}
+                onBlur={field.onBlur}
+                ref={field.ref}
+              >
+                <SelectValue placeholder="Chọn thành phẩm" />
+              </SelectTrigger>
+              <SelectContent>
+                {finishedGoods.map((good) => (
+                  <SelectItem key={good.id} value={String(good.id)}>
+                    {good.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label>Số lượng</Label>
+          <Controller
+            control={control}
+            name={`lines.${index}.quantity`}
+            render={({ field }) => (
+              <FormattedNumberInput
+                value={field.value ?? ""}
+                onValueChange={field.onChange}
+                onBlur={field.onBlur}
+                ref={field.ref}
+                name={field.name}
+                maxFractionDigits={3}
+                placeholder="Số lượng"
+                aria-invalid={!!rowError?.quantity}
+                className={cn(rowError?.quantity && "border-destructive")}
+              />
+            )}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Đơn vị</Label>
+          <Controller
+            control={control}
+            name={`lines.${index}.unit`}
+            render={({ field }) => (
+              <Input
+                {...field}
+                value={field.value ?? ""}
+                placeholder="ĐVT"
+                aria-invalid={!!rowError?.unit}
+                className={cn(rowError?.unit && "border-destructive")}
+              />
+            )}
+          />
+        </div>
+      </div>
+
+      {rowError && (
+        <p className="text-xs text-destructive" role="alert">
+          {rowError.finished_good_id?.message ??
+            rowError.quantity?.message ??
+            rowError.unit?.message}
+        </p>
+      )}
+
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onRemove}
+          disabled={!canRemove}
+        >
+          <CircleSlash className="mr-2 size-4" />
+          Bỏ dòng
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Form ─── */
 
 interface MobileProductionOrderFormProps {
   centralKitchenBranches: BranchOption[];
@@ -48,100 +215,67 @@ export function MobileProductionOrderForm({
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [branchId, setBranchId] = useState(
-    centralKitchenBranches[0]?.id ? String(centralKitchenBranches[0].id) : "",
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const defaultBranchId = centralKitchenBranches[0]?.id
+    ? String(centralKitchenBranches[0].id)
+    : "";
+
+  const initialValues = useMemo<MobileProductionFormValues>(
+    () => ({
+      branch_id: defaultBranchId,
+      production_number: defaultProductionNumber(),
+      notes: "",
+      lines: [buildEmptyRow(finishedGoodsOptions[0])],
+    }),
+    [defaultBranchId, finishedGoodsOptions],
   );
-  const [productionNumber, setProductionNumber] = useState(
-    defaultProductionNumber(),
-  );
-  const [notes, setNotes] = useState("");
-  const [lines, setLines] = useState<DraftLine[]>([
-    {
-      finishedGoodId: finishedGoodsOptions[0]?.id ?? 0,
-      quantity: "1",
-      unit: finishedGoodsOptions[0]?.unit ?? "",
-    },
-  ]);
+
+  const form = useForm<
+    MobileProductionFormValues,
+    unknown,
+    MobileProductionFormValues
+  >({
+    resolver: zodResolver(mobileProductionSchema),
+    defaultValues: initialValues,
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "lines",
+  });
 
   useEffect(() => {
-    if (!isOpen) return;
-    if (!branchId && centralKitchenBranches[0]) {
-      setBranchId(String(centralKitchenBranches[0].id));
+    if (isOpen) {
+      form.reset({
+        branch_id: defaultBranchId,
+        production_number: defaultProductionNumber(),
+        notes: "",
+        lines: [buildEmptyRow(finishedGoodsOptions[0])],
+      });
+      setServerError(null);
     }
-    if (lines.length === 0 && finishedGoodsOptions[0]) {
-      setLines([
-        {
-          finishedGoodId: finishedGoodsOptions[0].id,
-          quantity: "1",
-          unit: finishedGoodsOptions[0].unit,
-        },
-      ]);
-    }
-  }, [
-    branchId,
-    centralKitchenBranches,
-    finishedGoodsOptions,
-    isOpen,
-    lines.length,
-  ]);
+  }, [isOpen, defaultBranchId, finishedGoodsOptions, form]);
 
-  function updateLine(index: number, patch: Partial<DraftLine>) {
-    setLines((prev) =>
-      prev.map((line, lineIndex) =>
-        lineIndex === index ? { ...line, ...patch } : line,
-      ),
-    );
+  const finishedGoodsMap = useMemo(() => {
+    const m = new Map<number, FinishedGoodOption>();
+    for (const g of finishedGoodsOptions) m.set(g.id, g);
+    return m;
+  }, [finishedGoodsOptions]);
+
+  function handleFinishedGoodChangeFactory(rowIndex: number) {
+    return (value: string) => {
+      const good = finishedGoodsMap.get(Number(value));
+      if (good) {
+        form.setValue(`lines.${rowIndex}.unit`, good.unit);
+      }
+    };
   }
 
-  function addLine() {
-    const fallback = finishedGoodsOptions[0];
-    setLines((prev) => [
-      ...prev,
-      {
-        finishedGoodId: fallback?.id ?? 0,
-        quantity: "1",
-        unit: fallback?.unit ?? "",
-      },
-    ]);
-  }
-
-  function removeLine(index: number) {
-    setLines((prev) =>
-      prev.length <= 1
-        ? prev
-        : prev.filter((_, lineIndex) => lineIndex !== index),
-    );
-  }
-
-  function resetForm() {
-    setCreateError(null);
-    setProductionNumber(defaultProductionNumber());
-    setNotes("");
-    setLines([
-      {
-        finishedGoodId: finishedGoodsOptions[0]?.id ?? 0,
-        quantity: "1",
-        unit: finishedGoodsOptions[0]?.unit ?? "",
-      },
-    ]);
-    if (centralKitchenBranches[0]) {
-      setBranchId(String(centralKitchenBranches[0].id));
-    }
-  }
-
-  function handleOpenChange(open: boolean) {
-    setIsOpen(open);
-    if (!open) {
-      resetForm();
-    }
-  }
-
-  function handleCreate() {
-    const parsedBranchId = Number(branchId);
-    const payloadLines = lines
+  function onValid(values: MobileProductionFormValues) {
+    const payloadLines = values.lines
       .map((line) => ({
-        finishedGoodId: line.finishedGoodId,
+        finishedGoodId: Number(line.finished_good_id),
         quantity: Number(line.quantity),
         unit: line.unit.trim(),
       }))
@@ -155,32 +289,35 @@ export function MobileProductionOrderForm({
       );
 
     if (payloadLines.length === 0) {
-      setCreateError("Cần ít nhất một thành phẩm hợp lệ.");
+      setServerError("Cần ít nhất một thành phẩm hợp lệ.");
       return;
     }
 
     startTransition(async () => {
-      setCreateError(null);
+      setServerError(null);
       const result = await createProductionOrder({
-        branchId: parsedBranchId,
-        productionNumber: productionNumber.trim(),
-        notes: notes.trim() || undefined,
+        branchId: Number(values.branch_id),
+        productionNumber: values.production_number.trim(),
+        notes: values.notes?.trim() || undefined,
         items: payloadLines,
       });
 
       if (!result.success) {
-        setCreateError(result.error ?? "Không thể tạo lệnh sản xuất");
+        setServerError(result.error ?? "Không thể tạo lệnh sản xuất");
         return;
       }
 
       toast.success("Đã tạo lệnh sản xuất");
-      handleOpenChange(false);
+      setIsOpen(false);
       router.refresh();
     });
   }
 
+  const errors = form.formState.errors;
+  const linesRootError = errors.lines?.root?.message ?? errors.lines?.message;
+
   return (
-    <Sheet open={isOpen} onOpenChange={handleOpenChange}>
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
         <Button disabled={!actionsEnabled}>
           <Plus className="mr-2 size-4" />
@@ -195,157 +332,138 @@ export function MobileProductionOrderForm({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="space-y-4 px-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="mobile-production-number">Số lệnh</Label>
-            <Input
-              id="mobile-production-number"
-              value={productionNumber}
-              onChange={(event) => setProductionNumber(event.target.value)}
-              placeholder="PRD-20260414-001"
-            />
-          </div>
+        <form onSubmit={form.handleSubmit(onValid)} noValidate>
+          <div className="space-y-4 px-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="mobile-production-number">Số lệnh</Label>
+              <Controller
+                control={form.control}
+                name="production_number"
+                render={({ field }) => (
+                  <Input
+                    id="mobile-production-number"
+                    {...field}
+                    value={field.value ?? ""}
+                    placeholder="PRD-20260414-001"
+                    aria-invalid={!!errors.production_number}
+                    className={cn(
+                      errors.production_number && "border-destructive",
+                    )}
+                  />
+                )}
+              />
+              {errors.production_number && (
+                <p className="text-xs text-destructive" role="alert">
+                  {errors.production_number.message}
+                </p>
+              )}
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="mobile-production-branch">Bếp trung tâm</Label>
-            <Select value={branchId} onValueChange={setBranchId}>
-              <SelectTrigger id="mobile-production-branch">
-                <SelectValue placeholder="Chọn bếp trung tâm" />
-              </SelectTrigger>
-              <SelectContent>
-                {centralKitchenBranches.map((branch) => (
-                  <SelectItem key={branch.id} value={String(branch.id)}>
-                    {branch.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="mobile-production-branch">Bếp trung tâm</Label>
+              <Controller
+                control={form.control}
+                name="branch_id"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger
+                      id="mobile-production-branch"
+                      aria-invalid={!!errors.branch_id}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                    >
+                      <SelectValue placeholder="Chọn bếp trung tâm" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {centralKitchenBranches.map((branch) => (
+                        <SelectItem key={branch.id} value={String(branch.id)}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.branch_id && (
+                <p className="text-xs text-destructive" role="alert">
+                  {errors.branch_id.message}
+                </p>
+              )}
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="mobile-production-notes">Ghi chú</Label>
-            <Textarea
-              id="mobile-production-notes"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="Ca làm việc, đóng gói, ghi chú bàn giao..."
-            />
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <Label>Thành phẩm</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addLine}
-              >
-                Thêm dòng
-              </Button>
+            <div className="space-y-2">
+              <Label htmlFor="mobile-production-notes">Ghi chú</Label>
+              <Controller
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <Textarea
+                    id="mobile-production-notes"
+                    {...field}
+                    value={field.value ?? ""}
+                    placeholder="Ca làm việc, đóng gói, ghi chú bàn giao..."
+                  />
+                )}
+              />
             </div>
 
             <div className="space-y-3">
-              {lines.map((line, index) => (
-                <div
-                  key={`${index}-${line.finishedGoodId}`}
-                  className="space-y-3 rounded-xl border bg-card p-3"
+              <div className="flex items-center justify-between gap-3">
+                <Label>Thành phẩm</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => append(buildEmptyRow(finishedGoodsOptions[0]))}
                 >
-                  <div className="space-y-2">
-                    <Label>Thành phẩm</Label>
-                    <Select
-                      value={String(line.finishedGoodId)}
-                      onValueChange={(value) => {
-                        const option = finishedGoodsOptions.find(
-                          (good) => good.id === Number(value),
-                        );
-                        updateLine(index, {
-                          finishedGoodId: Number(value),
-                          unit: option?.unit ?? line.unit,
-                        });
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Chọn thành phẩm" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {finishedGoodsOptions.map((good) => (
-                          <SelectItem key={good.id} value={String(good.id)}>
-                            {good.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  Thêm dòng
+                </Button>
+              </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label>Số lượng</Label>
-                      <FormattedNumberInput
-                        value={line.quantity}
-                        onValueChange={(value) =>
-                          updateLine(index, { quantity: value })
-                        }
-                        maxFractionDigits={3}
-                        placeholder="Số lượng"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Đơn vị</Label>
-                      <Input
-                        value={line.unit}
-                        onChange={(event) =>
-                          updateLine(index, { unit: event.target.value })
-                        }
-                        placeholder="ĐVT"
-                      />
-                    </div>
-                  </div>
+              <div className="space-y-3">
+                {fields.map((row, index) => (
+                  <LineRowCard
+                    key={row.id}
+                    control={form.control}
+                    index={index}
+                    finishedGoods={finishedGoodsOptions}
+                    errors={errors}
+                    onRemove={() => remove(index)}
+                    canRemove={fields.length > 1}
+                    onFinishedGoodChange={handleFinishedGoodChangeFactory(index)}
+                  />
+                ))}
+              </div>
 
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeLine(index)}
-                      disabled={lines.length === 1}
-                    >
-                      <CircleSlash className="mr-2 size-4" />
-                      Bỏ dòng
-                    </Button>
-                  </div>
-                </div>
-              ))}
+              {linesRootError && (
+                <p className="text-sm text-destructive" role="alert">
+                  {linesRootError}
+                </p>
+              )}
             </div>
+
+            {serverError ? (
+              <p className="text-sm text-destructive" role="alert">
+                {serverError}
+              </p>
+            ) : null}
           </div>
 
-          {createError ? (
-            <p className="text-sm text-destructive" role="alert">
-              {createError}
-            </p>
-          ) : null}
-        </div>
-
-        <SheetFooter className="border-t px-4 py-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleOpenChange(false)}
-            disabled={isPending}
-          >
-            Hủy
-          </Button>
-          <Button
-            type="button"
-            onClick={handleCreate}
-            disabled={isPending || !actionsEnabled}
-          >
-            {isPending ? (
-              <Spinner className="mr-2" />
-            ) : null}
-            Tạo lệnh
-          </Button>
-        </SheetFooter>
+          <SheetFooter className="border-t px-4 py-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsOpen(false)}
+              disabled={isPending}
+            >
+              Hủy
+            </Button>
+            <Button type="submit" disabled={isPending || !actionsEnabled}>
+              {isPending ? <Spinner className="mr-2" /> : null}
+              Tạo lệnh
+            </Button>
+          </SheetFooter>
+        </form>
       </SheetContent>
     </Sheet>
   );

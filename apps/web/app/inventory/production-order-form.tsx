@@ -1,8 +1,18 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CircleSlash, Plus } from "lucide-react";
+import {
+  Controller,
+  useFieldArray,
+  useForm,
+  type Control,
+  type FieldErrors,
+} from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -27,11 +37,154 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { FormattedNumberInput } from "./_components/formatted-number-input";
 import { createProductionOrder } from "./production-actions";
 import { defaultProductionNumber } from "./production-types";
-import type {
-  BranchOption,
-  DraftLine,
-  FinishedGoodOption,
-} from "./production-types";
+import type { BranchOption, FinishedGoodOption } from "./production-types";
+
+/* ─── Schema ─── */
+
+const productionLineRowSchema = z.object({
+  finished_good_id: z
+    .string()
+    .min(1, { error: "Chọn thành phẩm" })
+    .refine((v) => Number(v) > 0, { error: "Thành phẩm không hợp lệ" }),
+  quantity: z
+    .string()
+    .min(1, { error: "Nhập số lượng" })
+    .refine((v) => Number(v) > 0, { error: "Số lượng phải > 0" }),
+  unit: z.string().trim().min(1, { error: "Đơn vị không được trống" }),
+});
+
+const productionOrderSchema = z.object({
+  branch_id: z
+    .string()
+    .min(1, { error: "Vui lòng chọn bếp trung tâm" }),
+  production_number: z.string().trim().min(1, { error: "Số lệnh không được trống" }),
+  notes: z.string().optional(),
+  lines: z
+    .array(productionLineRowSchema)
+    .min(1, { error: "Cần ít nhất một thành phẩm hợp lệ" }),
+});
+
+type ProductionOrderFormValues = z.infer<typeof productionOrderSchema>;
+type ProductionLineRow = z.infer<typeof productionLineRowSchema>;
+
+function buildEmptyRow(fallback?: FinishedGoodOption): ProductionLineRow {
+  return {
+    finished_good_id: fallback?.id ? String(fallback.id) : "",
+    quantity: "1",
+    unit: fallback?.unit ?? "",
+  };
+}
+
+/* ─── Row ─── */
+
+function LineRowCells({
+  control,
+  index,
+  finishedGoods,
+  errors,
+  onRemove,
+  canRemove,
+  onFinishedGoodChange,
+}: {
+  control: Control<ProductionOrderFormValues>;
+  index: number;
+  finishedGoods: FinishedGoodOption[];
+  errors: FieldErrors<ProductionOrderFormValues>;
+  onRemove: () => void;
+  canRemove: boolean;
+  onFinishedGoodChange: (value: string) => void;
+}) {
+  const rowError = errors.lines?.[index];
+
+  return (
+    <div className="space-y-1.5">
+      <div className="grid gap-3 md:grid-cols-[1fr_120px_120px_auto]">
+        <Controller
+          control={control}
+          name={`lines.${index}.finished_good_id`}
+          render={({ field }) => (
+            <Select
+              value={field.value}
+              onValueChange={(v) => {
+                field.onChange(v);
+                onFinishedGoodChange(v);
+              }}
+            >
+              <SelectTrigger
+                className={cn(rowError?.finished_good_id && "border-destructive")}
+                aria-invalid={!!rowError?.finished_good_id}
+                onBlur={field.onBlur}
+                ref={field.ref}
+              >
+                <SelectValue placeholder="Chọn thành phẩm" />
+              </SelectTrigger>
+              <SelectContent>
+                {finishedGoods.map((good) => (
+                  <SelectItem key={good.id} value={String(good.id)}>
+                    {good.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+
+        <Controller
+          control={control}
+          name={`lines.${index}.quantity`}
+          render={({ field }) => (
+            <FormattedNumberInput
+              value={field.value ?? ""}
+              onValueChange={field.onChange}
+              onBlur={field.onBlur}
+              ref={field.ref}
+              name={field.name}
+              maxFractionDigits={3}
+              placeholder="Số lượng"
+              aria-invalid={!!rowError?.quantity}
+              className={cn(rowError?.quantity && "border-destructive")}
+            />
+          )}
+        />
+
+        <Controller
+          control={control}
+          name={`lines.${index}.unit`}
+          render={({ field }) => (
+            <Input
+              {...field}
+              value={field.value ?? ""}
+              placeholder="ĐVT"
+              aria-invalid={!!rowError?.unit}
+              className={cn(rowError?.unit && "border-destructive")}
+            />
+          )}
+        />
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onRemove}
+          disabled={!canRemove}
+          className="self-start"
+          aria-label="Xoá dòng"
+        >
+          <CircleSlash className="size-4" />
+        </Button>
+      </div>
+      {rowError && (
+        <p className="text-xs text-destructive" role="alert">
+          {rowError.finished_good_id?.message ??
+            rowError.quantity?.message ??
+            rowError.unit?.message}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ─── Dialog ─── */
 
 interface ProductionOrderFormProps {
   centralKitchenBranches: BranchOption[];
@@ -47,89 +200,63 @@ export function ProductionOrderForm({
   const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [branchId, setBranchId] = useState(
-    centralKitchenBranches[0]?.id ? String(centralKitchenBranches[0].id) : "",
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const defaultBranchId = centralKitchenBranches[0]?.id
+    ? String(centralKitchenBranches[0].id)
+    : "";
+
+  const initialValues = useMemo<ProductionOrderFormValues>(
+    () => ({
+      branch_id: defaultBranchId,
+      production_number: defaultProductionNumber(),
+      notes: "",
+      lines: [buildEmptyRow(finishedGoodsOptions[0])],
+    }),
+    [defaultBranchId, finishedGoodsOptions],
   );
-  const [productionNumber, setProductionNumber] = useState(
-    defaultProductionNumber(),
-  );
-  const [notes, setNotes] = useState("");
-  const [lines, setLines] = useState<DraftLine[]>([
-    {
-      finishedGoodId: finishedGoodsOptions[0]?.id ?? 0,
-      quantity: "1",
-      unit: finishedGoodsOptions[0]?.unit ?? "",
-    },
-  ]);
+
+  const form = useForm<ProductionOrderFormValues, unknown, ProductionOrderFormValues>({
+    resolver: zodResolver(productionOrderSchema),
+    defaultValues: initialValues,
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "lines",
+  });
 
   useEffect(() => {
-    if (!isDialogOpen) return;
-    if (!branchId && centralKitchenBranches[0]) {
-      setBranchId(String(centralKitchenBranches[0].id));
+    if (isDialogOpen) {
+      form.reset({
+        branch_id: defaultBranchId,
+        production_number: defaultProductionNumber(),
+        notes: "",
+        lines: [buildEmptyRow(finishedGoodsOptions[0])],
+      });
+      setServerError(null);
     }
-    if (lines.length === 0 && finishedGoodsOptions[0]) {
-      setLines([
-        {
-          finishedGoodId: finishedGoodsOptions[0].id,
-          quantity: "1",
-          unit: finishedGoodsOptions[0].unit,
-        },
-      ]);
-    }
-  }, [
-    branchId,
-    centralKitchenBranches,
-    finishedGoodsOptions,
-    isDialogOpen,
-    lines.length,
-  ]);
+  }, [isDialogOpen, defaultBranchId, finishedGoodsOptions, form]);
 
-  function updateLine(index: number, patch: Partial<DraftLine>) {
-    setLines((prev) =>
-      prev.map((line, i) => (i === index ? { ...line, ...patch } : line)),
-    );
+  const finishedGoodsMap = useMemo(() => {
+    const m = new Map<number, FinishedGoodOption>();
+    for (const g of finishedGoodsOptions) m.set(g.id, g);
+    return m;
+  }, [finishedGoodsOptions]);
+
+  function handleFinishedGoodChangeFactory(rowIndex: number) {
+    return (value: string) => {
+      const good = finishedGoodsMap.get(Number(value));
+      if (good) {
+        form.setValue(`lines.${rowIndex}.unit`, good.unit);
+      }
+    };
   }
 
-  function addLine() {
-    const fallback = finishedGoodsOptions[0];
-    setLines((prev) => [
-      ...prev,
-      {
-        finishedGoodId: fallback?.id ?? 0,
-        quantity: "1",
-        unit: fallback?.unit ?? "",
-      },
-    ]);
-  }
-
-  function removeLine(index: number) {
-    setLines((prev) =>
-      prev.length <= 1 ? prev : prev.filter((_, i) => i !== index),
-    );
-  }
-
-  function resetDialog() {
-    setCreateError(null);
-    setProductionNumber(defaultProductionNumber());
-    setNotes("");
-    setLines([
-      {
-        finishedGoodId: finishedGoodsOptions[0]?.id ?? 0,
-        quantity: "1",
-        unit: finishedGoodsOptions[0]?.unit ?? "",
-      },
-    ]);
-    if (centralKitchenBranches[0]) {
-      setBranchId(String(centralKitchenBranches[0].id));
-    }
-  }
-
-  function handleCreate() {
-    const parsedBranchId = Number(branchId);
-    const payloadLines = lines
+  function onValid(values: ProductionOrderFormValues) {
+    const payloadLines = values.lines
       .map((line) => ({
-        finishedGoodId: line.finishedGoodId,
+        finishedGoodId: Number(line.finished_good_id),
         quantity: Number(line.quantity),
         unit: line.unit.trim(),
       }))
@@ -143,36 +270,33 @@ export function ProductionOrderForm({
       );
 
     if (payloadLines.length === 0) {
-      setCreateError("Cần ít nhất một thành phẩm hợp lệ.");
+      setServerError("Cần ít nhất một thành phẩm hợp lệ.");
       return;
     }
 
     startTransition(async () => {
-      setCreateError(null);
+      setServerError(null);
       const result = await createProductionOrder({
-        branchId: parsedBranchId,
-        productionNumber: productionNumber.trim(),
-        notes: notes.trim() || undefined,
+        branchId: Number(values.branch_id),
+        productionNumber: values.production_number.trim(),
+        notes: values.notes?.trim() || undefined,
         items: payloadLines,
       });
       if (!result.success) {
-        setCreateError(result.error ?? "Không thể tạo lệnh sản xuất");
+        setServerError(result.error ?? "Không thể tạo lệnh sản xuất");
         return;
       }
       toast.success("Đã tạo lệnh sản xuất");
       setIsDialogOpen(false);
-      resetDialog();
       router.refresh();
     });
   }
 
-  function handleDialogOpenChange(open: boolean) {
-    setIsDialogOpen(open);
-    if (!open) resetDialog();
-  }
+  const errors = form.formState.errors;
+  const linesRootError = errors.lines?.root?.message ?? errors.lines?.message;
 
   return (
-    <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
         <Button disabled={!actionsEnabled}>
           <Plus className="mr-2 size-4" />
@@ -184,41 +308,78 @@ export function ProductionOrderForm({
           <DialogTitle>Tạo lệnh sản xuất</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <form onSubmit={form.handleSubmit(onValid)} noValidate className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="productionNumber">Số lệnh</Label>
-              <Input
-                id="productionNumber"
-                value={productionNumber}
-                onChange={(e) => setProductionNumber(e.target.value)}
-                placeholder="PRD-20260414-001"
+              <Controller
+                control={form.control}
+                name="production_number"
+                render={({ field }) => (
+                  <Input
+                    id="productionNumber"
+                    {...field}
+                    value={field.value ?? ""}
+                    placeholder="PRD-20260414-001"
+                    aria-invalid={!!errors.production_number}
+                    className={cn(
+                      errors.production_number && "border-destructive",
+                    )}
+                  />
+                )}
               />
+              {errors.production_number && (
+                <p className="text-xs text-destructive" role="alert">
+                  {errors.production_number.message}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="branchId">Bếp trung tâm</Label>
-              <Select value={branchId} onValueChange={setBranchId}>
-                <SelectTrigger id="branchId">
-                  <SelectValue placeholder="Chọn bếp trung tâm" />
-                </SelectTrigger>
-                <SelectContent>
-                  {centralKitchenBranches.map((branch) => (
-                    <SelectItem key={branch.id} value={String(branch.id)}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={form.control}
+                name="branch_id"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger
+                      id="branchId"
+                      aria-invalid={!!errors.branch_id}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                    >
+                      <SelectValue placeholder="Chọn bếp trung tâm" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {centralKitchenBranches.map((branch) => (
+                        <SelectItem key={branch.id} value={String(branch.id)}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.branch_id && (
+                <p className="text-xs text-destructive" role="alert">
+                  {errors.branch_id.message}
+                </p>
+              )}
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="notes">Ghi chú</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ghi chú lô sản xuất, ca làm việc, yêu cầu đóng gói..."
+            <Controller
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <Textarea
+                  id="notes"
+                  {...field}
+                  value={field.value ?? ""}
+                  placeholder="Ghi chú lô sản xuất, ca làm việc, yêu cầu đóng gói..."
+                />
+              )}
             />
           </div>
 
@@ -229,96 +390,55 @@ export function ProductionOrderForm({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addLine}
+                onClick={() => append(buildEmptyRow(finishedGoodsOptions[0]))}
               >
                 Thêm dòng
               </Button>
             </div>
 
             <div className="space-y-3">
-              {lines.map((line, index) => (
-                <div
-                  key={`${index}-${line.finishedGoodId}`}
-                  className="grid gap-3 md:grid-cols-[1fr_120px_120px_auto]"
-                >
-                  <Select
-                    value={String(line.finishedGoodId)}
-                    onValueChange={(value) => {
-                      const option = finishedGoodsOptions.find(
-                        (g) => g.id === Number(value),
-                      );
-                      updateLine(index, {
-                        finishedGoodId: Number(value),
-                        unit: option?.unit ?? line.unit,
-                      });
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Chọn thành phẩm" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {finishedGoodsOptions.map((good) => (
-                        <SelectItem key={good.id} value={String(good.id)}>
-                          {good.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormattedNumberInput
-                    value={line.quantity}
-                    onValueChange={(value) =>
-                      updateLine(index, { quantity: value })
-                    }
-                    maxFractionDigits={3}
-                    placeholder="Số lượng"
-                  />
-                  <Input
-                    value={line.unit}
-                    onChange={(e) =>
-                      updateLine(index, { unit: e.target.value })
-                    }
-                    placeholder="ĐVT"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeLine(index)}
-                    disabled={lines.length === 1}
-                    className="self-start"
-                  >
-                    <CircleSlash className="size-4" />
-                  </Button>
-                </div>
+              {fields.map((row, index) => (
+                <LineRowCells
+                  key={row.id}
+                  control={form.control}
+                  index={index}
+                  finishedGoods={finishedGoodsOptions}
+                  errors={errors}
+                  onRemove={() => remove(index)}
+                  canRemove={fields.length > 1}
+                  onFinishedGoodChange={handleFinishedGoodChangeFactory(index)}
+                />
               ))}
             </div>
+
+            {linesRootError && (
+              <p className="text-sm text-destructive" role="alert">
+                {linesRootError}
+              </p>
+            )}
           </div>
 
-          {createError && (
+          {serverError && (
             <p className="text-sm text-destructive" role="alert">
-              {createError}
+              {serverError}
             </p>
           )}
-        </div>
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleDialogOpenChange(false)}
-            disabled={isPending}
-          >
-            Hủy
-          </Button>
-          <Button
-            type="button"
-            onClick={handleCreate}
-            disabled={isPending || !actionsEnabled}
-          >
-            {isPending && <Spinner className="mr-2" />}
-            Tạo lệnh
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsDialogOpen(false)}
+              disabled={isPending}
+            >
+              Hủy
+            </Button>
+            <Button type="submit" disabled={isPending || !actionsEnabled}>
+              {isPending && <Spinner className="mr-2" />}
+              Tạo lệnh
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
