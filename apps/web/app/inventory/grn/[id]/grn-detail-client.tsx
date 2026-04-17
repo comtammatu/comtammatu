@@ -75,7 +75,11 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
         return;
       }
       toast.success("Đã chốt nhập kho.");
-      router.refresh();
+      if (grn.poId) {
+        router.push(`/inventory/purchase-orders/${grn.poId}`);
+      } else {
+        router.push("/inventory/grn");
+      }
     });
   }
 
@@ -355,15 +359,24 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
 
       {/* Footer Action Bar */}
       <footer className="flex flex-col gap-3 border-t border-border py-6 sm:flex-row sm:items-center sm:justify-between">
-        <Button
-          type="button"
-          variant="ghost"
-          className="justify-center text-destructive hover:bg-destructive/8 hover:text-destructive"
-          disabled
-        >
-          <X className="size-5" />
-          Hủy bỏ
-        </Button>
+        {canConfirm ? (
+          <Button
+            type="button"
+            variant="ghost"
+            className="justify-center text-destructive hover:bg-destructive/8 hover:text-destructive"
+            disabled
+          >
+            <X className="size-5" />
+            Hủy bỏ
+          </Button>
+        ) : (
+          <Button asChild variant="ghost" className="justify-center">
+            <Link href={grn.poId ? `/inventory/purchase-orders/${grn.poId}` : "/inventory/grn"}>
+              <ArrowLeft className="size-5" />
+              {grn.poId ? "Về đơn đặt hàng" : "Về danh sách GRN"}
+            </Link>
+          </Button>
+        )}
         <Button
           type="button"
           disabled={isPending || !canConfirm}

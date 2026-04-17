@@ -116,7 +116,6 @@ export function PODetailClient({ po }: { po: PODetail }) {
       const created = res.data as { id: number };
       toast.success("Đã tạo GRN từ PO.");
       router.push(`/inventory/grn/${created.id}`);
-      router.refresh();
     });
   }
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "crypto";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
@@ -306,6 +307,9 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
         .in("status", ["sent", "partially_received"]);
     }
   }
+
+  revalidatePath("/inventory/grn");
+  if (poId) revalidatePath(`/inventory/purchase-orders/${poId}`);
 
   return { success: true, data };
 }
