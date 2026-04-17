@@ -536,6 +536,7 @@ export function BillReceipt({
                         {methods.map((m) => (
                           <Button
                             key={m}
+                            data-testid={`bill-pay-${m}`}
                             type="button"
                             variant={m === "cash" ? "default" : "secondary"}
                             disabled={payPending || hasPendingRemotePayment}
@@ -610,6 +611,7 @@ export function BillReceipt({
               <div className="space-y-2">
                 {canCompleteOrder && (
                   <Button
+                    data-testid="bill-complete-order"
                     className="w-full rounded-lg shadow-sm transition-transform hover:translate-y-[-1px]"
                     onClick={handleCompleteOrder}
                     disabled={completePending}

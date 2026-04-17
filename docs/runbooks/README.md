@@ -12,6 +12,10 @@ Checklist vận hành và readiness gates.
 - [inventory/operator-journeys.md](inventory/operator-journeys.md): kịch bản đóng vai nhân viên vận hành mỗi ngày
 - [inventory/route-cta-matrix.md](inventory/route-cta-matrix.md): ma trận route, section, CTA, role, device, severity
 
+## POS / KDS
+
+- [pos-kds/payment-autopost-verify.md](pos-kds/payment-autopost-verify.md): checklist apply migration GL non-fatal + rerun smoke cho POS/KDS
+
 ## Cách dùng
 
 1. Đọc canonical doc tương ứng trong `docs/ref/`

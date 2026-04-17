@@ -144,6 +144,7 @@ function canAppendOrderStatus(status: string): boolean {
 
 export interface OrderDetailSheetProps {
   orderId: number | null;
+  refreshToken?: number;
   onClose: () => void;
   onOpenBill: (orderId: number) => void;
   /** Start append flow: parent closes sheet and sets append target on menu */
@@ -155,6 +156,7 @@ export interface OrderDetailSheetProps {
 
 export function OrderDetailSheet({
   orderId,
+  refreshToken,
   onClose,
   onOpenBill,
   onStartAppend,
@@ -195,6 +197,11 @@ export function OrderDetailSheet({
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (orderId === null || refreshToken == null) return;
+    load();
+  }, [load, orderId, refreshToken]);
 
   const handleOpenChange = (open: boolean) => {
     if (!open) onClose();
