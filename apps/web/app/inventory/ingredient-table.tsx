@@ -12,7 +12,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
-import { Input } from "@comtammatu/ui/components/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from "@comtammatu/ui/components/input-group";
 import {
   Item,
   ItemActions,
@@ -104,18 +109,21 @@ export function IngredientTable({
           </p>
         </CardHeader>
         <CardContent className="px-4 sm:px-5">
-          <Card className="mb-4 py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
-            <Search className="size-4 shrink-0 text-muted-foreground" />
-            <Input
+          <InputGroup className="mb-4 h-10">
+            <InputGroupAddon>
+              <Search />
+            </InputGroupAddon>
+            <InputGroupInput
               placeholder="Tìm tên, SKU, danh mục…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="min-w-0 flex-1 border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
             />
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {filtered.length} / {ingredients.length}
-            </span>
-          </CardContent></Card>
+            <InputGroupAddon align="inline-end">
+              <InputGroupText>
+                {filtered.length} / {ingredients.length}
+              </InputGroupText>
+            </InputGroupAddon>
+          </InputGroup>
 
           {isMobile ? (
             <div className="space-y-3">
