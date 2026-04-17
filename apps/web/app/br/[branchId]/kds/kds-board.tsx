@@ -12,10 +12,9 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from "@comtammatu/ui/components/tabs";
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@comtammatu/ui/components/toggle-group";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ChefHat, Filter } from "lucide-react";
@@ -577,37 +576,41 @@ export function KdsBoard({
         <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3">
           <div className="flex shrink-0 items-stretch">
             <ScrollArea className="min-w-0 flex-1">
-              <Tabs
+              <ToggleGroup
+                type="single"
                 value={activeStationId === null ? "all" : String(activeStationId)}
-                onValueChange={(value) =>
-                  replaceQuery({ station: value === "all" ? null : value })
-                }
-                className="gap-0"
+                onValueChange={(value) => {
+                  // ToggleGroup "single" allows empty; treat that as "all"
+                  if (!value) return;
+                  replaceQuery({ station: value === "all" ? null : value });
+                }}
+                variant="outline"
+                className="h-auto justify-start gap-2 rounded-lg border bg-card p-2"
               >
-                <TabsList className="h-auto justify-start gap-2 rounded-lg border bg-card p-2">
-                  <TabsTrigger
-                    value="all"
+                <ToggleGroupItem
+                  value="all"
+                  className="min-h-11 shrink-0 gap-2 px-4 text-sm font-semibold"
+                  aria-label="Tất cả trạm"
+                >
+                  Tất cả
+                  <Badge variant="secondary" className="rounded-full px-2 py-0.5 text-xs font-semibold">
+                    {totalActiveCount}
+                  </Badge>
+                </ToggleGroupItem>
+                {stations.map((station) => (
+                  <ToggleGroupItem
+                    key={station.id}
+                    value={String(station.id)}
                     className="min-h-11 shrink-0 gap-2 px-4 text-sm font-semibold"
+                    aria-label={`Trạm ${station.name}`}
                   >
-                    Tất cả
-                    <span className="rounded-full bg-primary-foreground/15 px-2 py-0.5 text-xs font-semibold text-primary-foreground">
-                      {totalActiveCount}
-                    </span>
-                  </TabsTrigger>
-                  {stations.map((station) => (
-                    <TabsTrigger
-                      key={station.id}
-                      value={String(station.id)}
-                      className="min-h-11 shrink-0 gap-2 px-4 text-sm font-semibold"
-                    >
-                      {station.name}
-                      <span className="rounded-full bg-primary-foreground/15 px-2 py-0.5 text-xs font-semibold text-primary-foreground">
-                        {stationCounts.get(station.id) ?? 0}
-                      </span>
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
+                    {station.name}
+                    <Badge variant="secondary" className="rounded-full px-2 py-0.5 text-xs font-semibold">
+                      {stationCounts.get(station.id) ?? 0}
+                    </Badge>
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
             </ScrollArea>
           </div>
         </div>
