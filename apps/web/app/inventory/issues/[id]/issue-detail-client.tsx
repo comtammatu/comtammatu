@@ -31,14 +31,8 @@ import {
 } from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import { Combobox } from "@/components/form";
 import {
   Table,
   TableBody,
@@ -737,23 +731,20 @@ function AddIssueLineDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label>Nguyên liệu *</Label>
-            <Select value={ingredientId} onValueChange={handleIngredientChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Chọn nguyên liệu" />
-              </SelectTrigger>
-              <SelectContent>
-                {ingredients
-                  .filter((ingredient) => ingredient.is_active)
-                  .map((ingredient) => (
-                    <SelectItem
-                      key={ingredient.id}
-                      value={String(ingredient.id)}
-                    >
-                      {ingredient.name} ({ingredient.unit})
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              value={ingredientId}
+              onValueChange={handleIngredientChange}
+              options={ingredients
+                .filter((ingredient) => ingredient.is_active)
+                .map((ingredient) => ({
+                  value: String(ingredient.id),
+                  label: ingredient.name,
+                  hint: ingredient.unit,
+                  keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
+                }))}
+              placeholder="Chọn nguyên liệu"
+              searchPlaceholder="Tìm tên, SKU, danh mục..."
+            />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
