@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
-import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
 import {
   Dialog,
   DialogContent,
@@ -12,15 +12,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
+import { FieldGroup } from "@comtammatu/ui/components/field";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { FormattedNumberInput } from "../_components/formatted-number-input";
+import { NumberField, SelectField, TextField } from "@/components/form";
 import { createIngredient, updateIngredient } from "../actions";
 
 export interface IngredientRow {
@@ -42,6 +37,81 @@ export interface IngredientRow {
   updated_at: string | null;
 }
 
+const ingredientSchema = z.object({
+  name: z.string().trim().min(1, { error: "Tên nguyên liệu không được trống" }),
+  purchase_unit: z
+    .string()
+    .trim()
+    .min(1, { error: "Đơn vị nhập không được trống" }),
+  measure_unit: z
+    .string()
+    .trim()
+    .min(1, { error: "Đơn vị tính không được trống" }),
+  sku: z.string().trim().optional(),
+  category: z.string().trim().optional(),
+  unit_cost: z.string().optional(),
+  item_kind: z.enum(["raw_material", "finished_good"]),
+  storage_type: z.enum(["ambient", "refrigerated", "frozen"]),
+  min_stock_level: z.string().optional(),
+  max_stock_level: z.string().optional(),
+  reorder_point: z.string().optional(),
+  shelf_life_days: z.string().optional(),
+});
+
+type IngredientFormValues = z.infer<typeof ingredientSchema>;
+
+const STORAGE_OPTIONS = [
+  { value: "ambient", label: "Thường" },
+  { value: "refrigerated", label: "Lạnh" },
+  { value: "frozen", label: "Đông lạnh" },
+] as const;
+
+const ITEM_KIND_OPTIONS = [
+  { value: "raw_material", label: "Nguyên liệu" },
+  { value: "finished_good", label: "Thành phẩm" },
+] as const;
+
+function parseOptionalNumber(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function toFormValues(ingredient: IngredientRow | null): IngredientFormValues {
+  return {
+    name: ingredient?.name ?? "",
+    purchase_unit: ingredient?.purchase_unit ?? ingredient?.unit ?? "",
+    measure_unit: ingredient?.measure_unit ?? ingredient?.unit ?? "",
+    sku: ingredient?.sku ?? "",
+    category: ingredient?.category ?? "",
+    unit_cost:
+      ingredient?.unit_cost != null ? String(ingredient.unit_cost) : "",
+    item_kind:
+      (ingredient?.item_kind as "raw_material" | "finished_good" | undefined) ??
+      "raw_material",
+    storage_type:
+      (ingredient?.storage_type as
+        | "ambient"
+        | "refrigerated"
+        | "frozen"
+        | undefined) ?? "ambient",
+    min_stock_level:
+      ingredient?.min_stock_level != null
+        ? String(ingredient.min_stock_level)
+        : "",
+    max_stock_level:
+      ingredient?.max_stock_level != null
+        ? String(ingredient.max_stock_level)
+        : "",
+    reorder_point:
+      ingredient?.reorder_point != null ? String(ingredient.reorder_point) : "",
+    shelf_life_days:
+      ingredient?.shelf_life_days != null
+        ? String(ingredient.shelf_life_days)
+        : "",
+  };
+}
+
 interface IngredientDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -54,95 +124,66 @@ function IngredientFormContent({
   ingredient,
   onOpenChange,
   onSaved,
-}: {
-  open: boolean;
-  ingredient: IngredientRow | null;
-  onOpenChange: (open: boolean) => void;
-  onSaved: () => void;
-}) {
+}: IngredientDialogProps) {
   const isEdit = ingredient !== null;
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [storageType, setStorageType] = useState<string>(
-    ingredient?.storage_type ?? "ambient",
-  );
-  const [itemKind, setItemKind] = useState<string>(
-    ingredient?.item_kind ?? "raw_material",
-  );
-  const [unitCost, setUnitCost] = useState("");
-  const [minStockLevel, setMinStockLevel] = useState("");
-  const [maxStockLevel, setMaxStockLevel] = useState("");
-  const [reorderPoint, setReorderPoint] = useState("");
-  const [shelfLifeDays, setShelfLifeDays] = useState("");
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const form = useForm<IngredientFormValues>({
+    resolver: zodResolver(ingredientSchema),
+    defaultValues: toFormValues(ingredient),
+  });
 
   useEffect(() => {
-    if (!open) {
-      return;
+    if (open) {
+      form.reset(toFormValues(ingredient));
+      setServerError(null);
     }
+  }, [open, ingredient, form]);
 
-    setStorageType(ingredient?.storage_type ?? "ambient");
-    setItemKind(ingredient?.item_kind ?? "raw_material");
-    setUnitCost(ingredient?.unit_cost != null ? String(ingredient.unit_cost) : "");
-    setMinStockLevel(
-      ingredient?.min_stock_level != null ? String(ingredient.min_stock_level) : "",
-    );
-    setMaxStockLevel(
-      ingredient?.max_stock_level != null ? String(ingredient.max_stock_level) : "",
-    );
-    setReorderPoint(
-      ingredient?.reorder_point != null ? String(ingredient.reorder_point) : "",
-    );
-    setShelfLifeDays(
-      ingredient?.shelf_life_days != null ? String(ingredient.shelf_life_days) : "",
-    );
-    setError(null);
-  }, [open, ingredient]);
-
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-
-    const raw = {
-      name: fd.get("name") as string,
-      purchase_unit: fd.get("purchase_unit") as string,
-      measure_unit: fd.get("measure_unit") as string,
-      sku: (fd.get("sku") as string) || undefined,
-      unit_cost: unitCost ? Number(unitCost) : undefined,
-      category: (fd.get("category") as string) || undefined,
-      item_kind: itemKind as "raw_material" | "finished_good",
-      storage_type: storageType as "ambient" | "refrigerated" | "frozen",
-      min_stock_level: minStockLevel ? Number(minStockLevel) : undefined,
-      max_stock_level: maxStockLevel ? Number(maxStockLevel) : undefined,
-      reorder_point: reorderPoint ? Number(reorderPoint) : undefined,
-      shelf_life_days: shelfLifeDays ? Number(shelfLifeDays) : undefined,
-    };
-
+  function onValid(values: IngredientFormValues) {
     startTransition(async () => {
-      setError(null);
+      setServerError(null);
+
+      const payload = {
+        name: values.name,
+        purchase_unit: values.purchase_unit,
+        measure_unit: values.measure_unit,
+        sku: values.sku || undefined,
+        category: values.category || undefined,
+        unit_cost: parseOptionalNumber(values.unit_cost),
+        item_kind: values.item_kind,
+        storage_type: values.storage_type,
+        min_stock_level: parseOptionalNumber(values.min_stock_level),
+        max_stock_level: parseOptionalNumber(values.max_stock_level),
+        reorder_point: parseOptionalNumber(values.reorder_point),
+        shelf_life_days: parseOptionalNumber(values.shelf_life_days),
+      };
+
       if (isEdit) {
-        const result = await updateIngredient(ingredient.id, raw);
+        const result = await updateIngredient(ingredient.id, payload);
         if (!result.success) {
-          setError(result.error ?? "Đã xảy ra lỗi");
+          setServerError(result.error ?? "Đã xảy ra lỗi");
           return;
         }
         toast.success("Đã cập nhật nguyên liệu");
       } else {
         const result = await createIngredient({
-          name: raw.name,
-          purchase_unit: raw.purchase_unit,
-          measure_unit: raw.measure_unit,
-          sku: raw.sku,
-          unit_cost: raw.unit_cost,
-          category: raw.category,
-          item_kind: raw.item_kind,
-          storage_type: raw.storage_type,
-          min_stock_level: raw.min_stock_level ?? 0,
-          max_stock_level: raw.max_stock_level,
-          reorder_point: raw.reorder_point,
-          shelf_life_days: raw.shelf_life_days,
+          name: payload.name,
+          purchase_unit: payload.purchase_unit,
+          measure_unit: payload.measure_unit,
+          sku: payload.sku,
+          unit_cost: payload.unit_cost,
+          category: payload.category,
+          item_kind: payload.item_kind,
+          storage_type: payload.storage_type,
+          min_stock_level: payload.min_stock_level ?? 0,
+          max_stock_level: payload.max_stock_level,
+          reorder_point: payload.reorder_point,
+          shelf_life_days: payload.shelf_life_days,
         });
         if (!result.success) {
-          setError(result.error ?? "Đã xảy ra lỗi");
+          setServerError(result.error ?? "Đã xảy ra lỗi");
           return;
         }
         toast.success("Đã thêm nguyên liệu mới");
@@ -160,199 +201,118 @@ function IngredientFormContent({
         </DialogTitle>
       </DialogHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Row 1: name + purchase unit */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="ing-name" className="text-sm font-medium">
-              Tên nguyên liệu *
-            </Label>
-            <Input
-              id="ing-name"
+      <form onSubmit={form.handleSubmit(onValid)} noValidate>
+        <FieldGroup>
+          <div className="grid grid-cols-2 gap-4">
+            <TextField
+              control={form.control}
               name="name"
-              required
-              defaultValue={ingredient?.name ?? ""}
+              label="Tên nguyên liệu"
               placeholder="VD: Sườn cốt lết"
-              className="h-10"
+              required
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ing-purchase-unit" className="text-sm font-medium">
-              Đơn vị nhập *
-            </Label>
-            <Input
-              id="ing-purchase-unit"
+            <TextField
+              control={form.control}
               name="purchase_unit"
-              required
-              defaultValue={ingredient?.purchase_unit ?? ingredient?.unit ?? ""}
+              label="Đơn vị nhập"
               placeholder="thùng, bao, chai..."
-              className="h-10"
-            />
-          </div>
-        </div>
-
-        {/* Row 2: measure unit + sku */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="ing-measure-unit" className="text-sm font-medium">
-              Đơn vị tính *
-            </Label>
-            <Input
-              id="ing-measure-unit"
-              name="measure_unit"
               required
-              defaultValue={ingredient?.measure_unit ?? ingredient?.unit ?? ""}
-              placeholder="kg, ml, cái..."
-              className="h-10"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="ing-sku" className="text-sm font-medium">
-              Mã SKU
-            </Label>
-            <Input
-              id="ing-sku"
-              name="sku"
-              defaultValue={ingredient?.sku ?? ""}
-              placeholder="SKU-001"
-              className="h-10"
-            />
-          </div>
-        </div>
 
-        {/* Row 3: category + unit_cost */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="ing-category" className="text-sm font-medium">
-              Danh mục
-            </Label>
-            <Input
-              id="ing-category"
-              name="category"
-              defaultValue={ingredient?.category ?? ""}
-              placeholder="Thịt, Rau củ..."
-              className="h-10"
+          <div className="grid grid-cols-2 gap-4">
+            <TextField
+              control={form.control}
+              name="measure_unit"
+              label="Đơn vị tính"
+              placeholder="kg, ml, cái..."
+              required
+            />
+            <TextField
+              control={form.control}
+              name="sku"
+              label="Mã SKU"
+              placeholder="SKU-001"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="ing-unit-cost" className="text-sm font-medium">
-              Giá nhập tham chiếu (VND)
-            </Label>
-            <FormattedNumberInput
-              id="ing-unit-cost"
-              value={unitCost}
-              onValueChange={setUnitCost}
+
+          <div className="grid grid-cols-2 gap-4">
+            <TextField
+              control={form.control}
+              name="category"
+              label="Danh mục"
+              placeholder="Thịt, Rau củ..."
+            />
+            <NumberField
+              control={form.control}
+              name="unit_cost"
+              label="Giá nhập tham chiếu (VND)"
               maxFractionDigits={0}
               placeholder="0"
-              className="h-10"
             />
           </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="ing-storage" className="text-sm font-medium">
-              Kiểu lưu trữ
-            </Label>
-            <Select value={storageType} onValueChange={setStorageType}>
-              <SelectTrigger id="ing-storage" className="h-10">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ambient">Thường</SelectItem>
-                <SelectItem value="refrigerated">Lạnh</SelectItem>
-                <SelectItem value="frozen">Đông lạnh</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <SelectField
+              control={form.control}
+              name="storage_type"
+              label="Kiểu lưu trữ"
+              options={STORAGE_OPTIONS}
+            />
+            <SelectField
+              control={form.control}
+              name="item_kind"
+              label="Loại hàng"
+              options={ITEM_KIND_OPTIONS}
+            />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="ing-kind" className="text-sm font-medium">
-              Loại hàng
-            </Label>
-            <Select value={itemKind} onValueChange={setItemKind}>
-              <SelectTrigger id="ing-kind" className="h-10">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="raw_material">Nguyên liệu</SelectItem>
-                <SelectItem value="finished_good">Thành phẩm</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
 
-        {/* Row 4: min / max / reorder */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="ing-min" className="text-sm font-medium">
-              Tồn tối thiểu
-            </Label>
-            <FormattedNumberInput
-              id="ing-min"
-              value={minStockLevel}
-              onValueChange={setMinStockLevel}
+          <div className="grid grid-cols-3 gap-4">
+            <NumberField
+              control={form.control}
+              name="min_stock_level"
+              label="Tồn tối thiểu"
               maxFractionDigits={2}
-              className="h-10"
+            />
+            <NumberField
+              control={form.control}
+              name="max_stock_level"
+              label="Tồn tối đa"
+              maxFractionDigits={2}
+            />
+            <NumberField
+              control={form.control}
+              name="reorder_point"
+              label="Điểm đặt hàng"
+              maxFractionDigits={2}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="ing-max" className="text-sm font-medium">
-              Tồn tối đa
-            </Label>
-            <FormattedNumberInput
-              id="ing-max"
-              value={maxStockLevel}
-              onValueChange={setMaxStockLevel}
-              maxFractionDigits={2}
-              className="h-10"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ing-reorder" className="text-sm font-medium">
-              Điểm đặt hàng
-            </Label>
-            <FormattedNumberInput
-              id="ing-reorder"
-              value={reorderPoint}
-              onValueChange={setReorderPoint}
-              maxFractionDigits={2}
-              className="h-10"
-            />
-          </div>
-        </div>
 
-        {/* shelf_life_days */}
-        <div className="space-y-2">
-          <Label htmlFor="ing-shelf" className="text-sm font-medium">
-            Hạn sử dụng (ngày)
-          </Label>
-          <FormattedNumberInput
-            id="ing-shelf"
-            value={shelfLifeDays}
-            onValueChange={setShelfLifeDays}
+          <NumberField
+            control={form.control}
+            name="shelf_life_days"
+            label="Hạn sử dụng (ngày)"
             maxFractionDigits={0}
             placeholder="VD: 7"
-            className="h-10"
           />
-        </div>
 
-        {error && (
-          <p className="text-sm text-destructive" role="alert">
-            {error}
-          </p>
-        )}
+          {serverError && (
+            <p className="text-sm text-destructive" role="alert">
+              {serverError}
+            </p>
+          )}
+        </FieldGroup>
 
-        <DialogFooter className="pt-2">
+        <DialogFooter className="pt-6">
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isPending}
-            className="h-10"
           >
             Hủy
           </Button>
-          <Button type="submit" disabled={isPending} className="h-10">
+          <Button type="submit" disabled={isPending}>
             {isPending && <Spinner className="mr-2" />}
             {isEdit ? "Cập nhật" : "Tạo mới"}
           </Button>

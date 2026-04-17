@@ -7,3 +7,5 @@ export type {
   SelectFieldOption,
   SelectFieldProps,
 } from "./select-field";
+export { TextareaField } from "./textarea-field";
+export type { TextareaFieldProps } from "./textarea-field";

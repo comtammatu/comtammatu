@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
-import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
 import {
   Dialog,
   DialogContent,
@@ -12,16 +12,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
+import { FieldGroup } from "@comtammatu/ui/components/field";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { SelectField, TextField } from "@/components/form";
 import { createShift } from "./actions";
 import type { BranchOption, ShiftRow } from "./page";
+
+const shiftSchema = z.object({
+  name: z.string().trim().min(1, { error: "Tên ca không được trống" }),
+  branch_id: z.string().min(1, { error: "Vui lòng chọn chi nhánh" }),
+  start_time: z.string().min(1, { error: "Giờ bắt đầu không được trống" }),
+  end_time: z.string().min(1, { error: "Giờ kết thúc không được trống" }),
+});
+
+type ShiftFormValues = z.infer<typeof shiftSchema>;
 
 interface ShiftFormDialogProps {
   open: boolean;
@@ -39,46 +44,55 @@ export function ShiftFormDialog({
   onShiftCreated,
 }: ShiftFormDialogProps) {
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [branchId, setBranchId] = useState<string>(
-    defaultBranchId?.toString() ?? "",
-  );
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const form = useForm<ShiftFormValues>({
+    resolver: zodResolver(shiftSchema),
+    defaultValues: {
+      name: "",
+      branch_id: defaultBranchId?.toString() ?? "",
+      start_time: "",
+      end_time: "",
+    },
+  });
 
   useEffect(() => {
-    if (!open) {
-      return;
+    if (open) {
+      form.reset({
+        name: "",
+        branch_id: defaultBranchId?.toString() ?? "",
+        start_time: "",
+        end_time: "",
+      });
+      setServerError(null);
     }
+  }, [open, defaultBranchId, form]);
 
-    setError(null);
-    setBranchId(defaultBranchId?.toString() ?? "");
-  }, [open, defaultBranchId]);
+  const branchOptions = branches.map((b) => ({
+    value: b.id.toString(),
+    label: b.name,
+  }));
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const name = fd.get("name") as string;
-    const startTime = fd.get("startTime") as string;
-    const endTime = fd.get("endTime") as string;
-
+  function onValid(values: ShiftFormValues) {
     startTransition(async () => {
-      setError(null);
+      setServerError(null);
       const result = await createShift({
-        branchId: Number(branchId),
-        name,
-        startTime,
-        endTime,
+        branchId: Number(values.branch_id),
+        name: values.name,
+        startTime: values.start_time,
+        endTime: values.end_time,
       });
       if (!result.success) {
-        setError(result.error ?? "Đã xảy ra lỗi");
+        setServerError(result.error ?? "Đã xảy ra lỗi");
         return;
       }
       toast.success("Đã tạo ca làm việc mới");
       const created = result.data as { id: number } | null;
       onShiftCreated({
         id: created?.id ?? 0,
-        name,
-        start_time: startTime,
-        end_time: endTime,
+        name: values.name,
+        start_time: values.start_time,
+        end_time: values.end_time,
         is_active: true,
       });
       onOpenChange(false);
@@ -92,63 +106,52 @@ export function ShiftFormDialog({
           <DialogTitle>Thêm ca làm việc</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="shift-name">Tên ca *</Label>
-            <Input
-              id="shift-name"
+        <form onSubmit={form.handleSubmit(onValid)} noValidate>
+          <FieldGroup>
+            <TextField
+              control={form.control}
               name="name"
-              required
+              label="Tên ca"
               placeholder="Ca sáng, Ca chiều, Ca tối..."
+              required
             />
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="shift-branch">Chi nhánh *</Label>
-            <Select value={branchId} onValueChange={setBranchId} required>
-              <SelectTrigger id="shift-branch">
-                <SelectValue placeholder="Chọn chi nhánh" />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((b) => (
-                  <SelectItem key={b.id} value={b.id.toString()}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <SelectField
+              control={form.control}
+              name="branch_id"
+              label="Chi nhánh"
+              options={branchOptions}
+              placeholder="Chọn chi nhánh"
+              required
+            />
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="shift-start">Giờ bắt đầu *</Label>
-              <Input
-                id="shift-start"
-                name="startTime"
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
+                control={form.control}
+                name="start_time"
+                label="Giờ bắt đầu"
                 type="time"
-                required
                 placeholder="06:00"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="shift-end">Giờ kết thúc *</Label>
-              <Input
-                id="shift-end"
-                name="endTime"
-                type="time"
                 required
+              />
+              <TextField
+                control={form.control}
+                name="end_time"
+                label="Giờ kết thúc"
+                type="time"
                 placeholder="14:00"
+                required
               />
             </div>
-          </div>
 
-          {error && (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          )}
+            {serverError && (
+              <p className="text-sm text-destructive" role="alert">
+                {serverError}
+              </p>
+            )}
+          </FieldGroup>
 
-          <DialogFooter>
+          <DialogFooter className="pt-6">
             <Button
               type="button"
               variant="outline"
@@ -157,7 +160,7 @@ export function ShiftFormDialog({
             >
               Hủy
             </Button>
-            <Button type="submit" disabled={isPending || !branchId}>
+            <Button type="submit" disabled={isPending}>
               {isPending && <Spinner className="mr-2" />}
               Tạo ca
             </Button>

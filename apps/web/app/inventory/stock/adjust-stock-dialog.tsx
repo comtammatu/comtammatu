@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
-import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Label } from "@comtammatu/ui/components/label";
-import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
   Dialog,
   DialogContent,
@@ -13,16 +13,44 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
+import { FieldGroup } from "@comtammatu/ui/components/field";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import {
+  NumberField,
+  SelectField,
+  TextareaField,
+} from "@/components/form";
 import { adjustStock } from "../actions";
-import { FormattedNumberInput } from "../_components/formatted-number-input";
+
+const ADJUST_TYPE_OPTIONS = [
+  { value: "adjustment", label: "Điều chỉnh thủ công" },
+  { value: "count_adjustment", label: "Kiểm kho" },
+] as const;
+
+const adjustStockSchema = z.object({
+  adjust_type: z.enum(["adjustment", "count_adjustment"]),
+  quantity_change: z
+    .string()
+    .trim()
+    .min(1, { error: "Số lượng điều chỉnh không được trống" })
+    .refine(
+      (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) && n !== 0;
+      },
+      { error: "Số lượng điều chỉnh không được bằng 0" },
+    ),
+  reason: z.string().trim().optional(),
+});
+
+type AdjustStockFormValues = z.infer<typeof adjustStockSchema>;
+
+const DEFAULT_VALUES: AdjustStockFormValues = {
+  adjust_type: "adjustment",
+  quantity_change: "",
+  reason: "",
+};
 
 interface AdjustStockDialogProps {
   open: boolean;
@@ -44,45 +72,35 @@ export function AdjustStockDialog({
   onAdjusted,
 }: AdjustStockDialogProps) {
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [adjustType, setAdjustType] = useState<
-    "adjustment" | "count_adjustment"
-  >("adjustment");
-  const [quantityChange, setQuantityChange] = useState("");
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const form = useForm<AdjustStockFormValues>({
+    resolver: zodResolver(adjustStockSchema),
+    defaultValues: DEFAULT_VALUES,
+  });
 
   useEffect(() => {
-    if (!open) {
-      return;
+    if (open) {
+      form.reset(DEFAULT_VALUES);
+      setServerError(null);
     }
+  }, [open, ingredientId, form]);
 
-    setError(null);
-    setAdjustType("adjustment");
-    setQuantityChange("");
-  }, [open, ingredientId]);
-
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const parsedQuantityChange = Number(quantityChange);
-    const reason = (fd.get("reason") as string) || undefined;
-
-    if (isNaN(parsedQuantityChange) || parsedQuantityChange === 0) {
-      setError("Số lượng điều chỉnh không được bằng 0");
-      return;
-    }
+  function onValid(values: AdjustStockFormValues) {
+    const parsedQuantityChange = Number(values.quantity_change);
 
     startTransition(async () => {
-      setError(null);
+      setServerError(null);
       const result = await adjustStock({
         branchId,
         ingredientId,
         quantityChange: parsedQuantityChange,
-        type: adjustType,
-        reason,
+        type: values.adjust_type,
+        reason: values.reason || undefined,
       });
 
       if (!result.success) {
-        setError(result.error ?? "Đã xảy ra lỗi");
+        setServerError(result.error ?? "Đã xảy ra lỗi");
         return;
       }
 
@@ -109,74 +127,50 @@ export function AdjustStockDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="adjust-type" className="text-sm font-medium">
-              Loại điều chỉnh
-            </Label>
-            <Select
-              value={adjustType}
-              onValueChange={(v) =>
-                setAdjustType(v as "adjustment" | "count_adjustment")
-              }
-            >
-              <SelectTrigger id="adjust-type" className="h-11">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="adjustment">Điều chỉnh thủ công</SelectItem>
-                <SelectItem value="count_adjustment">Kiểm kho</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <form onSubmit={form.handleSubmit(onValid)} noValidate>
+          <FieldGroup>
+            <SelectField
+              control={form.control}
+              name="adjust_type"
+              label="Loại điều chỉnh"
+              options={ADJUST_TYPE_OPTIONS}
+            />
 
-          <div className="space-y-2">
-            <Label htmlFor="adjust-qty" className="text-sm font-medium">
-              Số lượng ({unit}) — dương = nhập, âm = xuất
-            </Label>
-            <FormattedNumberInput
-              id="adjust-qty"
-              value={quantityChange}
-              onValueChange={setQuantityChange}
+            <NumberField
+              control={form.control}
+              name="quantity_change"
+              label={`Số lượng (${unit}) — dương = nhập, âm = xuất`}
               allowNegative
               maxFractionDigits={2}
-              required
               placeholder="VD: 10 hoặc -5"
-              autoFocus
-              className="h-11"
+              required
             />
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="adjust-reason" className="text-sm font-medium">
-              Lý do (tùy chọn)
-            </Label>
-            <Textarea
-              id="adjust-reason"
+            <TextareaField
+              control={form.control}
               name="reason"
-              rows={3}
+              label="Lý do (tùy chọn)"
               placeholder="VD: Nhập hàng sáng, Hao hụt..."
-              className="min-h-24"
+              rows={3}
             />
-          </div>
 
-          {error && (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          )}
+            {serverError && (
+              <p className="text-sm text-destructive" role="alert">
+                {serverError}
+              </p>
+            )}
+          </FieldGroup>
 
-          <DialogFooter className="pt-2">
+          <DialogFooter className="pt-6">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isPending}
-              className="h-10"
             >
               Hủy
             </Button>
-            <Button type="submit" disabled={isPending} className="h-10">
+            <Button type="submit" disabled={isPending}>
               {isPending && <Spinner className="mr-2" />}
               Xác nhận
             </Button>

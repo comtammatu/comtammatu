@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
-import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
 import {
   Dialog,
   DialogContent,
@@ -12,15 +12,54 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
+import { FieldGroup } from "@comtammatu/ui/components/field";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { SelectField, TextField } from "@/components/form";
 import { createEmployee } from "./actions";
+
+const employeeSchema = z.object({
+  profile_id: z
+    .string()
+    .trim()
+    .min(1, { error: "Profile UUID không được trống" }),
+  employee_code: z.string().trim().optional(),
+  id_number: z.string().trim().optional(),
+  bank_account: z.string().trim().optional(),
+  bank_name: z.string().trim().optional(),
+  base_salary: z.string().optional(),
+  dependents_count: z.string().optional(),
+  start_date: z.string().optional(),
+  contract_type: z
+    .union([z.enum(["probation", "fixed_term", "indefinite"]), z.literal("")])
+    .optional(),
+});
+
+type EmployeeFormValues = z.infer<typeof employeeSchema>;
+
+const CONTRACT_TYPE_OPTIONS = [
+  { value: "probation", label: "Thử việc" },
+  { value: "fixed_term", label: "Có thời hạn" },
+  { value: "indefinite", label: "Không thời hạn" },
+] as const;
+
+const DEFAULT_VALUES: EmployeeFormValues = {
+  profile_id: "",
+  employee_code: "",
+  id_number: "",
+  bank_account: "",
+  bank_name: "",
+  base_salary: "",
+  dependents_count: "0",
+  start_date: "",
+  contract_type: "",
+};
+
+function parseOptionalNumber(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
+}
 
 interface EmployeeFormDialogProps {
   open: boolean;
@@ -32,45 +71,37 @@ export function EmployeeFormDialog({
   onOpenChange,
 }: EmployeeFormDialogProps) {
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [contractType, setContractType] = useState<string>("");
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const form = useForm<EmployeeFormValues>({
+    resolver: zodResolver(employeeSchema),
+    defaultValues: DEFAULT_VALUES,
+  });
 
   useEffect(() => {
-    if (!open) {
-      return;
+    if (open) {
+      form.reset(DEFAULT_VALUES);
+      setServerError(null);
     }
+  }, [open, form]);
 
-    setError(null);
-    setContractType("");
-  }, [open]);
-
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-
+  function onValid(values: EmployeeFormValues) {
     startTransition(async () => {
-      setError(null);
+      setServerError(null);
       const result = await createEmployee({
-        profileId: fd.get("profileId") as string,
-        employeeCode: (fd.get("employeeCode") as string) || undefined,
-        idNumber: (fd.get("idNumber") as string) || undefined,
-        bankAccount: (fd.get("bankAccount") as string) || undefined,
-        bankName: (fd.get("bankName") as string) || undefined,
-        baseSalary: fd.get("baseSalary")
-          ? Number(fd.get("baseSalary"))
-          : undefined,
-        startDate: (fd.get("startDate") as string) || undefined,
-        contractType: contractType as
-          | "probation"
-          | "fixed_term"
-          | "indefinite"
-          | undefined,
-        dependentsCount: fd.get("dependentsCount")
-          ? Number(fd.get("dependentsCount"))
-          : 0,
+        profileId: values.profile_id,
+        employeeCode: values.employee_code || undefined,
+        idNumber: values.id_number || undefined,
+        bankAccount: values.bank_account || undefined,
+        bankName: values.bank_name || undefined,
+        baseSalary: parseOptionalNumber(values.base_salary),
+        startDate: values.start_date || undefined,
+        contractType:
+          values.contract_type === "" ? undefined : values.contract_type,
+        dependentsCount: parseOptionalNumber(values.dependents_count) ?? 0,
       });
       if (!result.success) {
-        setError(result.error ?? "Đã xảy ra lỗi");
+        setServerError(result.error ?? "Đã xảy ra lỗi");
         return;
       }
       toast.success("Đã tạo hồ sơ nhân viên mới");
@@ -85,100 +116,89 @@ export function EmployeeFormDialog({
           <DialogTitle>Thêm hồ sơ nhân viên</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="emp-profileId">Profile UUID *</Label>
-            <Input
-              id="emp-profileId"
-              name="profileId"
-              required
+        <form onSubmit={form.handleSubmit(onValid)} noValidate>
+          <FieldGroup>
+            <TextField
+              control={form.control}
+              name="profile_id"
+              label="Profile UUID"
               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              description="Nhập UUID từ trang Nhân sự (tab Nhân viên → ID của profile)"
+              required
             />
-            <p className="text-xs text-muted-foreground">
-              Nhập UUID từ trang Nhân sự (tab Nhân viên → ID của profile)
-            </p>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="emp-code">Mã nhân viên</Label>
-              <Input id="emp-code" name="employeeCode" placeholder="NV001" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="emp-id">Số CCCD / CMND</Label>
-              <Input id="emp-id" name="idNumber" placeholder="012345678901" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="emp-bank">Số tài khoản</Label>
-              <Input
-                id="emp-bank"
-                name="bankAccount"
-                placeholder="1234567890"
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
+                control={form.control}
+                name="employee_code"
+                label="Mã nhân viên"
+                placeholder="NV001"
+              />
+              <TextField
+                control={form.control}
+                name="id_number"
+                label="Số CCCD / CMND"
+                placeholder="012345678901"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="emp-bankname">Ngân hàng</Label>
-              <Input
-                id="emp-bankname"
-                name="bankName"
+
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
+                control={form.control}
+                name="bank_account"
+                label="Số tài khoản"
+                placeholder="1234567890"
+              />
+              <TextField
+                control={form.control}
+                name="bank_name"
+                label="Ngân hàng"
                 placeholder="Vietcombank"
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="emp-salary">Lương cơ bản (VND)</Label>
-              <Input
-                id="emp-salary"
-                name="baseSalary"
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
+                control={form.control}
+                name="base_salary"
+                label="Lương cơ bản (VND)"
                 type="number"
-                min="0"
+                min={0}
                 placeholder="5000000"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="emp-deps">Số người phụ thuộc</Label>
-              <Input
-                id="emp-deps"
-                name="dependentsCount"
+              <TextField
+                control={form.control}
+                name="dependents_count"
+                label="Số người phụ thuộc"
                 type="number"
-                min="0"
-                defaultValue="0"
+                min={0}
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="emp-start">Ngày bắt đầu</Label>
-              <Input id="emp-start" name="startDate" type="date" />
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
+                control={form.control}
+                name="start_date"
+                label="Ngày bắt đầu"
+                type="date"
+              />
+              <SelectField
+                control={form.control}
+                name="contract_type"
+                label="Loại hợp đồng"
+                options={CONTRACT_TYPE_OPTIONS}
+                placeholder="Chọn loại HĐ"
+              />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="emp-contract">Loại hợp đồng</Label>
-              <Select value={contractType} onValueChange={setContractType}>
-                <SelectTrigger id="emp-contract">
-                  <SelectValue placeholder="Chọn loại HĐ" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="probation">Thử việc</SelectItem>
-                  <SelectItem value="fixed_term">Có thời hạn</SelectItem>
-                  <SelectItem value="indefinite">Không thời hạn</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
-          {error && (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          )}
+            {serverError && (
+              <p className="text-sm text-destructive" role="alert">
+                {serverError}
+              </p>
+            )}
+          </FieldGroup>
 
-          <DialogFooter>
+          <DialogFooter className="pt-6">
             <Button
               type="button"
               variant="outline"
