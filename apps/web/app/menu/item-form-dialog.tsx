@@ -1,19 +1,38 @@
 "use client";
 
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
-import { Textarea } from "@comtammatu/ui/components/textarea";
+import { z } from "zod";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
+  FormDialog,
+  SelectField,
+  TextField,
+  TextareaField,
+  valuesToFormData,
+} from "@/components/form";
 import { createItem, updateItem } from "./actions";
 import type { CategoryRow } from "./category-table";
 import type { ItemRow } from "./item-table";
-import { CrudDialog } from "@/components/crud-dialog";
+
+const itemSchema = z.object({
+  name: z.string().trim().min(1, { error: "Tên món không được trống" }),
+  category_id: z.string().min(1, { error: "Vui lòng chọn danh mục" }),
+  base_price: z
+    .string()
+    .trim()
+    .min(1, { error: "Giá không được trống" })
+    .refine((v) => Number(v) >= 0, { error: "Giá không hợp lệ" }),
+  description: z.string().optional(),
+});
+
+type ItemFormValues = z.infer<typeof itemSchema>;
+
+function toFormValues(item: ItemRow | null | undefined): ItemFormValues {
+  return {
+    name: item?.name ?? "",
+    category_id: item?.category_id != null ? String(item.category_id) : "",
+    base_price: item?.base_price != null ? String(item.base_price) : "",
+    description: item?.description ?? "",
+  };
+}
 
 interface ItemFormDialogProps {
   open: boolean;
@@ -33,73 +52,66 @@ export function ItemFormDialog({
     (c) => c.is_active || c.id === item?.category_id,
   );
 
+  const categoryOptions = activeCategories.map((cat) => ({
+    value: cat.id.toString(),
+    label: cat.name,
+  }));
+
   return (
-    <CrudDialog
+    <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      action={isEdit ? updateItem : createItem}
+      schema={itemSchema}
+      defaultValues={toFormValues(item)}
       entityKey={item?.id ?? "new"}
       title={isEdit ? "Chỉnh sửa món" : "Thêm món mới"}
       successMessage={isEdit ? "Đã cập nhật món" : "Đã tạo món mới"}
       submitLabel={isEdit ? "Cập nhật" : "Tạo mới"}
+      onSubmit={async (values) => {
+        const fd = valuesToFormData(values);
+        if (isEdit && item) {
+          fd.set("id", String(item.id));
+          return updateItem(null, fd);
+        }
+        return createItem(null, fd);
+      }}
     >
-      {isEdit && <input type="hidden" name="id" value={item.id} />}
-
-      <div className="space-y-2">
-        <Label htmlFor="name">Tên món *</Label>
-        <Input
-          id="name"
-          name="name"
-          required
-          defaultValue={item?.name ?? ""}
-          placeholder="VD: Cơm sườn cốt lết"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="category_id">Danh mục *</Label>
-        <Select
-          name="category_id"
-          defaultValue={item?.category_id?.toString() ?? ""}
-          required
-        >
-          <SelectTrigger id="category_id">
-            <SelectValue placeholder="Chọn danh mục" />
-          </SelectTrigger>
-          <SelectContent>
-            {activeCategories.map((cat) => (
-              <SelectItem key={cat.id} value={cat.id.toString()}>
-                {cat.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="base_price">Giá gốc (VND) *</Label>
-        <Input
-          id="base_price"
-          name="base_price"
-          type="number"
-          min={0}
-          step={1000}
-          required
-          defaultValue={item?.base_price ?? ""}
-          placeholder="35000"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">Mô tả</Label>
-        <Textarea
-          id="description"
-          name="description"
-          rows={2}
-          defaultValue={item?.description ?? ""}
-          placeholder="Mô tả ngắn về món ăn"
-        />
-      </div>
-    </CrudDialog>
+      {(form) => (
+        <>
+          <TextField
+            control={form.control}
+            name="name"
+            label="Tên món"
+            placeholder="VD: Cơm sườn cốt lết"
+            required
+          />
+          <SelectField
+            control={form.control}
+            name="category_id"
+            label="Danh mục"
+            options={categoryOptions}
+            placeholder="Chọn danh mục"
+            required
+          />
+          <TextField
+            control={form.control}
+            name="base_price"
+            label="Giá gốc (VND)"
+            type="number"
+            min={0}
+            step={1000}
+            placeholder="35000"
+            required
+          />
+          <TextareaField
+            control={form.control}
+            name="description"
+            label="Mô tả"
+            rows={2}
+            placeholder="Mô tả ngắn về món ăn"
+          />
+        </>
+      )}
+    </FormDialog>
   );
 }

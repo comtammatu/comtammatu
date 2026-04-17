@@ -1,12 +1,33 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
+import { z } from "zod";
+import { Controller } from "react-hook-form";
+import {
+  Field,
+  FieldLabel,
+} from "@comtammatu/ui/components/field";
 import { Switch } from "@comtammatu/ui/components/switch";
+import { FormDialog, TextField, valuesToFormData } from "@/components/form";
 import { createTerminal, updateTerminal } from "./actions";
 import type { TerminalRow } from "./terminals-client";
-import { CrudDialog } from "../../../components/crud-dialog";
+
+const terminalSchema = z.object({
+  name: z.string().trim().min(1, { error: "Tên máy không được trống" }),
+  device_id: z.string().trim().optional(),
+  is_active: z.boolean().optional(),
+});
+
+type TerminalFormValues = z.infer<typeof terminalSchema>;
+
+function toFormValues(
+  terminal: TerminalRow | null,
+): TerminalFormValues {
+  return {
+    name: terminal?.name ?? "",
+    device_id: terminal?.device_id ?? "",
+    is_active: terminal?.is_active ?? true,
+  };
+}
 
 interface TerminalFormDialogProps {
   open: boolean;
@@ -22,19 +43,13 @@ export function TerminalFormDialog({
   terminal,
 }: TerminalFormDialogProps) {
   const isEdit = !!terminal;
-  const [isActive, setIsActive] = useState(true);
-
-  useEffect(() => {
-    if (open) {
-      setIsActive(terminal?.is_active ?? true);
-    }
-  }, [open, terminal]);
 
   return (
-    <CrudDialog
+    <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      action={isEdit ? updateTerminal : createTerminal}
+      schema={terminalSchema}
+      defaultValues={toFormValues(terminal)}
       entityKey={terminal?.id ?? "new"}
       title={isEdit ? "Chỉnh sửa máy POS" : "Thêm máy POS mới"}
       description={
@@ -42,46 +57,56 @@ export function TerminalFormDialog({
       }
       successMessage={isEdit ? "Đã cập nhật máy POS" : "Đã tạo máy POS"}
       submitLabel={isEdit ? "Cập nhật" : "Tạo mới"}
+      onSubmit={async (values) => {
+        const payload: Record<string, unknown> = {
+          name: values.name,
+          device_id: values.device_id,
+        };
+        if (isEdit) {
+          payload.is_active = values.is_active ?? true;
+        }
+        const fd = valuesToFormData(payload);
+        fd.set("branch_id", String(branchId));
+        if (isEdit && terminal) {
+          fd.set("id", String(terminal.id));
+          return updateTerminal(null, fd);
+        }
+        return createTerminal(null, fd);
+      }}
     >
-      {isEdit && <input type="hidden" name="id" value={terminal.id} />}
-      <input type="hidden" name="branch_id" value={branchId} />
-
-      <div className="space-y-2">
-        <Label htmlFor="terminal-name">Tên máy *</Label>
-        <Input
-          id="terminal-name"
-          name="name"
-          required
-          defaultValue={terminal?.name ?? ""}
-          placeholder="VD: Quầy 1, Quầy chính"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="terminal-device">Mã thiết bị (tuỳ chọn)</Label>
-        <Input
-          id="terminal-device"
-          name="device_id"
-          defaultValue={terminal?.device_id ?? ""}
-          placeholder="VD: tablet-thungan-01"
-        />
-      </div>
-
-      {isEdit && (
-        <div className="flex items-center gap-3">
-          <input
-            type="hidden"
-            name="is_active"
-            value={isActive ? "true" : "false"}
+      {(form) => (
+        <>
+          <TextField
+            control={form.control}
+            name="name"
+            label="Tên máy"
+            placeholder="VD: Quầy 1, Quầy chính"
+            required
           />
-          <Switch
-            id="terminal-active"
-            checked={isActive}
-            onCheckedChange={setIsActive}
+          <TextField
+            control={form.control}
+            name="device_id"
+            label="Mã thiết bị (tuỳ chọn)"
+            placeholder="VD: tablet-thungan-01"
           />
-          <Label htmlFor="terminal-active">Hoạt động</Label>
-        </div>
+          {isEdit && (
+            <Controller
+              control={form.control}
+              name="is_active"
+              render={({ field }) => (
+                <Field orientation="horizontal">
+                  <Switch
+                    id="terminal-active"
+                    checked={field.value ?? true}
+                    onCheckedChange={field.onChange}
+                  />
+                  <FieldLabel htmlFor="terminal-active">Hoạt động</FieldLabel>
+                </Field>
+              )}
+            />
+          )}
+        </>
       )}
-    </CrudDialog>
+    </FormDialog>
   );
 }
