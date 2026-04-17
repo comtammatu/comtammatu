@@ -28,6 +28,13 @@ import {
   CollapsibleTrigger,
 } from "@comtammatu/ui/components/collapsible";
 import { Input } from "@comtammatu/ui/components/input";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
@@ -39,6 +46,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { cn } from "@comtammatu/ui";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { InventoryHeader } from "../../_components/inventory-header";
 import {
@@ -520,61 +528,60 @@ function SuggestionsPanel({
                         s.ingredient_id,
                       );
                       return (
-                        <div
+                        <Item
                           key={s.ingredient_id}
-                          className={`rounded-xl border border-border/60 px-3 py-2 transition-colors ${
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "justify-between transition-colors",
                             alreadyAdded
                               ? "bg-muted/30 opacity-60"
-                              : "bg-background/70 hover:bg-info/5"
-                          }`}
+                              : "bg-background/70 hover:bg-info/5",
+                          )}
                         >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-sm font-medium truncate">
-                                  {s.ingredient_name}
-                                </span>
-                                {s.below_reorder && (
-                                  <Badge
-                                    variant="destructive"
-                                    className="text-xs shrink-0"
-                                  >
-                                    Thấp
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                Tồn: {s.hq_current_qty.toLocaleString("vi-VN")}{" "}
-                                · TB: ~
-                                {s.avg_daily_consumption.toLocaleString(
-                                  "vi-VN",
-                                )}
-                                /ngày
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="font-mono text-sm font-semibold">
-                                {s.suggested_qty.toLocaleString("vi-VN")}{" "}
-                                <span className="text-xs font-normal text-muted-foreground">
-                                  {s.unit}
-                                </span>
+                          <ItemContent>
+                            <ItemTitle className="text-sm font-medium">
+                              <span className="truncate">
+                                {s.ingredient_name}
                               </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs"
-                                disabled={alreadyAdded || s.suggested_qty <= 0}
-                                onClick={() => onAddSuggestion(s)}
-                              >
-                                {alreadyAdded ? (
-                                  "Đã thêm"
-                                ) : (
-                                  <Plus className="size-3.5" />
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
+                              {s.below_reorder && (
+                                <Badge
+                                  variant="destructive"
+                                  className="text-xs shrink-0"
+                                >
+                                  Thấp
+                                </Badge>
+                              )}
+                            </ItemTitle>
+                            <ItemDescription>
+                              Tồn: {s.hq_current_qty.toLocaleString("vi-VN")}{" "}
+                              · TB: ~
+                              {s.avg_daily_consumption.toLocaleString("vi-VN")}
+                              /ngày
+                            </ItemDescription>
+                          </ItemContent>
+                          <ItemActions>
+                            <span className="font-mono text-sm font-semibold">
+                              {s.suggested_qty.toLocaleString("vi-VN")}{" "}
+                              <span className="text-xs font-normal text-muted-foreground">
+                                {s.unit}
+                              </span>
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs"
+                              disabled={alreadyAdded || s.suggested_qty <= 0}
+                              onClick={() => onAddSuggestion(s)}
+                            >
+                              {alreadyAdded ? (
+                                "Đã thêm"
+                              ) : (
+                                <Plus className="size-3.5" />
+                              )}
+                            </Button>
+                          </ItemActions>
+                        </Item>
                       );
                     })}
                   </div>
