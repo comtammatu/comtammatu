@@ -6,11 +6,11 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  Loader2,
   Keyboard,
   Camera,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -373,7 +373,7 @@ export function ClockClient({
           disabled={isPending}
         >
           {isPending ? (
-            <Loader2 className="mr-2 size-5 animate-spin" />
+            <Spinner className="mr-2 size-5" />
           ) : (
             <Clock className="mr-2 size-5" />
           )}
@@ -419,7 +419,7 @@ export function ClockClient({
           <MapPin className="size-10 text-muted-foreground" />
         )}
         {state === "checking_gps" && (
-          <Loader2 className={cn("size-10 animate-spin", getStateIconClassName(state))} />
+          <Spinner className={cn("size-10", getStateIconClassName(state))} />
         )}
         {state === "gps_passed" && (
           <CheckCircle2 className={cn("size-10", getStateIconClassName(state))} />
@@ -431,7 +431,7 @@ export function ClockClient({
           <Camera className={cn("size-10", getStateIconClassName(state))} />
         )}
         {state === "verifying" && (
-          <Loader2 className={cn("size-10 animate-spin", getStateIconClassName(state))} />
+          <Spinner className={cn("size-10", getStateIconClassName(state))} />
         )}
         {state === "success" && (
           <CheckCircle2 className={cn("size-10", getStateIconClassName(state))} />
@@ -537,7 +537,7 @@ export function ClockClient({
               disabled={manualCode.length !== 6 || isPending}
               onClick={() => submitClockIn(manualCode)}
             >
-              {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {isPending && <Spinner className="mr-2" />}
               Xác nhận
             </Button>
           </div>

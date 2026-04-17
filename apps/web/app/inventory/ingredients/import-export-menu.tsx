@@ -5,10 +5,10 @@ import {
   AlertCircle,
   Download,
   FileSpreadsheet,
-  Loader2,
   Upload,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   Dialog,
   DialogContent,
@@ -76,7 +76,7 @@ export function IngredientImportExportMenu({
         <DropdownMenuTrigger asChild>
           <Button variant="outline" disabled={isExporting}>
             {isExporting ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
+              <Spinner className="mr-2" />
             ) : (
               <FileSpreadsheet className="mr-2 size-4" />
             )}
@@ -261,7 +261,7 @@ function IngredientImportDialog({
               Đóng
             </Button>
             <Button type="submit" disabled={isPending}>
-              {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {isPending && <Spinner className="mr-2" />}
               Import
             </Button>
           </DialogFooter>

@@ -5,11 +5,11 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarDays,
-  Loader2,
   Plus,
   X,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   Select,
   SelectContent,
@@ -296,7 +296,7 @@ export function ShiftAssignmentsTable({
           {formatShortDate(weekEndDate)}
         </span>
 
-        {isPending && <Loader2 className="size-4 animate-spin" />}
+        {isPending && <Spinner />}
       </div>
 
       {/* Calendar Grid */}
@@ -445,7 +445,7 @@ export function ShiftAssignmentsTable({
               onClick={handleCreateAssignment}
               disabled={isPending || !addDialogEmployeeId}
             >
-              {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {isPending && <Spinner className="mr-2" />}
               Phân ca
             </Button>
           </DialogFooter>
@@ -480,7 +480,7 @@ export function ShiftAssignmentsTable({
               onClick={handleDeleteAssignment}
               disabled={isPending}
             >
-              {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {isPending && <Spinner className="mr-2" />}
               Xóa
             </AlertDialogAction>
           </AlertDialogFooter>

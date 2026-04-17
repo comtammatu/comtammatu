@@ -1,10 +1,11 @@
 import { Suspense } from "react";
-import { ChefHat, Loader2, TriangleAlert } from "lucide-react";
+import { ChefHat, TriangleAlert } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaims, canAccess } from "@comtammatu/shared/auth";
 import { redirect } from "next/navigation";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { KdsBoard } from "./kds-board";
 
 /* ─── Types shared with client ─── */
@@ -287,7 +288,7 @@ export default async function KdsPage({
                   </div>
                 </div>
                 <Badge variant="info">
-                  <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
+                  <Spinner className="size-3.5 motion-reduce:animate-none" />
                   <span>Đang tải phiếu bếp</span>
                 </Badge>
               </div>

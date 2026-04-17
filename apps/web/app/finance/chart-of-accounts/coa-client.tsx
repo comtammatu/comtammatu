@@ -12,8 +12,9 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { CircleOff, Loader2, Plus, RefreshCw } from "lucide-react";
+import { CircleOff, Plus, RefreshCw } from "lucide-react";
 import type { AccountRow } from "./page";
 import {
   seedChartOfAccounts,
@@ -106,7 +107,7 @@ export function ChartOfAccountsClient({
           <div className="flex flex-wrap justify-center gap-2">
             <Button onClick={handleSeed} disabled={isPending}>
               {isPending ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
+                <Spinner className="mr-2" />
               ) : (
                 <Plus className="mr-2 size-4" />
               )}

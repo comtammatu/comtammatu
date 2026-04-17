@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -491,7 +492,7 @@ export function ProductionRecipePanel({
               onClick={handleRecipeSubmit}
               disabled={isPending || !canSubmitRecipe}
             >
-              {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {isPending && <Spinner className="mr-2" />}
               Lưu dòng BOM
             </Button>
           </DialogFooter>
@@ -528,7 +529,7 @@ export function ProductionRecipePanel({
               onClick={handleRecipeGroupDelete}
               disabled={isPending}
             >
-              {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {isPending && <Spinner className="mr-2" />}
               Xóa toàn bộ BOM
             </AlertDialogAction>
           </AlertDialogFooter>

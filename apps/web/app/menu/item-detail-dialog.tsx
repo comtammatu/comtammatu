@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
@@ -268,7 +269,7 @@ export function ItemDetailDialog({
 
         {isLoading ? (
           <div className="flex justify-center py-8">
-            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+            <Spinner className="size-6 text-muted-foreground" />
           </div>
         ) : loadError ? (
           <p className="py-8 text-center text-sm text-destructive" role="alert">
@@ -348,7 +349,7 @@ export function ItemDetailDialog({
                   disabled={isPending}
                 >
                   {isPending && (
-                    <Loader2 className="mr-1 size-3 animate-spin" />
+                    <Spinner className="mr-1 size-3" />
                   )}
                   Lưu biến thể
                 </Button>
@@ -416,7 +417,7 @@ export function ItemDetailDialog({
                   disabled={isPending}
                 >
                   {isPending && (
-                    <Loader2 className="mr-1 size-3 animate-spin" />
+                    <Spinner className="mr-1 size-3" />
                   )}
                   Lưu tùy chọn
                 </Button>
@@ -474,7 +475,7 @@ export function ItemDetailDialog({
                   disabled={isPending}
                 >
                   {isPending && (
-                    <Loader2 className="mr-1 size-3 animate-spin" />
+                    <Spinner className="mr-1 size-3" />
                   )}
                   Lưu món kèm
                 </Button>

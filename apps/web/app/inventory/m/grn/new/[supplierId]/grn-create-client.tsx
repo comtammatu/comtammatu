@@ -6,12 +6,12 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronRight,
-  Loader2,
   Pencil,
   Search,
   Trash2,
 } from "lucide-react";
 import { Input } from "@comtammatu/ui/components/input";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Card } from "@comtammatu/ui/components/card";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -423,7 +423,7 @@ export function GrnCreateClient({
         >
           {submitting ? (
             <>
-              <Loader2 className="size-5 animate-spin" />
+              <Spinner className="size-5" />
               Đang gửi...
             </>
           ) : lineCount === 0 ? (

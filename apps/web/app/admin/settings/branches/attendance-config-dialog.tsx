@@ -1,8 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useState, useTransition } from "react";
-import { Key, MapPin, Loader2, Copy, RefreshCw, Locate } from "lucide-react";
+import { Key, MapPin, Copy, RefreshCw, Locate } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -180,7 +181,7 @@ export function AttendanceConfigDialog({
                 disabled={geoLoading}
               >
                 {geoLoading ? (
-                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  <Spinner className="mr-2" />
                 ) : (
                   <Locate className="mr-2 size-4" />
                 )}
@@ -194,7 +195,7 @@ export function AttendanceConfigDialog({
               )}
               <Button type="submit" size="sm" disabled={coordsPending}>
                 {coordsPending && (
-                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  <Spinner className="mr-2" />
                 )}
                 Lưu tọa độ
               </Button>
@@ -216,7 +217,7 @@ export function AttendanceConfigDialog({
                 disabled={isPending}
               >
                 {isPending ? (
-                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  <Spinner className="mr-2" />
                 ) : (
                   <RefreshCw className="mr-2 size-4" />
                 )}

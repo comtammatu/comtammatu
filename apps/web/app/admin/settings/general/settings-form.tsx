@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -115,7 +115,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
 
       <div className="flex justify-end">
         <Button type="submit" disabled={isPending}>
-          {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+          {isPending && <Spinner className="mr-2" />}
           Lưu cài đặt
         </Button>
       </div>

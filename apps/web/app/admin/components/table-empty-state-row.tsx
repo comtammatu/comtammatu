@@ -1,5 +1,12 @@
 import type { ReactNode } from "react";
 import { TableCell, TableRow } from "@comtammatu/ui/components/table";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
 import { cn } from "@comtammatu/ui";
 
 type EmptyStateMode = "no-data" | "no-results" | "no-access";
@@ -31,25 +38,20 @@ export function TableEmptyStateRow({
 
   return (
     <TableRow>
-      <TableCell
-        colSpan={colSpan}
-        className={cn(paddingClassName, "text-center")}
-      >
-        <div className="mx-auto flex max-w-sm flex-col items-center gap-3 rounded-lg border bg-background px-4 py-6">
-          {icon ? (
-            <div className="flex size-11 items-center justify-center rounded-full border bg-muted/40 text-muted-foreground">
-              {icon}
-            </div>
-          ) : null}
-          <p className="text-sm font-semibold text-foreground">
-            {resolvedTitle}
-          </p>
-          {description ? (
-            <p className="text-xs leading-5 text-muted-foreground">
-              {description}
-            </p>
-          ) : null}
-        </div>
+      <TableCell colSpan={colSpan} className={cn(paddingClassName, "text-center")}>
+        <Empty className="mx-auto max-w-sm border bg-background py-6">
+          {icon ? <EmptyMedia variant="icon">{icon}</EmptyMedia> : null}
+          <EmptyHeader>
+            <EmptyTitle className="text-sm font-semibold">
+              {resolvedTitle}
+            </EmptyTitle>
+            {description ? (
+              <EmptyDescription className="text-xs leading-5">
+                {description}
+              </EmptyDescription>
+            ) : null}
+          </EmptyHeader>
+        </Empty>
       </TableCell>
     </TableRow>
   );

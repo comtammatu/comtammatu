@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@comtammatu/ui/components/button";
-import { Loader2, LogIn, LogOut } from "lucide-react";
+import { LogIn, LogOut } from "lucide-react";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { checkIn, checkOut } from "../hr/actions";
 import {
   Card,
@@ -109,7 +110,7 @@ export function EmployeePortalActions({
             variant={hasCheckedIn ? "outline" : "default"}
           >
             {loading && !hasCheckedIn ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
+              <Spinner className="mr-2" />
             ) : (
               <LogIn className="mr-2 size-4" />
             )}
@@ -123,7 +124,7 @@ export function EmployeePortalActions({
             variant={hasCheckedOut ? "outline" : "secondary"}
           >
             {loading && hasCheckedIn && !hasCheckedOut ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
+              <Spinner className="mr-2" />
             ) : (
               <LogOut className="mr-2 size-4" />
             )}

@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Loader2 } from "lucide-react";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   fetchAttendance,
   fetchAttendanceSummary,
@@ -197,7 +197,7 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
           </Button>
         </div>
 
-        {isPending && <Loader2 className="size-4 animate-spin" />}
+        {isPending && <Spinner />}
       </div>
 
       {view === "summary" ? (

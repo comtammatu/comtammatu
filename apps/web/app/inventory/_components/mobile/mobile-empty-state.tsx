@@ -1,5 +1,13 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
 import { cn } from "@comtammatu/ui";
 
 interface MobileEmptyStateProps {
@@ -18,22 +26,17 @@ export function MobileEmptyState({
   className,
 }: MobileEmptyStateProps) {
   return (
-    <div
-      className={cn(
-        "flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/30 px-4 py-10 text-center",
-        className,
-      )}
-    >
-      <span className="flex size-12 items-center justify-center rounded-full bg-background text-muted-foreground">
+    <Empty className={cn("border border-dashed bg-muted/30 px-4 py-10", className)}>
+      <EmptyMedia variant="icon" className="size-12 rounded-full bg-background">
         <Icon className="size-6" />
-      </span>
-      <div className="flex flex-col gap-1">
-        <p className="text-sm font-semibold">{title}</p>
+      </EmptyMedia>
+      <EmptyHeader>
+        <EmptyTitle className="text-sm font-semibold">{title}</EmptyTitle>
         {description ? (
-          <p className="text-xs text-muted-foreground">{description}</p>
+          <EmptyDescription className="text-xs">{description}</EmptyDescription>
         ) : null}
-      </div>
-      {action}
-    </div>
+      </EmptyHeader>
+      {action ? <EmptyContent>{action}</EmptyContent> : null}
+    </Empty>
   );
 }

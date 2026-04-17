@@ -14,7 +14,8 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { ArrowRight, Loader2, Monitor, Wallet } from "lucide-react";
+import { ArrowRight, Monitor, Wallet } from "lucide-react";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { openPosSession } from "./actions";
 
@@ -296,7 +297,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
             >
               {isPending ? (
                 <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  <Spinner className="mr-2" />
                   Đang mở ca…
                 </>
               ) : (

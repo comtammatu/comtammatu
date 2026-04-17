@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition, useMemo } from "react";
-import { Loader2, ShoppingBag } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   Card,
   CardContent,
@@ -255,7 +256,7 @@ export function OrdersClient({
             size="sm"
             className="flex-1 sm:flex-none"
           >
-            {isPending && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
+            {isPending && <Spinner className="mr-1.5 size-3.5" />}
             Lọc
           </Button>
           {hasFilters && (

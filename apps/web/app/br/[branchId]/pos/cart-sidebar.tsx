@@ -24,7 +24,6 @@ import {
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
 import {
-  Loader2,
   Minus,
   Package,
   Plus,
@@ -33,6 +32,7 @@ import {
   UtensilsCrossed,
   X,
 } from "lucide-react";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import type { CartItem, OrderType } from "./types";
 import { calcItemSubtotal } from "./types";
 import type { BranchTable } from "./page";
@@ -379,7 +379,7 @@ export function CartSidebar({
                     >
                       {isSubmitting ? (
                         <>
-                          <Loader2 className="mr-2 size-5 animate-spin" />
+                          <Spinner className="mr-2 size-5" />
                           Đang xử lý...
                         </>
                       ) : (

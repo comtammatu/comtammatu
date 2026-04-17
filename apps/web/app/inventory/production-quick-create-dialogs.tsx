@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useTransition, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   Dialog,
   DialogContent,
@@ -177,7 +177,7 @@ export function QuickFinishedGoodDialog({
               isPending || name.trim().length === 0 || unit.trim().length === 0
             }
           >
-            {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+            {isPending && <Spinner className="mr-2" />}
             Tạo thành phẩm
           </Button>
         </DialogFooter>
@@ -336,7 +336,7 @@ export function QuickRawIngredientDialog({
               isPending || name.trim().length === 0 || unit.trim().length === 0
             }
           >
-            {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+            {isPending && <Spinner className="mr-2" />}
             Tạo nguyên liệu
           </Button>
         </DialogFooter>

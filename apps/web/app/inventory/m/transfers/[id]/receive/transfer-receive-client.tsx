@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   Check,
-  Loader2,
   PackageCheck,
   Pencil,
   TriangleAlert,
 } from "lucide-react";
 import { Card } from "@comtammatu/ui/components/card";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Button } from "@comtammatu/ui/components/button";
@@ -189,7 +189,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
               className="h-12 w-full text-sm"
             >
               {startingReceive ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Spinner />
               ) : (
                 <Check className="size-4" />
               )}
@@ -327,7 +327,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
           >
             {pending ? (
               <>
-                <Loader2 className="size-5 animate-spin" />
+                <Spinner className="size-5" />
                 Đang xác nhận...
               </>
             ) : !canAct ? (

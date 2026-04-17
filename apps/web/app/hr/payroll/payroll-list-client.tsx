@@ -12,8 +12,9 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Loader2, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { createPayrollPeriod, fetchPayrollPeriods } from "../payroll-actions";
 import type { PayrollPeriodRow } from "./page";
 
@@ -69,7 +70,7 @@ export function PayrollListClient({
         </p>
         <Button onClick={handleCreate} disabled={isPending}>
           {isPending ? (
-            <Loader2 className="mr-2 size-4 animate-spin" />
+            <Spinner className="mr-2" />
           ) : (
             <Plus className="mr-2 size-4" />
           )}

@@ -1,7 +1,13 @@
-import { cn } from "@comtammatu/ui";
 import type { ReactNode } from "react";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { TableCell, TableRow } from "@comtammatu/ui/components/table";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import { cn } from "@comtammatu/ui";
 
 type EmptyStateMode = "no-data" | "no-results" | "no-access";
 
@@ -10,6 +16,7 @@ const TABLE_EMPTY_STATE_COPY: Partial<Record<EmptyStateMode, string>> = {
   "no-results": "Không có kết quả phù hợp",
   "no-access": "Không có quyền truy cập",
 };
+
 interface TableEmptyStateRowProps {
   colSpan: number;
   title?: string;
@@ -31,27 +38,20 @@ export function TableEmptyStateRow({
 
   return (
     <TableRow>
-      <TableCell
-        colSpan={colSpan}
-        className={cn(paddingClassName, "text-center")}
-      >
-        <Card className="mx-auto max-w-sm">
-          <CardContent className="flex flex-col items-center gap-3 py-6">
-            {icon ? (
-              <div className="flex size-11 items-center justify-center rounded-full border bg-muted text-muted-foreground">
-                {icon}
-              </div>
-            ) : null}
-            <p className="text-sm font-semibold text-foreground">
+      <TableCell colSpan={colSpan} className={cn(paddingClassName, "text-center")}>
+        <Empty className="mx-auto max-w-sm border bg-card py-6">
+          {icon ? <EmptyMedia variant="icon">{icon}</EmptyMedia> : null}
+          <EmptyHeader>
+            <EmptyTitle className="text-sm font-semibold">
               {resolvedTitle}
-            </p>
+            </EmptyTitle>
             {description ? (
-              <p className="text-xs leading-5 text-muted-foreground">
+              <EmptyDescription className="text-xs leading-5">
                 {description}
-              </p>
+              </EmptyDescription>
             ) : null}
-          </CardContent>
-        </Card>
+          </EmptyHeader>
+        </Empty>
       </TableCell>
     </TableRow>
   );

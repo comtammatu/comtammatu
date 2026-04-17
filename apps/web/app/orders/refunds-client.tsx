@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Loader2, RotateCcw, CheckCircle, XCircle } from "lucide-react";
+import { RotateCcw, CheckCircle, XCircle } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   Card,
   CardContent,
@@ -159,7 +160,7 @@ export function RefundsClient({
           disabled={isPending}
         >
           {isPending ? (
-            <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+            <Spinner className="mr-1.5 size-3.5" />
           ) : (
             <RotateCcw className="mr-1.5 size-3.5" />
           )}
@@ -254,7 +255,7 @@ export function RefundsClient({
                         onClick={() => handleApprove(refund.id, true)}
                       >
                         {isPending && actioningId === refund.id ? (
-                          <Loader2 className="size-3.5 animate-spin" />
+                          <Spinner className="size-3.5" />
                         ) : (
                           <CheckCircle className="size-3.5" />
                         )}
@@ -268,7 +269,7 @@ export function RefundsClient({
                         onClick={() => handleApprove(refund.id, false)}
                       >
                         {isPending && actioningId === refund.id ? (
-                          <Loader2 className="size-3.5 animate-spin" />
+                          <Spinner className="size-3.5" />
                         ) : (
                           <XCircle className="size-3.5" />
                         )}
@@ -374,7 +375,7 @@ export function RefundsClient({
                               onClick={() => handleApprove(refund.id, true)}
                             >
                               {isPending && actioningId === refund.id ? (
-                                <Loader2 className="size-3.5 animate-spin" />
+                                <Spinner className="size-3.5" />
                               ) : (
                                 <CheckCircle className="size-3.5" />
                               )}
@@ -390,7 +391,7 @@ export function RefundsClient({
                               onClick={() => handleApprove(refund.id, false)}
                             >
                               {isPending && actioningId === refund.id ? (
-                                <Loader2 className="size-3.5 animate-spin" />
+                                <Spinner className="size-3.5" />
                               ) : (
                                 <XCircle className="size-3.5" />
                               )}

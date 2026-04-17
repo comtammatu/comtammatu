@@ -10,8 +10,9 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Calculator, CheckCircle, CreditCard, Loader2 } from "lucide-react";
+import { Calculator, CheckCircle, CreditCard } from "lucide-react";
 import {
   calculatePayroll,
   approvePayroll,
@@ -99,7 +100,7 @@ export function PayrollDetailClient({
       <div className="flex flex-wrap gap-2">
         <Button onClick={handleCalculate} disabled={isPending}>
           {isPending ? (
-            <Loader2 className="mr-2 size-4 animate-spin" />
+            <Spinner className="mr-2" />
           ) : (
             <Calculator className="mr-2 size-4" />
           )}

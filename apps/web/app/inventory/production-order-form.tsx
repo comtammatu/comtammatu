@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CircleSlash, Loader2, Plus } from "lucide-react";
+import { CircleSlash, Plus } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   Dialog,
   DialogContent,
@@ -314,7 +315,7 @@ export function ProductionOrderForm({
             onClick={handleCreate}
             disabled={isPending || !actionsEnabled}
           >
-            {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+            {isPending && <Spinner className="mr-2" />}
             Tạo lệnh
           </Button>
         </DialogFooter>

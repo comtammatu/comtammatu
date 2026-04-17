@@ -21,11 +21,11 @@ import {
   CheckCircle2,
   CircleDollarSign,
   ExternalLink,
-  Loader2,
   Printer,
   ReceiptText,
   ScanQrCode,
 } from "lucide-react";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { fetchOrderForBill, updateOrderStatus } from "./actions";
 import {
@@ -280,7 +280,7 @@ export function BillReceipt({
       <SheetContent side="right" className="w-95 p-0 sm:max-w-95">
         {isPending ? (
           <div className="flex h-full items-center justify-center">
-            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+            <Spinner className="size-6 text-muted-foreground" />
           </div>
         ) : error ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 px-4">
@@ -555,7 +555,7 @@ export function BillReceipt({
                               {METHOD_LABELS[m] ?? m}
                             </span>
                             {payPending ? (
-                              <Loader2 className="size-4 animate-spin" />
+                              <Spinner />
                             ) : (
                               <ReceiptText className="size-4 opacity-70" />
                             )}
@@ -617,7 +617,7 @@ export function BillReceipt({
                     disabled={completePending}
                   >
                     {completePending ? (
-                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      <Spinner className="mr-2" />
                     ) : (
                       <CheckCircle2 className="mr-2 size-4" />
                     )}

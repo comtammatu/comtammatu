@@ -21,9 +21,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   CircleDollarSign,
-  Loader2,
   ShieldCheck,
 } from "lucide-react";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { closePosSession } from "./actions";
 
 interface CloseSummary {
@@ -333,7 +333,7 @@ export function CloseSessionDialog({
               >
                 {isPending ? (
                   <>
-                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    <Spinner className="mr-2" />
                     Đang đóng...
                   </>
                 ) : (

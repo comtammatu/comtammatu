@@ -18,8 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Loader2 } from "lucide-react";
 import {
   generateBalanceSheet,
   generateIncomeStatement,
@@ -105,7 +105,7 @@ export function StatementsClient() {
             />
           </div>
           <Button onClick={handleBalanceSheet} disabled={isPending}>
-            {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+            {isPending && <Spinner className="mr-2" />}
             Tạo báo cáo
           </Button>
         </div>
@@ -135,7 +135,7 @@ export function StatementsClient() {
             />
           </div>
           <Button onClick={handleIncomeStatement} disabled={isPending}>
-            {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+            {isPending && <Spinner className="mr-2" />}
             Tạo báo cáo
           </Button>
         </div>
@@ -156,7 +156,7 @@ export function StatementsClient() {
             />
           </div>
           <Button onClick={handleVatSummary} disabled={isPending}>
-            {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+            {isPending && <Spinner className="mr-2" />}
             Tạo báo cáo
           </Button>
         </div>

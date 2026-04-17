@@ -1,8 +1,9 @@
 "use client";
 
 import { useActionState } from "react";
-import { ArrowRight, Loader2, ShieldCheck } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { cn } from "@comtammatu/ui";
@@ -110,7 +111,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
         >
           {isPending ? (
             <>
-              <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
+              <Spinner className="motion-reduce:animate-none" />
               Đang kiểm tra...
             </>
           ) : (
