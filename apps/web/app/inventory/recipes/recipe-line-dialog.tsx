@@ -2,6 +2,16 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Plus, Trash2 } from "lucide-react";
+import {
+  Controller,
+  useFieldArray,
+  useForm,
+  type Control,
+  type FieldErrors,
+} from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
@@ -44,44 +54,201 @@ export interface RecipeLineDraft {
   note: string | null;
 }
 
+/* ─── Schema ─── */
+
+const recipeLineRowSchema = z.object({
+  ingredient_id: z
+    .string()
+    .min(1, { error: "Chọn nguyên liệu" }),
+  quantity: z
+    .string()
+    .min(1, { error: "Nhập số lượng" })
+    .refine((v) => Number(v) > 0, { error: "Số lượng phải > 0" }),
+  unit: z.string().trim().min(1, { error: "Đơn vị không được trống" }),
+  yield_factor: z
+    .string()
+    .min(1, { error: "Nhập yield" })
+    .refine((v) => Number(v) > 0, { error: "Yield phải > 0" }),
+  note: z.string().optional(),
+});
+
+const recipeSchema = z.object({
+  menu_item_id: z
+    .string()
+    .min(1, { error: "Vui lòng chọn thành phẩm" }),
+  lines: z
+    .array(recipeLineRowSchema)
+    .min(1, { error: "Công thức phải có ít nhất 1 nguyên liệu" })
+    .refine(
+      (arr) => {
+        const ids = arr.map((row) => row.ingredient_id).filter(Boolean);
+        return new Set(ids).size === ids.length;
+      },
+      { error: "Nguyên liệu trùng lặp. Gộp chung vào 1 dòng." },
+    ),
+});
+
+type RecipeFormValues = z.infer<typeof recipeSchema>;
+type RecipeLineRow = z.infer<typeof recipeLineRowSchema>;
+
+const EMPTY_ROW: RecipeLineRow = {
+  ingredient_id: "",
+  quantity: "",
+  unit: "",
+  yield_factor: "1",
+  note: "",
+};
+
+/* ─── Row ─── */
+
+function LineRowCells({
+  control,
+  index,
+  ingredients,
+  errors,
+  onRemove,
+  canRemove,
+  onIngredientChange,
+}: {
+  control: Control<RecipeFormValues>;
+  index: number;
+  ingredients: IngredientOption[];
+  errors: FieldErrors<RecipeFormValues>;
+  onRemove: () => void;
+  canRemove: boolean;
+  onIngredientChange: (ingredientId: string) => void;
+}) {
+  const rowError = errors.lines?.[index];
+
+  return (
+    <div className="space-y-1.5">
+      <div className="grid grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1.4fr)_auto] items-center gap-2 px-3 py-2">
+        <Controller
+          control={control}
+          name={`lines.${index}.ingredient_id`}
+          render={({ field }) => (
+            <Select
+              value={field.value}
+              onValueChange={(v) => {
+                field.onChange(v);
+                onIngredientChange(v);
+              }}
+            >
+              <SelectTrigger
+                className={cn("h-9", rowError?.ingredient_id && "border-destructive")}
+                aria-invalid={!!rowError?.ingredient_id}
+                onBlur={field.onBlur}
+                ref={field.ref}
+              >
+                <SelectValue placeholder="Chọn nguyên liệu..." />
+              </SelectTrigger>
+              <SelectContent>
+                {ingredients.map((ing) => (
+                  <SelectItem key={ing.id} value={String(ing.id)}>
+                    {ing.name} ({ing.unit})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
+
+        <Controller
+          control={control}
+          name={`lines.${index}.quantity`}
+          render={({ field }) => (
+            <FormattedNumberInput
+              placeholder="VD: 0.5"
+              value={field.value ?? ""}
+              onValueChange={field.onChange}
+              onBlur={field.onBlur}
+              ref={field.ref}
+              name={field.name}
+              maxFractionDigits={3}
+              aria-invalid={!!rowError?.quantity}
+              className={cn("h-9", rowError?.quantity && "border-destructive")}
+            />
+          )}
+        />
+
+        <Controller
+          control={control}
+          name={`lines.${index}.unit`}
+          render={({ field }) => (
+            <Input
+              placeholder="kg, lít..."
+              {...field}
+              value={field.value ?? ""}
+              aria-invalid={!!rowError?.unit}
+              className={cn("h-9", rowError?.unit && "border-destructive")}
+            />
+          )}
+        />
+
+        <Controller
+          control={control}
+          name={`lines.${index}.yield_factor`}
+          render={({ field }) => (
+            <FormattedNumberInput
+              value={field.value ?? ""}
+              onValueChange={field.onChange}
+              onBlur={field.onBlur}
+              ref={field.ref}
+              name={field.name}
+              maxFractionDigits={2}
+              aria-invalid={!!rowError?.yield_factor}
+              className={cn("h-9", rowError?.yield_factor && "border-destructive")}
+            />
+          )}
+        />
+
+        <Controller
+          control={control}
+          name={`lines.${index}.note`}
+          render={({ field }) => (
+            <Input
+              placeholder="Tùy chọn"
+              {...field}
+              value={field.value ?? ""}
+              className="h-9"
+            />
+          )}
+        />
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onRemove}
+          disabled={!canRemove}
+          aria-label="Xoá dòng"
+        >
+          <Trash2 className="size-4 text-muted-foreground" />
+        </Button>
+      </div>
+      {rowError && (
+        <p className="px-3 text-xs text-destructive" role="alert">
+          {rowError.ingredient_id?.message ??
+            rowError.quantity?.message ??
+            rowError.unit?.message ??
+            rowError.yield_factor?.message}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ─── Dialog ─── */
+
 interface RecipeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   menuItems: MenuItemOption[];
   ingredients: IngredientOption[];
-  /** Menu item being edited. Undefined = creating a brand-new recipe. */
   editingMenuItemId?: number;
-  /** Existing lines to prefill when editing. */
   editingLines?: RecipeLineDraft[];
-  /** Menu item IDs that already have recipes — excluded from the create dropdown. */
   existingMenuItemIds?: number[];
   onSaved: () => void;
-}
-
-type DraftRow = {
-  key: string;
-  ingredientId: string;
-  quantity: string;
-  unit: string;
-  yieldFactor: string;
-  note: string;
-};
-
-let rowIdCounter = 0;
-function newRowKey() {
-  rowIdCounter += 1;
-  return `r${rowIdCounter}`;
-}
-
-function makeEmptyRow(): DraftRow {
-  return {
-    key: newRowKey(),
-    ingredientId: "",
-    quantity: "",
-    unit: "",
-    yieldFactor: "1",
-    note: "",
-  };
 }
 
 export function RecipeLineDialog({
@@ -96,40 +263,41 @@ export function RecipeLineDialog({
 }: RecipeDialogProps) {
   const isEdit = editingMenuItemId != null;
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [selectedMenuItemId, setSelectedMenuItemId] = useState<string>(
-    editingMenuItemId ? String(editingMenuItemId) : "",
-  );
-  const [rows, setRows] = useState<DraftRow[]>(() =>
-    editingLines && editingLines.length > 0
-      ? editingLines.map((l) => ({
-          key: newRowKey(),
-          ingredientId: String(l.ingredientId),
-          quantity: String(l.quantity),
-          unit: l.unit,
-          yieldFactor: String(l.yieldFactor),
-          note: l.note ?? "",
-        }))
-      : [makeEmptyRow()],
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  const initialValues = useMemo<RecipeFormValues>(
+    () => ({
+      menu_item_id: editingMenuItemId ? String(editingMenuItemId) : "",
+      lines:
+        editingLines && editingLines.length > 0
+          ? editingLines.map((l) => ({
+              ingredient_id: String(l.ingredientId),
+              quantity: String(l.quantity),
+              unit: l.unit,
+              yield_factor: String(l.yieldFactor),
+              note: l.note ?? "",
+            }))
+          : [EMPTY_ROW],
+    }),
+    [editingMenuItemId, editingLines],
   );
 
+  const form = useForm<RecipeFormValues, unknown, RecipeFormValues>({
+    resolver: zodResolver(recipeSchema),
+    defaultValues: initialValues,
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "lines",
+  });
+
   useEffect(() => {
-    if (!open) return;
-    setError(null);
-    setSelectedMenuItemId(editingMenuItemId ? String(editingMenuItemId) : "");
-    setRows(
-      editingLines && editingLines.length > 0
-        ? editingLines.map((l) => ({
-            key: newRowKey(),
-            ingredientId: String(l.ingredientId),
-            quantity: String(l.quantity),
-            unit: l.unit,
-            yieldFactor: String(l.yieldFactor),
-            note: l.note ?? "",
-          }))
-        : [makeEmptyRow()],
-    );
-  }, [open, editingMenuItemId, editingLines]);
+    if (open) {
+      form.reset(initialValues);
+      setServerError(null);
+    }
+  }, [open, initialValues, form]);
 
   const availableMenuItems = useMemo(() => {
     if (isEdit) return menuItems;
@@ -143,104 +311,38 @@ export function RecipeLineDialog({
     return m;
   }, [ingredients]);
 
-  function updateRow(key: string, patch: Partial<DraftRow>) {
-    setRows((prev) =>
-      prev.map((r) => (r.key === key ? { ...r, ...patch } : r)),
-    );
+  function handleIngredientChangeFactory(rowIndex: number) {
+    return (value: string) => {
+      const currentUnit = form.getValues(`lines.${rowIndex}.unit`);
+      if (!currentUnit) {
+        const ing = ingredientMap.get(Number(value));
+        if (ing) {
+          form.setValue(`lines.${rowIndex}.unit`, ing.unit);
+        }
+      }
+    };
   }
 
-  function handleIngredientChange(rowKey: string, value: string) {
-    const ing = ingredientMap.get(Number(value));
-    updateRow(rowKey, {
-      ingredientId: value,
-      unit:
-        // Only auto-fill unit if the row hasn't got one yet.
-        rows.find((r) => r.key === rowKey)?.unit || ing?.unit || "",
-    });
-  }
-
-  function addRow() {
-    setRows((prev) => [...prev, makeEmptyRow()]);
-  }
-
-  function removeRow(key: string) {
-    setRows((prev) =>
-      prev.length <= 1 ? prev : prev.filter((r) => r.key !== key),
-    );
-  }
-
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError(null);
-
-    const menuItemId = Number(selectedMenuItemId);
-    if (!menuItemId) {
-      setError("Vui lòng chọn thành phẩm.");
-      return;
-    }
-
-    const parsedLines: Array<{
-      ingredientId: number;
-      quantity: number;
-      unit: string;
-      yieldFactor: number;
-      note: string | null;
-    }> = [];
-    const seen = new Set<number>();
-
-    for (const row of rows) {
-      const ingredientId = Number(row.ingredientId);
-      const quantity = Number(row.quantity);
-      const yieldFactor = Number(row.yieldFactor || 1);
-      const unit = row.unit.trim();
-
-      if (!ingredientId) {
-        setError("Mỗi dòng phải chọn nguyên liệu.");
-        return;
-      }
-      if (seen.has(ingredientId)) {
-        setError("Nguyên liệu trùng lặp. Gộp chung vào 1 dòng.");
-        return;
-      }
-      seen.add(ingredientId);
-
-      if (!(quantity > 0)) {
-        setError("Số lượng phải lớn hơn 0.");
-        return;
-      }
-      if (!unit) {
-        setError("Đơn vị không được để trống.");
-        return;
-      }
-      if (!(yieldFactor > 0)) {
-        setError("Yield factor phải lớn hơn 0.");
-        return;
-      }
-
-      parsedLines.push({
-        ingredientId,
-        quantity,
-        unit,
-        yieldFactor,
-        note: row.note.trim() ? row.note.trim() : null,
-      });
-    }
-
-    if (parsedLines.length === 0) {
-      setError("Công thức phải có ít nhất 1 nguyên liệu.");
-      return;
-    }
+  function onValid(values: RecipeFormValues) {
+    const menuItemId = Number(values.menu_item_id);
+    const parsedLines = values.lines.map((row) => ({
+      ingredientId: Number(row.ingredient_id),
+      quantity: Number(row.quantity),
+      unit: row.unit.trim(),
+      yieldFactor: Number(row.yield_factor || "1"),
+      note: row.note?.trim() ? row.note.trim() : null,
+    }));
 
     startTransition(async () => {
+      setServerError(null);
       const result = await upsertRecipeLines({
         menuItemId,
         lines: parsedLines,
       });
       if (!result.success) {
-        setError(result.error ?? "Đã xảy ra lỗi");
+        setServerError(result.error ?? "Đã xảy ra lỗi");
         return;
       }
-
       toast.success(
         isEdit
           ? `Đã cập nhật công thức (${parsedLines.length} nguyên liệu)`
@@ -250,6 +352,9 @@ export function RecipeLineDialog({
       onSaved();
     });
   }
+
+  const errors = form.formState.errors;
+  const linesRootError = errors.lines?.root?.message ?? errors.lines?.message;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -264,31 +369,50 @@ export function RecipeLineDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={form.handleSubmit(onValid)} noValidate className="space-y-5">
           <div className="space-y-2">
             <Label className="text-sm font-medium">Thành phẩm *</Label>
-            <Select
-              value={selectedMenuItemId}
-              onValueChange={setSelectedMenuItemId}
-              disabled={isEdit}
-            >
-              <SelectTrigger className="h-10">
-                <SelectValue placeholder="Chọn thành phẩm..." />
-              </SelectTrigger>
-              <SelectContent>
-                {availableMenuItems.length === 0 ? (
-                  <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-                    Tất cả thành phẩm đã có công thức.
-                  </div>
-                ) : (
-                  availableMenuItems.map((mi) => (
-                    <SelectItem key={mi.id} value={String(mi.id)}>
-                      {mi.name}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+            <Controller
+              control={form.control}
+              name="menu_item_id"
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  disabled={isEdit}
+                >
+                  <SelectTrigger
+                    className={cn(
+                      "h-10",
+                      errors.menu_item_id && "border-destructive",
+                    )}
+                    aria-invalid={!!errors.menu_item_id}
+                    onBlur={field.onBlur}
+                    ref={field.ref}
+                  >
+                    <SelectValue placeholder="Chọn thành phẩm..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableMenuItems.length === 0 ? (
+                      <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                        Tất cả thành phẩm đã có công thức.
+                      </div>
+                    ) : (
+                      availableMenuItems.map((mi) => (
+                        <SelectItem key={mi.id} value={String(mi.id)}>
+                          {mi.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.menu_item_id && (
+              <p className="text-xs text-destructive" role="alert">
+                {errors.menu_item_id.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -300,7 +424,7 @@ export function RecipeLineDialog({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={addRow}
+                onClick={() => append(EMPTY_ROW)}
               >
                 <Plus className="size-4" />
                 Thêm nguyên liệu
@@ -318,81 +442,34 @@ export function RecipeLineDialog({
               </div>
 
               <div className="divide-y">
-                {rows.map((row) => (
-                  <div
-                    key={row.key}
-                    className="grid grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1.4fr)_auto] items-center gap-2 px-3 py-2"
-                  >
-                    <Select
-                      value={row.ingredientId}
-                      onValueChange={(v) => handleIngredientChange(row.key, v)}
-                    >
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Chọn nguyên liệu..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ingredients.map((ing) => (
-                          <SelectItem key={ing.id} value={String(ing.id)}>
-                            {ing.name} ({ing.unit})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormattedNumberInput
-                      placeholder="VD: 0.5"
-                      value={row.quantity}
-                      onValueChange={(value) =>
-                        updateRow(row.key, { quantity: value })
-                      }
-                      maxFractionDigits={3}
-                      className="h-9"
-                    />
-                    <Input
-                      placeholder="kg, lít..."
-                      value={row.unit}
-                      onChange={(e) =>
-                        updateRow(row.key, { unit: e.target.value })
-                      }
-                      className="h-9"
-                    />
-                    <FormattedNumberInput
-                      value={row.yieldFactor}
-                      onValueChange={(value) =>
-                        updateRow(row.key, { yieldFactor: value })
-                      }
-                      maxFractionDigits={2}
-                      className="h-9"
-                    />
-                    <Input
-                      placeholder="Tùy chọn"
-                      value={row.note}
-                      onChange={(e) =>
-                        updateRow(row.key, { note: e.target.value })
-                      }
-                      className="h-9"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeRow(row.key)}
-                      disabled={rows.length <= 1}
-                      aria-label="Xoá dòng"
-                    >
-                      <Trash2 className="size-4 text-muted-foreground" />
-                    </Button>
-                  </div>
+                {fields.map((row, index) => (
+                  <LineRowCells
+                    key={row.id}
+                    control={form.control}
+                    index={index}
+                    ingredients={ingredients}
+                    errors={errors}
+                    onRemove={() => remove(index)}
+                    canRemove={fields.length > 1}
+                    onIngredientChange={handleIngredientChangeFactory(index)}
+                  />
                 ))}
               </div>
             </div>
+
+            {linesRootError && (
+              <p className="text-sm text-destructive" role="alert">
+                {linesRootError}
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
               Yield mặc định 1.0 (không hao hụt). 0.85 = hao 15% khi chế biến.
             </p>
           </div>
 
-          {error && (
+          {serverError && (
             <p className="text-sm text-destructive" role="alert">
-              {error}
+              {serverError}
             </p>
           )}
 
