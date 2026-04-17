@@ -47,6 +47,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
+import { Combobox } from "@/components/form";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { InventoryHeader } from "../../_components/inventory-header";
 import {
@@ -385,18 +386,16 @@ function SupplierSection({
             <Label>
               Nhà cung cấp <span className="text-destructive">*</span>
             </Label>
-            <Select value={supplierId} onValueChange={onSupplierChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Chọn nhà cung cấp" />
-              </SelectTrigger>
-              <SelectContent>
-                {suppliers.map((s) => (
-                  <SelectItem key={s.id} value={String(s.id)}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              value={supplierId}
+              onValueChange={onSupplierChange}
+              options={suppliers.map((s) => ({
+                value: String(s.id),
+                label: s.name,
+              }))}
+              placeholder="Chọn nhà cung cấp"
+              searchPlaceholder="Tìm nhà cung cấp..."
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="notes">Ghi chú</Label>
@@ -834,21 +833,19 @@ function LineItemsSection({
               onSubmit={handleAddLine}
               className="border-t bg-muted/5 p-3 space-y-2 md:px-5"
             >
-              <Select
+              <Combobox
                 value={ingredientId}
                 onValueChange={handleIngredientChange}
-              >
-                <SelectTrigger className="h-8 text-sm border-dashed">
-                  <SelectValue placeholder="+ Chọn nguyên liệu" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ingredients.map((i) => (
-                    <SelectItem key={i.id} value={String(i.id)}>
-                      {i.name} ({i.purchase_unit ?? i.unit})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={ingredients.map((i) => ({
+                  value: String(i.id),
+                  label: i.name,
+                  hint: i.purchase_unit ?? i.unit,
+                  keywords: [i.sku ?? "", i.category ?? ""],
+                }))}
+                placeholder="+ Chọn nguyên liệu"
+                searchPlaceholder="Tìm tên, SKU, danh mục..."
+                triggerClassName="h-8 border-dashed text-sm"
+              />
               <div className="grid grid-cols-3 gap-2">
                 <FormattedNumberInput
                   ref={qtyRef}
@@ -1004,21 +1001,19 @@ function LineItemsSection({
             className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] items-center gap-0 border-t bg-muted/5 px-3 py-2 md:px-5"
           >
             <div className="pr-2">
-              <Select
+              <Combobox
                 value={ingredientId}
                 onValueChange={handleIngredientChange}
-              >
-                <SelectTrigger className="h-8 text-sm border-dashed">
-                  <SelectValue placeholder="+ Chọn nguyên liệu" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ingredients.map((i) => (
-                    <SelectItem key={i.id} value={String(i.id)}>
-                      {i.name} ({i.purchase_unit ?? i.unit})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={ingredients.map((i) => ({
+                  value: String(i.id),
+                  label: i.name,
+                  hint: i.purchase_unit ?? i.unit,
+                  keywords: [i.sku ?? "", i.category ?? ""],
+                }))}
+                placeholder="+ Chọn nguyên liệu"
+                searchPlaceholder="Tìm tên, SKU, danh mục..."
+                triggerClassName="h-8 border-dashed text-sm"
+              />
             </div>
             <div>
               <FormattedNumberInput
