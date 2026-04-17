@@ -8,7 +8,12 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
-import { Input } from "@comtammatu/ui/components/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from "@comtammatu/ui/components/input-group";
 import {
   Table,
   TableBody,
@@ -151,25 +156,22 @@ export function TransfersListClient({
           </div>
 
           {/* Search */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Tìm số phiếu hoặc tên kho..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-8"
-                  />
-                </div>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {filtered.length} / {rows.length}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+          <InputGroup className="h-10">
+            <InputGroupAddon>
+              <Search />
+            </InputGroupAddon>
+            <InputGroupInput
+              type="search"
+              placeholder="Tìm số phiếu hoặc tên kho..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <InputGroupAddon align="inline-end">
+              <InputGroupText>
+                {filtered.length} / {rows.length}
+              </InputGroupText>
+            </InputGroupAddon>
+          </InputGroup>
 
           {/* Table */}
           <Card>

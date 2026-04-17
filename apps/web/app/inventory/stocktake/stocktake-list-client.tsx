@@ -15,7 +15,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
-import { Input } from "@comtammatu/ui/components/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
@@ -199,15 +203,16 @@ export function StocktakeListClient({
 
         {/* Search */}
         <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
+          <InputGroup className="h-10 flex-1">
+            <InputGroupAddon>
+              <Search />
+            </InputGroupAddon>
+            <InputGroupInput
               placeholder="Tìm mã phiên hoặc tên chi nhánh..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
             />
-          </div>
+          </InputGroup>
           <Badge variant="outline" className="rounded-full">
             {filtered.length} / {rows.length} phiên
           </Badge>
