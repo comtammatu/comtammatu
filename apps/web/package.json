@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:webpack": "next dev",
+    "dev:clean": "rm -rf .next && next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
