@@ -52,63 +52,32 @@ async function fetchHubCounts(): Promise<{
     };
   }
 
-  const [poRes, tfRes, currentBranchRes, centralKitchenRes] = await Promise.all(
-    [
-      supabase
-        .from("purchase_orders")
-        .select("id", { count: "exact", head: true })
-        .eq("tenant_id", claims.tenant_id)
-        .in("status", ["sent", "partially_received"]),
-      supabase
-        .from("stock_transfers")
-        .select("id", { count: "exact", head: true })
-        .eq("tenant_id", claims.tenant_id)
-        .in("status", ["confirmed_ship", "in_transit", "confirmed_receive"]),
-      claims.branch_id
-        ? supabase
-            .from("branches")
-            .select("branch_kind")
-            .eq("tenant_id", claims.tenant_id)
-            .eq("id", claims.branch_id)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-      supabase
-        .from("branches")
-        .select("id", { count: "exact", head: true })
-        .eq("tenant_id", claims.tenant_id)
-        .eq("is_active", true)
-        .eq("branch_kind", "central_kitchen"),
-    ],
-  );
+  const canOpenProduction = canAccessProductionSurface(claims.user_role);
 
-  const currentBranchKind = currentBranchRes.data?.branch_kind ?? null;
-  const hasCentralKitchen = (centralKitchenRes.count ?? 0) > 0;
-
-  const canOpenProduction =
-    canAccessProductionSurface(claims.user_role) &&
-    (currentBranchKind === "central_kitchen" ||
-      currentBranchKind === null ||
-      !hasCentralKitchen);
-
-  const draftProductionRes = canOpenProduction
-    ? await (currentBranchKind === "central_kitchen" && claims.branch_id != null
-        ? supabase
-            .from("production_orders")
-            .select("id", { count: "exact", head: true })
-            .eq("tenant_id", claims.tenant_id)
-            .eq("branch_id", claims.branch_id)
-            .eq("status", "draft")
-        : supabase
-            .from("production_orders")
-            .select("id", { count: "exact", head: true })
-            .eq("tenant_id", claims.tenant_id)
-            .eq("status", "draft"))
-    : null;
+  const [poRes, tfRes, draftProductionRes] = await Promise.all([
+    supabase
+      .from("purchase_orders")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .in("status", ["sent", "partially_received"]),
+    supabase
+      .from("stock_transfers")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .in("status", ["confirmed_ship", "in_transit", "confirmed_receive"]),
+    canOpenProduction
+      ? supabase
+          .from("production_orders")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", claims.tenant_id)
+          .eq("status", "draft")
+      : Promise.resolve({ count: 0 }),
+  ]);
 
   return {
     openPoCount: poRes.count ?? 0,
     pendingTransferCount: tfRes.count ?? 0,
-    draftProductionCount: draftProductionRes?.count ?? 0,
+    draftProductionCount: draftProductionRes.count ?? 0,
     canOpenProduction,
   };
 }
