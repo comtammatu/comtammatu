@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
-import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Input } from "@comtammatu/ui/components/input";
 import {
   Dialog,
   DialogContent,
@@ -14,21 +12,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@comtammatu/ui/components/field";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
+import { FieldGroup } from "@comtammatu/ui/components/field";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { FormattedNumberInput } from "./_components/formatted-number-input";
+import {
+  NumberField,
+  SelectField,
+  TextField,
+} from "@/components/form";
 import { createIngredient, updateIngredient } from "./actions";
 import type { IngredientRow } from "./page";
 
@@ -56,6 +47,17 @@ const ingredientSchema = z.object({
 });
 
 type IngredientFormValues = z.infer<typeof ingredientSchema>;
+
+const STORAGE_OPTIONS = [
+  { value: "ambient", label: "Thường" },
+  { value: "refrigerated", label: "Lạnh" },
+  { value: "frozen", label: "Đông lạnh" },
+] as const;
+
+const ITEM_KIND_OPTIONS = [
+  { value: "raw_material", label: "Nguyên liệu" },
+  { value: "finished_good", label: "Thành phẩm" },
+] as const;
 
 function parseOptionalNumber(value: string | undefined): number | undefined {
   if (!value) return undefined;
@@ -215,8 +217,6 @@ function IngredientFormContent({
     });
   }
 
-  const errors = form.formState.errors;
-
   return (
     <>
       <DialogHeader>
@@ -227,205 +227,98 @@ function IngredientFormContent({
 
       <form onSubmit={form.handleSubmit(onValid)} noValidate>
         <FieldGroup>
-          {/* Row 1: name + purchase unit */}
           <div className="grid grid-cols-2 gap-4">
-            <Field data-invalid={!!errors.name}>
-              <FieldLabel htmlFor="ing-name">Tên nguyên liệu *</FieldLabel>
-              <Input
-                id="ing-name"
-                placeholder="VD: Sườn cốt lết"
-                aria-invalid={!!errors.name}
-                className="h-10"
-                {...form.register("name")}
-              />
-              <FieldError errors={errors.name ? [errors.name] : undefined} />
-            </Field>
-            <Field data-invalid={!!errors.purchase_unit}>
-              <FieldLabel htmlFor="ing-purchase-unit">Đơn vị nhập *</FieldLabel>
-              <Input
-                id="ing-purchase-unit"
-                placeholder="thùng, bao, chai..."
-                aria-invalid={!!errors.purchase_unit}
-                className="h-10"
-                {...form.register("purchase_unit")}
-              />
-              <FieldError
-                errors={
-                  errors.purchase_unit ? [errors.purchase_unit] : undefined
-                }
-              />
-            </Field>
-          </div>
-
-          {/* Row 2: measure unit + sku */}
-          <div className="grid grid-cols-2 gap-4">
-            <Field data-invalid={!!errors.measure_unit}>
-              <FieldLabel htmlFor="ing-measure-unit">Đơn vị tính *</FieldLabel>
-              <Input
-                id="ing-measure-unit"
-                placeholder="kg, ml, cái..."
-                aria-invalid={!!errors.measure_unit}
-                className="h-10"
-                {...form.register("measure_unit")}
-              />
-              <FieldError
-                errors={errors.measure_unit ? [errors.measure_unit] : undefined}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="ing-sku">Mã SKU</FieldLabel>
-              <Input
-                id="ing-sku"
-                placeholder="SKU-001"
-                className="h-10"
-                {...form.register("sku")}
-              />
-            </Field>
-          </div>
-
-          {/* Row 3: category + unit_cost */}
-          <div className="grid grid-cols-2 gap-4">
-            <Field>
-              <FieldLabel htmlFor="ing-category">Danh mục</FieldLabel>
-              <Input
-                id="ing-category"
-                placeholder="Thịt, Rau củ..."
-                className="h-10"
-                {...form.register("category")}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="ing-unit-cost">
-                Giá nhập tham chiếu (VND)
-              </FieldLabel>
-              <Controller
-                name="unit_cost"
-                control={form.control}
-                render={({ field }) => (
-                  <FormattedNumberInput
-                    id="ing-unit-cost"
-                    value={field.value ?? ""}
-                    onValueChange={field.onChange}
-                    maxFractionDigits={0}
-                    placeholder="0"
-                    className="h-10"
-                  />
-                )}
-              />
-            </Field>
-          </div>
-
-          {/* Row 4: storage + kind */}
-          <div className="grid grid-cols-2 gap-4">
-            <Field>
-              <FieldLabel htmlFor="ing-storage">Kiểu lưu trữ</FieldLabel>
-              <Controller
-                name="storage_type"
-                control={form.control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="ing-storage" className="h-10">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ambient">Thường</SelectItem>
-                      <SelectItem value="refrigerated">Lạnh</SelectItem>
-                      <SelectItem value="frozen">Đông lạnh</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="ing-kind">Loại hàng</FieldLabel>
-              <Controller
-                name="item_kind"
-                control={form.control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="ing-kind" className="h-10">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="raw_material">Nguyên liệu</SelectItem>
-                      <SelectItem value="finished_good">Thành phẩm</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </Field>
-          </div>
-
-          {/* Row 5: min / max / reorder */}
-          <div className="grid grid-cols-3 gap-4">
-            <Field>
-              <FieldLabel htmlFor="ing-min">Tồn tối thiểu</FieldLabel>
-              <Controller
-                name="min_stock_level"
-                control={form.control}
-                render={({ field }) => (
-                  <FormattedNumberInput
-                    id="ing-min"
-                    value={field.value ?? ""}
-                    onValueChange={field.onChange}
-                    maxFractionDigits={2}
-                    className="h-10"
-                  />
-                )}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="ing-max">Tồn tối đa</FieldLabel>
-              <Controller
-                name="max_stock_level"
-                control={form.control}
-                render={({ field }) => (
-                  <FormattedNumberInput
-                    id="ing-max"
-                    value={field.value ?? ""}
-                    onValueChange={field.onChange}
-                    maxFractionDigits={2}
-                    className="h-10"
-                  />
-                )}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="ing-reorder">Điểm đặt hàng</FieldLabel>
-              <Controller
-                name="reorder_point"
-                control={form.control}
-                render={({ field }) => (
-                  <FormattedNumberInput
-                    id="ing-reorder"
-                    value={field.value ?? ""}
-                    onValueChange={field.onChange}
-                    maxFractionDigits={2}
-                    className="h-10"
-                  />
-                )}
-              />
-            </Field>
-          </div>
-
-          {/* shelf_life_days */}
-          <Field>
-            <FieldLabel htmlFor="ing-shelf">Hạn sử dụng (ngày)</FieldLabel>
-            <Controller
-              name="shelf_life_days"
+            <TextField
               control={form.control}
-              render={({ field }) => (
-                <FormattedNumberInput
-                  id="ing-shelf"
-                  value={field.value ?? ""}
-                  onValueChange={field.onChange}
-                  maxFractionDigits={0}
-                  placeholder="VD: 7"
-                  className="h-10"
-                />
-              )}
+              name="name"
+              label="Tên nguyên liệu"
+              placeholder="VD: Sườn cốt lết"
+              required
             />
-          </Field>
+            <TextField
+              control={form.control}
+              name="purchase_unit"
+              label="Đơn vị nhập"
+              placeholder="thùng, bao, chai..."
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <TextField
+              control={form.control}
+              name="measure_unit"
+              label="Đơn vị tính"
+              placeholder="kg, ml, cái..."
+              required
+            />
+            <TextField
+              control={form.control}
+              name="sku"
+              label="Mã SKU"
+              placeholder="SKU-001"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <TextField
+              control={form.control}
+              name="category"
+              label="Danh mục"
+              placeholder="Thịt, Rau củ..."
+            />
+            <NumberField
+              control={form.control}
+              name="unit_cost"
+              label="Giá nhập tham chiếu (VND)"
+              maxFractionDigits={0}
+              placeholder="0"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <SelectField
+              control={form.control}
+              name="storage_type"
+              label="Kiểu lưu trữ"
+              options={STORAGE_OPTIONS}
+            />
+            <SelectField
+              control={form.control}
+              name="item_kind"
+              label="Loại hàng"
+              options={ITEM_KIND_OPTIONS}
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <NumberField
+              control={form.control}
+              name="min_stock_level"
+              label="Tồn tối thiểu"
+              maxFractionDigits={2}
+            />
+            <NumberField
+              control={form.control}
+              name="max_stock_level"
+              label="Tồn tối đa"
+              maxFractionDigits={2}
+            />
+            <NumberField
+              control={form.control}
+              name="reorder_point"
+              label="Điểm đặt hàng"
+              maxFractionDigits={2}
+            />
+          </div>
+
+          <NumberField
+            control={form.control}
+            name="shelf_life_days"
+            label="Hạn sử dụng (ngày)"
+            maxFractionDigits={0}
+            placeholder="VD: 7"
+          />
 
           {serverError && (
             <p className="text-sm text-destructive" role="alert">
