@@ -16,7 +16,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
-import { Input } from "@comtammatu/ui/components/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import {
   Item,
   ItemActions,
@@ -361,15 +365,16 @@ export function ExpiryListClient({
 
       {/* Search + branch filter */}
       <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
-        <div className="relative flex-1">
-          <Search className="size-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
+        <InputGroup className="h-10 flex-1">
+          <InputGroupAddon>
+            <Search />
+          </InputGroupAddon>
+          <InputGroupInput
             placeholder="Tìm nguyên liệu, lô hàng, phiếu nhập..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
           />
-        </div>
+        </InputGroup>
         {!isBranchLocked && (
           <Select value={branchFilter} onValueChange={setBranchFilter}>
             <SelectTrigger className="w-48">
