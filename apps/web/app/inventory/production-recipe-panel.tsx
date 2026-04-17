@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -23,16 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
-import { Textarea } from "@comtammatu/ui/components/textarea";
+import { FieldGroup } from "@comtammatu/ui/components/field";
 import {
   Table,
   TableBody,
@@ -44,7 +38,12 @@ import {
 import { cn } from "@comtammatu/ui";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
-import { FormattedNumberInput } from "./_components/formatted-number-input";
+import {
+  NumberField,
+  SelectField,
+  TextField,
+  TextareaField,
+} from "@/components/form";
 import {
   deleteProductionRecipeGroup,
   deleteProductionRecipe,
@@ -66,6 +65,55 @@ import type {
   ProductionRecipeRow,
   RawIngredientOption,
 } from "./production-types";
+
+/* ─── Schema ─── */
+
+const recipeLineSchema = z.object({
+  finished_good_id: z
+    .string()
+    .min(1, { error: "Vui lòng chọn thành phẩm" })
+    .refine((v) => Number(v) > 0, { error: "Thành phẩm không hợp lệ" }),
+  ingredient_id: z
+    .string()
+    .min(1, { error: "Vui lòng chọn nguyên liệu" })
+    .refine((v) => Number(v) > 0, { error: "Nguyên liệu không hợp lệ" }),
+  quantity: z
+    .string()
+    .min(1, { error: "Nhập số lượng" })
+    .refine((v) => Number(v) > 0, { error: "Số lượng phải > 0" }),
+  unit: z.string().trim().min(1, { error: "Đơn vị không được trống" }),
+  yield_factor: z
+    .string()
+    .min(1, { error: "Nhập yield" })
+    .refine((v) => Number(v) > 0, { error: "Yield phải > 0" }),
+  note: z.string().optional(),
+});
+
+type RecipeLineFormValues = z.infer<typeof recipeLineSchema>;
+
+function toFormValues(
+  recipe: ProductionRecipeRow | null,
+  defaultFinishedGoodId?: string,
+): RecipeLineFormValues {
+  if (recipe) {
+    return {
+      finished_good_id: String(recipe.finished_good_id),
+      ingredient_id: String(recipe.ingredient_id),
+      quantity: String(recipe.quantity),
+      unit: recipe.unit,
+      yield_factor: String(recipe.yield_factor),
+      note: recipe.note ?? "",
+    };
+  }
+  return {
+    finished_good_id: defaultFinishedGoodId ?? "",
+    ingredient_id: "",
+    quantity: "1",
+    unit: "",
+    yield_factor: "1",
+    note: "",
+  };
+}
 
 /* ─── Main recipe panel ─── */
 
@@ -106,19 +154,23 @@ export function ProductionRecipePanel({
   const [quickRawIngredientDialogOpen, setQuickRawIngredientDialogOpen] =
     useState(false);
   const [recipeDialogOpen, setRecipeDialogOpen] = useState(false);
-  const [recipeError, setRecipeError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [editingRecipe, setEditingRecipe] =
     useState<ProductionRecipeRow | null>(null);
   const [recipeGroupToDelete, setRecipeGroupToDelete] =
     useState<ProductionRecipeGroup | null>(null);
-  const [recipeFinishedGoodId, setRecipeFinishedGoodId] = useState(
-    finishedGoodsOptions[0]?.id ? String(finishedGoodsOptions[0].id) : "",
-  );
-  const [recipeIngredientId, setRecipeIngredientId] = useState("");
-  const [recipeQuantity, setRecipeQuantity] = useState("1");
-  const [recipeUnit, setRecipeUnit] = useState("");
-  const [recipeYieldFactor, setRecipeYieldFactor] = useState("1");
-  const [recipeNote, setRecipeNote] = useState("");
+  const [pendingFinishedGoodId, setPendingFinishedGoodId] = useState<
+    string | undefined
+  >(undefined);
+
+  const defaultFinishedGoodId = finishedGoodsOptions[0]?.id
+    ? String(finishedGoodsOptions[0].id)
+    : "";
+
+  const form = useForm<RecipeLineFormValues, unknown, RecipeLineFormValues>({
+    resolver: zodResolver(recipeLineSchema),
+    defaultValues: toFormValues(null, defaultFinishedGoodId),
+  });
 
   useEffect(() => {
     setFinishedGoodsOptions(sortFinishedGoods(finishedGoods));
@@ -137,6 +189,21 @@ export function ProductionRecipePanel({
       ),
     );
   }, [ingredients]);
+
+  useEffect(() => {
+    if (recipeDialogOpen) {
+      form.reset(
+        toFormValues(editingRecipe, pendingFinishedGoodId ?? defaultFinishedGoodId),
+      );
+      setServerError(null);
+    }
+  }, [
+    recipeDialogOpen,
+    editingRecipe,
+    pendingFinishedGoodId,
+    defaultFinishedGoodId,
+    form,
+  ]);
 
   const groupedRecipes = useMemo<ProductionRecipeGroup[]>(() => {
     const groups = new Map<number, ProductionRecipeGroup>();
@@ -161,63 +228,32 @@ export function ProductionRecipePanel({
     );
   }, [recipes]);
 
-  const canSubmitRecipe =
-    Number.isFinite(Number(recipeFinishedGoodId)) &&
-    Number(recipeFinishedGoodId) > 0 &&
-    Number.isFinite(Number(recipeIngredientId)) &&
-    Number(recipeIngredientId) > 0 &&
-    Number.isFinite(Number(recipeQuantity)) &&
-    Number(recipeQuantity) > 0 &&
-    recipeUnit.trim().length > 0 &&
-    Number.isFinite(Number(recipeYieldFactor)) &&
-    Number(recipeYieldFactor) > 0;
+  const finishedGoodOptions = finishedGoodsOptions.map((good) => ({
+    value: String(good.id),
+    label: good.name,
+  }));
 
-  function resetRecipeForm() {
-    setRecipeError(null);
+  const ingredientOptions = rawIngredientsOptions.map((item) => ({
+    value: String(item.id),
+    label: item.name,
+  }));
+
+  function openRecipeDialog(finishedGoodId?: number) {
     setEditingRecipe(null);
-    setRecipeFinishedGoodId(
-      finishedGoodsOptions[0]?.id ? String(finishedGoodsOptions[0].id) : "",
+    setPendingFinishedGoodId(
+      finishedGoodId != null ? String(finishedGoodId) : undefined,
     );
-    setRecipeIngredientId("");
-    setRecipeQuantity("1");
-    setRecipeUnit("");
-    setRecipeYieldFactor("1");
-    setRecipeNote("");
+    setRecipeDialogOpen(true);
   }
 
   function handleRecipeDialogOpenChange(open: boolean) {
     setRecipeDialogOpen(open);
-    if (!open) resetRecipeForm();
+    if (!open) {
+      setEditingRecipe(null);
+      setPendingFinishedGoodId(undefined);
+      setServerError(null);
+    }
   }
-
-  function openRecipeDialog(finishedGoodId?: number) {
-    setRecipeError(null);
-    setEditingRecipe(null);
-    setRecipeFinishedGoodId(
-      finishedGoodId != null
-        ? String(finishedGoodId)
-        : finishedGoodsOptions[0]?.id
-          ? String(finishedGoodsOptions[0].id)
-          : "",
-    );
-    setRecipeIngredientId("");
-    setRecipeQuantity("1");
-    setRecipeUnit("");
-    setRecipeYieldFactor("1");
-    setRecipeNote("");
-    setRecipeDialogOpen(true);
-  }
-
-  useEffect(() => {
-    if (!editingRecipe) return;
-    setRecipeFinishedGoodId(String(editingRecipe.finished_good_id));
-    setRecipeIngredientId(String(editingRecipe.ingredient_id));
-    setRecipeQuantity(String(editingRecipe.quantity));
-    setRecipeUnit(editingRecipe.unit);
-    setRecipeYieldFactor(String(editingRecipe.yield_factor));
-    setRecipeNote(editingRecipe.note ?? "");
-    setRecipeDialogOpen(true);
-  }, [editingRecipe]);
 
   function handleFinishedGoodCreated(good: FinishedGoodOption) {
     setFinishedGoodsOptions((prev) => {
@@ -226,7 +262,7 @@ export function ProductionRecipePanel({
       }
       return sortFinishedGoods([...prev, good]);
     });
-    setRecipeFinishedGoodId(String(good.id));
+    form.setValue("finished_good_id", String(good.id));
     router.refresh();
   }
 
@@ -237,34 +273,41 @@ export function ProductionRecipePanel({
       }
       return sortRawIngredients([...prev, ingredient]);
     });
-    setRecipeIngredientId(String(ingredient.id));
-    setRecipeUnit(ingredient.unit);
+    form.setValue("ingredient_id", String(ingredient.id));
+    form.setValue("unit", ingredient.unit);
     router.refresh();
   }
 
-  function handleRecipeSubmit() {
-    const parsedFinishedGoodId = Number(recipeFinishedGoodId);
-    const parsedIngredientId = Number(recipeIngredientId);
-    const parsedQuantity = Number(recipeQuantity);
-    const parsedYieldFactor = Number(recipeYieldFactor);
+  const ingredientValue = form.watch("ingredient_id");
+  useEffect(() => {
+    if (!ingredientValue || editingRecipe) return;
+    const ing = rawIngredientsOptions.find(
+      (item) => item.id === Number(ingredientValue),
+    );
+    if (ing && !form.getValues("unit")) {
+      form.setValue("unit", ing.unit);
+    }
+  }, [ingredientValue, editingRecipe, rawIngredientsOptions, form]);
 
+  function onValid(values: RecipeLineFormValues) {
     startTransition(async () => {
-      setRecipeError(null);
+      setServerError(null);
       const result = await upsertProductionRecipe({
-        finishedGoodId: parsedFinishedGoodId,
-        ingredientId: parsedIngredientId,
-        quantity: parsedQuantity,
-        unit: recipeUnit.trim(),
-        yieldFactor: parsedYieldFactor,
-        note: recipeNote.trim() || undefined,
+        finishedGoodId: Number(values.finished_good_id),
+        ingredientId: Number(values.ingredient_id),
+        quantity: Number(values.quantity),
+        unit: values.unit.trim(),
+        yieldFactor: Number(values.yield_factor),
+        note: values.note?.trim() || undefined,
       });
       if (!result.success) {
-        setRecipeError(result.error ?? "Không thể lưu công thức");
+        setServerError(result.error ?? "Không thể lưu công thức");
         return;
       }
       toast.success("Đã lưu công thức");
       setRecipeDialogOpen(false);
-      resetRecipeForm();
+      setEditingRecipe(null);
+      setPendingFinishedGoodId(undefined);
       router.refresh();
     });
   }
@@ -296,6 +339,13 @@ export function ProductionRecipePanel({
       setRecipeGroupToDelete(null);
       router.refresh();
     });
+  }
+
+  // Open the dialog via edit click: set editingRecipe, then the effect reacts.
+  function handleEditClick(recipe: ProductionRecipeRow) {
+    setEditingRecipe(recipe);
+    setPendingFinishedGoodId(undefined);
+    setRecipeDialogOpen(true);
   }
 
   return (
@@ -331,173 +381,141 @@ export function ProductionRecipePanel({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Một thành phẩm có thể có nhiều dòng nguyên liệu. Mỗi dòng bên dưới
-              tương ứng với một nguyên liệu trong BOM sản xuất.
-            </p>
+          <form onSubmit={form.handleSubmit(onValid)} noValidate>
+            <FieldGroup>
+              <p className="text-sm text-muted-foreground">
+                Một thành phẩm có thể có nhiều dòng nguyên liệu. Mỗi dòng bên
+                dưới tương ứng với một nguyên liệu trong BOM sản xuất.
+              </p>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="recipeFinishedGood">Thành phẩm</Label>
-                <Select
-                  value={recipeFinishedGoodId}
-                  onValueChange={setRecipeFinishedGoodId}
-                  disabled={editingRecipe != null}
-                >
-                  <SelectTrigger id="recipeFinishedGood" className="w-full">
-                    <SelectValue placeholder="Chọn thành phẩm" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {finishedGoodsOptions.map((good) => (
-                      <SelectItem key={good.id} value={String(good.id)}>
-                        {good.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {!editingRecipe && canManageCatalog && (
-                  <p className="text-xs text-muted-foreground">
-                    Chưa có trong danh sách?{" "}
-                    <button
-                      type="button"
-                      onClick={() => setQuickFinishedGoodDialogOpen(true)}
-                      className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
-                    >
-                      <Plus className="size-3.5" />
-                      Tạo thành phẩm mới
-                    </button>
-                  </p>
-                )}
-                {!editingRecipe &&
-                  !canManageCatalog &&
-                  finishedGoodsOptions.length === 0 && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <SelectField
+                    control={form.control}
+                    name="finished_good_id"
+                    label="Thành phẩm"
+                    options={finishedGoodOptions}
+                    placeholder="Chọn thành phẩm"
+                    disabled={editingRecipe != null}
+                    required
+                  />
+                  {!editingRecipe && canManageCatalog && (
                     <p className="text-xs text-muted-foreground">
-                      Chưa có thành phẩm trong danh mục và bạn không có quyền tạo
-                      mới tại đây.
+                      Chưa có trong danh sách?{" "}
+                      <button
+                        type="button"
+                        onClick={() => setQuickFinishedGoodDialogOpen(true)}
+                        className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                      >
+                        <Plus className="size-3.5" />
+                        Tạo thành phẩm mới
+                      </button>
                     </p>
                   )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="recipeIngredient">Nguyên liệu</Label>
-                <Select
-                  value={recipeIngredientId}
-                  onValueChange={(value) => {
-                    setRecipeIngredientId(value);
-                    const ing = rawIngredientsOptions.find(
-                      (item) => item.id === Number(value),
-                    );
-                    if (ing) setRecipeUnit(ing.unit);
-                  }}
-                  disabled={editingRecipe != null}
-                >
-                  <SelectTrigger id="recipeIngredient" className="w-full">
-                    <SelectValue placeholder="Chọn nguyên liệu" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {rawIngredientsOptions.map((item) => (
-                      <SelectItem key={item.id} value={String(item.id)}>
-                        {item.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {!editingRecipe && canManageCatalog && (
-                  <p className="text-xs text-muted-foreground">
-                    Thiếu nguyên liệu đầu vào?{" "}
-                    <button
-                      type="button"
-                      onClick={() => setQuickRawIngredientDialogOpen(true)}
-                      className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
-                    >
-                      <Plus className="size-3.5" />
-                      Tạo nguyên liệu mới
-                    </button>
-                  </p>
-                )}
-                {!editingRecipe &&
-                  !canManageCatalog &&
-                  rawIngredientsOptions.length === 0 && (
+                  {!editingRecipe &&
+                    !canManageCatalog &&
+                    finishedGoodsOptions.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Chưa có thành phẩm trong danh mục và bạn không có quyền
+                        tạo mới tại đây.
+                      </p>
+                    )}
+                </div>
+                <div className="space-y-2">
+                  <SelectField
+                    control={form.control}
+                    name="ingredient_id"
+                    label="Nguyên liệu"
+                    options={ingredientOptions}
+                    placeholder="Chọn nguyên liệu"
+                    disabled={editingRecipe != null}
+                    required
+                  />
+                  {!editingRecipe && canManageCatalog && (
                     <p className="text-xs text-muted-foreground">
-                      Chưa có nguyên liệu đầu vào và bạn không có quyền tạo mới
-                      tại đây.
+                      Thiếu nguyên liệu đầu vào?{" "}
+                      <button
+                        type="button"
+                        onClick={() => setQuickRawIngredientDialogOpen(true)}
+                        className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                      >
+                        <Plus className="size-3.5" />
+                        Tạo nguyên liệu mới
+                      </button>
                     </p>
                   )}
-                {editingRecipe && (
-                  <p className="text-xs text-muted-foreground">
-                    Muốn đổi thành phẩm hoặc nguyên liệu, hãy xóa dòng cũ và tạo
-                    dòng mới để tránh ghi đè sai BOM.
-                  </p>
-                )}
+                  {!editingRecipe &&
+                    !canManageCatalog &&
+                    rawIngredientsOptions.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Chưa có nguyên liệu đầu vào và bạn không có quyền tạo
+                        mới tại đây.
+                      </p>
+                    )}
+                  {editingRecipe && (
+                    <p className="text-xs text-muted-foreground">
+                      Muốn đổi thành phẩm hoặc nguyên liệu, hãy xóa dòng cũ và
+                      tạo dòng mới để tránh ghi đè sai BOM.
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="recipeQuantity">Số lượng</Label>
-                <FormattedNumberInput
-                  id="recipeQuantity"
-                  value={recipeQuantity}
-                  onValueChange={setRecipeQuantity}
+              <div className="grid gap-4 md:grid-cols-3">
+                <NumberField
+                  control={form.control}
+                  name="quantity"
+                  label="Số lượng"
                   maxFractionDigits={3}
+                  required
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="recipeUnit">Đơn vị</Label>
-                <Input
-                  id="recipeUnit"
-                  value={recipeUnit}
-                  onChange={(e) => setRecipeUnit(e.target.value)}
+                <TextField
+                  control={form.control}
+                  name="unit"
+                  label="Đơn vị"
+                  required
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="recipeYieldFactor">Yield</Label>
-                <FormattedNumberInput
-                  id="recipeYieldFactor"
-                  value={recipeYieldFactor}
-                  onValueChange={setRecipeYieldFactor}
+                <NumberField
+                  control={form.control}
+                  name="yield_factor"
+                  label="Yield"
                   maxFractionDigits={3}
+                  required
                 />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="recipeNote">Ghi chú</Label>
-              <Textarea
-                id="recipeNote"
-                value={recipeNote}
-                onChange={(e) => setRecipeNote(e.target.value)}
+              <TextareaField
+                control={form.control}
+                name="note"
+                label="Ghi chú"
                 placeholder="Tỷ lệ ước tính, lưu ý hao hụt..."
               />
-            </div>
 
-            {recipeError && (
-              <p className="text-sm text-destructive" role="alert">
-                {recipeError}
-              </p>
-            )}
-          </div>
+              {serverError && (
+                <p className="text-sm text-destructive" role="alert">
+                  {serverError}
+                </p>
+              )}
+            </FieldGroup>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleRecipeDialogOpenChange(false)}
-              disabled={isPending}
-            >
-              Hủy
-            </Button>
-            <Button
-              type="button"
-              onClick={handleRecipeSubmit}
-              disabled={isPending || !canSubmitRecipe}
-            >
-              {isPending && <Spinner className="mr-2" />}
-              Lưu dòng BOM
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="pt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleRecipeDialogOpenChange(false)}
+                disabled={isPending}
+              >
+                Hủy
+              </Button>
+              <Button type="submit" disabled={isPending}>
+                {isPending && <Spinner className="mr-2" />}
+                Lưu dòng BOM
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
+
       <QuickFinishedGoodDialog
         open={quickFinishedGoodDialogOpen}
         onOpenChange={setQuickFinishedGoodDialogOpen}
@@ -636,7 +654,7 @@ export function ProductionRecipePanel({
                               type="button"
                               variant="ghost"
                               size="icon"
-                              onClick={() => setEditingRecipe(recipe)}
+                              onClick={() => handleEditClick(recipe)}
                               aria-label={`Chỉnh sửa dòng BOM ${recipe.ingredient_name}`}
                               title="Chỉnh sửa dòng BOM"
                             >
