@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
 import {
   Card,
   CardContent,
@@ -12,104 +13,147 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
-import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
-import { updateSettings } from "./actions";
+import { FieldGroup } from "@comtammatu/ui/components/field";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
+import { TextField, valuesToFormData } from "@/components/form";
+import { updateSettings } from "./actions";
+
+const settingsSchema = z.object({
+  vat_rate: z
+    .string()
+    .trim()
+    .refine(
+      (v) => {
+        if (!v) return true;
+        const n = Number(v);
+        return Number.isFinite(n) && n >= 0 && n <= 100;
+      },
+      { error: "Thuế GTGT phải trong khoảng 0-100" },
+    ),
+  service_charge: z
+    .string()
+    .trim()
+    .refine(
+      (v) => {
+        if (!v) return true;
+        const n = Number(v);
+        return Number.isFinite(n) && n >= 0 && n <= 100;
+      },
+      { error: "Phí dịch vụ phải trong khoảng 0-100" },
+    ),
+  currency: z.string().trim(),
+  store_phone: z.string().trim(),
+  store_email: z
+    .string()
+    .trim()
+    .refine((v) => !v || /.+@.+\..+/.test(v), {
+      error: "Email không hợp lệ",
+    }),
+});
+
+type SettingsFormValues = z.infer<typeof settingsSchema>;
 
 interface SettingsFormProps {
   settings: Record<string, string>;
 }
 
 export function SettingsForm({ settings }: SettingsFormProps) {
-  const [state, formAction, isPending] = useActionState(updateSettings, null);
+  const [isPending, startTransition] = useTransition();
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (state?.success) {
+  const form = useForm<SettingsFormValues, unknown, SettingsFormValues>({
+    resolver: zodResolver(settingsSchema),
+    defaultValues: {
+      vat_rate: settings[SYSTEM_SETTING_KEYS.VAT_RATE] ?? "8",
+      service_charge: settings[SYSTEM_SETTING_KEYS.SERVICE_CHARGE] ?? "5",
+      currency: settings[SYSTEM_SETTING_KEYS.CURRENCY] ?? "VND",
+      store_phone: settings[SYSTEM_SETTING_KEYS.STORE_PHONE] ?? "",
+      store_email: settings[SYSTEM_SETTING_KEYS.STORE_EMAIL] ?? "",
+    },
+  });
+
+  function onValid(values: SettingsFormValues) {
+    startTransition(async () => {
+      setServerError(null);
+      const fd = valuesToFormData(values);
+      const result = await updateSettings(null, fd);
+      if (!result.success) {
+        setServerError(result.error ?? "Đã xảy ra lỗi");
+        return;
+      }
       toast.success("Đã lưu cài đặt");
-    }
-  }, [state]);
+    });
+  }
 
   return (
-    <form action={formAction} className="space-y-6">
-      {/* Tax & Charges */}
+    <form
+      onSubmit={form.handleSubmit(onValid)}
+      noValidate
+      className="space-y-6"
+    >
       <Card>
         <CardHeader>
           <CardTitle>Thuế & Phí</CardTitle>
           <CardDescription>Áp dụng cho toàn hệ thống</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor={SYSTEM_SETTING_KEYS.VAT_RATE}>Thuế GTGT (%)</Label>
-            <Input
-              id={SYSTEM_SETTING_KEYS.VAT_RATE}
-              name={SYSTEM_SETTING_KEYS.VAT_RATE}
+        <CardContent>
+          <FieldGroup className="grid gap-4 sm:grid-cols-2">
+            <TextField
+              control={form.control}
+              name="vat_rate"
+              label="Thuế GTGT (%)"
               type="number"
               min={0}
               max={100}
               step="0.1"
-              defaultValue={settings[SYSTEM_SETTING_KEYS.VAT_RATE] ?? "8"}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={SYSTEM_SETTING_KEYS.SERVICE_CHARGE}>
-              Phí dịch vụ (%)
-            </Label>
-            <Input
-              id={SYSTEM_SETTING_KEYS.SERVICE_CHARGE}
-              name={SYSTEM_SETTING_KEYS.SERVICE_CHARGE}
+            <TextField
+              control={form.control}
+              name="service_charge"
+              label="Phí dịch vụ (%)"
               type="number"
               min={0}
               max={100}
               step="0.1"
-              defaultValue={settings[SYSTEM_SETTING_KEYS.SERVICE_CHARGE] ?? "5"}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={SYSTEM_SETTING_KEYS.CURRENCY}>Đơn vị tiền tệ</Label>
-            <Input
-              id={SYSTEM_SETTING_KEYS.CURRENCY}
-              name={SYSTEM_SETTING_KEYS.CURRENCY}
-              defaultValue={settings[SYSTEM_SETTING_KEYS.CURRENCY] ?? "VND"}
+            <TextField
+              control={form.control}
+              name="currency"
+              label="Đơn vị tiền tệ"
             />
-          </div>
+          </FieldGroup>
         </CardContent>
       </Card>
 
-      {/* Contact */}
       <Card>
         <CardHeader>
           <CardTitle>Thông tin liên hệ</CardTitle>
           <CardDescription>Hiển thị trên hóa đơn</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor={SYSTEM_SETTING_KEYS.STORE_PHONE}>
-              Số điện thoại
-            </Label>
-            <Input
-              id={SYSTEM_SETTING_KEYS.STORE_PHONE}
-              name={SYSTEM_SETTING_KEYS.STORE_PHONE}
+        <CardContent>
+          <FieldGroup className="grid gap-4 sm:grid-cols-2">
+            <TextField
+              control={form.control}
+              name="store_phone"
+              label="Số điện thoại"
               type="tel"
-              defaultValue={settings[SYSTEM_SETTING_KEYS.STORE_PHONE] ?? ""}
               placeholder="028 1234 5678"
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={SYSTEM_SETTING_KEYS.STORE_EMAIL}>Email</Label>
-            <Input
-              id={SYSTEM_SETTING_KEYS.STORE_EMAIL}
-              name={SYSTEM_SETTING_KEYS.STORE_EMAIL}
+            <TextField
+              control={form.control}
+              name="store_email"
+              label="Email"
               type="email"
-              defaultValue={settings[SYSTEM_SETTING_KEYS.STORE_EMAIL] ?? ""}
               placeholder="info@comtammatu.com"
             />
-          </div>
+          </FieldGroup>
         </CardContent>
       </Card>
 
-      {state?.error && (
+      {serverError && (
         <p className="text-sm text-destructive" role="alert">
-          {state.error}
+          {serverError}
         </p>
       )}
 
