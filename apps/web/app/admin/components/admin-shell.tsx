@@ -190,13 +190,13 @@ export function AdminShell({
             ))}
           </SidebarContent>
 
-          <SidebarFooter className="p-4">
-            <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-3">
-              <div className="flex items-center gap-3">
+          <SidebarFooter className="p-4 group-data-[collapsible=icon]:p-2">
+            <div className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-3 group-data-[collapsible=icon]:p-2">
+              <div className="flex items-center gap-3 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-2">
                 <Avatar size="sm">
                   <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                 </Avatar>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
                   <p className="truncate text-sm font-medium text-sidebar-foreground">
                     {user.name}
                   </p>

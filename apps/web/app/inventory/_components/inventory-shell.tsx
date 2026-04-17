@@ -272,13 +272,13 @@ export function InventoryShell({
           ))}
         </SidebarContent>
 
-        <SidebarFooter>
+        <SidebarFooter className="group-data-[collapsible=icon]:p-2">
           <SidebarSeparator />
-          <div className="flex items-center gap-2 px-2 py-2">
+          <div className="flex items-center gap-2 px-2 py-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-1 group-data-[collapsible=icon]:px-1 group-data-[collapsible=icon]:py-1">
             <div className="flex size-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
               {user.name.charAt(0)}
             </div>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
               <p className="truncate text-xs font-medium">{user.name}</p>
               <p className="truncate text-xs text-muted-foreground">
                 {ROLE_LABEL_VI[userRole]}
