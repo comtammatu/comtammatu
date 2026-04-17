@@ -91,6 +91,9 @@ ALTER TABLE public.profiles
   DROP CONSTRAINT IF EXISTS chk_area_id_for_area_manager;
 
 ALTER TABLE public.profiles
+  DROP CONSTRAINT IF EXISTS chk_area_id_scope;
+
+ALTER TABLE public.profiles
   ADD CONSTRAINT chk_area_id_scope CHECK (
     role IN ('area_manager', 'warehouse_manager', 'production_manager')
     OR area_id IS NULL

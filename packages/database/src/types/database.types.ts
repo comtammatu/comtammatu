@@ -4292,6 +4292,10 @@ export type Database = {
         Args: { p_new_status: string; p_order_id: number }
         Returns: Json
       }
+      upsert_recipe_lines: {
+        Args: { p_lines: Json; p_menu_item_id: number }
+        Returns: Json
+      }
       validate_journal_balance: {
         Args: { p_entry_id: number }
         Returns: boolean

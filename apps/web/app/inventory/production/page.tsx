@@ -15,6 +15,7 @@ type InventoryIngredientRow = {
   name: string;
   unit: string;
   item_kind: string;
+  is_active: boolean | null;
 };
 
 type BranchPreviewRow = {
@@ -73,10 +74,11 @@ export default async function ProductionPage() {
     redirect("/inventory?forbidden=1&reason=insufficient-permission");
   }
 
-  const allIngredients =
+  const allIngredients = (
     ingredientsRes.success && Array.isArray(ingredientsRes.data)
       ? (ingredientsRes.data as InventoryIngredientRow[])
-      : [];
+      : []
+  ).filter((ingredient) => ingredient.is_active !== false);
 
   const finishedGoods = allIngredients
     .filter((ingredient) => ingredient.item_kind === "finished_good")
