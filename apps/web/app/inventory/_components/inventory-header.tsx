@@ -1,70 +1,37 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@comtammatu/ui/components/breadcrumb";
+import type { ReactNode } from "react";
 import { SidebarTrigger } from "@comtammatu/ui/components/sidebar";
+import { Separator } from "@comtammatu/ui/components/separator";
 
 interface InventoryHeaderProps {
   title: string;
   description?: string;
-  breadcrumbs?: string[];
   actions?: ReactNode;
 }
 
 export function InventoryHeader({
   title,
   description,
-  breadcrumbs,
   actions,
 }: InventoryHeaderProps) {
-  const hasBreadcrumbs = breadcrumbs && breadcrumbs.length > 0;
-
   return (
-    <header className="workspace-header-card mx-4 mt-4">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div className="flex-1 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <SidebarTrigger />
-            {hasBreadcrumbs ? (
-              <Breadcrumb>
-                <BreadcrumbList>
-                  {breadcrumbs.map((segment, idx) => (
-                    <Fragment key={`${segment}-${String(idx)}`}>
-                      <BreadcrumbItem>
-                        <BreadcrumbPage className="font-normal text-muted-foreground">
-                          {segment}
-                        </BreadcrumbPage>
-                      </BreadcrumbItem>
-                      {idx < breadcrumbs.length - 1 && <BreadcrumbSeparator />}
-                    </Fragment>
-                  ))}
-                </BreadcrumbList>
-              </Breadcrumb>
-            ) : (
-              <span className="workspace-context-pill">Kho vận</span>
-            )}
-          </div>
-          <div className="space-y-1.5">
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              {title}
-            </h1>
-            {description ? (
-              <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
-                {description}
-              </p>
-            ) : null}
-          </div>
+    <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4">
+      <SidebarTrigger />
+      <Separator orientation="vertical" className="h-6" />
+
+      <div className="flex flex-1 items-center gap-4">
+        <div className="flex flex-col">
+          <h1 className="text-sm font-semibold leading-tight">{title}</h1>
+          {description ? (
+            <p className="text-xs text-muted-foreground">{description}</p>
+          ) : null}
         </div>
-        {actions ? (
-          <div className="flex flex-wrap items-center gap-2">{actions}</div>
-        ) : null}
       </div>
+
+      {actions ? (
+        <div className="flex items-center gap-2">{actions}</div>
+      ) : null}
     </header>
   );
 }
