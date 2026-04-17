@@ -69,7 +69,7 @@ export function AttendanceConfigDialog({
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
 
-  const form = useForm<CoordsFormValues, unknown, CoordsFormValues>({
+  const form = useForm<CoordsFormValues>({
     resolver: zodResolver(coordsSchema),
     defaultValues: {
       latitude: branch.latitude?.toString() ?? "",
