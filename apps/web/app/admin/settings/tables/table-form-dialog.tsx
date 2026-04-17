@@ -1,19 +1,44 @@
 "use client";
 
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
+import { z } from "zod";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
+  FormDialog,
+  SelectField,
+  TextField,
+  valuesToFormData,
+} from "@/components/form";
 import { createTable, updateTable } from "./actions";
-import { STATUS_OPTIONS } from "./constants";
+import { STATUS_OPTIONS, TABLE_STATUSES } from "./constants";
 import type { ZoneRow } from "./zone-table";
 import type { TableRow } from "./table-table";
-import { CrudDialog } from "../../../components/crud-dialog";
+
+const NO_ZONE = "none";
+
+const tableSchema = z.object({
+  number: z
+    .string()
+    .trim()
+    .min(1, { error: "Số bàn không được trống" })
+    .refine((v) => Number(v) >= 1, { error: "Số bàn phải ≥ 1" }),
+  capacity: z
+    .string()
+    .trim()
+    .min(1, { error: "Sức chứa không được trống" })
+    .refine((v) => Number(v) >= 1, { error: "Sức chứa phải ≥ 1" }),
+  zone_id: z.string().optional(),
+  status: z.enum(TABLE_STATUSES).optional(),
+});
+
+type TableFormValues = z.infer<typeof tableSchema>;
+
+function toFormValues(table: TableRow | null | undefined): TableFormValues {
+  return {
+    number: table?.number != null ? String(table.number) : "",
+    capacity: String(table?.capacity ?? 4),
+    zone_id: table?.zone_id != null ? String(table.zone_id) : NO_ZONE,
+    status: table?.status as TableFormValues["status"],
+  };
+}
 
 interface TableFormDialogProps {
   open: boolean;
@@ -32,11 +57,17 @@ export function TableFormDialog({
 }: TableFormDialogProps) {
   const isEdit = !!table;
 
+  const zoneOptions = [
+    { value: NO_ZONE, label: "Không có khu vực" },
+    ...zones.map((z) => ({ value: z.id.toString(), label: z.name })),
+  ];
+
   return (
-    <CrudDialog
+    <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      action={isEdit ? updateTable : createTable}
+      schema={tableSchema}
+      defaultValues={toFormValues(table)}
       entityKey={table?.id ?? "new"}
       title={isEdit ? "Chỉnh sửa bàn" : "Thêm bàn mới"}
       description={
@@ -44,71 +75,60 @@ export function TableFormDialog({
       }
       successMessage={isEdit ? "Đã cập nhật bàn" : "Đã tạo bàn mới"}
       submitLabel={isEdit ? "Cập nhật" : "Tạo mới"}
+      onSubmit={async (values) => {
+        const payload: Record<string, unknown> = {
+          number: values.number,
+          capacity: values.capacity,
+        };
+        if (values.zone_id && values.zone_id !== NO_ZONE) {
+          payload.zone_id = values.zone_id;
+        }
+        if (isEdit && values.status) {
+          payload.status = values.status;
+        }
+        const fd = valuesToFormData(payload);
+        fd.set("branch_id", String(branchId));
+        if (isEdit && table) {
+          fd.set("id", String(table.id));
+          return updateTable(null, fd);
+        }
+        return createTable(null, fd);
+      }}
     >
-      {isEdit && <input type="hidden" name="id" value={table.id} />}
-      <input type="hidden" name="branch_id" value={branchId} />
-
-      <div className="space-y-2">
-        <Label htmlFor="table-number">Số bàn *</Label>
-        <Input
-          id="table-number"
-          name="number"
-          type="number"
-          min={1}
-          required
-          defaultValue={table?.number ?? ""}
-          placeholder="VD: 1, 2, 3..."
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="table-capacity">Sức chứa (người)</Label>
-        <Input
-          id="table-capacity"
-          name="capacity"
-          type="number"
-          min={1}
-          defaultValue={table?.capacity ?? 4}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="table-zone">Khu vực</Label>
-        <Select
-          name="zone_id"
-          defaultValue={table?.zone_id?.toString() ?? "none"}
-        >
-          <SelectTrigger id="table-zone">
-            <SelectValue placeholder="Không có khu vực" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Không có khu vực</SelectItem>
-            {zones.map((z) => (
-              <SelectItem key={z.id} value={z.id.toString()}>
-                {z.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {isEdit && (
-        <div className="space-y-2">
-          <Label htmlFor="table-status">Trạng thái</Label>
-          <Select name="status" defaultValue={table.status}>
-            <SelectTrigger id="table-status">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      {(form) => (
+        <>
+          <TextField
+            control={form.control}
+            name="number"
+            label="Số bàn"
+            type="number"
+            min={1}
+            placeholder="VD: 1, 2, 3..."
+            required
+          />
+          <TextField
+            control={form.control}
+            name="capacity"
+            label="Sức chứa (người)"
+            type="number"
+            min={1}
+          />
+          <SelectField
+            control={form.control}
+            name="zone_id"
+            label="Khu vực"
+            options={zoneOptions}
+          />
+          {isEdit && (
+            <SelectField
+              control={form.control}
+              name="status"
+              label="Trạng thái"
+              options={STATUS_OPTIONS}
+            />
+          )}
+        </>
       )}
-    </CrudDialog>
+    </FormDialog>
   );
 }

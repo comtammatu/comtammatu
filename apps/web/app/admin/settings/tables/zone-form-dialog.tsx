@@ -1,10 +1,23 @@
 "use client";
 
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
+import { z } from "zod";
+import { FormDialog, TextField, valuesToFormData } from "@/components/form";
 import { createZone, updateZone } from "./actions";
 import type { ZoneRow } from "./zone-table";
-import { CrudDialog } from "../../../components/crud-dialog";
+
+const zoneSchema = z.object({
+  name: z.string().trim().min(1, { error: "Tên khu vực không được trống" }),
+  sort_order: z.string().optional(),
+});
+
+type ZoneFormValues = z.infer<typeof zoneSchema>;
+
+function toFormValues(zone: ZoneRow | null | undefined): ZoneFormValues {
+  return {
+    name: zone?.name ?? "",
+    sort_order: zone?.sort_order != null ? String(zone.sort_order) : "0",
+  };
+}
 
 interface ZoneFormDialogProps {
   open: boolean;
@@ -22,10 +35,11 @@ export function ZoneFormDialog({
   const isEdit = !!zone;
 
   return (
-    <CrudDialog
+    <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      action={isEdit ? updateZone : createZone}
+      schema={zoneSchema}
+      defaultValues={toFormValues(zone)}
       entityKey={zone?.id ?? "new"}
       title={isEdit ? "Chỉnh sửa khu vực" : "Thêm khu vực mới"}
       description={
@@ -33,31 +47,34 @@ export function ZoneFormDialog({
       }
       successMessage={isEdit ? "Đã cập nhật khu vực" : "Đã tạo khu vực mới"}
       submitLabel={isEdit ? "Cập nhật" : "Tạo mới"}
+      onSubmit={async (values) => {
+        const fd = valuesToFormData(values);
+        fd.set("branch_id", String(branchId));
+        if (isEdit && zone) {
+          fd.set("id", String(zone.id));
+          return updateZone(null, fd);
+        }
+        return createZone(null, fd);
+      }}
     >
-      {isEdit && <input type="hidden" name="id" value={zone.id} />}
-      <input type="hidden" name="branch_id" value={branchId} />
-
-      <div className="space-y-2">
-        <Label htmlFor="zone-name">Tên khu vực *</Label>
-        <Input
-          id="zone-name"
-          name="name"
-          required
-          defaultValue={zone?.name ?? ""}
-          placeholder="VD: Tầng 1, Sân vườn, VIP"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="zone-sort-order">Thứ tự hiển thị</Label>
-        <Input
-          id="zone-sort-order"
-          name="sort_order"
-          type="number"
-          min={0}
-          defaultValue={zone?.sort_order ?? 0}
-        />
-      </div>
-    </CrudDialog>
+      {(form) => (
+        <>
+          <TextField
+            control={form.control}
+            name="name"
+            label="Tên khu vực"
+            placeholder="VD: Tầng 1, Sân vườn, VIP"
+            required
+          />
+          <TextField
+            control={form.control}
+            name="sort_order"
+            label="Thứ tự hiển thị"
+            type="number"
+            min={0}
+          />
+        </>
+      )}
+    </FormDialog>
   );
 }
