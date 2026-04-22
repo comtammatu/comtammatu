@@ -7,7 +7,37 @@ import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { PG_ERR } from "./_lib/constants";
 
-const PRODUCTION_ROLES: readonly StaffRole[] = ["super_manager"];
+/**
+ * Route-level fast gate for the production (central kitchen) surface. Fine-grained
+ * authz is enforced at RLS via `has_permission(branch_id, 'inventory:production_create' |
+ * 'inventory:production_confirm')` and `has_permission_any('menu:write')` — so this
+ * list only controls "who can reach the surface at all".
+ *
+ * Mirrors `PROCUREMENT_ROLES` shape: include every role that may hold the underlying
+ * permission grants (owner bypass + super/area/branch managers + bếp trưởng/production_manager).
+ */
+const PRODUCTION_ROLES: readonly StaffRole[] = [
+  "owner",
+  "super_manager",
+  "area_manager",
+  "branch_manager",
+  "production_manager",
+];
+
+/**
+ * Roles whose operational context is a single branch and therefore must be pinned
+ * to a `central_kitchen` branch when acting on production surfaces. Tenant-wide
+ * roles (owner, super_manager, area_manager) bypass this check because their
+ * scope is broader than a single site.
+ */
+const CK_BRANCH_SCOPED_ROLES: readonly StaffRole[] = [
+  "branch_manager",
+  "production_manager",
+];
+
+function isCentralKitchenScopedRole(role: StaffRole): boolean {
+  return (CK_BRANCH_SCOPED_ROLES as readonly string[]).includes(role);
+}
 
 const productionLineSchema = z.object({
   finishedGoodId: z.coerce.number().int().positive(),
@@ -186,7 +216,7 @@ export async function fetchProductionRecipes(): Promise<
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-  if (claims.user_role === "branch_manager") {
+  if (isCentralKitchenScopedRole(claims.user_role)) {
     if (claims.branch_id == null) {
       return {
         success: false,
@@ -260,7 +290,7 @@ export async function fetchProductionOrders(): Promise<
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-  if (claims.user_role === "branch_manager") {
+  if (isCentralKitchenScopedRole(claims.user_role)) {
     if (claims.branch_id == null) {
       return {
         success: false,
@@ -302,8 +332,12 @@ export async function fetchProductionOrders(): Promise<
     .eq("tenant_id", claims.tenant_id)
     .order("created_at", { ascending: false });
 
-  // branch_manager sees only their own branch's orders
-  if (claims.user_role === "branch_manager" && claims.branch_id != null) {
+  // Branch-scoped roles (branch_manager, production_manager/bếp trưởng) see only
+  // their own branch's orders. Tenant-wide roles keep full tenant visibility.
+  if (
+    isCentralKitchenScopedRole(claims.user_role) &&
+    claims.branch_id != null
+  ) {
     ordersQuery = ordersQuery.eq("branch_id", claims.branch_id);
   }
 
@@ -395,7 +429,7 @@ export const upsertProductionRecipe = withAction(
   { roles: PRODUCTION_ROLES, schema: productionRecipeSchema },
   async (data, ctx) => {
     const { supabase, claims } = ctx;
-    if (claims.user_role === "branch_manager") {
+    if (isCentralKitchenScopedRole(claims.user_role)) {
       if (claims.branch_id == null) {
         return {
           success: false,
@@ -469,7 +503,7 @@ export async function deleteProductionRecipe(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-  if (claims.user_role === "branch_manager") {
+  if (isCentralKitchenScopedRole(claims.user_role)) {
     if (claims.branch_id == null) {
       return {
         success: false,
@@ -509,7 +543,7 @@ export async function deleteProductionRecipeGroup(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-  if (claims.user_role === "branch_manager") {
+  if (isCentralKitchenScopedRole(claims.user_role)) {
     if (claims.branch_id == null) {
       return {
         success: false,
