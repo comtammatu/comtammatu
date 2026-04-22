@@ -30,19 +30,17 @@ import {
 } from "@comtammatu/ui/components/alert-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { InventoryHeader } from "../_components/inventory-header";
+import { InteractiveCard } from "../_components/interactive-card";
+import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
-import {
-  getInventoryStatusBadgeVariant,
-  getInventoryStatusLabel,
-} from "../_lib/ui";
 import { deleteSupplier, fetchSuppliers } from "../procurement-actions";
 import { SupplierDialog } from "./supplier-dialog";
 import type { SupplierRow } from "./supplier-dialog";
 
 export type { SupplierRow } from "./supplier-dialog";
 
-// Color palette for supplier avatars
 const avatarColors = [
   { bg: "bg-primary/10", fg: "text-primary" },
   { bg: "bg-success/12", fg: "text-success" },
@@ -51,7 +49,27 @@ const avatarColors = [
   { bg: "bg-muted", fg: "text-muted-foreground" },
 ];
 
+function SupplierAvatar({ name, colorIndex }: { name: string; colorIndex: number }) {
+  const color = avatarColors[colorIndex % avatarColors.length]!;
+  return (
+    <div
+      className={cn(
+        "flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+        color.bg,
+        color.fg,
+      )}
+    >
+      {name
+        .split(" ")
+        .map((w) => w[0])
+        .slice(0, 2)
+        .join("")}
+    </div>
+  );
+}
+
 export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
+  const isMobile = useIsMobile();
   const [rows, setRows] = useState(initial);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -108,154 +126,185 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
       <InventoryHeader
         title="Nhà cung cấp"
         actions={
-          <Button
-            type="button"
-            onClick={openCreate}
-          >
+          <Button type="button" onClick={openCreate}>
             <Plus className="size-4" />
-            Them nha cung cap
+            Thêm nhà cung cấp
           </Button>
         }
       />
       <div className="flex-1 overflow-auto p-4">
-      <div className="mx-auto max-w-7xl space-y-4">
-
-      {/* Search */}
-      <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
-        <InputGroup className="h-10 flex-1">
-          <InputGroupAddon>
-            <Search />
-          </InputGroupAddon>
-          <InputGroupInput
-            type="text"
-            placeholder="Tìm tên, mã số thuế, điện thoại..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </InputGroup>
-        <Badge variant="outline" className="rounded-full">
-          {filtered.length} / {rows.length}
-        </Badge>
-      </CardContent></Card>
-
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/40">
-                {[
-                  "Nhà cung cấp",
-                  "Mã số thuế",
-                  "Điện thoại",
-                  "Địa chỉ",
-                  "Trạng thái",
-                  "Thao tác",
-                ].map((h) => (
-                  <TableHead
-                    key={h}
-                    className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider text-muted-foreground ${h === "Trạng thái" ? "text-center" : ""} ${h === "Thao tác" ? "text-right" : ""}`}
-                  >
-                    {h}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 && (
-                <TableEmptyStateRow
-                  colSpan={6}
-                  paddingClassName="py-16"
-                  title={
-                    search
-                      ? "Không tìm thấy nhà cung cấp nào"
-                      : "Chưa có nhà cung cấp"
-                  }
-                  description={
-                    search
-                      ? "Thử tên, mã số thuế hoặc số điện thoại khác."
-                      : 'Nhấn "Thêm nhà cung cấp" để bắt đầu.'
-                  }
+        <div className={cn("mx-auto space-y-4", isMobile ? "max-w-xl" : "max-w-7xl")}>
+          {/* Search */}
+          <Card className="py-0">
+            <CardContent className="flex flex-wrap items-center gap-3 p-3">
+              <InputGroup className={cn("flex-1", isMobile && "h-12 basis-full")}>
+                <InputGroupAddon>
+                  <Search />
+                </InputGroupAddon>
+                <InputGroupInput
+                  type="text"
+                  placeholder="Tìm tên, mã số thuế, điện thoại..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  inputMode="search"
                 />
-              )}
-              {filtered.map((s, i) => {
-                const color = avatarColors[i % avatarColors.length]!;
-                return (
-                  <TableRow
+              </InputGroup>
+              <Badge variant="outline" className="rounded-full">
+                {filtered.length}/{rows.length}
+              </Badge>
+            </CardContent>
+          </Card>
+
+          {/* Desktop: Table / Mobile: Cards */}
+          {isMobile ? (
+            <div className="flex flex-col gap-2">
+              {filtered.length === 0 ? (
+                <div className="py-12 text-center text-sm text-muted-foreground">
+                  {search.trim()
+                    ? "Không tìm thấy nhà cung cấp phù hợp"
+                    : "Chưa có nhà cung cấp nào"}
+                </div>
+              ) : (
+                filtered.map((s, i) => (
+                  <InteractiveCard
                     key={s.id}
-                    className="group border-border transition-colors"
+                    minHeight="mobile"
+                    padding="default"
+                    className="flex-col items-stretch gap-2"
                   >
-                    <TableCell className="px-6 py-5">
+                    <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-3">
-                        <div
-                          className={cn(
-                            "flex size-9 items-center justify-center rounded-full text-xs font-bold",
-                            color.bg,
-                            color.fg,
-                          )}
-                        >
-                          {s.name
-                            .split(" ")
-                            .map((w) => w[0])
-                            .slice(0, 2)
-                            .join("")}
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold">{s.name}</p>
+                        <SupplierAvatar name={s.name} colorIndex={i} />
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold">{s.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {s.phone ?? "—"}
+                          </p>
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-5 font-mono text-sm text-muted-foreground">
-                      {s.tax_code ?? "—"}
-                    </TableCell>
-                    <TableCell className="px-6 py-5 font-mono text-sm">
-                      {s.phone ?? "—"}
-                    </TableCell>
-                    <TableCell className="max-w-44 truncate px-6 py-5 text-sm text-muted-foreground">
-                      {s.address ?? "—"}
-                    </TableCell>
-                    <TableCell className="px-6 py-5 text-center">
-                      <Badge
-                        variant={getInventoryStatusBadgeVariant(
-                          s.is_active ? "active" : "suspended",
+                      <StatusBadge
+                        status={s.is_active ? "active" : "suspended"}
+                        size="sm"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between border-t pt-2">
+                      <div className="flex gap-2 text-xs text-muted-foreground">
+                        {s.tax_code && (
+                          <span className="font-mono">MST: {s.tax_code}</span>
                         )}
-                      >
-                        {getInventoryStatusLabel(
-                          s.is_active ? "active" : "suspended",
-                        )}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="px-6 py-5 text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      </div>
+                      <div className="flex items-center gap-1">
                         <Button
                           type="button"
                           variant="ghost"
-                          size="icon"
+                          size="sm"
                           onClick={() => openEdit(s)}
                           aria-label={`Sửa ${s.name}`}
+                          className="min-h-10"
                         >
                           <Pencil className="size-4" />
                         </Button>
                         <Button
                           type="button"
                           variant="ghost"
-                          size="icon"
+                          size="sm"
                           onClick={() => setDeleteConfirmId(s.id)}
-                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          className="min-h-10 text-destructive hover:bg-destructive/10 hover:text-destructive"
                           aria-label={`Xóa ${s.name}`}
                         >
                           <Trash2 className="size-4" />
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-
-        </CardContent>
-      </Card>
+                    </div>
+                  </InteractiveCard>
+                ))
+              )}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nhà cung cấp</TableHead>
+                      <TableHead>Mã số thuế</TableHead>
+                      <TableHead>Điện thoại</TableHead>
+                      <TableHead>Địa chỉ</TableHead>
+                      <TableHead>Trạng thái</TableHead>
+                      <TableHead className="w-24 text-right">Thao tác</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.length === 0 && (
+                      <TableEmptyStateRow
+                        colSpan={6}
+                        title={
+                          search.trim()
+                            ? "Không tìm thấy nhà cung cấp phù hợp"
+                            : "Chưa có nhà cung cấp"
+                        }
+                        description={
+                          search.trim()
+                            ? "Thử tên, mã số thuế hoặc số điện thoại khác."
+                            : 'Nhấn "Thêm nhà cung cấp" để bắt đầu.'
+                        }
+                      />
+                    )}
+                    {filtered.map((s, i) => (
+                      <TableRow key={s.id} className="group">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <SupplierAvatar name={s.name} colorIndex={i} />
+                            <p className="text-sm font-semibold">{s.name}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm text-muted-foreground">
+                          {s.tax_code ?? "—"}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {s.phone ?? "—"}
+                        </TableCell>
+                        <TableCell className="max-w-44 truncate text-sm text-muted-foreground">
+                          {s.address ?? "—"}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge
+                            status={s.is_active ? "active" : "suspended"}
+                            size="sm"
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEdit(s)}
+                              aria-label={`Sửa ${s.name}`}
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setDeleteConfirmId(s.id)}
+                              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                              aria-label={`Xóa ${s.name}`}
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
 
       {/* Create / Edit Dialog */}
       <SupplierDialog
@@ -289,13 +338,11 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
                 if (deleteConfirmId != null) handleDelete(deleteConfirmId);
               }}
             >
-              {isPending ? "Đang xóa…" : "Xóa"}
+              {isPending ? "Đang xóa..." : "Xóa"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-    </div>
     </>
   );
 }

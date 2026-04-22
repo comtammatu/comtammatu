@@ -29,14 +29,12 @@ import {
   CardTitle,
 } from "@comtammatu/ui/components/card";
 import { Progress } from "@comtammatu/ui/components/progress";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { InventoryHeader } from "./_components/inventory-header";
-import { MobileEntryBanner } from "./_components/mobile/mobile-entry-banner";
+import { StatusBadge } from "./_components/status-badge";
 import { formatVND } from "./_lib/format";
 import { getInventoryPaths, type InventoryRouteBase } from "./_lib/paths";
-import {
-  getInventoryStatusBadgeVariant,
-  getInventoryStatusLabel,
-} from "./_lib/ui";
+import { tNav, tStatus } from "./_lib/dictionary";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -98,29 +96,29 @@ function buildQuickActions(
   if (siteKind === "warehouse")
     return [
       { label: "Nhập nguyên liệu", icon: ShoppingCart, href: p.receiving, primary: true },
-      { label: "Điều chuyển", icon: ArrowLeftRight, href: p.transfers },
-      { label: "Kiểm kê", icon: ClipboardList, href: p.stocktake },
-      { label: "Báo cáo", icon: BarChart3, href: p.reports },
+      { label: tNav("transfers"), icon: ArrowLeftRight, href: p.transfers },
+      { label: tNav("stocktake"), icon: ClipboardList, href: p.stocktake },
+      { label: tNav("reports"), icon: BarChart3, href: p.reports },
     ];
 
   if (siteKind === "central_kitchen")
     return [
       { label: "Tạo lệnh sản xuất", icon: Factory, href: p.production, primary: true },
       { label: "Xuất thành phẩm", icon: Package, href: p.transfers },
-      { label: "Kiểm kê", icon: ClipboardList, href: p.stocktake },
-      { label: "Báo cáo", icon: BarChart3, href: p.reports },
+      { label: tNav("stocktake"), icon: ClipboardList, href: p.stocktake },
+      { label: tNav("reports"), icon: BarChart3, href: p.reports },
     ];
 
   return [
-    { label: "Nhận transfer", icon: Truck, href: p.transfers, primary: true },
-    { label: "Cấp bếp", icon: ChefHat, href: p.issues },
-    { label: "Tồn kho", icon: Package, href: p.stock },
-    { label: "Kiểm kê", icon: ClipboardList, href: p.stocktake },
+    { label: "Nhận điều chuyển", icon: Truck, href: p.transfers, primary: true },
+    { label: tNav("issues"), icon: ChefHat, href: p.issues },
+    { label: tNav("stock"), icon: Package, href: p.stock },
+    { label: tNav("stocktake"), icon: ClipboardList, href: p.stocktake },
   ];
 }
 
 /* ------------------------------------------------------------------ */
-/*  Task / alert builders (business logic kept intact)                 */
+/*  Task / alert builders                                              */
 /* ------------------------------------------------------------------ */
 
 function isTransferOpen(status: string) {
@@ -139,7 +137,7 @@ type TaskItem = {
 function buildTasks(props: DashboardProps): TaskItem[] {
   const {
     siteKind, siteName, showProcurement, pendingPO,
-    activeTransfers, activeStocktakes, reorderAlerts, expiryAlerts, transfers,
+    activeTransfers, reorderAlerts, expiryAlerts, transfers,
   } = props;
   const paths = getInventoryPaths(props.routeBase);
   const items: TaskItem[] = [];
@@ -166,8 +164,8 @@ function buildTasks(props: DashboardProps): TaskItem[] {
     items.push({ key: "kitchen", title: "Cấp bếp theo nhịp bán", description: "Ghi nhận cấp phát kitchen_use.", href: paths.issues, icon: <CheckSquare className="size-4" />, severity: "info" });
   }
 
-  if (activeStocktakes > 0)
-    items.push({ key: "st", title: `${activeStocktakes} phiên kiểm kê đang mở`, description: "Hoàn tất để khóa chênh lệch.", href: paths.stocktake, icon: <ClipboardList className="size-4" />, severity: "success" });
+  if (props.activeStocktakes > 0)
+    items.push({ key: "st", title: `${props.activeStocktakes} phiên kiểm kê đang mở`, description: "Hoàn tất để khóa chênh lệch.", href: paths.stocktake, icon: <ClipboardList className="size-4" />, severity: "success" });
   if (expiryAlerts.length > 0)
     items.push({ key: "exp", title: `${expiryAlerts.length} lô cần xử lý hạn dùng`, description: "Ưu tiên xuất các lô cận hạn.", href: paths.expiry, icon: <Hourglass className="size-4" />, severity: "warning" });
   if (showProcurement && reorderAlerts.length > 0)
@@ -195,28 +193,34 @@ export function DashboardClient(props: DashboardProps) {
     reorderAlerts, expiryAlerts, transfers, stocktakeSessions,
   } = props;
 
+  const isMobile = useIsMobile();
   const paths = getInventoryPaths(routeBase);
   const quickActions = buildQuickActions(siteKind, routeBase);
   const tasks = buildTasks(props);
 
   const activeTransferList = transfers
     .filter((t) => ["in_transit", "confirmed", "confirmed_ship", "confirmed_receive"].includes(t.status))
-    .slice(0, 3);
+    .slice(isMobile ? 2 : 3);
   const activeStocktakeList = stocktakeSessions
     .filter((s) => s.status === "in_progress");
+
+  const siteKindLabel = siteKind === "warehouse"
+    ? "HQ"
+    : siteKind === "central_kitchen"
+      ? "Bếp TT"
+      : "Chi nhánh";
 
   return (
     <>
       <InventoryHeader
-        title="Tổng quan"
+        title={tNav("home")}
         description={`${siteName} • ${new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}`}
       />
 
       <div className="flex-1 overflow-auto p-4">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <MobileEntryBanner />
+        <div className={cn("mx-auto space-y-6", isMobile ? "max-w-xl" : "max-w-7xl")}>
           {/* KPI cards */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className={cn("grid gap-3", isMobile ? "grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-4")}>
             {[
               { label: "Giá trị tồn kho", value: `${formatVND(totalStockValue)}đ` },
               { label: "PO đang chờ", value: String(pendingPO) },
@@ -225,8 +229,8 @@ export function DashboardClient(props: DashboardProps) {
             ].map((kpi) => (
               <Card key={kpi.label}>
                 <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground">{kpi.label}</p>
-                  <p className="mt-1 text-2xl font-bold">{kpi.value}</p>
+                  <p className={cn("text-muted-foreground text-xs")}>{kpi.label}</p>
+                  <p className={cn("font-bold tabular-nums", isMobile ? "mt-0.5 text-lg" : "mt-1 text-2xl")}>{kpi.value}</p>
                 </CardContent>
               </Card>
             ))}
@@ -243,12 +247,13 @@ export function DashboardClient(props: DashboardProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2">
+              <div className={cn("flex gap-2", isMobile ? "flex-col" : "flex-wrap")}>
                 {quickActions.map((a) => (
                   <Button
                     key={a.label}
                     variant={a.primary ? "default" : "outline"}
-                    size="sm"
+                    size={isMobile ? "lg" : "sm"}
+                    className={cn(isMobile && "justify-start")}
                     asChild
                   >
                     <Link href={a.href}>
@@ -262,7 +267,7 @@ export function DashboardClient(props: DashboardProps) {
           </Card>
 
           {/* Tasks + Alerts */}
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className={cn("grid gap-4", isMobile ? "grid-cols-1" : "lg:grid-cols-2")}>
             {/* Tasks */}
             <Card>
               <CardHeader className="pb-3">
@@ -275,7 +280,7 @@ export function DashboardClient(props: DashboardProps) {
                   </div>
                   <Badge variant="secondary" className="h-6">
                     <Clock className="mr-1 size-3" />
-                    {siteKind === "warehouse" ? "HQ" : siteKind === "central_kitchen" ? "Bếp TT" : "Chi nhánh"}
+                    {siteKindLabel}
                   </Badge>
                 </div>
               </CardHeader>
@@ -285,19 +290,22 @@ export function DashboardClient(props: DashboardProps) {
                     Không có việc cần xử lý gấp.
                   </p>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {tasks.map((task) => (
                       <Link
                         key={task.key}
                         href={task.href}
-                        className="flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent"
+                        className={cn(
+                          "flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent active:scale-[0.99]",
+                          isMobile && "min-h-14",
+                        )}
                       >
-                        <div className={cn("mt-1.5 size-2 rounded-full", severityDot[task.severity])} />
-                        <div className="flex-1 space-y-1">
+                        <div className={cn("mt-1.5 size-2 shrink-0 rounded-full", severityDot[task.severity])} />
+                        <div className="min-w-0 flex-1 space-y-1">
                           <p className="text-sm font-medium leading-tight">{task.title}</p>
                           <p className="text-xs text-muted-foreground">{task.description}</p>
                         </div>
-                        <ArrowRight className="size-4 text-muted-foreground" />
+                        <ArrowRight className="mt-1 size-4 shrink-0 text-muted-foreground" />
                       </Link>
                     ))}
                   </div>
@@ -319,37 +327,41 @@ export function DashboardClient(props: DashboardProps) {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {reorderAlerts.slice(0, 3).map((item) => (
+                <div className="space-y-2">
+                  {reorderAlerts.slice(0, isMobile ? 2 : 3).map((item) => (
                     <Link
                       key={`r-${item.ingredientId}-${item.branchId}`}
                       href={showProcurement ? paths.purchaseOrders : paths.stock}
-                      className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/5 p-3 transition-colors hover:bg-accent"
+                      className={cn(
+                        "flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/5 p-3 transition-colors hover:bg-accent",
+                        isMobile && "min-h-14",
+                      )}
                     >
-                      <AlertTriangle className="mt-0.5 size-4 text-destructive" />
-                      <div className="flex-1 space-y-1">
+                      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
+                      <div className="min-w-0 flex-1 space-y-1">
                         <p className="text-sm font-medium leading-tight">{item.name}</p>
                         <p className="text-xs text-muted-foreground">
                           Tồn {item.current}{item.unit} / Ngưỡng {item.reorder}{item.unit}
                         </p>
                       </div>
-                      <Badge variant="destructive" className="text-xs">Tái đặt</Badge>
+                      <Badge variant="destructive" className="shrink-0 text-xs">Tái đặt</Badge>
                     </Link>
                   ))}
-                  {expiryAlerts.slice(0, 3).map((item) => (
+                  {expiryAlerts.slice(0, isMobile ? 2 : 3).map((item) => (
                     <Link
                       key={`e-${item.id}`}
                       href={paths.expiry}
                       className={cn(
                         "flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent",
                         item.urgency === "critical" ? "border-destructive/50 bg-destructive/5" : "border-warning/50 bg-warning/5",
+                        isMobile && "min-h-14",
                       )}
                     >
                       <AlertTriangle className={cn(
-                        "mt-0.5 size-4",
+                        "mt-0.5 size-4 shrink-0",
                         item.urgency === "critical" ? "text-destructive" : "text-warning",
                       )} />
-                      <div className="flex-1 space-y-1">
+                      <div className="min-w-0 flex-1 space-y-1">
                         <p className="text-sm font-medium leading-tight">
                           {item.ingredientName}{item.lot ? ` • ${item.lot}` : ""}
                         </p>
@@ -357,8 +369,8 @@ export function DashboardClient(props: DashboardProps) {
                           {item.daysLeft <= 0 ? `Quá hạn ${Math.abs(item.daysLeft)} ngày` : `Còn ${item.daysLeft} ngày`}
                         </p>
                       </div>
-                      <Badge variant={item.urgency === "critical" ? "destructive" : "warning"} className="text-xs">
-                        Hết hạn
+                      <Badge variant={item.urgency === "critical" ? "destructive" : "warning"} className="shrink-0 text-xs">
+                        {item.daysLeft <= 0 ? tStatus("expired", "badge") : tStatus("critical", "badge")}
                       </Badge>
                     </Link>
                   ))}
@@ -373,7 +385,7 @@ export function DashboardClient(props: DashboardProps) {
           </div>
 
           {/* Transfer tracking + Stocktake progress */}
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className={cn("grid gap-4", isMobile ? "grid-cols-1" : "lg:grid-cols-2")}>
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -394,18 +406,19 @@ export function DashboardClient(props: DashboardProps) {
                     Không có điều chuyển đang xử lý
                   </p>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {activeTransferList.map((t) => (
                       <Link
                         key={t.id}
                         href={paths.transferDetail(t.id)}
-                        className="block rounded-lg border p-3 transition-colors hover:bg-accent"
+                        className={cn(
+                          "block rounded-lg border p-3 transition-colors hover:bg-accent active:scale-[0.99]",
+                          isMobile && "min-h-14",
+                        )}
                       >
                         <div className="mb-2 flex items-center justify-between">
                           <span className="text-sm font-medium">{t.code}</span>
-                          <Badge variant={getInventoryStatusBadgeVariant(t.status)} className="text-xs">
-                            {getInventoryStatusLabel(t.status)}
-                          </Badge>
+                          <StatusBadge status={t.status} />
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <span>{t.fromBranch}</span>
@@ -439,12 +452,15 @@ export function DashboardClient(props: DashboardProps) {
                     Không có phiên kiểm kê đang thực hiện
                   </p>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {activeStocktakeList.map((s) => (
                       <Link
                         key={s.id}
                         href={paths.stocktakeDetail(s.id)}
-                        className="block rounded-lg border p-3 transition-colors hover:bg-accent"
+                        className={cn(
+                          "block rounded-lg border p-3 transition-colors hover:bg-accent active:scale-[0.99]",
+                          isMobile && "min-h-14",
+                        )}
                       >
                         <div className="mb-2 flex items-center justify-between">
                           <span className="text-sm font-medium">{s.code}</span>

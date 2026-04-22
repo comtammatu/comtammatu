@@ -40,10 +40,10 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { InventoryHeader } from "../_components/inventory-header";
-
-
-import { createStocktakeSession, fetchStocktakeSessions } from "../actions";
+import { StatusBadge } from "../_components/status-badge";
+import { InteractiveCard } from "../_components/interactive-card";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
+import { createStocktakeSession, fetchStocktakeSessions } from "../actions";
 
 export interface StocktakeSessionRow {
   id: number;
@@ -63,20 +63,14 @@ export interface BranchOption {
   is_active: boolean;
 }
 
-const STATUS_META: Record<string, { label: string; className: string }> = {
-  in_progress: {
-    label: "Đang thực hiện",
-    className: "bg-warning/10 text-warning border-warning/30",
-  },
-  completed: {
-    label: "Hoàn tất",
-    className: "bg-success/10 text-success border-success/30",
-  },
-  cancelled: {
-    label: "Đã hủy",
-    className: "bg-muted text-muted-foreground",
-  },
-};
+function formatDateShort(dateStr: string | null): string {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
 
 export function StocktakeListClient({
   initial,
@@ -95,7 +89,7 @@ export function StocktakeListClient({
   const isMobile = useIsMobile();
   const [rows, setRows] = useState(initial);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isPending, startTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedBranchId, setSelectedBranchId] = useState("");
@@ -110,7 +104,7 @@ export function StocktakeListClient({
 
   const filtered = useMemo(() => {
     let list = rows;
-    if (statusFilter) {
+    if (statusFilter !== "all") {
       list = list.filter((r) => r.status === statusFilter);
     }
     const q = search.trim().toLowerCase();
@@ -161,169 +155,115 @@ export function StocktakeListClient({
         actions={
           <Button type="button" onClick={handleCreate} disabled={isPending}>
             <Plus className="size-4" />
-            Mo phien kiem ke
+            Mở phiên kiểm kê
           </Button>
         }
       />
       <div className="flex-1 overflow-auto p-4">
-      <div className="mx-auto max-w-7xl space-y-4">
+        <div className={cn("mx-auto space-y-4", isMobile ? "max-w-xl" : "max-w-7xl")}>
 
-        {/* Status filter buttons */}
-        <div className="flex flex-wrap gap-2">
-          {Object.entries(STATUS_META).map(([key, meta]) => {
-            const count = statusCounts[key] ?? 0;
-            const isActive = statusFilter === key;
+          {/* Filters */}
+          <Card className="py-0">
+            <CardContent className="flex flex-wrap items-center gap-3 p-3">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Trạng thái" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                  <SelectItem value="in_progress">
+                    Đang thực hiện ({statusCounts["in_progress"] ?? 0})
+                  </SelectItem>
+                  <SelectItem value="completed">
+                    Hoàn tất ({statusCounts["completed"] ?? 0})
+                  </SelectItem>
+                  <SelectItem value="cancelled">
+                    Đã hủy ({statusCounts["cancelled"] ?? 0})
+                  </SelectItem>
+                </SelectContent>
+              </Select>
 
-            return (
-              <Button
-                key={key}
-                type="button"
-                size="sm"
-                variant={isActive ? "default" : "outline"}
-                onClick={() => setStatusFilter(isActive ? null : key)}
-                aria-pressed={isActive}
-              >
-                {meta.label}
-                <span className="text-xs opacity-80">{count}</span>
-              </Button>
-            );
-          })}
-          {statusFilter && (
-            <Button
-              type="button"
-              size="sm"
-              variant="link"
-              onClick={() => setStatusFilter(null)}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              Xóa bộ lọc
-            </Button>
-          )}
-        </div>
+              <InputGroup className={cn("flex-1", isMobile && "h-12 basis-full")}>
+                <InputGroupAddon>
+                  <Search />
+                </InputGroupAddon>
+                <InputGroupInput
+                  placeholder="Tìm mã phiên hoặc tên chi nhánh..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  inputMode="search"
+                />
+              </InputGroup>
 
-        {/* Search */}
-        <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
-          <InputGroup className="h-10 flex-1">
-            <InputGroupAddon>
-              <Search />
-            </InputGroupAddon>
-            <InputGroupInput
-              placeholder="Tìm mã phiên hoặc tên chi nhánh..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </InputGroup>
-          <Badge variant="outline" className="rounded-full">
-            {filtered.length} / {rows.length} phiên
-          </Badge>
-        </CardContent></Card>
+              <Badge variant="outline" className="rounded-full">
+                {filtered.length}/{rows.length}
+              </Badge>
+            </CardContent>
+          </Card>
 
-        {/* Table */}
-        <Card>
-          <CardContent className="p-0">
-            {isMobile ? (
-              <div className="space-y-3">
-                {filtered.length === 0 && (
-                  <div className="px-4 py-16 text-center">
-                    <ClipboardCheck className="mx-auto size-10 text-muted-foreground/40" />
-                    <p className="mt-2 text-sm font-medium text-muted-foreground">
-                      {search || statusFilter
-                        ? "Không tìm thấy phiên nào"
-                        : "Chưa có phiên kiểm kê nào"}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {search || statusFilter
-                        ? "Thử từ khóa khác"
-                        : 'Nhấn "Tạo kiểm kê" để bắt đầu'}
-                    </p>
-                  </div>
-                )}
-                {filtered.map((r) => {
-                  const meta = STATUS_META[r.status] ?? {
-                    label: r.status,
-                    className: "bg-muted text-muted-foreground",
-                  };
-
-                  return (
-                    <Link
-                      key={r.id}
-                      href={`${routeBase}/${r.id}`}
-                      className="rounded-lg border bg-muted/30 text-card-foreground block p-4 transition hover:border-primary/25"
-                    >
+          {/* Content */}
+          {isMobile ? (
+            <div className="flex flex-col gap-2">
+              {filtered.length === 0 ? (
+                <div className="px-4 py-16 text-center">
+                  <ClipboardCheck className="mx-auto size-10 text-muted-foreground/40" />
+                  <p className="mt-2 text-sm font-medium text-muted-foreground">
+                    {search || statusFilter !== "all"
+                      ? "Không tìm thấy phiên nào"
+                      : "Chưa có phiên kiểm kê nào"}
+                  </p>
+                </div>
+              ) : (
+                filtered.map((r) => (
+                  <InteractiveCard
+                    key={r.id}
+                    minHeight="mobile"
+                    padding="default"
+                    asChild
+                  >
+                    <Link href={`${routeBase}/${r.id}`} className="flex-col items-stretch gap-2">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono text-sm font-medium">
-                          KK-{r.id}
-                        </span>
-                        <Badge
-                          className={cn("shrink-0 text-xs", meta.className)}
-                        >
-                          {meta.label}
-                        </Badge>
+                        <span className="font-mono text-sm font-medium">KK-{r.id}</span>
+                        <StatusBadge status={r.status} />
                       </div>
-                      <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>{r.branches?.name ?? "—"}</span>
-                        <span className="tabular-nums">
-                          {r.started_at
-                            ? new Date(r.started_at).toLocaleDateString(
-                                "vi-VN",
-                                {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                },
-                              )
-                            : r.created_at
-                              ? new Date(r.created_at).toLocaleDateString(
-                                  "vi-VN",
-                                  {
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                  },
-                                )
-                              : "—"}
-                        </span>
+                        <span className="tabular-nums">{formatDateShort(r.started_at ?? r.created_at)}</span>
                       </div>
                     </Link>
-                  );
-                })}
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Mã phiên</TableHead>
-                    <TableHead>Chi nhánh</TableHead>
-                    <TableHead>Ngày bắt đầu</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    <TableHead className="w-10" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.length === 0 && (
-                    <TableEmptyStateRow
-                      colSpan={5}
-                      paddingClassName="py-16"
-                      icon={
-                        <ClipboardCheck className="mx-auto size-10 text-muted-foreground/40" />
-                      }
-                      title={
-                        search || statusFilter
-                          ? "Không tìm thấy phiên nào"
-                          : "Chưa có phiên kiểm kê nào"
-                      }
-                      description={
-                        search || statusFilter
-                          ? "Thử từ khóa khác"
-                          : 'Nhấn "Tạo kiểm kê" để bắt đầu'
-                      }
-                    />
-                  )}
-                  {filtered.map((r) => {
-                    const meta = STATUS_META[r.status] ?? {
-                      label: r.status,
-                      className: "bg-muted text-muted-foreground",
-                    };
-
-                    return (
+                  </InteractiveCard>
+                ))
+              )}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Mã phiên</TableHead>
+                      <TableHead>Chi nhánh</TableHead>
+                      <TableHead>Ngày bắt đầu</TableHead>
+                      <TableHead>Trạng thái</TableHead>
+                      <TableHead className="w-10" />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.length === 0 ? (
+                      <TableEmptyStateRow
+                        colSpan={5}
+                        paddingClassName="py-16"
+                        icon={
+                          <ClipboardCheck className="mx-auto size-10 text-muted-foreground/40" />
+                        }
+                        title={
+                          search || statusFilter !== "all"
+                            ? "Không tìm thấy phiên nào"
+                            : "Chưa có phiên kiểm kê nào"
+                        }
+                      />
+                    ) : null}
+                    {filtered.map((r) => (
                       <TableRow key={r.id}>
                         <TableCell className="font-mono text-sm font-medium">
                           KK-{r.id}
@@ -332,30 +272,10 @@ export function StocktakeListClient({
                           {r.branches?.name ?? "—"}
                         </TableCell>
                         <TableCell className="text-sm tabular-nums text-muted-foreground">
-                          {r.started_at
-                            ? new Date(r.started_at).toLocaleDateString(
-                                "vi-VN",
-                                {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  year: "numeric",
-                                },
-                              )
-                            : r.created_at
-                              ? new Date(r.created_at).toLocaleDateString(
-                                  "vi-VN",
-                                  {
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                    year: "numeric",
-                                  },
-                                )
-                              : "—"}
+                          {formatDateShort(r.started_at ?? r.created_at)}
                         </TableCell>
                         <TableCell>
-                          <Badge className={cn("text-xs", meta.className)}>
-                            {meta.label}
-                          </Badge>
+                          <StatusBadge status={r.status} />
                         </TableCell>
                         <TableCell>
                           <Button
@@ -370,14 +290,13 @@ export function StocktakeListClient({
                           </Button>
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

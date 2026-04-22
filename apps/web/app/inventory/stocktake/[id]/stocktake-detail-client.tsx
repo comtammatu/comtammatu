@@ -96,21 +96,15 @@ export function StocktakeDetailClient({
   lines: initialLines,
   routeBase = "/inventory/stocktake",
 }: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  session: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  lines: any[];
+  session: StocktakeSession;
+  lines: StocktakeLine[];
   routeBase?: string;
   inventoryBasePath?: string;
 }) {
   const isMobile = useIsMobile();
   const [isPending, startTransition] = useTransition();
-  const [session, setSession] = useState<StocktakeSession>(
-    initialSession as StocktakeSession,
-  );
-  const [lines, setLines] = useState<StocktakeLine[]>(
-    initialLines as StocktakeLine[],
-  );
+  const [session, setSession] = useState<StocktakeSession>(initialSession);
+  const [lines, setLines] = useState<StocktakeLine[]>(initialLines);
   const [savedLines, setSavedLines] = useState<Set<number>>(new Set());
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -259,7 +253,7 @@ export function StocktakeDetailClient({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">
           <p className="text-sm font-medium text-muted-foreground">
-            Kiem soat cuoi ca
+            Kiểm soát cuối ca
           </p>
           <div className="space-y-1">
             <h1 className="text-3xl font-semibold tracking-tight">
@@ -384,16 +378,16 @@ export function StocktakeDetailClient({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Chot ket qua kiem ke?</AlertDialogTitle>
+            <AlertDialogTitle>Chốt kết quả kiểm kê?</AlertDialogTitle>
             <AlertDialogDescription>
-              Hanh dong nay se tinh chenh lech va cap nhat ton kho he thong. Sau
-              khi chot, phien kiem ke se chuyen sang lop doi chieu ket qua.
+              Hành động này sẽ tính chênh lệch và cập nhật tồn kho hệ thống. Sau
+              khi chốt, phiên kiểm kê sẽ chuyển sang lớp đối chiếu kết quả.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
             <AlertDialogAction onClick={handleComplete} disabled={isPending}>
-              {isPending ? "Dang xu ly..." : "Chot ket qua"}
+              {isPending ? "Đang xử lý..." : "Chốt kết quả"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -403,10 +397,10 @@ export function StocktakeDetailClient({
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Huy phien kiem ke?</AlertDialogTitle>
+            <AlertDialogTitle>Hủy phiên kiểm kê?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tat ca du lieu da dem se bi huy va khong con duoc doi chieu trong
-              phien nay.
+              Tất cả dữ liệu đã đếm sẽ bị hủy và không còn được đối chiếu trong
+              phiên này.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

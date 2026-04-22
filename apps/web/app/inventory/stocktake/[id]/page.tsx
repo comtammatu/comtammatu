@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { fetchStocktakeDetail } from "../../actions";
 import { StocktakeDetailClient } from "./stocktake-detail-client";
 
@@ -10,27 +11,40 @@ export default async function StocktakeDetailPage({
   const sessionId = Number(id);
 
   if (!Number.isFinite(sessionId) || sessionId <= 0) {
-    return (
-      <div className="py-12 text-center text-muted-foreground">
-        ID không hợp lệ
-      </div>
-    );
+    notFound();
   }
 
   const result = await fetchStocktakeDetail(sessionId);
   if (!result.success || !result.data) {
-    return (
-      <div className="py-12 text-center text-muted-foreground">
-        Không tìm thấy phiên kiểm kê
-      </div>
-    );
+    notFound();
   }
 
   const { session: stocktakeSession, lines } = result.data as {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    session: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    lines: any[];
+    session: {
+      id: number;
+      branch_id: number;
+      started_at: string | null;
+      completed_at: string | null;
+      status: string;
+      notes: string | null;
+      created_at: string;
+      created_by: string;
+    };
+    lines: Array<{
+      id: number;
+      session_id: number;
+      ingredient_id: number;
+      system_quantity: number;
+      counted_quantity: number | null;
+      variance: number | null;
+      variance_reason: string | null;
+      ingredients: {
+        id: number;
+        name: string;
+        unit: string;
+        category: string | null;
+      } | null;
+    }>;
   };
 
   return (
