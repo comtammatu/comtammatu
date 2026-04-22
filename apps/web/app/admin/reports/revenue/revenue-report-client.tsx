@@ -45,7 +45,7 @@ export function RevenueReportClient({
     setError(null);
     startTransition(async () => {
       if (initialBranchId <= 0) {
-        setError("Không tìm thấy chi nhánh tổng hợp.");
+        setError("Vui lòng chọn chi nhánh trước khi làm mới.");
         return;
       }
       const res = await fetchDailyRevenue(initialBranchId, startDate, endDate);

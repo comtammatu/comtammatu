@@ -1,19 +1,50 @@
+import { Suspense } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { loadAuthState } from "@/_lib/auth";
 import { fetchDailyRevenue } from "../../../finance/actions";
 import { RevenueReportClient } from "./revenue-report-client";
+import { BranchSelect } from "@/_components/branch-select";
+import type { BranchOption } from "@/_components/branch-select";
 
-export default async function RevenueReportPage() {
+interface RevenueReportPageProps {
+  searchParams: Promise<{ branchId?: string }>;
+}
+
+export default async function RevenueReportPage({
+  searchParams,
+}: RevenueReportPageProps) {
+  const { claims } = await loadAuthState();
   const supabase = await createClient();
+  const params = await searchParams;
 
-  const { data: hqBranch } = await supabase
+  // Fetch active operational branches
+  const { data: branchRows } = await supabase
     .from("branches")
     .select("id, name")
-    .eq("is_headquarters", true)
-    .maybeSingle();
+    .eq("branch_kind", "branch")
+    .eq("is_active", true)
+    .order("name");
 
-  const branchId = hqBranch?.id ?? 0;
+  const branches: BranchOption[] = (branchRows ?? []).map((b) => ({
+    id: b.id,
+    name: b.name,
+  }));
+
+  // branch_manager is locked to their JWT branch_id
+  const isBranchScoped = claims.user_role === "branch_manager";
+
+  let branchId: number;
+  if (isBranchScoped && claims.branch_id !== null) {
+    branchId = claims.branch_id;
+  } else if (params.branchId) {
+    const parsed = parseInt(params.branchId, 10);
+    branchId = Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  } else {
+    // Default: first active operational branch
+    branchId = branches[0]?.id ?? 0;
+  }
 
   const endDate = new Date().toISOString().slice(0, 10);
   const startDate = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000)
@@ -43,6 +74,25 @@ export default async function RevenueReportPage() {
           </div>
         </CardContent>
       </Card>
+
+      {branches.length > 0 && (
+        <div className="flex items-center px-1">
+          <Suspense>
+            <BranchSelect
+              branches={branches}
+              selectedBranchId={branchId}
+              locked={isBranchScoped}
+            />
+          </Suspense>
+        </div>
+      )}
+
+      {branches.length === 0 && (
+        <div className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          Không có chi nhánh hoạt động nào. Vui lòng kiểm tra cấu hình hệ thống.
+        </div>
+      )}
+
       <RevenueReportClient
         initialRows={rows}
         initialBranchId={branchId}

@@ -1,23 +1,50 @@
+import { Suspense } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { loadAuthState } from "@/_lib/auth";
 import { FinanceClient } from "./finance-client";
 import { fetchDailyRevenue, fetchTaxInvoices, fetchTopItems } from "./actions";
+import { BranchSelect } from "@/_components/branch-select";
+import type { BranchOption } from "@/_components/branch-select";
 
-export default async function FinancePage() {
+interface FinancePageProps {
+  searchParams: Promise<{ branchId?: string }>;
+}
+
+export default async function FinancePage({ searchParams }: FinancePageProps) {
+  const { claims } = await loadAuthState();
   const supabase = await createClient();
+  const params = await searchParams;
 
-  // Fetch the headquarters branch to use as default scope for revenue queries.
-  // owner/super_manager have branch_id=null in JWT, so we resolve HQ here.
-  const { data: hqBranch } = await supabase
+  // Fetch active operational branches
+  const { data: branchRows } = await supabase
     .from("branches")
     .select("id, name")
-    .eq("is_headquarters", true)
-    .maybeSingle();
+    .eq("branch_kind", "branch")
+    .eq("is_active", true)
+    .order("name");
 
-  const branchId = hqBranch?.id ?? 0;
+  const branches: BranchOption[] = (branchRows ?? []).map((b) => ({
+    id: b.id,
+    name: b.name,
+  }));
+
+  // branch_manager is locked to their JWT branch_id
+  const isBranchScoped = claims.user_role === "branch_manager";
+
+  let branchId: number;
+  if (isBranchScoped && claims.branch_id !== null) {
+    branchId = claims.branch_id;
+  } else if (params.branchId) {
+    const parsed = parseInt(params.branchId, 10);
+    branchId = Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  } else {
+    // Default: first active operational branch
+    branchId = branches[0]?.id ?? 0;
+  }
 
   // Compute 30-day date range
-  const endDate = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const endDate = new Date().toISOString().slice(0, 10);
   const startDate = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000)
     .toISOString()
     .slice(0, 10);
@@ -51,9 +78,9 @@ export default async function FinancePage() {
       <Card>
         <CardContent className="p-5 sm:p-6">
           <div className="space-y-3">
-              <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                Kế toán
-              </span>
+            <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+              Kế toán
+            </span>
             <div className="space-y-2">
               <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
                 Tài chính
@@ -62,6 +89,25 @@ export default async function FinancePage() {
           </div>
         </CardContent>
       </Card>
+
+      {branches.length > 0 && (
+        <div className="flex items-center px-1">
+          <Suspense>
+            <BranchSelect
+              branches={branches}
+              selectedBranchId={branchId}
+              locked={isBranchScoped}
+            />
+          </Suspense>
+        </div>
+      )}
+
+      {branches.length === 0 && (
+        <div className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          Không có chi nhánh hoạt động nào. Vui lòng kiểm tra cấu hình hệ thống.
+        </div>
+      )}
+
       <FinanceClient
         dailyRevenue={dailyRevenue}
         topItems={topItems}
