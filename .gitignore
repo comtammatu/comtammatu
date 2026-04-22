@@ -46,6 +46,7 @@ supabase/.branches/
 # Claude Code personal/machine-specific
 .claude/settings.json
 .claude/launch.json
+.claude/worktrees/
 
 # IDE
 .vscode/
