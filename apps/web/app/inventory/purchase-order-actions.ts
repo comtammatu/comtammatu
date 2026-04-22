@@ -341,6 +341,7 @@ export async function fetchOpenPurchaseOrdersForReceiving(): Promise<
 /* ─── PO Suggestions ─── */
 
 const poSuggestionsSchema = z.object({
+  branchId: z.coerce.number().int().positive(),
   periodDays: z.union([z.literal(7), z.literal(14), z.literal(30)]).default(7),
 });
 
@@ -357,11 +358,14 @@ export interface PoSuggestionRow {
   below_reorder: boolean;
 }
 
-// Skip withAction: optional input parameter
-export async function fetchPoSuggestions(input?: {
+// Skip withAction: positional input object keeps the public signature stable.
+// branchId is required since PR #24 retired the singleton HQ — callers must
+// pick an explicit procurement branch (CW or CK).
+export async function fetchPoSuggestions(input: {
+  branchId: number;
   periodDays?: 7 | 14 | 30;
 }): Promise<ActionResult> {
-  const parsed = poSuggestionsSchema.safeParse(input ?? {});
+  const parsed = poSuggestionsSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: "Dữ liệu không hợp lệ" };
   }
@@ -369,20 +373,31 @@ export async function fetchPoSuggestions(input?: {
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
 
-  const procBranches = await fetchProcurementBranches(supabase, claims.tenant_id);
-  const primaryWarehouseId = procBranches.find(
-    (b) => b.branch_kind === "warehouse",
-  )?.id ?? procBranches[0]?.id;
+  const { branchId, periodDays: rawPeriod } = parsed.data;
+  const periodDays = rawPeriod;
 
-  if (!primaryWarehouseId) {
-    return { success: false, error: "Chưa cấu hình kho tổng." };
+  // Branch-scoped procurement roles must stay within their assigned branch.
+  if (!canAccessProcurementBranch(claims, branchId)) {
+    return {
+      success: false,
+      error: "Bạn chỉ được xem gợi ý cho kho của mình.",
+    };
   }
 
-  const periodDays = parsed.data.periodDays;
+  // Validate branchId points to a procurement branch (CW or CK) in this tenant.
+  const procBranches = await fetchProcurementBranches(supabase, claims.tenant_id);
+  const target = procBranches.find((b) => b.id === branchId);
+  if (!target) {
+    return {
+      success: false,
+      error: "Chi nhánh không hợp lệ (phải là Kho Tổng hoặc Bếp Trung Tâm).",
+    };
+  }
+
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - periodDays);
 
-  // 1. Primary warehouse stock levels for active ingredients with reorder_point
+  // 1. Stock levels at the selected procurement branch for active ingredients with reorder_point.
   const { data: hqStock, error: e1 } = await supabase
     .from("stock_levels")
     .select(
@@ -395,13 +410,16 @@ export async function fetchPoSuggestions(input?: {
     `,
     )
     .eq("tenant_id", claims.tenant_id)
-    .eq("branch_id", primaryWarehouseId)
+    .eq("branch_id", branchId)
     .eq("ingredients.is_active", true)
     .not("ingredients.reorder_point", "is", null);
 
   if (e1) return { success: false, error: "Không thể tải tồn kho kho tổng." };
 
-  // 2. Consumption data across ALL branches over the period
+  // 2. Consumption aggregated tenant-wide over the period.
+  // Proxy until branches.primary_warehouse_id FK exists (see inventory.md §10).
+  // Multi-CW note: the same consumption pool feeds every CW's suggestion —
+  // treat the avg_daily_consumption as an upper-bound hint, not a strict per-CW demand.
   const { data: movements, error: e2 } = await supabase
     .from("stock_movements")
     .select("ingredient_id, quantity_change")

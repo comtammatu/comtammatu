@@ -2,6 +2,28 @@
 
 > Log mỗi quyết định kiến trúc quan trọng với rationale.
 
+## D000: Inventory: retire HQ, introduce multi-instance Kho Tổng + Bếp Trung Tâm (2026-04-24)
+
+**Decision:** Remove the singleton "HQ / headquarters" branch concept. Replace with multi-instance `central_warehouse` (Kho Tổng / CW) and existing multi-instance `central_kitchen` (Bếp Trung Tâm / CK). Both accept direct supplier GRN.
+
+**Transfer direction matrix** (enforced by DB trigger `enforce_stock_transfer_direction`):
+- Allowed: CW→CK, CW→Branch, CK→Branch, intra-branch.
+- Rejected: CK→CW, CW↔CW, CK↔CK, Branch→*.
+
+**Stock issue kitchen_use rule** (enforced by `enforce_stock_issue_kitchen_use_scope`): `stock_issue(issue_type = 'kitchen_use')` is only valid at `branch_kind = 'branch'`, not at CW or CK.
+
+**Rationale:** Pilot now plans more than one Kho Tổng and more than one Bếp Trung Tâm. The legacy `is_headquarters` flag assumed a singleton and does not scale.
+
+**Migration:** `20260424000000_rename_warehouse_to_central_warehouse_retire_hq.sql`
+- Renames `branch_kind='warehouse'` → `'central_warehouse'`
+- Drops `branches.is_headquarters` column
+- Replaces `enforce_po_branch_is_headquarters` trigger → `enforce_po_grn_branch_is_procurement` (accepts CW + CK)
+- Drops `set_headquarters` RPC (replace with `set_branch_kind`)
+- Adds `enforce_stock_transfer_direction` trigger with direction matrix above
+- Adds `enforce_stock_issue_kitchen_use_scope` trigger: `kitchen_use` only valid at `branch_kind='branch'`
+
+**Superseded:** prior ADRs (D007 `set_headquarters`) are superseded for the CW/CK flow; other parts untouched.
+
 ## D001: Greenfield thay vì refactor (2026-04-01)
 
 **Context:** Project cũ tích lũy 326 `brand_id` references, 43 pages với `/b/[brandId]/`, Prisma dependency không cần thiết, multi-brand architecture cho 1 brand duy nhất.
@@ -58,13 +80,13 @@
 
 **Consequences:** Mỗi setting có RLS riêng, audit trail qua `updated_at`, dễ thêm settings mới mà không thay đổi schema. Trade-off: N queries khi upsert nhiều settings cùng lúc (acceptable cho admin-only operation).
 
-## D007: Atomic RPC cho set_headquarters (2026-04-02)
+## D007: Atomic RPC cho set_headquarters (2026-04-02) — **SUPERSEDED by D000 (2026-04-24)**
 
-**Context:** `setHeadquarters` cần unset current HQ rồi set new HQ. Hai UPDATE riêng biệt tạo TOCTOU race — concurrent calls có thể để 0 hoặc 2 branches làm HQ.
+**Context (historical):** `setHeadquarters` cần unset current HQ rồi set new HQ. Hai UPDATE riêng biệt tạo TOCTOU race — concurrent calls có thể để 0 hoặc 2 branches làm HQ.
 
-**Decision:** Postgres RPC `set_headquarters(p_branch_id)` chạy cả hai thao tác trong 1 transaction. Dùng single UPDATE với `SET is_headquarters = (id = p_branch_id)`.
+**Decision (historical):** Postgres RPC `set_headquarters(p_branch_id)` chạy cả hai thao tác trong 1 transaction. Dùng single UPDATE với `SET is_headquarters = (id = p_branch_id)`.
 
-**Consequences:** Atomic, không race condition. Cần maintain thêm 1 RPC function + type stub.
+**Superseded:** migration `20260424000000` dropped the `is_headquarters` column and the `set_headquarters` RPC. Multi-instance `central_warehouse` removes the singleton constraint; no atomic swap is needed. Use `set_branch_kind(p_branch_id, p_kind)` to tag a branch as `central_warehouse`.
 
 ## D008: Cloud-first, local-first Phase 2 (2026-04-04)
 

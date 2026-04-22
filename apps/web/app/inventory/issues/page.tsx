@@ -19,7 +19,7 @@ export default async function IssuesPage() {
     supabase
       .from("branches")
       .select("id, name")
-      .order("is_headquarters", { ascending: false })
+      .order("branch_kind")
       .order("name"),
   ]);
   const dbRows = res.success

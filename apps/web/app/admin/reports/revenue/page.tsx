@@ -7,13 +7,17 @@ import { RevenueReportClient } from "./revenue-report-client";
 export default async function RevenueReportPage() {
   const supabase = await createClient();
 
-  const { data: hqBranch } = await supabase
+  // Revenue report defaults to the first active operational branch (POS produces revenue).
+  const { data: defaultBranch } = await supabase
     .from("branches")
     .select("id, name")
-    .eq("is_headquarters", true)
+    .eq("branch_kind", "branch")
+    .eq("is_active", true)
+    .order("id")
+    .limit(1)
     .maybeSingle();
 
-  const branchId = hqBranch?.id ?? 0;
+  const branchId = defaultBranch?.id ?? 0;
 
   const endDate = new Date().toISOString().slice(0, 10);
   const startDate = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000)

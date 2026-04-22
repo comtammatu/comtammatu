@@ -42,7 +42,7 @@
 | `quan_ly_tong` | Quản lý tổng | `super_manager` | Tenant-wide operations + procurement |
 | `quan_ly_khu_vuc` | Quản lý khu vực | `area_manager` | Branches thuộc area (qua per-branch grants) |
 | `quan_ly_cn` | Quản lý chi nhánh | `branch_manager` | Branch của mình |
-| `kho_truong` | Kho trưởng | `warehouse_manager` | Kho Trụ sở / HQ (procurement + outbound transfer) |
+| `kho_truong` | Kho trưởng | `warehouse_manager` | Kho Tổng / CW (procurement + outbound transfer) |
 | `thu_kho` | Thủ kho | `warehouse_manager` | Staff-level warehouse (nhận hàng + stocktake) |
 | `bep_truong` | Bếp trưởng | `production_manager` | Bếp trung tâm (sản xuất + KDS) |
 

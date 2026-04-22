@@ -23,21 +23,18 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   // Fetch branches for filters + form
   const { data: branches } = await supabase
     .from("branches")
-    .select("id, name, is_headquarters, branch_kind")
+    .select("id, name, branch_kind")
     .eq("is_active", true)
     .order("name");
 
-  // Build staff query — exclude owner/super_manager (not managed here)
+  // Build staff query — role is now derived via positions.legacy_role_code (auth_v2).
   let query = supabase
     .from("profiles")
-    .select("id, full_name, phone, role, branch_id, is_active, branches(name)")
-    .not("role", "in", "(owner,super_manager)")
+    .select(
+      "id, full_name, phone, branch_id, is_active, positions(legacy_role_code), branches(name)",
+    )
     .order("full_name");
 
-  // Apply filters
-  if (params.role && (STAFF_ROLES as readonly string[]).includes(params.role)) {
-    query = query.eq("role", params.role as StaffRole);
-  }
   if (params.branch) {
     query = query.eq("branch_id", Number(params.branch));
   }
@@ -49,15 +46,26 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
 
   const { data: profiles } = await query;
 
-  const staff: StaffRow[] = (profiles ?? []).map((p) => ({
+  type PositionJoin = { legacy_role_code: string | null } | null;
+  type BranchJoin = { name: string } | null;
+
+  const allStaff: StaffRow[] = (profiles ?? []).map((p) => ({
     id: p.id,
     full_name: p.full_name,
     phone: p.phone,
-    role: p.role,
+    role: (p.positions as PositionJoin)?.legacy_role_code ?? "unassigned",
     branch_id: p.branch_id,
-    branch_name: p.branches?.name ?? null,
+    branch_name: (p.branches as BranchJoin)?.name ?? null,
     is_active: p.is_active,
   }));
+
+  const staff: StaffRow[] = allStaff.filter((s) => {
+    if (s.role === "owner" || s.role === "super_manager") return false;
+    if (params.role && (STAFF_ROLES as readonly string[]).includes(params.role)) {
+      return s.role === (params.role as StaffRole);
+    }
+    return true;
+  });
 
   const branchOptions = branches ?? [];
 

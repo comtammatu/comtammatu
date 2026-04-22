@@ -7,12 +7,12 @@ import {
   TextField,
   valuesToFormData,
 } from "@/components/form";
-import { FieldDescription, FieldLabel } from "@comtammatu/ui/components/field";
 import { createBranch, updateBranch } from "./actions";
 import type { BranchRow } from "./branch-table";
 
 const BRANCH_KIND_OPTIONS = [
   { value: "branch", label: "Chi nhánh" },
+  { value: "central_warehouse", label: "Kho tổng" },
   { value: "central_kitchen", label: "Bếp trung tâm" },
 ] as const;
 
@@ -23,7 +23,7 @@ const branchSchema = z.object({
     .min(1, { error: "Tên điểm vận hành không được trống" }),
   address: z.string().trim().optional(),
   phone: z.string().trim().optional(),
-  branchKind: z.enum(["branch", "central_kitchen", "warehouse"]),
+  branchKind: z.enum(["branch", "central_kitchen", "central_warehouse"]),
 });
 
 type BranchFormValues = z.infer<typeof branchSchema>;
@@ -32,8 +32,8 @@ function toFormValues(branch: BranchRow | null | undefined): BranchFormValues {
   const kind: BranchFormValues["branchKind"] =
     branch?.branch_kind === "central_kitchen"
       ? "central_kitchen"
-      : branch?.branch_kind === "warehouse"
-        ? "warehouse"
+      : branch?.branch_kind === "central_warehouse"
+        ? "central_warehouse"
         : "branch";
   return {
     name: branch?.name ?? "",
@@ -55,7 +55,6 @@ export function BranchFormDialog({
   branch,
 }: BranchFormDialogProps) {
   const isEdit = !!branch;
-  const isHeadquarters = branch?.is_headquarters === true;
 
   return (
     <FormDialog
@@ -100,22 +99,13 @@ export function BranchFormDialog({
             type="tel"
             placeholder="VD: 028 1234 5678"
           />
-          {isHeadquarters ? (
-            <div>
-              <FieldLabel>Loại điểm vận hành</FieldLabel>
-              <FieldDescription>
-                Trụ sở được gán bằng nút &quot;Đặt làm trụ sở chính&quot;.
-              </FieldDescription>
-            </div>
-          ) : (
-            <SelectField
-              control={form.control}
-              name="branchKind"
-              label="Loại điểm vận hành"
-              options={BRANCH_KIND_OPTIONS}
-              placeholder="Chọn loại"
-            />
-          )}
+          <SelectField
+            control={form.control}
+            name="branchKind"
+            label="Loại điểm vận hành"
+            options={BRANCH_KIND_OPTIONS}
+            placeholder="Chọn loại"
+          />
         </>
       )}
     </FormDialog>

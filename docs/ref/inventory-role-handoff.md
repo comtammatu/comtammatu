@@ -1,7 +1,7 @@
 # Inventory Role Handoff — 1 Trang
 
 > Dùng cho training nhanh đội vận hành  
-> Mô hình pilot: `HQ / Trụ sở`, `Bếp trung tâm`, `Kho chi nhánh`, `Bếp chi nhánh`
+> Mô hình pilot: `Kho Tổng / CW`, `Bếp trung tâm / CK`, `Kho chi nhánh`, `Bếp chi nhánh`
 
 ---
 
@@ -17,34 +17,34 @@ Tài liệu này là bản training 1 trang.
 
 ## 1. Luồng chuẩn
 
-1. HQ nhập nguyên liệu từ nhà cung cấp bằng `PO` và `GRN`.
-2. HQ có thể chuyển hàng sang bếp trung tâm hoặc chuyển thẳng về kho chi nhánh bằng `stock_transfer`.
+1. CW/CK nhập nguyên liệu từ nhà cung cấp bằng `PO` và `GRN`.
+2. CW có thể chuyển hàng sang bếp trung tâm hoặc chuyển thẳng về kho chi nhánh bằng `stock_transfer`.
 3. Nếu sản xuất tập trung, bếp trung tâm tạo `production_order` để sản xuất thành phẩm.
 4. Bếp trung tâm có thể chuyển thành phẩm sang kho chi nhánh bằng `stock_transfer`.
 5. Kho chi nhánh cấp phát xuống bếp chi nhánh theo nhu cầu bán.
 6. Cuối ngày các site kiểm kê và xử lý chênh lệch nếu có.
 
-## 2. Thủ kho HQ
+## 2. Thủ kho Kho Tổng / CW
 
 Trong hệ thống hiện tại, vai trò này thường map vào `super_manager`.
 
 ### Việc phải làm
 
 - Tạo `PO` cho nhà cung cấp.
-- Tạo và xác nhận `GRN` khi hàng tới.
+- Tạo và xác nhận `GRN` khi hàng tới tại CW.
 - Kiểm đúng số lượng, đơn giá, batch, hạn dùng.
-- Tạo transfer từ HQ sang bếp trung tâm hoặc kho chi nhánh.
+- Tạo transfer từ CW sang bếp trung tâm hoặc kho chi nhánh.
 
 ### Không được làm
 
-- Không tạo `GRN` cho chi nhánh hoặc bếp trung tâm.
+- GRN chỉ được tạo tại site `branch_kind = 'central_warehouse'`.
 - Không sửa tay tồn kho nếu lệch số.
-- Không ép mọi flow phải qua bếp trung tâm nếu hàng được cấp thẳng từ HQ về kho chi nhánh.
+- Không ép mọi flow phải qua bếp trung tâm nếu hàng được cấp thẳng từ CW về kho chi nhánh.
 
 ### Checklist cuối ngày
 
 - Tất cả `GRN` đã confirm.
-- Không còn transfer HQ -> bếp trung tâm hoặc HQ -> kho chi nhánh bị treo bất thường.
+- Không còn transfer CW → bếp trung tâm hoặc CW → kho chi nhánh bị treo bất thường.
 - Hóa đơn NCC mới đã được chuyển cho kế toán / OPS nếu có.
 
 ## 3. Bếp trưởng / Quản lý bếp trung tâm

@@ -129,12 +129,12 @@ export async function proxy(request: NextRequest) {
         const kind = branchRow?.branch_kind;
         if (
           branchRow &&
-          (kind === "warehouse" || kind === "central_kitchen")
+          (kind === "central_warehouse" || kind === "central_kitchen")
         ) {
           return redirectToAccessDenied(
             request,
             response,
-            "warehouse-branch-restricted",
+            "central-warehouse-branch-restricted",
           );
         }
       }

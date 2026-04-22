@@ -6,7 +6,6 @@ import {
   Clock,
   MoreHorizontal,
   Pencil,
-  Star,
   ToggleLeft,
   ToggleRight,
 } from "lucide-react";
@@ -31,7 +30,7 @@ import {
   ACTIVE_STATE_LABELS_VI,
   getSiteKindLabelVi,
 } from "@comtammatu/shared/labels";
-import { toggleBranchActive, setHeadquarters } from "./actions";
+import { toggleBranchActive } from "./actions";
 import { BranchFormDialog } from "./branch-form-dialog";
 import { AttendanceConfigDialog } from "./attendance-config-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -43,7 +42,6 @@ export interface BranchRow {
   address: string | null;
   phone: string | null;
   is_active: boolean | null;
-  is_headquarters: boolean | null;
   branch_kind: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -64,15 +62,6 @@ export function BranchTable({ branches }: BranchTableProps) {
   function handleToggleActive(id: number) {
     startTransition(async () => {
       const result = await toggleBranchActive({ id });
-      if (!result.success) {
-        toast.error(result.error);
-      }
-    });
-  }
-
-  function handleSetHQ(id: number) {
-    startTransition(async () => {
-      const result = await setHeadquarters({ id });
       if (!result.success) {
         toast.error(result.error);
       }
@@ -111,12 +100,6 @@ export function BranchTable({ branches }: BranchTableProps) {
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{branch.name}</span>
-                    {branch.is_headquarters === true && (
-                      <Badge variant="secondary" className="text-xs">
-                        <Star className="mr-1 size-3" />
-                        HQ
-                      </Badge>
-                    )}
                   </div>
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
@@ -167,17 +150,6 @@ export function BranchTable({ branches }: BranchTableProps) {
                           </>
                         )}
                       </DropdownMenuItem>
-                      {branch.is_headquarters !== true && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleSetHQ(branch.id)}
-                          >
-                            <Star className="mr-2 size-4" />
-                            Đặt làm trụ sở chính
-                          </DropdownMenuItem>
-                        </>
-                      )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         onClick={() => setAttendanceBranch(branch)}

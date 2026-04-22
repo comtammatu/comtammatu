@@ -322,7 +322,6 @@ export type Database = {
           created_at: string | null
           id: number
           is_active: boolean | null
-          is_headquarters: boolean | null
           latitude: number | null
           longitude: number | null
           name: string
@@ -336,7 +335,6 @@ export type Database = {
           created_at?: string | null
           id?: never
           is_active?: boolean | null
-          is_headquarters?: boolean | null
           latitude?: number | null
           longitude?: number | null
           name: string
@@ -350,7 +348,6 @@ export type Database = {
           created_at?: string | null
           id?: never
           is_active?: boolean | null
-          is_headquarters?: boolean | null
           latitude?: number | null
           longitude?: number | null
           name?: string
@@ -2053,6 +2050,91 @@ export type Database = {
           },
         ]
       }
+      permission_audit_log: {
+        Row: {
+          action: string
+          actor_user_id: string
+          at: string
+          branch_id: number | null
+          id: number
+          metadata: Json
+          permission_key: string
+          source_template_id: number | null
+          target_user_id: string
+          tenant_id: number
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          at?: string
+          branch_id?: number | null
+          id?: never
+          metadata?: Json
+          permission_key: string
+          source_template_id?: number | null
+          target_user_id: string
+          tenant_id: number
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          at?: string
+          branch_id?: number | null
+          id?: never
+          metadata?: Json
+          permission_key?: string
+          source_template_id?: number | null
+          target_user_id?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permission_audit_log_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permission_audit_log_source_template_id_fkey"
+            columns: ["source_template_id"]
+            isOneToOne: false
+            referencedRelation: "role_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permission_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permission_keys: {
+        Row: {
+          created_at: string
+          description: string
+          key: string
+          module: string
+          scope: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          key: string
+          module: string
+          scope: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          key?: string
+          module?: string
+          scope?: string
+        }
+        Relationships: []
+      }
       pos_sessions: {
         Row: {
           branch_id: number
@@ -2187,6 +2269,50 @@ export type Database = {
           },
           {
             foreignKeyName: "pos_terminals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      positions: {
+        Row: {
+          code: string
+          created_at: string
+          id: number
+          is_active: boolean
+          is_system: boolean
+          label_en: string | null
+          label_vi: string
+          legacy_role_code: string
+          tenant_id: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          is_system?: boolean
+          label_en?: string | null
+          label_vi: string
+          legacy_role_code: string
+          tenant_id: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          is_system?: boolean
+          label_en?: string | null
+          label_vi?: string
+          legacy_role_code?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "positions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -2501,7 +2627,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           phone: string | null
-          role: Database["public"]["Enums"]["staff_role"]
+          position_id: number | null
           tenant_id: number
           updated_at: string | null
         }
@@ -2514,7 +2640,7 @@ export type Database = {
           id: string
           is_active?: boolean | null
           phone?: string | null
-          role?: Database["public"]["Enums"]["staff_role"]
+          position_id?: number | null
           tenant_id: number
           updated_at?: string | null
         }
@@ -2527,7 +2653,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           phone?: string | null
-          role?: Database["public"]["Enums"]["staff_role"]
+          position_id?: number | null
           tenant_id?: number
           updated_at?: string | null
         }
@@ -2544,6 +2670,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
             referencedColumns: ["id"]
           },
           {
@@ -2739,6 +2872,47 @@ export type Database = {
           },
         ]
       }
+      role_templates: {
+        Row: {
+          created_at: string
+          id: number
+          is_system: boolean
+          name: string
+          permission_keys: string[]
+          position_code: string | null
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          is_system?: boolean
+          name: string
+          permission_keys?: string[]
+          position_code?: string | null
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          is_system?: boolean
+          name?: string
+          permission_keys?: string[]
+          position_code?: string | null
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shift_assignments: {
         Row: {
           branch_id: number
@@ -2842,6 +3016,74 @@ export type Database = {
           },
           {
             foreignKeyName: "shifts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_permissions: {
+        Row: {
+          branch_id: number | null
+          granted_at: string
+          granted_by: string | null
+          id: number
+          permission_key: string
+          source_template: number | null
+          tenant_id: number
+          user_id: string
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          branch_id?: number | null
+          granted_at?: string
+          granted_by?: string | null
+          id?: never
+          permission_key: string
+          source_template?: number | null
+          tenant_id: number
+          user_id: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Update: {
+          branch_id?: number | null
+          granted_at?: string
+          granted_by?: string | null
+          id?: never
+          permission_key?: string
+          source_template?: number | null
+          tenant_id?: number
+          user_id?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_permissions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_permissions_permission_key_fkey"
+            columns: ["permission_key"]
+            isOneToOne: false
+            referencedRelation: "permission_keys"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "staff_permissions_source_template_fkey"
+            columns: ["source_template"]
+            isOneToOne: false
+            referencedRelation: "role_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_permissions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -4047,31 +4289,40 @@ export type Database = {
       }
     }
     Functions: {
-      admin_update_profile:
-        | {
-            Args: {
-              p_branch_id?: number
-              p_full_name?: string
-              p_phone?: string
-              p_role?: string
-              p_target_id: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_branch_id?: number
-              p_full_name?: string
-              p_is_active?: boolean
-              p_phone?: string
-              p_role?: Database["public"]["Enums"]["staff_role"]
-              p_target_id: string
-            }
-            Returns: undefined
-          }
+      _auth_v2_is_owner: { Args: { p_user: string }; Returns: boolean }
+      _auth_v2_is_tenant_wide_role: {
+        Args: { p_role: string }
+        Returns: boolean
+      }
+      _auth_v2_position_id_from_role: {
+        Args: { p_role: string; p_tenant: number }
+        Returns: number
+      }
+      _auth_v2_role_to_position: { Args: { p_role: string }; Returns: string }
+      admin_update_profile: {
+        Args: {
+          p_branch_id?: number
+          p_full_name?: string
+          p_is_active?: boolean
+          p_phone?: string
+          p_role?: string
+          p_target_id: string
+        }
+        Returns: undefined
+      }
       append_order_items: {
         Args: { p_items: Json; p_order_id: number }
         Returns: Json
+      }
+      apply_template_to_user: {
+        Args: {
+          p_branch_id: number
+          p_target_user: string
+          p_template_id: number
+          p_valid_from?: string
+          p_valid_until?: string
+        }
+        Returns: number
       }
       auth_area_id: { Args: never; Returns: number }
       auth_branch_id: { Args: never; Returns: number }
@@ -4089,6 +4340,14 @@ export type Database = {
           p_tenant_id: number
         }
         Returns: number
+      }
+      backfill_permissions_from_role: {
+        Args: never
+        Returns: {
+          perm_rows_inserted: number
+          positions_set: number
+          total_profiles: number
+        }[]
       }
       bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       can_access_branch: { Args: { p_branch_id: number }; Returns: boolean }
@@ -4110,6 +4369,21 @@ export type Database = {
       close_pos_session: {
         Args: { p_closing_cash: number; p_note?: string; p_session_id: number }
         Returns: Json
+      }
+      complete_payment_and_consume_stock: {
+        Args: {
+          p_actor_id?: string
+          p_expected_amount?: number
+          p_payment_id: number
+          p_provider_data?: Json
+        }
+        Returns: {
+          detail: string
+          order_id: number
+          payment_id: number
+          status: string
+          stock_consumed: boolean
+        }[]
       }
       complete_stocktake: { Args: { p_session_id: number }; Returns: Json }
       confirm_goods_receipt_note: { Args: { p_grn_id: number }; Returns: Json }
@@ -4193,11 +4467,46 @@ export type Database = {
         }
         Returns: Json
       }
+      current_position: { Args: never; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      find_payment_order_desync: {
+        Args: { p_since?: string }
+        Returns: {
+          age_minutes: number
+          amount: number
+          branch_id: number
+          order_created_at: string
+          order_id: number
+          order_payment_status: string
+          order_status: string
+          payment_id: number
+          payment_method: string
+          payment_paid_at: string
+          payment_status: string
+          tenant_id: number
+        }[]
+      }
       gl_reconciliation: {
         Args: { p_month: number; p_tenant_id: number; p_year: number }
         Returns: Json
       }
+      grant_permission: {
+        Args: {
+          p_branch_id: number
+          p_permission_key: string
+          p_source_template?: number
+          p_target_user: string
+          p_valid_from?: string
+          p_valid_until?: string
+        }
+        Returns: number
+      }
+      has_permission: {
+        Args: { p_branch_id: number; p_key: string }
+        Returns: boolean
+      }
+      has_permission_any: { Args: { p_key: string }; Returns: boolean }
+      has_position: { Args: { p_code: string }; Returns: boolean }
       post_payroll_journal: {
         Args: { p_payroll_period_id: number }
         Returns: number
@@ -4209,6 +4518,14 @@ export type Database = {
       }
       refresh_finance_views: { Args: never; Returns: undefined }
       release_table: { Args: { p_table_id: number }; Returns: undefined }
+      revoke_permission: {
+        Args: {
+          p_branch_id: number
+          p_permission_key: string
+          p_target_user: string
+        }
+        Returns: number
+      }
       route_order_to_kds: { Args: { p_order_id: number }; Returns: undefined }
       save_item_modifiers: {
         Args: { p_item_id: number; p_modifiers: Json }
@@ -4235,7 +4552,6 @@ export type Database = {
         Args: { p_branch_id: number; p_kind?: string }
         Returns: undefined
       }
-      set_headquarters: { Args: { p_branch_id: number }; Returns: undefined }
       stock_transfer_confirm_receive: {
         Args: { p_transfer_id: number }
         Returns: Json
@@ -4250,7 +4566,6 @@ export type Database = {
           branch_kind: string
           id: number
           is_active: boolean
-          is_headquarters: boolean
           name: string
         }[]
       }
@@ -4265,6 +4580,12 @@ export type Database = {
       sync_insurance_base: {
         Args: { p_employee_id: number }
         Returns: undefined
+      }
+      sync_missing_permissions_from_template: {
+        Args: never
+        Returns: {
+          rows_added: number
+        }[]
       }
       toggle_category_active: { Args: { p_id: number }; Returns: boolean }
       toggle_item_active: { Args: { p_id: number }; Returns: boolean }
@@ -4312,17 +4633,7 @@ export type Database = {
       }
     }
     Enums: {
-      staff_role:
-        | "owner"
-        | "super_manager"
-        | "area_manager"
-        | "branch_manager"
-        | "cashier"
-        | "waiter"
-        | "chef"
-        | "office"
-        | "warehouse_manager"
-        | "production_manager"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4449,19 +4760,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      staff_role: [
-        "owner",
-        "super_manager",
-        "area_manager",
-        "branch_manager",
-        "cashier",
-        "waiter",
-        "chef",
-        "office",
-        "warehouse_manager",
-        "production_manager",
-      ],
-    },
+    Enums: {},
   },
 } as const

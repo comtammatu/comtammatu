@@ -1,4 +1,4 @@
-export type SiteKind = "warehouse" | "central_kitchen" | "branch";
+export type SiteKind = "central_warehouse" | "central_kitchen" | "branch";
 
 export type ModuleLabelKey =
   | "dashboard"
@@ -17,7 +17,6 @@ export type ModuleLabelKey =
   | "employee";
 
 type SiteLike = {
-  is_headquarters?: boolean | null;
   branch_kind?: string | null;
 };
 
@@ -65,13 +64,13 @@ export const APP_COPY_VI = {
 } as const;
 
 export const SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
-  warehouse: "Kho tổng",
+  central_warehouse: "Kho tổng",
   central_kitchen: "Bếp trung tâm",
   branch: "Chi nhánh",
 };
 
 export const INVENTORY_SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
-  warehouse: "Kho tổng",
+  central_warehouse: "Kho tổng",
   central_kitchen: "Bếp trung tâm",
   branch: "Kho chi nhánh",
 };
@@ -82,8 +81,8 @@ export const ACTIVE_STATE_LABELS_VI = {
 } as const;
 
 export function resolveSiteKind(site: SiteLike): SiteKind {
-  if (site.branch_kind === "warehouse" || site.is_headquarters === true) {
-    return "warehouse";
+  if (site.branch_kind === "central_warehouse") {
+    return "central_warehouse";
   }
   if (site.branch_kind === "central_kitchen") {
     return "central_kitchen";

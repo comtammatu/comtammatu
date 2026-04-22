@@ -130,12 +130,14 @@ export default async function EmployeePage() {
   if (branchId) {
     const { data } = await supabase
       .from("branches")
-      .select("name, is_headquarters")
+      .select("name, branch_kind")
       .eq("id", branchId)
       .eq("tenant_id", claims.tenant_id)
       .maybeSingle();
     branchName = data?.name ?? null;
-    branchIsHq = data?.is_headquarters === true;
+    branchIsHq =
+      data?.branch_kind === "central_warehouse" ||
+      data?.branch_kind === "central_kitchen";
   }
 
   const posHref = branchId ? `/br/${branchId}/pos` : "/employee";

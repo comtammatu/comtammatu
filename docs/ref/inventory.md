@@ -1,7 +1,7 @@
 # Kho Hàng — Inventory Management
 
 > Áp dụng: Cơm Tấm Má Tư CTCP — quản lý kho nguyên liệu và thành phẩm F&B  
-> Phạm vi: M5 Stock + M5-Ext — **Kho Trụ sở (nhập NCC) + Bếp trung tâm sản xuất thành phẩm + luân chuyển nội bộ + GRN + 3-way matching + stocktake + báo cáo**
+> Phạm vi: M5 Stock + M5-Ext — **Kho Tổng (nhập NCC) + Bếp trung tâm sản xuất thành phẩm + luân chuyển nội bộ + GRN + 3-way matching + stocktake + báo cáo**
 
 ---
 
@@ -22,7 +22,7 @@ Nếu một ý tưởng mới không rõ nằm ở lớp nào, mặc định coi
 | Nguyên liệu `ingredients` | Có — migration `20260406310000_stock.sql` | Thêm semantics rõ hơn cho hao hụt sơ chế | Không mở item master kiểu ERP nhiều lớp |
 | Tồn kho `stock_levels` | Có — `current_quantity`, `avg_unit_cost` | Giữ WAC nhất quán ở mọi readout quan trọng | Không chuyển sang FIFO engine |
 | Biến động `stock_movements` | Có — `adjustment`, `count_adjustment`, `consumption`, `grn_receipt`, `transfer_*`, `production_*` | Chuẩn hóa reason codes và report semantics | Không mở lot-first ledger / batch accounting |
-| Mô hình site | Có — `headquarters`, `branch`, `central_kitchen` | Hỗ trợ linh hoạt `HQ -> Bếp trung tâm`, `HQ -> Kho chi nhánh`, `Bếp trung tâm -> Kho chi nhánh`, và tiêu hao tại bếp chi nhánh | Không mở tree `company -> region -> branch -> sub-location` |
+| Mô hình site | Có — `central_warehouse`, `branch`, `central_kitchen` | Hỗ trợ linh hoạt `CW -> Bếp trung tâm`, `CW -> Kho chi nhánh`, `Bếp trung tâm -> Kho chi nhánh`, và tiêu hao tại bếp chi nhánh | Không mở tree `company -> region -> branch -> sub-location` |
 | PO / GRN / NCC | Có — bảng + RPC `confirm_grn` | Thêm `price variance` semantics v1 | Không mở PR workflow nhiều bước |
 | Luân chuyển nội bộ | Có — `stock_transfers` + workflow | Củng cố short-receipt / discrepancy semantics | Không mở full logistics module |
 | HĐ NCC + 3-way matching | Có — `supplier_invoices` + matching logic | Thêm `payment_terms`, `due_date`, `payment_status`, `AP aging` | Không mở payment proposal engine |
@@ -47,17 +47,17 @@ Những thứ dưới đây **không phải mục tiêu của Inventory v1/pilot
 
 **Nguyên tắc vận hành:**
 
-- **Kho Trụ sở / HQ (`branch_kind = headquarters`):** là **điểm nhập duy nhất** từ nhà cung cấp ngoài. Mọi **PO**, **GRN**, cập nhật **giá vốn (WAC)** và **3-way matching** với **hóa đơn đầu vào** đều gắn với kho này.
-- **Bếp trung tâm (`branch_kind = central_kitchen`):** nhận **nguyên liệu** từ HQ, chạy **lệnh sản xuất**, trừ nguyên liệu theo BOM, và nhập **thành phẩm** vào tồn riêng của bếp.
+- **Kho Tổng / CW (`branch_kind = 'central_warehouse'`):** là **điểm nhập** từ nhà cung cấp ngoài (có thể multi-instance). Mọi **PO**, **GRN**, cập nhật **giá vốn (WAC)** và **3-way matching** với **hóa đơn đầu vào** đều gắn với các kho này.
+- **Bếp Trung Tâm / CK (`branch_kind = 'central_kitchen'`):** nhận **nguyên liệu** từ CW, chạy **lệnh sản xuất**, trừ nguyên liệu theo BOM, và nhập **thành phẩm** vào tồn riêng của bếp (có thể multi-instance).
 - **Chi nhánh vận hành (`branch_kind = branch`):** không tạo PO/GRN với NCC trong pilot. Mỗi chi nhánh hiện được vận hành theo hai điểm nội bộ: **Kho chi nhánh** (điểm nhận / giữ tồn) và **Bếp chi nhánh** (điểm tiêu hao cuối cùng cho bán hàng). Hai điểm này vẫn cùng nằm trong một site `branch`, chưa tách thành node schema riêng. Vì vậy bước **Kho chi nhánh -> Bếp chi nhánh** hiện được chuẩn hóa bằng **`stock_issue(issue_type = kitchen_use)`**, chưa phải location ledger riêng.
-- **Phiếu luân chuyển nội bộ giữa site thật:** dùng state machine `draft -> confirmed_ship -> in_transit -> confirmed_receive -> received`. Engine áp dụng cho các hướng hợp lệ trong pilot: **HQ -> Bếp trung tâm**, **HQ -> Kho chi nhánh**, **Bếp trung tâm -> Kho chi nhánh**. Riêng bước **Kho chi nhánh -> Bếp chi nhánh** được ghi nhận như **phiếu cấp phát nội bộ** trong cùng site chi nhánh.
+- **Phiếu luân chuyển nội bộ giữa site thật:** dùng state machine `draft -> confirmed_ship -> in_transit -> confirmed_receive -> received`. Engine áp dụng cho các hướng hợp lệ trong pilot: **CW → CK**, **CW → Branch**, **CK → Branch**. Riêng bước **Kho chi nhánh -> Bếp chi nhánh** được ghi nhận như **phiếu cấp phát nội bộ** trong cùng site chi nhánh. Transfer ngược (CK→CW, CW↔CW, CK↔CK, Branch→*) bị reject qua trigger.
 
 ```
-NCC → [PO] → [GRN] → Tồn kho HQ (nguyên liệu)
+NCC → [PO] → [GRN] → Tồn kho Kho Tổng (nguyên liệu)
                           │
              ┌────────────┴────────────┐
              ▼                         ▼
-[HQ → Bếp trung tâm]          [HQ → Kho chi nhánh]
+[CW → Bếp trung tâm]          [CW → Kho chi nhánh]
              │                         │
              ▼                         ▼
  Tồn nguyên liệu Bếp trung tâm     Tồn kho chi nhánh
@@ -90,7 +90,7 @@ kitchen_use)`.
 
 | Bước                           | Trạng thái (DB)     | Việc làm                                                                                       |
 | ------------------------------ | ------------------- | ---------------------------------------------------------------------------------------------- |
-| Tạo phiếu                      | `draft`             | Chọn kho **gửi** / **nhận** (ví dụ `HQ -> Bếp trung tâm`, `HQ -> Kho chi nhánh`, `Bếp trung tâm -> Kho chi nhánh`), liệt kê mặt hàng và SL |
+| Tạo phiếu                      | `draft`             | Chọn kho **gửi** / **nhận** (ví dụ `CW -> Bếp trung tâm`, `CW -> Kho chi nhánh`, `Bếp trung tâm -> Kho chi nhánh`), liệt kê mặt hàng và SL |
 | Xác nhận xuất tại kho gửi      | `confirmed_ship`    | Trừ tồn tại `from_branch_id` (`transfer_out`), snapshot WAC vào dòng phiếu                     |
 | Đang vận chuyển                | `in_transit`        | Theo dõi (biển số / ghi chú — tùy pha UI)                                                      |
 | Bắt đầu kiểm nhận tại kho nhận | `confirmed_receive` | Kho nhận mở kiểm đếm (`receive_started_at`); chưa cộng tồn                                     |
@@ -104,7 +104,7 @@ Trạng thái `cancelled` khi hủy phiếu (theo quyền); không ghi nhận t�
 
 | Loại phiếu                  | Mô tả                                            | `stock_movements.type` |
 | --------------------------- | ------------------------------------------------ | ---------------------- |
-| **Nhập từ NCC (GRN)**       | Chỉ tại Trụ sở                                   | `grn_receipt`          |
+| **Nhập từ NCC (GRN)**       | Tại Kho Tổng hoặc Bếp Trung Tâm                  | `grn_receipt`          |
 | **Xuất luân chuyển**        | Trừ kho gửi (`from_branch_id`) khi xác nhận xuất | `transfer_out`         |
 | **Nhận luân chuyển**        | Cộng kho nhận (`to_branch_id`) khi hoàn tất nhận | `transfer_in`          |
 | **Tiêu hao sản xuất**       | Trừ nguyên liệu tại bếp trung tâm khi confirm production | `production_consumption` |
@@ -139,9 +139,9 @@ Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients`
 
 ### 2.3 Tồn kho theo chi nhánh — bảng `stock_levels`
 
-- **Khóa:** `(tenant_id, branch_id, ingredient_id)` — mỗi chi nhánh (gồm Trụ sở) một dòng tồn.
+- **Khóa:** `(tenant_id, branch_id, ingredient_id)` — mỗi site (Kho Tổng, Bếp Trung Tâm, chi nhánh) một dòng tồn.
 - **`current_quantity`:** tồn thực (đơn vị cơ sở) — tên cột trong DB.
-- **`avg_unit_cost`:** giá bình quân gia quyền (WAC) tại kho đó, cập nhật khi **GRN** (HQ) và có thể dùng làm **đơn giá xuất nội bộ** khi HQ hoặc bếp trung tâm chuyển về kho chi nhánh (policy mặc định: WAC tại thời điểm xuất).
+- **`avg_unit_cost`:** giá bình quân gia quyền (WAC) tại kho đó, cập nhật khi **GRN** (tại CW hoặc CK) và có thể dùng làm **đơn giá xuất nội bộ** khi CW hoặc bếp trung tâm chuyển về kho chi nhánh (policy mặc định: WAC tại thời điểm xuất).
 
 ---
 
@@ -223,34 +223,34 @@ Ngoài phạm vi v1:
 Khi order → `completed`:
 
 1. `order_items` × `recipes` × số lượng món → tổng nguyên liệu theo `branch_id` của order.
-2. Trừ `stock_levels.current_quantity` tại site `branch` tương ứng; về mặt vận hành đây là bước **Kho chi nhánh -> Bếp chi nhánh -> bán hàng**, nhưng hiện vẫn hạch toán trong cùng branch/site. Nếu cần ghi nhận một bước cấp phát nội bộ rõ ràng trước bán hàng, dùng `stock_issue(issue_type = kitchen_use)`.
+2. Trừ `stock_levels.current_quantity` tại site `branch` tương ứng; về mặt vận hành đây là bước **Kho chi nhánh -> Bếp chi nhánh -> bán hàng**, nhưng hiện vẫn hạch toán trong cùng branch/site. `stock_issue(issue_type = kitchen_use)` chỉ có giá trị khi `branch_kind = 'branch'` (không ở CW/CK).
 3. Cảnh báo nếu dưới `min_stock_level` (logic app / báo cáo).
 
 > Thực hiện trong **Postgres RPC** (ví dụ gọi từ `transition_order_status` khi `served` → `completed`).
 
 ---
 
-## 5. Nhập kho — GRN (chỉ Trụ sở)
+## 5. Nhập kho — GRN (tại Kho Tổng hoặc Bếp Trung Tâm)
 
-### 5.1 Quy trình (SOP Trụ sở)
+### 5.1 Quy trình (SOP CW/CK)
 
 1. Thiết lập **NCC**, điều khoản thanh toán.
-2. Tạo **PO** gắn **branch_id = Trụ sở** (kiểm tra `is_headquarters`).
+2. Tạo **PO** gắn **branch_id** = Kho Tổng hoặc Bếp Trung Tâm nào sẽ nhập.
 3. NCC giao hàng → kiểm đếm, QC.
-4. Lập **GRN** (số thực nhận, đơn giá, lô/HSD nếu có) → **xác nhận GRN** (RPC) → cập nhật tồn HQ + **WAC**.
+4. Lập **GRN** (số thực nhận, đơn giá, lô/HSD nếu có) → **xác nhận GRN** (RPC) → cập nhật tồn CW/CK + **WAC**.
 5. Nhận **HĐ từ NCC** → nhập **supplier_invoice** → **3-way matching** với PO & GRN (§7).
 
-**Nguyên tắc:** Food cost nhập mua theo **GRN** (thực nhận), không theo số đặt PO.
+**Nguyên tắc:** Food cost nhập mua theo **GRN** (thực nhận), không theo số đặt PO. GRN chỉ được tạo tại site có `branch_kind IN ('central_warehouse', 'central_kitchen')`.
 
 ### 5.2 Schema tham chiếu — `goods_received_notes` / `grn_items`
 
-Như đã mô tả trong các phiên bản trước của tài liệu; **`branch_id` trên GRN luôn là chi nhánh Trụ sở**. Không tạo GRN cho chi nhánh vận hành từ NCC.
+**`branch_id` trên GRN phải là site có `branch_kind = 'central_warehouse'` hoặc `branch_kind = 'central_kitchen'`**. Không tạo GRN cho chi nhánh vận hành từ NCC.
 
 ---
 
 ## 6. Phương pháp tính giá xuất kho
 
-- **v1 (đang hướng tới):** **Giá bình quân gia quyền (WAC)** trên từng `stock_levels`, cập nhật khi **xác nhận GRN** tại Trụ sở.
+- **v1 (đang hướng tới):** **Giá bình quân gia quyền (WAC)** trên từng `stock_levels`, cập nhật khi **xác nhận GRN** tại Kho Tổng hoặc Bếp Trung Tâm.
 - **FIFO / FEFO theo lô:** hướng mở rộng sau (cần bảng lô/batch); phần mở đầu §6 cũ nhắc FIFO như **nguyên tắc thực phẩm**, không mâu thuẫn nếu ghi rõ **hệ thống v1 dùng WAC**.
 
 Công thức WAC sau mỗi dòng nhập (đơn giản hóa):
@@ -288,7 +288,7 @@ Trong pilot:
 
 ## 7. 3-Way Matching (PO ↔ GRN ↔ Supplier Invoice)
 
-Áp dụng cho **hàng mua về Trụ sở** (đầu vào VAT). Điều kiện thanh toán / kê khai: tham chiếu [einvoice-tax.md](einvoice-tax.md) §4.
+Áp dụng cho **hàng mua về Kho Tổng hoặc Bếp Trung Tâm** (đầu vào VAT). Điều kiện thanh toán / kê khai: tham chiếu [einvoice-tax.md](einvoice-tax.md) §4.
 
 | Bước     | Kiểm tra         | Dung sai gợi ý       |
 | -------- | ---------------- | -------------------- |
@@ -396,6 +396,8 @@ Cột `grn_items.receiving_temperature` (`NUMERIC(5,1)`, nullable) — chỉ hi�
 - **AP aging:** nhóm `supplier_invoices` chưa `paid` theo bucket `current / 1-30 / 31-60 / 61-90 / >90 ngày`.
 - **Consumption variance:** so sánh tiêu hao lý thuyết từ recipe với điều chỉnh/kiểm kê thực tế để tìm site lệch lớn.
 
+> **Multi-CW consumption proxy:** `fetchPoSuggestions` scope tồn kho theo một Kho Tổng (CW) được chọn, nhưng consumption vẫn lấy tenant-wide từ `stock_movements` (type=`consumption`) toàn bộ chi nhánh. Đây là proxy gần đúng cho tới khi có mapping `branch → primary_warehouse_id` (chưa build, defer). Với hai CW song song, `avg_daily_consumption` nên coi như upper-bound hint cho mỗi CW, không phải nhu cầu chính xác theo kho.
+
 ---
 
 ## 11. Quyền truy cập (ACL) — hướng dẫn
@@ -405,7 +407,7 @@ Business-action matrix chi tiết cho Inventory xem ở [inventory-rbac-matrix.m
 
 Tóm tắt pilot hiện tại:
 
-- `super_manager`: role chính cho procurement, HQ, bếp trung tâm, production.
+- `super_manager`: role chính cho procurement, Kho Tổng, bếp trung tâm, production.
 - `area_manager`: vai trò giám sát inventory tenant-wide tạm thời; không vào procurement.
 - `branch_manager`: vận hành tồn kho, nhận transfer, stocktake, và điều phối tồn giữa kho chi nhánh / bếp chi nhánh trong site của mình; không vào procurement.
 - `owner`: xem qua `reports` / `finance`, không coi là operator Inventory hằng ngày.

@@ -6,15 +6,18 @@ import { fetchDailyRevenue, fetchTaxInvoices, fetchTopItems } from "./actions";
 export default async function FinancePage() {
   const supabase = await createClient();
 
-  // Fetch the headquarters branch to use as default scope for revenue queries.
-  // owner/super_manager have branch_id=null in JWT, so we resolve HQ here.
-  const { data: hqBranch } = await supabase
+  // Finance defaults to the first active operational branch (POS produces revenue).
+  // owner/super_manager have branch_id=null in JWT, so we resolve a default here.
+  const { data: defaultBranch } = await supabase
     .from("branches")
     .select("id, name")
-    .eq("is_headquarters", true)
+    .eq("branch_kind", "branch")
+    .eq("is_active", true)
+    .order("id")
+    .limit(1)
     .maybeSingle();
 
-  const branchId = hqBranch?.id ?? 0;
+  const branchId = defaultBranch?.id ?? 0;
 
   // Compute 30-day date range
   const endDate = new Date().toISOString().slice(0, 10); // YYYY-MM-DD

@@ -38,7 +38,6 @@ import type { IngredientRow } from "../page";
 export interface BranchForTransfer {
   id: number;
   name: string;
-  is_headquarters: boolean;
   branch_kind?: string | null;
   is_active: boolean;
 }
@@ -95,7 +94,7 @@ export function CreateTransferDialog({
   const [isPending, startTransition] = useTransition();
 
   const isProcurementBranch = (b: BranchForTransfer) =>
-    b.branch_kind === "warehouse" || b.branch_kind === "central_kitchen";
+    b.branch_kind === "central_warehouse" || b.branch_kind === "central_kitchen";
   const operational = branches.filter((b) => !isProcurementBranch(b));
   const canBranchToBranch = operational.length >= 2;
   const canInternalTransfer = userBranchId != null && locations.length >= 2;

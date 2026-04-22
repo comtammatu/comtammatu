@@ -83,8 +83,8 @@ function mapRpcError(msg: string): string {
     return "Vai trò vận hành phải thuộc một chi nhánh";
   if (msg.includes("branch_id does not belong"))
     return "Chi nhánh không hợp lệ";
-  if (msg.includes("operational roles cannot be assigned to headquarters"))
-    return "Chi nhánh trụ sở (HQ) không có POS/KDS — không gán vai trò vận hành tại đây";
+  if (msg.includes("operational roles cannot be assigned to central_warehouse"))
+    return "Kho tổng / bếp trung tâm không có POS/KDS — không gán vai trò vận hành tại đây";
   if (msg.includes("insufficient privileges"))
     return "Không có quyền quản lý nhân viên";
   return "Không thể cập nhật. Vui lòng thử lại.";
@@ -146,15 +146,18 @@ export async function createStaff(
   if (OPS_ROLES.includes(role) && branch_id) {
     const { data: br } = await supabase
       .from("branches")
-      .select("is_headquarters")
+      .select("branch_kind")
       .eq("id", branch_id)
       .eq("tenant_id", claims.tenant_id)
       .maybeSingle();
-    if (br?.is_headquarters === true) {
+    if (
+      br?.branch_kind === "central_warehouse" ||
+      br?.branch_kind === "central_kitchen"
+    ) {
       return {
         success: false,
         error:
-          "Chi nhánh trụ sở (HQ) không có POS/KDS — không gán vai trò vận hành tại đây",
+          "Kho tổng / bếp trung tâm không có POS/KDS — không gán vai trò vận hành tại đây",
       };
     }
   }

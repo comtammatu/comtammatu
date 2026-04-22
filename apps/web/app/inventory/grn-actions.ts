@@ -162,7 +162,7 @@ export async function fetchGrnDetail(grnId: number): Promise<ActionResult> {
   const { data: grn, error: e1 } = await supabase
     .from("goods_received_notes")
     .select(
-      "*, branches ( id, name, is_headquarters ), suppliers ( id, name ), purchase_orders ( id, po_number )",
+      "*, branches ( id, name, branch_kind ), suppliers ( id, name ), purchase_orders ( id, po_number )",
     )
     .eq("id", id.data)
     .eq("tenant_id", claims.tenant_id)
