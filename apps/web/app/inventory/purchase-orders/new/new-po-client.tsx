@@ -71,15 +71,27 @@ interface LocalLine {
   unitPriceEst: number | null;
 }
 
+export interface ProcurementBranchOption {
+  id: number;
+  name: string;
+  branch_kind: string;
+}
+
 export function NewPoClient({
   suppliers,
   ingredients,
   initialSuggestions,
+  procurementBranches,
+  initialBranchId,
+  canSwitchBranch,
   poBasePath = "/inventory/purchase-orders",
 }: {
   suppliers: SupplierRow[];
   ingredients: IngredientRow[];
   initialSuggestions: PoSuggestionRow[];
+  procurementBranches: ProcurementBranchOption[];
+  initialBranchId: number | null;
+  canSwitchBranch: boolean;
   poBasePath?: string;
 }) {
   const router = useRouter();
@@ -90,7 +102,8 @@ export function NewPoClient({
   const [lines, setLines] = useState<LocalLine[]>([]);
   const [isPending, startTransition] = useTransition();
 
-  // Suggestions state
+  // Suggestions state — scoped to a selected procurement branch (CW or CK).
+  const [branchId, setBranchId] = useState<number | null>(initialBranchId);
   const [suggestions, setSuggestions] =
     useState<PoSuggestionRow[]>(initialSuggestions);
   const [periodDays, setPeriodDays] = useState<7 | 14 | 30>(7);
@@ -135,15 +148,37 @@ export function NewPoClient({
     });
   }
 
+  function refreshSuggestions(
+    nextBranchId: number | null,
+    nextPeriod: 7 | 14 | 30,
+  ) {
+    if (!nextBranchId) {
+      setSuggestions([]);
+      return;
+    }
+    startSuggestionsTransition(async () => {
+      const res = await fetchPoSuggestions({
+        branchId: nextBranchId,
+        periodDays: nextPeriod,
+      });
+      if (res.success) {
+        setSuggestions((res.data ?? []) as PoSuggestionRow[]);
+      } else {
+        toast.error(res.error ?? "Không thể tải gợi ý.");
+      }
+    });
+  }
+
   function handlePeriodChange(val: string) {
     const days = Number(val) as 7 | 14 | 30;
     setPeriodDays(days);
-    startSuggestionsTransition(async () => {
-      const res = await fetchPoSuggestions({ periodDays: days });
-      if (res.success) {
-        setSuggestions((res.data ?? []) as PoSuggestionRow[]);
-      }
-    });
+    refreshSuggestions(branchId, days);
+  }
+
+  function handleBranchChange(val: string) {
+    const nextId = Number(val) || null;
+    setBranchId(nextId);
+    refreshSuggestions(nextId, periodDays);
   }
 
   function addSuggestionToLines(s: PoSuggestionRow) {
@@ -302,6 +337,10 @@ export function NewPoClient({
             onAddSuggestion={addSuggestionToLines}
             onAddAll={addAllSuggestions}
             isMobile={isMobile}
+            procurementBranches={procurementBranches}
+            branchId={branchId}
+            onBranchChange={handleBranchChange}
+            canSwitchBranch={canSwitchBranch}
           />
 
           {/* Line items */}
@@ -429,6 +468,10 @@ function SuggestionsPanel({
   onAddSuggestion,
   onAddAll,
   isMobile,
+  procurementBranches,
+  branchId,
+  onBranchChange,
+  canSwitchBranch,
 }: {
   suggestions: PoSuggestionRow[];
   suggestionsOpen: boolean;
@@ -441,7 +484,15 @@ function SuggestionsPanel({
   onAddSuggestion: (s: PoSuggestionRow) => void;
   onAddAll: () => void;
   isMobile: boolean;
+  procurementBranches: ProcurementBranchOption[];
+  branchId: number | null;
+  onBranchChange: (val: string) => void;
+  canSwitchBranch: boolean;
 }) {
+  const branchLabel =
+    procurementBranches.find((b) => b.id === branchId)?.name ?? "Chưa chọn";
+  const showBranchSwitcher =
+    canSwitchBranch && procurementBranches.length > 1;
   return (
     <Card className="rounded-lg border-info/20 bg-info/5">
       <CardContent className="pt-6">
@@ -468,9 +519,31 @@ function SuggestionsPanel({
 
             <CollapsibleContent>
               <div className="border-t border-info/20 px-4 pb-4 pt-3 md:px-5">
-                {/* Period selector + bulk action */}
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
+                {/* Branch + period selector + bulk action */}
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Kho</span>
+                    {showBranchSwitcher ? (
+                      <Select
+                        value={branchId ? String(branchId) : ""}
+                        onValueChange={onBranchChange}
+                        disabled={isLoading}
+                      >
+                        <SelectTrigger className="h-7 w-40 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {procurementBranches.map((b) => (
+                            <SelectItem key={b.id} value={String(b.id)}>
+                              {b.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="text-xs font-medium">{branchLabel}</span>
+                    )}
+                    <span className="text-xs text-muted-foreground">·</span>
                     <span className="text-xs text-muted-foreground">
                       Tiêu thụ trung bình
                     </span>

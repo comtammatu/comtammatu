@@ -396,6 +396,8 @@ Cột `grn_items.receiving_temperature` (`NUMERIC(5,1)`, nullable) — chỉ hi�
 - **AP aging:** nhóm `supplier_invoices` chưa `paid` theo bucket `current / 1-30 / 31-60 / 61-90 / >90 ngày`.
 - **Consumption variance:** so sánh tiêu hao lý thuyết từ recipe với điều chỉnh/kiểm kê thực tế để tìm site lệch lớn.
 
+> **Multi-CW consumption proxy:** `fetchPoSuggestions` scope tồn kho theo một Kho Tổng (CW) được chọn, nhưng consumption vẫn lấy tenant-wide từ `stock_movements` (type=`consumption`) toàn bộ chi nhánh. Đây là proxy gần đúng cho tới khi có mapping `branch → primary_warehouse_id` (chưa build, defer). Với hai CW song song, `avg_daily_consumption` nên coi như upper-bound hint cho mỗi CW, không phải nhu cầu chính xác theo kho.
+
 ---
 
 ## 11. Quyền truy cập (ACL) — hướng dẫn
