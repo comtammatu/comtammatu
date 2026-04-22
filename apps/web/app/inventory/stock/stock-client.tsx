@@ -23,6 +23,7 @@ import { cn } from "@comtammatu/ui";
 import { InventoryHeader } from "../_components/inventory-header";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { formatQty, formatVND } from "../_lib/format";
+import { CATEGORY_TONE_CLASS } from "../_lib/constants";
 import {
   getInventoryStatusBadgeVariant,
   getInventoryStatusLabel,
@@ -46,16 +47,6 @@ export type StockIngredient = {
 };
 
 type StockFilter = "all" | "in_stock" | "low" | "out";
-
-const categoryClasses: Record<string, string> = {
-  Thịt: "bg-destructive/10 text-destructive",
-  Gạo: "bg-primary/10 text-primary",
-  "Gia vị": "bg-success/10 text-success",
-  "Rau củ": "bg-success/10 text-success",
-  Trứng: "bg-primary/10 text-primary",
-  "Chế biến": "bg-muted text-muted-foreground",
-  Dầu: "bg-muted text-muted-foreground",
-};
 
 const stockFilterOptions: { value: StockFilter; label: string }[] = [
   { value: "all", label: "Tất cả" },
@@ -220,7 +211,7 @@ export function StockClient({
                           <p className="font-semibold">{item.name}</p>
                           <Badge
                             className={
-                              categoryClasses[item.category] ??
+                              CATEGORY_TONE_CLASS[item.category] ??
                               "bg-muted text-muted-foreground"
                             }
                           >

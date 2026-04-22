@@ -4,11 +4,25 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 import { PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { withAction } from "../_lib/with-action";
+import { withAction } from "@/_lib/with-action";
 import { getAuthContext } from "./_lib/auth";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
 
 const ROLES = PROCUREMENT_ROLES;
+
+function isBranchScopedProcurementRole(role: string) {
+  return role === "warehouse_manager" || role === "production_manager";
+}
+
+function canAccessProcurementBranch(
+  claims: { user_role: string; branch_id: number | null },
+  branchId: number,
+) {
+  return (
+    !isBranchScopedProcurementRole(claims.user_role) ||
+    claims.branch_id === branchId
+  );
+}
 
 /* ─── fetchPurchaseOrders ─── */
 
@@ -40,6 +54,10 @@ export const createPurchaseOrder = withAction(
   async (data, { supabase, claims, user }) => {
     let targetBranchId = data.branchId;
 
+    if (!targetBranchId && isBranchScopedProcurementRole(claims.user_role)) {
+      targetBranchId = claims.branch_id ?? undefined;
+    }
+
     if (!targetBranchId) {
       // Fallback: first procurement branch (backward compat)
       const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
@@ -50,12 +68,8 @@ export const createPurchaseOrder = withAction(
       return { success: false, error: "Chưa cấu hình kho tổng hoặc bếp trung tâm." };
     }
 
-    // Branch-scoped roles: must match their assigned branch
-    if (
-      (claims.user_role === "warehouse_manager" || claims.user_role === "production_manager") &&
-      claims.branch_id != null &&
-      claims.branch_id !== targetBranchId
-    ) {
+    // Branch-scoped roles must match their assigned procurement branch.
+    if (!canAccessProcurementBranch(claims, targetBranchId)) {
       return { success: false, error: "Bạn chỉ được tạo PO cho kho của mình." };
     }
 
@@ -124,7 +138,7 @@ export const upsertPurchaseOrderLine = withAction(
   async (data, { supabase, claims }) => {
     const { data: po, error: pe } = await supabase
       .from("purchase_orders")
-      .select("id, status")
+      .select("id, status, branch_id")
       .eq("id", data.poId)
       .eq("tenant_id", claims.tenant_id)
       .single();
@@ -137,6 +151,10 @@ export const upsertPurchaseOrderLine = withAction(
         error: "Chỉ chỉnh sửa dòng khi PO đang ở trạng thái nháp.",
       };
     }
+    if (!canAccessProcurementBranch(claims, po.branch_id)) {
+      return { success: false, error: "Bạn chỉ được chỉnh sửa PO của kho mình." };
+    }
+
     const unitPrice = data.unitPriceEst ?? null;
     const lineTotal =
       unitPrice != null
@@ -173,7 +191,7 @@ export const deletePurchaseOrderLine = withAction(
   async (data, { supabase, claims }) => {
     const { data: po, error: pe } = await supabase
       .from("purchase_orders")
-      .select("id, status")
+      .select("id, status, branch_id")
       .eq("id", data.poId)
       .eq("tenant_id", claims.tenant_id)
       .single();
@@ -186,6 +204,10 @@ export const deletePurchaseOrderLine = withAction(
         error: "Chỉ xóa dòng khi PO đang ở trạng thái nháp.",
       };
     }
+    if (!canAccessProcurementBranch(claims, po.branch_id)) {
+      return { success: false, error: "Bạn chỉ được chỉnh sửa PO của kho mình." };
+    }
+
     const { error } = await supabase
       .from("purchase_order_items")
       .delete()
@@ -223,7 +245,7 @@ export async function updatePurchaseOrderStatus(
   const { supabase, claims } = ctx;
   const { data: po, error: pe } = await supabase
     .from("purchase_orders")
-    .select("id, status")
+    .select("id, status, branch_id")
     .eq("id", parsed.data.poId)
     .eq("tenant_id", claims.tenant_id)
     .single();
@@ -234,6 +256,10 @@ export async function updatePurchaseOrderStatus(
       error: "Chỉ gửi/hủy PO đang ở trạng thái nháp.",
     };
   }
+  if (!canAccessProcurementBranch(claims, po.branch_id)) {
+    return { success: false, error: "Bạn chỉ được cập nhật PO của kho mình." };
+  }
+
   const { error } = await supabase
     .from("purchase_orders")
     .update({ status: parsed.data.status })

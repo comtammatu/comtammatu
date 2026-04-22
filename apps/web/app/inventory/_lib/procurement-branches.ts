@@ -1,6 +1,4 @@
-import type { Database, SupabaseClient } from "@comtammatu/database";
-
-type TenantSupabase = SupabaseClient<Database>;
+import type { TenantSupabase } from "./types";
 
 export type InventorySiteKind = "warehouse" | "central_kitchen" | "branch";
 

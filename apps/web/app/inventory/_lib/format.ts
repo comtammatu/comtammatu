@@ -2,6 +2,14 @@ export function formatVND(n: number): string {
   return n.toLocaleString("vi-VN");
 }
 
+export function parseOptionalNumber(
+  value: string | undefined,
+): number | undefined {
+  if (!value) return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 export function formatQty(n: number): string {
   return n % 1 === 0
     ? n.toLocaleString("vi-VN")

@@ -5,6 +5,7 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
+import { PG_ERR } from "./_lib/constants";
 
 const PRODUCTION_ROLES: readonly StaffRole[] = ["super_manager"];
 
@@ -371,16 +372,16 @@ export const createProductionOrder = withAction(
     });
 
     if (error) {
-      if (error.code === "23505") {
+      if (error.code === PG_ERR.UNIQUE_VIOLATION) {
         return { success: false, error: "Số lệnh sản xuất đã tồn tại." };
       }
-      if (error.code === "23514" || error.code === "22023") {
+      if (error.code === PG_ERR.CHECK_VIOLATION || error.code === PG_ERR.INVALID_TEXT_REPRESENTATION) {
         return {
           success: false,
           error: "Bếp trung tâm hoặc thành phẩm chưa hợp lệ.",
         };
       }
-      if (error.code === "42501") {
+      if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
         return { success: false, error: "Không có quyền tạo lệnh sản xuất." };
       }
       return { success: false, error: "Không thể tạo lệnh sản xuất." };
@@ -554,15 +555,15 @@ export async function confirmProductionOrder(
   });
 
   if (error) {
-    if (error.code === "42501") {
+    if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
       return {
         success: false,
         error: "Không có quyền xác nhận lệnh sản xuất.",
       };
     }
     if (
-      error.code === "23514" ||
-      error.code === "22023" ||
+      error.code === PG_ERR.CHECK_VIOLATION ||
+      error.code === PG_ERR.INVALID_TEXT_REPRESENTATION ||
       error.code === "P0001"
     ) {
       if (error.message?.includes("production_recipe_missing")) {
@@ -598,7 +599,7 @@ export async function cancelProductionOrder(
   });
 
   if (error) {
-    if (error.code === "42501") {
+    if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
       return { success: false, error: "Không có quyền hủy lệnh sản xuất." };
     }
     return { success: false, error: "Không thể hủy lệnh sản xuất." };

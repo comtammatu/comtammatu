@@ -6,10 +6,9 @@ import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
-import type { Database, SupabaseClient } from "@comtammatu/database";
+import type { TenantSupabase } from "./_lib/types";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
-
-type TenantSupabase = SupabaseClient<Database>;
+import { PG_ERR } from "./_lib/constants";
 
 const ROLES = INVENTORY_OPS_ROLES;
 
@@ -204,10 +203,10 @@ export async function createStockTransfer(
   });
 
   if (error) {
-    if (error.code === "42501") {
+    if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
       return { success: false, error: "Không có quyền tạo phiếu chuyển." };
     }
-    if (error.code === "23514" || error.code === "22023") {
+    if (error.code === PG_ERR.CHECK_VIOLATION || error.code === PG_ERR.INVALID_TEXT_REPRESENTATION) {
       return {
         success: false,
         error: "Thông tin kho luân chuyển không hợp lệ.",

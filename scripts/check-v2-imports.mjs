@@ -1,51 +1,73 @@
-import { execSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 
-/**
- * Use grep (universally available in CI) instead of rg.
- * rg is faster locally but not installed on GitHub Actions runners.
- */
+function walkFiles(rootDir) {
+  const entries = [];
+  const stack = [rootDir];
+
+  while (stack.length > 0) {
+    const dir = stack.pop();
+    if (!dir) continue;
+
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === "node_modules" || entry.name === ".git") continue;
+
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(fullPath);
+      } else if (entry.isFile()) {
+        entries.push(fullPath);
+      }
+    }
+  }
+
+  return entries;
+}
+
+function toPosix(filePath) {
+  return filePath.split(path.sep).join("/");
+}
+
 const checks = [
   {
     description: "legacy admin-patterns imports",
-    command:
-      "grep -rn '@comtammatu/ui/components/admin-patterns' apps/web/app --exclude='empty-state-panel.tsx' --exclude='table-empty-state-row.tsx'",
+    rootDir: "apps/web/app",
+    exclude: [/empty-state-panel\.tsx$/, /table-empty-state-row\.tsx$/],
+    contentPattern: /@comtammatu\/ui\/components\/admin-patterns/,
   },
   {
     description: "legacy inventory-patterns imports",
-    command:
-      "grep -rn '@comtammatu/ui/components/inventory-patterns' apps/web/app",
+    rootDir: "apps/web/app",
+    exclude: [],
+    contentPattern: /@comtammatu\/ui\/components\/inventory-patterns/,
   },
-  // sidebar is now the proper shadcn component — no longer legacy
-  // {
-  //   description: "legacy sidebar imports in shipped routes",
-  //   command:
-  //     "grep -rn '@comtammatu/ui/components/sidebar' apps/web/app --exclude='inventory-sidebar.tsx' --exclude='inventory-header.tsx'",
-  // },
   {
     description: "legacy inventory helper imports in shipped routes",
-    command:
-      "grep -rn -E '_components/(section-card|empty-state-panel|action-icon-button)' apps/web/app/inventory --exclude-dir='_components'",
+    rootDir: "apps/web/app/inventory",
+    exclude: [/_components\//],
+    contentPattern: /_components\/(section-card|empty-state-panel|action-icon-button)/,
   },
 ];
 
 const failures = [];
 
 for (const check of checks) {
-  try {
-    execSync(check.command, {
-      stdio: "pipe",
-      cwd: process.cwd(),
-      encoding: "utf8",
-    });
-    // grep exit 0 = matches found = legacy import detected = failure
-    failures.push(check.description);
-  } catch (error) {
-    if (typeof error?.status === "number" && error.status === 1) {
-      // grep exit 1 = no matches found = OK
-      continue;
-    }
+  const files = walkFiles(check.rootDir);
+  let found = false;
 
-    throw error;
+  for (const filePath of files) {
+    const normalized = toPosix(filePath);
+    if (check.exclude.some((pattern) => pattern.test(normalized))) continue;
+
+    const content = fs.readFileSync(filePath, "utf8");
+    if (check.contentPattern.test(content)) {
+      found = true;
+      break;
+    }
+  }
+
+  if (found) {
+    failures.push(check.description);
   }
 }
 

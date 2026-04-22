@@ -28,12 +28,11 @@ import {
 import { InventoryHeader } from "../_components/inventory-header";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { formatVND } from "../_lib/format";
+import { CATEGORY_TONE_CLASS } from "../_lib/constants";
 import { fetchIngredients } from "../actions";
 import { IngredientDialog } from "./ingredient-dialog";
-import type { IngredientRow } from "./ingredient-dialog";
+import type { IngredientRow } from "../_lib/types";
 import { IngredientImportExportMenu } from "./import-export-menu";
-
-export type { IngredientRow };
 
 const categoryOptions = [
   { value: "all", label: "Tất cả loại" },
@@ -49,16 +48,6 @@ const preservationOptions = [
   { value: "frozen", label: "Đông" },
   { value: "ambient", label: "Khô" },
 ];
-
-const categoryToneClass: Record<string, string> = {
-  Thịt: "bg-destructive/10 text-destructive",
-  Gạo: "bg-primary/10 text-primary",
-  "Gia vị": "bg-warning/10 text-warning",
-  "Rau củ": "bg-success/10 text-success",
-  Trứng: "bg-primary/10 text-primary",
-  "Chế biến": "bg-info/10 text-info",
-  Dầu: "bg-muted text-muted-foreground",
-};
 
 function storageLabel(type: string | null): string {
   if (type === "refrigerated") return "0-4°C";
@@ -208,7 +197,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
 
               {filtered.map((item) => {
                 const categoryTone =
-                  categoryToneClass[item.category ?? ""] ??
+                  CATEGORY_TONE_CLASS[item.category ?? ""] ??
                   "bg-muted text-muted-foreground";
                 const isActive = item.is_active;
 

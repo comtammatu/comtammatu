@@ -21,12 +21,7 @@ import type {
   FinishedGoodOption,
   RawIngredientOption,
 } from "./production-types";
-
-const STORAGE_OPTIONS = [
-  { value: "ambient", label: "Thường" },
-  { value: "refrigerated", label: "Lạnh" },
-  { value: "frozen", label: "Đông lạnh" },
-] as const;
+import { STORAGE_OPTIONS } from "./_lib/constants";
 
 type StorageType = "ambient" | "refrigerated" | "frozen";
 

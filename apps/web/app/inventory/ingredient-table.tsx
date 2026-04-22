@@ -36,18 +36,8 @@ import {
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { IngredientFormDialog } from "./ingredient-form-dialog";
 import { TableEmptyStateRow } from "./_components/table-empty-state-row";
-import type { IngredientRow } from "./page";
-
-const STORAGE_LABELS: Record<string, string> = {
-  ambient: "Thường",
-  refrigerated: "Lạnh",
-  frozen: "Đông lạnh",
-};
-
-const ITEM_KIND_LABELS: Record<string, string> = {
-  raw_material: "Nguyên liệu",
-  finished_good: "Thành phẩm",
-};
+import type { IngredientRow } from "./_lib/types";
+import { STORAGE_LABELS, ITEM_KIND_LABELS } from "./_lib/constants";
 
 interface IngredientTableProps {
   ingredients: IngredientRow[];
@@ -55,6 +45,11 @@ interface IngredientTableProps {
   onIngredientUpdated: (ingredient: IngredientRow) => void;
   /** CRUD danh mục — chỉ Trụ sở (super_manager) */
   canManageCatalog: boolean;
+}
+
+function storageLabel(storageType: string | null) {
+  if (!storageType) return "—";
+  return STORAGE_LABELS[storageType] ?? storageType;
 }
 
 export function IngredientTable({
@@ -163,7 +158,7 @@ export function IngredientTable({
                         <> · {formatVND(ing.unit_cost)}</>
                       )}
                       {" · "}
-                      {STORAGE_LABELS[ing.storage_type] ?? ing.storage_type}
+                      {storageLabel(ing.storage_type)}
                     </ItemDescription>
                   </ItemContent>
                   {canManageCatalog && (
@@ -248,7 +243,7 @@ export function IngredientTable({
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">
-                        {STORAGE_LABELS[ing.storage_type] ?? ing.storage_type}
+                        {storageLabel(ing.storage_type)}
                       </Badge>
                     </TableCell>
                     {canManageCatalog && (

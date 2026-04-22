@@ -3,8 +3,9 @@
 import { z } from "zod";
 import { PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { withAction } from "../_lib/with-action";
+import { withAction } from "@/_lib/with-action";
 import { getAuthContext } from "./_lib/auth";
+import { PG_ERR } from "./_lib/constants";
 
 const ROLES = PROCUREMENT_ROLES;
 
@@ -46,7 +47,7 @@ export const createSupplier = withAction(
       .select("id")
       .single();
     if (error) {
-      if (error.code === "23505") {
+      if (error.code === PG_ERR.UNIQUE_VIOLATION) {
         return { success: false, error: "Tên NCC đã tồn tại." };
       }
       return { success: false, error: "Không thể tạo nhà cung cấp." };
@@ -87,7 +88,7 @@ export async function updateSupplier(
     .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id);
   if (error) {
-    if (error.code === "23505") {
+    if (error.code === PG_ERR.UNIQUE_VIOLATION) {
       return { success: false, error: "Tên NCC đã tồn tại." };
     }
     return { success: false, error: "Không thể cập nhật nhà cung cấp." };
@@ -107,7 +108,7 @@ export async function deleteSupplier(id: number): Promise<ActionResult> {
     .eq("id", parsedId.data)
     .eq("tenant_id", claims.tenant_id);
   if (error) {
-    if (error.code === "23503") {
+    if (error.code === PG_ERR.FK_VIOLATION) {
       return {
         success: false,
         error: "Không thể xóa — NCC đang được dùng trong đơn hàng.",

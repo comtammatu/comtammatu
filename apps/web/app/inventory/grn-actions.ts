@@ -6,11 +6,26 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { withAction } from "../_lib/with-action";
+import { withAction } from "@/_lib/with-action";
 import { getAuthContext } from "./_lib/auth";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
+import { PG_ERR } from "./_lib/constants";
 
 const ROLES = PROCUREMENT_ROLES;
+
+function isBranchScopedProcurementRole(role: string) {
+  return role === "warehouse_manager" || role === "production_manager";
+}
+
+function canAccessProcurementBranch(
+  claims: { user_role: string; branch_id: number | null },
+  branchId: number,
+) {
+  return (
+    !isBranchScopedProcurementRole(claims.user_role) ||
+    claims.branch_id === branchId
+  );
+}
 
 /* ─── Recent Activity (cross-domain) ─── */
 
@@ -178,6 +193,10 @@ export const createGrnDraft = withAction(
   async (data, { supabase, claims, user }) => {
     let targetBranchId = data.branchId;
 
+    if (!targetBranchId && isBranchScopedProcurementRole(claims.user_role)) {
+      targetBranchId = claims.branch_id ?? undefined;
+    }
+
     if (!targetBranchId) {
       const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
       targetBranchId = branches[0]?.id;
@@ -187,12 +206,8 @@ export const createGrnDraft = withAction(
       return { success: false, error: "Chưa cấu hình kho tổng hoặc bếp trung tâm." };
     }
 
-    // Branch-scoped roles: must match their assigned branch
-    if (
-      (claims.user_role === "warehouse_manager" || claims.user_role === "production_manager") &&
-      claims.branch_id != null &&
-      claims.branch_id !== targetBranchId
-    ) {
+    // Branch-scoped roles must match their assigned procurement branch.
+    if (!canAccessProcurementBranch(claims, targetBranchId)) {
       return { success: false, error: "Bạn chỉ được tạo phiếu nhập cho kho của mình." };
     }
 
@@ -237,6 +252,23 @@ const grnLineSchema = z.object({
 export const upsertGrnLine = withAction(
   { roles: ROLES, schema: grnLineSchema },
   async (data, { supabase, claims }) => {
+    const { data: grn, error: grnError } = await supabase
+      .from("goods_received_notes")
+      .select("id, status, branch_id")
+      .eq("id", data.grnId)
+      .eq("tenant_id", claims.tenant_id)
+      .single();
+
+    if (grnError || !grn) {
+      return { success: false, error: "Không tìm thấy phiếu nhập." };
+    }
+    if (grn.status !== "draft") {
+      return { success: false, error: "Chỉ chỉnh sửa dòng khi phiếu nhập đang ở trạng thái nháp." };
+    }
+    if (!canAccessProcurementBranch(claims, grn.branch_id)) {
+      return { success: false, error: "Bạn chỉ được chỉnh sửa phiếu nhập của kho mình." };
+    }
+
     const totalCost = data.receivedQuantity * data.unitCost;
     const { error } = await supabase.from("grn_items").upsert(
       {
@@ -404,6 +436,9 @@ export async function createGrnFromPo(poId: number): Promise<ActionResult> {
   }
 
   let targetBranchId: number | null = po.branch_id;
+  if (!targetBranchId && isBranchScopedProcurementRole(claims.user_role)) {
+    targetBranchId = claims.branch_id;
+  }
   if (!targetBranchId) {
     const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
     targetBranchId = branches[0]?.id ?? null;
@@ -411,12 +446,7 @@ export async function createGrnFromPo(poId: number): Promise<ActionResult> {
   if (!targetBranchId)
     return { success: false, error: "Chưa cấu hình kho tổng." };
 
-  if (
-    (claims.user_role === "warehouse_manager" ||
-      claims.user_role === "production_manager") &&
-    claims.branch_id != null &&
-    claims.branch_id !== targetBranchId
-  ) {
+  if (!canAccessProcurementBranch(claims, targetBranchId)) {
     return {
       success: false,
       error: "Bạn chỉ được nhận hàng cho kho của mình.",
@@ -594,7 +624,7 @@ export const createSupplierInvoice = withAction(
       .select("id")
       .single();
     if (error) {
-      if (error.code === "23505") {
+      if (error.code === PG_ERR.UNIQUE_VIOLATION) {
         return {
           success: false,
           error: "Số hóa đơn đã tồn tại cho NCC này.",

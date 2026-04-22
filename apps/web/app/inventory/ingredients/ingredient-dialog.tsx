@@ -17,25 +17,12 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { NumberField, SelectField, TextField } from "@/components/form";
 import { createIngredient, updateIngredient } from "../actions";
-
-export interface IngredientRow {
-  id: number;
-  name: string;
-  sku: string | null;
-  unit: string;
-  purchase_unit: string;
-  measure_unit: string;
-  category: string | null;
-  item_kind: string;
-  unit_cost: number | null;
-  min_stock_level: number | null;
-  max_stock_level: number | null;
-  reorder_point: number | null;
-  storage_type: string | null;
-  shelf_life_days: number | null;
-  is_active: boolean;
-  updated_at: string | null;
-}
+import type { IngredientRow } from "../_lib/types";
+import {
+  STORAGE_OPTIONS,
+  ITEM_KIND_OPTIONS,
+} from "../_lib/constants";
+import { parseOptionalNumber } from "../_lib/format";
 
 const ingredientSchema = z.object({
   name: z.string().trim().min(1, { error: "Tên nguyên liệu không được trống" }),
@@ -59,23 +46,6 @@ const ingredientSchema = z.object({
 });
 
 type IngredientFormValues = z.infer<typeof ingredientSchema>;
-
-const STORAGE_OPTIONS = [
-  { value: "ambient", label: "Thường" },
-  { value: "refrigerated", label: "Lạnh" },
-  { value: "frozen", label: "Đông lạnh" },
-] as const;
-
-const ITEM_KIND_OPTIONS = [
-  { value: "raw_material", label: "Nguyên liệu" },
-  { value: "finished_good", label: "Thành phẩm" },
-] as const;
-
-function parseOptionalNumber(value: string | undefined): number | undefined {
-  if (!value) return undefined;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : undefined;
-}
 
 function toFormValues(ingredient: IngredientRow | null): IngredientFormValues {
   return {

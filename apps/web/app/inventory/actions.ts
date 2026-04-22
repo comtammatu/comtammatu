@@ -10,6 +10,13 @@ import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import {
+  STORAGE_TYPE_BY_LABEL,
+  ITEM_KIND_BY_LABEL,
+  STORAGE_LABELS,
+  ITEM_KIND_LABELS,
+  PG_ERR,
+} from "./_lib/constants";
+import {
   buildCsv,
   buildXlsx,
   bufferToBase64,
@@ -131,7 +138,7 @@ export const createIngredient = withAction(
       .single();
 
     if (error) {
-      if (error.code === "23505") {
+      if (error.code === PG_ERR.UNIQUE_VIOLATION) {
         return { success: false, error: "Nguyên liệu này đã tồn tại." };
       }
       return { success: false, error: "Không thể tạo nguyên liệu." };
@@ -191,7 +198,7 @@ export async function updateIngredient(
     .eq("tenant_id", claims.tenant_id);
 
   if (error) {
-    if (error.code === "23505") {
+    if (error.code === PG_ERR.UNIQUE_VIOLATION) {
       return {
         success: false,
         error: "Tên hoặc mã nguyên liệu đã tồn tại.",
@@ -281,7 +288,7 @@ export const adjustStock = withAction(
     });
 
     if (error) {
-      if (error.code === "23514") {
+      if (error.code === PG_ERR.CHECK_VIOLATION) {
         return {
           success: false,
           error: "Không thể điều chỉnh tồn kho do vi phạm ràng buộc dữ liệu.",
@@ -386,13 +393,13 @@ export async function createStocktakeSession(
   });
 
   if (error) {
-    if (error.code === "23505") {
+    if (error.code === PG_ERR.UNIQUE_VIOLATION) {
       return {
         success: false,
         error: "Chi nhánh này đang có phiên kiểm kê chưa hoàn tất.",
       };
     }
-    if (error.code === "42501") {
+    if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
     return { success: false, error: "Không thể tạo phiên kiểm kê." };
@@ -867,42 +874,6 @@ export async function fetchReorderAlerts(
 
 /* ─── Export / Import Ingredients ─── */
 
-const STORAGE_TYPE_LABELS: Record<string, string> = {
-  ambient: "Thường",
-  refrigerated: "Lạnh",
-  frozen: "Đông lạnh",
-};
-
-const STORAGE_TYPE_BY_LABEL: Record<string, "ambient" | "refrigerated" | "frozen"> = {
-  "thường": "ambient",
-  "thuong": "ambient",
-  "ambient": "ambient",
-  "lạnh": "refrigerated",
-  "lanh": "refrigerated",
-  "mát": "refrigerated",
-  "mat": "refrigerated",
-  "refrigerated": "refrigerated",
-  "đông lạnh": "frozen",
-  "dong lanh": "frozen",
-  "đông": "frozen",
-  "dong": "frozen",
-  "frozen": "frozen",
-};
-
-const ITEM_KIND_LABELS: Record<string, string> = {
-  raw_material: "Nguyên liệu",
-  finished_good: "Thành phẩm",
-};
-
-const ITEM_KIND_BY_LABEL: Record<string, "raw_material" | "finished_good"> = {
-  "nguyên liệu": "raw_material",
-  "nguyen lieu": "raw_material",
-  "raw_material": "raw_material",
-  "thành phẩm": "finished_good",
-  "thanh pham": "finished_good",
-  "finished_good": "finished_good",
-};
-
 function buildIngredientSheets(
   rows: {
     name: string;
@@ -949,7 +920,7 @@ function buildIngredientSheets(
         min_stock_level: r.min_stock_level,
         max_stock_level: r.max_stock_level ?? "",
         reorder_point: r.reorder_point ?? "",
-        storage_label: STORAGE_TYPE_LABELS[r.storage_type] ?? r.storage_type,
+        storage_label: STORAGE_LABELS[r.storage_type] ?? r.storage_type,
         shelf_life_days: r.shelf_life_days ?? "",
         is_active: r.is_active ? "Có" : "Không",
       })),
@@ -1272,7 +1243,7 @@ export async function importIngredients(
     .upsert(toUpsert, { onConflict: "name,tenant_id" });
 
   if (error) {
-    if (error.code === "23505") {
+    if (error.code === PG_ERR.UNIQUE_VIOLATION) {
       return {
         success: false,
         error: "Trùng dữ liệu với nguyên liệu đang có. Vui lòng kiểm tra tên và SKU.",

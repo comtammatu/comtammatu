@@ -21,7 +21,9 @@ import {
   TextField,
 } from "@/components/form";
 import { createIngredient, updateIngredient } from "./actions";
-import type { IngredientRow } from "./page";
+import type { IngredientRow } from "./_lib/types";
+import { STORAGE_OPTIONS, ITEM_KIND_OPTIONS } from "./_lib/constants";
+import { parseOptionalNumber } from "./_lib/format";
 
 /* ─── Schema ─── */
 
@@ -47,23 +49,6 @@ const ingredientSchema = z.object({
 });
 
 type IngredientFormValues = z.infer<typeof ingredientSchema>;
-
-const STORAGE_OPTIONS = [
-  { value: "ambient", label: "Thường" },
-  { value: "refrigerated", label: "Lạnh" },
-  { value: "frozen", label: "Đông lạnh" },
-] as const;
-
-const ITEM_KIND_OPTIONS = [
-  { value: "raw_material", label: "Nguyên liệu" },
-  { value: "finished_good", label: "Thành phẩm" },
-] as const;
-
-function parseOptionalNumber(value: string | undefined): number | undefined {
-  if (!value) return undefined;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : undefined;
-}
 
 function toFormValues(ingredient: IngredientRow | null): IngredientFormValues {
   return {
@@ -211,6 +196,7 @@ function IngredientFormContent({
           reorder_point: payload.reorder_point ?? null,
           shelf_life_days: payload.shelf_life_days ?? null,
           is_active: true,
+          updated_at: null,
         });
       }
       onOpenChange(false);

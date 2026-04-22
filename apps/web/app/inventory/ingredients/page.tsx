@@ -1,6 +1,6 @@
 import { fetchIngredients } from "../actions";
 import { IngredientsClient } from "./ingredients-client";
-import type { IngredientRow } from "./ingredient-dialog";
+import type { IngredientRow } from "../_lib/types";
 
 export default async function IngredientsPage() {
   const result = await fetchIngredients();
