@@ -40,7 +40,7 @@ import { tNav, tStatus } from "./_lib/dictionary";
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-type DashboardSiteKind = "warehouse" | "central_kitchen" | "branch";
+type DashboardSiteKind = "central_warehouse" | "central_kitchen" | "branch";
 
 export type DashboardProps = {
   routeBase: InventoryRouteBase;
@@ -93,7 +93,7 @@ function buildQuickActions(
 ) {
   const p = getInventoryPaths(routeBase);
 
-  if (siteKind === "warehouse")
+  if (siteKind === "central_warehouse")
     return [
       { label: "Nhập nguyên liệu", icon: ShoppingCart, href: p.receiving, primary: true },
       { label: tNav("transfers"), icon: ArrowLeftRight, href: p.transfers },
@@ -145,7 +145,7 @@ function buildTasks(props: DashboardProps): TaskItem[] {
   const inbound = open.filter((t) => t.toBranch === siteName);
   const outbound = open.filter((t) => t.fromBranch === siteName);
 
-  if (siteKind === "warehouse") {
+  if (siteKind === "central_warehouse") {
     if (pendingPO > 0)
       items.push({ key: "po", title: `${pendingPO} PO cần theo dõi`, description: "Đẩy nhanh đơn mở trước GRN.", href: paths.purchaseOrders, icon: <ShoppingCart className="size-4" />, severity: "primary" });
     if (outbound.length > 0 || activeTransfers > 0)
@@ -204,7 +204,7 @@ export function DashboardClient(props: DashboardProps) {
   const activeStocktakeList = stocktakeSessions
     .filter((s) => s.status === "in_progress");
 
-  const siteKindLabel = siteKind === "warehouse"
+  const siteKindLabel = siteKind === "central_warehouse"
     ? "HQ"
     : siteKind === "central_kitchen"
       ? "Bếp TT"
@@ -241,7 +241,7 @@ export function DashboardClient(props: DashboardProps) {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Thao tác nhanh</CardTitle>
               <CardDescription className="text-xs">
-                {siteKind === "warehouse" && "Các thao tác phổ biến tại trụ sở"}
+                {siteKind === "central_warehouse" && "Các thao tác phổ biến tại trụ sở"}
                 {siteKind === "central_kitchen" && "Các thao tác phổ biến tại bếp trung tâm"}
                 {siteKind === "branch" && "Các thao tác phổ biến tại chi nhánh"}
               </CardDescription>

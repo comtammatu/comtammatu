@@ -26,7 +26,6 @@ export interface BranchOption {
   name: string;
   is_active: boolean;
   branch_kind?: string | null;
-  is_headquarters?: boolean | null;
 }
 
 export interface ReorderAlertRow {

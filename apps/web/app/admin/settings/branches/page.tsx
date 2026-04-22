@@ -20,9 +20,9 @@ export default async function BranchesPage() {
   const { data: branches } = await supabase
     .from("branches")
     .select(
-      "id, name, address, phone, is_active, is_headquarters, branch_kind, latitude, longitude",
+      "id, name, address, phone, is_active, branch_kind, latitude, longitude",
     )
-    .order("is_headquarters", { ascending: false })
+    .order("branch_kind")
     .order("name");
 
   // Check which branches have attendance secrets configured

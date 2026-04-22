@@ -371,7 +371,7 @@ export async function fetchPoSuggestions(input?: {
 
   const procBranches = await fetchProcurementBranches(supabase, claims.tenant_id);
   const primaryWarehouseId = procBranches.find(
-    (b) => b.branch_kind === "warehouse",
+    (b) => b.branch_kind === "central_warehouse",
   )?.id ?? procBranches[0]?.id;
 
   if (!primaryWarehouseId) {

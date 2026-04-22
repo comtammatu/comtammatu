@@ -33,7 +33,7 @@ export default async function StockPage() {
     : await fetchProcurementBranches(supabase, claims.tenant_id);
   const branchId =
     claims.branch_id ??
-    procBranches.find((b) => b.branch_kind === "warehouse")?.id ??
+    procBranches.find((b) => b.branch_kind === "central_warehouse")?.id ??
     procBranches[0]?.id ??
     null;
   if (!branchId) redirect("/inventory");

@@ -87,7 +87,7 @@ export function StaffFormDialog({
 
   const branchChoices = useMemo(() => {
     if (selectedRole === "warehouse_manager") {
-      return branches.filter((b) => b.branch_kind === "warehouse");
+      return branches.filter((b) => b.branch_kind === "central_warehouse");
     }
     if (selectedRole === "production_manager") {
       return branches.filter((b) => b.branch_kind === "central_kitchen");
@@ -95,7 +95,7 @@ export function StaffFormDialog({
     if (HQ_EXCLUDED_OPERATIONAL_ROLES.includes(selectedRole as StaffRole)) {
       return branches.filter((b) => {
         const kind = b.branch_kind;
-        return kind !== "warehouse" && kind !== "central_kitchen";
+        return kind !== "central_warehouse" && kind !== "central_kitchen";
       });
     }
     return branches;
@@ -216,7 +216,7 @@ export function StaffFormDialog({
               disabled={isTenantLevel}
               description={
                 !isTenantLevel
-                  ? "Bắt buộc cho vai trò vận hành (thu ngân, phục vụ, bếp, QL chi nhánh). Chi nhánh trụ sở (HQ) chỉ dành cho văn phòng — không chọn HQ cho các vai trò sàn."
+                  ? "Bắt buộc cho vai trò vận hành (thu ngân, phục vụ, bếp, QL chi nhánh). Kho tổng / bếp trung tâm không có POS/KDS — không chọn cho các vai trò sàn."
                   : undefined
               }
             />

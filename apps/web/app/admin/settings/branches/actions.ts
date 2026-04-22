@@ -13,7 +13,7 @@ const branchSchema = z.object({
   name: z.string().min(1, { error: "Tên điểm vận hành không được để trống" }),
   address: z.string().optional().default(""),
   phone: z.string().optional().default(""),
-  branchKind: z.enum(["branch", "central_kitchen", "warehouse"]).default("branch"),
+  branchKind: z.enum(["branch", "central_kitchen", "central_warehouse"]).default("branch"),
 });
 
 const updateBranchSchema = branchSchema.extend({
@@ -140,18 +140,3 @@ export const toggleBranchActive = withAction(
   },
 );
 
-export const setHeadquarters = withAction(
-  { roles: SETTINGS_ROLES, schema: toggleIdSchema },
-  async (data, { supabase }) => {
-    const { error } = await supabase.rpc("set_headquarters", {
-      p_branch_id: data.id,
-    });
-
-    if (error) {
-      return { success: false, error: "Không thể cập nhật. Vui lòng thử lại." };
-    }
-
-    revalidateSurfacePath("/admin/settings/branches");
-    return { success: true };
-  },
-);

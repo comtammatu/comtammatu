@@ -1,6 +1,6 @@
 import type { TenantSupabase } from "./types";
 
-export type InventorySiteKind = "warehouse" | "central_kitchen" | "branch";
+export type InventorySiteKind = "central_warehouse" | "central_kitchen" | "branch";
 
 export type ProcurementBranch = {
   id: number;
@@ -8,7 +8,7 @@ export type ProcurementBranch = {
   branch_kind: string;
 };
 
-/** Fetch all branches that can procure (warehouse + central_kitchen). */
+/** Fetch all branches that can procure (central_warehouse + central_kitchen). */
 export async function fetchProcurementBranches(
   supabase: TenantSupabase,
   tenantId: number,
@@ -18,7 +18,7 @@ export async function fetchProcurementBranches(
     .select("id, name, branch_kind")
     .eq("tenant_id", tenantId)
     .eq("is_active", true)
-    .in("branch_kind", ["warehouse", "central_kitchen"])
+    .in("branch_kind", ["central_warehouse", "central_kitchen"])
     .order("id");
 
   if (error) return [];
@@ -29,7 +29,6 @@ export type InventorySiteContext = {
   branchId: number;
   branchName: string;
   branchKind: InventorySiteKind;
-  isHeadquarters: boolean;
 };
 
 export async function fetchInventorySiteContext(
@@ -37,7 +36,7 @@ export async function fetchInventorySiteContext(
   tenantId: number,
   branchId: number | null | undefined,
 ): Promise<InventorySiteContext | null> {
-  const baseSelect = "id, name, branch_kind, is_headquarters";
+  const baseSelect = "id, name, branch_kind";
 
   const loadBranch = async (targetBranchId: number | null) => {
     if (!targetBranchId) return null;
@@ -54,12 +53,12 @@ export async function fetchInventorySiteContext(
 
   const branch = await loadBranch(branchId ?? null);
 
-  // Fallback to first warehouse if no branch specified
+  // Fallback to first central_warehouse if no branch specified.
   let fallbackData = branch;
   if (!fallbackData) {
     const procBranches = await fetchProcurementBranches(supabase, tenantId);
     const warehouseId = procBranches.find(
-      (b) => b.branch_kind === "warehouse",
+      (b) => b.branch_kind === "central_warehouse",
     )?.id;
     if (warehouseId) {
       fallbackData = await loadBranch(warehouseId);
@@ -71,14 +70,13 @@ export async function fetchInventorySiteContext(
   const kind: InventorySiteKind =
     fallbackData.branch_kind === "central_kitchen"
       ? "central_kitchen"
-      : fallbackData.branch_kind === "warehouse" || fallbackData.is_headquarters
-        ? "warehouse"
+      : fallbackData.branch_kind === "central_warehouse"
+        ? "central_warehouse"
         : "branch";
 
   return {
     branchId: fallbackData.id,
     branchName: fallbackData.name,
     branchKind: kind,
-    isHeadquarters: fallbackData.is_headquarters === true,
   };
 }
