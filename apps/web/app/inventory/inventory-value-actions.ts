@@ -1,8 +1,9 @@
 "use server";
 
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "./_lib/auth";
+import { getAuthContextWithPermission } from "./_lib/auth";
+import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 
 const SYSTEM_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 
@@ -38,7 +39,7 @@ type IngredientCost = { unit_cost: number | null } | null;
 export async function fetchInventoryValueSystem(): Promise<
   ActionResult<{ totalValue: number }>
 > {
-  const ctx = await getAuthContext(SYSTEM_ROLES);
+  const ctx = await getAuthContextWithPermission(SYSTEM_ROLES, PERMISSION_KEYS.INVENTORY_READ);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -80,7 +81,7 @@ export interface AreaValueRow {
 export async function fetchInventoryValueByArea(): Promise<
   ActionResult<{ rows: AreaValueRow[] }>
 > {
-  const ctx = await getAuthContext(AREA_ROLES);
+  const ctx = await getAuthContextWithPermission(AREA_ROLES, PERMISSION_KEYS.INVENTORY_READ);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -200,7 +201,7 @@ export interface BranchValueRow {
 export async function fetchInventoryValueByBranch(): Promise<
   ActionResult<{ rows: BranchValueRow[] }>
 > {
-  const ctx = await getAuthContext(BRANCH_ROLES);
+  const ctx = await getAuthContextWithPermission(BRANCH_ROLES, PERMISSION_KEYS.INVENTORY_READ);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -242,7 +243,7 @@ export async function fetchInventoryValueByBranch(): Promise<
 
   let branchesQuery = supabase
     .from("branches")
-    .select("id, name")
+    .select("id, name, branch_kind")
     .eq("tenant_id", claims.tenant_id)
     .eq("is_active", true)
     .order("name");
@@ -298,7 +299,7 @@ export async function fetchInventoryValueByBranch(): Promise<
 
   const rows: BranchValueRow[] = (branchList ?? []).map((b) => ({
     branchId: b.id,
-    branchName: b.name,
+    branchName: getBranchSiteDisplayName(b),
     totalValue: totals.get(b.id) ?? 0,
   }));
 

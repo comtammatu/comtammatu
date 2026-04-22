@@ -2,13 +2,14 @@
 
 import { randomUUID } from "crypto";
 import { z } from "zod";
-import { INVENTORY_OPS_ROLES } from "@comtammatu/shared/auth";
+import { INVENTORY_OPS_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "./_lib/auth";
+import { getAuthContextWithPermission } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import type { TenantSupabase } from "./_lib/types";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import { PG_ERR } from "./_lib/constants";
+import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 
 const ROLES = INVENTORY_OPS_ROLES;
 
@@ -17,7 +18,7 @@ export async function fetchStockTransferDetail(
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(transferId);
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContext(ROLES);
+  const ctx = await getAuthContextWithPermission(ROLES, PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
   const { data: tr, error: e1 } = await supabase
@@ -36,11 +37,11 @@ export async function fetchStockTransferDetail(
   if (e2) return { success: false, error: "Không tải được dòng chuyển." };
   const { data: branches } = await supabase
     .from("branches")
-    .select("id, name")
+    .select("id, name, branch_kind")
     .eq("tenant_id", claims.tenant_id)
     .in("id", [tr.from_branch_id, tr.to_branch_id]);
   const nameById = new Map(
-    (branches ?? []).map((b) => [b.id, b.name] as const),
+    (branches ?? []).map((b) => [b.id, getBranchSiteDisplayName(b)] as const),
   );
   const enriched = {
     ...tr,
@@ -51,7 +52,7 @@ export async function fetchStockTransferDetail(
 }
 
 export async function fetchStockTransfers(): Promise<ActionResult> {
-  const ctx = await getAuthContext(ROLES);
+  const ctx = await getAuthContextWithPermission(ROLES, PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
   let transferQuery = supabase
@@ -74,10 +75,10 @@ export async function fetchStockTransfers(): Promise<ActionResult> {
   if (error) return { success: false, error: "Không thể tải phiếu chuyển." };
   const { data: branches } = await supabase
     .from("branches")
-    .select("id, name")
+    .select("id, name, branch_kind")
     .eq("tenant_id", claims.tenant_id);
   const nameById = new Map(
-    (branches ?? []).map((b) => [b.id, b.name] as const),
+    (branches ?? []).map((b) => [b.id, getBranchSiteDisplayName(b)] as const),
   );
   const enriched = (transfers ?? []).map((t) => ({
     ...t,
@@ -128,7 +129,7 @@ export async function createStockTransfer(
       error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
     };
   }
-  const ctx = await getAuthContext(ROLES);
+  const ctx = await getAuthContextWithPermission(ROLES, PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
 
@@ -255,7 +256,7 @@ export async function transferConfirmShip(
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(transferId);
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContext(ROLES);
+  const ctx = await getAuthContextWithPermission(ROLES, PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase } = ctx;
   const { error } = await supabase.rpc("stock_transfer_confirm_ship", {
@@ -276,7 +277,7 @@ export async function transferMarkInTransit(
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(transferId);
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContext(ROLES);
+  const ctx = await getAuthContextWithPermission(ROLES, PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase } = ctx;
   const { error } = await supabase.rpc("stock_transfer_mark_in_transit", {
@@ -294,7 +295,7 @@ export async function transferConfirmReceive(
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(transferId);
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContext(ROLES);
+  const ctx = await getAuthContextWithPermission(ROLES, PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase } = ctx;
   const { error } = await supabase.rpc("stock_transfer_confirm_receive", {
@@ -330,7 +331,7 @@ export async function transferReceive(
     }
   }
 
-  const ctx = await getAuthContext(ROLES);
+  const ctx = await getAuthContextWithPermission(ROLES, PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase } = ctx;
   const { error } = await supabase.rpc("stock_transfer_receive", {
@@ -345,7 +346,7 @@ export async function transferReceive(
 }
 
 export async function fetchBranchesForTransfer(): Promise<ActionResult> {
-  const ctx = await getAuthContext(ROLES);
+  const ctx = await getAuthContextWithPermission(ROLES, PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase } = ctx;
   const { data, error } = await supabase.rpc("stock_transfer_list_branches");
@@ -358,7 +359,7 @@ export async function fetchInventoryLocationsForBranch(
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(branchId);
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContext(ROLES);
+  const ctx = await getAuthContextWithPermission(ROLES, PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
 

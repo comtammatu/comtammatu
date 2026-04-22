@@ -1,4 +1,4 @@
-import type { StaffRole } from "./types";
+import { STAFF_ROLES, type StaffRole } from "./types";
 import { getModuleLabelVi } from "../labels";
 
 /**
@@ -31,7 +31,7 @@ interface ModuleAcl {
 export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   dashboard: {
     path: "/admin/dashboard",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager", "warehouse_manager", "production_manager"],
+    allowedRoles: ["owner", "super_manager"],
     label: getModuleLabelVi("dashboard"),
   },
   menu: {
@@ -57,7 +57,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   staff: {
     path: "/admin/staff",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    allowedRoles: ["owner", "super_manager"],
     label: getModuleLabelVi("staff"),
   },
   hr: {
@@ -67,7 +67,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   crm: {
     path: "/admin/crm",
-    allowedRoles: ["owner", "super_manager", "area_manager"],
+    allowedRoles: ["owner", "super_manager"],
     label: getModuleLabelVi("crm"),
   },
   finance: {
@@ -77,12 +77,12 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   reports: {
     path: "/admin/reports",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager", "warehouse_manager", "production_manager"],
+    allowedRoles: ["owner", "super_manager"],
     label: getModuleLabelVi("reports"),
   },
   settings: {
     path: "/admin/settings",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    allowedRoles: ["owner", "super_manager"],
     label: getModuleLabelVi("settings"),
   },
   pos: {
@@ -97,16 +97,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   employee: {
     path: "/employee",
-    allowedRoles: [
-      "owner",
-      "super_manager",
-      "area_manager",
-      "branch_manager",
-      "cashier",
-      "waiter",
-      "chef",
-      "office",
-    ],
+    allowedRoles: STAFF_ROLES,
     label: getModuleLabelVi("employee"),
   },
 };

@@ -58,9 +58,7 @@ export interface RecipeLineDraft {
 /* ─── Schema ─── */
 
 const recipeLineRowSchema = z.object({
-  ingredient_id: z
-    .string()
-    .min(1, { error: "Chọn nguyên liệu" }),
+  ingredient_id: z.string().min(1, { error: "Chọn nguyên liệu" }),
   quantity: z
     .string()
     .min(1, { error: "Nhập số lượng" })
@@ -74,12 +72,10 @@ const recipeLineRowSchema = z.object({
 });
 
 const recipeSchema = z.object({
-  menu_item_id: z
-    .string()
-    .min(1, { error: "Vui lòng chọn thành phẩm" }),
+  menu_item_id: z.string().min(1, { error: "Vui lòng chọn món bán" }),
   lines: z
     .array(recipeLineRowSchema)
-    .min(1, { error: "Công thức phải có ít nhất 1 nguyên liệu" })
+    .min(1, { error: "Định mức món bán phải có ít nhất 1 nguyên liệu" })
     .refine(
       (arr) => {
         const ids = arr.map((row) => row.ingredient_id).filter(Boolean);
@@ -194,7 +190,10 @@ function LineRowCells({
               name={field.name}
               maxFractionDigits={2}
               aria-invalid={!!rowError?.yield_factor}
-              className={cn("h-9", rowError?.yield_factor && "border-destructive")}
+              className={cn(
+                "h-9",
+                rowError?.yield_factor && "border-destructive",
+              )}
             />
           )}
         />
@@ -342,8 +341,8 @@ export function RecipeLineDialog({
       }
       toast.success(
         isEdit
-          ? `Đã cập nhật công thức (${parsedLines.length} nguyên liệu)`
-          : `Đã tạo công thức (${parsedLines.length} nguyên liệu)`,
+          ? `Đã cập nhật định mức món bán (${parsedLines.length} nguyên liệu)`
+          : `Đã tạo định mức món bán (${parsedLines.length} nguyên liệu)`,
       );
       onOpenChange(false);
       onSaved();
@@ -358,17 +357,21 @@ export function RecipeLineDialog({
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? "Sửa công thức" : "Tạo công thức thành phẩm"}
+            {isEdit ? "Sửa định mức món bán" : "Tạo định mức món bán"}
           </DialogTitle>
           <DialogDescription>
-            Công thức là định mức nguyên liệu để Bếp trung tâm sản xuất 1 phần
-            thành phẩm. Mỗi thành phẩm có thể gồm nhiều nguyên liệu.
+            Định mức này xác định lượng nguyên liệu tiêu hao khi bán 1 phần món
+            trên menu. BOM sản xuất thành phẩm nằm ở luồng sản xuất riêng.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(onValid)} noValidate className="space-y-5">
+        <form
+          onSubmit={form.handleSubmit(onValid)}
+          noValidate
+          className="space-y-5"
+        >
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Thành phẩm *</Label>
+            <Label className="text-sm font-medium">Món bán *</Label>
             <Controller
               control={form.control}
               name="menu_item_id"
@@ -387,12 +390,12 @@ export function RecipeLineDialog({
                     onBlur={field.onBlur}
                     ref={field.ref}
                   >
-                    <SelectValue placeholder="Chọn thành phẩm..." />
+                    <SelectValue placeholder="Chọn món bán..." />
                   </SelectTrigger>
                   <SelectContent>
                     {availableMenuItems.length === 0 ? (
                       <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-                        Tất cả thành phẩm đã có công thức.
+                        Tất cả món bán đã có định mức.
                       </div>
                     ) : (
                       availableMenuItems.map((mi) => (
@@ -482,7 +485,7 @@ export function RecipeLineDialog({
             </Button>
             <Button type="submit" disabled={isPending} className="h-10">
               {isPending && <Spinner className="mr-2" />}
-              {isEdit ? "Cập nhật công thức" : "Lưu công thức"}
+              {isEdit ? "Cập nhật định mức" : "Lưu định mức"}
             </Button>
           </DialogFooter>
         </form>

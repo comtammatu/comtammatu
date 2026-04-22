@@ -1,10 +1,16 @@
 "use server";
 
 import { z } from "zod";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "@/_lib/auth";
+import { getAuthContextWithPermission } from "@/_lib/auth";
 
+/**
+ * Role surface gate — who can reach the fiscal-periods surface at all.
+ * Fine-grained authz is enforced via RLS (`fiscal_periods_*` policies) and
+ * the `close_fiscal_period` / `gl_reconciliation` SECURITY DEFINER RPCs,
+ * both guarded by Auth v2 permissions.
+ */
 const FINANCE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 const REPORT_ROLES: readonly StaffRole[] = [
   "owner",
@@ -15,7 +21,10 @@ const REPORT_ROLES: readonly StaffRole[] = [
 /* ─── Fetch Fiscal Periods ─── */
 
 export async function fetchFiscalPeriods(): Promise<ActionResult> {
-  const ctx = await getAuthContext(REPORT_ROLES);
+  const ctx = await getAuthContextWithPermission(
+    REPORT_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -56,7 +65,10 @@ export async function openFiscalPeriod(
     };
   }
 
-  const ctx = await getAuthContext(FINANCE_ROLES);
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -107,7 +119,10 @@ export async function closeFiscalPeriod(
     };
   }
 
-  const ctx = await getAuthContext(FINANCE_ROLES);
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -152,7 +167,10 @@ export async function fetchReconciliation(
     };
   }
 
-  const ctx = await getAuthContext(REPORT_ROLES);
+  const ctx = await getAuthContextWithPermission(
+    REPORT_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;

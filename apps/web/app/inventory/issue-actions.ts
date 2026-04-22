@@ -7,6 +7,7 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
+import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 
 const ROLES = INVENTORY_OPS_ROLES;
 
@@ -58,7 +59,7 @@ export async function fetchStockIssues(opts?: {
   let query = supabase
     .from("stock_issues")
     .select(
-      "id, issue_number, issue_type, status, notes, issued_at, branch_id, source_location_id, target_location_id, branches ( id, name )",
+      "id, issue_number, issue_type, status, notes, issued_at, branch_id, source_location_id, target_location_id, branches ( id, name, branch_kind )",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("issued_at", { ascending: false });
@@ -150,7 +151,7 @@ export async function fetchStockIssueDetail(
   let issueQuery = supabase
     .from("stock_issues")
     .select(
-      "id, issue_number, issue_type, status, notes, issued_at, branch_id, source_location_id, target_location_id, branches ( id, name )",
+      "id, issue_number, issue_type, status, notes, issued_at, branch_id, source_location_id, target_location_id, branches ( id, name, branch_kind )",
     )
     .eq("id", id.data)
     .eq("tenant_id", claims.tenant_id);
@@ -176,9 +177,23 @@ export async function fetchStockIssueDetail(
     return { success: false, error: "Không tìm thấy phiếu xuất." };
   }
 
+  const branch = issueRes.data.branches as
+    | {
+        id: number;
+        name: string;
+        branch_kind?: string | null;
+      }
+    | null;
+  const issue = {
+    ...issueRes.data,
+    branches: branch
+      ? { ...branch, name: getBranchSiteDisplayName(branch) }
+      : branch,
+  };
+
   return {
     success: true,
-    data: { issue: issueRes.data, lines: linesRes.data ?? [] },
+    data: { issue, lines: linesRes.data ?? [] },
   };
 }
 

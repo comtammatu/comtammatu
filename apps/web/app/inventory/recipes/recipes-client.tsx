@@ -51,8 +51,7 @@ export type RecipeRow = {
 function YieldBadge({ value }: { value: number }) {
   // yield_factor is stored as a multiplier (0.85 = 15% loss, 1.0 = no loss)
   const pct = Math.round(value * 100);
-  const variant =
-    pct >= 95 ? "success" : pct >= 80 ? "warning" : "destructive";
+  const variant = pct >= 95 ? "success" : pct >= 80 ? "warning" : "destructive";
   return <Badge variant={variant}>{pct}%</Badge>;
 }
 
@@ -104,11 +103,11 @@ export function RecipesClient({
   return (
     <>
       <InventoryHeader
-        title="Công thức thành phẩm"
+        title="Định mức món bán"
         actions={
           <Button type="button" onClick={openCreate}>
-            <Plus className="size-4" />
-            Tạo công thức
+            <Plus data-icon="inline-start" />
+            Tạo định mức
           </Button>
         }
       />
@@ -117,10 +116,12 @@ export function RecipesClient({
           {recipes.length === 0 && (
             <Card>
               <CardContent className="py-10 text-center">
-                <p className="text-base font-semibold">Chưa có công thức nào</p>
+                <p className="text-base font-semibold">
+                  Chưa có định mức món bán nào
+                </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Công thức là định mức nguyên liệu để Bếp trung tâm sản xuất
-                  thành phẩm. Nhấn &quot;Tạo công thức&quot; để bắt đầu.
+                  Định mức món bán là lượng nguyên liệu tiêu hao khi bán 1 phần
+                  menu item. Nhấn &quot;Tạo định mức&quot; để bắt đầu.
                 </p>
               </CardContent>
             </Card>
@@ -147,7 +148,7 @@ export function RecipesClient({
                     onClick={() => openEdit(recipe)}
                   >
                     <Pencil className="size-4" />
-                    Sửa công thức
+                    Sửa định mức
                   </Button>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -172,7 +173,9 @@ export function RecipesClient({
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="font-mono">{item.qty}</TableCell>
+                          <TableCell className="font-mono">
+                            {item.qty}
+                          </TableCell>
                           <TableCell className="text-muted-foreground">
                             {item.unit}
                           </TableCell>

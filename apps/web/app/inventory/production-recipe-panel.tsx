@@ -53,6 +53,7 @@ import {
   QuickFinishedGoodDialog,
   QuickRawIngredientDialog,
 } from "./production-quick-create-dialogs";
+import { ProductionRecipeImportExportMenu } from "./production-recipe-import-export-menu";
 import {
   badgeVariantFromTone,
   sortFinishedGoods,
@@ -119,6 +120,7 @@ function toFormValues(
 
 interface ProductionRecipePanelProps {
   canManageCatalog: boolean;
+  canManageRecipes: boolean;
   finishedGoods: FinishedGoodOption[];
   ingredients: IngredientOption[];
   recipes: ProductionRecipeRow[];
@@ -126,6 +128,7 @@ interface ProductionRecipePanelProps {
 
 export function ProductionRecipePanel({
   canManageCatalog,
+  canManageRecipes,
   finishedGoods,
   ingredients,
   recipes,
@@ -193,7 +196,10 @@ export function ProductionRecipePanel({
   useEffect(() => {
     if (recipeDialogOpen) {
       form.reset(
-        toFormValues(editingRecipe, pendingFinishedGoodId ?? defaultFinishedGoodId),
+        toFormValues(
+          editingRecipe,
+          pendingFinishedGoodId ?? defaultFinishedGoodId,
+        ),
       );
       setServerError(null);
     }
@@ -358,14 +364,21 @@ export function ProductionRecipePanel({
             nguyên liệu trong BOM của thành phẩm đó.
           </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => openRecipeDialog()}
-        >
-          <Plus className="mr-2 size-4" />
-          Thêm dòng BOM
-        </Button>
+        {canManageRecipes ? (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <ProductionRecipeImportExportMenu
+              onImported={() => router.refresh()}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => openRecipeDialog()}
+            >
+              <Plus className="mr-2 size-4" />
+              Thêm dòng BOM
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <Dialog
@@ -596,30 +609,32 @@ export function ProductionRecipePanel({
                       này.
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openRecipeDialog(group.finishedGoodId)}
-                    >
-                      <Plus className="mr-2 size-4" />
-                      Thêm nguyên liệu
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setRecipeGroupToDelete(group)}
-                      className={cn(
-                        "transition-opacity md:opacity-0 md:group-hover/recipe:opacity-100 md:group-focus-within/recipe:opacity-100",
-                        "md:pointer-events-none md:group-hover/recipe:pointer-events-auto md:group-focus-within/recipe:pointer-events-auto",
-                      )}
-                    >
-                      <Trash2 className="mr-2 size-4" />
-                      Xóa toàn bộ BOM
-                    </Button>
-                  </div>
+                  {canManageRecipes ? (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openRecipeDialog(group.finishedGoodId)}
+                      >
+                        <Plus className="mr-2 size-4" />
+                        Thêm nguyên liệu
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setRecipeGroupToDelete(group)}
+                        className={cn(
+                          "transition-opacity md:opacity-0 md:group-hover/recipe:opacity-100 md:group-focus-within/recipe:opacity-100",
+                          "md:pointer-events-none md:group-hover/recipe:pointer-events-auto md:group-focus-within/recipe:pointer-events-auto",
+                        )}
+                      >
+                        <Trash2 className="mr-2 size-4" />
+                        Xóa toàn bộ BOM
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
 
                 <Table>
@@ -629,7 +644,7 @@ export function ProductionRecipePanel({
                       <TableHead>Số lượng</TableHead>
                       <TableHead>Yield</TableHead>
                       <TableHead>Ghi chú</TableHead>
-                      <TableHead className="w-24" />
+                      {canManageRecipes ? <TableHead className="w-24" /> : null}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -650,30 +665,32 @@ export function ProductionRecipePanel({
                         <TableCell className="text-muted-foreground">
                           {recipe.note ?? "—"}
                         </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditClick(recipe)}
-                              aria-label={`Chỉnh sửa dòng BOM ${recipe.ingredient_name}`}
-                              title="Chỉnh sửa dòng BOM"
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleRecipeDelete(recipe.id)}
-                              aria-label={`Xóa dòng BOM ${recipe.ingredient_name}`}
-                              title="Xóa dòng BOM"
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                        {canManageRecipes ? (
+                          <TableCell>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditClick(recipe)}
+                                aria-label={`Chỉnh sửa dòng BOM ${recipe.ingredient_name}`}
+                                title="Chỉnh sửa dòng BOM"
+                              >
+                                <Pencil className="size-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRecipeDelete(recipe.id)}
+                                aria-label={`Xóa dòng BOM ${recipe.ingredient_name}`}
+                                title="Xóa dòng BOM"
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        ) : null}
                       </TableRow>
                     ))}
                   </TableBody>

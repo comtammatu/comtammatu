@@ -75,7 +75,7 @@ apps/web/app/
 │   ├── layout.tsx          # Inventory shell with site context + role-aware nav
 │   ├── page.tsx            # Task-queue-first dashboard by role/site
 │   ├── ingredients/        # Ingredient master data (canonical catalog entry)
-│   ├── recipes/            # Recipe management (BOM, procurement-scoped catalog entry)
+│   ├── recipes/            # Sales menu consumption recipe / Định mức món bán
 │   ├── stock/              # Live stock levels by site (search + status filter)
 │   ├── suppliers/          # Supplier directory (canonical catalog entry)
 │   ├── purchase-orders/    # PO list + new + [id] detail
@@ -146,7 +146,7 @@ Các nguyên tắc đang được code phản ánh:
 - `Receiving` là hub procurement của HQ, không phải hub nhận hàng chung cho chi nhánh
 - `Production` chỉ hiện trên nav cho `super_manager`
 - `Issues` được đổi mental model ở branch thành `Cấp bếp`
-- `Ingredients / Suppliers / Recipes` chỉ còn một cửa vào chính trong `Danh mục`
+- `Ingredients / Suppliers / Định mức món bán` chỉ còn một cửa vào chính trong `Danh mục`
 
 ### Workflow đã wire thật ở UI
 

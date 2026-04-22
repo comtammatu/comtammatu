@@ -1,7 +1,11 @@
 import type { z } from "zod";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import type { PermissionKey, StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "./auth";
+import {
+  getAuthContext,
+  getAuthContextWithAnyPermission,
+  getAuthContextWithPermission,
+} from "./auth";
 
 /** Context provided to action handlers after auth succeeds. */
 export type ActionContext = NonNullable<
@@ -25,7 +29,12 @@ export type ActionContext = NonNullable<
  * );
  */
 export function withAction<TSchema extends z.ZodType>(
-  opts: { roles: readonly StaffRole[]; schema: TSchema },
+  opts: {
+    roles: readonly StaffRole[];
+    schema: TSchema;
+    permission?: PermissionKey | string;
+    anyPermission?: readonly (PermissionKey | string)[];
+  },
   handler: (
     data: z.infer<TSchema>,
     ctx: ActionContext,
@@ -39,7 +48,11 @@ export function withAction<TSchema extends z.ZodType>(
         error: result.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
       };
     }
-    const ctx = await getAuthContext(opts.roles);
+    const ctx = opts.anyPermission
+      ? await getAuthContextWithAnyPermission(opts.roles, opts.anyPermission)
+      : opts.permission
+        ? await getAuthContextWithPermission(opts.roles, opts.permission)
+        : await getAuthContext(opts.roles);
     if (!ctx) return { success: false, error: "Không có quyền" };
     return handler(result.data, ctx);
   };
@@ -75,6 +88,8 @@ export function withFormAction<TSchema extends z.ZodType>(
     roles: readonly StaffRole[];
     schema: TSchema;
     extract: (fd: FormData) => unknown;
+    permission?: PermissionKey | string;
+    anyPermission?: readonly (PermissionKey | string)[];
   },
   handler: (
     data: z.infer<TSchema>,
@@ -93,7 +108,11 @@ export function withFormAction<TSchema extends z.ZodType>(
         error: result.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
       };
     }
-    const ctx = await getAuthContext(opts.roles);
+    const ctx = opts.anyPermission
+      ? await getAuthContextWithAnyPermission(opts.roles, opts.anyPermission)
+      : opts.permission
+        ? await getAuthContextWithPermission(opts.roles, opts.permission)
+        : await getAuthContext(opts.roles);
     if (!ctx) return { success: false, error: "Không có quyền" };
     return handler(result.data, ctx);
   };

@@ -3,6 +3,7 @@
 import { z } from "zod";
 import {
   BRANCH_FLOOR_SETTINGS_ROLES,
+  PERMISSION_KEYS,
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
@@ -73,6 +74,7 @@ export const createTerminal = withFormAction(
   {
     roles: SETTINGS_ROLES,
     schema: createTerminalSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
     extract: (fd) => ({
       name: fd.get("name"),
       branch_id: fd.get("branch_id"),
@@ -120,6 +122,7 @@ export const updateTerminal = withFormAction(
   {
     roles: SETTINGS_ROLES,
     schema: updateTerminalSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
     extract: (fd) => {
       const rawIsActive = fd.get("is_active");
       return {

@@ -4,6 +4,9 @@ import { MobileProductionClient } from "./mobile-production-client";
 export default async function MobileProductionPage() {
   const {
     canManageCatalog,
+    canManageRecipes,
+    canCreateProduction,
+    canConfirmProduction,
     centralKitchenBranches,
     ingredients,
     finishedGoods,
@@ -14,6 +17,9 @@ export default async function MobileProductionPage() {
   return (
     <MobileProductionClient
       canManageCatalog={canManageCatalog}
+      canManageRecipes={canManageRecipes}
+      canCreateProduction={canCreateProduction}
+      canConfirmProduction={canConfirmProduction}
       centralKitchenBranches={centralKitchenBranches}
       ingredients={ingredients}
       finishedGoods={finishedGoods}

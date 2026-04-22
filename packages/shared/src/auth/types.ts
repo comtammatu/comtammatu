@@ -21,10 +21,6 @@ export type StaffRole = (typeof STAFF_ROLES)[number];
 export const ADMIN_ROLES: readonly StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
-  "branch_manager",
-  "warehouse_manager",
-  "production_manager",
 ] as const;
 
 /** Roles that operate at branch level (POS/KDS) */
@@ -100,6 +96,12 @@ export interface JwtClaims {
   branch_id: number | null;
   area_id: number | null;
   user_role: StaffRole;
+  /**
+   * HR position code (Auth v2). Dual-emitted alongside `user_role` during
+   * transition. Prefer `position` for new code; `user_role` remains for
+   * legacy RLS/policies until M5 cleanup.
+   */
+  position?: string;
 }
 
 /** Scope IDs extracted from URL or JWT */

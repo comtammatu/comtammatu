@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 
 const STATEMENT_ROLES: readonly StaffRole[] = [
@@ -28,7 +28,7 @@ const vatSummarySchema = z.object({
 /* ─── Balance Sheet — Bảng Cân Đối Kế Toán ─── */
 
 export const generateBalanceSheet = withAction(
-  { roles: STATEMENT_ROLES, schema: balanceSheetSchema },
+  { roles: STATEMENT_ROLES, schema: balanceSheetSchema, permission: PERMISSION_KEYS.FINANCE_VIEW },
   async (data, { supabase, claims }) => {
     const { data: postedEntries } = await supabase
       .from("journal_entries")
@@ -136,7 +136,7 @@ export const generateBalanceSheet = withAction(
 /* ─── Income Statement — Kết Quả Kinh Doanh ─── */
 
 export const generateIncomeStatement = withAction(
-  { roles: STATEMENT_ROLES, schema: incomeStatementSchema },
+  { roles: STATEMENT_ROLES, schema: incomeStatementSchema, permission: PERMISSION_KEYS.FINANCE_VIEW },
   async (data, { supabase, claims }) => {
     const { data: entries } = await supabase
       .from("journal_entries")
@@ -240,7 +240,7 @@ export const generateIncomeStatement = withAction(
 /* ─── VAT Summary — Tổng hợp thuế GTGT ─── */
 
 export const generateVatSummary = withAction(
-  { roles: STATEMENT_ROLES, schema: vatSummarySchema },
+  { roles: STATEMENT_ROLES, schema: vatSummarySchema, permission: PERMISSION_KEYS.FINANCE_VIEW },
   async (data, { supabase, claims }) => {
     const [year, month] = data.period.split("-").map(Number);
     const startDate = `${data.period}-01`;

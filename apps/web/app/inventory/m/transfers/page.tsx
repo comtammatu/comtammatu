@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
-  extractClaims,
+  extractClaimsFromAccessToken,
   INVENTORY_OPS_ROLES,
 } from "@comtammatu/shared/auth";
 import { MobilePage } from "../../_components/mobile/mobile-page";
@@ -19,6 +19,7 @@ import { MobileSectionHeader } from "../../_components/mobile/mobile-section-hea
 import { MobileEmptyState } from "../../_components/mobile/mobile-empty-state";
 import { InteractiveCard } from "../../_components/mobile/interactive-card";
 import { formatDate } from "../../_lib/format";
+import { getBranchSiteDisplayName } from "../../_lib/branch-site-labels";
 
 type TransferRow = {
   id: number;
@@ -67,7 +68,7 @@ export default async function MobileTransferHome({
     data: { session },
   } = await supabase.auth.getSession();
   if (!session) redirect("/login");
-  const claims = extractClaims(session.user.app_metadata);
+  const claims = extractClaimsFromAccessToken(session.access_token);
   if (!claims) redirect("/login");
   if (!INVENTORY_OPS_ROLES.includes(claims.user_role)) {
     redirect("/inventory/m?forbidden=1");
@@ -90,12 +91,14 @@ export default async function MobileTransferHome({
     query,
     supabase
       .from("branches")
-      .select("id, name")
+      .select("id, name, branch_kind")
       .eq("tenant_id", claims.tenant_id),
   ]);
 
   const branchName = new Map(
-    (branchesData ?? []).map((b) => [b.id, b.name] as const),
+    (branchesData ?? []).map(
+      (b) => [b.id, getBranchSiteDisplayName(b)] as const,
+    ),
   );
 
   const enriched: TransferRow[] = (transfersData ?? []).map((t) => ({

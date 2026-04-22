@@ -1,6 +1,12 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  extractClaimsFromAccessToken,
+  PERMISSION_KEYS,
+  type JwtClaims,
+  type PermissionKey,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import { fetchIngredients } from "./actions";
 import {
   fetchProductionOrders,
@@ -14,9 +20,29 @@ import type {
   IngredientOption,
 } from "./production-types";
 
-const PRODUCTION_SURFACE_ROLES = ["super_manager"] as const;
+const PRODUCTION_SURFACE_ROLES = [
+  "owner",
+  "super_manager",
+  "production_manager",
+] as const;
+
+export const PRODUCTION_OPEN_PERMISSIONS = [
+  PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
+  PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
+  PERMISSION_KEYS.MENU_WRITE,
+] as const;
+
+const CATALOG_MANAGE_PERMISSIONS = [
+  PERMISSION_KEYS.PROCUREMENT_SUPPLIER_MANAGE,
+  PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
+] as const;
+
+const PRODUCTION_BRANCH_SCOPED_ROLES = ["production_manager"] as const;
 
 type ProductionSurfaceRole = (typeof PRODUCTION_SURFACE_ROLES)[number];
+type ProductionBranchScopedRole =
+  (typeof PRODUCTION_BRANCH_SCOPED_ROLES)[number];
+type InventorySupabase = Awaited<ReturnType<typeof createClient>>;
 
 type InventoryIngredientRow = {
   id: number;
@@ -36,6 +62,9 @@ type BranchPreviewRow = {
 export interface ProductionSurfaceData {
   role: ProductionSurfaceRole;
   canManageCatalog: boolean;
+  canManageRecipes: boolean;
+  canCreateProduction: boolean;
+  canConfirmProduction: boolean;
   centralKitchenBranches: BranchOption[];
   ingredients: IngredientOption[];
   finishedGoods: FinishedGoodOption[];
@@ -52,6 +81,59 @@ export function canAccessProductionSurface(
   );
 }
 
+export function isProductionBranchScopedRole(
+  role: StaffRole | null | undefined,
+): role is ProductionBranchScopedRole {
+  return (
+    role != null &&
+    PRODUCTION_BRANCH_SCOPED_ROLES.includes(role as ProductionBranchScopedRole)
+  );
+}
+
+async function currentUserHasAnyPermission(
+  supabase: InventorySupabase,
+  key: PermissionKey,
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc("has_permission_any", {
+    p_key: key,
+  });
+  return !error && data === true;
+}
+
+async function currentUserHasOneOfPermissions(
+  supabase: InventorySupabase,
+  keys: readonly PermissionKey[],
+): Promise<boolean> {
+  for (const key of keys) {
+    if (await currentUserHasAnyPermission(supabase, key)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export async function hasCurrentProductionBranchAccess(
+  supabase: InventorySupabase,
+  claims: JwtClaims,
+): Promise<boolean> {
+  if (!isProductionBranchScopedRole(claims.user_role)) {
+    return true;
+  }
+
+  if (claims.branch_id == null) {
+    return false;
+  }
+
+  const { data, error } = await supabase
+    .from("branches")
+    .select("branch_kind")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("id", claims.branch_id)
+    .maybeSingle();
+
+  return !error && data?.branch_kind === "central_kitchen";
+}
+
 export async function loadProductionSurfaceData({
   includeRecipes = true,
 }: {
@@ -66,13 +148,37 @@ export async function loadProductionSurfaceData({
     redirect("/login");
   }
 
-  const claims = extractClaims(session.user.app_metadata);
+  const claims = extractClaimsFromAccessToken(session.access_token);
   if (!claims || !canAccessProductionSurface(claims.user_role)) {
     redirect("/inventory?forbidden=1&reason=insufficient-permission");
   }
 
   const role = claims.user_role;
-  const canManageCatalog = role === "super_manager";
+  const [
+    canOpenProduction,
+    canManageCatalog,
+    canManageRecipes,
+    canCreateProduction,
+    canConfirmProduction,
+    hasBranchAccess,
+  ] = await Promise.all([
+    currentUserHasOneOfPermissions(supabase, PRODUCTION_OPEN_PERMISSIONS),
+    currentUserHasOneOfPermissions(supabase, CATALOG_MANAGE_PERMISSIONS),
+    currentUserHasAnyPermission(supabase, PERMISSION_KEYS.MENU_WRITE),
+    currentUserHasAnyPermission(
+      supabase,
+      PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
+    ),
+    currentUserHasAnyPermission(
+      supabase,
+      PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
+    ),
+    hasCurrentProductionBranchAccess(supabase, claims),
+  ]);
+
+  if (!canOpenProduction || !hasBranchAccess) {
+    redirect("/inventory?forbidden=1&reason=insufficient-permission");
+  }
 
   const recipesPromise = includeRecipes
     ? fetchProductionRecipes()
@@ -95,12 +201,17 @@ export async function loadProductionSurfaceData({
     ]);
 
   const branches = (branchesRes.data ?? []) as BranchPreviewRow[];
-  const centralKitchenBranches: BranchOption[] = branches
+  let centralKitchenBranches: BranchOption[] = branches
     .filter((branch) => branch.branch_kind === "central_kitchen")
     .map((branch) => ({
       id: branch.id,
       name: branch.name,
     }));
+  if (isProductionBranchScopedRole(role) && claims.branch_id != null) {
+    centralKitchenBranches = centralKitchenBranches.filter(
+      (branch) => branch.id === claims.branch_id,
+    );
+  }
 
   const ingredients: IngredientOption[] = (
     ingredientsRes.success && Array.isArray(ingredientsRes.data)
@@ -126,6 +237,9 @@ export async function loadProductionSurfaceData({
   return {
     role,
     canManageCatalog,
+    canManageRecipes,
+    canCreateProduction,
+    canConfirmProduction,
     centralKitchenBranches,
     ingredients,
     finishedGoods,

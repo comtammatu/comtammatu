@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import {
+  KeyRound,
   MoreHorizontal,
   Pencil,
   ToggleLeft,
@@ -121,6 +123,12 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
                     <Pencil className="mr-2 size-4" />
                     Chỉnh sửa
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/admin/staff/${member.id}/permissions`}>
+                      <KeyRound className="mr-2 size-4" />
+                      Quyền hạn
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onSelect={() => handleToggleActive(member.id)}
                   >
@@ -216,6 +224,12 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
                       <DropdownMenuItem onSelect={() => setEditStaff(member)}>
                         <Pencil className="mr-2 size-4" />
                         Chỉnh sửa
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/admin/staff/${member.id}/permissions`}>
+                          <KeyRound className="mr-2 size-4" />
+                          Quyền hạn
+                        </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onSelect={() => handleToggleActive(member.id)}

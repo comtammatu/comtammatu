@@ -1,15 +1,16 @@
 "use server";
 
 import { z } from "zod";
-import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   GENERAL_SYSTEM_SETTING_KEYS,
   SYSTEM_SETTING_KEYS,
 } from "@comtammatu/shared/settings";
+import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
+
+const SETTINGS_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 
 const settingsSchema = z.object({
   [SYSTEM_SETTING_KEYS.VAT_RATE]: z
@@ -55,19 +56,12 @@ export async function updateSettings(
     };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { success: false, error: "Chưa đăng nhập" };
-
-  const claims = extractClaims(user.app_metadata);
-  if (!claims) return { success: false, error: "Không có quyền" };
-
-  const SETTINGS_ROLES: StaffRole[] = ["owner", "super_manager"];
-  if (!SETTINGS_ROLES.includes(claims.user_role)) {
-    return { success: false, error: "Không có quyền" };
-  }
+  const ctx = await getAuthContextWithPermission(
+    SETTINGS_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims } = ctx;
 
   // Upsert each setting
   const entries = Object.entries(parsed.data) as [string, string][];

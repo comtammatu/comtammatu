@@ -115,6 +115,31 @@ SET role = 'owner', full_name = 'Your Name'
 WHERE id = '<user-uuid>';
 ```
 
+### Seed QA Test Accounts (dev / staging)
+
+Chạy `scripts/sql/seed_dev_auth_users.sql` trong Supabase SQL Editor (role `postgres`) — idempotent, có thể chạy lại nhiều lần.
+
+Mật khẩu tất cả: `Test1234!`. Bao phủ toàn bộ `STAFF_ROLES`:
+
+| Email                             | Role                 | Scope                  |
+| --------------------------------- | -------------------- | ---------------------- |
+| `owner@comtammatu.vn`             | `owner`              | Tenant (pin HQ)        |
+| `supermanager@comtammatu.vn`      | `super_manager`      | Tenant (pin HQ, keeper)|
+| `area.vungtau@comtammatu.vn`      | `area_manager`       | Area "Khu vực Vũng Tàu"|
+| `warehouse@comtammatu.vn`         | `warehouse_manager`  | Trụ sở chính (warehouse)|
+| `production@comtammatu.vn`        | `production_manager` | Bếp trung tâm (central kitchen)|
+| `manager.datdo@comtammatu.vn`     | `branch_manager`     | Chi nhánh Đất Đỏ       |
+| `cashier.datdo@comtammatu.vn`     | `cashier`            | Chi nhánh Đất Đỏ       |
+| `waiter.datdo@comtammatu.vn`      | `waiter`             | Chi nhánh Đất Đỏ       |
+| `chef.datdo@comtammatu.vn`        | `chef`               | Chi nhánh Đất Đỏ       |
+| `manager.phuochai@comtammatu.vn`  | `branch_manager`     | Chi nhánh Phước Hải    |
+| `cashier.phuochai@comtammatu.vn`  | `cashier`            | Chi nhánh Phước Hải    |
+| `waiter.phuochai@comtammatu.vn`   | `waiter`             | Chi nhánh Phước Hải    |
+| `chef.phuochai@comtammatu.vn`     | `chef`               | Chi nhánh Phước Hải    |
+| `office@comtammatu.vn`            | `office`             | Tenant (branch NULL)   |
+
+> **Chỉ chạy trên dev / staging.** Script DELETE các account theo email rồi re-INSERT, CASCADE cả profile + employees.
+
 ## 5. Generate Types
 
 `pnpm db:types` đọc `$SUPABASE_PROJECT_ID` từ shell env (không phải `.env.local`). Có 2 cách:

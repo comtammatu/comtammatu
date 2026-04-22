@@ -64,6 +64,9 @@ import type {
 
 interface MobileProductionClientProps {
   canManageCatalog: boolean;
+  canManageRecipes: boolean;
+  canCreateProduction: boolean;
+  canConfirmProduction: boolean;
   centralKitchenBranches: BranchOption[];
   ingredients: IngredientOption[];
   finishedGoods: FinishedGoodOption[];
@@ -75,6 +78,9 @@ type OrderTab = "draft" | "completed" | "cancelled";
 
 export function MobileProductionClient({
   canManageCatalog,
+  canManageRecipes,
+  canCreateProduction,
+  canConfirmProduction,
   centralKitchenBranches,
   ingredients,
   finishedGoods,
@@ -136,8 +142,14 @@ export function MobileProductionClient({
     readinessState === "missing-raw-material"
       ? "/inventory/ingredients"
       : readinessState === "missing-recipe"
-        ? "/inventory/recipes"
+        ? "/inventory/production"
         : "/inventory/production";
+  const canFixReadiness =
+    readinessState === "missing-recipe"
+      ? canManageRecipes
+      : (readinessState === "missing-finished-good" ||
+            readinessState === "missing-raw-material") &&
+          canManageCatalog;
 
   return (
     <MobilePage>
@@ -197,7 +209,7 @@ export function MobileProductionClient({
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-2 pt-0">
-          {actionsEnabled ? (
+          {actionsEnabled && canCreateProduction ? (
             <>
               <MobileProductionOrderForm
                 centralKitchenBranches={centralKitchenBranches}
@@ -211,7 +223,7 @@ export function MobileProductionClient({
                 </Link>
               </Button>
             </>
-          ) : canManageCatalog ? (
+          ) : canFixReadiness ? (
             <Button type="button" asChild>
               <Link href={recoveryHref}>
                 <Factory className="mr-2 size-4" />
@@ -238,6 +250,7 @@ export function MobileProductionClient({
         <TabsContent value="draft" className="m-0">
           <ProductionOrderCardList
             orders={orderGroups.draft}
+            canConfirmProduction={canConfirmProduction}
             emptyTitle="Không có lệnh nháp"
             emptyDescription="Tạo lệnh mới khi bếp đã sẵn sàng và cần chạy mẻ tiếp theo."
           />
@@ -246,6 +259,7 @@ export function MobileProductionClient({
         <TabsContent value="completed" className="m-0">
           <ProductionOrderCardList
             orders={orderGroups.completed}
+            canConfirmProduction={canConfirmProduction}
             emptyTitle="Chưa có lệnh hoàn tất"
             emptyDescription="Sau khi xác nhận, lệnh hoàn tất sẽ hiện ở đây để chuẩn bị điều chuyển."
           />
@@ -254,6 +268,7 @@ export function MobileProductionClient({
         <TabsContent value="cancelled" className="m-0">
           <ProductionOrderCardList
             orders={orderGroups.cancelled}
+            canConfirmProduction={canConfirmProduction}
             emptyTitle="Chưa có lệnh bị hủy"
             emptyDescription="Các lệnh nháp bị hủy sẽ được lưu tại đây để đối chiếu."
           />
@@ -265,10 +280,12 @@ export function MobileProductionClient({
 
 function ProductionOrderCardList({
   orders,
+  canConfirmProduction,
   emptyTitle,
   emptyDescription,
 }: {
   orders: ProductionOrderRow[];
+  canConfirmProduction: boolean;
   emptyTitle: string;
   emptyDescription: string;
 }) {
@@ -369,7 +386,7 @@ function ProductionOrderCardList({
                 </div>
               ) : null}
 
-              {order.status === "draft" ? (
+              {order.status === "draft" && canConfirmProduction ? (
                 <div className="flex flex-col gap-2">
                   <Button
                     type="button"

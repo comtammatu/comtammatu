@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
-  extractClaims,
+  extractClaimsFromAccessToken,
   INVENTORY_OPS_ROLES,
 } from "@comtammatu/shared/auth";
 import { TransferReceiveClient } from "./transfer-receive-client";
+import { getBranchSiteDisplayName } from "../../../../_lib/branch-site-labels";
 
 export default async function MobileTransferReceivePage({
   params,
@@ -22,7 +23,7 @@ export default async function MobileTransferReceivePage({
     data: { session },
   } = await supabase.auth.getSession();
   if (!session) redirect("/login");
-  const claims = extractClaims(session.user.app_metadata);
+  const claims = extractClaimsFromAccessToken(session.access_token);
   if (!claims || !INVENTORY_OPS_ROLES.includes(claims.user_role)) {
     redirect("/inventory/m?forbidden=1");
   }
@@ -38,7 +39,7 @@ export default async function MobileTransferReceivePage({
       .maybeSingle(),
     supabase
       .from("branches")
-      .select("id, name")
+      .select("id, name, branch_kind")
       .eq("tenant_id", claims.tenant_id),
   ]);
 
@@ -53,7 +54,9 @@ export default async function MobileTransferReceivePage({
     .eq("tenant_id", claims.tenant_id);
 
   const branchName = new Map(
-    (branchesRes.data ?? []).map((b) => [b.id, b.name] as const),
+    (branchesRes.data ?? []).map(
+      (b) => [b.id, getBranchSiteDisplayName(b)] as const,
+    ),
   );
 
   const lines = (linesRes.data ?? []).map((l) => {

@@ -1,11 +1,14 @@
 "use client";
 
+import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
+import { Button } from "@comtammatu/ui/components/button";
 import type { DailyRevenueRow, InvoiceRow, TopItemRow } from "./page";
 import { InvoiceList } from "./invoice-list";
 import { RevenueOverview } from "./revenue-overview";
@@ -28,6 +31,12 @@ export function FinanceClient({
         <TabsTrigger value="invoices">
           Hóa đơn điện tử ({invoices.length})
         </TabsTrigger>
+        <Button asChild variant="ghost" size="sm" className="ml-auto">
+          <Link href="/finance/reconciliation">
+            <AlertTriangle className="mr-1 size-4 text-amber-500" />
+            Đối soát
+          </Link>
+        </Button>
       </TabsList>
 
       <TabsContent value="revenue" className="mt-0">

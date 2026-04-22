@@ -5,9 +5,9 @@ import { z } from "zod";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { extractClaims } from "@comtammatu/shared/auth";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "../../admin/_lib/auth";
+import { getAuthContextWithPermission } from "../../admin/_lib/auth";
 
 /* ─── Constants ─── */
 
@@ -346,7 +346,7 @@ export async function generateDailyCode(
     return { success: false, error: "ID chi nhánh không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(CONFIG_ROLES);
+  const ctx = await getAuthContextWithPermission(CONFIG_ROLES, PERMISSION_KEYS.SETTINGS_BRANCH);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { claims } = ctx;

@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, withFormAction } from "@/_lib/with-action";
 
@@ -112,7 +112,11 @@ export const updateBranch = withFormAction(
 );
 
 export const toggleBranchActive = withAction(
-  { roles: SETTINGS_ROLES, schema: toggleIdSchema },
+  {
+    roles: SETTINGS_ROLES,
+    schema: toggleIdSchema,
+    permission: PERMISSION_KEYS.SETTINGS_TENANT,
+  },
   async (data, { supabase, claims }) => {
     const { data: branch } = await supabase
       .from("branches")

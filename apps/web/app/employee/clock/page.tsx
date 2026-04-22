@@ -1,5 +1,11 @@
 import { loadAuthState } from "@/_lib/auth";
 import { ClockClient } from "./clock-client";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
 
 export default async function ClockPage() {
   const { supabase, session, claims } = await loadAuthState();
@@ -14,11 +20,14 @@ export default async function ClockPage() {
 
   if (!employee) {
     return (
-      <div className="flex flex-col items-center gap-3 py-12 text-center">
-        <p className="text-sm text-muted-foreground">
-          Tài khoản chưa được liên kết hồ sơ nhân viên. Liên hệ quản lý.
-        </p>
-      </div>
+      <Empty>
+        <EmptyHeader>
+          <EmptyTitle>Chưa có hồ sơ nhân viên</EmptyTitle>
+          <EmptyDescription>
+            Tài khoản chưa được liên kết hồ sơ nhân viên. Liên hệ quản lý.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
   }
 

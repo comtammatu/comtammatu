@@ -9,13 +9,23 @@ import {
   Keyboard,
   Camera,
 } from "lucide-react";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -61,11 +71,7 @@ interface ClockClientProps {
 function getStateRingClassName(state: ClockState) {
   if (state === "checking_gps" || state === "verifying") return "bg-warning/12";
   if (state === "gps_passed" || state === "success") return "bg-success/12";
-  if (
-    state === "gps_failed" ||
-    state === "code_invalid" ||
-    state === "error"
-  ) {
+  if (state === "gps_failed" || state === "code_invalid" || state === "error") {
     return "bg-destructive/12";
   }
   if (state === "scanning_code" || state === "entering_code") {
@@ -77,11 +83,7 @@ function getStateRingClassName(state: ClockState) {
 function getStateIconClassName(state: ClockState) {
   if (state === "checking_gps" || state === "verifying") return "text-warning";
   if (state === "gps_passed" || state === "success") return "text-success";
-  if (
-    state === "gps_failed" ||
-    state === "code_invalid" ||
-    state === "error"
-  ) {
+  if (state === "gps_failed" || state === "code_invalid" || state === "error") {
     return "text-destructive";
   }
   if (state === "scanning_code" || state === "entering_code") {
@@ -135,7 +137,10 @@ export function ClockClient({
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(
     () => {
       // Prefer the user's assigned branch, but only if it exists in the GPS-enabled list
-      if (defaultBranchId != null && branches.some((b) => b.id === defaultBranchId)) {
+      if (
+        defaultBranchId != null &&
+        branches.some((b) => b.id === defaultBranchId)
+      ) {
         return defaultBranchId;
       }
       return branches[0]?.id ?? null;
@@ -316,30 +321,32 @@ export function ClockClient({
             Hôm nay bạn đã chấm công đầy đủ
           </p>
         </div>
-        <div className="w-full max-w-xs space-y-2 rounded-lg border p-4">
-          {status.branchName && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Chi nhánh</span>
-              <span className="font-medium">{status.branchName}</span>
-            </div>
-          )}
-          {status.checkInTime && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Giờ vào</span>
-              <span className="font-mono font-medium">
-                {formatTime(status.checkInTime)}
-              </span>
-            </div>
-          )}
-          {status.checkOutTime && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Giờ ra</span>
-              <span className="font-mono font-medium">
-                {formatTime(status.checkOutTime)}
-              </span>
-            </div>
-          )}
-        </div>
+        <Card className="w-full max-w-xs">
+          <CardContent className="flex flex-col gap-2 text-sm">
+            {status.branchName && (
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Chi nhánh</span>
+                <span className="font-medium">{status.branchName}</span>
+              </div>
+            )}
+            {status.checkInTime && (
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Giờ vào</span>
+                <span className="font-mono font-medium">
+                  {formatTime(status.checkInTime)}
+                </span>
+              </div>
+            )}
+            {status.checkOutTime && (
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground">Giờ ra</span>
+                <span className="font-mono font-medium">
+                  {formatTime(status.checkOutTime)}
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -373,9 +380,9 @@ export function ClockClient({
           disabled={isPending}
         >
           {isPending ? (
-            <Spinner className="mr-2 size-5" />
+            <Spinner data-icon="inline-start" />
           ) : (
-            <Clock className="mr-2 size-5" />
+            <Clock data-icon="inline-start" />
           )}
           Chấm công ra
         </Button>
@@ -390,18 +397,18 @@ export function ClockClient({
   // ── No branches configured with GPS — clock-in cannot proceed ──
   if (branches.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-6 py-8 text-center">
-        <div className="flex size-24 items-center justify-center rounded-full bg-destructive/12">
-          <XCircle className="size-12 text-destructive" />
-        </div>
-        <div className="max-w-xs">
-          <h2 className="text-lg font-semibold">Chưa thể chấm công</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+      <Empty>
+        <EmptyMedia variant="icon">
+          <XCircle />
+        </EmptyMedia>
+        <EmptyHeader>
+          <EmptyTitle>Chưa thể chấm công</EmptyTitle>
+          <EmptyDescription>
             Chi nhánh chưa được thiết lập toạ độ GPS. Liên hệ quản lý để cấu
             hình vị trí chi nhánh trong mục Thiết lập.
-          </p>
-        </div>
-      </div>
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
   }
 
@@ -422,7 +429,9 @@ export function ClockClient({
           <Spinner className={cn("size-10", getStateIconClassName(state))} />
         )}
         {state === "gps_passed" && (
-          <CheckCircle2 className={cn("size-10", getStateIconClassName(state))} />
+          <CheckCircle2
+            className={cn("size-10", getStateIconClassName(state))}
+          />
         )}
         {state === "gps_failed" && (
           <XCircle className={cn("size-10", getStateIconClassName(state))} />
@@ -434,7 +443,9 @@ export function ClockClient({
           <Spinner className={cn("size-10", getStateIconClassName(state))} />
         )}
         {state === "success" && (
-          <CheckCircle2 className={cn("size-10", getStateIconClassName(state))} />
+          <CheckCircle2
+            className={cn("size-10", getStateIconClassName(state))}
+          />
         )}
         {(state === "code_invalid" || state === "error") && (
           <XCircle className={cn("size-10", getStateIconClassName(state))} />
@@ -443,17 +454,10 @@ export function ClockClient({
 
       {/* GPS distance indicator */}
       {gpsDistance != null && (
-        <div
-          className={cn(
-            "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium",
-            gpsDistance <= 200
-              ? "bg-success/12 text-success"
-              : "bg-destructive/12 text-destructive",
-          )}
-        >
-          <MapPin className="size-4" />
+        <Badge variant={gpsDistance <= 200 ? "success" : "destructive"}>
+          <MapPin data-icon="inline-start" />
           {gpsDistance}m
-        </div>
+        </Badge>
       )}
 
       {/* Branch selection */}
@@ -461,7 +465,7 @@ export function ClockClient({
         state !== "scanning_code" &&
         state !== "verifying" &&
         state !== "success" && (
-          <div className="w-full max-w-xs space-y-2">
+          <div className="flex w-full max-w-xs flex-col gap-2">
             <Label>Chi nhánh</Label>
             <Select
               value={selectedBranchId?.toString() ?? ""}
@@ -476,11 +480,13 @@ export function ClockClient({
                 <SelectValue placeholder="Chọn chi nhánh" />
               </SelectTrigger>
               <SelectContent>
-                {branches.map((b) => (
-                  <SelectItem key={b.id} value={b.id.toString()}>
-                    {b.name}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.id.toString()}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>
@@ -488,7 +494,7 @@ export function ClockClient({
 
       {/* QR Scanner area */}
       {state === "scanning_code" && (
-        <div className="w-full max-w-xs space-y-3">
+        <div className="flex w-full max-w-xs flex-col gap-3">
           <div
             ref={scannerRef}
             id="qr-reader"
@@ -507,8 +513,8 @@ export function ClockClient({
 
       {/* Manual code entry */}
       {state === "entering_code" && (
-        <div className="w-full max-w-xs space-y-3">
-          <div className="space-y-2">
+        <div className="flex w-full max-w-xs flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="manual-code">Nhập mã chấm công (6 ký tự)</Label>
             <Input
               id="manual-code"
@@ -516,7 +522,7 @@ export function ClockClient({
               maxLength={6}
               value={manualCode}
               onChange={(e) => setManualCode(e.target.value)}
-              className="text-center font-mono text-lg tracking-widest"
+              className="text-center font-mono text-lg"
               autoFocus
             />
           </div>
@@ -537,7 +543,7 @@ export function ClockClient({
               disabled={manualCode.length !== 6 || isPending}
               onClick={() => submitClockIn(manualCode)}
             >
-              {isPending && <Spinner className="mr-2" />}
+              {isPending && <Spinner data-icon="inline-start" />}
               Xác nhận
             </Button>
           </div>
@@ -552,7 +558,7 @@ export function ClockClient({
       {/* Primary action button */}
       {state === "idle" && (
         <Button size="lg" className="w-full max-w-xs" onClick={checkGps}>
-          <MapPin className="mr-2 size-5" />
+          <MapPin data-icon="inline-start" />
           Bắt đầu chấm công
         </Button>
       )}
@@ -579,21 +585,23 @@ export function ClockClient({
       {state === "gps_passed" && (
         <div className="flex w-full max-w-xs flex-col gap-3">
           <Button size="lg" className="w-full" onClick={startQrScan}>
-            <Camera className="mr-2 size-5" />
+            <Camera data-icon="inline-start" />
             Quét mã QR
           </Button>
-          <button
+          <Button
             type="button"
-            className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            variant="link"
+            size="lg"
+            className="w-full"
             onClick={() => {
               setState("entering_code");
               setManualCode("");
               setError(null);
             }}
           >
-            <Keyboard className="size-4" />
+            <Keyboard data-icon="inline-start" />
             Nhập mã thủ công
-          </button>
+          </Button>
         </div>
       )}
 

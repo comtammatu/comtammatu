@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { MODULE_ACL } from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   getPaymentProvider,
@@ -10,10 +10,10 @@ import {
 } from "@comtammatu/shared/providers";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { ensurePaymentProvidersRegistered } from "../../../../lib/payment-providers-init";
-import { getAuthContext } from "../../_lib/auth";
+import { getAuthContextWithPermission } from "../../_lib/auth";
 
 type PosSupabase = NonNullable<
-  Awaited<ReturnType<typeof getAuthContext>>
+  Awaited<ReturnType<typeof getAuthContextWithPermission>>
 >["supabase"];
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
@@ -135,7 +135,7 @@ export async function fetchPaymentMethodsForPos(
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(POS_ROLES);
+  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -178,7 +178,7 @@ export async function createPayment(
     };
   }
 
-  const ctx = await getAuthContext(POS_ROLES);
+  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -336,7 +336,7 @@ export async function confirmPayment(
     return { success: false, error: "Payment ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(POS_ROLES);
+  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -420,7 +420,7 @@ export async function fetchPaymentForOrder(
     return { success: false, error: "Order ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(POS_ROLES);
+  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -459,7 +459,7 @@ export async function fetchDailyReconciliation(
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(POS_ROLES);
+  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;

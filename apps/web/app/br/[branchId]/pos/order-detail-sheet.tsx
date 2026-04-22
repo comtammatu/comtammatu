@@ -39,6 +39,7 @@ import {
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   CheckCircle2,
@@ -332,10 +333,7 @@ export function OrderDetailSheet({
 
           {isPending && !data && orderId !== null && (
             <div className="flex flex-1 items-center justify-center py-12">
-              <Loader2
-                className="size-8 animate-spin text-muted-foreground motion-safe:animate-spin"
-                aria-hidden
-              />
+              <Spinner className="size-8 text-muted-foreground" />
               <span className="sr-only">Đang tải đơn hàng</span>
             </div>
           )}
@@ -431,7 +429,7 @@ export function OrderDetailSheet({
                       <li
                         key={row.id}
                         className={cn(
-                          "transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border p-3",
+                          "rounded-xl border p-3 transition-transform hover:-translate-y-0.5 hover:shadow-md",
                           cancelled
                             ? "border-dashed bg-muted/40"
                             : "border-border bg-card shadow-sm",
@@ -519,7 +517,7 @@ export function OrderDetailSheet({
                   <Button
                     type="button"
                     size="lg"
-                    className="min-h-11 w-full rounded-lg shadow-sm transition-transform hover:translate-y-[-1px]"
+                    className="min-h-11 w-full rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
                     onClick={() => {
                       onOpenBill(data.id);
                       onClose();
@@ -535,7 +533,7 @@ export function OrderDetailSheet({
                   <Button
                     type="button"
                     variant="outline"
-                    className="min-h-11 w-full rounded-lg shadow-sm transition-transform hover:translate-y-[-1px]"
+                    className="min-h-11 w-full rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
                     onClick={() => {
                       onStartAppend(data.id, data.order_number);
                     }}

@@ -16,6 +16,9 @@ import type {
 
 interface ProductionHubClientProps {
   canManageCatalog: boolean;
+  canManageRecipes: boolean;
+  canCreateProduction: boolean;
+  canConfirmProduction: boolean;
   centralKitchenBranches: BranchOption[];
   ingredients: IngredientOption[];
   finishedGoods: FinishedGoodOption[];
@@ -25,6 +28,9 @@ interface ProductionHubClientProps {
 
 export function ProductionHubClient({
   canManageCatalog,
+  canManageRecipes,
+  canCreateProduction,
+  canConfirmProduction,
   centralKitchenBranches,
   ingredients,
   finishedGoods,
@@ -55,20 +61,25 @@ export function ProductionHubClient({
         readinessState={readinessState}
         centralKitchenCount={centralKitchenBranches.length}
         canManageCatalog={canManageCatalog}
+        canManageRecipes={canManageRecipes}
       />
 
       <div className="flex flex-wrap items-center justify-end gap-3">
         <ProductionOrderForm
           centralKitchenBranches={centralKitchenBranches}
           finishedGoodsOptions={sortedFinishedGoods}
-          actionsEnabled={actionsEnabled}
+          actionsEnabled={actionsEnabled && canCreateProduction}
         />
       </div>
 
-      <ProductionOrderList orders={orders} />
+      <ProductionOrderList
+        orders={orders}
+        canConfirmProduction={canConfirmProduction}
+      />
 
       <ProductionRecipePanel
         canManageCatalog={canManageCatalog}
+        canManageRecipes={canManageRecipes}
         finishedGoods={finishedGoods}
         ingredients={ingredients}
         recipes={recipes}

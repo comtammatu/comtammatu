@@ -23,6 +23,7 @@ interface ProductionStatsProps {
   readinessState: ProductionReadinessState;
   centralKitchenCount: number;
   canManageCatalog: boolean;
+  canManageRecipes: boolean;
 }
 
 export function ProductionStats({
@@ -31,6 +32,7 @@ export function ProductionStats({
   readinessState,
   centralKitchenCount,
   canManageCatalog,
+  canManageRecipes,
 }: ProductionStatsProps) {
   const router = useRouter();
   const [quickFinishedGoodDialogOpen, setQuickFinishedGoodDialogOpen] =
@@ -58,7 +60,7 @@ export function ProductionStats({
           ? "Tạo nguyên liệu đầu vào để hoàn thiện BOM trước khi xác nhận sản xuất."
           : "Cần đội quản trị danh mục bổ sung nguyên liệu đầu vào trước khi hoàn thiện BOM sản xuất."
         : readinessState === "missing-recipe"
-          ? canManageCatalog
+          ? canManageRecipes
             ? "Cấu hình ít nhất một BOM sản xuất trước khi xác nhận lệnh."
             : "Cần đội quản trị cấu hình BOM sản xuất trước khi bếp trung tâm chạy mẻ này."
           : null;
@@ -109,17 +111,17 @@ export function ProductionStats({
                     Tạo nguyên liệu
                   </Button>
                 ) : null}
-                {readinessState === "missing-recipe" ? (
+                {readinessState === "missing-recipe" && canManageRecipes ? (
                   <Button type="button" size="sm" variant="outline" asChild>
-                    <Link href="/inventory/recipes">Mở công thức</Link>
+                    <Link href="/inventory/production">Mở BOM sản xuất</Link>
                   </Button>
-                ) : (
+                ) : readinessState !== "missing-recipe" && canManageCatalog ? (
                   <Button type="button" size="sm" variant="outline" asChild>
                     <Link href="/inventory/ingredients">
                       Mở danh mục nguyên liệu
                     </Link>
                   </Button>
-                )}
+                ) : null}
               </div>
             )}
           </CardContent>

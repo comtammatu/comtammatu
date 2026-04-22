@@ -22,11 +22,7 @@ import {
   Users,
   UtensilsCrossed,
 } from "lucide-react";
-import {
-  canAccess,
-  ROLE_LABEL_VI,
-  type StaffRole,
-} from "@comtammatu/shared/auth";
+import { ROLE_LABEL_VI, type StaffRole } from "@comtammatu/shared/auth";
 import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -54,15 +50,23 @@ interface InventoryShellProps {
   userRole: StaffRole;
   siteName: string;
   siteKind: string;
+  showProcurement: boolean;
+  showProduction: boolean;
+  showCatalogManagement: boolean;
+  showSettings: boolean;
 }
 
 function buildInventoryGroups({
   showProcurement,
-  userRole,
+  showProduction,
+  showCatalogManagement,
+  showSettings,
   siteKind,
 }: {
   showProcurement: boolean;
-  userRole: StaffRole;
+  showProduction: boolean;
+  showCatalogManagement: boolean;
+  showSettings: boolean;
   siteKind: string;
 }): ShellNavGroup[] {
   const isBranchSite = siteKind === "branch";
@@ -127,7 +131,7 @@ function buildInventoryGroups({
     ],
   });
 
-  if (userRole === "super_manager") {
+  if (showProduction) {
     groups.push({
       title: "Bếp trung tâm",
       items: [
@@ -164,11 +168,15 @@ function buildInventoryGroups({
   groups.push({
     title: "Quản lý",
     items: [
-      {
-        href: "/inventory/settings",
-        label: tNav("settings", "navigation"),
-        icon: Settings,
-      },
+      ...(showSettings
+        ? [
+            {
+              href: "/inventory/settings",
+              label: tNav("settings", "navigation"),
+              icon: Settings,
+            },
+          ]
+        : []),
       ...(showProcurement
         ? [
             {
@@ -178,11 +186,15 @@ function buildInventoryGroups({
             },
           ]
         : []),
-      {
-        href: "/inventory/ingredients",
-        label: tNav("ingredients", "navigation"),
-        icon: FileText,
-      },
+      ...(showCatalogManagement
+        ? [
+            {
+              href: "/inventory/ingredients",
+              label: tNav("ingredients", "navigation"),
+              icon: FileText,
+            },
+          ]
+        : []),
       ...(showProcurement
         ? [
             {
@@ -207,15 +219,33 @@ export function InventoryShell({
   userRole,
   siteName,
   siteKind,
+  showProcurement,
+  showProduction,
+  showCatalogManagement,
+  showSettings,
 }: InventoryShellProps) {
   const pathname = usePathname();
-  const showProcurement = canAccess(userRole, "inventory_procurement");
   const groups = useMemo(
-    () => buildInventoryGroups({ showProcurement, userRole, siteKind }),
-    [showProcurement, siteKind, userRole],
+    () =>
+      buildInventoryGroups({
+        showProcurement,
+        showProduction,
+        showCatalogManagement,
+        showSettings,
+        siteKind,
+      }),
+    [
+      showCatalogManagement,
+      showProcurement,
+      showProduction,
+      showSettings,
+      siteKind,
+    ],
   );
 
   const isMobileRoute = pathname?.startsWith("/inventory/m") ?? false;
+  const siteKindLabel = getInventorySiteKindLabelVi(siteKind);
+  const showSiteKindLabel = siteKindLabel !== siteName;
   if (isMobileRoute) {
     return (
       <div className="flex min-h-dvh flex-col bg-background">
@@ -244,9 +274,11 @@ export function InventoryShell({
             <Store className="size-4 shrink-0" />
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-xs font-medium">{siteName}</span>
-              <span className="truncate text-xs text-muted-foreground">
-                {getInventorySiteKindLabelVi(siteKind)}
-              </span>
+              {showSiteKindLabel ? (
+                <span className="truncate text-xs text-muted-foreground">
+                  {siteKindLabel}
+                </span>
+              ) : null}
             </div>
           </div>
         </SidebarHeader>

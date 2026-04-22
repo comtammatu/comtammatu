@@ -2,10 +2,10 @@
 
 import { randomUUID } from "crypto";
 import { z } from "zod";
-import { PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
-import { getAuthContext } from "./_lib/auth";
+import { getAuthContextWithPermission } from "./_lib/auth";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
 
 const ROLES = PROCUREMENT_ROLES;
@@ -27,7 +27,10 @@ function canAccessProcurementBranch(
 /* ─── fetchPurchaseOrders ─── */
 
 export async function fetchPurchaseOrders(): Promise<ActionResult> {
-  const ctx = await getAuthContext(ROLES);
+  const ctx = await getAuthContextWithPermission(
+    ROLES,
+    PERMISSION_KEYS.PROCUREMENT_READ,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
   const { data, error } = await supabase
@@ -50,7 +53,11 @@ const poCreateSchema = z.object({
 });
 
 export const createPurchaseOrder = withAction(
-  { roles: ROLES, schema: poCreateSchema },
+  {
+    roles: ROLES,
+    schema: poCreateSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+  },
   async (data, { supabase, claims, user }) => {
     let targetBranchId = data.branchId;
 
@@ -101,7 +108,10 @@ export async function fetchPurchaseOrderDetail(
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(poId);
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContext(ROLES);
+  const ctx = await getAuthContextWithPermission(
+    ROLES,
+    PERMISSION_KEYS.PROCUREMENT_READ,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
   const { data: po, error: e1 } = await supabase
@@ -134,7 +144,11 @@ const poLineSchema = z.object({
 });
 
 export const upsertPurchaseOrderLine = withAction(
-  { roles: ROLES, schema: poLineSchema },
+  {
+    roles: ROLES,
+    schema: poLineSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+  },
   async (data, { supabase, claims }) => {
     const { data: po, error: pe } = await supabase
       .from("purchase_orders")
@@ -187,7 +201,11 @@ const deletePoLineSchema = z.object({
 });
 
 export const deletePurchaseOrderLine = withAction(
-  { roles: ROLES, schema: deletePoLineSchema },
+  {
+    roles: ROLES,
+    schema: deletePoLineSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+  },
   async (data, { supabase, claims }) => {
     const { data: po, error: pe } = await supabase
       .from("purchase_orders")
@@ -240,7 +258,10 @@ export async function updatePurchaseOrderStatus(
       error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
     };
   }
-  const ctx = await getAuthContext(ROLES);
+  const ctx = await getAuthContextWithPermission(
+    ROLES,
+    PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
   const { data: po, error: pe } = await supabase
@@ -286,7 +307,10 @@ export interface OpenPurchaseOrderRow {
 export async function fetchOpenPurchaseOrdersForReceiving(): Promise<
   ActionResult<OpenPurchaseOrderRow[]>
 > {
-  const ctx = await getAuthContext(ROLES);
+  const ctx = await getAuthContextWithPermission(
+    ROLES,
+    PERMISSION_KEYS.PROCUREMENT_READ,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
 
@@ -369,7 +393,10 @@ export async function fetchPoSuggestions(input: {
   if (!parsed.success) {
     return { success: false, error: "Dữ liệu không hợp lệ" };
   }
-  const ctx = await getAuthContext(ROLES);
+  const ctx = await getAuthContextWithPermission(
+    ROLES,
+    PERMISSION_KEYS.PROCUREMENT_READ,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
 
@@ -414,7 +441,7 @@ export async function fetchPoSuggestions(input: {
     .eq("ingredients.is_active", true)
     .not("ingredients.reorder_point", "is", null);
 
-  if (e1) return { success: false, error: "Không thể tải tồn kho kho tổng." };
+  if (e1) return { success: false, error: "Không thể tải tồn kho tại kho tổng." };
 
   // 2. Consumption aggregated tenant-wide over the period.
   // Proxy until branches.primary_warehouse_id FK exists (see inventory.md §10).
@@ -501,7 +528,11 @@ const priceDeviationsSchema = z.object({
 });
 
 export const fetchPriceDeviations = withAction(
-  { roles: ROLES, schema: priceDeviationsSchema },
+  {
+    roles: ROLES,
+    schema: priceDeviationsSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_READ,
+  },
   async (data, { supabase, claims }) => {
     // 1. Fetch PO with supplier_id
     const { data: po, error: e1 } = await supabase
@@ -585,7 +616,11 @@ const singleDeviationSchema = z.object({
 });
 
 export const fetchSinglePriceDeviation = withAction(
-  { roles: ROLES, schema: singleDeviationSchema },
+  {
+    roles: ROLES,
+    schema: singleDeviationSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_READ,
+  },
   async (data, { supabase, claims }) => {
     const { data: history } = await supabase
       .from("grn_items")
@@ -637,7 +672,11 @@ const priceHistorySchema = z.object({
 });
 
 export const fetchIngredientPriceHistory = withAction(
-  { roles: ROLES, schema: priceHistorySchema },
+  {
+    roles: ROLES,
+    schema: priceHistorySchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_READ,
+  },
   async (data, { supabase, claims }) => {
     let query = supabase
       .from("grn_items")

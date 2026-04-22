@@ -138,7 +138,7 @@ export default async function PosPage({
   const tableParamValidForDineIn =
     initialTableId != null &&
     tablesList.some(
-      (t) => t.id === initialTableId && t.status !== "maintenance",
+      (t) => t.id === initialTableId && t.status === "available",
     );
   const initialOrderType: OrderType = tableParamValidForDineIn
     ? "dine_in"

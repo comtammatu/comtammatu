@@ -5,10 +5,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { LogIn, LogOut } from "lucide-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { checkIn, checkOut } from "../hr/actions";
-import {
-  Card,
-  CardContent,
-} from "@comtammatu/ui/components/card";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 
 interface TodayAttendance {
   id: number;
@@ -76,8 +73,8 @@ export function EmployeePortalActions({
 
   return (
     <Card>
-      <CardContent className="space-y-3 p-4">
-        <div className="mb-3 flex gap-4 text-xs text-muted-foreground">
+      <CardContent className="flex flex-col gap-3 p-4">
+        <div className="flex gap-4 text-xs text-muted-foreground">
           <span>
             Vào:{" "}
             <span className="font-medium text-foreground">
@@ -110,9 +107,9 @@ export function EmployeePortalActions({
             variant={hasCheckedIn ? "outline" : "default"}
           >
             {loading && !hasCheckedIn ? (
-              <Spinner className="mr-2" />
+              <Spinner data-icon="inline-start" />
             ) : (
-              <LogIn className="mr-2 size-4" />
+              <LogIn data-icon="inline-start" />
             )}
             {hasCheckedIn ? "Đã vào ca" : "Chấm công vào"}
           </Button>
@@ -124,9 +121,9 @@ export function EmployeePortalActions({
             variant={hasCheckedOut ? "outline" : "secondary"}
           >
             {loading && hasCheckedIn && !hasCheckedOut ? (
-              <Spinner className="mr-2" />
+              <Spinner data-icon="inline-start" />
             ) : (
-              <LogOut className="mr-2 size-4" />
+              <LogOut data-icon="inline-start" />
             )}
             {hasCheckedOut ? "Đã ra ca" : "Chấm công ra"}
           </Button>

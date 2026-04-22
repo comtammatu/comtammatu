@@ -3,10 +3,11 @@
 import { z } from "zod";
 import {
   BRANCH_FLOOR_SETTINGS_ROLES,
+  PERMISSION_KEYS,
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "@/_lib/auth";
+import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, withFormAction, type ActionContext } from "@/_lib/with-action";
 
@@ -72,7 +73,10 @@ const saveStationCategoriesSchema = z.object({
  * Optionally filter by branchId. Kept manual (auth-only + complex optional filter).
  */
 export async function fetchStations(branchId?: number): Promise<ActionResult> {
-  const ctx = await getAuthContext(SETTINGS_ROLES);
+  const ctx = await getAuthContextWithPermission(
+    SETTINGS_ROLES,
+    PERMISSION_KEYS.SETTINGS_BRANCH,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -139,6 +143,7 @@ export const createStation = withFormAction(
   {
     roles: SETTINGS_ROLES,
     schema: createStationSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
     extract: (fd) => ({
       name: fd.get("name"),
       branch_id: fd.get("branch_id"),
@@ -186,6 +191,7 @@ export const updateStation = withFormAction(
   {
     roles: SETTINGS_ROLES,
     schema: updateStationSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
     extract: (fd) => {
       const rawIsActive = fd.get("is_active");
       return {
@@ -235,7 +241,7 @@ export const updateStation = withFormAction(
 );
 
 export const saveStationCategories = withAction(
-  { roles: SETTINGS_ROLES, schema: saveStationCategoriesSchema },
+  { roles: SETTINGS_ROLES, schema: saveStationCategoriesSchema, permission: PERMISSION_KEYS.SETTINGS_BRANCH },
   async (data, { supabase, claims }) => {
     const { data: station } = await supabase
       .from("kds_stations")

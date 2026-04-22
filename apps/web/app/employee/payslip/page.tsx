@@ -1,5 +1,17 @@
 import { loadAuthState } from "@/_lib/auth";
 import { PayslipClient } from "./payslip-client";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
 
 export default async function PayslipPage() {
   const { supabase, session, claims } = await loadAuthState();
@@ -14,9 +26,14 @@ export default async function PayslipPage() {
 
   if (!employee) {
     return (
-      <div className="p-8 text-center text-muted-foreground">
-        Không tìm thấy hồ sơ nhân viên. Liên hệ quản lý.
-      </div>
+      <Empty>
+        <EmptyHeader>
+          <EmptyTitle>Không tìm thấy hồ sơ nhân viên</EmptyTitle>
+          <EmptyDescription>
+            Liên hệ quản lý để kiểm tra hồ sơ.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
   }
 
@@ -37,13 +54,13 @@ export default async function PayslipPage() {
     .limit(12);
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 px-4 py-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Phiếu lương</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          12 kỳ lương gần nhất
-        </p>
-      </div>
+    <div className="flex flex-col gap-5">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Phiếu lương</CardTitle>
+          <CardDescription>12 kỳ lương gần nhất.</CardDescription>
+        </CardHeader>
+      </Card>
 
       <PayslipClient entries={(entries ?? []) as PayslipEntry[]} />
     </div>

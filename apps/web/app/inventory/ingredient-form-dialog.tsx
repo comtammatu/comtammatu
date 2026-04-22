@@ -15,11 +15,7 @@ import {
 import { FieldGroup } from "@comtammatu/ui/components/field";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  NumberField,
-  SelectField,
-  TextField,
-} from "@/components/form";
+import { NumberField, SelectField, TextField } from "@/components/form";
 import { createIngredient, updateIngredient } from "./actions";
 import type { IngredientRow } from "./_lib/types";
 import { STORAGE_OPTIONS, ITEM_KIND_OPTIONS } from "./_lib/constants";
@@ -37,6 +33,17 @@ const ingredientSchema = z.object({
     .string()
     .trim()
     .min(1, { error: "Đơn vị tính không được trống" }),
+  purchase_to_measure_factor: z
+    .string()
+    .trim()
+    .min(1, { error: "Tỉ lệ quy đổi không được để trống" })
+    .refine(
+      (value) => {
+        const n = Number(value);
+        return Number.isFinite(n) && n > 0;
+      },
+      { error: "Tỉ lệ quy đổi phải lớn hơn 0" },
+    ),
   sku: z.string().trim().optional(),
   category: z.string().trim().optional(),
   unit_cost: z.string().optional(),
@@ -55,6 +62,10 @@ function toFormValues(ingredient: IngredientRow | null): IngredientFormValues {
     name: ingredient?.name ?? "",
     purchase_unit: ingredient?.purchase_unit ?? ingredient?.unit ?? "",
     measure_unit: ingredient?.measure_unit ?? ingredient?.unit ?? "",
+    purchase_to_measure_factor:
+      ingredient?.purchase_to_measure_factor != null
+        ? String(ingredient.purchase_to_measure_factor)
+        : "1",
     sku: ingredient?.sku ?? "",
     category: ingredient?.category ?? "",
     unit_cost:
@@ -124,6 +135,8 @@ function IngredientFormContent({
         name: values.name,
         purchase_unit: values.purchase_unit,
         measure_unit: values.measure_unit,
+        purchase_to_measure_factor:
+          parseOptionalNumber(values.purchase_to_measure_factor) ?? 1,
         sku: values.sku || undefined,
         category: values.category || undefined,
         unit_cost: parseOptionalNumber(values.unit_cost),
@@ -148,6 +161,7 @@ function IngredientFormContent({
           unit: payload.measure_unit,
           purchase_unit: payload.purchase_unit,
           measure_unit: payload.measure_unit,
+          purchase_to_measure_factor: payload.purchase_to_measure_factor,
           sku: payload.sku ?? null,
           unit_cost: payload.unit_cost ?? null,
           category: payload.category ?? null,
@@ -164,6 +178,7 @@ function IngredientFormContent({
           name: payload.name,
           purchase_unit: payload.purchase_unit,
           measure_unit: payload.measure_unit,
+          purchase_to_measure_factor: payload.purchase_to_measure_factor,
           sku: payload.sku,
           unit_cost: payload.unit_cost,
           category: payload.category,
@@ -186,6 +201,7 @@ function IngredientFormContent({
           unit: payload.measure_unit,
           purchase_unit: payload.purchase_unit,
           measure_unit: payload.measure_unit,
+          purchase_to_measure_factor: payload.purchase_to_measure_factor,
           sku: payload.sku ?? null,
           unit_cost: payload.unit_cost ?? null,
           category: payload.category ?? null,
@@ -245,6 +261,16 @@ function IngredientFormContent({
               placeholder="SKU-001"
             />
           </div>
+
+          <NumberField
+            control={form.control}
+            name="purchase_to_measure_factor"
+            label="Tỉ lệ quy đổi"
+            description="Số đơn vị tính trong 1 đơn vị nhập. VD: 1 chai = 250 ml thì nhập 250."
+            maxFractionDigits={6}
+            placeholder="VD: 250"
+            required
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <TextField

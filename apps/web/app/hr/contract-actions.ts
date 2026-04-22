@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 
 const HR_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
@@ -13,7 +13,7 @@ const fetchContractsSchema = z.object({
 });
 
 export const fetchContracts = withAction(
-  { roles: HR_ROLES, schema: fetchContractsSchema },
+  { roles: HR_ROLES, schema: fetchContractsSchema, permission: PERMISSION_KEYS.HR_CONTRACT_CREATE },
   async (data, { supabase, claims }) => {
     const { data: result, error } = await supabase
       .from("employment_contracts")
@@ -48,7 +48,7 @@ const createContractSchema = z.object({
 });
 
 export const createContract = withAction(
-  { roles: HR_ROLES, schema: createContractSchema },
+  { roles: HR_ROLES, schema: createContractSchema, permission: PERMISSION_KEYS.HR_CONTRACT_CREATE },
   async (data, { supabase, claims }) => {
     // Count existing contracts to determine sequence
     const { count } = await supabase
@@ -126,7 +126,7 @@ const terminateSchema = z.object({
 });
 
 export const terminateContract = withAction(
-  { roles: HR_ROLES, schema: terminateSchema },
+  { roles: HR_ROLES, schema: terminateSchema, permission: PERMISSION_KEYS.HR_CONTRACT_CREATE },
   async (data, { supabase, claims }) => {
     const { data: result, error } = await supabase
       .from("employment_contracts")

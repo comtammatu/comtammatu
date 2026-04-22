@@ -12,9 +12,19 @@ export {
 } from "./types";
 export type { ModuleKey } from "./module-acl";
 export { MODULE_ACL, canAccess, getAccessibleModules } from "./module-acl";
+export type { PermissionKey } from "./permissions";
+export {
+  PERMISSION_KEYS,
+  PERMISSION_KEY_COUNT,
+  hasPermission,
+  hasAllPermissions,
+  hasAnyPermission,
+} from "./permissions";
 export type { AuthSurface } from "./scope";
 export {
+  decodeJwtAppMetadata,
   extractClaims,
+  extractClaimsFromAccessToken,
   getBetaDefaultRedirect,
   getScope,
   getDefaultRedirect,
@@ -77,6 +87,7 @@ export {
   BETA_ROUTE_PREFIX,
   INVENTORY_PROCUREMENT_PREFIXES,
   PUBLIC_APP_PATHS,
+  isAdminRoutePath,
   isBetaPath,
   isPublicAppPath,
   resolveModuleFromPath,

@@ -13,7 +13,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
   canAccess,
-  extractClaims,
+  extractClaimsFromAccessToken,
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
 import { MobilePage } from "../../_components/mobile/mobile-page";
@@ -41,7 +41,7 @@ async function loadSuppliers(): Promise<SupplierRow[]> {
     data: { session },
   } = await supabase.auth.getSession();
   if (!session) return [];
-  const claims = extractClaims(session.user.app_metadata);
+  const claims = extractClaimsFromAccessToken(session.access_token);
   if (!claims) return [];
 
   const [suppliersRes, grnRes] = await Promise.all([
@@ -138,7 +138,7 @@ export default async function MobileGrnSupplierList({
     data: { session },
   } = await supabase.auth.getSession();
   if (!session) redirect("/login");
-  const claims = extractClaims(session.user.app_metadata);
+  const claims = extractClaimsFromAccessToken(session.access_token);
   if (!claims) redirect("/login");
   if (!PROCUREMENT_ROLES.includes(claims.user_role)) {
     redirect("/inventory/m?forbidden=1");

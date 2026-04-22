@@ -1,9 +1,18 @@
 import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
+import { buildAccessDeniedPath, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { loadAuthState } from "../../_lib/auth";
+import { currentUserHasAnyPermissionAny } from "../../_lib/permissions";
 import { InventoryHeader } from "../_components/inventory-header";
 import { SettingsSectionNav } from "./settings-section-nav";
+
+const INVENTORY_SETTINGS_PERMISSIONS = [
+  PERMISSION_KEYS.SETTINGS_BRANCH,
+  PERMISSION_KEYS.SETTINGS_TENANT,
+  PERMISSION_KEYS.SETTINGS_INTEGRATIONS,
+] as const;
 
 export default async function InventorySettingsLayout({
   children,
@@ -11,6 +20,16 @@ export default async function InventorySettingsLayout({
   children: ReactNode;
 }) {
   const { claims } = await loadAuthState();
+  const canOpenSettings = await currentUserHasAnyPermissionAny(
+    INVENTORY_SETTINGS_PERMISSIONS,
+  );
+  if (!canOpenSettings) {
+    redirect(
+      buildAccessDeniedPath("insufficient-permission", {
+        from: "/inventory/settings",
+      }),
+    );
+  }
 
   return (
     <>

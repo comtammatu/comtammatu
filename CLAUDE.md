@@ -22,9 +22,9 @@ pnpm db:types     # Regenerate Supabase types (after migration merged & applied)
 - NEVER import `@comtammatu/database` barrel in "use client" components
 - NEVER store scope in localStorage/Context — URL params only
 - Multi-item atomic writes → Postgres RPC function
-- After SQL migration merged & applied → `pnpm db:types`
-- NEVER apply migrations directly — write file → PR → merge → owner applies manually
-- ACL single source: `packages/shared/src/auth/module-acl.ts`
+- After SQL migration applied → `pnpm db:types` to regenerate types
+- Claude applies migrations via `supabase db push` (or equivalent) — write file → apply → regen types. Owner does NOT apply manually
+- ACL single source: route-level = `packages/shared/src/auth/module-acl.ts`; row-level = `staff_permissions` table + `has_permission(branch, key)` SQL helper (Auth v2). Permission key catalog = `packages/shared/src/auth/permissions.ts`
 
 ## Architecture
 

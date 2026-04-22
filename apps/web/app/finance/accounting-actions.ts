@@ -1,9 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "@/_lib/auth";
+import { getAuthContextWithPermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 
 const FINANCE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
@@ -17,7 +17,7 @@ const REPORT_ROLES: readonly StaffRole[] = [
 /* ─── Chart of Accounts ──────────────────────────────────────────────────── */
 
 export async function fetchChartOfAccounts(): Promise<ActionResult> {
-  const ctx = await getAuthContext(FINANCE_ROLES);
+  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, PERMISSION_KEYS.SETTINGS_TENANT);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -43,7 +43,7 @@ const createAccountSchema = z.object({
 });
 
 export const createAccount = withAction(
-  { roles: FINANCE_ROLES, schema: createAccountSchema },
+  { roles: FINANCE_ROLES, schema: createAccountSchema, permission: PERMISSION_KEYS.SETTINGS_TENANT },
   async (data, { supabase, claims }) => {
     const { data: result, error } = await supabase
       .from("chart_of_accounts")
@@ -72,7 +72,7 @@ const updateAccountSchema = z.object({
 });
 
 export const updateAccount = withAction(
-  { roles: FINANCE_ROLES, schema: updateAccountSchema },
+  { roles: FINANCE_ROLES, schema: updateAccountSchema, permission: PERMISSION_KEYS.SETTINGS_TENANT },
   async (data, { supabase, claims }) => {
     const updatePayload: Record<string, unknown> = {};
     if (data.name !== undefined) updatePayload.name = data.name;
@@ -107,7 +107,7 @@ export async function fetchJournalEntries(
     return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
   }
 
-  const ctx = await getAuthContext(FINANCE_ROLES);
+  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, PERMISSION_KEYS.SETTINGS_TENANT);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -175,7 +175,7 @@ export async function createJournalEntry(
     };
   }
 
-  const ctx = await getAuthContext(FINANCE_ROLES);
+  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, PERMISSION_KEYS.SETTINGS_TENANT);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -223,7 +223,7 @@ export async function fetchFoodCost(
     return { success: false, error: "Tham số không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(REPORT_ROLES);
+  const ctx = await getAuthContextWithPermission(REPORT_ROLES, PERMISSION_KEYS.FINANCE_VIEW);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;

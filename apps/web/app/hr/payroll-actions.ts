@@ -1,10 +1,10 @@
 "use server";
 
 import { z } from "zod";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { calculatePayrollEntry } from "@comtammatu/shared/payroll";
-import { getAuthContext } from "../admin/_lib/auth";
+import { getAuthContextWithPermission } from "../admin/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { logAudit } from "../admin/_lib/audit";
 
@@ -13,7 +13,7 @@ const PAYROLL_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 /* ─── Fetch Payroll Periods ─── */
 
 export async function fetchPayrollPeriods(): Promise<ActionResult> {
-  const ctx = await getAuthContext(PAYROLL_ROLES);
+  const ctx = await getAuthContextWithPermission(PAYROLL_ROLES, PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;

@@ -1,9 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "@/_lib/auth";
+import { getAuthContextWithPermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { logAudit } from "@/admin/_lib/audit";
 
@@ -30,7 +30,7 @@ export async function fetchJournalEntries(
 ): Promise<ActionResult> {
   const parsed = fetchJournalSchema.optional().safeParse(filters);
 
-  const ctx = await getAuthContext(JOURNAL_READ_ROLES);
+  const ctx = await getAuthContextWithPermission(JOURNAL_READ_ROLES, PERMISSION_KEYS.FINANCE_VIEW);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -97,7 +97,7 @@ const voidSchema = z.object({
 /* ─── Create Journal Entry ─── */
 
 export const createJournalEntry = withAction(
-  { roles: JOURNAL_WRITE_ROLES, schema: createJournalSchema },
+  { roles: JOURNAL_WRITE_ROLES, schema: createJournalSchema, permission: PERMISSION_KEYS.FINANCE_EXPENSE_APPROVE },
   async (data, { supabase, claims, user }) => {
     // Validate balance: SUM(debit) must equal SUM(credit)
     const totalDebit = data.lines.reduce((sum, l) => sum + l.debitAmount, 0);
@@ -167,7 +167,7 @@ export const createJournalEntry = withAction(
 /* ─── Post Journal Entry ─── */
 
 export const postJournalEntry = withAction(
-  { roles: JOURNAL_WRITE_ROLES, schema: postIdSchema },
+  { roles: JOURNAL_WRITE_ROLES, schema: postIdSchema, permission: PERMISSION_KEYS.FINANCE_EXPENSE_APPROVE },
   async (data, { supabase, claims, user }) => {
     const { data: entry, error: fetchErr } = await supabase
       .from("journal_entries")
@@ -224,7 +224,7 @@ export const postJournalEntry = withAction(
 /* ─── Void Journal Entry ─── */
 
 export const voidJournalEntry = withAction(
-  { roles: JOURNAL_WRITE_ROLES, schema: voidSchema },
+  { roles: JOURNAL_WRITE_ROLES, schema: voidSchema, permission: PERMISSION_KEYS.FINANCE_EXPENSE_APPROVE },
   async (data, { supabase, claims, user }) => {
     const { error } = await supabase
       .from("journal_entries")

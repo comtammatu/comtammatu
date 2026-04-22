@@ -4,8 +4,8 @@
 
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "@/_lib/auth";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { getAuthContextWithPermission } from "@/_lib/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 
 /* ─── Allowed roles ─── */
 
@@ -74,7 +74,7 @@ export async function createRefund(input: {
     return { success: false, error: "Dữ liệu không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(CREATE_ROLES);
+  const ctx = await getAuthContextWithPermission(CREATE_ROLES, PERMISSION_KEYS.ORDERS_REFUND);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims, user } = ctx;
@@ -141,7 +141,7 @@ export async function approveRefund(input: {
     return { success: false, error: "Dữ liệu không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(APPROVE_ROLES);
+  const ctx = await getAuthContextWithPermission(APPROVE_ROLES, PERMISSION_KEYS.ORDERS_REFUND);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims, user } = ctx;
@@ -202,7 +202,7 @@ export async function fetchRefunds(
     return { success: false, error: "Bộ lọc không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(FETCH_ROLES);
+  const ctx = await getAuthContextWithPermission(FETCH_ROLES, PERMISSION_KEYS.ORDERS_READ);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;

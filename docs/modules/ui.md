@@ -10,6 +10,29 @@ Source of truth:
 2. `packages/ui/components.json`
 3. `apps/web/app/globals.css`
 4. `apps/web/app/layout.tsx`
+5. `docs/spec/design-system.md`
+6. `tasks/regressions.md`
+
+## Design System Contract
+
+Doc chot: `docs/spec/design-system.md`.
+
+Tat ca UI/UX rebuild phai di theo contract do truoc khi sua runtime. Design system cua repo la:
+
+- shadcn preset hien hanh (`radix-mira`, preset `b1GfmQMCm`)
+- token runtime trong `apps/web/app/globals.css`
+- primitive source trong `packages/ui/src/components/*`
+- glossary/copy source trong `docs/ref/glossary.md` va shared label dictionaries
+
+Khong duoc coi design system la mot layer moi tach rieng khoi shadcn. Neu can pattern moi, update `docs/spec/design-system.md` truoc, roi moi rollout vao code.
+
+Read order cho agent khi lam UI:
+
+1. `AGENTS.md`
+2. `docs/spec/design-system.md`
+3. `docs/modules/ui.md`
+4. `tasks/regressions.md`
+5. Domain docs lien quan den route dang sua
 
 ## Reset Contract
 
@@ -108,6 +131,27 @@ Quy tac review:
 - neu UI la form field thi phai dung helpers tu `@/components/form` (`TextField`, `NumberField`, `SelectField`, `TextareaField`)
 - neu UI la form dialog CRUD thi phai dung `FormDialog` wrapper
 - neu khong co primitive phu hop, dung lai va thong nhat truoc khi them pattern moi
+
+## UI Rebuild Gate
+
+Truoc khi rebuild mot surface, agent phai ghi ro trong plan:
+
+- surface va route family dang sua
+- primary user job cua surface do
+- UI thay doi thuoc nhom visual refactor, UX flow, copy, hay behavior
+- primitives se dung (`Table`, `Tabs`, `Sheet`, `Dialog`, `Item`, `InputGroup`, ...)
+- regression rules co nguy co cham vao
+
+Rebuild theo wave nho:
+
+1. Lock design system va rule.
+2. Audit route family.
+3. Chuan hoa shell/layout/state primitives.
+4. Sua flow chinh.
+5. Verify mobile first viewport + desktop density.
+6. Update docs/regressions neu phat sinh rule moi.
+
+Khong gom nhieu route family lon vao mot PR neu khong can thiet.
 
 ## Operational Surfaces
 

@@ -9,6 +9,7 @@ export interface IngredientRow {
   unit: string;
   purchase_unit: string;
   measure_unit: string;
+  purchase_to_measure_factor: number;
   category: string | null;
   item_kind: string;
   unit_cost: number | null;

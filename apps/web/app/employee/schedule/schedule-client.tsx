@@ -1,7 +1,25 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { cn } from "@comtammatu/ui";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import {
   CalendarDays,
@@ -123,71 +141,76 @@ export function ScheduleClient({
     : formatDate(weekStart);
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {/* Week navigation */}
       <div className="flex items-center justify-between gap-2">
         <Button
           variant="outline"
           size="icon"
-          className="min-h-11 min-w-11"
           onClick={goToPrevWeek}
           disabled={isPending}
           aria-label="Tuần trước"
         >
-          <ChevronLeft className="size-5" />
+          <ChevronLeft />
         </Button>
 
         <div className="flex flex-1 flex-col items-center gap-1">
           <p className="text-sm font-medium">{weekLabel}</p>
           {!isCurrentWeek && (
-            <button
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
               onClick={goToCurrentWeek}
               disabled={isPending}
-              className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
             >
               Tuần này
-            </button>
+            </Button>
           )}
         </div>
 
         <Button
           variant="outline"
           size="icon"
-          className="min-h-11 min-w-11"
           onClick={goToNextWeek}
           disabled={isPending}
           aria-label="Tuần sau"
         >
-          <ChevronRight className="size-5" />
+          <ChevronRight />
         </Button>
       </div>
 
       {/* Error state */}
       {error && (
-        <div className="flex flex-col items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
-          <p className="text-sm text-destructive">{error}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => loadWeek(weekStart)}
-            disabled={isPending}
-          >
-            <RefreshCw className="mr-1.5 size-4" />
-            Thử lại
-          </Button>
-        </div>
+        <Empty className="border border-destructive/30 bg-destructive/5">
+          <EmptyHeader>
+            <EmptyTitle>Không tải được lịch ca</EmptyTitle>
+            <EmptyDescription>{error}</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadWeek(weekStart)}
+              disabled={isPending}
+            >
+              <RefreshCw data-icon="inline-start" />
+              Thử lại
+            </Button>
+          </EmptyContent>
+        </Empty>
       )}
 
       {/* Loading skeleton */}
       {isPending && (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {Array.from({ length: 7 }).map((_, i) => (
             <div
               key={i}
               className="flex items-center gap-3 rounded-xl border p-4"
             >
-              <Skeleton className="h-10 w-10 rounded-lg" />
-              <div className="flex-1 space-y-2">
+              <Skeleton className="size-10 rounded-lg" />
+              <div className="flex flex-1 flex-col gap-2">
                 <Skeleton className="h-4 w-24" />
                 <Skeleton className="h-3 w-32" />
               </div>
@@ -198,71 +221,63 @@ export function ScheduleClient({
 
       {/* Day list */}
       {!isPending && !error && (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {shifts.length === 0 &&
             weekDates.every((d) => !shiftsByDate.has(d)) && (
-              <div className="flex flex-col items-center gap-3 rounded-lg border bg-card p-8 text-center">
-                <CalendarDays className="size-10 text-muted-foreground/40" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">
-                    Chưa có lịch ca tuần này
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Liên hệ quản lý xếp ca.
-                  </p>
-                </div>
-              </div>
+              <Empty>
+                <EmptyMedia variant="icon">
+                  <CalendarDays />
+                </EmptyMedia>
+                <EmptyHeader>
+                  <EmptyTitle>Chưa có lịch ca tuần này</EmptyTitle>
+                  <EmptyDescription>Liên hệ quản lý xếp ca.</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             )}
 
-          {(shifts.length > 0 || weekDates.some((d) => shiftsByDate.has(d))
-            ? weekDates
-            : []
-          ).map((dateStr) => {
-            const shift = shiftsByDate.get(dateStr);
-            const isToday = dateStr === todayStr;
+          <ItemGroup>
+            {(shifts.length > 0 || weekDates.some((d) => shiftsByDate.has(d))
+              ? weekDates
+              : []
+            ).map((dateStr) => {
+              const shift = shiftsByDate.get(dateStr);
+              const isToday = dateStr === todayStr;
 
-            return (
-              <div
-                key={dateStr}
-                className={`rounded-xl border p-4 transition-colors ${
-                  isToday
-                    ? "border-primary/50 bg-primary/5"
-                    : "border-border bg-card"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p
-                      className={`text-sm font-semibold ${
-                        isToday ? "text-primary" : "text-foreground"
-                      }`}
-                    >
-                      {getDayName(dateStr)}
-                      {isToday && (
-                        <span className="ml-2 text-xs font-medium text-primary">
-                          Hôm nay
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDate(dateStr)}
-                    </p>
-                  </div>
-
-                  {shift ? (
-                    <div className="text-right">
-                      <p className="text-sm font-medium">{shift.shift_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {shift.start_time} – {shift.end_time}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Nghỉ</p>
+              return (
+                <Item
+                  key={dateStr}
+                  variant="outline"
+                  className={cn(
+                    "items-center",
+                    isToday && "border-primary/50 bg-primary/5",
                   )}
-                </div>
-              </div>
-            );
-          })}
+                >
+                  <ItemContent>
+                    <ItemTitle className={cn(isToday && "text-primary")}>
+                      {getDayName(dateStr)}
+                      {isToday ? <Badge variant="info">Hôm nay</Badge> : null}
+                    </ItemTitle>
+                    <ItemDescription>{formatDate(dateStr)}</ItemDescription>
+                  </ItemContent>
+
+                  <ItemActions className="text-right">
+                    {shift ? (
+                      <div>
+                        <p className="text-sm font-medium">
+                          {shift.shift_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {shift.start_time} – {shift.end_time}
+                        </p>
+                      </div>
+                    ) : (
+                      <Badge variant="outline">Nghỉ</Badge>
+                    )}
+                  </ItemActions>
+                </Item>
+              );
+            })}
+          </ItemGroup>
         </div>
       )}
     </div>

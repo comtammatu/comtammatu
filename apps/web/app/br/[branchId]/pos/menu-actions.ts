@@ -1,9 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import { MODULE_ACL } from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "../../_lib/auth";
+import { getAuthContextWithPermission } from "../../_lib/auth";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 
@@ -24,7 +24,7 @@ export async function fetchMenuForPos(
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(POS_ROLES);
+  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;

@@ -9,12 +9,16 @@ export const PUBLIC_APP_PATHS = [
 export const BETA_ROUTE_PREFIX = "/beta" as const;
 
 export const INVENTORY_PROCUREMENT_PREFIXES = [
+  "/inventory/ingredients",
+  "/inventory/settings",
   "/inventory/suppliers",
   "/inventory/purchase-orders",
   "/inventory/grn",
   "/inventory/supplier-invoices",
   "/inventory/recipes",
   "/inventory/receiving",
+  "/inventory/m/drafts",
+  "/inventory/m/grn",
 ] as const;
 
 export function isPublicAppPath(pathname: string): boolean {
@@ -39,9 +43,17 @@ export function stripBetaPrefix(pathname: string): string {
   return stripped.length > 0 ? stripped : "/";
 }
 
+export function isAdminRoutePath(pathname: string): boolean {
+  const resolvedPathname = stripBetaPrefix(pathname);
+  return resolvedPathname === "/admin" || resolvedPathname.startsWith("/admin/");
+}
+
 export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   const resolvedPathname = stripBetaPrefix(pathname);
 
+  if (resolvedPathname === "/admin" || resolvedPathname === "/admin/") {
+    return "dashboard";
+  }
   if (resolvedPathname.startsWith("/admin/dashboard")) return "dashboard";
   if (resolvedPathname.startsWith("/admin/staff")) return "staff";
   if (resolvedPathname.startsWith("/admin/crm")) return "crm";

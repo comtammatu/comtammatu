@@ -5,6 +5,9 @@ import { ProductionHubClient } from "../production-client";
 export default async function ProductionPage() {
   const {
     canManageCatalog,
+    canManageRecipes,
+    canCreateProduction,
+    canConfirmProduction,
     centralKitchenBranches,
     ingredients,
     finishedGoods,
@@ -19,6 +22,9 @@ export default async function ProductionPage() {
         <div className="mx-auto max-w-7xl space-y-6">
           <ProductionHubClient
             canManageCatalog={canManageCatalog}
+            canManageRecipes={canManageRecipes}
+            canCreateProduction={canCreateProduction}
+            canConfirmProduction={canConfirmProduction}
             centralKitchenBranches={centralKitchenBranches}
             ingredients={ingredients}
             finishedGoods={finishedGoods}

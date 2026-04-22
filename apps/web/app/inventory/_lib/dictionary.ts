@@ -34,7 +34,7 @@ const VI_DICTIONARY: InventoryDictionary = {
     production: { long: "Bếp trung tâm" },
     ingredients: { long: "Nguyên liệu" },
     suppliers: { long: "Nhà cung cấp" },
-    recipes: { short: "Công thức", long: "Công thức món" },
+    recipes: { short: "Định mức", long: "Định mức món bán" },
     settings: { long: "Cài đặt" },
   },
 
@@ -76,7 +76,7 @@ const VI_DICTIONARY: InventoryDictionary = {
     "/inventory/production": { long: "Bếp trung tâm" },
     "/inventory/reports": { long: "Báo cáo" },
     "/inventory/ingredients": { long: "Nguyên liệu" },
-    "/inventory/recipes": { short: "Công thức", long: "Công thức món" },
+    "/inventory/recipes": { short: "Định mức", long: "Định mức món bán" },
     "/inventory/suppliers": { long: "Nhà cung cấp" },
     "/inventory/settings": { long: "Cài đặt" },
     "/inventory/settings/ingredients": {
@@ -84,8 +84,8 @@ const VI_DICTIONARY: InventoryDictionary = {
       long: "Danh mục nguyên liệu",
     },
     "/inventory/settings/recipes": {
-      short: "Công thức",
-      long: "Công thức món",
+      short: "Định mức",
+      long: "Định mức món bán",
     },
     "/inventory/settings/suppliers": { long: "Nhà cung cấp" },
     "/inventory/settings/expiry": {

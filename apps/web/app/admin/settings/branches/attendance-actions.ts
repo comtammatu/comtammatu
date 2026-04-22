@@ -2,11 +2,11 @@
 
 import { randomBytes, createHmac } from "node:crypto";
 import { z } from "zod";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
-import { getAuthContext } from "../../_lib/auth";
+import { getAuthContextWithPermission } from "../../_lib/auth";
 
 const CONFIG_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 
@@ -56,7 +56,10 @@ export async function updateBranchCoordinates(
     };
   }
 
-  const ctx = await getAuthContext(CONFIG_ROLES);
+  const ctx = await getAuthContextWithPermission(
+    CONFIG_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -88,7 +91,10 @@ export async function generateAttendanceSecret(
   const parsed = branchIdSchema.safeParse(branchId);
   if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
 
-  const ctx = await getAuthContext(CONFIG_ROLES);
+  const ctx = await getAuthContextWithPermission(
+    CONFIG_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { claims } = ctx;
@@ -143,7 +149,10 @@ export async function getTodayCode(
   const parsed = branchIdSchema.safeParse(branchId);
   if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
 
-  const ctx = await getAuthContext(CONFIG_ROLES);
+  const ctx = await getAuthContextWithPermission(
+    CONFIG_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { claims } = ctx;

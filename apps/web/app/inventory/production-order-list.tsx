@@ -29,10 +29,12 @@ import type { ProductionOrderRow } from "./production-types";
 
 interface ProductionOrderListProps {
   orders: ProductionOrderRow[];
+  canConfirmProduction: boolean;
 }
 
 export function ProductionOrderList({
   orders,
+  canConfirmProduction,
 }: ProductionOrderListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -125,7 +127,7 @@ export function ProductionOrderList({
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-2">
-                    {order.status === "draft" ? (
+                    {order.status === "draft" && canConfirmProduction ? (
                       <>
                         <Button
                           type="button"

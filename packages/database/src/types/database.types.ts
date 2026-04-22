@@ -810,6 +810,7 @@ export type Database = {
           measure_unit: string
           min_stock_level: number
           name: string
+          purchase_to_measure_factor: number
           purchase_unit: string
           reorder_point: number | null
           shelf_life_days: number | null
@@ -830,6 +831,7 @@ export type Database = {
           measure_unit: string
           min_stock_level?: number
           name: string
+          purchase_to_measure_factor?: number
           purchase_unit: string
           reorder_point?: number | null
           shelf_life_days?: number | null
@@ -850,6 +852,7 @@ export type Database = {
           measure_unit?: string
           min_stock_level?: number
           name?: string
+          purchase_to_measure_factor?: number
           purchase_unit?: string
           reorder_point?: number | null
           shelf_life_days?: number | null
@@ -4617,6 +4620,10 @@ export type Database = {
       }
       update_pos_order_status: {
         Args: { p_new_status: string; p_order_id: number }
+        Returns: Json
+      }
+      upsert_production_recipe_lines: {
+        Args: { p_finished_good_id: number; p_lines: Json }
         Returns: Json
       }
       upsert_recipe_lines: {

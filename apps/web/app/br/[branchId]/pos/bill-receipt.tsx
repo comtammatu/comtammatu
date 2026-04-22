@@ -315,22 +315,17 @@ export function BillReceipt({
                         Thu ngân có thể chốt tiền mặt, mở QR hoặc kiểm tra lại hóa đơn ngay tại đây.
                       </p>
                     </div>
-                    <div
-                      className={cn(
-                        "rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm",
-                        isPaid
-                          ? "border-success/15 bg-success/10 text-success"
-                          : pendingExtras
-                            ? "border-warning/15 bg-warning/10 text-warning"
-                            : "border-primary/15 bg-card text-primary",
-                      )}
+                    <Badge
+                      variant={
+                        isPaid ? "success" : pendingExtras ? "warning" : "outline"
+                      }
                     >
                       {isPaid
                         ? "Đã thanh toán"
                         : pendingExtras
                           ? "Đang chờ khách"
                           : "Chờ thu ngân"}
-                    </div>
+                    </Badge>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
@@ -527,9 +522,9 @@ export function BillReceipt({
                             Chọn phương thức xử lý ngay tại quầy
                           </h4>
                         </div>
-                        <div className="rounded-full border border-primary/15 bg-card px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
+                        <Badge variant="outline">
                           {methods.length} phương thức
-                        </div>
+                        </Badge>
                       </div>
 
                       <div className="grid gap-2">
@@ -541,7 +536,7 @@ export function BillReceipt({
                             variant={m === "cash" ? "default" : "secondary"}
                             disabled={payPending || hasPendingRemotePayment}
                             className={cn(
-                              "h-12 w-full justify-between rounded-lg px-4 text-sm font-semibold shadow-sm transition-transform hover:translate-y-[-1px]",
+                              "h-12 w-full justify-between rounded-lg px-4 text-sm font-semibold shadow-sm transition-transform hover:-translate-y-0.5",
                               m === "cash" && "shadow-md",
                             )}
                             onClick={() => handlePay(m)}
@@ -612,7 +607,7 @@ export function BillReceipt({
                 {canCompleteOrder && (
                   <Button
                     data-testid="bill-complete-order"
-                    className="w-full rounded-lg shadow-sm transition-transform hover:translate-y-[-1px]"
+                    className="w-full rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
                     onClick={handleCompleteOrder}
                     disabled={completePending}
                   >
@@ -628,7 +623,7 @@ export function BillReceipt({
                 )}
                 <Button
                   variant={canCompleteOrder ? "outline" : "default"}
-                  className="w-full rounded-lg shadow-sm transition-transform hover:translate-y-[-1px]"
+                  className="w-full rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
                   onClick={handlePrint}
                 >
                 {isPaid ? (

@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { randomUUID as _randomUUID } from "crypto";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getInvoiceProvider } from "@comtammatu/shared/providers";
 import {
@@ -10,7 +10,7 @@ import {
   SYSTEM_SETTING_DEFAULTS,
 } from "@comtammatu/shared/settings";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
-import { getAuthContext } from "@/_lib/auth";
+import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/admin/_lib/branch-scope";
 import { logAudit } from "@/admin/_lib/audit";
 
@@ -55,7 +55,7 @@ export async function createTaxInvoice(
     };
   }
 
-  const ctx = await getAuthContext(INVOICE_CREATE_ROLES);
+  const ctx = await getAuthContextWithPermission(INVOICE_CREATE_ROLES, PERMISSION_KEYS.ORDERS_WRITE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims, user } = ctx;
@@ -228,7 +228,7 @@ export async function cancelTaxInvoice(
   }
 
   // Only owner/super_manager can cancel
-  const ctx = await getAuthContext(FINANCE_ROLES);
+  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, PERMISSION_KEYS.SETTINGS_TENANT);
   if (!ctx) return { success: false, error: "Không có quyền hủy hóa đơn." };
 
   const { supabase, claims, user } = ctx;
@@ -306,7 +306,7 @@ export async function fetchTaxInvoices(
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(FINANCE_ROLES);
+  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, PERMISSION_KEYS.SETTINGS_TENANT);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -355,7 +355,7 @@ export async function fetchDailyRevenue(
     return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
   }
 
-  const ctx = await getAuthContext(REPORT_ROLES);
+  const ctx = await getAuthContextWithPermission(REPORT_ROLES, PERMISSION_KEYS.FINANCE_VIEW);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -396,7 +396,7 @@ export async function fetchTopItems(
     };
   }
 
-  const ctx = await getAuthContext(REPORT_ROLES);
+  const ctx = await getAuthContextWithPermission(REPORT_ROLES, PERMISSION_KEYS.FINANCE_VIEW);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -435,7 +435,7 @@ export async function fetchFoodCost(
     return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
   }
 
-  const ctx = await getAuthContext(REPORT_ROLES);
+  const ctx = await getAuthContextWithPermission(REPORT_ROLES, PERMISSION_KEYS.FINANCE_VIEW);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -462,7 +462,7 @@ export async function fetchFoodCost(
 /* ─── Refresh Materialized Views ─── */
 
 export async function refreshMaterializedViews(): Promise<ActionResult> {
-  const ctx = await getAuthContext(FINANCE_ROLES);
+  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, PERMISSION_KEYS.SETTINGS_TENANT);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase } = ctx;
@@ -490,7 +490,7 @@ export async function fetchAuditLogs(
     .optional()
     .safeParse(limitCount);
 
-  const ctx = await getAuthContext(FINANCE_ROLES);
+  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, PERMISSION_KEYS.SETTINGS_TENANT);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;

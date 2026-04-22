@@ -131,7 +131,6 @@ export function AdminShell({
     [navGroups, pathname],
   );
   const breadcrumbSegments = pageContext.trail.slice(0, -1);
-  const trail = breadcrumbSegments.join(" · ");
 
   return (
     <SidebarProvider>
@@ -241,9 +240,6 @@ export function AdminShell({
               <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
                 {pageContext.title}
               </h1>
-              <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
-                {trail || APP_COPY_VI.adminSurface}
-              </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">

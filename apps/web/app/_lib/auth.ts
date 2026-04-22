@@ -1,6 +1,6 @@
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
-import type { JwtClaims, StaffRole } from "@comtammatu/shared/auth";
+import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
+import type { JwtClaims, PermissionKey, StaffRole } from "@comtammatu/shared/auth";
 import type { Session } from "@supabase/supabase-js";
 
 /**
@@ -22,12 +22,67 @@ export async function getAuthContext(allowedRoles: readonly StaffRole[]) {
 
   if (!user) return null;
 
-  const claims = extractClaims(user.app_metadata);
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const claims = extractClaimsFromAccessToken(session?.access_token);
   if (!claims) return null;
 
   if (!allowedRoles.includes(claims.user_role)) return null;
 
   return { supabase, claims, user };
+}
+
+type PermissionLike = PermissionKey | string;
+
+type AuthContext = NonNullable<Awaited<ReturnType<typeof getAuthContext>>>;
+
+async function hasPermissionGrant(
+  ctx: AuthContext,
+  permission: PermissionLike,
+  branchId?: number | null,
+): Promise<boolean> {
+  if (branchId == null) {
+    const { data, error } = await ctx.supabase.rpc("has_permission_any", {
+      p_key: permission,
+    });
+    return !error && data === true;
+  }
+
+  const { data, error } = await ctx.supabase.rpc("has_permission", {
+    p_branch_id: branchId,
+    p_key: permission,
+  });
+  return !error && data === true;
+}
+
+export async function getAuthContextWithPermission(
+  allowedRoles: readonly StaffRole[],
+  permission: PermissionLike,
+  branchId?: number | null,
+) {
+  const ctx = await getAuthContext(allowedRoles);
+  if (!ctx) return null;
+
+  const allowed = await hasPermissionGrant(ctx, permission, branchId);
+  return allowed ? ctx : null;
+}
+
+export async function getAuthContextWithAnyPermission(
+  allowedRoles: readonly StaffRole[],
+  permissions: readonly PermissionLike[],
+  branchId?: number | null,
+) {
+  const ctx = await getAuthContext(allowedRoles);
+  if (!ctx) return null;
+
+  for (const permission of permissions) {
+    if (await hasPermissionGrant(ctx, permission, branchId)) {
+      return ctx;
+    }
+  }
+
+  return null;
 }
 
 type LoadedAuthState = {
@@ -58,7 +113,7 @@ export async function loadAuthState(): Promise<LoadedAuthState> {
     );
   }
 
-  const claims = extractClaims(session.user.app_metadata);
+  const claims = extractClaimsFromAccessToken(session.access_token);
   if (!claims) {
     throw new Error(
       "loadAuthState: claims missing — proxy should have redirected to /access-denied (missing-auth-context).",

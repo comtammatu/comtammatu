@@ -1,5 +1,6 @@
 import { canAccess } from "./module-acl";
 import {
+  isAdminRoutePath,
   isBetaPath,
   resolveModuleFromPath,
   stripBetaPrefix,
@@ -23,13 +24,75 @@ export function extractClaims(
 
   const branchId = appMetadata.branch_id;
   const areaId = appMetadata.area_id;
+  const position = appMetadata.position;
 
   return {
     tenant_id: tenantId,
     branch_id: typeof branchId === "number" ? branchId : null,
     area_id: typeof areaId === "number" ? areaId : null,
     user_role: role as StaffRole,
+    position: typeof position === "string" ? position : undefined,
   };
+}
+
+/**
+ * Decode the `app_metadata` section of a Supabase access-token JWT.
+ *
+ * `session.user.app_metadata` (supabase-js) reads from the `auth.users` row and
+ * DOES NOT include claims injected by the `custom_access_token_hook`. Those
+ * hook-added claims (`user_role`, `position`) only live inside the JWT itself.
+ * Call this helper on `session.access_token` whenever you need the canonical
+ * server-side view of the user's claims.
+ *
+ * Environment: Node.js or edge runtimes (uses Buffer/atob). Safe in both
+ * because we try `Buffer` first, then fall back to `atob`.
+ */
+export function decodeJwtAppMetadata(
+  accessToken: string | null | undefined,
+): Record<string, unknown> | null {
+  if (!accessToken) return null;
+  const parts = accessToken.split(".");
+  if (parts.length !== 3 || !parts[1]) return null;
+  try {
+    // Base64url → base64
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+
+    let decoded: string;
+    if (typeof Buffer !== "undefined") {
+      decoded = Buffer.from(padded, "base64").toString("utf-8");
+    } else if (typeof atob !== "undefined") {
+      decoded = decodeURIComponent(
+        atob(padded)
+          .split("")
+          .map((c) => "%" + c.charCodeAt(0).toString(16).padStart(2, "0"))
+          .join(""),
+      );
+    } else {
+      return null;
+    }
+
+    const payload = JSON.parse(decoded) as { app_metadata?: unknown };
+    if (payload.app_metadata && typeof payload.app_metadata === "object") {
+      return payload.app_metadata as Record<string, unknown>;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extract JWT claims directly from the access token — the canonical path.
+ * Use this in server components, Server Actions, and middleware instead of
+ * `extractClaims(user.app_metadata)` when hook-injected claims are required.
+ */
+export function extractClaimsFromAccessToken(
+  accessToken: string | null | undefined,
+): JwtClaims | null {
+  const appMetadata = decodeJwtAppMetadata(accessToken);
+  if (!appMetadata) return null;
+  return extractClaims(appMetadata);
 }
 
 /** Get scope IDs from claims */
@@ -48,8 +111,7 @@ export function getDefaultRedirect(claims: JwtClaims): string {
     return "/admin/dashboard";
   }
 
-  // All non-admin staff land on the employee workspace
-  // (cashier, waiter, chef, office)
+  // All non-admin staff land on the employee workspace.
   return "/employee";
 }
 
@@ -76,11 +138,7 @@ export function getBetaDefaultRedirect(claims: JwtClaims): string {
     return "/beta/admin/dashboard";
   }
 
-  if (canAccess(claims.user_role, "inventory")) {
-    return "/beta/inventory";
-  }
-
-  return "/beta";
+  return "/employee";
 }
 
 /** Validate and normalize an internal return path. */
@@ -147,6 +205,10 @@ export function resolvePostLoginRedirect(
 
   // Non-module paths (e.g. /beta home) are allowed when surface matches.
   if (!moduleKey) {
+    if (isAdminRoutePath(targetUrl.pathname)) {
+      return fallback;
+    }
+
     return surface === "beta"
       ? `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`
       : fallback;

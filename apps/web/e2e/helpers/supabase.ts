@@ -111,7 +111,7 @@ async function resolveProfileByEmail(
     tenantId: profile.tenant_id,
     branchId: profile.branch_id,
     fullName: profile.full_name,
-    role: profile.role,
+    role: profile.positions?.legacy_role_code ?? "",
   };
 }
 
@@ -142,10 +142,10 @@ export async function resolveChefCredentials() {
   const users = await listAuthUsers(supabase);
   const { data: chefProfile, error } = await supabase
     .from("profiles")
-    .select("id, tenant_id, branch_id, full_name, role")
+    .select("id, tenant_id, branch_id, full_name, positions!inner(legacy_role_code)")
     .eq("tenant_id", cashier.tenantId)
     .eq("branch_id", cashier.branchId)
-    .eq("role", "chef")
+    .eq("positions.legacy_role_code", "chef")
     .limit(1)
     .maybeSingle();
 

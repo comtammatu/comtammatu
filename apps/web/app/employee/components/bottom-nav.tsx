@@ -6,7 +6,7 @@ import { CalendarDays, Clock, Home, User } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 
 const NAV_ITEMS = [
-  { href: "/employee", label: "Trang chủ", icon: Home, exact: true },
+  { href: "/employee", label: "Cổng", icon: Home, exact: true },
   {
     href: "/employee/schedule",
     label: "Lịch ca",
@@ -27,10 +27,10 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 px-3 pb-3 sm:px-4 lg:hidden"
-      aria-label="Điều hướng chính"
+      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-2 pb-2 pt-2 backdrop-blur sm:px-4 lg:hidden"
+      aria-label="Điều hướng cổng nhân viên"
     >
-      <div className="pb-3 mx-auto flex max-w-6xl items-stretch gap-1.5 rounded-3xl border border-border/70 bg-background/92 p-2 shadow-sm backdrop-blur-xl">
+      <div className="mx-auto flex max-w-4xl items-stretch gap-1.5">
         {NAV_ITEMS.map((item) => {
           const active = isActive(pathname, item.href, item.exact);
           const Icon = item.icon;
@@ -40,10 +40,10 @@ export function BottomNav() {
               asChild
               variant={active ? "default" : "ghost"}
               size="lg"
-              className="h-auto flex-1 flex-col gap-1 rounded-2xl py-2"
+              className="h-auto flex-1 flex-col gap-1 py-2"
             >
               <Link href={item.href} aria-current={active ? "page" : undefined}>
-                <Icon className="size-5" strokeWidth={active ? 2.4 : 2} />
+                <Icon data-icon="inline-start" strokeWidth={active ? 2.4 : 2} />
                 <span>{item.label}</span>
               </Link>
             </Button>

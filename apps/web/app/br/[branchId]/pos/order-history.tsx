@@ -5,6 +5,13 @@ import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import {
   Package,
   Receipt,
   UtensilsCrossed,
@@ -63,56 +70,25 @@ export function OrderHistory({
   const archivedOrders = orders.filter(
     (order) => !activeOrders.some((active) => active.id === order.id),
   );
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
 
   if (orders.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center text-muted-foreground">
-        <div className="flex size-16 items-center justify-center rounded-full border border-dashed border-border/80 bg-background/70">
-          <Receipt className="size-7 opacity-40" />
-        </div>
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-foreground">Chưa có đơn hàng</p>
-          <p className="text-xs leading-5 text-muted-foreground">
+      <Empty className="flex-1 px-6">
+        <EmptyMedia variant="icon">
+          <Receipt />
+        </EmptyMedia>
+        <EmptyHeader>
+          <EmptyTitle>Chưa có đơn hàng</EmptyTitle>
+          <EmptyDescription>
             Các đơn trong ca sẽ xuất hiện tại đây để staff tra cứu lại nhanh.
-          </p>
-        </div>
-      </div>
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
   }
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden bg-background">
-      <div className="border-b border-border/60 px-4 py-4">
-        <div className="rounded-xl border bg-card shadow-sm p-4">
-          <div className="space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Theo dõi ca</p>
-                <h2 className="mt-1 text-lg font-semibold tracking-tight">
-                  Đơn đang phục vụ và thanh toán nằm trong cùng một luồng thao tác.
-                </h2>
-              </div>
-              <div className="rounded-full border border-primary/15 bg-card px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
-                {orders.length} đơn
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="rounded-full px-3 py-1">
-                {activeOrders.length} đơn đang phục vụ
-              </Badge>
-              <Badge variant="outline" className="rounded-full px-3 py-1">
-                {archivedOrders.length} đơn đã chốt
-              </Badge>
-              <Badge variant="outline" className="rounded-full px-3 py-1">
-                Doanh thu ca {formatVND(totalRevenue)}
-              </Badge>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <ScrollArea className="flex-1">
         <div className="space-y-5 p-4">
           <section className="space-y-3">
@@ -123,15 +99,17 @@ export function OrderHistory({
                   Ưu tiên các đơn còn đang làm ở bếp hoặc tại bàn.
                 </p>
               </div>
-              <span className="rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-xs font-semibold text-primary">
+              <Badge variant="outline" className="text-xs">
                 {activeOrders.length}
-              </span>
+              </Badge>
             </div>
 
             {activeOrders.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border/70 bg-background/70 px-4 py-6 text-center text-sm text-muted-foreground">
-                Không có đơn đang phục vụ.
-              </div>
+              <Empty className="min-h-32 border">
+                <EmptyHeader>
+                  <EmptyTitle>Không có đơn đang phục vụ</EmptyTitle>
+                </EmptyHeader>
+              </Empty>
             ) : (
               <div className="space-y-3">
                 {activeOrders.map((order) => {
@@ -148,7 +126,7 @@ export function OrderHistory({
                     <div
                       key={order.id}
                       data-testid={`pos-order-card-${order.id}`}
-                      className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-4 shadow-sm"
+                      className="rounded-xl border border-border bg-card p-4 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-2">
@@ -247,15 +225,17 @@ export function OrderHistory({
                   Lưu vết đơn đã kết thúc trong ca hiện tại.
                 </p>
               </div>
-              <span className="rounded-full border border-success/15 bg-success/10 px-3 py-1 text-xs font-semibold text-success">
+              <Badge variant="success" className="text-xs">
                 {archivedOrders.length}
-              </span>
+              </Badge>
             </div>
 
             {archivedOrders.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border/70 bg-background/70 px-4 py-6 text-center text-sm text-muted-foreground">
-                Chưa có đơn hoàn tất trong ca này.
-              </div>
+              <Empty className="min-h-32 border">
+                <EmptyHeader>
+                  <EmptyTitle>Chưa có đơn hoàn tất</EmptyTitle>
+                </EmptyHeader>
+              </Empty>
             ) : (
               <div className="space-y-3">
                 {archivedOrders.map((order) => {
@@ -267,7 +247,7 @@ export function OrderHistory({
                   return (
                     <div
                       key={order.id}
-                      className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-background p-4 shadow-sm"
+                      className="rounded-xl border border-border bg-background p-4 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-2">

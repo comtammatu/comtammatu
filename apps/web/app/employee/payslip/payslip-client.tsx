@@ -1,31 +1,59 @@
 "use client";
 
-import { Badge } from "@comtammatu/ui/components/badge";
+import { cn } from "@comtammatu/ui";
+import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import { Separator } from "@comtammatu/ui/components/separator";
 import type { PayslipEntry } from "./page";
 
 const fmt = (n: number) =>
   n.toLocaleString("vi-VN", { maximumFractionDigits: 0 });
 
+const PERIOD_STATUS_LABELS: Record<string, string> = {
+  draft: "Nháp",
+  calculated: "Đã tính",
+  approved: "Đã duyệt",
+  paid: "Đã trả",
+};
+
+const PERIOD_STATUS_VARIANTS: Record<string, BadgeProps["variant"]> = {
+  draft: "outline",
+  calculated: "secondary",
+  approved: "info",
+  paid: "success",
+};
+
 export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
   if (entries.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        Chưa có phiếu lương nào.
-      </p>
+      <Empty>
+        <EmptyHeader>
+          <EmptyTitle>Chưa có phiếu lương</EmptyTitle>
+          <EmptyDescription>
+            Các kỳ lương đã phát hành sẽ hiển thị tại đây.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {entries.map((entry) => {
         const period = entry.payroll_periods;
-        const isPaid = period?.status === "paid";
+        const status = period?.status ?? "draft";
+        const statusLabel = PERIOD_STATUS_LABELS[status] ?? status;
 
         return (
           <Card key={entry.id}>
@@ -36,12 +64,12 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
                     ? `Tháng ${period.period_month}/${period.period_year}`
                     : "Kỳ lương"}
                 </CardTitle>
-                <Badge variant={isPaid ? "default" : "secondary"}>
-                  {isPaid ? "Đã trả" : (period?.status ?? "—")}
+                <Badge variant={PERIOD_STATUS_VARIANTS[status] ?? "secondary"}>
+                  {statusLabel}
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
+            <CardContent className="flex flex-col gap-2 text-sm">
               <Row
                 label="Ngày công"
                 value={`${Number(entry.working_days)}/${Number(entry.standard_days)}`}
@@ -77,13 +105,12 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
                 }
                 muted
               />
-              <div className="border-t pt-2">
-                <Row
-                  label="THỰC LĨNH"
-                  value={fmt(Number(entry.net_salary))}
-                  bold
-                />
-              </div>
+              <Separator />
+              <Row
+                label="Thực lĩnh"
+                value={fmt(Number(entry.net_salary))}
+                bold
+              />
             </CardContent>
           </Card>
         );
@@ -107,7 +134,11 @@ function Row({
     <div className="flex justify-between">
       <span className={muted ? "text-muted-foreground" : ""}>{label}</span>
       <span
-        className={`font-mono ${bold ? "text-lg font-bold text-primary" : ""} ${muted ? "text-muted-foreground" : ""}`}
+        className={cn(
+          "font-mono",
+          bold && "text-lg font-bold text-primary",
+          muted && "text-muted-foreground",
+        )}
       >
         {value}
       </span>

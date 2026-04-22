@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, MapPin, CheckCircle, Printer } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import {
   Card,
   CardContent,
@@ -76,6 +77,26 @@ export function TransferDetailClient({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [receiveQty, setReceiveQty] = useState<Record<number, string>>(() => {
+    const initial: Record<number, string> = {};
+    for (const item of transfer.items) {
+      initial[item.ingredientId] = String(item.received ?? item.qty);
+    }
+    return initial;
+  });
+  const [shortNote, setShortNote] = useState("");
+  const isReceiveMode = transfer.status === "confirmed_receive";
+  const shortLines = useMemo(() => {
+    if (!isReceiveMode) return 0;
+    let count = 0;
+    for (const item of transfer.items) {
+      const got = Number(receiveQty[item.ingredientId] ?? item.qty);
+      if (Number.isFinite(got) && got < item.qty) count += 1;
+    }
+    return count;
+  }, [isReceiveMode, transfer.items, receiveQty]);
+  const hasShort = shortLines > 0;
+  const noteOk = !hasShort || shortNote.trim().length >= 3;
   const receivedCount = transfer.items.filter(
     (item) => item.received != null,
   ).length;
@@ -173,9 +194,24 @@ export function TransferDetailClient({
       } else if (actionConfig.action === "confirm_receive") {
         res = await transferConfirmReceive(transfer.id);
       } else {
-        const payload = Object.fromEntries(
-          transfer.items.map((item) => [String(item.ingredientId), item.qty]),
-        );
+        if (!noteOk) {
+          toast.error("Nhập ghi chú thiếu hụt tối thiểu 3 ký tự.");
+          return;
+        }
+        const trimmedNote = shortNote.trim();
+        const payload: Record<string, { qty: number; note?: string }> = {};
+        for (const item of transfer.items) {
+          const raw = receiveQty[item.ingredientId];
+          const qty = Number(raw ?? item.qty);
+          if (!Number.isFinite(qty) || qty < 0) {
+            toast.error(`Số lượng nhận không hợp lệ cho ${item.name}.`);
+            return;
+          }
+          payload[String(item.ingredientId)] =
+            qty < item.qty && trimmedNote
+              ? { qty, note: trimmedNote }
+              : { qty };
+        }
         res = await transferReceive(transfer.id, payload);
       }
 
@@ -293,7 +329,9 @@ export function TransferDetailClient({
                 <CardTitle>{tTerm("ingredientsList")}</CardTitle>
               </div>
               <span className="text-xs font-medium text-muted-foreground">
-                Nhận toàn bộ theo số lượng gửi trên từng dòng
+                {isReceiveMode
+                  ? "Nhập số lượng thực nhận từng dòng, ghi chú nếu thiếu"
+                  : "Số lượng nhận hiển thị sau khi xác nhận"}
               </span>
             </CardHeader>
             <CardContent className="p-0">
@@ -319,15 +357,29 @@ export function TransferDetailClient({
                       </div>
                       <div>
                         <p className="text-muted-foreground">SL nhận</p>
-                        <p className="font-semibold">
-                          {item.received != null ? (
-                            item.received
-                          ) : (
-                            <span className="italic text-muted-foreground">
-                              Chưa nhận
-                            </span>
-                          )}
-                        </p>
+                        {isReceiveMode ? (
+                          <FormattedNumberInput
+                            value={receiveQty[item.ingredientId] ?? ""}
+                            onValueChange={(value) =>
+                              setReceiveQty((prev) => ({
+                                ...prev,
+                                [item.ingredientId]: value,
+                              }))
+                            }
+                            maxFractionDigits={3}
+                            className="h-9"
+                          />
+                        ) : (
+                          <p className="font-semibold">
+                            {item.received != null ? (
+                              item.received
+                            ) : (
+                              <span className="italic text-muted-foreground">
+                                Chưa nhận
+                              </span>
+                            )}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <p className="text-muted-foreground">Giá WAC</p>
@@ -399,8 +451,28 @@ export function TransferDetailClient({
                         <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
                           {formatVND(item.total)}
                         </TableCell>
-                        <TableCell className="px-6 py-4 text-right italic text-muted-foreground">
-                          {item.received != null ? item.received : "Chưa nhận"}
+                        <TableCell className="px-6 py-4 text-right">
+                          {isReceiveMode ? (
+                            <FormattedNumberInput
+                              value={receiveQty[item.ingredientId] ?? ""}
+                              onValueChange={(value) =>
+                                setReceiveQty((prev) => ({
+                                  ...prev,
+                                  [item.ingredientId]: value,
+                                }))
+                              }
+                              maxFractionDigits={3}
+                              className="h-9 text-right"
+                            />
+                          ) : item.received != null ? (
+                            <span className="font-mono tabular-nums">
+                              {item.received}
+                            </span>
+                          ) : (
+                            <span className="italic text-muted-foreground">
+                              Chưa nhận
+                            </span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -472,6 +544,33 @@ export function TransferDetailClient({
         </Card>
       </div>
 
+      {isReceiveMode && hasShort ? (
+        <Card className="border-warning/30 bg-warning/5">
+          <CardContent className="space-y-2 pt-6">
+            <p className="text-sm font-semibold">
+              Ghi chú thiếu hụt <span className="text-destructive">*</span>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {shortLines} mặt hàng thiếu so với phiếu xuất. Ghi chú tối thiểu 3
+              ký tự.
+            </p>
+            <textarea
+              value={shortNote}
+              onChange={(e) => setShortNote(e.target.value)}
+              rows={3}
+              maxLength={300}
+              placeholder="Ví dụ: thiếu 2kg thịt ba chỉ do giao chưa đủ..."
+              className="w-full resize-none rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+            />
+            {!noteOk ? (
+              <p className="text-xs text-destructive">
+                Ghi chú cần ít nhất 3 ký tự.
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
       {/* Footer Action Bar */}
       <footer className="flex flex-col gap-3 border-t border-border py-6 sm:flex-row sm:items-center sm:justify-between">
         <Button
@@ -484,7 +583,13 @@ export function TransferDetailClient({
         </Button>
         <Button
           type="button"
-          disabled={isPending || !actionConfig?.enabled}
+          disabled={
+            isPending ||
+            !actionConfig?.enabled ||
+            (isReceiveMode &&
+              actionConfig?.action === "receive" &&
+              !noteOk)
+          }
           className="rounded-full px-10 font-bold shadow-lg"
           onClick={handlePrimaryAction}
         >

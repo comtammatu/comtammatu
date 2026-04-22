@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 import { canAccessBranch } from "../admin/_lib/branch-scope";
 
@@ -20,7 +20,7 @@ const fetchShiftAssignmentsSchema = z.object({
 });
 
 export const fetchShiftAssignments = withAction(
-  { roles: SHIFT_ROLES, schema: fetchShiftAssignmentsSchema },
+  { roles: SHIFT_ROLES, schema: fetchShiftAssignmentsSchema, permission: PERMISSION_KEYS.STAFF_MANAGE },
   async (data, { supabase, claims }) => {
     if (!(await canAccessBranch(supabase, claims, data.branchId))) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
@@ -66,7 +66,7 @@ const createAssignmentSchema = z.object({
 });
 
 export const createShiftAssignment = withAction(
-  { roles: SHIFT_ROLES, schema: createAssignmentSchema },
+  { roles: SHIFT_ROLES, schema: createAssignmentSchema, permission: PERMISSION_KEYS.STAFF_MANAGE },
   async (data, { supabase, claims }) => {
     if (!(await canAccessBranch(supabase, claims, data.branchId))) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
@@ -127,7 +127,7 @@ const deleteAssignmentSchema = z.object({
 });
 
 export const deleteShiftAssignment = withAction(
-  { roles: SHIFT_ROLES, schema: deleteAssignmentSchema },
+  { roles: SHIFT_ROLES, schema: deleteAssignmentSchema, permission: PERMISSION_KEYS.STAFF_MANAGE },
   async (data, { supabase, claims }) => {
     const { error } = await supabase
       .from("shift_assignments")
@@ -150,7 +150,7 @@ const fetchEmployeesForBranchSchema = z.object({
 });
 
 export const fetchEmployeesForBranch = withAction(
-  { roles: SHIFT_ROLES, schema: fetchEmployeesForBranchSchema },
+  { roles: SHIFT_ROLES, schema: fetchEmployeesForBranchSchema, permission: PERMISSION_KEYS.STAFF_MANAGE },
   async (data, { supabase, claims }) => {
     if (!(await canAccessBranch(supabase, claims, data.branchId))) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };

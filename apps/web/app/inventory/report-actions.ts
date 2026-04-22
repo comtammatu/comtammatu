@@ -5,9 +5,11 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   INVENTORY_OPS_ROLES,
+  PERMISSION_KEYS,
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
-import { getAuthContext } from "./_lib/auth";
+import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
+import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 
 const REPORT_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 
@@ -304,13 +306,13 @@ export async function fetchBranchMovementSummary(
   // Get branches
   const { data: branches, error: brErr } = await supabase
     .from("branches")
-    .select("id, name")
+    .select("id, name, branch_kind")
     .eq("tenant_id", claims.tenant_id)
     .eq("is_active", true);
   if (brErr) return { success: false, error: "Không tải được chi nhánh." };
 
   const branchMap = new Map(
-    (branches ?? []).map((b) => [b.id, b.name] as const),
+    (branches ?? []).map((b) => [b.id, getBranchSiteDisplayName(b)] as const),
   );
 
   // Get movements grouped by branch
@@ -409,10 +411,10 @@ export async function fetchInTransitTransfers(): Promise<
   // Get branch names
   const { data: branches } = await supabase
     .from("branches")
-    .select("id, name")
+    .select("id, name, branch_kind")
     .eq("tenant_id", claims.tenant_id);
   const nameById = new Map(
-    (branches ?? []).map((b) => [b.id, b.name] as const),
+    (branches ?? []).map((b) => [b.id, getBranchSiteDisplayName(b)] as const),
   );
 
   // Get item counts per transfer
@@ -464,7 +466,10 @@ export interface ApAgingRow {
 }
 
 export async function fetchApAging(): Promise<ActionResult<ApAgingRow[]>> {
-  const ctx = await getAuthContext(PROCUREMENT_ROLES);
+  const ctx = await getAuthContextWithPermission(
+    PROCUREMENT_ROLES,
+    PERMISSION_KEYS.PROCUREMENT_READ,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
 

@@ -3,14 +3,17 @@ import { updateSession } from "@comtammatu/database/supabase/middleware";
 import {
   buildAccessDeniedPath,
   canAccess,
-  extractClaims,
+  extractClaimsFromAccessToken,
+  isAdminRoutePath,
   isBetaPath,
   isPublicAppPath,
+  PERMISSION_KEYS,
   resolveModuleFromPath,
   resolvePostLoginRedirect,
   stripBetaPrefix,
   type AuthSurface,
   type BlockedStateReasonCode,
+  type JwtClaims,
   type ModuleKey,
 } from "@comtammatu/shared/auth";
 
@@ -39,6 +42,19 @@ function redirectToAccessDenied(
   return redirectWithCookies(url, sessionResponse);
 }
 
+function redirectToDefaultLanding(
+  request: NextRequest,
+  sessionResponse: NextResponse,
+  claims: JwtClaims,
+  surface: AuthSurface,
+): NextResponse {
+  const url = new URL(
+    resolvePostLoginRedirect(claims, null, { surface }),
+    request.nextUrl.origin,
+  );
+  return redirectWithCookies(url, sessionResponse);
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const surface: AuthSurface = isBetaPath(pathname) ? "beta" : "legacy";
@@ -56,7 +72,10 @@ export async function proxy(request: NextRequest) {
   if (pathname === "/login" || pathname === "/beta/login") {
     if (!user) return response; // unauthenticated → show login
     // Authenticated → bounce to role's post-login destination.
-    const claims = extractClaims(user.app_metadata);
+    const {
+      data: { session: loginSession },
+    } = await supabase.auth.getSession();
+    const claims = extractClaimsFromAccessToken(loginSession?.access_token);
     if (claims) {
       const returnTo = request.nextUrl.searchParams.get("returnTo");
       const url = new URL(
@@ -80,27 +99,52 @@ export async function proxy(request: NextRequest) {
     return redirectWithCookies(url, response);
   }
 
-  // Authenticated — verify claims + module ACL. Any failure below routes to
-  // `/access-denied` (authenticated but blocked) rather than bouncing through
-  // login. Proxy is the single gate: layouts and pages downstream MUST NOT
-  // re-check these invariants.
-  const claims = extractClaims(user.app_metadata);
+  // Authenticated — verify claims + module ACL. Blocked operational routes go
+  // to `/access-denied`; disallowed Admin routes go to the role's default
+  // landing page. Proxy is the single gate: layouts and pages downstream MUST
+  // NOT re-check these invariants.
+  //
+  // Claims are decoded from the JWT access_token, NOT from `user.app_metadata`.
+  // Supabase-js reads `user.app_metadata` from the `auth.users` row, which does
+  // not include hook-injected claims like `user_role` or `position`.
+  const {
+    data: { session: authSession },
+  } = await supabase.auth.getSession();
+  const claims = extractClaimsFromAccessToken(authSession?.access_token);
   if (!claims) {
-    return redirectToAccessDenied(
-      request,
-      response,
-      "missing-auth-context",
-    );
+    return redirectToAccessDenied(request, response, "missing-auth-context");
+  }
+
+  if (isAdminRoutePath(pathname) && !canAccess(claims.user_role, "dashboard")) {
+    return redirectToDefaultLanding(request, response, claims, surface);
   }
 
   const moduleKey: ModuleKey | null = resolveModuleFromPath(pathname);
   if (moduleKey) {
     if (!canAccess(claims.user_role, moduleKey)) {
+      if (isAdminRoutePath(pathname)) {
+        return redirectToDefaultLanding(request, response, claims, surface);
+      }
+
       return redirectToAccessDenied(
         request,
         response,
         "insufficient-permission",
       );
+    }
+
+    if (moduleKey === "inventory_procurement") {
+      const { data: canReadProcurement, error } = await supabase.rpc(
+        "has_permission_any",
+        { p_key: PERMISSION_KEYS.PROCUREMENT_READ },
+      );
+      if (error || canReadProcurement !== true) {
+        return redirectToAccessDenied(
+          request,
+          response,
+          "insufficient-permission",
+        );
+      }
     }
 
     // POS/KDS are branch-scoped. Enforce two rules in proxy so layouts stay dumb:

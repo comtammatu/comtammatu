@@ -1,1 +1,5 @@
-export { getAuthContext } from "@/_lib/auth";
+export {
+  getAuthContext,
+  getAuthContextWithAnyPermission,
+  getAuthContextWithPermission,
+} from "@/_lib/auth";

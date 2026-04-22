@@ -49,7 +49,15 @@ export {
   recomputeInvoiceMatching,
   fetchRecipes,
   upsertRecipeLines,
+  exportRecipes,
+  importRecipes,
+  downloadRecipeTemplate,
   fetchMenuItemsForRecipes,
   markInvoicePaid,
 } from "./grn-actions";
-export type { RecentActivityItem, LinkedGrnRow } from "./grn-actions";
+export type {
+  RecentActivityItem,
+  LinkedGrnRow,
+  ImportRecipeIssue,
+  ImportRecipeSummary,
+} from "./grn-actions";

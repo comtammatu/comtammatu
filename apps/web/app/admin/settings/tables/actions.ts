@@ -3,6 +3,7 @@
 import { z } from "zod";
 import {
   BRANCH_FLOOR_SETTINGS_ROLES,
+  PERMISSION_KEYS,
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
@@ -98,6 +99,7 @@ export const createZone = withFormAction(
   {
     roles: SETTINGS_ROLES,
     schema: createZoneSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
     extract: (fd) => ({
       name: fd.get("name"),
       branch_id: fd.get("branch_id"),
@@ -135,6 +137,7 @@ export const updateZone = withFormAction(
   {
     roles: SETTINGS_ROLES,
     schema: updateZoneSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
     extract: (fd) => ({
       id: fd.get("id"),
       name: fd.get("name"),
@@ -173,7 +176,7 @@ export const updateZone = withFormAction(
 );
 
 export const deleteZone = withAction(
-  { roles: SETTINGS_ROLES, schema: deleteIdSchema },
+  { roles: SETTINGS_ROLES, schema: deleteIdSchema, permission: PERMISSION_KEYS.SETTINGS_BRANCH },
   async (data, { supabase, claims }) => {
     let deleteQuery = supabase
       .from("branch_zones")
@@ -206,6 +209,7 @@ export const createTable = withFormAction(
   {
     roles: SETTINGS_ROLES,
     schema: createTableSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
     extract: (fd) => {
       const rawZoneId = fd.get("zone_id");
       const zoneId = rawZoneId && rawZoneId !== "none" ? rawZoneId : undefined;
@@ -249,6 +253,7 @@ export const updateTable = withFormAction(
   {
     roles: SETTINGS_ROLES,
     schema: updateTableSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
     extract: (fd) => {
       const rawZoneId = fd.get("zone_id");
       const zoneId = rawZoneId && rawZoneId !== "none" ? rawZoneId : undefined;
@@ -296,7 +301,7 @@ export const updateTable = withFormAction(
 );
 
 export const deleteTable = withAction(
-  { roles: SETTINGS_ROLES, schema: deleteIdSchema },
+  { roles: SETTINGS_ROLES, schema: deleteIdSchema, permission: PERMISSION_KEYS.SETTINGS_BRANCH },
   async (data, { supabase, claims }) => {
     let deleteTableQuery = supabase
       .from("tables")

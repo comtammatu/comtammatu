@@ -1,10 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import { MODULE_ACL } from "@comtammatu/shared/auth";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "../../_lib/auth";
+import { getAuthContextWithPermission } from "../../_lib/auth";
 import { cartStateSchema, calcItemSubtotal, cartItemSchema } from "./types";
 import type { CartState, CartItem } from "./types";
 
@@ -77,7 +76,7 @@ export async function submitOrder(
     }
   }
 
-  const ctx = await getAuthContext(POS_ROLES);
+  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -198,7 +197,7 @@ export async function fetchSessionOrders(
     return { success: false, error: "Session ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(POS_ROLES);
+  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -249,7 +248,7 @@ export async function fetchOrderForBill(
     return { success: false, error: "Order ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(POS_ROLES);
+  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -331,10 +330,10 @@ export async function fetchOrderDetail(orderId: number): Promise<
     return { success: false, error: "Order ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(POS_ROLES);
+  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const mgr = await getAuthContext(MANAGER_ROLES);
+  const mgr = await getAuthContextWithPermission(MANAGER_ROLES, PERMISSION_KEYS.STAFF_MANAGE);
 
   const { supabase, claims } = ctx;
 
@@ -437,7 +436,7 @@ export async function appendOrderItems(
     };
   }
 
-  const ctx = await getAuthContext(POS_ROLES);
+  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -535,7 +534,7 @@ export async function voidOrderItem(
     };
   }
 
-  const ctx = await getAuthContext(MANAGER_ROLES);
+  const ctx = await getAuthContextWithPermission(MANAGER_ROLES, PERMISSION_KEYS.STAFF_MANAGE);
   if (!ctx) {
     return { success: false, error: "Cần quyền quản lý để hủy món." };
   }
@@ -588,7 +587,7 @@ export async function cancelOrder(
     };
   }
 
-  const ctx = await getAuthContext(MANAGER_ROLES);
+  const ctx = await getAuthContextWithPermission(MANAGER_ROLES, PERMISSION_KEYS.STAFF_MANAGE);
   if (!ctx) {
     return { success: false, error: "Cần quyền quản lý để hủy đơn." };
   }
@@ -637,7 +636,7 @@ export async function transferOrderTable(
     };
   }
 
-  const ctx = await getAuthContext(POS_ROLES);
+  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase } = ctx;
@@ -690,7 +689,7 @@ export async function updateOrderStatus(
     };
   }
 
-  const ctx = await getAuthContext(POS_ROLES);
+  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase } = ctx;
@@ -739,7 +738,7 @@ export async function fetchOrderItemsForReorder(
     return { success: false, error: "Order ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(POS_ROLES);
+  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;

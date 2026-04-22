@@ -1,11 +1,24 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
-import type { StaffRole } from "@comtammatu/shared/auth";
-import { getAuthContext } from "./_lib/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  getAuthContextWithAnyPermission,
+  getAuthContextWithPermission,
+} from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { PG_ERR } from "./_lib/constants";
+import {
+  buildCsv,
+  buildXlsx,
+  bufferToBase64,
+  MAX_ROWS_PER_SHEET,
+  parseSpreadsheetFile,
+  stringToBase64,
+  type SheetDef,
+} from "@/_lib/spreadsheet";
 
 /**
  * Route-level fast gate for the production (central kitchen) surface. Fine-grained
@@ -23,6 +36,16 @@ const PRODUCTION_ROLES: readonly StaffRole[] = [
   "branch_manager",
   "production_manager",
 ];
+
+const PRODUCTION_ORDER_PERMISSIONS = [
+  PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
+  PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
+] as const;
+
+const PRODUCTION_RECIPE_READ_PERMISSIONS = [
+  PERMISSION_KEYS.MENU_READ,
+  PERMISSION_KEYS.MENU_WRITE,
+] as const;
 
 /**
  * Roles whose operational context is a single branch and therefore must be pinned
@@ -75,6 +98,64 @@ type RpcClient = {
     data: unknown;
     error: { code?: string; message?: string } | null;
   }>;
+};
+
+type ProductionRecipeSheetRow = {
+  finished_good_id: number | "";
+  finished_good_name: string;
+  ingredient_id: number | "";
+  ingredient_name: string;
+  quantity: number | "";
+  unit: string;
+  yield_factor: number | "";
+  note: string;
+};
+
+type ExportProductionRecipesResult =
+  | {
+      success: true;
+      data: { filename: string; base64: string; format: "xlsx" | "csv" };
+    }
+  | { success: false; error: string };
+
+const importProductionRecipeRowSchema = z.object({
+  finishedGoodId: z.number().int().positive(),
+  ingredientId: z.number().int().positive(),
+  quantity: z.number().positive({ error: "Số lượng phải lớn hơn 0" }),
+  unit: z.string().trim().min(1, { error: "Thiếu đơn vị" }),
+  yieldFactor: z.number().positive({ error: "Yield phải lớn hơn 0" }),
+  note: z.string().trim().optional(),
+});
+
+export interface ImportProductionRecipeIssue {
+  row: number;
+  field?: string;
+  message: string;
+}
+
+export interface ImportProductionRecipeSummary {
+  recipes: number;
+  lines: number;
+}
+
+type ImportProductionRecipesResult =
+  | {
+      success: true;
+      data: { summary: ImportProductionRecipeSummary };
+    }
+  | {
+      success: false;
+      error: string;
+      issues?: ImportProductionRecipeIssue[];
+    };
+
+type IngredientLookupRow = {
+  id: number;
+  name: string;
+  unit: string;
+  measure_unit: string;
+  item_kind: string;
+  is_active: boolean;
 };
 
 async function requireCentralKitchenBranch(
@@ -212,7 +293,10 @@ type ProductionRecipeQueryClient = {
 export async function fetchProductionRecipes(): Promise<
   ActionResult<ProductionRecipeRow[]>
 > {
-  const ctx = await getAuthContext(PRODUCTION_ROLES);
+  const ctx = await getAuthContextWithAnyPermission(
+    PRODUCTION_ROLES,
+    PRODUCTION_RECIPE_READ_PERMISSIONS,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -283,10 +367,452 @@ export async function fetchProductionRecipes(): Promise<
   };
 }
 
+function buildProductionRecipeSheets(
+  rows: ProductionRecipeSheetRow[],
+): SheetDef[] {
+  return [
+    {
+      name: "BOM san xuat",
+      columns: [
+        { header: "Mã thành phẩm", key: "finished_good_id", width: 14 },
+        { header: "Thành phẩm", key: "finished_good_name", width: 32 },
+        { header: "Mã nguyên liệu", key: "ingredient_id", width: 14 },
+        { header: "Nguyên liệu", key: "ingredient_name", width: 32 },
+        { header: "Số lượng", key: "quantity", width: 14 },
+        { header: "Đơn vị", key: "unit", width: 12 },
+        { header: "Yield", key: "yield_factor", width: 10 },
+        { header: "Ghi chú", key: "note", width: 28 },
+      ],
+      rows,
+    },
+  ];
+}
+
+function productionRecipeToSheetRow(
+  recipe: ProductionRecipeRow,
+): ProductionRecipeSheetRow {
+  return {
+    finished_good_id: recipe.finished_good_id,
+    finished_good_name: recipe.finished_good_name,
+    ingredient_id: recipe.ingredient_id,
+    ingredient_name: recipe.ingredient_name,
+    quantity: recipe.quantity,
+    unit: recipe.unit,
+    yield_factor: recipe.yield_factor,
+    note: recipe.note ?? "",
+  };
+}
+
+export async function exportProductionRecipes(
+  format: "xlsx" | "csv" = "xlsx",
+): Promise<ExportProductionRecipesResult> {
+  const recipesRes = await fetchProductionRecipes();
+  if (!recipesRes.success) {
+    return {
+      success: false,
+      error: recipesRes.error ?? "Không thể tải BOM sản xuất.",
+    };
+  }
+
+  const rows = (recipesRes.data ?? [])
+    .map(productionRecipeToSheetRow)
+    .sort((a, b) => {
+      const byFinishedGood = a.finished_good_name.localeCompare(
+        b.finished_good_name,
+        "vi",
+      );
+      if (byFinishedGood !== 0) return byFinishedGood;
+      return a.ingredient_name.localeCompare(b.ingredient_name, "vi");
+    });
+  const sheets = buildProductionRecipeSheets(rows);
+  const stamp = new Date().toISOString().slice(0, 10);
+  const safeFormat = format === "csv" ? "csv" : "xlsx";
+
+  if (safeFormat === "csv") {
+    const csv = buildCsv(sheets[0]!);
+    return {
+      success: true,
+      data: {
+        filename: `bom-san-xuat-${stamp}.csv`,
+        base64: stringToBase64(csv),
+        format: "csv",
+      },
+    };
+  }
+
+  const buf = await buildXlsx(sheets);
+  return {
+    success: true,
+    data: {
+      filename: `bom-san-xuat-${stamp}.xlsx`,
+      base64: bufferToBase64(buf),
+      format: "xlsx",
+    },
+  };
+}
+
+export async function downloadProductionRecipeTemplate(): Promise<
+  ActionResult<{ filename: string; base64: string; format: "xlsx" }>
+> {
+  const ctx = await getAuthContextWithPermission(
+    PRODUCTION_ROLES,
+    PERMISSION_KEYS.MENU_WRITE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const sheets = buildProductionRecipeSheets([
+    {
+      finished_good_id: "",
+      finished_good_name: "Sườn ướp sẵn (ví dụ)",
+      ingredient_id: "",
+      ingredient_name: "Sườn cốt lết sống (ví dụ)",
+      quantity: 1,
+      unit: "kg",
+      yield_factor: 0.9,
+      note: "Hao hụt sơ chế 10%",
+    },
+  ]);
+  const buf = await buildXlsx(sheets);
+
+  return {
+    success: true,
+    data: {
+      filename: "bom-san-xuat-template.xlsx",
+      base64: bufferToBase64(buf),
+      format: "xlsx",
+    },
+  };
+}
+
+function readCell(raw: Record<string, string>, ...keys: string[]): string {
+  for (const key of keys) {
+    const value = raw[key];
+    if (value != null) return value.trim();
+  }
+  return "";
+}
+
+function normalizeLookupKey(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function parseCsvNumber(raw: string): number | null {
+  const value = raw.trim();
+  if (!value) return null;
+
+  const compact = value.replace(/\s/g, "");
+  const parts = compact.split(",");
+  const decimalComma =
+    parts.length === 2 &&
+    parts[1] != null &&
+    parts[1].length > 0 &&
+    parts[1].length !== 3 &&
+    !compact.includes(".");
+  const normalized = decimalComma
+    ? `${parts[0]}.${parts[1]}`
+    : compact.replace(/,/g, "");
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseOptionalId(raw: string): number | null | undefined {
+  if (!raw.trim()) return undefined;
+  const n = parseCsvNumber(raw);
+  if (n == null || !Number.isInteger(n) || n <= 0) return null;
+  return n;
+}
+
+function addNameLookup<T extends { name: string }>(
+  map: Map<string, T[]>,
+  item: T,
+) {
+  const key = normalizeLookupKey(item.name);
+  const existing = map.get(key);
+  if (existing) existing.push(item);
+  else map.set(key, [item]);
+}
+
+function resolveByName<T extends { id: number; name: string }>(
+  rowsByName: Map<string, T[]>,
+  name: string,
+): T | "ambiguous" | null {
+  const matches = rowsByName.get(normalizeLookupKey(name)) ?? [];
+  if (matches.length === 1) return matches[0]!;
+  if (matches.length > 1) return "ambiguous";
+  return null;
+}
+
+export async function importProductionRecipes(
+  formData: FormData,
+): Promise<ImportProductionRecipesResult> {
+  const ctx = await getAuthContextWithPermission(
+    PRODUCTION_ROLES,
+    PERMISSION_KEYS.MENU_WRITE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return { success: false, error: "Thiếu file để import" };
+  }
+
+  let parsed;
+  try {
+    parsed = await parseSpreadsheetFile(file, {
+      maxRowsPerSheet: MAX_ROWS_PER_SHEET,
+    });
+  } catch {
+    return { success: false, error: "Không đọc được file BOM sản xuất." };
+  }
+
+  const sheet = parsed.sheets[0];
+  if (!sheet || sheet.rows.length === 0) {
+    return { success: false, error: "File trống" };
+  }
+
+  const { supabase, claims } = ctx;
+  const { data, error } = await supabase
+    .from("ingredients")
+    .select("id, name, unit, measure_unit, item_kind, is_active")
+    .eq("tenant_id", claims.tenant_id);
+
+  if (error) {
+    return { success: false, error: "Không thể tải dữ liệu đối chiếu." };
+  }
+
+  const ingredients = ((data ?? []) as IngredientLookupRow[]).filter(
+    (ingredient) => ingredient.is_active !== false,
+  );
+  const ingredientById = new Map(ingredients.map((item) => [item.id, item]));
+  const finishedGoodByName = new Map<string, IngredientLookupRow[]>();
+  const rawIngredientByName = new Map<string, IngredientLookupRow[]>();
+
+  for (const ingredient of ingredients) {
+    if (ingredient.item_kind === "finished_good") {
+      addNameLookup(finishedGoodByName, ingredient);
+    }
+    if (ingredient.item_kind === "raw_material") {
+      addNameLookup(rawIngredientByName, ingredient);
+    }
+  }
+
+  const issues: ImportProductionRecipeIssue[] = [];
+  const groups = new Map<
+    number,
+    {
+      finishedGoodName: string;
+      lines: Array<{
+        ingredientId: number;
+        quantity: number;
+        unit: string;
+        yieldFactor: number;
+        note: string | null;
+      }>;
+    }
+  >();
+  const seenRecipeIngredient = new Set<string>();
+
+  sheet.rows.forEach((raw, idx) => {
+    const rowNumber = idx + 2;
+    const finishedGoodIdRaw = readCell(
+      raw,
+      "Mã thành phẩm",
+      "finished_good_id",
+    );
+    const finishedGoodNameRaw = readCell(
+      raw,
+      "Thành phẩm",
+      "finished_good_name",
+    );
+    const ingredientIdRaw = readCell(raw, "Mã nguyên liệu", "ingredient_id");
+    const ingredientNameRaw = readCell(raw, "Nguyên liệu", "ingredient_name");
+
+    const finishedGoodId = parseOptionalId(finishedGoodIdRaw);
+    if (finishedGoodId === null) {
+      issues.push({
+        row: rowNumber,
+        field: "Mã thành phẩm",
+        message: "Mã thành phẩm không hợp lệ.",
+      });
+      return;
+    }
+
+    const ingredientId = parseOptionalId(ingredientIdRaw);
+    if (ingredientId === null) {
+      issues.push({
+        row: rowNumber,
+        field: "Mã nguyên liệu",
+        message: "Mã nguyên liệu không hợp lệ.",
+      });
+      return;
+    }
+
+    let finishedGood = finishedGoodId
+      ? (ingredientById.get(finishedGoodId) ?? null)
+      : null;
+    if (!finishedGood && finishedGoodNameRaw) {
+      const resolved = resolveByName(finishedGoodByName, finishedGoodNameRaw);
+      if (resolved === "ambiguous") {
+        issues.push({
+          row: rowNumber,
+          field: "Thành phẩm",
+          message: "Tên thành phẩm bị trùng. Vui lòng dùng Mã thành phẩm.",
+        });
+        return;
+      }
+      finishedGood = resolved;
+    }
+    if (!finishedGood || finishedGood.item_kind !== "finished_good") {
+      issues.push({
+        row: rowNumber,
+        field: "Thành phẩm",
+        message: "Không tìm thấy thành phẩm hợp lệ trong danh mục.",
+      });
+      return;
+    }
+
+    let ingredient = ingredientId
+      ? (ingredientById.get(ingredientId) ?? null)
+      : null;
+    if (!ingredient && ingredientNameRaw) {
+      const resolved = resolveByName(rawIngredientByName, ingredientNameRaw);
+      if (resolved === "ambiguous") {
+        issues.push({
+          row: rowNumber,
+          field: "Nguyên liệu",
+          message: "Tên nguyên liệu bị trùng. Vui lòng dùng Mã nguyên liệu.",
+        });
+        return;
+      }
+      ingredient = resolved;
+    }
+    if (!ingredient || ingredient.item_kind !== "raw_material") {
+      issues.push({
+        row: rowNumber,
+        field: "Nguyên liệu",
+        message: "Không tìm thấy nguyên liệu đầu vào hợp lệ trong danh mục.",
+      });
+      return;
+    }
+
+    const duplicateKey = `${finishedGood.id}:${ingredient.id}`;
+    if (seenRecipeIngredient.has(duplicateKey)) {
+      issues.push({
+        row: rowNumber,
+        field: "Nguyên liệu",
+        message: "Nguyên liệu bị trùng trong cùng một BOM sản xuất.",
+      });
+      return;
+    }
+    seenRecipeIngredient.add(duplicateKey);
+
+    const quantityRaw = readCell(raw, "Số lượng", "quantity");
+    const quantity = parseCsvNumber(quantityRaw);
+    if (quantity == null) {
+      issues.push({
+        row: rowNumber,
+        field: "Số lượng",
+        message: "Số lượng không hợp lệ.",
+      });
+      return;
+    }
+
+    const yieldRaw = readCell(raw, "Yield", "yield_factor");
+    const yieldFactor = yieldRaw ? parseCsvNumber(yieldRaw) : 1;
+    if (yieldFactor == null) {
+      issues.push({
+        row: rowNumber,
+        field: "Yield",
+        message: "Yield không hợp lệ.",
+      });
+      return;
+    }
+
+    const unit =
+      readCell(raw, "Đơn vị", "unit") ||
+      ingredient.measure_unit ||
+      ingredient.unit;
+    const parsedRow = importProductionRecipeRowSchema.safeParse({
+      finishedGoodId: finishedGood.id,
+      ingredientId: ingredient.id,
+      quantity,
+      unit,
+      yieldFactor,
+      note: readCell(raw, "Ghi chú", "note") || undefined,
+    });
+
+    if (!parsedRow.success) {
+      issues.push({
+        row: rowNumber,
+        field: parsedRow.error.issues[0]?.path.join("."),
+        message: parsedRow.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+      });
+      return;
+    }
+
+    const group = groups.get(parsedRow.data.finishedGoodId) ?? {
+      finishedGoodName: finishedGood.name,
+      lines: [],
+    };
+    group.lines.push({
+      ingredientId: parsedRow.data.ingredientId,
+      quantity: parsedRow.data.quantity,
+      unit: parsedRow.data.unit.trim(),
+      yieldFactor: parsedRow.data.yieldFactor,
+      note: parsedRow.data.note?.trim() ? parsedRow.data.note.trim() : null,
+    });
+    groups.set(parsedRow.data.finishedGoodId, group);
+  });
+
+  if (issues.length > 0) {
+    return {
+      success: false,
+      error: `Có ${issues.length} dòng lỗi. Vui lòng sửa và thử lại.`,
+      issues,
+    };
+  }
+
+  if (groups.size === 0) {
+    return { success: false, error: "Không có dòng hợp lệ nào để import" };
+  }
+
+  const sb = supabase as unknown as RpcClient;
+  let lineCount = 0;
+  for (const [finishedGoodId, group] of groups) {
+    lineCount += group.lines.length;
+    const { error: rpcError } = await sb.rpc("upsert_production_recipe_lines", {
+      p_finished_good_id: finishedGoodId,
+      p_lines: group.lines.map((line) => ({
+        ingredient_id: line.ingredientId,
+        quantity: line.quantity,
+        unit: line.unit,
+        note: line.note,
+        yield_factor: line.yieldFactor,
+      })),
+    });
+
+    if (rpcError) {
+      return {
+        success: false,
+        error: `Không thể import BOM sản xuất "${group.finishedGoodName}".`,
+      };
+    }
+  }
+
+  revalidatePath("/inventory/production");
+  return {
+    success: true,
+    data: { summary: { recipes: groups.size, lines: lineCount } },
+  };
+}
+
 export async function fetchProductionOrders(): Promise<
   ActionResult<ProductionOrderRow[]>
 > {
-  const ctx = await getAuthContext(PRODUCTION_ROLES);
+  const ctx = await getAuthContextWithAnyPermission(
+    PRODUCTION_ROLES,
+    PRODUCTION_ORDER_PERMISSIONS,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -391,7 +917,11 @@ export async function fetchProductionOrders(): Promise<
 }
 
 export const createProductionOrder = withAction(
-  { roles: PRODUCTION_ROLES, schema: createProductionOrderSchema },
+  {
+    roles: PRODUCTION_ROLES,
+    schema: createProductionOrderSchema,
+    permission: PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
+  },
   async (data, { supabase }) => {
     const sb = supabase as unknown as RpcClient;
     const { error } = await sb.rpc("create_production_order", {
@@ -409,7 +939,10 @@ export const createProductionOrder = withAction(
       if (error.code === PG_ERR.UNIQUE_VIOLATION) {
         return { success: false, error: "Số lệnh sản xuất đã tồn tại." };
       }
-      if (error.code === PG_ERR.CHECK_VIOLATION || error.code === PG_ERR.INVALID_TEXT_REPRESENTATION) {
+      if (
+        error.code === PG_ERR.CHECK_VIOLATION ||
+        error.code === PG_ERR.INVALID_TEXT_REPRESENTATION
+      ) {
         return {
           success: false,
           error: "Bếp trung tâm hoặc thành phẩm chưa hợp lệ.",
@@ -426,7 +959,11 @@ export const createProductionOrder = withAction(
 );
 
 export const upsertProductionRecipe = withAction(
-  { roles: PRODUCTION_ROLES, schema: productionRecipeSchema },
+  {
+    roles: PRODUCTION_ROLES,
+    schema: productionRecipeSchema,
+    permission: PERMISSION_KEYS.MENU_WRITE,
+  },
   async (data, ctx) => {
     const { supabase, claims } = ctx;
     if (isCentralKitchenScopedRole(claims.user_role)) {
@@ -499,7 +1036,10 @@ export async function deleteProductionRecipe(
   const parsed = idSchema.safeParse(recipeId);
   if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
 
-  const ctx = await getAuthContext(PRODUCTION_ROLES);
+  const ctx = await getAuthContextWithPermission(
+    PRODUCTION_ROLES,
+    PERMISSION_KEYS.MENU_WRITE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -539,7 +1079,10 @@ export async function deleteProductionRecipeGroup(
   if (!parsed.success)
     return { success: false, error: "ID thành phẩm không hợp lệ" };
 
-  const ctx = await getAuthContext(PRODUCTION_ROLES);
+  const ctx = await getAuthContextWithPermission(
+    PRODUCTION_ROLES,
+    PERMISSION_KEYS.MENU_WRITE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -579,7 +1122,10 @@ export async function confirmProductionOrder(
   const parsed = idSchema.safeParse(orderId);
   if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
 
-  const ctx = await getAuthContext(PRODUCTION_ROLES);
+  const ctx = await getAuthContextWithPermission(
+    PRODUCTION_ROLES,
+    PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase } = ctx;
@@ -623,7 +1169,10 @@ export async function cancelProductionOrder(
   const parsed = idSchema.safeParse(orderId);
   if (!parsed.success) return { success: false, error: "ID không hợp lệ" };
 
-  const ctx = await getAuthContext(PRODUCTION_ROLES);
+  const ctx = await getAuthContextWithPermission(
+    PRODUCTION_ROLES,
+    PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase } = ctx;

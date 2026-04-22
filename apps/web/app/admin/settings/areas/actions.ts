@@ -1,9 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "@/_lib/auth";
+import { getAuthContextWithPermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 
 const AREA_ADMIN_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
@@ -31,7 +31,10 @@ const removeSchema = z.object({
 /* ─── fetchAreas ─── */
 
 export async function fetchAreas(): Promise<ActionResult> {
-  const ctx = await getAuthContext(AREA_ADMIN_ROLES);
+  const ctx = await getAuthContextWithPermission(
+    AREA_ADMIN_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -66,7 +69,11 @@ export async function fetchAreas(): Promise<ActionResult> {
 /* ─── createArea ─── */
 
 export const createArea = withAction(
-  { roles: AREA_ADMIN_ROLES, schema: createAreaSchema },
+  {
+    roles: AREA_ADMIN_ROLES,
+    schema: createAreaSchema,
+    permission: PERMISSION_KEYS.SETTINGS_TENANT,
+  },
   async (data, { supabase, claims }) => {
     const { data: result, error } = await supabase
       .from("areas")
@@ -88,7 +95,11 @@ export const createArea = withAction(
 /* ─── updateArea ─── */
 
 export const updateArea = withAction(
-  { roles: AREA_ADMIN_ROLES, schema: updateAreaSchema },
+  {
+    roles: AREA_ADMIN_ROLES,
+    schema: updateAreaSchema,
+    permission: PERMISSION_KEYS.SETTINGS_TENANT,
+  },
   async (data, { supabase, claims }) => {
     const { error } = await supabase
       .from("areas")
@@ -110,7 +121,11 @@ export const updateArea = withAction(
 /* ─── assignBranchToArea ─── */
 
 export const assignBranchToArea = withAction(
-  { roles: AREA_ADMIN_ROLES, schema: assignSchema },
+  {
+    roles: AREA_ADMIN_ROLES,
+    schema: assignSchema,
+    permission: PERMISSION_KEYS.SETTINGS_TENANT,
+  },
   async (data, { supabase, claims }) => {
     const { error } = await supabase.from("area_branches").insert({
       tenant_id: claims.tenant_id,
@@ -132,7 +147,11 @@ export const assignBranchToArea = withAction(
 /* ─── removeBranchFromArea ─── */
 
 export const removeBranchFromArea = withAction(
-  { roles: AREA_ADMIN_ROLES, schema: removeSchema },
+  {
+    roles: AREA_ADMIN_ROLES,
+    schema: removeSchema,
+    permission: PERMISSION_KEYS.SETTINGS_TENANT,
+  },
   async (data, { supabase, claims }) => {
     const { error } = await supabase
       .from("area_branches")

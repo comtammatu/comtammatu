@@ -15,43 +15,34 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ChefHat, Filter } from "lucide-react";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { OrderCard } from "./order-card";
-import type { KdsStation, KdsTicket, KdsOrderInfo, KdsOrderItem } from "./page";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { Kbd } from "@comtammatu/ui/components/kbd";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
+import type {
+  KdsTicket,
+  KdsOrderInfo,
+  KdsOrderItem,
+  KdsOrder,
+  KdsBoardProps,
+  TicketStatusFilter,
+  OrderTypeFilter,
+  FilterOption,
+} from "./types";
 
-/* ─── Types ─── */
+/* ─── Constants ─── */
 
-/** Grouped order with its tickets and items for display */
-export interface KdsOrder {
-  orderId: number;
-  orderNumber: string;
-  orderType: string;
-  tableNumber: number | null;
-  createdAt: string;
-  tickets: KdsTicket[];
-  items: KdsOrderItem[];
-}
-
-interface KdsBoardProps {
-  branchId: number;
-  stations: KdsStation[];
-  initialTickets: KdsTicket[];
-  initialOrders: KdsOrderInfo[];
-  initialOrderItems: KdsOrderItem[];
-}
-
-/** URL query: `status` — lọc đơn theo trạng thái ticket */
-type TicketStatusFilter = "all" | "active" | "pending" | "preparing" | "ready";
-
-/** URL query: `orderType` */
-type OrderTypeFilter = "all" | "dine_in" | "takeaway";
-
-const TICKET_STATUS_OPTIONS: { value: TicketStatusFilter; label: string }[] = [
+const TICKET_STATUS_OPTIONS: FilterOption<TicketStatusFilter>[] = [
   { value: "all", label: "Tất cả" },
   { value: "active", label: "Còn việc" },
   { value: "pending", label: "Có món chờ" },
@@ -59,11 +50,13 @@ const TICKET_STATUS_OPTIONS: { value: TicketStatusFilter; label: string }[] = [
   { value: "ready", label: "Có món xong" },
 ];
 
-const ORDER_TYPE_OPTIONS: { value: OrderTypeFilter; label: string }[] = [
+const ORDER_TYPE_OPTIONS: FilterOption<OrderTypeFilter>[] = [
   { value: "all", label: "Tất cả" },
   { value: "dine_in", label: "Tại bàn" },
   { value: "takeaway", label: "Mang về" },
 ];
+
+/* ─── Helpers ─── */
 
 function parseTicketStatusFilter(v: string | null): TicketStatusFilter {
   if (v === "active" || v === "pending" || v === "preparing" || v === "ready") {
@@ -91,13 +84,6 @@ function orderMatchesTicketStatus(
   return statuses.some((s) => s === "ready");
 }
 
-function getElapsedMinutes(createdAt: string): number {
-  return Math.max(
-    0,
-    Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000),
-  );
-}
-
 function buildOrderItemMap(items: KdsOrderItem[]): Map<number, KdsOrderItem[]> {
   const map = new Map<number, KdsOrderItem[]>();
   for (const item of items) {
@@ -108,7 +94,7 @@ function buildOrderItemMap(items: KdsOrderItem[]): Map<number, KdsOrderItem[]> {
   return map;
 }
 
-/* ─── Audio beep helper (reuses single AudioContext) ─── */
+/* ─── Audio beep ─── */
 
 let _audioCtx: AudioContext | null = null;
 
@@ -130,7 +116,7 @@ function playBeep() {
     oscillator.start();
     oscillator.stop(_audioCtx.currentTime + 0.15);
   } catch {
-    // Audio not available — silently ignore
+    // Audio not available
   }
 }
 
@@ -172,6 +158,8 @@ export function KdsBoard({
     [pathname, router, searchParams],
   );
 
+  /* ── URL filter state ── */
+
   const activeStationId = useMemo((): number | null => {
     const raw = searchParams.get("station");
     if (!raw || raw === "all") return null;
@@ -190,18 +178,22 @@ export function KdsBoard({
     [searchParams],
   );
 
-  // Keep ordersRef in sync
+  /* ── Ref sync ── */
+
   useEffect(() => {
     ordersRef.current = orders;
   }, [orders]);
 
-  // Play beep on new tickets
+  /* ── Audio on new tickets ── */
+
   useEffect(() => {
     if (tickets.length > prevTicketCountRef.current) {
       playBeep();
     }
     prevTicketCountRef.current = tickets.length;
   }, [tickets.length]);
+
+  /* ── Fetch helpers ── */
 
   const fetchOrderInfo = useCallback(async (orderId: number) => {
     const supabase = supabaseRef.current;
@@ -318,7 +310,8 @@ export function KdsBoard({
     lastSnapshotSyncRef.current = Date.now();
   }, [branchId]);
 
-  // Subscribe to kds_tickets realtime
+  /* ── Realtime subscription ── */
+
   useEffect(() => {
     const supabase = supabaseRef.current;
 
@@ -339,7 +332,6 @@ export function KdsBoard({
             syncOrderItemStatusFromTicket(newTicket);
             lastSnapshotSyncRef.current = Date.now();
 
-            // Fetch order info if we don't have it
             const orderId = newTicket.order_id;
             if (!ordersRef.current.has(orderId)) {
               void fetchOrderInfo(orderId);
@@ -365,6 +357,8 @@ export function KdsBoard({
     };
   }, [branchId, fetchOrderInfo, syncOrderItemStatusFromTicket]);
 
+  /* ── Polling fallback ── */
+
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       if (document.visibilityState === "hidden") return;
@@ -378,13 +372,13 @@ export function KdsBoard({
     };
   }, [refreshBoardSnapshot]);
 
-  // Filter tickets by station
+  /* ── Derived data ── */
+
   const filteredTickets = useMemo(() => {
     if (activeStationId === null) return tickets;
     return tickets.filter((t) => t.station_id === activeStationId);
   }, [tickets, activeStationId]);
 
-  // Group tickets by order_id
   const groupedOrders = useMemo(() => {
     const orderMap = new Map<number, KdsTicket[]>();
     for (const ticket of filteredTickets) {
@@ -407,7 +401,6 @@ export function KdsBoard({
       });
     }
 
-    // Sort by creation time (oldest first)
     result.sort(
       (a, b) =>
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
@@ -429,15 +422,37 @@ export function KdsBoard({
     return list;
   }, [groupedOrders, orderTypeFilter, ticketStatusFilter]);
 
-  // Keyboard shortcuts: Escape clears all filters back to "all"
+  const pendingCount = useMemo(
+    () => tickets.filter((t) => t.status === "pending").length,
+    [tickets],
+  );
+
+  const stationCounts = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const t of tickets) {
+      if (t.status !== "ready") {
+        counts.set(t.station_id, (counts.get(t.station_id) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [tickets]);
+
+  const totalActiveCount = useMemo(
+    () => tickets.filter((t) => t.status !== "ready").length,
+    [tickets],
+  );
+
+  const hasFilters =
+    activeStationId !== null ||
+    ticketStatusFilter !== "all" ||
+    orderTypeFilter !== "all";
+
+  /* ── Keyboard shortcuts ── */
+
   useKeyboardShortcut([
     {
       key: "Escape",
       handler: () => {
-        const hasFilters =
-          activeStationId !== null ||
-          ticketStatusFilter !== "all" ||
-          orderTypeFilter !== "all";
         if (hasFilters) {
           replaceQuery({ station: null, status: null, orderType: null });
         }
@@ -445,10 +460,10 @@ export function KdsBoard({
     },
   ]);
 
-  // Optimistic bump handler
+  /* ── Bump / Recall ── */
+
   const handleBump = useCallback(
     async (ticketId: number) => {
-      // Optimistic update
       setTickets((prev) =>
         prev.map((t) => {
           if (t.id !== ticketId) return t;
@@ -475,10 +490,8 @@ export function KdsBoard({
     [refreshBoardSnapshot],
   );
 
-  // Optimistic recall handler
   const handleRecall = useCallback(
     async (ticketId: number) => {
-      // Optimistic update
       setTickets((prev) =>
         prev.map((t) => {
           if (t.id !== ticketId) return t;
@@ -505,232 +518,167 @@ export function KdsBoard({
     [refreshBoardSnapshot],
   );
 
-  // Count tickets per station (for badge)
-  const stationCounts = useMemo(() => {
-    const counts = new Map<number, number>();
-    for (const t of tickets) {
-      if (t.status !== "ready") {
-        counts.set(t.station_id, (counts.get(t.station_id) ?? 0) + 1);
-      }
-    }
-    return counts;
-  }, [tickets]);
-
-  const totalActiveCount = useMemo(
-    () => tickets.filter((t) => t.status !== "ready").length,
-    [tickets],
-  );
-  const pendingCount = useMemo(
-    () => tickets.filter((t) => t.status === "pending").length,
-    [tickets],
-  );
-  const preparingCount = useMemo(
-    () => tickets.filter((t) => t.status === "preparing").length,
-    [tickets],
-  );
-  const readyCount = useMemo(
-    () => tickets.filter((t) => t.status === "ready").length,
-    [tickets],
-  );
-  const oldestActiveOrderMinutes = useMemo(() => {
-    if (displayOrders.length === 0) return 0;
-    return Math.max(
-      ...displayOrders.map((order) => getElapsedMinutes(order.createdAt)),
-    );
-  }, [displayOrders]);
+  /* ── Render ── */
 
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
-      <div className="border-b border-border/60 px-3 py-3 md:px-4">
-        <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2">
-              <EmployeePortalBackControl className="h-8 rounded-full px-2 text-xs" />
-              <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                KDS chi nhánh #{branchId}
+      {/* Header — single compact row */}
+      <div className="flex items-center justify-between gap-3 border-b px-3 py-2 md:px-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <EmployeePortalBackControl className="h-7 rounded-full px-1.5 text-xs" />
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            KDS #{branchId}
+          </span>
+        </div>
+        <Badge
+          variant={pendingCount > 0 ? "warning" : "outline"}
+          className="rounded-full px-3 py-1 text-xs"
+        >
+          {pendingCount > 0
+            ? `${pendingCount} món cần nhận`
+            : "Không có món chờ"}
+        </Badge>
+      </div>
+
+      {/* Station toggle bar */}
+      <div className="border-b px-3 py-2 md:px-4">
+        <ScrollArea className="min-w-0 flex-1">
+          <ToggleGroup
+            type="single"
+            value={activeStationId === null ? "all" : String(activeStationId)}
+            onValueChange={(value) => {
+              if (!value) return;
+              replaceQuery({ station: value === "all" ? null : value });
+            }}
+            variant="outline"
+            className="h-auto justify-start gap-2 rounded-lg border bg-card p-2"
+          >
+            <ToggleGroupItem
+              value="all"
+              className="min-h-10 shrink-0 gap-2 px-3 text-sm font-semibold"
+              aria-label="Tất cả trạm"
+            >
+              Tất cả
+              <Badge
+                variant="secondary"
+                className="rounded-full px-2 py-0.5 text-xs font-semibold"
+              >
+                {totalActiveCount}
+              </Badge>
+            </ToggleGroupItem>
+            {stations.map((station) => (
+              <ToggleGroupItem
+                key={station.id}
+                value={String(station.id)}
+                className="min-h-10 shrink-0 gap-2 px-3 text-sm font-semibold"
+                aria-label={`Trạm ${station.name}`}
+              >
+                {station.name}
+                <Badge
+                  variant="secondary"
+                  className="rounded-full px-2 py-0.5 text-xs font-semibold"
+                >
+                  {stationCounts.get(station.id) ?? 0}
+                </Badge>
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </ScrollArea>
+      </div>
+
+      {/* Filter bar */}
+      <div className="border-b px-3 py-2 md:px-4">
+        <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+            <Filter className="size-4 shrink-0" aria-hidden />
+            <span className="hidden text-sm font-medium sm:inline">
+              Lọc
+            </span>
+            {hasFilters && (
+              <span
+                className="hidden items-center gap-1 text-xs md:inline-flex"
+                aria-label="Nhấn Esc để xoá bộ lọc"
+              >
+                <Kbd>Esc</Kbd>
+                <span>xoá</span>
               </span>
-            </div>
-            <Badge variant={pendingCount > 0 ? "warning" : "outline"} className="rounded-full px-3 py-1">
-              {pendingCount > 0
-                ? `${pendingCount} món cần nhận`
-                : "Không có món chờ"}
-            </Badge>
+            )}
           </div>
+          <Select
+            value={ticketStatusFilter}
+            onValueChange={(v) => {
+              if (v === "all") replaceQuery({ status: null });
+              else replaceQuery({ status: v });
+            }}
+          >
+            <SelectTrigger
+              className="h-10 min-h-10 w-auto min-w-28 shrink-0 rounded-lg text-sm md:min-w-36"
+              aria-label="Lọc theo trạng thái món"
+            >
+              <SelectValue placeholder="Trạng thái" />
+            </SelectTrigger>
+            <SelectContent>
+              {TICKET_STATUS_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value} className="text-sm">
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={orderTypeFilter}
+            onValueChange={(v) => {
+              if (v === "all") replaceQuery({ orderType: null });
+              else replaceQuery({ orderType: v });
+            }}
+          >
+            <SelectTrigger
+              className="h-10 min-h-10 w-auto min-w-24 shrink-0 rounded-lg text-sm md:min-w-32"
+              aria-label="Lọc theo loại đơn"
+            >
+              <SelectValue placeholder="Loại đơn" />
+            </SelectTrigger>
+            <SelectContent>
+              {ORDER_TYPE_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value} className="text-sm">
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          <div className="rounded-lg border bg-card px-4 py-3 shadow-sm">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Màn hình bếp
-                </p>
-                <p className="text-sm font-medium text-foreground">
-                  Ưu tiên món chờ mới và đơn chờ lâu, rồi xử lý theo trạm.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="rounded-full px-3 py-1">
-                  {displayOrders.length} đơn hiển thị
-                </Badge>
-                <Badge variant="outline" className="rounded-full px-3 py-1">
-                  {totalActiveCount} món còn việc
-                </Badge>
-                <Badge variant="outline" className="rounded-full px-3 py-1">
-                  {preparingCount} món đang làm
-                </Badge>
-                <Badge variant="outline" className="rounded-full px-3 py-1">
-                  {oldestActiveOrderMinutes} phút lâu nhất
-                </Badge>
-                <Badge variant="outline" className="rounded-full px-3 py-1">
-                  {readyCount} món chờ ra
-                </Badge>
-              </div>
-            </div>
-          </div>
+          {displayOrders.length > 0 && (
+            <span className="ml-auto text-sm font-semibold tabular-nums text-muted-foreground">
+              {displayOrders.length} đơn
+            </span>
+          )}
         </div>
       </div>
 
-      <div className="border-b border-border/40 px-3 py-3 md:px-4">
-        <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3">
-          <div className="flex shrink-0 items-stretch">
-            <ScrollArea className="min-w-0 flex-1">
-              <ToggleGroup
-                type="single"
-                value={activeStationId === null ? "all" : String(activeStationId)}
-                onValueChange={(value) => {
-                  // ToggleGroup "single" allows empty; treat that as "all"
-                  if (!value) return;
-                  replaceQuery({ station: value === "all" ? null : value });
-                }}
-                variant="outline"
-                className="h-auto justify-start gap-2 rounded-lg border bg-card p-2"
-              >
-                <ToggleGroupItem
-                  value="all"
-                  className="min-h-11 shrink-0 gap-2 px-4 text-sm font-semibold"
-                  aria-label="Tất cả trạm"
-                >
-                  Tất cả
-                  <Badge variant="secondary" className="rounded-full px-2 py-0.5 text-xs font-semibold">
-                    {totalActiveCount}
-                  </Badge>
-                </ToggleGroupItem>
-                {stations.map((station) => (
-                  <ToggleGroupItem
-                    key={station.id}
-                    value={String(station.id)}
-                    className="min-h-11 shrink-0 gap-2 px-4 text-sm font-semibold"
-                    aria-label={`Trạm ${station.name}`}
-                  >
-                    {station.name}
-                    <Badge variant="secondary" className="rounded-full px-2 py-0.5 text-xs font-semibold">
-                      {stationCounts.get(station.id) ?? 0}
-                    </Badge>
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            </ScrollArea>
-          </div>
-        </div>
-      </div>
-
-      <div className="border-b border-border/30 bg-secondary/35 px-3 py-2 md:px-4">
-        <div className="mx-auto w-full max-w-screen-2xl">
-          <div className="rounded-lg border bg-muted/30 text-card-foreground px-3 py-2.5">
-            <div className="relative flex shrink-0 flex-nowrap items-center gap-2 overflow-x-auto md:flex-wrap">
-              <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
-                <Filter className="size-4 shrink-0" aria-hidden />
-                <span className="hidden text-sm font-medium sm:inline">
-                  Bộ lọc
-                </span>
-              </div>
-              <Select
-                value={ticketStatusFilter}
-                onValueChange={(v) => {
-                  if (v === "all") replaceQuery({ status: null });
-                  else replaceQuery({ status: v });
-                }}
-              >
-                <SelectTrigger
-                  className="h-10 min-h-10 w-auto min-w-32 shrink-0 rounded-lg text-sm md:h-11 md:min-h-11 md:min-w-40"
-                  aria-label="Lọc theo trạng thái món"
-                >
-                  <SelectValue placeholder="Trạng thái" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TICKET_STATUS_OPTIONS.map((opt) => (
-                    <SelectItem
-                      key={opt.value}
-                      value={opt.value}
-                      className="text-sm"
-                    >
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={orderTypeFilter}
-                onValueChange={(v) => {
-                  if (v === "all") replaceQuery({ orderType: null });
-                  else replaceQuery({ orderType: v });
-                }}
-              >
-                <SelectTrigger
-                  className="h-10 min-h-10 w-auto min-w-28 shrink-0 rounded-lg text-sm md:h-11 md:min-h-11 md:min-w-36"
-                  aria-label="Lọc theo loại đơn"
-                >
-                  <SelectValue placeholder="Loại đơn" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ORDER_TYPE_OPTIONS.map((opt) => (
-                    <SelectItem
-                      key={opt.value}
-                      value={opt.value}
-                      className="text-sm"
-                    >
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {displayOrders.length > 0 && (
-                <span className="ml-auto text-sm font-semibold tabular-nums text-muted-foreground">
-                  {displayOrders.length} đơn
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
+      {/* Order grid */}
       <ScrollArea className="flex-1">
         {displayOrders.length === 0 ? (
-          <div className="mx-auto w-full max-w-screen-2xl p-3 md:p-4">
-            <Card>
-              <CardContent
-                className="flex min-h-80 flex-col items-center justify-center gap-4 px-6 py-10 text-center md:min-h-96"
-              >
-                <div className="flex size-12 items-center justify-center rounded-full border bg-muted/40 text-muted-foreground">
-                  <ChefHat className="size-4" />
-                </div>
-                <div className="space-y-1.5">
-                  <p className="text-base font-semibold">
-                    {groupedOrders.length > 0
-                      ? "Không có đơn phù hợp bộ lọc"
-                      : "Bếp đang rảnh"}
-                  </p>
-                  <p className="max-w-sm text-sm leading-6 text-muted-foreground">
-                    {groupedOrders.length > 0
-                      ? "Thử thay đổi bộ lọc để xem thêm đơn."
-                      : "Chưa có đơn hàng mới."}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="flex min-h-80 items-center justify-center p-6 md:min-h-96">
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <ChefHat />
+                </EmptyMedia>
+                <EmptyTitle>
+                  {groupedOrders.length > 0
+                    ? "Không có đơn phù hợp bộ lọc"
+                    : "Bếp đang rảnh"}
+                </EmptyTitle>
+                <EmptyDescription>
+                  {groupedOrders.length > 0
+                    ? "Thay đổi bộ lọc để xem thêm đơn."
+                    : "Chưa có đơn hàng mới."}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           </div>
         ) : (
-          <div className="mx-auto grid w-full max-w-screen-2xl grid-cols-1 gap-3 p-3 md:grid-cols-2 md:p-4 xl:grid-cols-3 2xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 md:p-4 xl:grid-cols-3 2xl:grid-cols-4">
             {displayOrders.map((order) => (
               <OrderCard
                 key={order.orderId}

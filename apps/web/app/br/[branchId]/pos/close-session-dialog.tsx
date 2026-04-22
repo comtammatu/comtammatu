@@ -7,6 +7,7 @@ import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Separator } from "@comtammatu/ui/components/separator";
 import {
@@ -18,6 +19,7 @@ import {
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
 import { FieldGroup } from "@comtammatu/ui/components/field";
+import { Progress } from "@comtammatu/ui/components/progress";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   AlertTriangle,
@@ -161,16 +163,11 @@ export function CloseSessionDialog({
                       Ca đã được đối soát, chỉ còn bước xác nhận cuối.
                     </p>
                   </div>
-                  <div className="rounded-full border border-success/15 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success shadow-sm">
+                  <Badge variant="success">
                     100%
-                  </div>
+                  </Badge>
                 </div>
-                <div className="h-2 w-full rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{ width: "100%" }}
-                  />
-                </div>
+                <Progress value={100} className="h-2" />
               </div>
             </div>
 
@@ -235,7 +232,7 @@ export function CloseSessionDialog({
 
             <DialogFooter>
               <Button
-                className="w-full rounded-lg shadow-sm transition-transform hover:translate-y-[-1px]"
+                className="w-full rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
                 size="lg"
                 onClick={handleConfirm}
               >
@@ -261,21 +258,11 @@ export function CloseSessionDialog({
                       Nhập tiền mặt cuối ca để hệ thống đối chiếu và chốt phiên.
                     </p>
                   </div>
-                  <div className="rounded-full border border-primary/15 bg-card px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
+                  <Badge variant="outline">
                     {String(Math.round(closeProgressPercent))}%
-                  </div>
+                  </Badge>
                 </div>
-                <div className="h-2 w-full rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    data-indeterminate={isPending ? "true" : undefined}
-                    style={
-                      isPending
-                        ? undefined
-                        : { width: `${closeProgressPercent}%` }
-                    }
-                  />
-                </div>
+                <Progress value={closeProgressPercent} className="h-2" />
                 <div className="grid gap-2 sm:grid-cols-3">
                   <div
                     className="rounded-lg border bg-card shadow-sm p-3"

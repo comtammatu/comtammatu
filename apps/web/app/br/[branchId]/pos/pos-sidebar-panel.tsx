@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@comtammatu/ui/components/button";
+import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Tabs,
   TabsList,
@@ -22,9 +23,6 @@ interface PosSidebarPanelProps {
   orderType: OrderType;
   selectedTableId: number | null;
   tables: BranchTable[];
-  flowProgressPercent: number;
-  flowHeadline: string;
-  flowHint: string;
   canSubmit: boolean;
   isPending: boolean;
   sessionOrders: SessionOrder[];
@@ -71,9 +69,9 @@ export function PosSidebarTabs({
           <TabsTrigger value="new-order" className="gap-2 py-2.5 text-sm font-semibold">
             Đơn mới
             {cartQuantity > 0 && (
-              <span className="rounded-full bg-primary-foreground/15 px-2 py-0.5 text-xs font-semibold text-primary-foreground">
+              <Badge variant="secondary" className="text-xs">
                 {cartQuantity}
-              </span>
+              </Badge>
             )}
           </TabsTrigger>
           <TabsTrigger
@@ -95,9 +93,6 @@ export function PosSidebarContent({
   orderType,
   selectedTableId,
   tables,
-  flowProgressPercent,
-  flowHeadline,
-  flowHint,
   canSubmit,
   isPending,
   sessionOrders,
@@ -120,9 +115,9 @@ export function PosSidebarContent({
           <div className="flex items-center gap-2">
             <span className="font-semibold">Đơn đang phục vụ</span>
             {sessionOrders.length > 0 && (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+              <Badge variant="secondary" className="text-xs">
                 {sessionOrders.length}
-              </span>
+              </Badge>
             )}
           </div>
           <Button
@@ -151,9 +146,6 @@ export function PosSidebarContent({
       orderType={orderType}
       selectedTableId={selectedTableId}
       tables={tables}
-      progressPercent={flowProgressPercent}
-      progressHeadline={flowHeadline}
-      progressHint={flowHint}
       canSubmit={canSubmit}
       isSubmitting={isPending}
       onUpdateQuantity={onUpdateQuantity}

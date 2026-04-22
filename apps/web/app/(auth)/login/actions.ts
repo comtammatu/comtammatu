@@ -5,7 +5,7 @@ import { z } from "zod";
 import { headers } from "next/headers";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
-  extractClaims,
+  extractClaimsFromAccessToken,
   resolvePostLoginRedirect,
 } from "@comtammatu/shared/auth";
 import { loginRateLimit } from "@comtammatu/security";
@@ -68,16 +68,16 @@ export async function login(
     return { error: "Email hoặc mật khẩu không đúng" };
   }
 
-  // Fetch fresh user to get JWT with custom claims
+  // Fetch fresh session to get the access token with hook-injected claims
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user) {
+  if (!session) {
     return { error: "Không thể đăng nhập. Vui lòng thử lại." };
   }
 
-  const claims = extractClaims(user.app_metadata);
+  const claims = extractClaimsFromAccessToken(session.access_token);
   if (!claims) {
     return { error: "Tài khoản chưa được phân quyền. Liên hệ quản lý." };
   }

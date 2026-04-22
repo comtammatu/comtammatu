@@ -52,6 +52,14 @@ function storageLabel(storageType: string | null) {
   return STORAGE_LABELS[storageType] ?? storageType;
 }
 
+const conversionNumberFormatter = new Intl.NumberFormat("vi-VN", {
+  maximumFractionDigits: 6,
+});
+
+function conversionLabel(ingredient: IngredientRow): string {
+  return `1 ${ingredient.purchase_unit} = ${conversionNumberFormatter.format(ingredient.purchase_to_measure_factor ?? 1)} ${ingredient.measure_unit}`;
+}
+
 export function IngredientTable({
   ingredients,
   onIngredientAdded,
@@ -152,7 +160,7 @@ export function IngredientTable({
                     </ItemTitle>
                     <ItemDescription className="truncate">
                       {ing.sku && <>{ing.sku} · </>}
-                      Nhập {ing.purchase_unit} · Tính {ing.measure_unit}
+                      {conversionLabel(ing)}
                       {ing.category && <> · {ing.category}</>}
                       {ing.unit_cost != null && (
                         <> · {formatVND(ing.unit_cost)}</>
@@ -228,6 +236,9 @@ export function IngredientTable({
                         <p>Nhập: {ing.purchase_unit}</p>
                         <p className="text-muted-foreground">
                           Tính: {ing.measure_unit}
+                        </p>
+                        <p className="text-muted-foreground">
+                          {conversionLabel(ing)}
                         </p>
                       </div>
                     </TableCell>

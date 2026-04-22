@@ -160,12 +160,8 @@ export function ItemCustomizer({
   }, []);
 
   return (
-      <Sheet open={item !== null} onOpenChange={resetAndSetItem}>
-      <SheetContent
-        side="bottom"
-        className="p-0"
-        style={{ height: "70dvh" }}
-      >
+    <Sheet open={item !== null} onOpenChange={resetAndSetItem}>
+      <SheetContent side="bottom" className="h-dvh max-h-dvh p-0">
         {item && (
           <div className="flex h-full flex-col">
             <SheetHeader className="px-4 pt-4">

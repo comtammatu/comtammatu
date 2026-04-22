@@ -1,5 +1,6 @@
-import { createClient } from "@comtammatu/database/supabase/server";
-import { canAccess, extractClaims } from "@comtammatu/shared/auth";
+import { canAccess, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { loadAuthState } from "@/_lib/auth";
+import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import {
   fetchReorderAlerts,
   fetchExpiryAlerts,
@@ -88,31 +89,23 @@ export type InventoryDashboardData = {
 };
 
 export async function loadInventoryDashboardData(): Promise<InventoryDashboardData> {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const claims = session?.user
-    ? extractClaims(session.user.app_metadata)
-    : null;
+  const { supabase, claims } = await loadAuthState();
 
-  const showProcurement = claims
-    ? canAccess(claims.user_role, "inventory_procurement")
-    : false;
+  const showProcurement =
+    canAccess(claims.user_role, "inventory_procurement") &&
+    (await currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ));
 
-  const siteContext = claims
-    ? await fetchInventorySiteContext(
-        supabase,
-        claims.tenant_id,
-        claims.branch_id,
-      )
-    : null;
+  const siteContext = await fetchInventorySiteContext(
+    supabase,
+    claims.tenant_id,
+    claims.branch_id,
+  );
 
   const resolvedSiteContext =
     siteContext ??
-    (claims?.user_role === "super_manager" ||
-    claims?.user_role === "owner" ||
-    claims?.user_role === "office"
+    (claims.user_role === "super_manager" ||
+    claims.user_role === "owner" ||
+    claims.user_role === "office"
       ? {
           branchName: "Kho tổng",
           branchKind: "central_warehouse" as const,
@@ -147,7 +140,10 @@ export async function loadInventoryDashboardData(): Promise<InventoryDashboardDa
       ? (transferRes.data as DashboardTransfer[])
       : [];
   const activeTransfers = rawTransfers.filter(
-    (t) => t.status === "in_transit" || t.status === "confirmed",
+    (t) =>
+      t.status === "confirmed_ship" ||
+      t.status === "in_transit" ||
+      t.status === "confirmed_receive",
   ).length;
   const transfers = rawTransfers.map((t) => ({
     id: t.id,

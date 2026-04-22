@@ -3,8 +3,8 @@
 import { z } from "zod";
 import { createClient } from "@comtammatu/database/supabase/server";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "@/_lib/auth";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { getAuthContextWithPermission } from "@/_lib/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 
 /* ─── Allowed roles ─── */
 
@@ -80,7 +80,7 @@ export async function fetchOrders(
     return { success: false, error: "Bộ lọc không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(ALLOWED_ROLES);
+  const ctx = await getAuthContextWithPermission(ALLOWED_ROLES, PERMISSION_KEYS.ORDERS_READ);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { claims } = ctx;

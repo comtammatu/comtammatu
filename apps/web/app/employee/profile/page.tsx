@@ -1,13 +1,27 @@
-import { BadgeCheck, Building2, CalendarDays, LogOut, User } from "lucide-react";
+import {
+  BadgeCheck,
+  Building2,
+  CalendarDays,
+  LogOut,
+  User,
+} from "lucide-react";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
+import {
+  Item,
+  ItemContent,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { loadAuthState } from "@/_lib/auth";
 
 export default async function ProfilePage() {
@@ -39,7 +53,7 @@ export default async function ProfilePage() {
     "Nhân viên";
 
   return (
-    <div className="space-y-6 p-5 md:p-6">
+    <div className="flex flex-col gap-5">
       <Card>
         <CardContent className="p-5">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -47,12 +61,16 @@ export default async function ProfilePage() {
               <div className="flex size-16 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <User className="size-8" />
               </div>
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              <div className="flex min-w-0 flex-col gap-1">
+                <p className="text-xs font-semibold text-muted-foreground">
                   Thông tin cá nhân
                 </p>
-                <p className="text-xl font-semibold text-foreground">{displayName}</p>
-                <p className="text-sm text-muted-foreground">{session.user.email}</p>
+                <p className="text-xl font-semibold text-foreground">
+                  {displayName}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {session.user.email}
+                </p>
               </div>
             </div>
             <Badge variant="info">{roleLabel}</Badge>
@@ -63,56 +81,56 @@ export default async function ProfilePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">Hồ sơ đang dùng</CardTitle>
+          <CardDescription>
+            Thông tin nhân viên gắn với tài khoản này.
+          </CardDescription>
         </CardHeader>
+        <CardContent>
+          <ItemGroup>
+            {branchName ? (
+              <Item variant="outline">
+                <ItemMedia variant="icon">
+                  <Building2 />
+                </ItemMedia>
+                <ItemContent>
+                  <ItemTitle>Chi nhánh</ItemTitle>
+                  <p className="text-sm font-medium">{branchName}</p>
+                </ItemContent>
+              </Item>
+            ) : null}
+
+            {employee?.employee_code ? (
+              <Item variant="outline">
+                <ItemMedia variant="icon">
+                  <BadgeCheck />
+                </ItemMedia>
+                <ItemContent>
+                  <ItemTitle>Mã nhân viên</ItemTitle>
+                  <p className="text-sm font-medium">
+                    {employee.employee_code}
+                  </p>
+                </ItemContent>
+              </Item>
+            ) : null}
+
+            {employee?.start_date ? (
+              <Item variant="outline">
+                <ItemMedia variant="icon">
+                  <CalendarDays />
+                </ItemMedia>
+                <ItemContent>
+                  <ItemTitle>Ngày bắt đầu</ItemTitle>
+                  <p className="text-sm font-medium">{employee.start_date}</p>
+                </ItemContent>
+              </Item>
+            ) : null}
+          </ItemGroup>
+        </CardContent>
       </Card>
 
-      <div className="grid gap-3">
-        {branchName && (
-          <Card>
-            <CardContent className="space-y-1.5 p-4">
-              <div className="flex items-center gap-3">
-                <Building2 className="size-4 shrink-0 text-muted-foreground" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Chi nhánh</p>
-                  <p className="text-sm font-medium">{branchName}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {employee?.employee_code && (
-          <Card>
-            <CardContent className="space-y-1.5 p-4">
-              <div className="flex items-center gap-3">
-                <BadgeCheck className="size-4 shrink-0 text-muted-foreground" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Mã nhân viên</p>
-                  <p className="text-sm font-medium">{employee.employee_code}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {employee?.start_date && (
-          <Card>
-            <CardContent className="space-y-1.5 p-4">
-              <div className="flex items-center gap-3">
-                <CalendarDays className="size-4 shrink-0 text-muted-foreground" />
-                <div>
-                  <p className="text-xs text-muted-foreground">Ngày bắt đầu</p>
-                  <p className="text-sm font-medium">{employee.start_date}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
       <form action="/api/auth/signout" method="post">
-        <Button type="submit" variant="outline" className="gap-2">
-          <LogOut className="size-4" />
+        <Button type="submit" variant="outline">
+          <LogOut data-icon="inline-start" />
           Đăng xuất
         </Button>
       </form>

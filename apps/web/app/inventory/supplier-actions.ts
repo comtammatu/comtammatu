@@ -1,10 +1,10 @@
 "use server";
 
 import { z } from "zod";
-import { PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
-import { getAuthContext } from "./_lib/auth";
+import { getAuthContextWithPermission } from "./_lib/auth";
 import { PG_ERR } from "./_lib/constants";
 
 const ROLES = PROCUREMENT_ROLES;
@@ -20,7 +20,10 @@ const supplierSchema = z.object({
 });
 
 export async function fetchSuppliers(): Promise<ActionResult> {
-  const ctx = await getAuthContext(ROLES);
+  const ctx = await getAuthContextWithPermission(
+    ROLES,
+    PERMISSION_KEYS.PROCUREMENT_READ,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
   const { data, error } = await supabase
@@ -33,7 +36,11 @@ export async function fetchSuppliers(): Promise<ActionResult> {
 }
 
 export const createSupplier = withAction(
-  { roles: ROLES, schema: supplierSchema },
+  {
+    roles: ROLES,
+    schema: supplierSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_SUPPLIER_MANAGE,
+  },
   async (data, { supabase, claims }) => {
     const { paymentTermsDays, paymentTermsNote, ...rest } = data;
     const { data: row, error } = await supabase
@@ -70,7 +77,10 @@ export async function updateSupplier(
       error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
     };
   }
-  const ctx = await getAuthContext(ROLES);
+  const ctx = await getAuthContextWithPermission(
+    ROLES,
+    PERMISSION_KEYS.PROCUREMENT_SUPPLIER_MANAGE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
   const {
@@ -99,7 +109,10 @@ export async function updateSupplier(
 export async function deleteSupplier(id: number): Promise<ActionResult> {
   const parsedId = z.coerce.number().int().positive().safeParse(id);
   if (!parsedId.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContext(ROLES);
+  const ctx = await getAuthContextWithPermission(
+    ROLES,
+    PERMISSION_KEYS.PROCUREMENT_SUPPLIER_MANAGE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
   const { error } = await supabase

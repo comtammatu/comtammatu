@@ -1,7 +1,7 @@
 "use server";
 
-import type { StaffRole } from "@comtammatu/shared/auth";
-import { getAuthContext } from "../_lib/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import { getAuthContextWithPermission } from "../_lib/auth";
 
 const DASHBOARD_ROLES: readonly StaffRole[] = [
   "owner",
@@ -39,7 +39,7 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
     recentOrders: [],
   };
 
-  const ctx = await getAuthContext(DASHBOARD_ROLES);
+  const ctx = await getAuthContextWithPermission(DASHBOARD_ROLES, PERMISSION_KEYS.DASHBOARD_VIEW);
   if (!ctx) return fallback;
 
   const { supabase, claims } = ctx;

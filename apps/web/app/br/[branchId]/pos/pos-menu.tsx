@@ -9,7 +9,6 @@ import {
   useTransition,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -18,6 +17,10 @@ import {
   DrawerContent,
   DrawerTitle,
 } from "@comtammatu/ui/components/drawer";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@comtammatu/ui/components/toggle-group";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
   Package,
@@ -148,13 +151,33 @@ export function PosMenu({
   useEffect(() => {
     if (initialTableId == null) return;
     const t = initialTables.find((x) => x.id === initialTableId);
-    if (t && t.status !== "maintenance") {
+    if (t && t.status === "available") {
       setSelectedTableId(initialTableId);
     }
   }, [initialTableId, initialTables]);
 
+  const selectedTable = useMemo(
+    () =>
+      selectedTableId != null
+        ? (localTables.find((table) => table.id === selectedTableId) ?? null)
+        : null,
+    [localTables, selectedTableId],
+  );
+  const selectedTableAvailable = selectedTable?.status === "available";
   const orderContextReady =
-    orderType === "takeaway" || selectedTableId !== null;
+    orderType === "takeaway" || selectedTableAvailable;
+
+  useEffect(() => {
+    if (
+      orderType === "dine_in" &&
+      selectedTableId !== null &&
+      selectedTable != null &&
+      selectedTable.status !== "available"
+    ) {
+      setSelectedTableId(null);
+      syncTableToUrl(null);
+    }
+  }, [orderType, selectedTable, selectedTableId, syncTableToUrl]);
 
   const loadSessionOrders = useCallback(async () => {
     const result = await fetchSessionOrders(branchId, session.id);
@@ -201,34 +224,8 @@ export function PosMenu({
 
   const canSubmit =
     cartItems.length > 0 &&
-    (orderType === "takeaway" || selectedTableId !== null);
-  const selectedTableNumber =
-    selectedTableId != null
-      ? localTables.find((table) => table.id === selectedTableId)?.number
-      : undefined;
-  const orderContextComplete =
-    orderType === "takeaway" || selectedTableId !== null;
-
-  const flowProgressPercent = useMemo(() => {
-    let progress = 22;
-    if (orderContextComplete) progress += 24;
-    if (cartItems.length > 0) progress += 28;
-    if (canSubmit) progress += 26;
-    return progress;
-  }, [canSubmit, cartItems.length, orderContextComplete]);
-
-  const flowHeadline = canSubmit
-    ? "Có thể gửi bếp."
-    : orderContextComplete
-      ? "Thêm món để hoàn tất."
-      : "Chọn thông tin đơn trước.";
-
-  const flowHint = canSubmit
-    ? "Kiểm tra giỏ và gửi bếp."
-    : orderContextComplete
-      ? "Thêm món vào giỏ."
-      : "Gán bàn cho đơn tại chỗ.";
-
+    (orderType === "takeaway" || selectedTableAvailable);
+  const selectedTableNumber = selectedTable?.number;
   const focusOrderWorkflow = useCallback((orderId: number) => {
     setShowOrders(true);
     setOrderDetailId(orderId);
@@ -246,6 +243,7 @@ export function PosMenu({
     ) => {
       const price = unitPrice ?? item.base_price;
       const key = makeCartKey(item.id, variantId, modifiers, sides);
+      setShowOrders(false);
 
       setCartItems((prev) => {
         const existing = prev.find((ci) => ci.key === key);
@@ -353,10 +351,8 @@ export function PosMenu({
         setCartItems([]);
         setOrderNote("");
         focusOrderWorkflow(orderId);
-        if (orderType === "takeaway") {
-          setSelectedTableId(null);
-          syncTableToUrl(null);
-        }
+        setSelectedTableId(null);
+        syncTableToUrl(null);
         void refreshOperationalData();
       } else {
         toast.error(result.error ?? "Không thể tạo đơn hàng");
@@ -474,6 +470,7 @@ export function PosMenu({
       ),
     [sessionOrders],
   );
+
   const hasAwaitingPaymentOrder = useMemo(
     () =>
       sessionOrders.some(
@@ -497,51 +494,42 @@ export function PosMenu({
 
   const serviceModeSelector = (
     <Card className="shadow-sm">
-      <CardContent className="space-y-3 p-3">
+      <CardContent className="flex flex-col gap-3 p-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Loại đơn
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Chọn đúng chế độ phục vụ trước khi thêm món.
+            Chọn tại bàn hoặc mang về trước khi tạo đơn mới.
           </p>
         </div>
-        <div
-          role="radiogroup"
-          aria-label="Loại đơn hàng"
-          className="grid grid-cols-2 gap-2"
+        <ToggleGroup
+          type="single"
+          value={orderType}
+          variant="outline"
+          size="lg"
+          className="grid w-full grid-cols-2 gap-2"
+          onValueChange={(value) => {
+            if (value === "dine_in" || value === "takeaway") {
+              handleOrderTypeChange(value);
+            }
+          }}
         >
-          <button
-            type="button"
-            role="radio"
-            aria-checked={orderType === "dine_in"}
-            className={cn(
-              "min-h-11 min-w-11 flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              orderType === "dine_in"
-                ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
-                : "border-border/70 bg-background text-foreground hover:border-primary/20",
-            )}
-            onClick={() => handleOrderTypeChange("dine_in")}
+          <ToggleGroupItem
+            value="dine_in"
+            className="min-h-11 justify-center gap-2 rounded-lg text-sm font-semibold"
           >
             <UtensilsCrossed className="size-4" />
             Tại bàn
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={orderType === "takeaway"}
-            className={cn(
-              "min-h-11 min-w-11 flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              orderType === "takeaway"
-                ? "border-primary/30 bg-primary text-primary-foreground shadow-sm"
-                : "border-border/70 bg-background text-foreground hover:border-primary/20",
-            )}
-            onClick={() => handleOrderTypeChange("takeaway")}
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="takeaway"
+            className="min-h-11 justify-center gap-2 rounded-lg text-sm font-semibold"
           >
             <Package className="size-4" />
             Mang về
-          </button>
-        </div>
+          </ToggleGroupItem>
+        </ToggleGroup>
       </CardContent>
     </Card>
   );
@@ -586,9 +574,6 @@ export function PosMenu({
     orderType,
     selectedTableId,
     tables: localTables,
-    flowProgressPercent,
-    flowHeadline,
-    flowHint,
     canSubmit,
     isPending,
     sessionOrders,
@@ -610,6 +595,72 @@ export function PosMenu({
     },
     onLoadSessionOrders: () => void loadSessionOrders(),
   } as const;
+  const mobileActionBar =
+    isMobile && (orderContextReady || activeSessionOrders.length > 0) ? (
+      <div className="fixed bottom-4 left-4 right-4 z-40 flex gap-2 md:hidden">
+        {activeSessionOrders.length > 0 && (
+          <Button
+            type="button"
+            variant="secondary"
+            className="min-h-14 min-w-14 flex-1 rounded-full text-sm font-bold shadow-lg"
+            onClick={() => {
+              setShowOrders(true);
+              void loadSessionOrders();
+              setCartDrawerOpen(true);
+            }}
+          >
+            Đơn đang phục vụ
+          </Button>
+        )}
+        {orderContextReady && (
+          <Button
+            type="button"
+            className="min-h-14 min-w-14 flex-1 rounded-full text-sm font-bold shadow-lg"
+            onClick={() => {
+              setShowOrders(false);
+              setCartDrawerOpen(true);
+            }}
+            aria-label="Mở giỏ hàng"
+          >
+            <ShoppingCart className="size-5" />
+            {cartQuantity > 0 ? (
+              <>
+                <span className="tabular-nums">{cartQuantity}</span>
+                <span aria-hidden>·</span>
+                <span className="tabular-nums">
+                  {formatVND(cartTotal)}
+                </span>
+              </>
+            ) : (
+              <span>Giỏ mới</span>
+            )}
+          </Button>
+        )}
+      </div>
+    ) : null;
+  const mobileSidebarDrawer = isMobile ? (
+    <Drawer
+      open={cartDrawerOpen}
+      onOpenChange={setCartDrawerOpen}
+      shouldScaleBackground={false}
+    >
+      <DrawerContent className="max-h-dvh p-0">
+        <DrawerTitle className="sr-only">
+          {showOrders ? "Đơn đang phục vụ" : "Giỏ hàng"}
+        </DrawerTitle>
+        <div className="flex min-h-0 flex-col overflow-hidden">
+          <PosSidebarTabs {...sidebarSharedProps} />
+          <PosSidebarContent
+            {...sidebarSharedProps}
+            onSubmitOrder={() => {
+              handleSubmitOrder();
+              // Drawer stays open on submit so validation errors remain visible.
+            }}
+          />
+        </div>
+      </DrawerContent>
+    </Drawer>
+  ) : null;
 
   return (
     <>
@@ -617,9 +668,6 @@ export function PosMenu({
         session={session}
         orderType={orderType}
         selectedTableNumber={selectedTableNumber}
-        isPending={isPending}
-        canSubmit={canSubmit}
-        cartQuantity={cartQuantity}
         activeOrderCount={activeSessionOrders.length}
         onShowCloseSession={() => setShowCloseSession(true)}
       />
@@ -653,6 +701,8 @@ export function PosMenu({
                 categories={categories}
                 cartQuantity={cartQuantity}
                 cartTotal={cartTotal}
+                orderType={orderType}
+                selectedTableNumber={selectedTableNumber}
                 onItemTap={handleItemTap}
               />
             </div>
@@ -662,53 +712,12 @@ export function PosMenu({
               <PosSidebarContent {...sidebarSharedProps} />
             </div>
 
-            {isMobile && (
-              <button
-                type="button"
-                className="min-h-14 min-w-14 fixed bottom-6 right-4 z-40 flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-lg transition-transform active:scale-95 md:hidden"
-                onClick={() => setCartDrawerOpen(true)}
-                aria-label="Mở giỏ hàng"
-              >
-                <ShoppingCart className="size-5" />
-                {cartQuantity > 0 ? (
-                  <>
-                    <span className="tabular-nums">{cartQuantity}</span>
-                    <span aria-hidden>·</span>
-                    <span className="tabular-nums">{formatVND(cartTotal)}</span>
-                  </>
-                ) : (
-                  <span>Mở điều phối</span>
-                )}
-              </button>
-            )}
-
-            {isMobile && (
-              <Drawer
-                open={cartDrawerOpen}
-                onOpenChange={setCartDrawerOpen}
-                shouldScaleBackground={false}
-              >
-                <DrawerContent className="max-h-dvh p-0">
-                  <DrawerTitle className="sr-only">Giỏ hàng</DrawerTitle>
-                  <div className="flex min-h-0 flex-col overflow-hidden">
-                    <PosSidebarTabs {...sidebarSharedProps} />
-                    <PosSidebarContent
-                      {...sidebarSharedProps}
-                      onSubmitOrder={() => {
-                        handleSubmitOrder();
-                        // Drawer closes via cart clearing — when cartItems
-                        // becomes empty after successful submit, the drawer
-                        // has nothing to show. Don't close eagerly on submit
-                        // to avoid hiding errors on failure.
-                      }}
-                    />
-                  </div>
-                </DrawerContent>
-              </Drawer>
-            )}
           </div>
         </>
       )}
+
+      {mobileActionBar}
+      {mobileSidebarDrawer}
 
       <ItemCustomizer
         item={customizerItem}

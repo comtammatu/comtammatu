@@ -6,8 +6,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Card } from "@comtammatu/ui/components/card";
 import { Check, ChevronRight, RotateCcw, UtensilsCrossed } from "lucide-react";
-import type { KdsOrder } from "./kds-board";
-import type { KdsTicket } from "./page";
+import type { KdsOrder, KdsTicket } from "./types";
 
 /* ─── Status config ─── */
 
@@ -15,64 +14,41 @@ const STATUS_CONFIG = {
   pending: {
     label: "Chờ",
     variant: "warning" as const,
-    badgeClass: "bg-muted text-muted-foreground border-border",
   },
   preparing: {
     label: "Đang làm",
     variant: "warning" as const,
-    badgeClass: "bg-warning/20 text-warning border-warning/30",
   },
   ready: {
     label: "Xong",
     variant: "success" as const,
-    badgeClass: "bg-success/20 text-success border-success/30",
   },
   cancelled: {
     label: "Đã hủy",
     variant: "destructive" as const,
-    badgeClass: "bg-destructive/20 text-destructive border-destructive/30",
   },
 } as const;
 
-type KdsStatusConfig = (typeof STATUS_CONFIG)[keyof typeof STATUS_CONFIG];
-
-function getStatusConfig(status: string) {
-  return (STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] ?? {
-    variant: "warning" as const,
-    label: status,
-    badgeClass: "bg-muted text-muted-foreground border-border",
-  }) as KdsStatusConfig;
-}
-
-const ORDER_TYPE_CONFIG: Record<string, { label: string; className: string }> =
-  {
-    dine_in: {
-      label: "Tại bàn",
-      className: "bg-info/20 text-info border-info/30",
-    },
-    takeaway: {
-      label: "Mang về",
-      className: "bg-accent/20 text-accent-foreground border-accent/40",
-    },
-  };
-
-function getOrderTypeConfig(type: string) {
+function getStatusLabel(status: string): string {
   return (
-    ORDER_TYPE_CONFIG[type] ?? {
-      label: type,
-      className: "bg-muted text-muted-foreground border-border",
-    }
+    STATUS_CONFIG[status as keyof typeof STATUS_CONFIG]?.label ?? status
   );
 }
 
-/* ─── Age color coding: green → yellow → red ─── */
+function getStatusVariant(
+  status: string,
+): "warning" | "success" | "destructive" {
+  const entry = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG];
+  return entry?.variant ?? "warning";
+}
 
-/**
- * Returns Tailwind classes for the elapsed time display.
- * < 5 min: green (fresh)
- * 5–9 min: yellow (aging)
- * ≥ 10 min: red (old — needs attention)
- */
+const ORDER_TYPE_CONFIG: Record<string, { label: string }> = {
+  dine_in: { label: "Tại bàn" },
+  takeaway: { label: "Mang về" },
+};
+
+/* ─── Age color coding ─── */
+
 function getAgeStyle(minutes: number, isComplete: boolean) {
   if (isComplete) return { text: "text-success", bg: "" };
   if (minutes < 5) return { text: "text-success", bg: "" };
@@ -80,19 +56,14 @@ function getAgeStyle(minutes: number, isComplete: boolean) {
   return { text: "text-destructive", bg: "bg-destructive/10" };
 }
 
-/* ─── Card border per overall status ─── */
-
 function getCardBorder(overallStatus: string, ageMinutes: number): string {
   if (overallStatus === "cancelled") return "border-destructive/60";
   if (overallStatus === "ready") return "border-success/60";
   if (overallStatus === "preparing") return "border-warning/60";
-  // pending — age-tinted border
   if (ageMinutes >= 10) return "border-destructive/70";
   if (ageMinutes >= 5) return "border-warning/70";
   return "border-border";
 }
-
-/* ─── Card left-border accent — vivid color stripe ─── */
 
 function getCardLeftAccent(overallStatus: string, ageMinutes: number): string {
   if (overallStatus === "cancelled") return "border-l-destructive";
@@ -119,9 +90,9 @@ function CancelledTicketOverlay() {
       )}
       aria-hidden
     >
-      <span className="rounded-md bg-destructive px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-destructive-foreground">
+      <Badge variant="destructive" className="text-xs font-bold uppercase tracking-widest">
         Đã hủy
-      </span>
+      </Badge>
     </div>
   );
 }
@@ -201,17 +172,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
   const isComplete = overallStatus === "ready";
   const ageStyle = getAgeStyle(elapsed, isComplete);
   const borderClass = getCardBorder(overallStatus, elapsed);
-  const typeConfig = getOrderTypeConfig(order.orderType);
-  const pendingCount = order.tickets.filter(
-    (ticket) => ticket.status === "pending",
-  ).length;
-  const preparingCount = order.tickets.filter(
-    (ticket) => ticket.status === "preparing",
-  ).length;
-  const readyCount = order.tickets.filter(
-    (ticket) => ticket.status === "ready",
-  ).length;
-  const totalTickets = order.tickets.length;
+  const typeLabel = ORDER_TYPE_CONFIG[order.orderType]?.label ?? order.orderType;
 
   const bumpableTickets = order.tickets.filter(
     (t) => t.status === "pending" || t.status === "preparing",
@@ -221,46 +182,34 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
     <Card
       data-testid={`kds-order-card-${order.orderId}`}
       className={cn(
-        "rounded-lg border bg-card text-card-foreground shadow-sm flex flex-col overflow-hidden border border-l-2 transition-all hover:-translate-y-0.5 hover:shadow-md",
+        "flex flex-col overflow-hidden border-l-2 transition-all hover:-translate-y-0.5 hover:shadow-md",
         borderClass,
         getCardLeftAccent(overallStatus, elapsed),
       )}
     >
-      {/* ── Header ── */}
+      {/* Header */}
       <div
         className={cn(
-          "flex items-start justify-between gap-2 border-b border-border/40 px-3 py-3 md:px-4",
+          "flex items-start justify-between gap-2 border-b px-3 py-3 md:px-4",
           ageStyle.bg,
         )}
       >
-        {/* Left: order number + type + table */}
         <div className="flex min-w-0 flex-col gap-1">
-          {/* Order number — must be readable from 2-3m */}
           <span className="text-xl font-black leading-none tracking-tight tabular-nums md:text-2xl">
             {order.orderNumber}
           </span>
           <div className="flex flex-wrap items-center gap-1.5">
-            <Badge
-              variant="outline"
-              className={cn(
-                "border px-2 py-0.5 text-xs font-semibold",
-                typeConfig.className,
-              )}
-            >
-              {typeConfig.label}
+            <Badge variant="outline" className="px-2 py-0.5 text-xs font-semibold">
+              {typeLabel}
             </Badge>
             {order.tableNumber !== null && (
-              <Badge
-                variant="secondary"
-                className="bg-secondary px-2 py-0.5 text-xs font-semibold text-secondary-foreground"
-              >
+              <Badge variant="secondary" className="px-2 py-0.5 text-xs font-semibold">
                 Bàn {order.tableNumber}
               </Badge>
             )}
           </div>
         </div>
 
-        {/* Right: elapsed timer — pill badge */}
         <Badge
           variant="outline"
           className={cn(
@@ -283,54 +232,11 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
         </Badge>
       </div>
 
-      <div className="border-b border-border/30 px-3 py-3 md:px-4">
-        <div className="space-y-3">
-          <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-lg border bg-muted/30 text-card-foreground px-3 py-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Chờ
-              </p>
-              <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
-                {pendingCount}
-              </p>
-            </div>
-            <div className="rounded-lg border bg-muted/30 text-card-foreground border-warning/20 bg-warning/10 px-3 py-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-warning">
-                Đang làm
-              </p>
-              <p className="mt-1 text-lg font-semibold tabular-nums text-warning">
-                {preparingCount}
-              </p>
-            </div>
-            <div className="rounded-lg border bg-muted/30 text-card-foreground border-success/20 bg-success/10 px-3 py-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-success">
-                Sẵn sàng
-              </p>
-              <p className="mt-1 text-lg font-semibold tabular-nums text-success">
-                {readyCount}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
-            <span className="rounded-full border border-border/70 bg-muted px-3 py-1.5">
-              {readyCount}/{totalTickets} món đã xong
-            </span>
-            <span className="rounded-full border border-border/70 bg-muted px-3 py-1.5">
-              {pendingCount > 0
-                ? `${pendingCount} món cần nhận`
-                : "Không còn món chờ"}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Items list ── */}
+      {/* Items list */}
       <div className="flex-1 divide-y divide-border/30">
         {order.items.map((item) => {
           const ticket = ticketByItemId.get(item.id);
           const status = ticket?.status ?? "pending";
-          const config = getStatusConfig(status);
           const isCancelled = status === "cancelled";
           const canBump =
             !isCancelled && (status === "pending" || status === "preparing");
@@ -349,10 +255,8 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
             >
               {isCancelled && <CancelledTicketOverlay />}
 
-              {/* Item info — large text for kitchen readability */}
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-2">
-                  {/* Quantity — gold accent, very prominent */}
                   <span className="text-lg font-black leading-tight text-warning tabular-nums md:text-xl">
                     {item.quantity}×
                   </span>
@@ -367,41 +271,20 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                 )}
               </div>
 
-              {/* Status dot + badge */}
-              <div className="flex shrink-0 items-center gap-1.5">
-                <span
-                  className={cn(
-                    "size-2 rounded-full",
-                    status === "preparing" && "animate-pulse",
-                    status === "preparing"
-                      ? "bg-warning"
-                      : status === "ready"
-                        ? "bg-success"
-                        : status === "cancelled"
-                          ? "bg-destructive"
-                          : "bg-muted-foreground",
-                  )}
-                  aria-hidden
-                />
-                <Badge
-                  variant={config.variant}
-                  className={cn(
-                    "px-2 py-1 text-xs font-bold",
-                    config.badgeClass,
-                  )}
-                >
-                  {config.label}
-                </Badge>
-              </div>
+              <Badge
+                variant={getStatusVariant(status)}
+                className="shrink-0 px-2 py-1 text-xs font-bold"
+              >
+                {getStatusLabel(status)}
+              </Badge>
 
-              {/* Action buttons — 56px min touch target */}
               <div className="flex shrink-0 gap-1">
                 {ticket && canRecall && (
                   <Button
                     data-testid={`kds-recall-${ticket.id}`}
                     variant="outline"
                     size="icon"
-                    className="size-11 min-h-11 min-w-11 rounded-xl border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:size-14 md:min-h-14 md:min-w-14"
+                    className="size-11 min-h-11 min-w-11 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:size-14 md:min-h-14 md:min-w-14"
                     aria-label="Thu hồi món"
                     onClick={() => void onRecall(ticket.id)}
                   >
@@ -434,11 +317,10 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
           );
         })}
 
-        {/* Orphan tickets (no matching order_item — edge case) */}
+        {/* Orphan tickets */}
         {order.tickets
           .filter((t) => !order.items.some((i) => i.id === t.order_item_id))
           .map((ticket) => {
-            const config = getStatusConfig(ticket.status);
             const canBump =
               ticket.status === "pending" || ticket.status === "preparing";
             const canRecall =
@@ -455,13 +337,10 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                   </span>
                 </div>
                 <Badge
-                  variant={config.variant}
-                  className={cn(
-                    "shrink-0 px-2 py-1 text-xs font-bold",
-                    config.badgeClass,
-                  )}
+                  variant={getStatusVariant(ticket.status)}
+                  className="shrink-0 px-2 py-1 text-xs font-bold"
                 >
-                  {config.label}
+                  {getStatusLabel(ticket.status)}
                 </Badge>
                 <div className="flex shrink-0 gap-1">
                   {canRecall && (
@@ -469,7 +348,7 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
                       data-testid={`kds-recall-${ticket.id}`}
                       variant="outline"
                       size="icon"
-                      className="size-11 min-h-11 min-w-11 rounded-xl border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:size-14 md:min-h-14 md:min-w-14"
+                      className="size-11 min-h-11 min-w-11 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:size-14 md:min-h-14 md:min-w-14"
                       aria-label="Thu hồi món"
                       onClick={() => void onRecall(ticket.id)}
                     >
@@ -494,14 +373,13 @@ export function OrderCard({ order, onBump, onRecall }: OrderCardProps) {
           })}
       </div>
 
-      {/* ── Bump All footer ── */}
+      {/* Bump All footer */}
       {bumpableTickets.length > 0 && (
-        <div className="border-t border-border/50 p-2.5 md:p-3">
+        <div className="border-t p-2.5 md:p-3">
           <Button
             variant="default"
             className={cn(
               "min-h-12 w-full rounded-xl text-sm font-bold md:min-h-14 md:text-base",
-              // Gold accent for "ready to serve" state (all preparing → ready)
               bumpableTickets.every((t) => t.status === "preparing")
                 ? "bg-success text-white hover:opacity-90"
                 : "bg-warning text-white hover:opacity-90",

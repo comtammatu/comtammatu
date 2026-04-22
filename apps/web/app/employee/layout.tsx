@@ -8,9 +8,9 @@ export default function EmployeeLayout({ children }: { children: ReactNode }) {
       <MobileHeader />
       <main
         id="main-content"
-        className="mx-auto w-full max-w-6xl flex-1 px-3 py-4 pb-32 sm:px-4 lg:px-6 lg:pb-6"
+        className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-5 px-3 py-4 pb-28 sm:px-4 lg:px-6 lg:pb-8"
       >
-        <div className="space-y-5">{children}</div>
+        {children}
       </main>
       <BottomNav />
     </div>

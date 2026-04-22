@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { formatVND } from "@comtammatu/shared/format";
 import {
@@ -16,9 +15,14 @@ import {
   AlertDialogTrigger,
 } from "@comtammatu/ui/components/alert-dialog";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
 import { Kbd, KbdGroup } from "@comtammatu/ui/components/kbd";
-import { Progress } from "@comtammatu/ui/components/progress";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
@@ -46,9 +50,6 @@ interface CartSidebarProps {
   orderType: OrderType;
   selectedTableId: number | null;
   tables: BranchTable[];
-  progressPercent: number;
-  progressHeadline: string;
-  progressHint: string;
   canSubmit: boolean;
   isSubmitting: boolean;
   onUpdateQuantity: (key: string, delta: number) => void;
@@ -67,9 +68,6 @@ export function CartSidebar({
   orderType,
   selectedTableId,
   tables,
-  progressPercent,
-  progressHeadline,
-  progressHint,
   canSubmit,
   isSubmitting,
   onUpdateQuantity,
@@ -82,6 +80,8 @@ export function CartSidebar({
   onOrderNoteChange,
 }: CartSidebarProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const cartDialogOpen = confirmOpen || clearConfirmOpen;
   const selectedTableNumber =
     selectedTableId != null
       ? tables.find((t) => t.id === selectedTableId)?.number
@@ -102,107 +102,111 @@ export function CartSidebar({
       fireInInput: true,
       preventDefault: true,
       handler: () => {
-        if (canSubmit && !isSubmitting) setConfirmOpen(true);
+        if (!cartDialogOpen && canSubmit && !isSubmitting) setConfirmOpen(true);
       },
     },
     // T: switch to takeaway (ignored while typing)
     {
       key: "t",
-      handler: () => onOrderTypeChange("takeaway"),
+      handler: () => {
+        if (!cartDialogOpen) onOrderTypeChange("takeaway");
+      },
     },
     // D: switch to dine-in
     {
       key: "d",
-      handler: () => onOrderTypeChange("dine_in"),
+      handler: () => {
+        if (!cartDialogOpen) onOrderTypeChange("dine_in");
+      },
     },
   ]);
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-background">
       <div className="border-b border-border/60 px-4 py-4">
-        <Card className="shadow-sm">
-          <CardContent className="space-y-4 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Đơn mới
-                </p>
-                <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">
-                  {progressHeadline}
-                </h2>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  {progressHint}
-                </p>
-              </div>
-              <div className="rounded-full border border-primary/15 bg-card px-3 py-1.5 text-xs font-semibold text-primary shadow-sm">
-                {Math.round(progressPercent)}%
-              </div>
-            </div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Đơn mới
+            </p>
+            <h2 className="mt-1 truncate text-xl font-semibold tracking-tight text-foreground">
+              {contextLabel}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {items.length > 0
+                ? `${totalQuantity} món đang chờ gửi bếp`
+                : "Chọn món từ menu để bắt đầu"}
+            </p>
+          </div>
+          <Badge variant={canSubmit ? "success" : "outline"}>
+            {canSubmit ? "Gửi được" : "Đang tạo"}
+          </Badge>
+        </div>
 
-            <ToggleGroup
-              type="single"
-              value={orderType}
-              variant="outline"
-              size="lg"
-              className="grid w-full grid-cols-2 gap-2"
-              onValueChange={(value) => {
-                if (value === "dine_in" || value === "takeaway") {
-                  onOrderTypeChange(value);
-                }
-              }}
-            >
-              <ToggleGroupItem
-                value="dine_in"
-                className="min-h-11 justify-center gap-2 rounded-lg text-sm font-semibold"
-                aria-keyshortcuts="D"
-              >
-                <UtensilsCrossed className="size-4" />
-                Tại bàn
-                <Kbd className="ml-1 hidden md:inline-flex">D</Kbd>
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value="takeaway"
-                className="min-h-11 justify-center gap-2 rounded-lg text-sm font-semibold"
-                aria-keyshortcuts="T"
-              >
-                <Package className="size-4" />
-                Mang về
-                <Kbd className="ml-1 hidden md:inline-flex">T</Kbd>
-              </ToggleGroupItem>
-            </ToggleGroup>
+        <ToggleGroup
+          type="single"
+          value={orderType}
+          variant="outline"
+          size="lg"
+          className="mt-4 grid w-full grid-cols-2 gap-2"
+          onValueChange={(value) => {
+            if (value === "dine_in" || value === "takeaway") {
+              onOrderTypeChange(value);
+            }
+          }}
+        >
+          <ToggleGroupItem
+            value="dine_in"
+            className="min-h-12 justify-center gap-2 rounded-lg text-sm font-semibold"
+            aria-keyshortcuts="D"
+          >
+            <UtensilsCrossed className="size-4" />
+            Tại bàn
+            <Kbd className="ml-1 hidden md:inline-flex">D</Kbd>
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="takeaway"
+            className="min-h-12 justify-center gap-2 rounded-lg text-sm font-semibold"
+            aria-keyshortcuts="T"
+          >
+            <Package className="size-4" />
+            Mang về
+            <Kbd className="ml-1 hidden md:inline-flex">T</Kbd>
+          </ToggleGroupItem>
+        </ToggleGroup>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="rounded-full px-3 py-1">
-                {contextLabel}
-              </Badge>
-              <Badge variant="outline" className="rounded-full px-3 py-1">
-                {totalQuantity > 0 ? `${totalQuantity} món` : "Chưa có món"}
-              </Badge>
-              <Badge variant="outline" className="rounded-full px-3 py-1">
-                {canSubmit ? "Có thể gửi bếp" : "Chờ hoàn thiện thông tin"}
-              </Badge>
-              {orderType === "dine_in" && selectedTableNumber != null && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 rounded-full px-4 text-xs"
-                  type="button"
-                  onClick={onRequestChangeTable}
-                >
-                  Đổi bàn
-                </Button>
-              )}
-            </div>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="rounded-lg border bg-muted/30 px-3 py-2">
+            <p className="text-xs text-muted-foreground">Món</p>
+            <p className="mt-1 text-lg font-bold tabular-nums">
+              {totalQuantity}
+            </p>
+          </div>
+          <div className="rounded-lg border bg-muted/30 px-3 py-2">
+            <p className="text-xs text-muted-foreground">Tổng</p>
+            <p className="mt-1 text-lg font-bold text-primary tabular-nums">
+              {formatVND(total)}
+            </p>
+          </div>
+          <div className="rounded-lg border bg-muted/30 px-3 py-2">
+            <p className="text-xs text-muted-foreground">Trạng thái</p>
+            <p className="mt-1 truncate text-sm font-semibold">
+              {canSubmit ? "Sẵn sàng" : "Chờ món"}
+            </p>
+          </div>
+        </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground">
-                <span>Tiến độ tạo đơn</span>
-                <span>{Math.round(progressPercent)}%</span>
-              </div>
-              <Progress value={isSubmitting ? undefined : progressPercent} className="h-2" />
-            </div>
-          </CardContent>
-        </Card>
+        {orderType === "dine_in" && selectedTableNumber != null && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3 h-9 w-full rounded-lg text-xs"
+            type="button"
+            onClick={onRequestChangeTable}
+          >
+            Đổi bàn
+          </Button>
+        )}
       </div>
 
       <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
@@ -220,7 +224,10 @@ export function CartSidebar({
           </div>
         </div>
         {items.length > 0 && (
-          <AlertDialog>
+          <AlertDialog
+            open={clearConfirmOpen}
+            onOpenChange={setClearConfirmOpen}
+          >
             <AlertDialogTrigger asChild>
               <Button
                 variant="ghost"
@@ -241,7 +248,12 @@ export function CartSidebar({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Hủy</AlertDialogCancel>
-                <AlertDialogAction onClick={onClearCart}>
+                <AlertDialogAction
+                  onClick={() => {
+                    onClearCart();
+                    setClearConfirmOpen(false);
+                  }}
+                >
                   Xóa tất cả
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -251,35 +263,77 @@ export function CartSidebar({
       </div>
 
       {items.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center text-muted-foreground">
-          <div className="flex size-16 items-center justify-center rounded-full border border-dashed border-border/80 bg-background/70">
-            <ShoppingCart className="size-7 opacity-40" />
+        <>
+          <div className="flex flex-1 flex-col justify-between p-4">
+            <Empty className="py-12">
+              <EmptyMedia variant="icon">
+                <ShoppingCart />
+              </EmptyMedia>
+              <EmptyHeader>
+                <EmptyTitle>Giỏ đang trống</EmptyTitle>
+                <EmptyDescription>
+                  Chạm món ở khu thực đơn để đưa vào đơn mới.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Bước tiếp theo
+                  </p>
+                  <p className="mt-1 text-sm font-semibold">
+                    Chọn món, kiểm tra giỏ, rồi gửi bếp.
+                  </p>
+                </div>
+                <Badge variant="outline">0 món</Badge>
+              </div>
+            </div>
           </div>
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-foreground">Giỏ đang trống</p>
-            <p className="text-xs leading-5 text-muted-foreground">
-              Chọn món từ menu để bắt đầu một đơn mới hoặc tiếp tục bổ sung món.
-            </p>
+
+          <div className="border-t border-border/60 bg-background px-4 py-4">
+            <div className="mb-3 flex items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Tổng tạm tính
+                </p>
+                <p className="mt-1 text-2xl font-bold text-primary tabular-nums">
+                  {formatVND(0)}
+                </p>
+              </div>
+              <Badge variant="outline">Chưa có món</Badge>
+            </div>
+            <Button
+              className="min-h-14 w-full rounded-xl text-base font-bold"
+              size="lg"
+              disabled
+            >
+              Chọn món từ menu
+            </Button>
           </div>
-        </div>
+        </>
       ) : (
         <>
           <ScrollArea className="flex-1">
-            <div className="space-y-3 p-4">
+            <div className="flex flex-col gap-3 p-4">
               {items.map((item) => {
                 const subtotal = calcItemSubtotal(item);
 
                 return (
                   <div
                     key={item.key}
-                    className="transition-all hover:-translate-y-0.5 hover:shadow-md rounded-xl border border-border bg-card p-4 shadow-sm"
+                    className="rounded-xl border border-border bg-card p-4 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start gap-3">
-                          <span className="rounded-lg bg-warning/12 px-2.5 py-1 text-sm font-black text-warning tabular-nums">
+                          <Badge
+                            variant="warning"
+                            className="shrink-0 text-sm font-black tabular-nums"
+                          >
                             {item.quantity}x
-                          </span>
+                          </Badge>
                           <div className="min-w-0">
                             <p className="text-sm font-semibold leading-snug text-foreground">
                               {item.item_name}
@@ -353,7 +407,7 @@ export function CartSidebar({
           </ScrollArea>
 
           <div className="border-t border-border/60 bg-background px-4 py-4">
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <label
                 htmlFor="pos-order-note"
                 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
@@ -379,7 +433,7 @@ export function CartSidebar({
             </div>
 
             <div className="rounded-xl border bg-card shadow-sm mt-4 p-4">
-              <div className="relative space-y-3">
+              <div className="relative flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -389,16 +443,9 @@ export function CartSidebar({
                       {formatVND(total)}
                     </p>
                   </div>
-                  <div
-                    className={cn(
-                      "rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm",
-                      canSubmit
-                        ? "border-success/15 bg-success/10 text-success"
-                        : "border-warning/15 bg-warning/10 text-warning",
-                    )}
-                  >
+                  <Badge variant={canSubmit ? "success" : "warning"}>
                     {canSubmit ? "Sẵn sàng gửi bếp" : "Chờ hoàn thiện thông tin đơn"}
-                  </div>
+                  </Badge>
                 </div>
 
                 <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -407,6 +454,7 @@ export function CartSidebar({
                       className="min-h-14 min-w-14 h-14 w-full rounded-xl text-base font-bold tracking-wide shadow-md transition-transform hover:-translate-y-0.5"
                       size="lg"
                       disabled={!canSubmit || isSubmitting}
+                      aria-keyshortcuts="Meta+Enter Control+Enter"
                     >
                       {isSubmitting ? (
                         <>

@@ -51,6 +51,14 @@ function storageLabel(type: string | null): string {
   return "Nhiệt độ phòng";
 }
 
+const conversionNumberFormatter = new Intl.NumberFormat("vi-VN", {
+  maximumFractionDigits: 6,
+});
+
+function conversionLabel(item: IngredientRow): string {
+  return `1 ${item.purchase_unit} = ${conversionNumberFormatter.format(item.purchase_to_measure_factor ?? 1)} ${item.measure_unit}`;
+}
+
 export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
   const isMobile = useIsMobile();
   const [rows, setRows] = useState(initial);
@@ -216,7 +224,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
                           />
                         </div>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {item.sku ?? "—"} &middot; Nhập: {item.purchase_unit} &middot; Tính: {item.measure_unit}
+                          {item.sku ?? "—"} &middot; {conversionLabel(item)}
                         </p>
                       </div>
                     </div>
@@ -335,6 +343,9 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
                             <p>Nhập: {item.purchase_unit}</p>
                             <p className="text-muted-foreground">
                               Tính: {item.measure_unit}
+                            </p>
+                            <p className="text-muted-foreground">
+                              {conversionLabel(item)}
                             </p>
                           </div>
                         </TableCell>

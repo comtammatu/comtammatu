@@ -1,9 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import { ADMIN_ROLES } from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContext } from "@/_lib/auth";
+import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, withFormAction } from "@/_lib/with-action";
 import {
@@ -18,7 +18,7 @@ import {
 
 /* ─── Helpers ─── */
 
-const MENU_MANAGER_ROLES = ADMIN_ROLES;
+const MENU_MANAGER_ROLES = MODULE_ACL.menu.allowedRoles;
 
 const CATEGORY_TYPES = ["main_dish", "side_dish", "drink", "dessert"] as const;
 
@@ -161,7 +161,7 @@ export const updateCategory = withFormAction(
 );
 
 export const toggleCategoryActive = withAction(
-  { roles: MENU_MANAGER_ROLES, schema: toggleIdSchema },
+  { roles: MENU_MANAGER_ROLES, schema: toggleIdSchema, permission: PERMISSION_KEYS.MENU_WRITE },
   async (data, { supabase }) => {
     const { error } = await supabase.rpc("toggle_category_active", {
       p_id: data.id,
@@ -189,7 +189,7 @@ export const createItem = withFormAction(
       name: fd.get("name"),
       category_id: fd.get("category_id"),
       base_price: fd.get("base_price"),
-      description: fd.get("description"),
+      description: fd.get("description") ?? "",
     }),
   },
   async (data, { supabase, claims }) => {
@@ -219,7 +219,7 @@ export const updateItem = withFormAction(
       name: fd.get("name"),
       category_id: fd.get("category_id"),
       base_price: fd.get("base_price"),
-      description: fd.get("description"),
+      description: fd.get("description") ?? "",
     }),
   },
   async (data, { supabase, claims }) => {
@@ -244,7 +244,7 @@ export const updateItem = withFormAction(
 );
 
 export const toggleItemActive = withAction(
-  { roles: MENU_MANAGER_ROLES, schema: toggleIdSchema },
+  { roles: MENU_MANAGER_ROLES, schema: toggleIdSchema, permission: PERMISSION_KEYS.MENU_WRITE },
   async (data, { supabase }) => {
     const { error } = await supabase.rpc("toggle_item_active", {
       p_id: data.id,
@@ -265,7 +265,7 @@ export const toggleItemActive = withAction(
 /* ─── Variants ─── */
 
 export const saveVariants = withAction(
-  { roles: MENU_MANAGER_ROLES, schema: saveVariantsSchema },
+  { roles: MENU_MANAGER_ROLES, schema: saveVariantsSchema, permission: PERMISSION_KEYS.MENU_WRITE },
   async (data, { supabase }) => {
     const { error } = await supabase.rpc("save_item_variants", {
       p_item_id: data.itemId,
@@ -291,7 +291,7 @@ export const saveVariants = withAction(
 /* ─── Modifiers ─── */
 
 export const saveModifiers = withAction(
-  { roles: MENU_MANAGER_ROLES, schema: saveModifiersSchema },
+  { roles: MENU_MANAGER_ROLES, schema: saveModifiersSchema, permission: PERMISSION_KEYS.MENU_WRITE },
   async (data, { supabase }) => {
     const { error } = await supabase.rpc("save_item_modifiers", {
       p_item_id: data.itemId,
@@ -317,7 +317,7 @@ export const saveModifiers = withAction(
 /* ─── Available Sides ─── */
 
 export const saveSides = withAction(
-  { roles: MENU_MANAGER_ROLES, schema: saveSidesSchema },
+  { roles: MENU_MANAGER_ROLES, schema: saveSidesSchema, permission: PERMISSION_KEYS.MENU_WRITE },
   async (data, { supabase }) => {
     const { error } = await supabase.rpc("save_item_sides", {
       p_main_item_id: data.mainItemId,
@@ -491,7 +491,7 @@ type ExportMenuResult =
 export async function exportMenu(
   format: "xlsx" | "csv" = "xlsx",
 ): Promise<ExportMenuResult> {
-  const ctx = await getAuthContext(MENU_MANAGER_ROLES);
+  const ctx = await getAuthContextWithPermission(MENU_MANAGER_ROLES, PERMISSION_KEYS.MENU_WRITE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -688,7 +688,7 @@ type ImportMenuResult =
   | { success: false; error: string; issues?: ImportIssue[] };
 
 export async function importMenu(formData: FormData): Promise<ImportMenuResult> {
-  const ctx = await getAuthContext(MENU_MANAGER_ROLES);
+  const ctx = await getAuthContextWithPermission(MENU_MANAGER_ROLES, PERMISSION_KEYS.MENU_WRITE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const file = formData.get("file");
@@ -1208,7 +1208,7 @@ export async function importMenu(formData: FormData): Promise<ImportMenuResult> 
 }
 
 export async function downloadMenuTemplate(): Promise<ActionResult> {
-  const ctx = await getAuthContext(MENU_MANAGER_ROLES);
+  const ctx = await getAuthContextWithPermission(MENU_MANAGER_ROLES, PERMISSION_KEYS.MENU_WRITE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const sheets = buildMenuSheets(

@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 
 const REPORT_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
@@ -13,7 +13,7 @@ const generatePayrollSummarySchema = z.object({
 });
 
 export const generatePayrollSummary = withAction(
-  { roles: REPORT_ROLES, schema: generatePayrollSummarySchema },
+  { roles: REPORT_ROLES, schema: generatePayrollSummarySchema, permission: PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE },
   async (data, { supabase, claims }) => {
     const { data: periods } = await supabase
       .from("payroll_periods")
@@ -113,7 +113,7 @@ const generateInsuranceSummarySchema = z.object({
 });
 
 export const generateInsuranceSummary = withAction(
-  { roles: REPORT_ROLES, schema: generateInsuranceSummarySchema },
+  { roles: REPORT_ROLES, schema: generateInsuranceSummarySchema, permission: PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE },
   async (data, { supabase, claims }) => {
     const { data: period } = await supabase
       .from("payroll_periods")

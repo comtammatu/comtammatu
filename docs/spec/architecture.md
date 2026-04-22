@@ -41,9 +41,13 @@ Tenant (L0, single row: Cơm Tấm Má Tư CTCP)
 
 ```
 Login → signInWithPassword() → custom_access_token_hook (SECURITY DEFINER)
-  → JWT minted with { tenant_id, branch_id, user_role }
-  → proxy.ts reads claims → route to role's default page
+  → JWT minted with { tenant_id, branch_id, user_role, position }
+  → proxy.ts reads claims (from access_token, not user.app_metadata) → route to role's default page
+
+Every DB query/mutation → RLS → has_permission(branch_id, key) on staff_permissions
 ```
+
+**Auth v2 layer:** `user_role` is derived from `positions.legacy_role_code` and kept for backward compat (route-level `canAccess`). Row-level authz runs against the `staff_permissions` grant table via the `has_permission()` SQL helper (owner bypass, temporal validity window, tenant-wide via NULL branch). See `docs/modules/auth.md` for the full model.
 
 ### Role → Default Route
 

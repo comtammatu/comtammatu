@@ -62,11 +62,7 @@ function QuickCreateDialog<TCreated>({
   onOpenChange: (open: boolean) => void;
   config: QuickCreateDialogConfig;
   onCreated?: (value: TCreated) => void;
-  mapCreated: (input: {
-    id: number;
-    name: string;
-    unit: string;
-  }) => TCreated;
+  mapCreated: (input: { id: number; name: string; unit: string }) => TCreated;
 }) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -100,6 +96,7 @@ function QuickCreateDialog<TCreated>({
         name: values.name,
         purchase_unit: values.unit,
         measure_unit: values.unit,
+        purchase_to_measure_factor: 1,
         category: values.category || undefined,
         item_kind: config.itemKind,
         storage_type: values.storage_type as StorageType,

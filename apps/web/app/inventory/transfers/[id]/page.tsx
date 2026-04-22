@@ -1,5 +1,5 @@
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
+import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
 import { notFound } from "next/navigation";
 import { fetchStockTransferDetail } from "../../transfer-actions";
 import { formatDateTime } from "../../_lib/format";
@@ -19,7 +19,7 @@ export default async function TransferDetailPage({
     data: { session },
   } = await supabase.auth.getSession();
   const claims = session?.user
-    ? extractClaims(session.user.app_metadata)
+    ? extractClaimsFromAccessToken(session.access_token)
     : null;
 
   const d = res.data as {

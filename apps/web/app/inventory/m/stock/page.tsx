@@ -2,13 +2,14 @@ import { redirect } from "next/navigation";
 import { Package } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
-  extractClaims,
+  extractClaimsFromAccessToken,
   INVENTORY_OPS_ROLES,
 } from "@comtammatu/shared/auth";
 import { MobilePage } from "../../_components/mobile/mobile-page";
 import { MobileSectionHeader } from "../../_components/mobile/mobile-section-header";
 import { MobileEmptyState } from "../../_components/mobile/mobile-empty-state";
 import { MobileStockClient } from "./mobile-stock-client";
+import { getBranchSiteDisplayName } from "../../_lib/branch-site-labels";
 
 type StockRow = {
   ingredientId: number;
@@ -42,7 +43,7 @@ export default async function MobileStockPage() {
     data: { session },
   } = await supabase.auth.getSession();
   if (!session) redirect("/login");
-  const claims = extractClaims(session.user.app_metadata);
+  const claims = extractClaimsFromAccessToken(session.access_token);
   if (!claims || !INVENTORY_OPS_ROLES.includes(claims.user_role)) {
     redirect("/inventory/m?forbidden=1");
   }
@@ -69,12 +70,14 @@ export default async function MobileStockPage() {
           .eq("tenant_id", claims.tenant_id),
     supabase
       .from("branches")
-      .select("id, name")
+      .select("id, name, branch_kind")
       .eq("tenant_id", claims.tenant_id),
   ]);
 
   const branchById = new Map(
-    (branchesRes.data ?? []).map((b) => [b.id, b.name] as const),
+    (branchesRes.data ?? []).map(
+      (b) => [b.id, getBranchSiteDisplayName(b)] as const,
+    ),
   );
 
   const qtyByKey = new Map<string, { qty: number; branchId: number }>();

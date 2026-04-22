@@ -166,13 +166,16 @@ export function ExpiryListClient({
     }
 
     const { alert } = writeOff;
+    const lotPart = alert.batch_number ? ` lô ${alert.batch_number}` : "";
+    const grnPart = alert.grn_number ? ` (GRN ${alert.grn_number})` : "";
+    const expiryPart = alert.expiry_date ? ` HSD ${alert.expiry_date}` : "";
     startTransition(async () => {
       const res = await adjustStock({
         branchId: alert.branch_id,
         ingredientId: alert.ingredient_id,
         quantityChange: -qty,
         type: "adjustment",
-        reason: `Hết hạn sử dụng — ${alert.ingredient_name}`,
+        reason: `Hết hạn sử dụng — ${alert.ingredient_name}${lotPart}${expiryPart}${grnPart}`,
       });
 
       if (!res.success) {

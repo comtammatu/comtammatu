@@ -9,12 +9,23 @@ import {
   Truck,
 } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
-import { canAccess } from "@comtammatu/shared/auth";
+import {
+  extractClaimsFromAccessToken,
+  PERMISSION_KEYS,
+} from "@comtammatu/shared/auth";
+import {
+  currentUserHasAnyPermissionAny,
+  currentUserHasPermissionAny,
+} from "@/_lib/permissions";
 import { MobilePage } from "../_components/mobile/mobile-page";
 import { InteractiveCard } from "../_components/mobile/interactive-card";
 import { MobileSectionHeader } from "../_components/mobile/mobile-section-header";
-import { canAccessProductionSurface } from "../production-data";
+import {
+  canAccessProductionSurface,
+  hasCurrentProductionBranchAccess,
+  isProductionBranchScopedRole,
+  PRODUCTION_OPEN_PERMISSIONS,
+} from "../production-data";
 
 type ActionTile = {
   href: string;
@@ -28,6 +39,7 @@ async function fetchHubCounts(): Promise<{
   openPoCount: number;
   pendingTransferCount: number;
   draftProductionCount: number;
+  canOpenProcurement: boolean;
   canOpenProduction: boolean;
 }> {
   const supabase = await createClient();
@@ -39,38 +51,65 @@ async function fetchHubCounts(): Promise<{
       openPoCount: 0,
       pendingTransferCount: 0,
       draftProductionCount: 0,
+      canOpenProcurement: false,
       canOpenProduction: false,
     };
   }
-  const claims = extractClaims(session.user.app_metadata);
+  const claims = extractClaimsFromAccessToken(session.access_token);
   if (!claims) {
     return {
       openPoCount: 0,
       pendingTransferCount: 0,
       draftProductionCount: 0,
+      canOpenProcurement: false,
       canOpenProduction: false,
     };
   }
 
-  const canOpenProduction = canAccessProductionSurface(claims.user_role);
+  const [
+    canOpenProcurement,
+    hasProductionPermission,
+    hasProductionBranchAccess,
+  ] = await Promise.all([
+    currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ),
+    currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS),
+    hasCurrentProductionBranchAccess(supabase, claims),
+  ]);
+  const canOpenProduction =
+    canAccessProductionSurface(claims.user_role) &&
+    hasProductionPermission &&
+    hasProductionBranchAccess;
 
   const [poRes, tfRes, draftProductionRes] = await Promise.all([
-    supabase
-      .from("purchase_orders")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .in("status", ["sent", "partially_received"]),
+    canOpenProcurement
+      ? supabase
+          .from("purchase_orders")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", claims.tenant_id)
+          .in("status", ["sent", "partially_received"])
+      : Promise.resolve({ count: 0 }),
     supabase
       .from("stock_transfers")
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", claims.tenant_id)
       .in("status", ["confirmed_ship", "in_transit", "confirmed_receive"]),
     canOpenProduction
-      ? supabase
-          .from("production_orders")
-          .select("id", { count: "exact", head: true })
-          .eq("tenant_id", claims.tenant_id)
-          .eq("status", "draft")
+      ? (() => {
+          let query = supabase
+            .from("production_orders")
+            .select("id", { count: "exact", head: true })
+            .eq("tenant_id", claims.tenant_id)
+            .eq("status", "draft");
+
+          if (
+            isProductionBranchScopedRole(claims.user_role) &&
+            claims.branch_id != null
+          ) {
+            query = query.eq("branch_id", claims.branch_id);
+          }
+
+          return query;
+        })()
       : Promise.resolve({ count: 0 }),
   ]);
 
@@ -78,6 +117,7 @@ async function fetchHubCounts(): Promise<{
     openPoCount: poRes.count ?? 0,
     pendingTransferCount: tfRes.count ?? 0,
     draftProductionCount: draftProductionRes.count ?? 0,
+    canOpenProcurement,
     canOpenProduction,
   };
 }
@@ -90,22 +130,16 @@ export default async function InventoryMobileHub() {
   const name = session?.user.user_metadata?.["display_name"] as
     | string
     | undefined;
-  const role = session
-    ? extractClaims(session.user.app_metadata)?.user_role
-    : undefined;
-  const showProcurement = role
-    ? canAccess(role, "inventory_procurement")
-    : false;
-
   const {
     openPoCount,
     pendingTransferCount,
     draftProductionCount,
+    canOpenProcurement,
     canOpenProduction,
   } = await fetchHubCounts();
 
   const primaryTiles: ActionTile[] = [];
-  if (showProcurement) {
+  if (canOpenProcurement) {
     primaryTiles.push({
       href: "/inventory/m/grn",
       icon: Receipt,
@@ -228,7 +262,7 @@ export default async function InventoryMobileHub() {
         </div>
       </div>
 
-      {showProcurement ? (
+      {canOpenProcurement ? (
         <div className="pt-4 text-center">
           <Link
             href="/inventory/m/drafts"

@@ -1,6 +1,57 @@
 # Cơm Tấm Má Tư — Restaurant Management System
 
-Single-tenant multi-branch for Cơm Tấm Má Tư CTCP. Hierarchy: `Tenant (L0) → Branch (L1)`.
+Single-tenant multi-branch system for Cơm Tấm Má Tư CTCP.
+
+Hierarchy: `Tenant (L0) → Branch (L1)`.
+
+This file is the agent entrypoint. Keep it short and stable. Detailed, topic-specific rules live under `docs/agent/rules/`.
+
+## Rule Loading
+
+Before implementation, read the applicable rule files:
+
+- Always read `docs/agent/rules/engineering.md` for repo commands, architecture, import boundaries, and core constraints.
+- Read `docs/agent/rules/database.md` for Supabase, migrations, RLS, ACL, auth, Server Actions, RPCs, or database type work.
+- Read `docs/agent/rules/ui.md` before any UI, UX, route surface, component, styling, or copy change.
+- Read `docs/agent/rules/workflow.md` for debate protocol, skip conditions, verification, and completion gates.
+- Read `docs/agent/rules/references.md` when onboarding or choosing the source-of-truth docs for a task.
+
+Instruction memory and learning memory stay separate:
+
+- Shared rules and policies live in `AGENTS.md` and `docs/agent/rules/`.
+- Regression lessons live in `tasks/regressions.md`.
+- Retrospectives and durable learnings live in `tasks/lessons.md`.
+- Current work tracking lives in `tasks/todo.md`.
+
+## Critical Constraints
+
+- MUST use TypeScript strict mode. `noUncheckedIndexedAccess: true`
+- MUST use `supabase-js` for all queries. NEVER Prisma.
+- MUST validate all Server Action inputs with Zod schemas.
+- MUST run `pnpm typecheck && pnpm lint && pnpm build` before marking implementation tasks complete.
+- NEVER return raw Supabase/Postgres `error.message` to clients.
+- NEVER import `@comtammatu/database` barrel in `"use client"` components.
+- NEVER store scope in `localStorage` or React Context. Scope belongs in URL params only.
+- Multi-item atomic writes MUST use a Postgres RPC function.
+- After SQL migration is merged and applied, run `pnpm db:types`.
+- NEVER apply migrations directly. Write migration file → PR → merge → owner applies manually.
+- ACL single source: `packages/shared/src/auth/module-acl.ts`.
+
+## UI Authority
+
+- NEVER invent or redesign the UI outside the project's established design system.
+- NEVER exceed authority when editing UI; only make UI changes explicitly requested or clearly required by the task.
+- USE `shadcn/ui` components and the project's active preset as the default UI path.
+- BEFORE UI/UX rebuild work, read and follow `docs/spec/design-system.md` as the locked design-system contract.
+- UI/UX rebuild PRs MUST state the surface, primary user job, route family, change type, and primitives used before implementation.
+
+## Architecture
+
+```text
+Browser → proxy.ts (auth + ACL) → App Router → Supabase (PostgREST + Auth)
+```
+
+Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Turborepo 2.9 | Node >= 24
 
 ## Commands
 
@@ -9,211 +60,15 @@ pnpm dev          # Start dev server (Turbopack)
 pnpm build        # Production build
 pnpm typecheck    # Type checking across all packages
 pnpm lint         # ESLint
-pnpm db:types     # Regenerate Supabase types (after migration merged & applied)
+pnpm db:types     # Regenerate Supabase types after migration is merged and applied
 ```
 
-## Constraints
+## Workflow Summary
 
-- MUST use TypeScript strict mode. `noUncheckedIndexedAccess: true`
-- MUST use supabase-js for all queries. NEVER Prisma
-- MUST validate all Server Action inputs with Zod schemas
-- MUST run `pnpm typecheck && pnpm lint && pnpm build` before marking task complete
-- NEVER return raw Supabase/Postgres error.message to client
-- NEVER import `@comtammatu/database` barrel in "use client" components
-- NEVER store scope in localStorage/Context — URL params only
-- Multi-item atomic writes → Postgres RPC function
-- After SQL migration merged & applied → `pnpm db:types`
-- NEVER apply migrations directly — write file → PR → merge → owner applies manually
-- ACL single source: `packages/shared/src/auth/module-acl.ts`
+Every feature, bug fix, and refactor must follow the 4-agent debate protocol in `docs/agent/rules/workflow.md` before implementation.
 
-### UI Guardrails
+Skip the 4-agent debate only for:
 
-- NEVER invent or redesign the UI outside the project's established design system.
-- NEVER exceed authority when editing UI; only make UI changes explicitly requested or clearly required by the task.
-- ALWAYS follow project UI rules and regressions before changing any interface.
-- USE `shadcn/ui` components and the project's active preset as the default UI path.
-- NEVER override the visual contract of core primitives through ad-hoc wrappers, custom themes, or parallel surface systems.
-- Source of truth:
-  - `docs/modules/ui.md`
-  - `tasks/regressions.md`
-  - `apps/web/components.json`
-  - `packages/ui/components.json`
-- External references:
-  - Shadcn UI Docs: https://ui.shadcn.com/docs/
-  - Installation: https://ui.shadcn.com/docs/installation/
-  - Preset: https://ui.shadcn.com/create?preset=b1GfmQMCm
-  - Components: https://ui.shadcn.com/docs/components/
-  - Preset command: `pnpm dlx shadcn@latest init --preset b1GfmQMCm --template next`
-
-### Operational UI Philosophy
-
-- Treat `/br/[branchId]/pos` and `/br/[branchId]/kds` as frontline operational surfaces, not dashboards.
-- Mobile-first for operational routes: the first viewport must show the next safe action or the live queue, not decorative hero/status chrome.
-- Once staff lock context (session, table, station, order), the UI MUST compact and give space back to the primary task.
-- One workflow state should have one visual source of truth. Do not repeat the same state in header, rail, sidebar, gate, and board.
-- Cart is for creating a new order only. After submit, order mutations MUST happen from order detail / order history flows.
-- Desktop may add density, secondary insight, or faster scan surfaces, but MUST NOT create a different IA from mobile.
-- Prefer real shadcn primitives (`Tabs`, `Badge`, `Button`, `Card`, `Sheet`, `Select`, `Table`, `Dialog`) before styling raw `div`/`button` controls.
-- Use a single vocabulary for the same workflow state across POS and KDS. Do not rename the same concept per surface.
-- Keep destructive actions visually separated from primary actions and always require confirmation or a safe recovery path.
-
-## Architecture
-
-```
-Browser → proxy.ts (auth + ACL) → App Router → Supabase (PostgREST + Auth)
-```
-
-Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Turborepo 2.9 | Node >= 24
-
-### Import Boundaries
-
-- **Server Actions / RSC:** `@comtammatu/database` (full barrel)
-- **Proxy / Edge:** `@comtammatu/database/supabase/middleware`
-- **Client ("use client"):** `@comtammatu/database/supabase/client` (NEVER barrel)
-
-### URL Structure
-
-```
-/admin/*              → Tenant-level management (manager+ roles)
-/br/[branchId]/pos    → POS (cashier/waiter)
-/br/[branchId]/kds    → KDS (chef)
-/employee             → Employee portal (all staff)
-/login                → Auth
-```
-
-### Proxy (Next.js 16)
-
-File: `apps/web/proxy.ts` — export `proxy(request: NextRequest)`
-
-### JWT Claims
-
-```ts
-{ tenant_id: number, branch_id: number | null, user_role: StaffRole }
-```
-
-## DB Type Boundaries
-
-Money: `NUMERIC(15,2)` | Time: `TIMESTAMPTZ` | PK: `BIGINT GENERATED ALWAYS AS IDENTITY` | Text: `TEXT` (no VARCHAR)
-
-## Things That Will Bite You
-
-- "use client" + barrel import → build explodes. Use `/supabase/client` directly
-- RLS returns `{ data: null, error: null }` on blocked writes — no error thrown
-- Auth hook MUST be SECURITY DEFINER or JWT gets no custom claims (silent fail)
-- New tables need explicit `GRANT ... TO authenticated`
-- UNIQUE constraints: `UNIQUE(field, tenant_id)` not `UNIQUE(field)`
-- TypeScript 6: packages using `process.env` need `"types": ["node"]` in tsconfig
-- Zod 4: `{ message: }` → `{ error: }`, `.email()` → `z.email()`
-
-## References
-
-### System overview (read first for onboarding)
-
-- Codebase map + module index: `docs/CODEBASE_MAP.md`
-- Auth & ACL (roles, JWT, proxy, RLS): `docs/modules/auth.md`
-- Database (clients, types, migrations, RLS patterns): `docs/modules/database.md`
-- Web App (routes, layouts, server actions): `docs/modules/web-app.md`
-- UI (shadcn components, styling): `docs/modules/ui.md`
-- Security (rate limiting): `docs/modules/security.md`
-- Infrastructure (monorepo, build, deploy): `docs/modules/infrastructure.md`
-
-### Planning & specs
-
-- Roadmap + phases: `docs/plan/roadmap.md`
-- M2-Ext POS order lifecycle (planned): `docs/plan/m2-order-lifecycle.md`
-- Architecture decisions: `docs/plan/decisions.md`
-- System architecture: `docs/spec/architecture.md`
-- Database schema: `docs/spec/database-schema.md`
-
-### Business domain
-
-- Reference index: `docs/ref/README.md`
-- CTCP business context: `docs/ref/business-context.md`
-- Setup guide: `docs/ref/setup.md`
-- HĐĐT & Thuế GTGT: `docs/ref/einvoice-tax.md`
-- Hợp đồng lao động: `docs/ref/labor-contracts.md`
-- Kho hàng (Inventory): `docs/ref/inventory.md`
-- Inventory SOP: `docs/ref/inventory-sop.md`
-- Inventory training handoff: `docs/ref/inventory-role-handoff.md`
-- Inventory RBAC matrix: `docs/ref/inventory-rbac-matrix.md`
-- Inventory ERP gap matrix: `docs/ref/inventory-erp-gap-matrix.md`
-- Thuế TNCN & Lương: `docs/ref/payroll-pit.md`
-
-### Meta-learning
-
-- Regression rules: `tasks/regressions.md`
-- Lessons learned: `tasks/lessons.md`
-- Current tasks: `tasks/todo.md`
-- Runbook index: `docs/runbooks/README.md`
-- Worklog index: `docs/worklog/README.md`
-
-## Team Workflow — 4-Agent Debate Protocol
-
-Every task MUST go through all 4 agents before implementation. No exceptions.
-
-### Team Roles
-
-| Role           | Agent Type                   | Responsibility                                                                                                                       |
-| -------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| **PM**         | `oh-my-Codex:planner`   | Scope, priority, acceptance criteria, timeline. Asks "should we build this?" and "what's the MVP?"                                   |
-| **BA**         | `oh-my-Codex:analyst`   | Requirements analysis, business logic validation, edge cases, data flow. Asks "what are the rules?" and "what can go wrong?"         |
-| **Senior Dev** | `oh-my-Codex:architect` | Architecture, code design, implementation plan, tech debt assessment. Asks "how should we build this?" and "does it fit the system?" |
-| **QA/QC**      | `oh-my-Codex:critic`    | Test strategy, acceptance verification, regression check, quality gates. Asks "how do we know it works?" and "what could break?"     |
-
-### Mandatory Workflow
-
-For EVERY task (feature, bug fix, refactor):
-
-#### Phase 1: Debate (parallel agents)
-
-Spawn all 4 agents in parallel with the task description. Each agent reviews from their perspective and returns:
-
-- **PM**: Scope decision (in/out), acceptance criteria, priority assessment
-- **BA**: Business rules, edge cases, data flow analysis, requirement gaps
-- **Senior Dev**: Architecture fit, implementation approach, risk assessment, affected files
-- **QA/QC**: Test plan, regression risks, quality gates, verification steps
-
-#### Phase 2: Synthesis
-
-After all 4 agents respond, synthesize their findings:
-
-1. List all agreements (all 4 agree)
-2. List all conflicts (agents disagree) — resolve each explicitly
-3. Produce a unified task contract with:
-   - Scope (from PM)
-   - Business rules (from BA)
-   - Implementation plan (from Senior Dev)
-   - Test plan (from QA/QC)
-
-#### Phase 3: Implementation
-
-Execute the unified plan. Senior Dev implements, following the agreed architecture.
-
-#### Phase 4: Verification
-
-Before marking complete:
-
-1. `pnpm typecheck && pnpm lint && pnpm build` MUST pass
-2. QA/QC agent reviews the diff for correctness
-3. BA agent verifies business rules are met
-4. PM agent confirms acceptance criteria satisfied
-
-### Agent Prompt Templates
-
-When spawning agents, include this context:
-
-- Current task description
-- Relevant files (from codebase)
-- `AGENTS.md` constraints
-- `tasks/regressions.md` rules
-- Any related docs from `docs/`
-
-### Skip Conditions
-
-The ONLY time you may skip the 4-agent debate:
-
-- Typo fixes (< 3 lines changed)
+- Typo fixes under 3 changed lines
 - Documentation-only changes
 - Dependency version bumps
-
-Everything else goes through all 4 agents.

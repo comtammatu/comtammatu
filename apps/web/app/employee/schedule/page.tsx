@@ -1,6 +1,18 @@
 import { loadAuthState } from "@/_lib/auth";
 import { ScheduleClient } from "./schedule-client";
 import type { ScheduleShift } from "./actions";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
 
 function getMonday(date: Date): string {
   const d = new Date(date);
@@ -26,16 +38,14 @@ export default async function SchedulePage() {
 
   if (!employee) {
     return (
-      <div className="mx-auto max-w-lg space-y-6 px-4 py-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Lịch ca</h1>
-        </div>
-        <div className="rounded-lg border bg-card p-8 text-center">
-          <p className="text-sm text-muted-foreground">
+      <Empty>
+        <EmptyHeader>
+          <EmptyTitle>Chưa có hồ sơ nhân viên</EmptyTitle>
+          <EmptyDescription>
             Tài khoản chưa được liên kết hồ sơ nhân viên. Liên hệ quản lý.
-          </p>
-        </div>
-      </div>
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
   }
 
@@ -72,13 +82,13 @@ export default async function SchedulePage() {
   });
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 px-4 py-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Lịch ca</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Lịch làm việc hàng tuần
-        </p>
-      </div>
+    <div className="flex flex-col gap-5">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Lịch ca</CardTitle>
+          <CardDescription>Lịch làm việc theo tuần.</CardDescription>
+        </CardHeader>
+      </Card>
 
       <ScheduleClient
         initialShifts={initialShifts}

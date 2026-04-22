@@ -72,63 +72,64 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true });
   }
 
-  // Payment succeeded — atomic update (idempotent via status=pending guard)
-  const { data: payment } = await supabase
+  // Resolve payment id from provider_ref (idempotent lookup — status unconstrained here
+  // so we can report on already-completed rows correctly instead of silently dropping).
+  const { data: pendingPayment } = await supabase
     .from("payments")
-    .update({
-      status: "completed",
-      paid_at: new Date().toISOString(),
-      provider_data: JSON.parse(JSON.stringify(payload)),
-    })
+    .select("id")
     .eq("provider_ref", payload.orderId)
     .eq("method", "momo")
-    .eq("status", "pending")
-    .select("id, order_id, amount, tenant_id")
     .maybeSingle();
 
-  if (!payment) {
-    // Already processed or not found — idempotent
+  if (!pendingPayment) {
+    // No payment row matches — MoMo retry for a foreign orderId, or DB got cleaned.
+    // Respond 200 to stop retries; nothing to reconcile.
     return NextResponse.json({ received: true });
   }
 
-  // Validate amount matches (prevent underpayment attack)
-  if (Number(payment.amount) !== payload.amount) {
-    await supabase
-      .from("payments")
-      .update({ status: "failed" })
-      .eq("id", payment.id);
-    return NextResponse.json({ error: "Amount mismatch" }, { status: 400 });
-  }
-
-  // Update order payment status
-  // TODO(M4): replace these two writes with a single atomic RPC
-  // complete_payment_and_consume_stock(p_payment_id) when M4 is wired for real.
-  const { error: orderErr } = await supabase
-    .from("orders")
-    .update({ payment_status: "paid" })
-    .eq("id", payment.order_id)
-    .eq("tenant_id", payment.tenant_id);
-
-  if (orderErr) {
-    // Payment completed but order status desync — log for manual reconciliation
-    console.error(
-      `[momo-webhook] order status desync: payment=${payment.id} order=${payment.order_id}`,
-      orderErr.message,
-    );
-  }
-
-  // Deduct ingredients consumed by this order from stock (service-role safe).
-  // Non-fatal: payment already completed — reconciliation can be done manually.
-  const { error: stockErr } = await supabase.rpc(
-    "consume_stock_for_order_service",
-    { p_order_id: payment.order_id },
+  // Atomic RPC: flip payment→completed, order→paid, consume stock, all in one
+  // transaction. Idempotent for already-completed payments. Raises if stock
+  // consumption fails — surfaced below for provider retry.
+  const { data: rpcData, error: rpcErr } = await supabase.rpc(
+    "complete_payment_and_consume_stock",
+    {
+      p_payment_id: pendingPayment.id,
+      p_expected_amount: payload.amount,
+      p_provider_data: JSON.parse(JSON.stringify(payload)),
+      p_actor_id: undefined,
+    },
   );
-  if (stockErr) {
+
+  if (rpcErr) {
+    // Stock consumption or other non-recoverable error — transaction rolled back.
+    // Return 500 so MoMo retries the webhook.
     console.error(
-      `[momo-webhook] consume_stock failed: payment=${payment.id} order=${payment.order_id}`,
-      stockErr.message,
+      `[momo-webhook] atomic RPC failed: payment=${pendingPayment.id}`,
+      rpcErr.message,
     );
+    return NextResponse.json({ error: "processing_failed" }, { status: 500 });
   }
 
-  return NextResponse.json({ received: true });
+  const result = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+  const status = (result?.status ?? "") as string;
+  const detail = (result?.detail ?? "") as string;
+
+  switch (status) {
+    case "completed":
+    case "already_completed":
+      return NextResponse.json({ received: true });
+    case "amount_mismatch":
+      return NextResponse.json(
+        { error: "Amount mismatch", detail },
+        { status: 400 },
+      );
+    case "not_found":
+    case "failed":
+    default:
+      // Unexpected — log and 200 so MoMo stops retrying (reconciliation page will surface).
+      console.error(
+        `[momo-webhook] unexpected status: ${status} payment=${pendingPayment.id} ${detail}`,
+      );
+      return NextResponse.json({ received: true });
+  }
 }
