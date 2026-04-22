@@ -66,9 +66,10 @@ test("resolvePostLoginRedirect → empty returnTo → default", () => {
 });
 
 test("resolvePostLoginRedirect → valid returnTo for accessible module → keeps it", () => {
+  // Finance route is `/finance`, not `/admin/finance` (per module-acl.ts).
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("super_manager"), "/admin/finance"),
-    "/admin/finance",
+    resolvePostLoginRedirect(makeClaims("super_manager"), "/finance"),
+    "/finance",
   );
 });
 

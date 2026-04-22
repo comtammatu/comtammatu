@@ -1,96 +1,188 @@
-# Inventory RBAC Matrix
+# Inventory RBAC Matrix — Auth v2
 
-> Draft lean contract cho Inventory.
+> Canonical access contract cho Inventory surfaces, viết theo model **Position ⟂ Permission** (Auth v2).
 >
-> Source of truth cho route/module access vẫn là `packages/shared/src/auth/module-acl.ts`.
-> Tài liệu này chỉ làm rõ **business actions**, **scope**, và **data visibility** trong Inventory để docs, UI, và verify không drift nhau.
+> Source of truth:
+>
+> - **Route-level ACL:** `packages/shared/src/auth/module-acl.ts` (gate nhanh theo `user_role` legacy claim)
+> - **Row-level authz:** `staff_permissions(user_id, branch_id, permission_key)` + `has_permission()` / `has_permission_any()`
+> - **Permission catalog:** `packages/shared/src/auth/permissions.ts`
+> - **Position + template seed:** `positions`, `role_templates` tables (per tenant)
+>
+> Docs này chốt **business actions** của Inventory theo permission key và position template. Không đặt thuật ngữ mới; mọi drift với code sẽ thua source of truth ở trên.
 
 ---
 
-## 1. Vai trò áp dụng
+## 1. Mô hình Auth v2 (tóm tắt cho Inventory)
 
-| Role | Scope hiện tại | Ghi chú |
-| ---- | -------------- | ------- |
-| `owner` | Không dùng Inventory routes hằng ngày | Xem qua `reports` / `finance`; không coi là operator kho |
-| `super_manager` | Tenant-wide | Vai trò chính cho procurement, HQ, bếp trung tâm |
-| `area_manager` | Tenant-wide tạm thời | Chỉ nên dùng như vai trò giám sát cho đến khi H3 area scope hoàn tất |
-| `branch_manager` | Own branch | Vai trò chính cho nhận hàng, tồn kho, stocktake, và điều phối kho chi nhánh / bếp chi nhánh |
-| `office` | Không có Inventory route theo ACL hiện tại | Nếu cần AP read access sau này, phải thay đổi ACL riêng |
-| `cashier` / `waiter` / `chef` | Không có Inventory route theo ACL hiện tại | Chỉ tác động tồn kho gián tiếp qua POS/KDS |
+| Khái niệm | Ý nghĩa | Nằm ở |
+| --- | --- | --- |
+| **Permission key** | Chuỗi hành động canonical (vd `inventory:production_create`). Là đơn vị authz nhỏ nhất. | `permission_keys` catalog + `permissions.ts` |
+| **Position** | Chức vụ HR (vd `bep_truong` = Bếp trưởng). **Không** gate authz trực tiếp. | `positions` (per tenant), `profiles.position_id` |
+| **Template** | Bundle permission preset gắn với 1 position. Snapshot — edit template không propagate. | `role_templates(position_code, permission_keys[])` |
+| **Grant** | Quyền thật của user tại branch cụ thể, dạng (user, branch, key). `branch_id IS NULL` = tenant-wide. | `staff_permissions` |
+| **Legacy role** | `user_role` claim còn ở JWT, derived từ `positions.legacy_role_code`. Phục vụ route-level ACL + 17 RPC chưa migrate. | `module-acl.ts`, `auth_role()` helper |
 
----
+**Authz path cho mỗi Inventory request:**
 
-## 2. Nguyên tắc
+1. `proxy.ts` check route-level qua `canAccess(user_role, module)` — fast gate.
+2. Server action (`apps/web/app/inventory/*-actions.ts`) check permission qua `currentUserHasPermission(key)` — domain gate.
+3. RLS policy trên table dùng `has_permission(branch_id, key)` — row gate.
+4. RPC body (SECURITY DEFINER) thực thi logic + check role/permission nội bộ.
 
-- `inventory` và `inventory_procurement` là hai lớp quyền khác nhau.
-- Procurement luôn hẹp hơn stock operations.
-- Không tạo role mới chỉ để hợp thức hóa doc.
-- Nếu doc cần quyền mà `module-acl.ts` chưa có, doc phải ghi rõ là `deferred`, không được giả định đã có.
-
----
-
-## 3. Action Matrix
-
-| Hành động | super_manager | area_manager | branch_manager | Ghi chú |
-| --------- | ------------- | ------------ | -------------- | ------- |
-| Xem dashboard tồn kho | ✅ | ✅ | ✅ | Branch manager chỉ scope chi nhánh mình |
-| Xem reorder / expiry alerts | ✅ | ✅ | ✅ | Branch manager chỉ thấy branch mình |
-| Xem lịch sử movement | ✅ | ✅ | ✅ | Area manager hiện vẫn tenant-wide do H3 chưa xong |
-| Quản lý `ingredients` | ✅ | ❌ | ❌ | Master data vẫn nằm phía procurement |
-| Quản lý `recipes` / `production_recipes` | ✅ | ❌ | ❌ | Chưa có vai trò bếp trung tâm riêng |
-| Tạo / sửa `PO` | ✅ | ❌ | ❌ | Pilot: chỉ HQ nhập NCC |
-| Confirm `GRN` | ✅ | ❌ | ❌ | `GRN` chỉ ở HQ |
-| Nhập / xử lý `supplier_invoice` + matching | ✅ | ❌ | ❌ | Nếu sau này tách AP role, cập nhật ACL riêng |
-| Tạo transfer `HQ -> Bếp trung tâm` | ✅ | ❌ | ❌ | Outbound từ HQ |
-| Tạo transfer `HQ -> Kho chi nhánh` | ✅ | ❌ | ❌ | Flow hợp lệ, không bắt buộc qua bếp trung tâm |
-| Tạo transfer `Bếp trung tâm -> Kho chi nhánh` | ✅ | ❌ | ❌ | Outbound từ bếp trung tâm |
-| Confirm dispatch transfer | ✅ | ❌ | ❌ | Vai trò gửi hàng |
-| Confirm receipt transfer tại chi nhánh đích | ✅ | ✅ | ✅ | Branch manager chỉ được xác nhận cho branch mình |
-| Điều phối `Kho chi nhánh -> Bếp chi nhánh` | ✅ | ✅ | ✅ | Thao tác vận hành nội bộ trong site `branch`, branch manager chỉ branch mình |
-| Tạo stocktake | ✅ | ✅ | ✅ | Branch manager chỉ branch mình |
-| Complete stocktake | ✅ | ✅ | ✅ | Branch manager chỉ branch mình |
-| Post adjustment / waste / expired write-off | ✅ | ❌ | ✅ | Branch manager chỉ branch mình và phải có reason |
-| Tạo / confirm production order | ✅ | ❌ | ❌ | Giữ hẹp cho đến khi có central kitchen role riêng |
-| Xem inventory value / AP aging | ✅ | ✅ | ⚠️ | Branch manager chỉ nên thấy nhánh mình nếu surface tồn tại |
+> **Phase 2-RPC còn legacy:** 17 RPC còn gọi `auth_role()` trong body (xem §6). Fix đang plan, không phải bug về RLS.
 
 ---
 
-## 4. Data Visibility
+## 2. Positions liên quan Inventory (Cơm Tấm Má Tư — tenant_id=1)
 
-| Dữ liệu | super_manager | area_manager | branch_manager | Ghi chú |
-| ------- | ------------- | ------------ | -------------- | ------- |
-| On-hand quantity | ✅ | ✅ | ✅ | Scope theo branch |
-| Average unit cost / WAC | ✅ | ✅ | ⚠️ | Chỉ hiển thị nếu UI thật sự cần; ưu tiên ẩn cho chi nhánh nếu không có use case |
-| Supplier invoice detail | ✅ | ❌ | ❌ | Thuộc procurement/AP |
-| Production BOM detail | ✅ | ❌ | ❌ | Không mở rộng sang branch manager trong pilot |
-| Stocktake variance | ✅ | ✅ | ✅ | Branch manager chỉ branch mình |
-| AP aging | ✅ | ❌ | ❌ | Nếu render ở reports/finance thì không phải Inventory route |
+| Position code | Label VI | `legacy_role_code` | Scope vận hành mặc định |
+| ------------- | -------- | ------------------ | ----------------------- |
+| `chu_so_huu` | Chủ sở hữu | `owner` | Tenant-wide bypass (owner bypass trong `has_permission()`) |
+| `quan_ly_tong` | Quản lý tổng | `super_manager` | Tenant-wide operations + procurement |
+| `quan_ly_khu_vuc` | Quản lý khu vực | `area_manager` | Branches thuộc area (qua per-branch grants) |
+| `quan_ly_cn` | Quản lý chi nhánh | `branch_manager` | Branch của mình |
+| `kho_truong` | Kho trưởng | `warehouse_manager` | Kho Trụ sở / HQ (procurement + outbound transfer) |
+| `thu_kho` | Thủ kho | `warehouse_manager` | Staff-level warehouse (nhận hàng + stocktake) |
+| `bep_truong` | Bếp trưởng | `production_manager` | Bếp trung tâm (sản xuất + KDS) |
 
----
-
-## 5. Route Ownership Gợi Ý
-
-| Route family | Chủ vai trò |
-| ------------ | ----------- |
-| `/inventory` | `super_manager`, `area_manager`, `branch_manager` |
-| `/inventory/production` | `super_manager` |
-| `/inventory/stocktake` | `super_manager`, `area_manager`, `branch_manager` |
-| `/inventory/expiry` | `super_manager`, `area_manager`, `branch_manager` |
-| Procurement sub-surfaces (`NCC`, `PO`, `GRN`, `supplier_invoice`) | `super_manager` |
+> Các position POS/KDS (`thu_ngan`, `phuc_vu`, `dau_bep`) không có Inventory grant mặc định; chỉ tác động tồn kho gián tiếp qua consumption flow.
 
 ---
 
-## 6. Open Questions
+## 3. Permission keys cho Inventory
 
-- Khi H3 hoàn tất, `area_manager` sẽ từ tenant-wide chuyển sang area-scoped. Tài liệu này phải cập nhật cùng lúc với RLS và ACL.
-- Nếu xuất hiện vai trò vận hành riêng cho bếp trung tâm, quyền `production_order` nên tách khỏi `super_manager`.
-- Nếu `office` cần AP read access, nên mở dưới `finance`/`reports` thay vì mở toàn bộ `inventory`.
+### 3.1 Inventory module
+
+| Key | Ý nghĩa |
+| --- | --- |
+| `inventory:read` | Xem tồn kho, movement, alerts |
+| `inventory:write` | Cập nhật catalog nguyên liệu, adjust tồn |
+| `inventory:transfer_create` | Tạo phiếu luân chuyển nội bộ (draft) |
+| `inventory:transfer_ship` | Confirm xuất kho (ship) của phiếu luân chuyển |
+| `inventory:transfer_receive` | Confirm nhận hàng tại điểm đến |
+| `inventory:stocktake_create` | Mở phiên kiểm kê |
+| `inventory:stocktake_complete` | Đóng phiên kiểm kê + post adjustments |
+| `inventory:writeoff` | Ghi hao hụt / waste / hết hạn |
+| `inventory:production_create` | Tạo lệnh sản xuất (bếp trung tâm) |
+| `inventory:production_confirm` | Confirm hoàn thành lệnh sản xuất |
+
+### 3.2 Procurement module (`inventory_procurement`)
+
+| Key | Ý nghĩa |
+| --- | --- |
+| `procurement:read` | Xem PO, GRN, NCC, hoá đơn mua |
+| `procurement:supplier_manage` | CRUD nhà cung cấp |
+| `procurement:po_create` | Tạo Purchase Order |
+| `procurement:po_approve` | Duyệt PO (thả ra cho NCC) |
+| `procurement:grn_create` | Tạo phiếu nhập kho draft |
+| `procurement:grn_confirm` | Xác nhận GRN → cập nhật tồn |
+| `procurement:invoice_create` | Nhập hoá đơn NCC |
+| `procurement:invoice_match` | 3-way matching PO ↔ GRN ↔ Invoice |
+
+### 3.3 Menu-adjacent (recipes)
+
+| Key | Ý nghĩa |
+| --- | --- |
+| `menu:read` | Xem công thức + menu items |
+| `menu:write` | CRUD `recipes`, `production_recipes`, `menu_items` |
+| `menu:manage_category` | Quản lý danh mục |
+| `menu:publish` | Publish thay đổi menu |
 
 ---
 
-## 7. Tài liệu liên quan
+## 4. Template matrix — Permissions per Position
 
-- [inventory.md](inventory.md)
-- [inventory-sop.md](inventory-sop.md)
-- [auth.md](../modules/auth.md)
-- [inventory-erp-gap-matrix.md](inventory-erp-gap-matrix.md)
+Matrix dưới đây là snapshot template (`role_templates.permission_keys`) mà Auth v2 grant tự động khi assign position. Edit template KHÔNG propagate; dùng `sync_missing_permissions_from_template()` để refresh.
+
+| Permission key | owner bypass | super_manager | area_manager | branch_manager | kho_truong | thu_kho | bep_truong |
+| -------------- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `inventory:read` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `inventory:write` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ gap |
+| `inventory:transfer_create` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️ gap |
+| `inventory:transfer_ship` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| `inventory:transfer_receive` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| `inventory:stocktake_create` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| `inventory:stocktake_complete` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| `inventory:writeoff` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| `inventory:production_create` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| `inventory:production_confirm` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| `procurement:read` | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ⚠️ gap |
+| `procurement:supplier_manage` | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| `procurement:po_create` | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| `procurement:po_approve` | ✅ | ✅ | ❌ | ❌ | ⚠️ held | ❌ | ❌ |
+| `procurement:grn_create` | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| `procurement:grn_confirm` | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| `procurement:invoice_create` | ✅ | ✅ | ❌ | ❌ | ⚠️ held | ❌ | ❌ |
+| `procurement:invoice_match` | ✅ | ✅ | ❌ | ❌ | ⚠️ held | ❌ | ❌ |
+| `menu:read` | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
+| `menu:write` | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️ gap |
+
+**Legenda:**
+
+- ✅ = có trong template mặc định (hoặc owner bypass)
+- ❌ = không trong template
+- ⚠️ **gap** = cần thêm nhưng template hiện tại thiếu, fix scheduled (xem §7)
+- ⚠️ **held** = cố ý không cấp; việc thuộc super_manager / accounting
+
+**Known gaps — template `bep_truong` cần bổ sung (scheduled fix):**
+
+- `menu:write` — Bếp trưởng cần CRUD `production_recipes`. RLS require `has_permission_any('menu:write')`.
+- `inventory:transfer_create` — Bếp trưởng cần tạo phiếu ship thành phẩm CK → chi nhánh.
+- `procurement:read` — Bếp trưởng cần xem PO/GRN để biết nguyên liệu sắp về.
+
+---
+
+## 5. Data visibility
+
+| Dữ liệu | Quy tắc |
+| ------- | ------- |
+| On-hand quantity (`stock_levels`) | `inventory:read` cần. Scope theo branch grant. Owner + super_manager thấy tenant-wide. |
+| WAC / Average unit cost | Cùng scope với stock_levels; UI có thể ẩn cho branch-level role nếu use case không cần. |
+| Supplier invoice detail | Cần `procurement:read` + scope branch. |
+| Production BOM (`production_recipes`) | Cần `menu:read` (xem) hoặc `menu:write` (CRUD). |
+| Stocktake variance | Cùng scope với stocktake_* grants. |
+| AP aging | Render trong finance/reports, không thuộc Inventory route. |
+
+---
+
+## 6. Hidden legacy surface — 17 RPC còn `auth_role()`
+
+Các SECURITY DEFINER RPC dưới đây bỏ qua RLS nhưng **vẫn check role legacy trong body**. User có permission grant đúng nhưng role không thuộc whitelist sẽ bị RPC reject:
+
+```
+admin_update_profile, bump_kds_ticket, can_access_branch,
+cancel_production_order, close_fiscal_period, confirm_production_order,
+create_production_order, create_stock_transfer_draft, create_stocktake_session,
+create_supplier_payment, gl_reconciliation, post_payroll_journal,
+recall_kds_ticket, set_branch_kind, stock_transfer_list_branches,
+toggle_profile_active, upsert_recipe_lines
+```
+
+**Tác động Inventory:**
+
+- `create_production_order`, `confirm_production_order`, `cancel_production_order`, `upsert_recipe_lines`: bếp trưởng bị reject dù có `inventory:production_create`.
+- `create_stock_transfer_draft`, `stock_transfer_list_branches`: kho trưởng / bếp trưởng có thể không list được branches đích để tạo phiếu.
+- `create_stocktake_session`: ảnh hưởng kho trưởng / thủ kho nếu role không match legacy whitelist.
+
+Phase 2-RPC cutover là P0 tiếp theo. Khi đó whitelist body sẽ thay bằng `IF has_permission(p_branch, '<key>') ...`.
+
+---
+
+## 7. Open Questions / Known Drift
+
+1. **Template `bep_truong` thiếu 3 key** (§4) — đã confirm cần fix. Migration kèm `sync_missing_permissions_from_template` re-grant.
+2. **Server action `production-actions.ts:10`** — `PRODUCTION_ROLES = ["super_manager"]` hardcoded. Migrate sang `currentUserHasPermission("inventory:production_create")`.
+3. **H3 area scoping** — docs cũ ghi DEFERRED; Auth v2 đã giải qua per-branch grants (backfilled từ `area_branches`). Treat là SHIPPED-VIA-AUTH-V2.
+4. **Held permissions của kho_truong** (`po_approve`, `invoice_*`) — cố ý để super_manager / kế toán. Document không ghi là gap.
+
+---
+
+## 8. Tài liệu liên quan
+
+- [inventory.md](inventory.md) — business rules nghiệp vụ
+- [inventory-sop.md](inventory-sop.md) — Standard Operating Procedure
+- [inventory-branch-kitchen-model.md](../plan/inventory-branch-kitchen-model.md) — pilot contract cho Kho ↔ Bếp model
+- [auth.md](../modules/auth.md) — Auth v2 architecture
+- [permissions.ts](../../packages/shared/src/auth/permissions.ts) — permission catalog source
+- [module-acl.ts](../../packages/shared/src/auth/module-acl.ts) — route-level ACL source
