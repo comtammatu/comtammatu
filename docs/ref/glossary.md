@@ -68,11 +68,11 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 | --- | --- | --- | --- |
 | `tenant` | tenant / pháp nhân CTCP | Khi nói về legal owner cấp hệ thống, single-tenant row | công ty, hệ thống, brand nếu đang nói row dữ liệu |
 | `branch` | chi nhánh | Site vận hành cấp L1 | cửa hàng nếu đang nói entity DB |
-| `headquarters` | trụ sở (`HQ`) | Điểm nhập NCC duy nhất trong pilot | kho tổng |
+| `central_warehouse` | kho tổng (`CW`) | Điểm nhập NCC đa thể hiện (có thể có nhiều Kho Tổng) | HQ, headquarters, trụ sở |
 | `central kitchen` | bếp trung tâm | Site sản xuất thành phẩm | tổng bếp, bếp tổng |
 | `branch warehouse` | kho chi nhánh | Điểm nhận / giữ tồn tại chi nhánh | kho con |
 | `branch kitchen` | bếp chi nhánh | Điểm tiêu hao cuối cùng cho bán hàng | bếp cửa hàng nếu đang nói topology chuẩn |
-| `site` | site vận hành | Specs / technical docs khi cần gom `HQ`, `central_kitchen`, `branch` | dùng thay cho `branch` trong UI |
+| `site` | site vận hành | Specs / technical docs khi cần gom `central_warehouse`, `central_kitchen`, `branch` | dùng thay cho `branch` trong UI |
 
 ### Bề mặt sản phẩm
 
@@ -103,7 +103,7 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 | Canonical English | Nhãn tiếng Việt chuẩn | Dùng khi nào | Tránh dùng |
 | --- | --- | --- | --- |
 | `purchase order (PO)` | đơn đặt hàng NCC | Đơn mua gửi NCC | đơn hàng |
-| `goods received note (GRN)` | phiếu nhập kho | Hàng thực nhận từ NCC tại HQ | receiving note, phiếu nhận |
+| `goods received note (GRN)` | phiếu nhập kho | Hàng thực nhận từ NCC tại Kho Tổng (CW) hoặc Bếp Trung Tâm (CK) | receiving note, phiếu nhận |
 | `supplier invoice` | hóa đơn NCC | Hóa đơn đầu vào từ NCC | invoice nếu không rõ loại |
 | `tax invoice / e-invoice` | hóa đơn điện tử bán ra (`HĐĐT`) | Hóa đơn xuất cho giao dịch bán | hóa đơn nếu đang đứng cạnh supplier invoice |
 | `stock level` | tồn kho | Snapshot số lượng + WAC tại site | số lượng tồn nếu đang nói entity chuẩn |
@@ -124,13 +124,13 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 | Code role | Nhãn tiếng Việt chuẩn | Boundary |
 | --- | --- | --- |
 | `owner` | chủ sở hữu | Vai trò cao nhất cấp tenant |
-| `super_manager` | quản lý tổng | Vận hành cấp trụ sở |
+| `super_manager` | quản lý tổng | Vận hành cấp tenant (CW + CK) |
 | `area_manager` | quản lý khu vực | Quản trị nhiều chi nhánh |
 | `branch_manager` | quản lý chi nhánh | Quản trị một chi nhánh vận hành |
 | `cashier` | thu ngân | POS |
 | `waiter` | phục vụ | POS |
 | `chef` | bếp | KDS |
-| `office` | văn phòng | Cổng nhân viên / HQ |
+| `office` | văn phòng | Cổng nhân viên, không gắn site vận hành cụ thể |
 
 ## Decision rules cho các cặp từ dễ drift
 
@@ -140,11 +140,11 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 - Dùng `purchase order` hoặc `đơn đặt hàng NCC` khi nói procurement.
 - Không dùng label ngắn `Đơn hàng` cho cả sales và procurement trong cùng một surface.
 
-### `headquarters` vs `kho tổng`
+### `central_warehouse` vs `headquarters` (legacy)
 
-- Dùng `headquarters` hoặc `trụ sở (HQ)` làm canonical term.
-- `kho tổng` chỉ nên xuất hiện như legacy phrasing cần thay dần.
-- Lý do: `kho tổng` dễ bị hiểu là một warehouse node, không phải site chuẩn của pilot.
+- Dùng `central_warehouse` hoặc `kho tổng (CW)` làm canonical term.
+- `headquarters` / `trụ sở (HQ)` là legacy phrasing — đã retire trong migration `20260424000000`. Không dùng trong docs mới.
+- Lý do: pilot nay hỗ trợ nhiều Kho Tổng (multi-CW); khái niệm singleton HQ không còn scale.
 
 ### `stock transfer` vs `stock issue`
 
@@ -169,19 +169,19 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 ### UI và product copy
 
 - Ưu tiên tiếng Việt ngắn, rõ nghiệp vụ.
-- Giữ acronym quen thuộc nếu người dùng đã nhận diện: `POS`, `KDS`, `HQ`, `GRN`, `WAC`.
+- Giữ acronym quen thuộc nếu người dùng đã nhận diện: `POS`, `KDS`, `CW`, `CK`, `GRN`, `WAC`.
 - Nếu UI cần label riêng, map ở dictionary/formatter layer thay vì tạo synonym trong domain type.
 
 ### Docs và specs
 
 - Lần nhắc đầu tiên nên giới thiệu song ngữ cho thuật ngữ dễ nhầm.
 - Trong cùng một tài liệu, dùng một cách gọi duy nhất cho cùng một entity.
-- Khi sơ đồ cần rút gọn, ưu tiên label ngắn nhưng vẫn giữ canonical meaning, ví dụ `HQ / Trụ sở`.
+- Khi sơ đồ cần rút gọn, ưu tiên label ngắn nhưng vẫn giữ canonical meaning, ví dụ `CW / Kho Tổng`.
 
 ### Code, DB, và contracts
 
 - Dùng English canonical terms cho table, type, enum, RPC, folder, và file.
-- Không đổi qua lại giữa `warehouse`, `hq`, `headquarters` cho cùng một khái niệm nếu schema đã chốt là `headquarters`.
+- Không đổi qua lại giữa `warehouse`, `hq`, `headquarters`, `central_warehouse` cho cùng một khái niệm — schema chốt là `central_warehouse`.
 - Không nhét alias business vào identifier kỹ thuật để “cho dễ đọc”.
 
 ## Quan hệ với các nguồn chuẩn khác

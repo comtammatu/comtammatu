@@ -6,7 +6,7 @@
 >
 > - Product vẫn là **restaurant operations system**, không nâng thành ERP tổng quát.
 > - Auth/ACL vẫn lấy từ `packages/shared/src/auth/module-acl.ts` và JWT claims hiện tại.
-> - Inventory vẫn ưu tiên mô hình pilot linh hoạt giữa `HQ`, `Bếp trung tâm`, `Kho chi nhánh`, và `Bếp chi nhánh`.
+> - Inventory vẫn ưu tiên mô hình pilot linh hoạt giữa `Kho Tổng (CW)`, `Bếp Trung Tâm (CK)`, `Kho chi nhánh`, và `Bếp chi nhánh` (multi-instance cho CW/CK).
 
 ---
 
@@ -25,7 +25,7 @@
 
 | ERP source | Repo hiện tại | Mức khớp | Quyết định | Ghi chú |
 | ---------- | ------------- | -------- | ---------- | ------- |
-| `docs/domain/inventory/README.md` | [inventory.md](inventory.md), [inventory-sop.md](inventory-sop.md), [inventory-role-handoff.md](inventory-role-handoff.md) | Cao | `Adapt` | Cùng trục vận hành giữa `HQ`, `Bếp trung tâm`, `Kho chi nhánh`, `Bếp chi nhánh`, nhưng repo hiện tại cần giữ phrasing ngắn gọn và gắn chặt vào route/RPC thật. |
+| `docs/domain/inventory/README.md` | [inventory.md](inventory.md), [inventory-sop.md](inventory-sop.md), [inventory-role-handoff.md](inventory-role-handoff.md) | Cao | `Adapt` | Cùng trục vận hành giữa `CW`, `CK`, `Kho chi nhánh`, `Bếp chi nhánh`, nhưng repo hiện tại cần giữ phrasing ngắn gọn và gắn chặt vào route/RPC thật. |
 | `docs/domain/inventory/schema-erd-v1.md` | [database-schema.md](../spec/database-schema.md), [inventory.md](inventory.md), [m5-stock-enhancement.md](../plan/m5-stock-enhancement.md) | Trung bình | `Adapt` | Nên lấy ledger, audit, FK/index conventions, production semantics. Không mang `business_documents`, `applications`, tree location enterprise. |
 | `docs/domain/inventory/rbac.md` | [auth.md](../modules/auth.md), [inventory.md](inventory.md) | Trung bình | `Adapt` | Nên lấy business action matrix và data visibility. Không copy role catalog ERP; repo vẫn dùng 8 role hiện tại. |
 | `docs/domain/inventory/price-variance-management.md` | [inventory.md](inventory.md), [m5-stock-enhancement.md](../plan/m5-stock-enhancement.md) | Trung bình | `Adapt` | Nên nhập tolerance, payment terms, due date, payment status, AP aging, alert semantics. Không nhập FX variance, price lock, standard cost engine lúc này. |

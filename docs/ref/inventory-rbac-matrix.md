@@ -39,11 +39,11 @@
 | Quản lý `ingredients` | ✅ | ❌ | ❌ | Master data vẫn nằm phía procurement |
 | Quản lý `recipes` / `production_recipes` | ✅ | ❌ | ❌ | Chưa có vai trò bếp trung tâm riêng |
 | Tạo / sửa `PO` | ✅ | ❌ | ❌ | Pilot: chỉ HQ nhập NCC |
-| Confirm `GRN` | ✅ | ❌ | ❌ | `GRN` chỉ ở HQ |
+| Confirm `GRN` | ✅ | ❌ | ❌ | `GRN` chỉ tại CW hoặc CK |
 | Nhập / xử lý `supplier_invoice` + matching | ✅ | ❌ | ❌ | Nếu sau này tách AP role, cập nhật ACL riêng |
-| Tạo transfer `HQ -> Bếp trung tâm` | ✅ | ❌ | ❌ | Outbound từ HQ |
-| Tạo transfer `HQ -> Kho chi nhánh` | ✅ | ❌ | ❌ | Flow hợp lệ, không bắt buộc qua bếp trung tâm |
-| Tạo transfer `Bếp trung tâm -> Kho chi nhánh` | ✅ | ❌ | ❌ | Outbound từ bếp trung tâm |
+| Tạo transfer `CW → Bếp trung tâm` | ✅ | ❌ | ❌ | Outbound từ Kho Tổng |
+| Tạo transfer `CW → Kho chi nhánh` | ✅ | ❌ | ❌ | Flow hợp lệ, không bắt buộc qua bếp trung tâm |
+| Tạo transfer `Bếp trung tâm → Kho chi nhánh` | ✅ | ❌ | ❌ | Outbound từ bếp trung tâm |
 | Confirm dispatch transfer | ✅ | ❌ | ❌ | Vai trò gửi hàng |
 | Confirm receipt transfer tại chi nhánh đích | ✅ | ✅ | ✅ | Branch manager chỉ được xác nhận cho branch mình |
 | Điều phối `Kho chi nhánh -> Bếp chi nhánh` | ✅ | ✅ | ✅ | Thao tác vận hành nội bộ trong site `branch`, branch manager chỉ branch mình |
