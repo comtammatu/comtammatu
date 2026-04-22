@@ -147,23 +147,23 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 | --- | ------------------------------------------------------------------------------------------------------ | ------ |
 | H1  | Settings ACL: thêm branch_manager + area_manager                                                       | ✅     |
 | H2  | Tables page: branch_manager chỉ thấy branch mình                                                       | ✅     |
-| H3  | area_manager scope: tạo `areas` + `area_branches` mapping, area_manager chỉ thấy branches mình quản lý | DEFERRED post-pilot |
+| H3  | area_manager scope: tạo `areas` + `area_branches` mapping, area_manager chỉ thấy branches mình quản lý | ✅ Hoàn thành (qua Auth v2) |
 
-### H3: area_manager branch scope
+### H3: area_manager branch scope ✅ SHIPPED-VIA-AUTH-V2
 
-> **Deferred to post-pilot.** Pilot chạy 1 tenant, 1-2 chi nhánh — area_manager tenant-wide access chấp nhận được. Trigger triển khai: khi mở rộng > 3 chi nhánh với nhiều area_manager, hoặc khi owner yêu cầu phân quyền vùng.
+> **Hoàn thành khác cách scope ban đầu.** Auth v2 (2026-04-22/23) giải area scoping qua per-branch `staff_permissions` grants (backfilled từ `area_branches` mapping), không cần thêm RLS area-filtering riêng. Xem `docs/modules/auth.md` + `tasks/lessons.md` (memory).
 
-Hiện tại `area_manager` có `branch_id: null` trong JWT → thấy toàn bộ tenant (spec ghi "tenant-wide temporary").
+**Actual implementation landed:**
 
-**Cần implement:**
+- [x] Migration `20260406220000_area_manager_scoping.sql`: bảng `areas` (id, tenant_id, name) + `area_branches` (area_id, branch_id) + `profiles.area_id` FK
+- [x] JWT claim `area_id` + helper `auth_area_id()` (`20260408170000_area_manager_jwt_fix.sql`)
+- [x] Auth v2 cutover: area_manager scope enforce qua per-branch grants trong `staff_permissions`, không cần RLS area-filtering table-by-table
+- [x] `admin_update_profile()` + các RPC staff-management tôn trọng area boundary
+- [x] `/verify` + `/review` passes
 
-- [ ] Migration: tạo bảng `areas` (id, tenant_id, name) + `area_branches` (area_id, branch_id)
-- [ ] Migration: thêm `area_id` FK vào `profiles` cho area_manager
-- [ ] RLS policies cho `areas` + `area_branches`
-- [ ] Server-side: query branches qua `area_branches` mapping khi role = area_manager
-- [ ] Update `admin_update_profile()` RPC: area_manager chỉ quản lý staff trong branches thuộc area mình
-- [ ] UI: quản lý areas (owner/super_manager only)
-- [ ] `/verify` + `/review` passes
+**Known defer** (không phải chặn pilot):
+
+- [ ] Admin UI quản lý `areas` (owner/super_manager) — chưa có surface; thêm khi mở rộng > 3 chi nhánh
 
 ---
 

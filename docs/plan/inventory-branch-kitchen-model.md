@@ -94,3 +94,55 @@ Từ thời điểm này, team nên hiểu như sau:
 - route transfer dùng cho luồng giữa các site thật: HQ, bếp trung tâm, chi nhánh
 - route issue dùng cho luồng cấp phát nội bộ trong site chi nhánh
 - copy trên UI cần nói rõ `kitchen_use = cấp phát bếp chi nhánh`, tránh wording mơ hồ kiểu chỉ ghi `Bếp`
+
+## 8. Auth v2 — Role canonical cho Kho ↔ Bếp (cập nhật 2026-04-23)
+
+> Section này bổ sung sau khi audit Auth v2: RLS cutover đã 100%, nhưng template + server action còn drift với runtime. Source: `docs/ref/inventory-rbac-matrix.md`, memory `project_auth_v2_phase_1.md`.
+
+### 8.1 Position canonical cho bếp trung tâm + kho
+
+| Position code | Legacy role code | Scope mặc định trong model này |
+| ------------- | ---------------- | ------------------------------ |
+| `kho_truong` | `warehouse_manager` | Kho Trụ sở (`branch_kind = headquarters`) — procurement + outbound transfer |
+| `thu_kho` | `warehouse_manager` | Kho Trụ sở — nhận hàng + stocktake, không outbound transfer |
+| `bep_truong` | `production_manager` | Bếp trung tâm (`branch_kind = central_kitchen`) — sản xuất + ship ra chi nhánh |
+| `quan_ly_cn` | `branch_manager` | Chi nhánh — nhận transfer, `kitchen_use` issue, stocktake nội bộ |
+
+Các position này được seed khi tenant khởi tạo. Grant thực tế lưu ở `staff_permissions(user_id, branch_id, permission_key)`.
+
+### 8.2 Workflow → permission key mapping
+
+| Bước trong model | Permission key cần | Position mặc định thực thi |
+| ---------------- | ------------------ | -------------------------- |
+| NCC → [PO] tại HQ | `procurement:po_create` + `procurement:po_approve` | `kho_truong` tạo, `super_manager` duyệt (held) |
+| NCC → [GRN] tại HQ | `procurement:grn_create` + `procurement:grn_confirm` | `kho_truong` |
+| [HQ → Bếp trung tâm] transfer | `inventory:transfer_create` + `inventory:transfer_ship` (tại HQ) + `inventory:transfer_receive` (tại CK) | `kho_truong` ship, `bep_truong` receive |
+| [HQ → Kho chi nhánh] transfer | Tương tự, nhận ở `quan_ly_cn` chi nhánh | `kho_truong` ship, `quan_ly_cn` receive |
+| [Bếp trung tâm] lệnh sản xuất | `inventory:production_create` + `inventory:production_confirm` (+ `menu:read` xem BOM) | `bep_truong` |
+| [Bếp trung tâm] CRUD công thức | `menu:write` (RLS `production_recipes` require `has_permission_any('menu:write')`) | `bep_truong` |
+| [Bếp trung tâm → Kho chi nhánh] transfer | `inventory:transfer_create` + `inventory:transfer_ship` (tại CK) + `inventory:transfer_receive` (tại chi nhánh) | `bep_truong` ship, `quan_ly_cn` receive |
+| [Kho chi nhánh → Bếp chi nhánh] `stock_issue(kitchen_use)` | `inventory:write` (tạo issue) | `quan_ly_cn` |
+
+### 8.3 Known gaps (runtime ≠ intent) — scheduled fix
+
+**Template `bep_truong` hiện thiếu 3 permission** để workflow §8.2 chạy đầy đủ:
+
+- `menu:write` — không CRUD được `production_recipes` vì RLS require key này
+- `inventory:transfer_create` — không tạo được phiếu ship CK → chi nhánh
+- `procurement:read` — không xem được PO/GRN để biết nguyên liệu sắp về
+
+Fix kèm migration + `sync_missing_permissions_from_template(bep_truong)` re-grant cho user đang hold template này.
+
+**Server action `apps/web/app/inventory/production-actions.ts:10`** còn `PRODUCTION_ROLES = ["super_manager"]` hardcoded — bếp trưởng có đúng grant vẫn bị reject trước khi gọi RPC. Sẽ migrate sang `currentUserHasPermission("inventory:production_create")`.
+
+**Phase 2-RPC** (17 SECURITY DEFINER functions còn gọi `auth_role()` trong body) chặn nhiều bước của model:
+
+- `create_production_order`, `confirm_production_order`, `cancel_production_order`, `upsert_recipe_lines` — chặn bếp trưởng vận hành lệnh sản xuất + công thức
+- `create_stock_transfer_draft`, `stock_transfer_list_branches` — chặn kho trưởng / bếp trưởng list branches đích
+- `create_stocktake_session` — chặn role nào không nằm trong whitelist legacy
+
+Các RPC này cần migrate sang `has_permission()` guards trước khi mở CK expansion. Xem [inventory-rbac-matrix.md §6](../ref/inventory-rbac-matrix.md).
+
+### 8.4 Area scoping (H3) — SHIPPED-VIA-AUTH-V2
+
+Roadmap H3 trước đây ghi DEFERRED; Auth v2 đã giải qua per-branch `staff_permissions` grants backfilled từ `area_branches`. Không cần thêm area-filtering RLS riêng cho mỗi table. Docs cũ (pre-2026-04-22) nói "area_manager tenant-wide tạm thời" đã lỗi thời khi user có đúng per-branch grants.
