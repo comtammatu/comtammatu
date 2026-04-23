@@ -1,6 +1,6 @@
 "use client";
 
-import { Users } from "lucide-react";
+import { IconUsers } from "@tabler/icons-react";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
@@ -45,7 +45,7 @@ export function EmployeeTable({ employees }: EmployeeTableProps) {
             <TableEmptyStateRow
               colSpan={7}
               title="Chưa có hồ sơ nhân viên nào"
-              icon={<Users className="mx-auto size-8 text-muted-foreground" />}
+              icon={<IconUsers className="mx-auto size-8 text-muted-foreground" />}
             />
           )}
           {employees.map((emp) => (

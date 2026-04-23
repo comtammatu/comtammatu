@@ -14,7 +14,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { CircleOff, Plus, RefreshCw } from "lucide-react";
+import { IconCircleOff, IconPlus, IconRefresh } from "@tabler/icons-react";
 import type { AccountRow } from "./page";
 import {
   seedChartOfAccounts,
@@ -94,7 +94,7 @@ export function ChartOfAccountsClient({
       <Card>
         <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
           <div className="flex size-14 items-center justify-center rounded-full border bg-muted text-primary">
-            <CircleOff className="size-8" />
+            <IconCircleOff className="size-8" />
           </div>
           <div className="space-y-1.5">
             <h3 className="text-2xl font-semibold">
@@ -109,7 +109,7 @@ export function ChartOfAccountsClient({
               {isPending ? (
                 <Spinner className="mr-2" />
               ) : (
-                <Plus className="mr-2 size-4" />
+                <IconPlus className="mr-2 size-4" />
               )}
               Khởi tạo hệ thống tài khoản VAS
             </Button>
@@ -136,7 +136,7 @@ export function ChartOfAccountsClient({
           onClick={handleSeed}
           disabled={isPending}
         >
-          <RefreshCw className="mr-2 size-4" />
+          <IconRefresh className="mr-2 size-4" />
           Kiểm tra thiếu
         </Button>
       </div>

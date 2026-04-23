@@ -23,11 +23,11 @@ import {
 } from "@comtammatu/ui/components/toggle-group";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
-  Package,
-  ShoppingCart,
-  UtensilsCrossed,
-  X,
-} from "lucide-react";
+  IconPackage,
+  IconShoppingCart,
+  IconToolsKitchen,
+  IconX,
+} from "@tabler/icons-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { PosTableGate } from "./pos-table-gate";
 import { ItemCustomizer } from "./item-customizer";
@@ -519,14 +519,14 @@ export function PosMenu({
             value="dine_in"
             className="min-h-11 justify-center gap-2 rounded-lg text-sm font-semibold"
           >
-            <UtensilsCrossed className="size-4" />
+            <IconToolsKitchen className="size-4" />
             Tại bàn
           </ToggleGroupItem>
           <ToggleGroupItem
             value="takeaway"
             className="min-h-11 justify-center gap-2 rounded-lg text-sm font-semibold"
           >
-            <Package className="size-4" />
+            <IconPackage className="size-4" />
             Mang về
           </ToggleGroupItem>
         </ToggleGroup>
@@ -556,7 +556,7 @@ export function PosMenu({
                 className="min-h-11 min-w-11 h-9 shrink-0 gap-1 rounded-full px-3 text-xs text-foreground hover:bg-warning/25"
                 onClick={() => setAppendTarget(null)}
               >
-                <X className="size-3.5" />
+                <IconX className="size-3.5" />
                 Hủy
               </Button>
             </div>
@@ -622,7 +622,7 @@ export function PosMenu({
             }}
             aria-label="Mở giỏ hàng"
           >
-            <ShoppingCart className="size-5" />
+            <IconShoppingCart className="size-5" />
             {cartQuantity > 0 ? (
               <>
                 <span className="tabular-nums">{cartQuantity}</span>
@@ -666,6 +666,7 @@ export function PosMenu({
     <>
       <PosSessionHeader
         session={session}
+        branchId={branchId}
         orderType={orderType}
         selectedTableNumber={selectedTableNumber}
         activeOrderCount={activeSessionOrders.length}

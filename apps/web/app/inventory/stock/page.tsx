@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchIngredients } from "../actions";
-import { fetchProcurementBranches } from "../_lib/procurement-branches";
+import {
+  parseBranchIdParam,
+  resolveInventoryBranchScope,
+} from "../_lib/inventory-scope";
 import { formatDate } from "../_lib/format";
 import { StockClient } from "./stock-client";
 import type { StockIngredient } from "./stock-client";
@@ -24,18 +27,16 @@ function storageTemp(type: string | null): string | null {
   return null;
 }
 
-export default async function StockPage() {
+export default async function StockPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string | string[] }>;
+}) {
   const { supabase, claims } = await loadAuthState();
-
-  // Resolve branch: use user's branch if set, otherwise first warehouse
-  const procBranches = claims.branch_id
-    ? []
-    : await fetchProcurementBranches(supabase, claims.tenant_id);
-  const branchId =
-    claims.branch_id ??
-    procBranches.find((b) => b.branch_kind === "central_warehouse")?.id ??
-    procBranches[0]?.id ??
-    null;
+  const params = await searchParams;
+  const requested = parseBranchIdParam(params.branchId);
+  const scope = await resolveInventoryBranchScope(supabase, claims, requested);
+  const branchId = scope.selectedBranchId;
   if (!branchId) redirect("/inventory");
 
   // Fetch ingredients + stock levels in parallel
@@ -65,7 +66,46 @@ export default async function StockPage() {
     : [];
 
   const stockRows = stockRes.data ?? [];
-  const stockMap = new Map(stockRows.map((s) => [s.ingredient_id, s]));
+  // Aggregate across locations (warehouse + kitchen) per ingredient.
+  const stockMap = new Map<
+    number,
+    {
+      ingredient_id: number;
+      current_quantity: number;
+      avg_unit_cost: number | null;
+      last_counted_at: string | null;
+    }
+  >();
+  for (const s of stockRows) {
+    const prev = stockMap.get(s.ingredient_id);
+    if (!prev) {
+      stockMap.set(s.ingredient_id, { ...s });
+      continue;
+    }
+    const prevQty = prev.current_quantity;
+    const addQty = s.current_quantity;
+    const totalQty = prevQty + addQty;
+    const weighted =
+      totalQty > 0
+        ? (prevQty * (prev.avg_unit_cost ?? 0) +
+            addQty * (s.avg_unit_cost ?? 0)) /
+          totalQty
+        : (s.avg_unit_cost ?? prev.avg_unit_cost);
+    const prevCount = prev.last_counted_at;
+    const nextCount = s.last_counted_at;
+    const latestCount =
+      prevCount && nextCount
+        ? prevCount > nextCount
+          ? prevCount
+          : nextCount
+        : (prevCount ?? nextCount);
+    stockMap.set(s.ingredient_id, {
+      ingredient_id: s.ingredient_id,
+      current_quantity: totalQty,
+      avg_unit_cost: weighted,
+      last_counted_at: latestCount,
+    });
+  }
 
   const ingredients: StockIngredient[] = dbIngredients.map((row) => {
     const sl = stockMap.get(row.id);

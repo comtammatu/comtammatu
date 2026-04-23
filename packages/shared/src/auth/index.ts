@@ -45,6 +45,8 @@ export {
   INVENTORY_CATALOG_ROLES,
   INVENTORY_OPS_ROLES,
   PROCUREMENT_ROLES,
+  SUPPLIER_RETURN_ROLES,
+  SUPPLIER_CREDIT_NOTE_ROLES,
 } from "./inventory-roles";
 export type {
   NavItemConfig,

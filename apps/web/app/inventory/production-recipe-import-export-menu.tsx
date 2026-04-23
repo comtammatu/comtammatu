@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import type { FormEvent } from "react";
-import { AlertCircle, Download, FileSpreadsheet, Upload } from "lucide-react";
+import { IconAlertCircle, IconDownload, IconFileSpreadsheet, IconUpload } from "@tabler/icons-react";
 import {
   Alert,
   AlertDescription,
@@ -87,7 +87,7 @@ export function ProductionRecipeImportExportMenu({
             {isExporting ? (
               <Spinner data-icon="inline-start" />
             ) : (
-              <FileSpreadsheet data-icon="inline-start" />
+              <IconFileSpreadsheet data-icon="inline-start" />
             )}
             Import / Export BOM
           </Button>
@@ -95,22 +95,22 @@ export function ProductionRecipeImportExportMenu({
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuGroup>
             <DropdownMenuItem onClick={() => setImportOpen(true)}>
-              <Upload data-icon="inline-start" />
+              <IconUpload data-icon="inline-start" />
               Import từ file
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleTemplate}>
-              <FileSpreadsheet data-icon="inline-start" />
+              <IconFileSpreadsheet data-icon="inline-start" />
               Tải template (.xlsx)
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem onClick={() => handleExport("xlsx")}>
-              <Download data-icon="inline-start" />
+              <IconDownload data-icon="inline-start" />
               Export .xlsx
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleExport("csv")}>
-              <Download data-icon="inline-start" />
+              <IconDownload data-icon="inline-start" />
               Export .csv
             </DropdownMenuItem>
           </DropdownMenuGroup>
@@ -231,7 +231,7 @@ function ProductionRecipeImportDialog({
 
           {error ? (
             <Alert variant="destructive">
-              <AlertCircle />
+              <IconAlertCircle />
               <AlertTitle>{error}</AlertTitle>
             </Alert>
           ) : null}

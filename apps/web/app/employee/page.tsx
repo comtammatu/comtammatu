@@ -1,18 +1,18 @@
 import Link from "next/link";
 import {
-  ArrowRight,
-  BarChart3,
-  Briefcase,
-  CalendarDays,
-  ChefHat,
-  CreditCard,
-  DoorOpen,
-  LayoutDashboard,
-  LogOut,
-  Monitor,
-  UserRound,
-  Warehouse,
-} from "lucide-react";
+  IconArrowRight,
+  IconChartBar,
+  IconBriefcase,
+  IconCalendarEvent,
+  IconChefHat,
+  IconCreditCard,
+  IconDoorEnter,
+  IconLayoutDashboard,
+  IconLogout,
+  IconDeviceDesktop,
+  IconUserCircle,
+  IconBuildingWarehouse,
+} from "@tabler/icons-react";
 import { ROLE_LABEL_VI, canAccess } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -91,7 +91,7 @@ function ActionLink({
                 </p>
               ) : null}
             </div>
-            <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+            <IconArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
           </Link>
         </Button>
       </CardContent>
@@ -154,28 +154,28 @@ export default async function EmployeePage() {
       ? {
           href: "/admin/dashboard",
           title: "Quản trị",
-          icon: <LayoutDashboard className="size-5" />,
+          icon: <IconLayoutDashboard className="size-5" />,
         }
       : null,
     canInventory
       ? {
           href: "/inventory",
           title: "Kho hàng",
-          icon: <Warehouse className="size-5" />,
+          icon: <IconBuildingWarehouse className="size-5" />,
         }
       : null,
     canReports
       ? {
           href: "/admin/reports",
           title: "Báo cáo",
-          icon: <BarChart3 className="size-5" />,
+          icon: <IconChartBar className="size-5" />,
         }
       : null,
     canHr
       ? {
           href: "/hr",
           title: "Nhân sự & tiền lương",
-          icon: <Briefcase className="size-5" />,
+          icon: <IconBriefcase className="size-5" />,
         }
       : null,
   ].filter(Boolean) as Array<{
@@ -264,23 +264,23 @@ export default async function EmployeePage() {
             <ActionLink
               href="/employee/clock"
               title="Chấm công"
-              icon={<DoorOpen className="size-5" />}
+              icon={<IconDoorEnter className="size-5" />}
               badge="Hôm nay"
             />
             <ActionLink
               href="/employee/schedule"
               title="Lịch ca"
-              icon={<CalendarDays className="size-5" />}
+              icon={<IconCalendarEvent className="size-5" />}
             />
             <ActionLink
               href="/employee/payslip"
               title="Phiếu lương"
-              icon={<CreditCard className="size-5" />}
+              icon={<IconCreditCard className="size-5" />}
             />
             <ActionLink
               href="/employee/profile"
               title="Cá nhân"
-              icon={<UserRound className="size-5" />}
+              icon={<IconUserCircle className="size-5" />}
             />
           </CardContent>
         </Card>
@@ -301,7 +301,7 @@ export default async function EmployeePage() {
               description={
                 posDisabled ? "Không dùng tại vai trò hoặc chi nhánh này" : undefined
               }
-              icon={<Monitor className="size-5" />}
+              icon={<IconDeviceDesktop className="size-5" />}
               badge={posDisabled ? undefined : "Vận hành"}
               disabled={posDisabled}
             />
@@ -311,7 +311,7 @@ export default async function EmployeePage() {
               description={
                 kdsDisabled ? "Không dùng tại vai trò hoặc chi nhánh này" : undefined
               }
-              icon={<ChefHat className="size-5" />}
+              icon={<IconChefHat className="size-5" />}
               badge={kdsDisabled ? undefined : "Bếp"}
               disabled={kdsDisabled}
             />
@@ -352,7 +352,7 @@ export default async function EmployeePage() {
           variant="outline"
           className="gap-2 rounded-full px-4"
         >
-          <LogOut className="size-4" />
+          <IconLogout className="size-4" />
           Đăng xuất
         </Button>
       </form>

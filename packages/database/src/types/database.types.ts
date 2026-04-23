@@ -731,11 +731,18 @@ export type Database = {
           id: number
           ingredient_id: number
           po_quantity: number | null
+          po_unit_price: number | null
+          price_override_note: string | null
+          price_override_photo_url: string | null
+          price_variance_pct: number | null
           quality_status: string
           received_quantity: number
           receiving_temperature: number | null
+          rejected_photo_url: string | null
           rejected_quantity: number
           rejection_reason: string | null
+          requires_review: boolean
+          short_delivery_action: string | null
           tenant_id: number
           total_cost: number
           unit: string
@@ -748,11 +755,18 @@ export type Database = {
           id?: never
           ingredient_id: number
           po_quantity?: number | null
+          po_unit_price?: number | null
+          price_override_note?: string | null
+          price_override_photo_url?: string | null
+          price_variance_pct?: number | null
           quality_status?: string
           received_quantity: number
           receiving_temperature?: number | null
+          rejected_photo_url?: string | null
           rejected_quantity?: number
           rejection_reason?: string | null
+          requires_review?: boolean
+          short_delivery_action?: string | null
           tenant_id: number
           total_cost: number
           unit: string
@@ -765,11 +779,18 @@ export type Database = {
           id?: never
           ingredient_id?: number
           po_quantity?: number | null
+          po_unit_price?: number | null
+          price_override_note?: string | null
+          price_override_photo_url?: string | null
+          price_variance_pct?: number | null
           quality_status?: string
           received_quantity?: number
           receiving_temperature?: number | null
+          rejected_photo_url?: string | null
           rejected_quantity?: number
           rejection_reason?: string | null
+          requires_review?: boolean
+          short_delivery_action?: string | null
           tenant_id?: number
           total_cost?: number
           unit?: string
@@ -932,6 +953,57 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_qc_settings: {
+        Row: {
+          alert_channel: string | null
+          alert_webhook_url: string | null
+          price_variance_review_pct: number
+          price_variance_warn_pct: number
+          qty_short_tolerance_pct: number
+          reject_requires_photo: boolean
+          tenant_id: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          alert_channel?: string | null
+          alert_webhook_url?: string | null
+          price_variance_review_pct?: number
+          price_variance_warn_pct?: number
+          qty_short_tolerance_pct?: number
+          reject_requires_photo?: boolean
+          tenant_id: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          alert_channel?: string | null
+          alert_webhook_url?: string | null
+          price_variance_review_pct?: number
+          price_variance_warn_pct?: number
+          qty_short_tolerance_pct?: number
+          reject_requires_photo?: boolean
+          tenant_id?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_qc_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_qc_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1241,6 +1313,7 @@ export type Database = {
           created_at: string
           id: number
           is_active: boolean
+          kitchen_printer: number
           name: string
           sort_order: number
           tenant_id: number
@@ -1251,6 +1324,7 @@ export type Database = {
           created_at?: string
           id?: never
           is_active?: boolean
+          kitchen_printer?: number
           name: string
           sort_order?: number
           tenant_id: number
@@ -1261,6 +1335,7 @@ export type Database = {
           created_at?: string
           id?: never
           is_active?: boolean
+          kitchen_printer?: number
           name?: string
           sort_order?: number
           tenant_id?: number
@@ -1485,12 +1560,155 @@ export type Database = {
           },
         ]
       }
+      notification_outbox: {
+        Row: {
+          channel: string
+          created_at: string
+          id: number
+          last_error: string | null
+          payload: Json
+          retries: number
+          sent_at: string | null
+          status: string
+          tenant_id: number
+          topic: string
+        }
+        Insert: {
+          channel?: string
+          created_at?: string
+          id?: never
+          last_error?: string | null
+          payload: Json
+          retries?: number
+          sent_at?: string | null
+          status?: string
+          tenant_id: number
+          topic: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          id?: never
+          last_error?: string | null
+          payload?: Json
+          retries?: number
+          sent_at?: string | null
+          status?: string
+          tenant_id?: number
+          topic?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_outbox_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_reads: {
+        Row: {
+          notification_id: number
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          notification_id: number
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          notification_id?: number
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_reads_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          action_url: string | null
+          body: string | null
+          created_at: string
+          dedup_key: string | null
+          entity_id: number | null
+          entity_type: string | null
+          expires_at: string | null
+          id: number
+          kind: string
+          meta: Json
+          severity: string
+          target_branch_id: number | null
+          target_roles: string[]
+          tenant_id: number
+          title: string
+        }
+        Insert: {
+          action_url?: string | null
+          body?: string | null
+          created_at?: string
+          dedup_key?: string | null
+          entity_id?: number | null
+          entity_type?: string | null
+          expires_at?: string | null
+          id?: never
+          kind: string
+          meta?: Json
+          severity?: string
+          target_branch_id?: number | null
+          target_roles: string[]
+          tenant_id: number
+          title: string
+        }
+        Update: {
+          action_url?: string | null
+          body?: string | null
+          created_at?: string
+          dedup_key?: string | null
+          entity_id?: number | null
+          entity_type?: string | null
+          expires_at?: string | null
+          id?: never
+          kind?: string
+          meta?: Json
+          severity?: string
+          target_branch_id?: number | null
+          target_roles?: string[]
+          tenant_id?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_target_branch_id_fkey"
+            columns: ["target_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_daily_counters: {
         Row: {
           branch_id: number
           counter_date: string
           id: number
           last_seq: number
+          order_type: string
           tenant_id: number
           updated_at: string
         }
@@ -1499,6 +1717,7 @@ export type Database = {
           counter_date: string
           id?: never
           last_seq?: number
+          order_type?: string
           tenant_id: number
           updated_at?: string
         }
@@ -1507,6 +1726,7 @@ export type Database = {
           counter_date?: string
           id?: never
           last_seq?: number
+          order_type?: string
           tenant_id?: number
           updated_at?: string
         }
@@ -1537,6 +1757,7 @@ export type Database = {
           note: string | null
           order_id: number
           quantity: number
+          sent_to_kitchen_at: string | null
           sides: Json
           status: string
           subtotal: number
@@ -1555,6 +1776,7 @@ export type Database = {
           note?: string | null
           order_id: number
           quantity: number
+          sent_to_kitchen_at?: string | null
           sides?: Json
           status?: string
           subtotal: number
@@ -1573,6 +1795,7 @@ export type Database = {
           note?: string | null
           order_id?: number
           quantity?: number
+          sent_to_kitchen_at?: string | null
           sides?: Json
           status?: string
           subtotal?: number
@@ -1677,6 +1900,7 @@ export type Database = {
           discount_amount: number
           id: number
           idempotency_key: string | null
+          kitchen_send_count: number
           note: string | null
           order_number: string
           order_type: string
@@ -1700,6 +1924,7 @@ export type Database = {
           discount_amount?: number
           id?: never
           idempotency_key?: string | null
+          kitchen_send_count?: number
           note?: string | null
           order_number: string
           order_type?: string
@@ -1723,6 +1948,7 @@ export type Database = {
           discount_amount?: number
           id?: never
           idempotency_key?: string | null
+          kitchen_send_count?: number
           note?: string | null
           order_number?: string
           order_type?: string
@@ -2370,62 +2596,226 @@ export type Database = {
           },
         ]
       }
-      printer_configs: {
+      print_jobs: {
         Row: {
+          attempts: number
           branch_id: number
-          connection_type: string
+          claimed_at: string | null
+          claimed_by_agent: string | null
           created_at: string
+          created_by: string | null
           id: number
-          ip_address: string | null
-          is_active: boolean
-          is_default: boolean
-          name: string
-          paper_width: number
-          port: number | null
+          idempotency_key: string
+          job_type: string
+          last_error: string | null
+          last_retried_at: string | null
+          last_retried_by: string | null
+          order_id: number | null
+          payload: Json
+          printed_at: string | null
+          printer_id: number
+          reprinted_from_id: number | null
+          retry_count: number
+          status: string
           tenant_id: number
-          type: string
-          updated_at: string
         }
         Insert: {
+          attempts?: number
           branch_id: number
-          connection_type: string
+          claimed_at?: string | null
+          claimed_by_agent?: string | null
           created_at?: string
+          created_by?: string | null
           id?: never
-          ip_address?: string | null
-          is_active?: boolean
-          is_default?: boolean
-          name: string
-          paper_width?: number
-          port?: number | null
+          idempotency_key: string
+          job_type: string
+          last_error?: string | null
+          last_retried_at?: string | null
+          last_retried_by?: string | null
+          order_id?: number | null
+          payload: Json
+          printed_at?: string | null
+          printer_id: number
+          reprinted_from_id?: number | null
+          retry_count?: number
+          status?: string
           tenant_id: number
-          type: string
-          updated_at?: string
         }
         Update: {
+          attempts?: number
           branch_id?: number
-          connection_type?: string
+          claimed_at?: string | null
+          claimed_by_agent?: string | null
           created_at?: string
+          created_by?: string | null
           id?: never
-          ip_address?: string | null
-          is_active?: boolean
-          is_default?: boolean
-          name?: string
-          paper_width?: number
-          port?: number | null
+          idempotency_key?: string
+          job_type?: string
+          last_error?: string | null
+          last_retried_at?: string | null
+          last_retried_by?: string | null
+          order_id?: number | null
+          payload?: Json
+          printed_at?: string | null
+          printer_id?: number
+          reprinted_from_id?: number | null
+          retry_count?: number
+          status?: string
           tenant_id?: number
-          type?: string
-          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "printer_configs_branch_id_fkey"
+            foreignKeyName: "print_jobs_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "printer_configs_tenant_id_fkey"
+            foreignKeyName: "print_jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_jobs_last_retried_by_fkey"
+            columns: ["last_retried_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_jobs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_jobs_printer_id_fkey"
+            columns: ["printer_id"]
+            isOneToOne: false
+            referencedRelation: "printers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_jobs_reprinted_from_id_fkey"
+            columns: ["reprinted_from_id"]
+            isOneToOne: false
+            referencedRelation: "print_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      printer_agents: {
+        Row: {
+          agent_id: string
+          branch_id: number
+          last_seen_at: string
+          tenant_id: number
+          version: string | null
+        }
+        Insert: {
+          agent_id: string
+          branch_id: number
+          last_seen_at?: string
+          tenant_id: number
+          version?: string | null
+        }
+        Update: {
+          agent_id?: string
+          branch_id?: number
+          last_seen_at?: string
+          tenant_id?: number
+          version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "printer_agents_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "printer_agents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      printers: {
+        Row: {
+          branch_id: number
+          code_page: string
+          connection_type: string
+          created_at: string
+          id: number
+          is_active: boolean
+          lan_host: string | null
+          lan_port: number | null
+          name: string
+          paper_width_mm: number
+          role: string
+          tenant_id: number
+          updated_at: string
+          usb_product_id: string | null
+          usb_vendor_id: string | null
+        }
+        Insert: {
+          branch_id: number
+          code_page?: string
+          connection_type: string
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          lan_host?: string | null
+          lan_port?: number | null
+          name: string
+          paper_width_mm?: number
+          role: string
+          tenant_id: number
+          updated_at?: string
+          usb_product_id?: string | null
+          usb_vendor_id?: string | null
+        }
+        Update: {
+          branch_id?: number
+          code_page?: string
+          connection_type?: string
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          lan_host?: string | null
+          lan_port?: number | null
+          name?: string
+          paper_width_mm?: number
+          role?: string
+          tenant_id?: number
+          updated_at?: string
+          usb_product_id?: string | null
+          usb_vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "printers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "printers_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -3237,7 +3627,7 @@ export type Database = {
           id: number
           ingredient_id: number
           last_counted_at: string | null
-          location_id: number | null
+          location_id: number
           tenant_id: number
           updated_at: string
         }
@@ -3248,7 +3638,7 @@ export type Database = {
           id?: never
           ingredient_id: number
           last_counted_at?: string | null
-          location_id?: number | null
+          location_id: number
           tenant_id: number
           updated_at?: string
         }
@@ -3259,7 +3649,7 @@ export type Database = {
           id?: never
           ingredient_id?: number
           last_counted_at?: string | null
-          location_id?: number | null
+          location_id?: number
           tenant_id?: number
           updated_at?: string
         }
@@ -3303,7 +3693,7 @@ export type Database = {
           id: number
           ingredient_id: number
           issue_id: number | null
-          location_id: number | null
+          location_id: number
           order_id: number | null
           production_order_id: number | null
           quantity_change: number
@@ -3321,7 +3711,7 @@ export type Database = {
           id?: never
           ingredient_id: number
           issue_id?: number | null
-          location_id?: number | null
+          location_id: number
           order_id?: number | null
           production_order_id?: number | null
           quantity_change: number
@@ -3339,7 +3729,7 @@ export type Database = {
           id?: never
           ingredient_id?: number
           issue_id?: number | null
-          location_id?: number | null
+          location_id?: number
           order_id?: number | null
           production_order_id?: number | null
           quantity_change?: number
@@ -3709,10 +4099,98 @@ export type Database = {
           },
         ]
       }
+      supplier_credit_notes: {
+        Row: {
+          amount: number
+          applied_amount: number
+          applied_at: string | null
+          created_at: string
+          created_by: string
+          credit_number: string
+          id: number
+          invoice_id: number | null
+          kind: string
+          notes: string | null
+          return_id: number
+          status: string
+          supplier_id: number
+          tenant_id: number
+        }
+        Insert: {
+          amount: number
+          applied_amount?: number
+          applied_at?: string | null
+          created_at?: string
+          created_by: string
+          credit_number: string
+          id?: never
+          invoice_id?: number | null
+          kind: string
+          notes?: string | null
+          return_id: number
+          status?: string
+          supplier_id: number
+          tenant_id: number
+        }
+        Update: {
+          amount?: number
+          applied_amount?: number
+          applied_at?: string | null
+          created_at?: string
+          created_by?: string
+          credit_number?: string
+          id?: never
+          invoice_id?: number | null
+          kind?: string
+          notes?: string | null
+          return_id?: number
+          status?: string
+          supplier_id?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_credit_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_credit_notes_return_id_fkey"
+            columns: ["return_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_returns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_credit_notes_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_credit_notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_invoices: {
         Row: {
           created_at: string
           created_by: string
+          credit_applied_amount: number
           due_date: string | null
           grn_id: number | null
           id: number
@@ -3736,6 +4214,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
+          credit_applied_amount?: number
           due_date?: string | null
           grn_id?: number | null
           id?: never
@@ -3759,6 +4238,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
+          credit_applied_amount?: number
           due_date?: string | null
           grn_id?: number | null
           id?: never
@@ -3881,6 +4361,183 @@ export type Database = {
           },
           {
             foreignKeyName: "supplier_payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_return_items: {
+        Row: {
+          grn_item_id: number | null
+          id: number
+          ingredient_id: number
+          photo_url: string | null
+          quantity: number
+          reason_detail: string | null
+          return_id: number
+          stock_movement_id: number | null
+          tenant_id: number
+          total_cost: number
+          unit: string
+          unit_cost: number
+        }
+        Insert: {
+          grn_item_id?: number | null
+          id?: never
+          ingredient_id: number
+          photo_url?: string | null
+          quantity: number
+          reason_detail?: string | null
+          return_id: number
+          stock_movement_id?: number | null
+          tenant_id: number
+          total_cost: number
+          unit: string
+          unit_cost: number
+        }
+        Update: {
+          grn_item_id?: number | null
+          id?: never
+          ingredient_id?: number
+          photo_url?: string | null
+          quantity?: number
+          reason_detail?: string | null
+          return_id?: number
+          stock_movement_id?: number | null
+          tenant_id?: number
+          total_cost?: number
+          unit?: string
+          unit_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_return_items_grn_item_id_fkey"
+            columns: ["grn_item_id"]
+            isOneToOne: false
+            referencedRelation: "grn_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_return_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_return_items_return_id_fkey"
+            columns: ["return_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_returns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_return_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_returns: {
+        Row: {
+          branch_id: number
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          created_by: string
+          grn_id: number | null
+          id: number
+          notes: string | null
+          reason: string
+          resolution: string
+          return_number: string
+          source: string
+          status: string
+          supplier_id: number
+          tenant_id: number
+          total_value: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by: string
+          grn_id?: number | null
+          id?: never
+          notes?: string | null
+          reason: string
+          resolution?: string
+          return_number: string
+          source: string
+          status?: string
+          supplier_id: number
+          tenant_id: number
+          total_value?: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by?: string
+          grn_id?: number | null
+          id?: never
+          notes?: string | null
+          reason?: string
+          resolution?: string
+          return_number?: string
+          source?: string
+          status?: string
+          supplier_id?: number
+          tenant_id?: number
+          total_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_returns_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_returns_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_returns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_returns_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "goods_received_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_returns_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_returns_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -4290,6 +4947,48 @@ export type Database = {
           },
         ]
       }
+      printer_agent_status: {
+        Row: {
+          agent_id: string | null
+          branch_id: number | null
+          is_online: boolean | null
+          last_seen_at: string | null
+          tenant_id: number | null
+          version: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          branch_id?: number | null
+          is_online?: never
+          last_seen_at?: string | null
+          tenant_id?: number | null
+          version?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          branch_id?: number | null
+          is_online?: never
+          last_seen_at?: string | null
+          tenant_id?: number | null
+          version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "printer_agents_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "printer_agents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       _auth_v2_is_owner: { Args: { p_user: string }; Returns: boolean }
@@ -4315,6 +5014,10 @@ export type Database = {
       }
       append_order_items: {
         Args: { p_items: Json; p_order_id: number }
+        Returns: Json
+      }
+      apply_credit_note_to_invoice: {
+        Args: { p_amount: number; p_credit_id: number; p_invoice_id: number }
         Returns: Json
       }
       apply_template_to_user: {
@@ -4360,6 +5063,10 @@ export type Database = {
       }
       cancel_production_order: { Args: { p_order_id: number }; Returns: Json }
       check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
+      claim_print_job: {
+        Args: { p_agent_id: string; p_job_id: number }
+        Returns: boolean
+      }
       close_fiscal_period: {
         Args: {
           p_month: number
@@ -4388,6 +5095,10 @@ export type Database = {
           stock_consumed: boolean
         }[]
       }
+      complete_print_job: {
+        Args: { p_error?: string; p_job_id: number; p_success: boolean }
+        Returns: undefined
+      }
       complete_stocktake: { Args: { p_session_id: number }; Returns: Json }
       confirm_goods_receipt_note: { Args: { p_grn_id: number }; Returns: Json }
       confirm_payment_and_post: {
@@ -4401,11 +5112,13 @@ export type Database = {
       }
       confirm_production_order: { Args: { p_order_id: number }; Returns: Json }
       confirm_stock_issue: { Args: { p_issue_id: number }; Returns: Json }
+      confirm_supplier_return: { Args: { p_return_id: number }; Returns: Json }
       consume_stock_for_order: { Args: { p_order_id: number }; Returns: Json }
       consume_stock_for_order_service: {
         Args: { p_actor_id?: string; p_order_id: number }
         Returns: Json
       }
+      count_unread_notifications: { Args: never; Returns: number }
       create_order: {
         Args: {
           p_branch_id: number
@@ -4470,8 +5183,30 @@ export type Database = {
         }
         Returns: Json
       }
+      create_supplier_return_from_grn: {
+        Args: {
+          p_grn_id: number
+          p_notes?: string
+          p_reason?: string
+          p_resolution?: string
+        }
+        Returns: Json
+      }
+      create_supplier_return_from_stock: {
+        Args: {
+          p_branch_id: number
+          p_lines: Json
+          p_notes: string
+          p_reason: string
+          p_resolution: string
+          p_supplier_id: number
+        }
+        Returns: Json
+      }
       current_position: { Args: never; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      enqueue_kitchen_print: { Args: { p_order_id: number }; Returns: Json }
+      enqueue_receipt_print: { Args: { p_order_id: number }; Returns: Json }
       find_payment_order_desync: {
         Args: { p_since?: string }
         Returns: {
@@ -4510,6 +5245,7 @@ export type Database = {
       }
       has_permission_any: { Args: { p_key: string }; Returns: boolean }
       has_position: { Args: { p_code: string }; Returns: boolean }
+      mark_all_notifications_read: { Args: never; Returns: number }
       post_payroll_journal: {
         Args: { p_payroll_period_id: number }
         Returns: number
@@ -4521,6 +5257,7 @@ export type Database = {
       }
       refresh_finance_views: { Args: never; Returns: undefined }
       release_table: { Args: { p_table_id: number }; Returns: undefined }
+      retry_print_job: { Args: { p_job_id: number }; Returns: boolean }
       revoke_permission: {
         Args: {
           p_branch_id: number
@@ -4545,6 +5282,13 @@ export type Database = {
       save_station_categories: {
         Args: { p_category_ids: number[]; p_station_id: number }
         Returns: undefined
+      }
+      scan_inventory_alerts: {
+        Args: never
+        Returns: {
+          expiry_count: number
+          low_stock_count: number
+        }[]
       }
       seed_chart_of_accounts: {
         Args: { p_tenant_id: number }
@@ -4612,6 +5356,10 @@ export type Database = {
           p_note?: string
           p_order_id: number
         }
+        Returns: Json
+      }
+      transition_supplier_return: {
+        Args: { p_notes?: string; p_return_id: number; p_target_status: string }
         Returns: Json
       }
       update_my_profile: {

@@ -4,15 +4,15 @@ import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ArrowLeft,
-  BarChart3,
-  Briefcase,
-  CalendarDays,
-  ClipboardList,
-  LogOut,
-  Users,
-  Wallet,
-} from "lucide-react";
+  IconArrowLeft,
+  IconChartBar,
+  IconBriefcase,
+  IconCalendarEvent,
+  IconClipboardList,
+  IconLogout,
+  IconUsers,
+  IconWallet,
+} from "@tabler/icons-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
@@ -45,22 +45,22 @@ const NAV_GROUPS: ShellNavGroup[] = [
   {
     title: "Nhân sự",
     items: [
-      { href: "/hr", label: "Tổng quan", icon: Briefcase },
+      { href: "/hr", label: "Tổng quan", icon: IconBriefcase },
       {
         href: "/hr/employees",
         label: "Nhân viên",
-        icon: Users,
+        icon: IconUsers,
         matchPrefixes: ["/hr/employee"],
       },
-      { href: "/hr/shifts", label: "Ca làm việc", icon: CalendarDays },
-      { href: "/hr/attendance", label: "Chấm công", icon: ClipboardList },
+      { href: "/hr/shifts", label: "Ca làm việc", icon: IconCalendarEvent },
+      { href: "/hr/attendance", label: "Chấm công", icon: IconClipboardList },
       {
         href: "/hr/payroll",
         label: "Bảng lương",
-        icon: Wallet,
+        icon: IconWallet,
         matchPrefixes: ["/hr/payroll/"],
       },
-      { href: "/hr/reports", label: "Báo cáo", icon: BarChart3 },
+      { href: "/hr/reports", label: "Báo cáo", icon: IconChartBar },
     ],
   },
 ];
@@ -96,12 +96,12 @@ export function HRShell({ children, user, role }: HRShellProps) {
             href="/admin/dashboard"
             className="inline-flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground group-data-[collapsible=icon]:hidden"
           >
-            <ArrowLeft className="size-3.5" />
+            <IconArrowLeft className="size-3.5" />
             Quản trị
           </Link>
           <div className="flex items-center gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-              <Briefcase className="size-5" />
+              <IconBriefcase className="size-5" />
             </div>
             <div className="min-w-0 space-y-0.5 group-data-[collapsible=icon]:hidden">
               <p className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
@@ -167,7 +167,7 @@ export function HRShell({ children, user, role }: HRShellProps) {
                 className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
                 aria-label="Đăng xuất"
               >
-                <LogOut className="size-4" />
+                <IconLogout className="size-4" />
               </Button>
             </form>
           </div>

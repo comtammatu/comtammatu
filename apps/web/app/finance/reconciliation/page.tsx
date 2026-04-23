@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { IconAlertTriangle, IconArrowLeft, IconCircleCheck } from "@tabler/icons-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -53,11 +53,11 @@ export default async function ReconciliationPage({ searchParams }: Props) {
           <div className="flex flex-col gap-3">
             <Button asChild variant="ghost" size="sm" className="-ml-3 self-start">
               <Link href="/finance">
-                <ArrowLeft className="mr-1 size-4" /> Quay lại Tài chính
+                <IconArrowLeft className="mr-1 size-4" /> Quay lại Tài chính
               </Link>
             </Button>
             <div className="flex items-start gap-3">
-              <AlertTriangle className="size-7 text-amber-500" />
+              <IconAlertTriangle className="size-7 text-amber-500" />
               <div>
                 <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
                   Đối soát thanh toán ↔ Đơn hàng
@@ -78,12 +78,12 @@ export default async function ReconciliationPage({ searchParams }: Props) {
           <CardTitle className="text-base flex items-center gap-2">
             {desync.length === 0 ? (
               <>
-                <CheckCircle2 className="size-4 text-emerald-500" />
+                <IconCircleCheck className="size-4 text-emerald-500" />
                 Không có desync
               </>
             ) : (
               <>
-                <AlertTriangle className="size-4 text-amber-500" />
+                <IconAlertTriangle className="size-4 text-amber-500" />
                 {desync.length} mục cần kiểm tra
               </>
             )}

@@ -30,14 +30,14 @@ import {
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
 import {
-  Minus,
-  Package,
-  Plus,
-  ShoppingCart,
-  Trash2,
-  UtensilsCrossed,
-  X,
-} from "lucide-react";
+  IconMinus,
+  IconPackage,
+  IconPlus,
+  IconShoppingCart,
+  IconTrash,
+  IconToolsKitchen,
+  IconX,
+} from "@tabler/icons-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
 import type { CartItem, OrderType } from "./types";
@@ -160,7 +160,7 @@ export function CartSidebar({
             className="min-h-12 justify-center gap-2 rounded-lg text-sm font-semibold"
             aria-keyshortcuts="D"
           >
-            <UtensilsCrossed className="size-4" />
+            <IconToolsKitchen className="size-4" />
             Tại bàn
             <Kbd className="ml-1 hidden md:inline-flex">D</Kbd>
           </ToggleGroupItem>
@@ -169,7 +169,7 @@ export function CartSidebar({
             className="min-h-12 justify-center gap-2 rounded-lg text-sm font-semibold"
             aria-keyshortcuts="T"
           >
-            <Package className="size-4" />
+            <IconPackage className="size-4" />
             Mang về
             <Kbd className="ml-1 hidden md:inline-flex">T</Kbd>
           </ToggleGroupItem>
@@ -212,7 +212,7 @@ export function CartSidebar({
       <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
         <div className="flex items-center gap-2">
           <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <ShoppingCart className="size-5" />
+            <IconShoppingCart className="size-5" />
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground">Giỏ thao tác</p>
@@ -234,7 +234,7 @@ export function CartSidebar({
                 size="sm"
                 className="min-h-11 min-w-11 h-9 rounded-full px-3 text-xs text-muted-foreground"
               >
-                <Trash2 className="mr-1 size-3.5" />
+                <IconTrash className="mr-1 size-3.5" />
                 Xóa giỏ
               </Button>
             </AlertDialogTrigger>
@@ -267,7 +267,7 @@ export function CartSidebar({
           <div className="flex flex-1 flex-col justify-between p-4">
             <Empty className="py-12">
               <EmptyMedia variant="icon">
-                <ShoppingCart />
+                <IconShoppingCart />
               </EmptyMedia>
               <EmptyHeader>
                 <EmptyTitle>Giỏ đang trống</EmptyTitle>
@@ -363,7 +363,7 @@ export function CartSidebar({
                         aria-label={`Xóa ${item.item_name} khỏi giỏ`}
                         onClick={() => onRemoveItem(item.key)}
                       >
-                        <X className="size-4" />
+                        <IconX className="size-4" />
                       </Button>
                     </div>
 
@@ -376,7 +376,7 @@ export function CartSidebar({
                           aria-label={`Giảm số lượng ${item.item_name}`}
                           onClick={() => onUpdateQuantity(item.key, -1)}
                         >
-                          <Minus className="size-4" />
+                          <IconMinus className="size-4" />
                         </Button>
                         <span className="w-10 text-center text-base font-bold tabular-nums">
                           {item.quantity}
@@ -388,7 +388,7 @@ export function CartSidebar({
                           aria-label={`Tăng số lượng ${item.item_name}`}
                           onClick={() => onUpdateQuantity(item.key, 1)}
                         >
-                          <Plus className="size-4" />
+                          <IconPlus className="size-4" />
                         </Button>
                       </div>
                       <div className="text-right">

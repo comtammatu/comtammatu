@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { CircleAlert } from "lucide-react";
+import { IconAlertCircle } from "@tabler/icons-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
@@ -26,7 +26,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
 
       {state?.error ? (
         <Alert variant="destructive">
-          <CircleAlert />
+          <IconAlertCircle />
           <AlertDescription>{state.error}</AlertDescription>
         </Alert>
       ) : null}

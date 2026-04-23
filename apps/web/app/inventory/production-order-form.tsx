@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CircleSlash, Plus } from "lucide-react";
+import { IconCircleOff, IconPlus } from "@tabler/icons-react";
 import {
   Controller,
   useFieldArray,
@@ -166,7 +166,7 @@ function LineRowCells({
           className="self-start"
           aria-label="Xoá dòng"
         >
-          <CircleSlash className="size-4" />
+          <IconCircleOff className="size-4" />
         </Button>
       </div>
       {rowError && (
@@ -295,7 +295,7 @@ export function ProductionOrderForm({
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
         <Button disabled={!actionsEnabled}>
-          <Plus className="mr-2 size-4" />
+          <IconPlus className="mr-2 size-4" />
           Tạo lệnh sản xuất
         </Button>
       </DialogTrigger>

@@ -6,7 +6,7 @@ import { Slot } from "radix-ui";
 import { cn } from "@comtammatu/ui";
 
 const interactiveCardVariants = cva(
-  "flex items-center gap-3 rounded-xl border bg-card text-card-foreground shadow-sm outline-none transition-[transform,box-shadow,background-color] hover:bg-accent/40 focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50",
+  "flex items-center gap-3 rounded-md border bg-card text-card-foreground shadow-sm outline-none transition-[transform,box-shadow,background-color] hover:bg-accent/40 focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       minHeight: {
@@ -43,10 +43,7 @@ export function InteractiveCard({
   return (
     <Comp
       data-slot="interactive-card"
-      className={cn(
-        interactiveCardVariants({ minHeight, padding }),
-        className,
-      )}
+      className={cn(interactiveCardVariants({ minHeight, padding }), className)}
       {...props}
     />
   );

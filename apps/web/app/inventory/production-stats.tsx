@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { IconPlus } from "@tabler/icons-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
@@ -96,7 +96,7 @@ export function ProductionStats({
                     size="sm"
                     onClick={() => setQuickFinishedGoodDialogOpen(true)}
                   >
-                    <Plus className="mr-2 size-4" />
+                    <IconPlus className="mr-2 size-4" />
                     Tạo thành phẩm
                   </Button>
                 ) : null}
@@ -107,7 +107,7 @@ export function ProductionStats({
                     size="sm"
                     onClick={() => setQuickRawIngredientDialogOpen(true)}
                   >
-                    <Plus className="mr-2 size-4" />
+                    <IconPlus className="mr-2 size-4" />
                     Tạo nguyên liệu
                   </Button>
                 ) : null}

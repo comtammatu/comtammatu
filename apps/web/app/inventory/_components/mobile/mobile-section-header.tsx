@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { IconArrowLeft } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import { cn } from "@comtammatu/ui";
 
@@ -29,7 +29,7 @@ export function MobileSectionHeader({
           href={backHref}
           className="inline-flex w-fit items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="size-4" />
+          <IconArrowLeft className="size-4" />
           {backLabel}
         </Link>
       ) : null}

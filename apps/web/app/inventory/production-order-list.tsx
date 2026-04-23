@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2 } from "lucide-react";
+import { IconCircleCheck } from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
@@ -135,7 +135,7 @@ export function ProductionOrderList({
                           onClick={() => handleConfirm(order.id)}
                           disabled={isPending}
                         >
-                          <CheckCircle2 className="mr-2 size-4" />
+                          <IconCircleCheck className="mr-2 size-4" />
                           Xác nhận
                         </Button>
                         <Button

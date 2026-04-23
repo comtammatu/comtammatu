@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarClock, Plus } from "lucide-react";
+import { IconCalendarClock, IconPlus } from "@tabler/icons-react";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -44,7 +44,7 @@ export function ShiftsTable({
           onClick={() => setAddOpen(true)}
           disabled={selectedBranchId === null}
         >
-          <Plus className="mr-2 size-4" />
+          <IconPlus className="mr-2 size-4" />
           Thêm ca
         </Button>
       </div>
@@ -70,7 +70,7 @@ export function ShiftsTable({
                     : "Chưa có ca làm việc nào"
                 }
                 icon={
-                  <CalendarClock className="mx-auto size-8 text-muted-foreground" />
+                  <IconCalendarClock className="mx-auto size-8 text-muted-foreground" />
                 }
               />
             )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { PackageSearch, Pencil, Plus, Search } from "lucide-react";
+import { IconPackage, IconPencil, IconPlus, IconSearch } from "@tabler/icons-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -98,7 +98,7 @@ export function IngredientTable({
       <div className="flex items-center justify-between gap-4">
         {canManageCatalog && (
           <Button onClick={() => setAddOpen(true)} className="ml-auto">
-            <Plus className="mr-2 size-4" />
+            <IconPlus className="mr-2 size-4" />
             Thêm nguyên liệu
           </Button>
         )}
@@ -114,7 +114,7 @@ export function IngredientTable({
         <CardContent className="px-4 sm:px-5">
           <InputGroup className="mb-4 h-10">
             <InputGroupAddon>
-              <Search />
+              <IconSearch />
             </InputGroupAddon>
             <InputGroupInput
               placeholder="Tìm tên, SKU, danh mục…"
@@ -132,7 +132,7 @@ export function IngredientTable({
             <div className="space-y-3">
               {filtered.length === 0 && (
                 <div className="py-16 text-center">
-                  <PackageSearch className="mx-auto size-8 text-muted-foreground" />
+                  <IconPackage className="mx-auto size-8 text-muted-foreground" />
                   <p className="mt-2 text-sm font-medium text-muted-foreground">
                     {search
                       ? "Không tìm thấy nguyên liệu nào"
@@ -178,7 +178,7 @@ export function IngredientTable({
                         aria-label={`Chỉnh sửa ${ing.name}`}
                         onClick={() => setEditItem(ing)}
                       >
-                        <Pencil className="size-4" />
+                        <IconPencil className="size-4" />
                       </Button>
                     </ItemActions>
                   )}
@@ -204,7 +204,7 @@ export function IngredientTable({
                     colSpan={canManageCatalog ? 7 : 6}
                     paddingClassName="py-16"
                     icon={
-                      <PackageSearch className="mx-auto size-8 text-muted-foreground" />
+                      <IconPackage className="mx-auto size-8 text-muted-foreground" />
                     }
                     title={
                       search
@@ -265,7 +265,7 @@ export function IngredientTable({
                           aria-label={`Chỉnh sửa ${ing.name}`}
                           onClick={() => setEditItem(ing)}
                         >
-                          <Pencil className="size-4" />
+                          <IconPencil className="size-4" />
                         </Button>
                       </TableCell>
                     )}

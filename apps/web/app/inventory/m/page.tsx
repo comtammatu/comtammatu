@@ -1,13 +1,13 @@
 import Link from "next/link";
 import {
-  ArrowRight,
-  BarChart3,
-  ClipboardList,
-  Factory,
-  Package,
-  Receipt,
-  Truck,
-} from "lucide-react";
+  IconArrowRight,
+  IconChartBar,
+  IconClipboardList,
+  IconBuildingFactory,
+  IconPackage,
+  IconReceipt,
+  IconTruck,
+} from "@tabler/icons-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
   extractClaimsFromAccessToken,
@@ -17,6 +17,7 @@ import {
   currentUserHasAnyPermissionAny,
   currentUserHasPermissionAny,
 } from "@/_lib/permissions";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { MobilePage } from "../_components/mobile/mobile-page";
 import { InteractiveCard } from "../_components/mobile/interactive-card";
 import { MobileSectionHeader } from "../_components/mobile/mobile-section-header";
@@ -29,7 +30,7 @@ import {
 
 type ActionTile = {
   href: string;
-  icon: typeof Receipt;
+  icon: typeof IconReceipt;
   title: string;
   description: string;
   badge?: string;
@@ -142,7 +143,7 @@ export default async function InventoryMobileHub() {
   if (canOpenProcurement) {
     primaryTiles.push({
       href: "/inventory/m/grn",
-      icon: Receipt,
+      icon: IconReceipt,
       title: "Nhập hàng",
       description: "Tạo phiếu nhập từ nhà cung cấp",
       badge: openPoCount > 0 ? `${openPoCount} PO chờ nhận` : undefined,
@@ -151,7 +152,7 @@ export default async function InventoryMobileHub() {
   if (canOpenProduction) {
     primaryTiles.push({
       href: "/inventory/m/production",
-      icon: Factory,
+      icon: IconBuildingFactory,
       title: "Bếp trung tâm",
       description: "Tạo lệnh sản xuất và chốt thành phẩm",
       badge:
@@ -162,7 +163,7 @@ export default async function InventoryMobileHub() {
   }
   primaryTiles.push({
     href: "/inventory/m/transfers",
-    icon: Truck,
+    icon: IconTruck,
     title: "Điều chuyển",
     description: "Nhận hàng & kiểm nhập nội bộ",
     badge:
@@ -174,13 +175,13 @@ export default async function InventoryMobileHub() {
   const secondaryTiles: ActionTile[] = [
     {
       href: "/inventory/stock",
-      icon: Package,
+      icon: IconPackage,
       title: "Tồn kho chi tiết",
       description: "Mở màn hình tồn kho đầy đủ",
     },
     {
       href: "/inventory",
-      icon: BarChart3,
+      icon: IconChartBar,
       title: "Bản đầy đủ",
       description: "Chuyển sang giao diện desktop",
     },
@@ -217,12 +218,12 @@ export default async function InventoryMobileHub() {
                     {tile.description}
                   </p>
                   {tile.badge ? (
-                    <span className="mt-1 inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning-foreground">
+                    <Badge variant="warning" className="mt-1">
                       {tile.badge}
-                    </span>
+                    </Badge>
                   ) : null}
                 </div>
-                <ArrowRight className="size-5 shrink-0 text-muted-foreground" />
+                <IconArrowRight className="size-5 shrink-0 text-muted-foreground" />
               </Link>
             </InteractiveCard>
           );
@@ -268,7 +269,7 @@ export default async function InventoryMobileHub() {
             href="/inventory/m/drafts"
             className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
           >
-            <ClipboardList className="size-4" />
+            <IconClipboardList className="size-4" />
             Phiếu nháp đã lưu
           </Link>
         </div>

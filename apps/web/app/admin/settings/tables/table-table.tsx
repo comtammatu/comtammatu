@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MoreHorizontal, Pencil, Trash2, UtensilsCrossed } from "lucide-react";
+import { IconDots, IconPencil, IconTrash, IconToolsKitchen } from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -89,7 +89,7 @@ export function TableTable({ tables, zones }: TableTableProps) {
                 colSpan={5}
                 title="Chưa có bàn nào"
                 icon={
-                  <UtensilsCrossed className="mx-auto size-8 text-muted-foreground" />
+                  <IconToolsKitchen className="mx-auto size-8 text-muted-foreground" />
                 }
               />
             )}
@@ -120,13 +120,13 @@ export function TableTable({ tables, zones }: TableTableProps) {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon-lg">
-                        <MoreHorizontal className="size-4" />
+                        <IconDots className="size-4" />
                         <span className="sr-only">Menu</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onSelect={() => setEditTable(table)}>
-                        <Pencil className="mr-2 size-4" />
+                        <IconPencil className="mr-2 size-4" />
                         Sửa
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -134,7 +134,7 @@ export function TableTable({ tables, zones }: TableTableProps) {
                         className="text-destructive"
                         onSelect={() => setDeleteId(table.id)}
                       >
-                        <Trash2 className="mr-2 size-4" />
+                        <IconTrash className="mr-2 size-4" />
                         Xóa
                       </DropdownMenuItem>
                     </DropdownMenuContent>

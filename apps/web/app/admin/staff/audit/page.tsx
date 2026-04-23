@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, History } from "lucide-react";
+import { IconArrowLeft, IconHistory } from "@tabler/icons-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -87,12 +87,12 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
           <div className="flex flex-col gap-3">
             <Button asChild variant="ghost" size="sm" className="-ml-3 self-start">
               <Link href="/admin/staff">
-                <ArrowLeft className="mr-1 size-4" />
+                <IconArrowLeft className="mr-1 size-4" />
                 Quay lại danh sách nhân viên
               </Link>
             </Button>
             <div className="flex items-center gap-3">
-              <History className="size-7 text-muted-foreground" />
+              <IconHistory className="size-7 text-muted-foreground" />
               <div>
                 <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
                   Nhật ký quyền hạn

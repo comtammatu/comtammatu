@@ -2,11 +2,11 @@
 
 import { useRef, useState, useTransition } from "react";
 import {
-  AlertCircle,
-  Download,
-  FileSpreadsheet,
-  Upload,
-} from "lucide-react";
+  IconAlertCircle,
+  IconDownload,
+  IconFileSpreadsheet,
+  IconUpload,
+} from "@tabler/icons-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -74,27 +74,27 @@ export function MenuImportExportMenu() {
             {isExporting ? (
               <Spinner className="mr-2" />
             ) : (
-              <FileSpreadsheet className="mr-2 size-4" />
+              <IconFileSpreadsheet className="mr-2 size-4" />
             )}
             Import / Export
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
-            <Upload className="mr-2 size-4" />
+            <IconUpload className="mr-2 size-4" />
             Import từ file
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleTemplate}>
-            <FileSpreadsheet className="mr-2 size-4" />
+            <IconFileSpreadsheet className="mr-2 size-4" />
             Tải template (.xlsx)
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => handleExport("xlsx")}>
-            <Download className="mr-2 size-4" />
+            <IconDownload className="mr-2 size-4" />
             Export .xlsx (đầy đủ)
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleExport("csv")}>
-            <Download className="mr-2 size-4" />
+            <IconDownload className="mr-2 size-4" />
             Export .csv (món ăn)
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -206,7 +206,7 @@ function MenuImportDialog({
 
           {error ? (
             <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              <IconAlertCircle className="mt-0.5 size-4 shrink-0" />
               <p className="font-medium">{error}</p>
             </div>
           ) : null}

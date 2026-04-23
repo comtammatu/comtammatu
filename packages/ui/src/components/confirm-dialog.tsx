@@ -1,0 +1,99 @@
+"use client"
+
+import * as React from "react"
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./alert-dialog"
+
+export interface ConfirmOptions {
+  title: string
+  description?: string
+  confirmText?: string
+  cancelText?: string
+  variant?: "default" | "destructive"
+}
+
+interface PendingConfirm {
+  opts: ConfirmOptions
+  resolve: (value: boolean) => void
+}
+
+const CONFIRM_EVENT = "ctmt:confirm-dialog"
+const bus: EventTarget =
+  typeof window !== "undefined" ? window : new EventTarget()
+
+export function confirm(opts: ConfirmOptions): Promise<boolean> {
+  if (typeof window === "undefined") {
+    return Promise.resolve(false)
+  }
+  return new Promise<boolean>((resolve) => {
+    const detail: PendingConfirm = { opts, resolve }
+    bus.dispatchEvent(new CustomEvent<PendingConfirm>(CONFIRM_EVENT, { detail }))
+  })
+}
+
+export function ConfirmDialogProvider() {
+  const [pending, setPending] = React.useState<PendingConfirm | null>(null)
+  const [open, setOpen] = React.useState(false)
+
+  React.useEffect(() => {
+    const handler = (e: Event) => {
+      const ev = e as CustomEvent<PendingConfirm>
+      setPending(ev.detail)
+      setOpen(true)
+    }
+    bus.addEventListener(CONFIRM_EVENT, handler)
+    return () => bus.removeEventListener(CONFIRM_EVENT, handler)
+  }, [])
+
+  const settle = React.useCallback(
+    (result: boolean) => {
+      pending?.resolve(result)
+      setOpen(false)
+    },
+    [pending],
+  )
+
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => {
+      if (!next) settle(false)
+      else setOpen(true)
+    },
+    [settle],
+  )
+
+  const opts = pending?.opts
+  const variant = opts?.variant ?? "default"
+
+  return (
+    <AlertDialog open={open} onOpenChange={handleOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{opts?.title ?? ""}</AlertDialogTitle>
+          {opts?.description ? (
+            <AlertDialogDescription>{opts.description}</AlertDialogDescription>
+          ) : null}
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => settle(false)}>
+            {opts?.cancelText ?? "Huỷ"}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            variant={variant}
+            onClick={() => settle(true)}
+          >
+            {opts?.confirmText ?? "Xác nhận"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}

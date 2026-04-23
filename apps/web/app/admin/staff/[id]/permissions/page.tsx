@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { IconArrowLeft } from "@tabler/icons-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -96,7 +96,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
             <div className="space-y-2">
               <Button asChild variant="ghost" size="sm" className="-ml-3">
                 <Link href="/admin/staff">
-                  <ArrowLeft className="mr-1 size-4" />
+                  <IconArrowLeft className="mr-1 size-4" />
                   Quay lại danh sách
                 </Link>
               </Button>

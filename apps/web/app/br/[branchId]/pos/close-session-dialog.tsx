@@ -22,11 +22,11 @@ import { FieldGroup } from "@comtammatu/ui/components/field";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
-  AlertTriangle,
-  CheckCircle2,
-  CircleDollarSign,
-  ShieldCheck,
-} from "lucide-react";
+  IconAlertTriangle,
+  IconCircleCheck,
+  IconCurrencyDollar,
+  IconShieldCheck,
+} from "@tabler/icons-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { NumberField, TextField } from "@/components/form";
 import { closePosSession } from "./actions";
@@ -236,7 +236,7 @@ export function CloseSessionDialog({
                 size="lg"
                 onClick={handleConfirm}
               >
-                <CheckCircle2 className="mr-2 size-4" />
+                <IconCircleCheck className="mr-2 size-4" />
                 Xác nhận
               </Button>
             </DialogFooter>
@@ -270,7 +270,7 @@ export function CloseSessionDialog({
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">
-                        <CircleDollarSign className="size-3.5" />
+                        <IconCurrencyDollar className="size-3.5" />
                       </div>
                       <div>
                         <p className="text-sm font-semibold">Nhập tiền</p>
@@ -292,7 +292,7 @@ export function CloseSessionDialog({
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">
-                        <ShieldCheck className="size-3.5" />
+                        <IconShieldCheck className="size-3.5" />
                       </div>
                       <div>
                         <p className="text-sm font-semibold">Đối chiếu</p>
@@ -308,7 +308,7 @@ export function CloseSessionDialog({
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-xs font-bold">
-                        <AlertTriangle className="size-3.5" />
+                        <IconAlertTriangle className="size-3.5" />
                       </div>
                       <div>
                         <p className="text-sm font-semibold">Xác nhận</p>

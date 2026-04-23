@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Key, MapPin, Copy, RefreshCw, Locate } from "lucide-react";
+import { IconKey, IconMapPin, IconCopy, IconRefresh, IconCurrentLocation } from "@tabler/icons-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -179,7 +179,7 @@ export function AttendanceConfigDialog({
           {/* GPS Coordinates */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium">
-              <MapPin className="size-4" />
+              <IconMapPin className="size-4" />
               Tọa độ GPS
             </div>
             <form onSubmit={form.handleSubmit(onValidCoords)} noValidate>
@@ -216,7 +216,7 @@ export function AttendanceConfigDialog({
                   {geoLoading ? (
                     <Spinner className="mr-2" />
                   ) : (
-                    <Locate className="mr-2 size-4" />
+                    <IconCurrentLocation className="mr-2 size-4" />
                   )}
                   Lấy vị trí hiện tại
                 </Button>
@@ -243,7 +243,7 @@ export function AttendanceConfigDialog({
           {/* Attendance Secret */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium">
-              <Key className="size-4" />
+              <IconKey className="size-4" />
               Mã bí mật chấm công
             </div>
 
@@ -257,7 +257,7 @@ export function AttendanceConfigDialog({
                 {secretPending ? (
                   <Spinner className="mr-2" />
                 ) : (
-                  <RefreshCw className="mr-2 size-4" />
+                  <IconRefresh className="mr-2 size-4" />
                 )}
                 {branch.hasSecret ? "Tạo mã mới" : "Tạo mã bí mật"}
               </Button>
@@ -288,7 +288,7 @@ export function AttendanceConfigDialog({
                     size="icon-lg"
                     onClick={handleCopyCode}
                   >
-                    <Copy className="size-4" />
+                    <IconCopy className="size-4" />
                   </Button>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">

@@ -9,6 +9,7 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
+import { dispatchNotificationOutbox } from "./notifications-actions";
 import { PG_ERR } from "./_lib/constants";
 import {
   buildCsv,
@@ -48,9 +49,9 @@ export type RecentActivityItem = {
   total: number | null;
 };
 
-export async function fetchRecentActivity(): Promise<
-  ActionResult<RecentActivityItem[]>
-> {
+export async function fetchRecentActivity(
+  branchId?: number,
+): Promise<ActionResult<RecentActivityItem[]>> {
   const ctx = await getAuthContextWithPermission(
     ROLES,
     PERMISSION_KEYS.PROCUREMENT_READ,
@@ -58,31 +59,41 @@ export async function fetchRecentActivity(): Promise<
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
 
+  let poQuery = supabase
+    .from("purchase_orders")
+    .select(
+      "id, po_number, status, ordered_at, suppliers ( name ), purchase_order_items ( line_total )",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .order("ordered_at", { ascending: false })
+    .limit(5);
+  let grnQuery = supabase
+    .from("goods_received_notes")
+    .select(
+      "id, grn_number, status, received_date, suppliers ( name ), grn_items ( total_cost )",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .order("received_date", { ascending: false })
+    .limit(5);
+  const invQuery = supabase
+    .from("supplier_invoices")
+    .select(
+      "id, invoice_number, matching_status, invoice_date, total_amount, suppliers ( name )",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .order("invoice_date", { ascending: false })
+    .limit(5);
+
+  if (branchId != null) {
+    poQuery = poQuery.eq("branch_id", branchId);
+    grnQuery = grnQuery.eq("branch_id", branchId);
+    // supplier_invoices has no branch_id — left tenant-wide intentionally.
+  }
+
   const [poRes, grnRes, invRes] = await Promise.all([
-    supabase
-      .from("purchase_orders")
-      .select(
-        "id, po_number, status, ordered_at, suppliers ( name ), purchase_order_items ( line_total )",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .order("ordered_at", { ascending: false })
-      .limit(5),
-    supabase
-      .from("goods_received_notes")
-      .select(
-        "id, grn_number, status, received_date, suppliers ( name ), grn_items ( total_cost )",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .order("received_date", { ascending: false })
-      .limit(5),
-    supabase
-      .from("supplier_invoices")
-      .select(
-        "id, invoice_number, matching_status, invoice_date, total_amount, suppliers ( name )",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .order("invoice_date", { ascending: false })
-      .limit(5),
+    poQuery,
+    grnQuery,
+    invQuery,
   ]);
 
   if (poRes.error || grnRes.error || invRes.error) {
@@ -148,20 +159,22 @@ export async function fetchRecentActivity(): Promise<
 
 /* ─── fetchGrns ─── */
 
-export async function fetchGrns(): Promise<ActionResult> {
+export async function fetchGrns(branchId?: number): Promise<ActionResult> {
   const ctx = await getAuthContextWithPermission(
     ROLES,
     PERMISSION_KEYS.PROCUREMENT_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
-  const { data, error } = await supabase
+  let query = supabase
     .from("goods_received_notes")
     .select(
       "id, grn_number, status, received_date, notes, supplier_id, branch_id, po_id, suppliers ( id, name ), purchase_orders ( po_number ), grn_items ( total_cost )",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("received_date", { ascending: false });
+  if (branchId != null) query = query.eq("branch_id", branchId);
+  const { data, error } = await query;
   if (error) return { success: false, error: "Không thể tải phiếu nhập." };
   return { success: true, data: data ?? [] };
 }
@@ -269,7 +282,7 @@ export const createGrnDraft = withAction(
 const grnLineSchema = z.object({
   grnId: z.coerce.number().int().positive(),
   ingredientId: z.coerce.number().int().positive(),
-  receivedQuantity: z.coerce.number().positive(),
+  receivedQuantity: z.coerce.number().min(0),
   unit: z.string().min(1),
   unitCost: z.coerce.number().min(0),
   qualityStatus: z
@@ -278,6 +291,18 @@ const grnLineSchema = z.object({
   receivingTemperature: z.coerce.number().optional().nullable(),
   batchNumber: z.string().trim().optional().nullable(),
   expiryDate: z.string().date().optional().nullable(),
+  // QC fields
+  rejectedQuantity: z.coerce.number().min(0).optional(),
+  rejectionReason: z.string().trim().max(500).optional().nullable(),
+  rejectedPhotoUrl: z.string().trim().url().optional().nullable(),
+  // Price-variance audit
+  priceOverrideNote: z.string().trim().max(500).optional().nullable(),
+  priceOverridePhotoUrl: z.string().trim().url().optional().nullable(),
+  // Short-delivery handling (set by user when received < ordered beyond tolerance)
+  shortDeliveryAction: z
+    .enum(["accept_and_close", "wait_backorder", "request_credit"])
+    .optional()
+    .nullable(),
 });
 
 export const upsertGrnLine = withAction(
@@ -310,6 +335,21 @@ export const upsertGrnLine = withAction(
       };
     }
 
+    const rejected = data.rejectedQuantity ?? 0;
+    if (rejected > 0 && !data.rejectionReason) {
+      return {
+        success: false,
+        error: "Phải nhập lý do khi có hàng từ chối nhập.",
+      };
+    }
+    if (data.qualityStatus === "rejected" && data.receivedQuantity > 0) {
+      return {
+        success: false,
+        error:
+          "Đã đánh dấu toàn bộ dòng là từ chối — số thực nhận phải bằng 0.",
+      };
+    }
+
     const totalCost = data.receivedQuantity * data.unitCost;
     const { error } = await supabase.from("grn_items").upsert(
       {
@@ -324,6 +364,12 @@ export const upsertGrnLine = withAction(
         receiving_temperature: data.receivingTemperature ?? null,
         batch_number: data.batchNumber ?? null,
         expiry_date: data.expiryDate ?? null,
+        rejected_quantity: rejected,
+        rejection_reason: data.rejectionReason ?? null,
+        rejected_photo_url: data.rejectedPhotoUrl ?? null,
+        price_override_note: data.priceOverrideNote ?? null,
+        price_override_photo_url: data.priceOverridePhotoUrl ?? null,
+        short_delivery_action: data.shortDeliveryAction ?? null,
       },
       { onConflict: "grn_id,ingredient_id,tenant_id" },
     );
@@ -358,9 +404,21 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
     data && typeof data === "object" && !Array.isArray(data)
       ? ((data as { po_id?: number | null }).po_id ?? null)
       : null;
+  const reviewCount =
+    data && typeof data === "object" && !Array.isArray(data)
+      ? ((data as { review_count?: number }).review_count ?? 0)
+      : 0;
 
   revalidatePath("/inventory/grn");
   if (poId) revalidatePath(`/inventory/purchase-orders/${poId}`);
+
+  // Fire-and-forget dispatch when there are review-flagged lines (real-time alert).
+  // Errors are swallowed — outbox row remains pending and will be retried on next dispatch.
+  if (reviewCount > 0) {
+    void dispatchNotificationOutbox().catch((e) => {
+      console.error("dispatchNotificationOutbox post-confirmGrn", e);
+    });
+  }
 
   return { success: true, data };
 }
@@ -510,6 +568,7 @@ export async function createGrnFromPo(poId: number): Promise<ActionResult> {
       grn_id: grn.id,
       ingredient_id: line.ingredient_id,
       po_quantity: orderedQty,
+      po_unit_price: unitCost,
       received_quantity: remaining,
       unit: line.unit,
       unit_cost: unitCost,
@@ -637,20 +696,30 @@ export const createSupplierInvoice = withAction(
   },
 );
 
-export async function fetchSupplierInvoices(): Promise<ActionResult> {
+export async function fetchSupplierInvoices(
+  branchId?: number,
+): Promise<ActionResult> {
   const ctx = await getAuthContextWithPermission(
     ROLES,
     PERMISSION_KEYS.PROCUREMENT_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
-  const { data, error } = await supabase
+  const grnSelect =
+    branchId != null
+      ? "goods_received_notes!inner ( id, grn_number, branch_id )"
+      : "goods_received_notes ( id, grn_number )";
+  let query = supabase
     .from("supplier_invoices")
     .select(
-      "id, invoice_number, invoice_date, total_amount, matching_status, subtotal, supplier_id, grn_id, due_date, payment_status, paid_amount, paid_at, suppliers ( id, name ), goods_received_notes ( id, grn_number )",
+      `id, invoice_number, invoice_date, total_amount, matching_status, subtotal, supplier_id, grn_id, due_date, payment_status, paid_amount, paid_at, suppliers ( id, name ), ${grnSelect}`,
     )
     .eq("tenant_id", claims.tenant_id)
     .order("invoice_date", { ascending: false });
+  if (branchId != null) {
+    query = query.eq("goods_received_notes.branch_id", branchId);
+  }
+  const { data, error } = await query;
   if (error) return { success: false, error: "Không thể tải hóa đơn NCC." };
   return { success: true, data: data ?? [] };
 }

@@ -1,4 +1,4 @@
-import { CircleAlert } from "lucide-react";
+import { IconAlertCircle } from "@tabler/icons-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
   extractClaimsFromAccessToken,
@@ -45,7 +45,7 @@ export default async function KdsPage({
     return (
       <div className="flex h-dvh items-center justify-center p-6">
         <Alert variant="destructive" className="max-w-md">
-          <CircleAlert />
+          <IconAlertCircle />
           <AlertDescription>
             Không tải được danh sách trạm bếp. Vui lòng tải lại trang.
           </AlertDescription>
@@ -67,7 +67,7 @@ export default async function KdsPage({
     return (
       <div className="flex h-dvh items-center justify-center p-6">
         <Alert variant="destructive" className="max-w-md">
-          <CircleAlert />
+          <IconAlertCircle />
           <AlertDescription>
             Không tải được món chờ chế biến. Vui lòng tải lại trang.
           </AlertDescription>

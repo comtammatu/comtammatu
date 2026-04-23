@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, XCircle, CheckCircle } from "lucide-react";
+import { IconArrowLeft, IconCircleX, IconCircleCheck } from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -128,7 +128,7 @@ export function PODetailClient({ po }: { po: PODetail }) {
             href="/inventory/purchase-orders"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
           >
-            <ArrowLeft className="size-4" />{" "}
+            <IconArrowLeft className="size-4" />{" "}
             {tRoute("/inventory/purchase-orders", "heading")}
           </Link>
         }
@@ -417,7 +417,7 @@ export function PODetailClient({ po }: { po: PODetail }) {
           className="min-h-11 rounded-full px-6 font-bold text-destructive"
           onClick={handleCancelPo}
         >
-          <XCircle className="size-5" />
+          <IconCircleX className="size-5" />
           Hủy PO
         </Button>
         <Button
@@ -426,7 +426,7 @@ export function PODetailClient({ po }: { po: PODetail }) {
           className="min-h-11 rounded-full px-10 font-bold shadow-lg"
           onClick={canSendOrCancel ? handleSendPo : handleCreateGrn}
         >
-          <CheckCircle className="size-5" />
+          <IconCircleCheck className="size-5" />
           {canSendOrCancel ? "Gửi PO cho NCC" : "Sang bước tạo GRN"}
         </Button>
       </footer>

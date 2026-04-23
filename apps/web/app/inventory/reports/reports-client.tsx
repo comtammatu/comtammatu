@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import {
-  BarChart3,
-  TrendingUp,
-  ArrowLeftRight,
-  Package,
-} from "lucide-react";
+  IconChartBar,
+  IconTrendingUp,
+  IconArrowLeftRight,
+  IconPackage,
+} from "@tabler/icons-react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -72,7 +72,7 @@ export function ReportsClient({
             <div className="mb-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
-                  <BarChart3 className="size-5 text-primary" />
+                  <IconChartBar className="size-5 text-primary" />
                 </div>
                 <h3 className="text-lg font-bold text-foreground">
                   Biến động kho theo nhóm
@@ -199,7 +199,7 @@ export function ReportsClient({
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex size-10 items-center justify-center rounded-full bg-card">
-                        <Package className="size-5 text-muted-foreground" />
+                        <IconPackage className="size-5 text-muted-foreground" />
                       </div>
                       <div>
                         <p className="text-sm font-bold text-foreground">
@@ -274,22 +274,22 @@ export function ReportsClient({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
-            icon: BarChart3,
+            icon: IconChartBar,
             title: "Biến động kho chi tiết",
             desc: "Lịch sử nhập, xuất từng mã.",
           },
           {
-            icon: TrendingUp,
+            icon: IconTrendingUp,
             title: "Chênh lệch định mức",
             desc: "Hao hụt theo định mức.",
           },
           {
-            icon: ArrowLeftRight,
+            icon: IconArrowLeftRight,
             title: "Luân chuyển đang vận chuyển",
             desc: "Hàng đang đi nội bộ.",
           },
           {
-            icon: Package,
+            icon: IconPackage,
             title: "Tồn kho cuối kỳ",
             desc: "Giá trị tồn khi chốt.",
           },

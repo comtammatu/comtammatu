@@ -4,11 +4,11 @@ import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ArrowLeft,
-  LayoutTemplate,
-  LogOut,
-  UtensilsCrossed,
-} from "lucide-react";
+  IconArrowLeft,
+  IconLayoutDashboard,
+  IconLogout,
+  IconToolsKitchen,
+} from "@tabler/icons-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
@@ -40,7 +40,7 @@ const NAV_GROUPS: ShellNavGroup[] = [
   {
     title: "Thực đơn",
     items: [
-      { href: "/menu", label: "Tổng quan", icon: LayoutTemplate },
+      { href: "/menu", label: "Tổng quan", icon: IconLayoutDashboard },
     ],
   },
 ];
@@ -76,12 +76,12 @@ export function MenuShell({ children, user, role }: MenuShellProps) {
             href="/admin/dashboard"
             className="inline-flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground group-data-[collapsible=icon]:hidden"
           >
-            <ArrowLeft className="size-3.5" />
+            <IconArrowLeft className="size-3.5" />
             Quản trị
           </Link>
           <div className="flex items-center gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-              <UtensilsCrossed className="size-5" />
+              <IconToolsKitchen className="size-5" />
             </div>
             <div className="min-w-0 space-y-0.5 group-data-[collapsible=icon]:hidden">
               <p className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
@@ -145,7 +145,7 @@ export function MenuShell({ children, user, role }: MenuShellProps) {
                 className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
                 aria-label="Đăng xuất"
               >
-                <LogOut className="size-4" />
+                <IconLogout className="size-4" />
               </Button>
             </form>
           </div>

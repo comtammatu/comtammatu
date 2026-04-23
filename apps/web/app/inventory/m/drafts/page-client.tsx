@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ClipboardList, Pencil, Trash2 } from "lucide-react";
+import { IconClipboardList, IconPencil, IconTrash } from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
@@ -66,7 +66,7 @@ export function MobileDraftsClient({ userKey }: { userKey: string }) {
 
       {drafts.length === 0 ? (
         <MobileEmptyState
-          icon={ClipboardList}
+          icon={IconClipboardList}
           title="Chưa có phiếu nháp"
           description="Bắt đầu tạo phiếu nhập để hệ thống lưu lại tiến độ cho bạn."
         />
@@ -115,7 +115,7 @@ export function MobileDraftsClient({ userKey }: { userKey: string }) {
                     className="flex-1"
                     onClick={() => openDraft(draft)}
                   >
-                    <Pencil className="size-4" />
+                    <IconPencil className="size-4" />
                     Tiếp tục
                   </Button>
                   <Button
@@ -125,7 +125,7 @@ export function MobileDraftsClient({ userKey }: { userKey: string }) {
                     className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => discardDraft(draft)}
                   >
-                    <Trash2 className="size-4" />
+                    <IconTrash className="size-4" />
                     Xóa
                   </Button>
                 </div>

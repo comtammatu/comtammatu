@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { FileX2, Receipt } from "lucide-react";
+import { IconFileX, IconReceipt } from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -87,7 +87,7 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
       <div className="space-y-4">
         {invoices.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border px-6 py-10 text-center">
-            <Receipt className="mx-auto size-8 text-muted-foreground" />
+            <IconReceipt className="mx-auto size-8 text-muted-foreground" />
             <p className="mt-3 text-sm text-muted-foreground">
               Chưa có hóa đơn nào
             </p>
@@ -141,7 +141,7 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
                     className="text-destructive hover:text-destructive"
                     onClick={() => setCancelTarget(inv)}
                   >
-                    <FileX2 className="size-4" />
+                    <IconFileX className="size-4" />
                     Hủy hóa đơn
                   </Button>
                 ) : null}
@@ -169,7 +169,7 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
                   colSpan={7}
                   title="Chưa có hóa đơn nào"
                   icon={
-                    <Receipt className="mx-auto size-8 text-muted-foreground" />
+                    <IconReceipt className="mx-auto size-8 text-muted-foreground" />
                   }
                 />
               )}
@@ -214,7 +214,7 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
                         className="size-8 text-destructive hover:text-destructive"
                         onClick={() => setCancelTarget(inv)}
                       >
-                        <FileX2 className="size-4" />
+                        <IconFileX className="size-4" />
                         <span className="sr-only">Hủy hóa đơn</span>
                       </Button>
                     )}

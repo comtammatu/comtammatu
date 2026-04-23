@@ -1,13 +1,21 @@
 import { fetchGrns, fetchSupplierInvoices } from "../procurement-actions";
 import { fetchSuppliers } from "../supplier-actions";
+import { parseBranchIdParam } from "../_lib/inventory-scope";
 import { SupplierInvoicesClient } from "./supplier-invoices-client";
 import type { SupplierInvoiceRow } from "./supplier-invoices-client";
 
-export default async function SupplierInvoicesPage() {
+export default async function SupplierInvoicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const branchFilter = parseBranchIdParam(params.branchId) ?? undefined;
+
   const [res, suppliersRes, grnsRes] = await Promise.all([
-    fetchSupplierInvoices(),
+    fetchSupplierInvoices(branchFilter),
     fetchSuppliers(),
-    fetchGrns(),
+    fetchGrns(branchFilter),
   ]);
   const dbRows = res.success
     ? (res.data as Array<Record<string, unknown>>)

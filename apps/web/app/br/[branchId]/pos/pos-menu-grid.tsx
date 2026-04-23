@@ -26,7 +26,7 @@ import {
 import { formatVND } from "@comtammatu/shared/format";
 import type { CategoryType } from "@comtammatu/shared";
 import { CATEGORY_TYPE_LABELS } from "@comtammatu/shared/menu";
-import { ChefHat, Plus, Search, ShoppingCart, X } from "lucide-react";
+import { IconChefHat, IconPlus, IconSearch, IconShoppingCart, IconX } from "@tabler/icons-react";
 import { MENU_ZONE_ORDER } from "./pos-menu-types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
 import type { OrderType } from "./types";
@@ -38,6 +38,8 @@ interface PosMenuGridProps {
   orderType: OrderType;
   selectedTableNumber: number | undefined;
   onItemTap: (item: MenuItem) => void;
+  /** Hide header status badges when sidebar already surfaces them (v2). */
+  showHeaderBadges?: boolean;
 }
 
 export function PosMenuGrid({
@@ -47,6 +49,7 @@ export function PosMenuGrid({
   orderType,
   selectedTableNumber,
   onItemTap,
+  showHeaderBadges = true,
 }: PosMenuGridProps) {
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(
     categories[0]?.id ?? null,
@@ -122,7 +125,7 @@ export function PosMenuGrid({
     return (
       <Empty className="flex-1">
         <EmptyMedia variant="icon">
-          <ChefHat />
+          <IconChefHat />
         </EmptyMedia>
         <EmptyHeader>
           <EmptyTitle>Chưa có món trong thực đơn</EmptyTitle>
@@ -152,17 +155,19 @@ export function PosMenuGrid({
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">{contextLabel}</Badge>
-                <Badge variant="outline">{cartQuantity} món trong giỏ</Badge>
-                <Badge variant="outline">{formatVND(cartTotal)}</Badge>
-              </div>
+              {showHeaderBadges && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary">{contextLabel}</Badge>
+                  <Badge variant="outline">{cartQuantity} món trong giỏ</Badge>
+                  <Badge variant="outline">{formatVND(cartTotal)}</Badge>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
               <InputGroup className="h-11 lg:max-w-md">
                 <InputGroupAddon>
-                  <Search />
+                  <IconSearch />
                 </InputGroupAddon>
                 <InputGroupInput
                   value={query}
@@ -177,64 +182,62 @@ export function PosMenuGrid({
                       aria-label="Xóa tìm kiếm"
                       onClick={() => setQuery("")}
                     >
-                      <X />
+                      <IconX />
                     </InputGroupButton>
                   </InputGroupAddon>
                 )}
               </InputGroup>
 
-              <ScrollArea className="w-full lg:flex-1">
-                <Tabs
-                  value={effectiveMenuZone}
-                  onValueChange={(value) =>
-                    setActiveMenuZone(value as CategoryType)
-                  }
-                  className="gap-0"
+              <Tabs
+                value={effectiveMenuZone}
+                onValueChange={(value) =>
+                  setActiveMenuZone(value as CategoryType)
+                }
+                className="w-full gap-0 lg:flex-1"
+              >
+                <TabsList
+                  aria-label="Khu thực đơn"
+                  style={{ height: "auto" }}
+                  className="w-full justify-start gap-2 rounded-lg border bg-card p-1"
                 >
-                  <TabsList
-                    aria-label="Khu thực đơn"
-                    className="h-auto justify-start gap-2 overflow-x-auto rounded-lg border bg-card p-2"
-                  >
-                    {availableMenuZones.map((zone) => (
-                      <TabsTrigger
-                        key={zone}
-                        value={zone}
-                        className="min-h-11 shrink-0 px-4 text-sm font-semibold"
-                      >
-                        {CATEGORY_TYPE_LABELS[zone] ?? zone}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
-              </ScrollArea>
+                  {availableMenuZones.map((zone) => (
+                    <TabsTrigger
+                      key={zone}
+                      value={zone}
+                      className="shrink-0 px-4 py-2 text-sm font-semibold"
+                    >
+                      {CATEGORY_TYPE_LABELS[zone] ?? zone}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
             </div>
 
             {categoriesInActiveZone.length > 1 ? (
-              <ScrollArea className="w-full">
-                <Tabs
-                  value={activeCategoryValue}
-                  onValueChange={(value) => setActiveCategoryId(Number(value))}
-                  className="gap-0"
+              <Tabs
+                value={activeCategoryValue}
+                onValueChange={(value) => setActiveCategoryId(Number(value))}
+                className="w-full gap-0"
+              >
+                <TabsList
+                  aria-label="Danh mục món"
+                  style={{ height: "auto" }}
+                  className="w-full justify-start gap-2 rounded-lg border bg-background p-1"
                 >
-                  <TabsList
-                    aria-label="Danh mục món"
-                    className="h-auto justify-start gap-2 overflow-x-auto rounded-lg border bg-background p-2"
-                  >
-                    {categoriesInActiveZone.map((category) => (
-                      <TabsTrigger
-                        key={category.id}
-                        value={String(category.id)}
-                        className="min-h-10 shrink-0 gap-2 px-3 text-sm font-medium"
-                      >
-                        {category.name}
-                        <Badge variant="outline" className="text-xs">
-                          {category.menu_items.length}
-                        </Badge>
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
-              </ScrollArea>
+                  {categoriesInActiveZone.map((category) => (
+                    <TabsTrigger
+                      key={category.id}
+                      value={String(category.id)}
+                      className="shrink-0 gap-2 px-3 py-2 text-sm font-medium"
+                    >
+                      {category.name}
+                      <Badge variant="outline" className="text-xs">
+                        {category.menu_items.length}
+                      </Badge>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
             ) : null}
           </div>
         </div>
@@ -329,7 +332,7 @@ export function PosMenuGrid({
                         </p>
                       </div>
                       <span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground">
-                        <Plus className="size-4" />
+                        <IconPlus className="size-4" />
                         Chọn món
                       </span>
                     </div>
@@ -342,7 +345,7 @@ export function PosMenuGrid({
           {visibleItems.length === 0 && (
             <Empty className="py-12">
               <EmptyMedia variant="icon">
-                <ShoppingCart />
+                <IconShoppingCart />
               </EmptyMedia>
               <EmptyHeader>
                 <EmptyTitle>Không tìm thấy món phù hợp</EmptyTitle>

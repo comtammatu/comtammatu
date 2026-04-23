@@ -4,16 +4,16 @@ import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ArrowLeft,
-  BarChart3,
-  BookOpen,
-  CalendarDays,
-  FileText,
-  LogOut,
-  Receipt,
-  Settings2,
-  Wallet,
-} from "lucide-react";
+  IconArrowLeft,
+  IconChartBar,
+  IconBook,
+  IconCalendarEvent,
+  IconFileText,
+  IconLogout,
+  IconReceipt,
+  IconSettings2,
+  IconWallet,
+} from "@tabler/icons-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
@@ -44,7 +44,7 @@ import {
 const NAV_GROUPS: ShellNavGroup[] = [
   {
     title: "Tổng quan",
-    items: [{ href: "/finance", label: "Tài chính", icon: Wallet }],
+    items: [{ href: "/finance", label: "Tài chính", icon: IconWallet }],
   },
   {
     title: "Kế toán",
@@ -52,13 +52,13 @@ const NAV_GROUPS: ShellNavGroup[] = [
       {
         href: "/finance/chart-of-accounts",
         label: "Hệ thống tài khoản",
-        icon: BookOpen,
+        icon: IconBook,
       },
-      { href: "/finance/journal", label: "Sổ nhật ký", icon: FileText },
+      { href: "/finance/journal", label: "Sổ nhật ký", icon: IconFileText },
       {
         href: "/finance/posting-rules",
         label: "Quy tắc hạch toán",
-        icon: Settings2,
+        icon: IconSettings2,
       },
     ],
   },
@@ -68,15 +68,15 @@ const NAV_GROUPS: ShellNavGroup[] = [
       {
         href: "/finance/statements",
         label: "Báo cáo tài chính",
-        icon: BarChart3,
+        icon: IconChartBar,
       },
-      { href: "/finance/food-cost", label: "Giá vốn món", icon: Receipt },
+      { href: "/finance/food-cost", label: "Giá vốn món", icon: IconReceipt },
     ],
   },
   {
     title: "Chu kỳ",
     items: [
-      { href: "/finance/periods", label: "Kỳ kế toán", icon: CalendarDays },
+      { href: "/finance/periods", label: "Kỳ kế toán", icon: IconCalendarEvent },
     ],
   },
 ];
@@ -112,12 +112,12 @@ export function FinanceShell({ children, user, role }: FinanceShellProps) {
             href="/admin/dashboard"
             className="inline-flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground group-data-[collapsible=icon]:hidden"
           >
-            <ArrowLeft className="size-3.5" />
+            <IconArrowLeft className="size-3.5" />
             Quản trị
           </Link>
           <div className="flex items-center gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-              <Wallet className="size-5" />
+              <IconWallet className="size-5" />
             </div>
             <div className="min-w-0 space-y-0.5 group-data-[collapsible=icon]:hidden">
               <p className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
@@ -181,7 +181,7 @@ export function FinanceShell({ children, user, role }: FinanceShellProps) {
                 className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
                 aria-label="Đăng xuất"
               >
-                <LogOut className="size-4" />
+                <IconLogout className="size-4" />
               </Button>
             </form>
           </div>

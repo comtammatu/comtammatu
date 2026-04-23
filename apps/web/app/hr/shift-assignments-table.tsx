@@ -2,12 +2,12 @@
 
 import { useState, useTransition, useCallback } from "react";
 import {
-  ChevronLeft,
-  ChevronRight,
-  CalendarDays,
-  Plus,
-  X,
-} from "lucide-react";
+  IconChevronLeft,
+  IconChevronRight,
+  IconCalendarEvent,
+  IconPlus,
+  IconX,
+} from "@tabler/icons-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -271,7 +271,7 @@ export function ShiftAssignmentsTable({
             onClick={() => handleWeekChange(-1)}
             disabled={isPending}
           >
-            <ChevronLeft className="size-4" />
+            <IconChevronLeft className="size-4" />
           </Button>
           <Button
             variant="outline"
@@ -287,7 +287,7 @@ export function ShiftAssignmentsTable({
             onClick={() => handleWeekChange(1)}
             disabled={isPending}
           >
-            <ChevronRight className="size-4" />
+            <IconChevronRight className="size-4" />
           </Button>
         </div>
 
@@ -302,7 +302,7 @@ export function ShiftAssignmentsTable({
       {/* Calendar Grid */}
       {shifts.length === 0 && !isPending ? (
         <div className="flex flex-col items-center gap-2 py-12">
-          <CalendarDays className="size-8 text-muted-foreground" />
+          <IconCalendarEvent className="size-8 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
             {selectedBranchId === 0
               ? "Chọn chi nhánh để xem phân ca"
@@ -362,7 +362,7 @@ export function ShiftAssignmentsTable({
                                   onClick={() => setDeleteTarget(a)}
                                   aria-label="Xóa phân ca"
                                 >
-                                  <X className="size-3" />
+                                  <IconX className="size-3" />
                                 </Button>
                               </div>
                             ))}
@@ -373,7 +373,7 @@ export function ShiftAssignmentsTable({
                               className="h-auto border-dashed py-0.5 text-muted-foreground/50 hover:border-primary hover:text-primary"
                               onClick={() => openAddDialog(shift.id, date)}
                             >
-                              <Plus className="size-3" />
+                              <IconPlus className="size-3" />
                             </Button>
                           </div>
                         </TableCell>

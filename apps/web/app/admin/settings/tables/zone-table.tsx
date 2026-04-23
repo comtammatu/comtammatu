@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { MoreHorizontal, Pencil, Trash2, MapPin } from "lucide-react";
+import { IconDots, IconPencil, IconTrash, IconMapPin } from "@tabler/icons-react";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   DropdownMenu,
@@ -78,7 +78,7 @@ export function ZoneTable({ zones }: ZoneTableProps) {
                 colSpan={3}
                 title="Chưa có khu vực nào"
                 icon={
-                  <MapPin className="mx-auto size-8 text-muted-foreground" />
+                  <IconMapPin className="mx-auto size-8 text-muted-foreground" />
                 }
               />
             )}
@@ -94,13 +94,13 @@ export function ZoneTable({ zones }: ZoneTableProps) {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon-lg">
-                        <MoreHorizontal className="size-4" />
+                        <IconDots className="size-4" />
                         <span className="sr-only">Menu</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setEditZone(zone)}>
-                        <Pencil className="mr-2 size-4" />
+                        <IconPencil className="mr-2 size-4" />
                         Sửa
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -108,7 +108,7 @@ export function ZoneTable({ zones }: ZoneTableProps) {
                         className="text-destructive"
                         onClick={() => setDeleteId(zone.id)}
                       >
-                        <Trash2 className="mr-2 size-4" />
+                        <IconTrash className="mr-2 size-4" />
                         Xóa
                       </DropdownMenuItem>
                     </DropdownMenuContent>

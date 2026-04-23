@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { AlertTriangle, CheckCircle2, Search } from "lucide-react";
+import { IconAlertTriangle, IconCircleCheck, IconSearch } from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -399,11 +399,11 @@ export function SupplierInvoicesClient({
       <div className="mx-auto max-w-7xl space-y-4">
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
-          {/* Search + filters */}
+          {/* IconSearch + filters */}
           <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
             <InputGroup className="h-10 flex-1">
               <InputGroupAddon>
-                <Search />
+                <IconSearch />
               </InputGroupAddon>
               <InputGroupInput
                 value={search}
@@ -475,7 +475,7 @@ export function SupplierInvoicesClient({
                   onClick={() => setShowOnlyOverdue((current) => !current)}
                   aria-pressed={showOnlyOverdue}
                 >
-                  <AlertTriangle className="size-4" />
+                  <IconAlertTriangle className="size-4" />
                   Chỉ xem hóa đơn quá hạn
                 </Button>
                 <Badge variant="outline" className="rounded-full">
@@ -820,7 +820,7 @@ export function SupplierInvoicesClient({
                   selectedInvoice.variance > 0 ? (
                     <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
                       <div className="flex items-start gap-3">
-                        <AlertTriangle className="mt-0.5 size-4 text-destructive" />
+                        <IconAlertTriangle className="mt-0.5 size-4 text-destructive" />
                         <div className="space-y-1">
                           <p className="text-sm font-semibold text-destructive">
                             Chênh lệch đối soát {selectedInvoice.variance}%
@@ -835,7 +835,7 @@ export function SupplierInvoicesClient({
                   ) : (
                     <div className="rounded-2xl border border-success/30 bg-success/5 p-4">
                       <div className="flex items-start gap-3">
-                        <CheckCircle2 className="mt-0.5 size-4 text-success" />
+                        <IconCircleCheck className="mt-0.5 size-4 text-success" />
                         <div className="space-y-1">
                           <p className="text-sm font-semibold text-success">
                             Hóa đơn đang ở ngưỡng an toàn để xử lý tiếp

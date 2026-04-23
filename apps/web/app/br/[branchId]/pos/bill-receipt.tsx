@@ -18,13 +18,13 @@ import {
   SheetDescription,
 } from "@comtammatu/ui/components/sheet";
 import {
-  CheckCircle2,
-  CircleDollarSign,
-  ExternalLink,
-  Printer,
-  ReceiptText,
-  ScanQrCode,
-} from "lucide-react";
+  IconCircleCheck,
+  IconCurrencyDollar,
+  IconExternalLink,
+  IconPrinter,
+  IconFileInvoice,
+  IconQrcode,
+} from "@tabler/icons-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { fetchOrderForBill, updateOrderStatus } from "./actions";
@@ -543,16 +543,16 @@ export function BillReceipt({
                           >
                             <span className="flex items-center gap-2">
                               {m === "cash" ? (
-                                <CircleDollarSign className="size-4" />
+                                <IconCurrencyDollar className="size-4" />
                               ) : (
-                                <ScanQrCode className="size-4" />
+                                <IconQrcode className="size-4" />
                               )}
                               {METHOD_LABELS[m] ?? m}
                             </span>
                             {payPending ? (
                               <Spinner />
                             ) : (
-                              <ReceiptText className="size-4 opacity-70" />
+                              <IconFileInvoice className="size-4 opacity-70" />
                             )}
                           </Button>
                         ))}
@@ -570,7 +570,7 @@ export function BillReceipt({
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            <ExternalLink className="mr-2 size-4" />
+                            <IconExternalLink className="mr-2 size-4" />
                             Mở trang thanh toán MoMo
                           </a>
                         </Button>
@@ -614,7 +614,7 @@ export function BillReceipt({
                     {completePending ? (
                       <Spinner className="mr-2" />
                     ) : (
-                      <CheckCircle2 className="mr-2 size-4" />
+                      <IconCircleCheck className="mr-2 size-4" />
                     )}
                     {order?.order_type === "dine_in"
                       ? "Hoàn tất và trả bàn"
@@ -627,9 +627,9 @@ export function BillReceipt({
                   onClick={handlePrint}
                 >
                 {isPaid ? (
-                  <CheckCircle2 className="mr-2 size-4" />
+                  <IconCircleCheck className="mr-2 size-4" />
                 ) : (
-                  <Printer className="mr-2 size-4" />
+                  <IconPrinter className="mr-2 size-4" />
                 )}
                 In hóa đơn
                 </Button>

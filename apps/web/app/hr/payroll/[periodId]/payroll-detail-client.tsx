@@ -12,7 +12,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Calculator, CheckCircle, CreditCard } from "lucide-react";
+import { IconCalculator, IconCircleCheck, IconCreditCard } from "@tabler/icons-react";
 import {
   calculatePayroll,
   approvePayroll,
@@ -102,7 +102,7 @@ export function PayrollDetailClient({
           {isPending ? (
             <Spinner className="mr-2" />
           ) : (
-            <Calculator className="mr-2 size-4" />
+            <IconCalculator className="mr-2 size-4" />
           )}
           Tính lương
         </Button>
@@ -111,7 +111,7 @@ export function PayrollDetailClient({
           disabled={isPending || entries.length === 0}
           variant="outline"
         >
-          <CheckCircle className="mr-2 size-4" />
+          <IconCircleCheck className="mr-2 size-4" />
           Duyệt
         </Button>
         <Button
@@ -119,7 +119,7 @@ export function PayrollDetailClient({
           disabled={isPending || entries.length === 0}
           variant="outline"
         >
-          <CreditCard className="mr-2 size-4" />
+          <IconCreditCard className="mr-2 size-4" />
           Thanh toán
         </Button>
       </div>

@@ -3,7 +3,7 @@
 import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, LogOut, Receipt } from "lucide-react";
+import { IconArrowLeft, IconLogout, IconReceipt } from "@tabler/icons-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
@@ -34,7 +34,7 @@ import {
 const NAV_GROUPS: ShellNavGroup[] = [
   {
     title: "Đơn hàng",
-    items: [{ href: "/orders", label: "Tổng quan", icon: Receipt }],
+    items: [{ href: "/orders", label: "Tổng quan", icon: IconReceipt }],
   },
 ];
 
@@ -69,12 +69,12 @@ export function OrdersShell({ children, user, role }: OrdersShellProps) {
             href="/admin/dashboard"
             className="inline-flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground group-data-[collapsible=icon]:hidden"
           >
-            <ArrowLeft className="size-3.5" />
+            <IconArrowLeft className="size-3.5" />
             Quản trị
           </Link>
           <div className="flex items-center gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-              <Receipt className="size-5" />
+              <IconReceipt className="size-5" />
             </div>
             <div className="min-w-0 space-y-0.5 group-data-[collapsible=icon]:hidden">
               <p className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
@@ -138,7 +138,7 @@ export function OrdersShell({ children, user, role }: OrdersShellProps) {
                 className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
                 aria-label="Đăng xuất"
               >
-                <LogOut className="size-4" />
+                <IconLogout className="size-4" />
               </Button>
             </form>
           </div>

@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Button } from "@comtammatu/ui/components/button";
-import { Plus } from "lucide-react";
+import { IconPlus } from "@tabler/icons-react";
 import { ZoneTable } from "./zone-table";
 import { ZoneFormDialog } from "./zone-form-dialog";
 import { TableTable } from "./table-table";
@@ -90,7 +90,7 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
         <TabsContent value="zones" className="mt-4 space-y-4">
           <div className="flex justify-end">
             <Button onClick={() => setZoneDialogOpen(true)}>
-              <Plus className="mr-2 size-4" />
+              <IconPlus className="mr-2 size-4" />
               Thêm khu vực
             </Button>
           </div>
@@ -100,7 +100,7 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
         <TabsContent value="tables" className="mt-4 space-y-4">
           <div className="flex justify-end">
             <Button onClick={() => setTableDialogOpen(true)}>
-              <Plus className="mr-2 size-4" />
+              <IconPlus className="mr-2 size-4" />
               Thêm bàn
             </Button>
           </div>

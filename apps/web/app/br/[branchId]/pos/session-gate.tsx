@@ -33,7 +33,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Monitor, TriangleAlert, Wallet } from "lucide-react";
+import { IconDeviceDesktop, IconAlertTriangle, IconWallet } from "@tabler/icons-react";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { openPosSession } from "./actions";
 
@@ -116,7 +116,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
                 </CardDescription>
               </div>
               <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Monitor className="size-5" />
+                <IconDeviceDesktop className="size-5" />
               </div>
             </div>
           </CardHeader>
@@ -127,7 +127,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
                 <FieldLabel htmlFor="terminal">Máy POS</FieldLabel>
                 {terminals.length === 0 ? (
                   <Alert className="border-warning/20 bg-warning/10 text-warning">
-                    <TriangleAlert />
+                    <IconAlertTriangle />
                     <AlertTitle>Chưa có máy POS</AlertTitle>
                     <AlertDescription>
                       Liên hệ quản lý để thiết lập máy POS trước khi mở ca.
@@ -135,7 +135,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
                   </Alert>
                 ) : availableTerminalCount === 0 ? (
                   <Alert className="border-warning/20 bg-warning/10 text-warning">
-                    <TriangleAlert />
+                    <IconAlertTriangle />
                     <AlertTitle>Tất cả máy đang có ca mở</AlertTitle>
                     <AlertDescription>
                       Đóng ca trên một máy POS hoặc chọn ca khác trước khi tiếp
@@ -169,7 +169,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
 
               {selectedTerminalOccupied ? (
                 <Alert className="border-warning/20 bg-warning/10 text-warning">
-                  <TriangleAlert />
+                  <IconAlertTriangle />
                   <AlertTitle>Máy POS đang bận</AlertTitle>
                   <AlertDescription>
                     Chọn máy khác hoặc đóng ca hiện tại trước khi tiếp tục.
@@ -206,7 +206,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
                       {statusText}
                     </p>
                   </div>
-                  <Wallet className="size-4 shrink-0 text-muted-foreground" />
+                  <IconWallet className="size-4 shrink-0 text-muted-foreground" />
                 </div>
               </div>
             </FieldGroup>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ShieldAlert } from "lucide-react";
+import { IconArrowLeft, IconShieldExclamation } from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -37,7 +37,7 @@ export default async function AccessDeniedPage({
       <CardHeader className="gap-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex size-12 items-center justify-center rounded-2xl border bg-muted text-muted-foreground">
-            <ShieldAlert className="size-5" />
+            <IconShieldExclamation className="size-5" />
           </div>
           <Badge variant="outline" className={TONE_BADGE_CLASS[copy.tone]}>
             Quyền truy cập
@@ -65,7 +65,7 @@ export default async function AccessDeniedPage({
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button asChild className="flex-1">
             <Link href="/">
-              <ArrowLeft className="size-4" />
+              <IconArrowLeft className="size-4" />
               Về trang mặc định
             </Link>
           </Button>

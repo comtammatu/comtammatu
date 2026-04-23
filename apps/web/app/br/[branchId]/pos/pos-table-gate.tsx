@@ -11,7 +11,7 @@ import {
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import { Armchair, LayoutGrid, MapPinned } from "lucide-react";
+import { IconArmchair, IconLayoutGrid, IconMapPin } from "@tabler/icons-react";
 import type { BranchTable } from "./page";
 
 interface PosTableGateProps {
@@ -61,7 +61,7 @@ export function PosTableGate({
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <LayoutGrid className="size-5" />
+              <IconLayoutGrid className="size-5" />
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -85,7 +85,7 @@ export function PosTableGate({
       {tables.length === 0 ? (
         <Empty className="flex-1">
           <EmptyMedia variant="icon">
-            <LayoutGrid />
+            <IconLayoutGrid />
           </EmptyMedia>
           <EmptyHeader>
             <EmptyTitle>Chưa có bàn</EmptyTitle>
@@ -102,7 +102,7 @@ export function PosTableGate({
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2">
                     <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <MapPinned className="size-4" />
+                      <IconMapPin className="size-4" />
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-foreground">
@@ -179,7 +179,7 @@ export function PosTableGate({
                         </div>
 
                         <div className="flex items-center gap-2 text-sm font-medium">
-                          <Armchair className="size-4" />
+                          <IconArmchair className="size-4" />
                           <span>{table.capacity} chỗ</span>
                         </div>
                       </button>

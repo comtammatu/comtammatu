@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { IconCheck, IconChevronDown } from "@tabler/icons-react";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -63,7 +63,7 @@ export function SearchableSelect({
           <span className={cn(!selected && "opacity-60")}>
             {selected?.label ?? placeholder}
           </span>
-          <ChevronDown
+          <IconChevronDown
             className={cn(
               "size-3.5 shrink-0 opacity-50 transition-transform",
               open && "rotate-180",
@@ -110,7 +110,7 @@ export function SearchableSelect({
                 >
                   <span className="flex-1">{option.label}</span>
                   {value === option.value ? (
-                    <Check className="size-4 shrink-0 text-primary" />
+                    <IconCheck className="size-4 shrink-0 text-primary" />
                   ) : null}
                 </CommandItem>
               ))}

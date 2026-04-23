@@ -40,6 +40,11 @@ export const PERMISSION_KEYS = {
   PROCUREMENT_INVOICE_MATCH: "procurement:invoice_match",
   PROCUREMENT_SUPPLIER_MANAGE: "procurement:supplier_manage",
 
+  // supplier returns (QC at receiving + post-receipt returns)
+  SUPPLIER_RETURN_READ: "supplier_return:read",
+  SUPPLIER_RETURN_CREATE: "supplier_return:create",
+  SUPPLIER_RETURN_CONFIRM: "supplier_return:confirm",
+
   // orders
   ORDERS_READ: "orders:read",
   ORDERS_WRITE: "orders:write",
@@ -91,17 +96,22 @@ export const PERMISSION_KEYS = {
   POS_OPEN_CASHBOX: "pos:open_cashbox",
   POS_CLOSE_SHIFT: "pos:close_shift",
   POS_REPRINT_RECEIPT: "pos:reprint_receipt",
+  POS_SEND_KITCHEN: "pos:send_kitchen",
+  POS_PRINT: "pos:print",
 
   // kds
   KDS_USE: "kds:use",
   KDS_MARK_READY: "kds:mark_ready",
   KDS_RECALL: "kds:recall",
+
+  // printer
+  PRINTER_MANAGE: "printer:manage",
 } as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];
 
 /** Total count (static assertion — update when adding keys) */
-export const PERMISSION_KEY_COUNT = 62;
+export const PERMISSION_KEY_COUNT = 68;
 
 /**
  * Pure function: check if a permission set contains a given key.

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus } from "lucide-react";
+import { IconPencil, IconPlus } from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -106,7 +106,7 @@ export function RecipesClient({
         title="Định mức món bán"
         actions={
           <Button type="button" onClick={openCreate}>
-            <Plus data-icon="inline-start" />
+            <IconPlus data-icon="inline-start" />
             Tạo định mức
           </Button>
         }
@@ -147,7 +147,7 @@ export function RecipesClient({
                     size="sm"
                     onClick={() => openEdit(recipe)}
                   >
-                    <Pencil className="size-4" />
+                    <IconPencil className="size-4" />
                     Sửa định mức
                   </Button>
                 </CardHeader>

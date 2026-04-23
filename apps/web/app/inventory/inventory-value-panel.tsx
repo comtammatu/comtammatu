@@ -1,15 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition, type ReactNode } from "react";
-import { RefreshCw } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
+import { IconRefresh } from "@tabler/icons-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import type { InventoryValueVisibility } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-} from "@comtammatu/ui/components/card";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Table,
   TableBody,
@@ -24,6 +27,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
@@ -119,7 +123,9 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
   const branchTotal =
     branchRows?.reduce((sum, row) => sum + Number(row.totalValue), 0) ?? 0;
   const SummaryBox = ({ children }: { children: ReactNode }) => (
-    <Card className="bg-muted/30"><CardContent className="px-4 py-4">{children}</CardContent></Card>
+    <Card className="bg-muted/30">
+      <CardContent className="px-4 py-4">{children}</CardContent>
+    </Card>
   );
 
   return (
@@ -146,9 +152,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
             disabled={isPending}
             className="gap-1.5 text-muted-foreground"
           >
-            <RefreshCw
-              className={`size-4 ${isPending ? "animate-spin" : ""}`}
-            />
+            {isPending ? <Spinner /> : <IconRefresh className="size-4" />}
             {APP_COPY_VI.refresh}
           </Button>
         </div>
@@ -174,23 +178,29 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
           <Card>
             <CardContent className="space-y-4 pt-6">
               <div className="grid gap-3 sm:grid-cols-2">
-                <Card className="bg-muted/30"><CardContent className="p-4">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                    Giá trị hiện tại
-                  </p>
-                  <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
-                    {systemTotal == null ? "—" : formatVND(systemTotal)}
-                  </p>
-                </CardContent></Card>
-                <Card className="bg-muted/30"><CardContent className="p-4">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                    Phạm vi xem
-                  </p>
-                  <p className="mt-2 text-base font-semibold">Toàn hệ thống</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Tổng hợp tất cả chi nhánh theo WAC hoặc giá tham chiếu.
-                  </p>
-                </CardContent></Card>
+                <Card className="bg-muted/30">
+                  <CardContent className="p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                      Giá trị hiện tại
+                    </p>
+                    <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
+                      {systemTotal == null ? "—" : formatVND(systemTotal)}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/30">
+                  <CardContent className="p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+                      Phạm vi xem
+                    </p>
+                    <p className="mt-2 text-base font-semibold">
+                      Toàn hệ thống
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Tổng hợp tất cả chi nhánh theo WAC hoặc giá tham chiếu.
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
             </CardContent>
           </Card>

@@ -1,5 +1,5 @@
 import { fetchPayrollEntries } from "../../payroll-actions";
-import { AlertTriangle } from "lucide-react";
+import { IconAlertTriangle } from "@tabler/icons-react";
 import {
   Card,
   CardContent,
@@ -23,7 +23,7 @@ export default async function PayrollDetailPage({
         <CardHeader className="gap-3">
           <div className="flex items-center gap-2 text-muted-foreground">
             <div className="flex size-8 items-center justify-center rounded-full border bg-muted">
-              <AlertTriangle className="size-4" />
+              <IconAlertTriangle className="size-4" />
             </div>
             <CardTitle className="text-xl">ID không hợp lệ</CardTitle>
           </div>

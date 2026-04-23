@@ -1,4 +1,4 @@
-import { ShieldCheck } from "lucide-react";
+import { IconShieldCheck } from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Card,
@@ -36,7 +36,7 @@ export default async function PermissionsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <ShieldCheck className="size-4" /> Quyền hạn của tôi
+            <IconShieldCheck className="size-4" /> Quyền hạn của tôi
           </CardTitle>
           <CardDescription>
             Trang kiểm tra quyền hiện tại của tài khoản đang đăng nhập.

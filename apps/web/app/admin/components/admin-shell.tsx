@@ -4,20 +4,20 @@ import { Fragment, useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BarChart3,
-  Briefcase,
-  ChefHat,
-  LayoutDashboard,
-  LogOut,
-  Monitor,
-  Package,
-  Receipt,
-  Settings,
-  ShieldCheck,
-  Users,
-  UtensilsCrossed,
-  Wallet,
-} from "lucide-react";
+  IconChartBar,
+  IconBriefcase,
+  IconChefHat,
+  IconLayoutDashboard,
+  IconLogout,
+  IconDeviceDesktop,
+  IconPackage,
+  IconReceipt,
+  IconSettings,
+  IconShieldCheck,
+  IconUsers,
+  IconToolsKitchen,
+  IconWallet,
+} from "@tabler/icons-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import {
   ROLE_LABEL_VI,
@@ -58,17 +58,17 @@ import {
 } from "@/lib/shell-primitives";
 
 const ADMIN_ICON_MAP: Record<string, React.ElementType> = {
-  LayoutDashboard,
-  BarChart3,
-  Users,
-  Wallet,
-  Package,
-  Briefcase,
-  Monitor,
-  Settings,
-  ChefHat,
-  Receipt,
-  UtensilsCrossed,
+  IconLayoutDashboard,
+  IconChartBar,
+  IconUsers,
+  IconWallet,
+  IconPackage,
+  IconBriefcase,
+  IconDeviceDesktop,
+  IconSettings,
+  IconChefHat,
+  IconReceipt,
+  IconToolsKitchen,
 };
 
 function mapResolvedNavGroups(
@@ -80,7 +80,7 @@ function mapResolvedNavGroups(
       href: item.href,
       label: item.label,
       icon: (ADMIN_ICON_MAP[item.icon] ??
-        LayoutDashboard) as typeof LayoutDashboard,
+        IconLayoutDashboard) as typeof IconLayoutDashboard,
     })),
   }));
 }
@@ -138,7 +138,7 @@ export function AdminShell({
         <SidebarHeader className="gap-4 p-4">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-              <ShieldCheck className="size-5" />
+              <IconShieldCheck className="size-5" />
             </div>
             <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
               <p className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
@@ -202,7 +202,7 @@ export function AdminShell({
                   className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
                   aria-label="Đăng xuất"
                 >
-                  <LogOut className="size-4" />
+                  <IconLogout className="size-4" />
                 </Button>
               </form>
             </div>

@@ -26,7 +26,7 @@ export function IngredientSearchDialog({
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput placeholder="Tìm theo tên, SKU, danh mục…" />
-      <CommandList className="max-h-[min(70vh,520px)]">
+      <CommandList className="max-h-96">
         <CommandEmpty>Không tìm thấy nguyên liệu.</CommandEmpty>
         <CommandGroup heading={tTerm("ingredientsList")}>
           {active.map((i) => (

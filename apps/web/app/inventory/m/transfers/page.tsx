@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  ArrowRight,
-  CheckCircle2,
-  ChevronRight,
-  History,
-  PackageCheck,
-  PackageX,
-  Send,
-} from "lucide-react";
+  IconArrowRight,
+  IconCircleCheck,
+  IconChevronRight,
+  IconHistory,
+  IconPackageImport,
+  IconPackageOff,
+  IconSend,
+} from "@tabler/icons-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
   extractClaimsFromAccessToken,
@@ -175,7 +175,7 @@ export default async function MobileTransferHome({
 
       {rows.length === 0 ? (
         <MobileEmptyState
-          icon={activeTab === "history" ? History : PackageX}
+          icon={activeTab === "history" ? IconHistory : IconPackageOff}
           title={
             activeTab === "receive"
               ? "Không có phiếu cần nhận"
@@ -252,9 +252,9 @@ function TransferRowCard({
   };
 
   const Icon = (() => {
-    if (tab === "receive") return PackageCheck;
-    if (tab === "dispatch") return Send;
-    return CheckCircle2;
+    if (tab === "receive") return IconPackageImport;
+    if (tab === "dispatch") return IconSend;
+    return IconCircleCheck;
   })();
 
   const actionHref =
@@ -281,7 +281,7 @@ function TransferRowCard({
           </div>
           <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-muted-foreground">
             <span className="truncate">{row.from_branch_name}</span>
-            <ArrowRight className="size-3 shrink-0" />
+            <IconArrowRight className="size-3 shrink-0" />
             <span className="truncate">{row.to_branch_name}</span>
           </p>
           {row.shipped_at || row.created_at ? (
@@ -291,7 +291,7 @@ function TransferRowCard({
             </p>
           ) : null}
         </div>
-        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+        <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
       </Link>
     </InteractiveCard>
   );

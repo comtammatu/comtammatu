@@ -15,6 +15,8 @@ export const INVENTORY_PROCUREMENT_PREFIXES = [
   "/inventory/purchase-orders",
   "/inventory/grn",
   "/inventory/supplier-invoices",
+  "/inventory/supplier-credit-notes",
+  "/inventory/supplier-returns",
   "/inventory/recipes",
   "/inventory/receiving",
   "/inventory/m/drafts",

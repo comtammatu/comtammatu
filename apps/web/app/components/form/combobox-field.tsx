@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Control, FieldPath, FieldValues } from "react-hook-form";
 import { useController } from "react-hook-form";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { IconCheck, IconSelector } from "@tabler/icons-react";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -102,7 +102,7 @@ export function ComboboxField<TFieldValues extends FieldValues>({
             <span className="truncate">
               {selected ? selected.label : placeholder}
             </span>
-            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+            <IconSelector className="ml-2 size-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent
@@ -138,7 +138,7 @@ export function ComboboxField<TFieldValues extends FieldValues>({
                         </span>
                       ) : null}
                     </div>
-                    <Check
+                    <IconCheck
                       className={cn(
                         "ml-2 size-4 shrink-0",
                         field.value === opt.value

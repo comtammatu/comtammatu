@@ -10,7 +10,7 @@ import { fetchPurchaseOrders } from "../procurement-actions";
 import { fetchStockTransfers } from "../transfer-actions";
 import { fetchInventoryValueSystem } from "../inventory-value-actions";
 import { formatDate } from "./format";
-import { fetchInventorySiteContext } from "./procurement-branches";
+import { resolveInventoryBranchScope } from "./inventory-scope";
 
 type DashboardSiteKind = "central_warehouse" | "central_kitchen" | "branch";
 
@@ -56,6 +56,8 @@ export type InventoryDashboardData = {
   pendingPO: number;
   activeTransfers: number;
   activeStocktakes: number;
+  priceReviewCount: number;
+  pendingSupplierReturns: number;
   reorderAlerts: Array<{
     ingredientId: number;
     branchId: number;
@@ -88,41 +90,56 @@ export type InventoryDashboardData = {
   }>;
 };
 
-export async function loadInventoryDashboardData(): Promise<InventoryDashboardData> {
+export async function loadInventoryDashboardData(
+  requestedBranchId: number | null,
+): Promise<InventoryDashboardData> {
   const { supabase, claims } = await loadAuthState();
 
   const showProcurement =
     canAccess(claims.user_role, "inventory_procurement") &&
     (await currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ));
 
-  const siteContext = await fetchInventorySiteContext(
+  const scope = await resolveInventoryBranchScope(
     supabase,
-    claims.tenant_id,
-    claims.branch_id,
+    claims,
+    requestedBranchId,
   );
 
-  const resolvedSiteContext =
-    siteContext ??
+  const selectedBranch = scope.allowedBranches.find(
+    (b) => b.id === scope.selectedBranchId,
+  );
+
+  const siteName =
+    selectedBranch?.name ??
     (claims.user_role === "super_manager" ||
     claims.user_role === "owner" ||
     claims.user_role === "office"
-      ? {
-          branchName: "Kho tổng",
-          branchKind: "central_warehouse" as const,
-        }
-      : {
-          branchName: "Điểm vận hành",
-          branchKind: "branch" as const,
-        });
+      ? "Kho tổng"
+      : "Điểm vận hành");
+  const siteKindRaw =
+    selectedBranch?.branch_kind ??
+    (claims.user_role === "super_manager" ||
+    claims.user_role === "owner" ||
+    claims.user_role === "office"
+      ? "central_warehouse"
+      : "branch");
+  const siteKind: DashboardSiteKind =
+    siteKindRaw === "central_kitchen"
+      ? "central_kitchen"
+      : siteKindRaw === "central_warehouse"
+        ? "central_warehouse"
+        : "branch";
+
+  const branchFilter = scope.selectedBranchId ?? undefined;
 
   const [valueRes, poRes, transferRes, stocktakeRes, reorderRes, expiryRes] =
     await Promise.all([
-      fetchInventoryValueSystem(),
-      fetchPurchaseOrders(),
-      fetchStockTransfers(),
-      fetchStocktakeSessions(),
-      fetchReorderAlerts(),
-      fetchExpiryAlerts(),
+      fetchInventoryValueSystem(branchFilter),
+      fetchPurchaseOrders(branchFilter),
+      fetchStockTransfers(branchFilter),
+      fetchStocktakeSessions(branchFilter),
+      fetchReorderAlerts(branchFilter),
+      fetchExpiryAlerts(branchFilter),
     ]);
 
   const totalStockValue =
@@ -200,13 +217,15 @@ export async function loadInventoryDashboardData(): Promise<InventoryDashboardDa
       : [];
 
   return {
-    siteName: resolvedSiteContext.branchName,
-    siteKind: resolvedSiteContext.branchKind as DashboardSiteKind,
+    siteName,
+    siteKind,
     showProcurement,
     totalStockValue,
     pendingPO,
     activeTransfers,
     activeStocktakes,
+    priceReviewCount: 0,
+    pendingSupplierReturns: 0,
     reorderAlerts,
     expiryAlerts,
     transfers,

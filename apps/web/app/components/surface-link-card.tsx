@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ElementType } from "react";
-import { ArrowRight } from "lucide-react";
+import { IconArrowRight } from "@tabler/icons-react";
 import { cn } from "@comtammatu/ui";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
@@ -69,7 +69,7 @@ export function SurfaceLinkCard({
           </div>
           <span className="inline-flex items-center gap-1 text-sm font-medium text-primary transition-transform group-hover:translate-x-0.5">
             {ctaLabel}
-            <ArrowRight className="size-4" />
+            <IconArrowRight className="size-4" />
           </span>
         </Link>
       </CardContent>

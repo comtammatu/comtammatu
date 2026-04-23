@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { Plus, Trash2 } from "lucide-react";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { createJournalEntry } from "../accounting-actions";
 import type { JournalEntryRow, AccountOption } from "./page";
 
@@ -154,7 +154,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
     <>
       <div className="flex justify-end">
         <Button onClick={() => setOpen(true)} size="sm">
-          <Plus className="mr-1.5 size-4" />
+          <IconPlus className="mr-1.5 size-4" />
           Tạo bút toán
         </Button>
       </div>
@@ -268,7 +268,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
               <div className="flex items-center justify-between">
                 <Label>Dòng bút toán</Label>
                 <Button variant="ghost" size="sm" onClick={addLine}>
-                  <Plus className="size-4" /> Thêm dòng
+                  <IconPlus className="size-4" /> Thêm dòng
                 </Button>
               </div>
               <div className="rounded-md border">
@@ -334,7 +334,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                               size="icon-lg"
                               onClick={() => removeLine(i)}
                             >
-                              <Trash2 className="size-3.5 text-destructive" />
+                              <IconTrash className="size-3.5 text-destructive" />
                             </Button>
                           )}
                         </TableCell>

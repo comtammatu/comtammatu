@@ -7,6 +7,7 @@ import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -22,12 +23,12 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
+import { Button } from "@comtammatu/ui/components/button";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { ChefHat, Filter } from "lucide-react";
+import { IconChefHat, IconFilter, IconX } from "@tabler/icons-react";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { OrderCard } from "./order-card";
-import { Kbd } from "@comtammatu/ui/components/kbd";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
 import type {
   KdsTicket,
@@ -140,10 +141,14 @@ export function KdsBoard({
   const [orderItems, setOrderItems] = useState<Map<number, KdsOrderItem[]>>(
     () => buildOrderItemMap(initialOrderItems),
   );
+  const [pendingTicketIds, setPendingTicketIds] = useState<Set<number>>(
+    () => new Set(),
+  );
   const supabaseRef = useRef(createClient());
   const prevTicketCountRef = useRef(tickets.length);
   const ordersRef = useRef(orders);
   const lastSnapshotSyncRef = useRef(Date.now());
+  const pendingTicketIdsRef = useRef<Set<number>>(new Set());
 
   const replaceQuery = useCallback(
     (updates: Record<string, string | null>) => {
@@ -157,6 +162,25 @@ export function KdsBoard({
     },
     [pathname, router, searchParams],
   );
+
+  const beginTicketMutation = useCallback((ticketId: number): boolean => {
+    if (pendingTicketIdsRef.current.has(ticketId)) return false;
+
+    const next = new Set(pendingTicketIdsRef.current);
+    next.add(ticketId);
+    pendingTicketIdsRef.current = next;
+    setPendingTicketIds(next);
+    return true;
+  }, []);
+
+  const endTicketMutation = useCallback((ticketId: number) => {
+    if (!pendingTicketIdsRef.current.has(ticketId)) return;
+
+    const next = new Set(pendingTicketIdsRef.current);
+    next.delete(ticketId);
+    pendingTicketIdsRef.current = next;
+    setPendingTicketIds(next);
+  }, []);
 
   /* ── URL filter state ── */
 
@@ -464,6 +488,8 @@ export function KdsBoard({
 
   const handleBump = useCallback(
     async (ticketId: number) => {
+      if (!beginTicketMutation(ticketId)) return;
+
       setTickets((prev) =>
         prev.map((t) => {
           if (t.id !== ticketId) return t;
@@ -477,21 +503,27 @@ export function KdsBoard({
         }),
       );
 
-      const sb = supabaseRef.current;
-      const { error } = await sb.rpc("bump_kds_ticket", {
-        p_ticket_id: ticketId,
-      });
+      try {
+        const sb = supabaseRef.current;
+        const { error } = await sb.rpc("bump_kds_ticket", {
+          p_ticket_id: ticketId,
+        });
 
-      if (error) {
-        toast.error("Không thể cập nhật trạng thái món. Vui lòng thử lại.");
-        await refreshBoardSnapshot();
+        if (error) {
+          toast.error("Không thể cập nhật trạng thái món. Vui lòng thử lại.");
+          await refreshBoardSnapshot();
+        }
+      } finally {
+        endTicketMutation(ticketId);
       }
     },
-    [refreshBoardSnapshot],
+    [beginTicketMutation, endTicketMutation, refreshBoardSnapshot],
   );
 
   const handleRecall = useCallback(
     async (ticketId: number) => {
+      if (!beginTicketMutation(ticketId)) return;
+
       setTickets((prev) =>
         prev.map((t) => {
           if (t.id !== ticketId) return t;
@@ -505,17 +537,21 @@ export function KdsBoard({
         }),
       );
 
-      const sb = supabaseRef.current;
-      const { error } = await sb.rpc("recall_kds_ticket", {
-        p_ticket_id: ticketId,
-      });
+      try {
+        const sb = supabaseRef.current;
+        const { error } = await sb.rpc("recall_kds_ticket", {
+          p_ticket_id: ticketId,
+        });
 
-      if (error) {
-        toast.error("Không thể thu hồi trạng thái món. Vui lòng thử lại.");
-        await refreshBoardSnapshot();
+        if (error) {
+          toast.error("Không thể thu hồi trạng thái món. Vui lòng thử lại.");
+          await refreshBoardSnapshot();
+        }
+      } finally {
+        endTicketMutation(ticketId);
       }
     },
-    [refreshBoardSnapshot],
+    [beginTicketMutation, endTicketMutation, refreshBoardSnapshot],
   );
 
   /* ── Render ── */
@@ -526,7 +562,7 @@ export function KdsBoard({
       <div className="flex items-center justify-between gap-3 border-b px-3 py-2 md:px-4">
         <div className="flex min-w-0 items-center gap-2">
           <EmployeePortalBackControl className="h-7 rounded-full px-1.5 text-xs" />
-          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <span className="text-xs font-semibold uppercase text-muted-foreground">
             KDS #{branchId}
           </span>
         </div>
@@ -586,23 +622,12 @@ export function KdsBoard({
         </ScrollArea>
       </div>
 
-      {/* Filter bar */}
+      {/* IconFilter bar */}
       <div className="border-b px-3 py-2 md:px-4">
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
-            <Filter className="size-4 shrink-0" aria-hidden />
-            <span className="hidden text-sm font-medium sm:inline">
-              Lọc
-            </span>
-            {hasFilters && (
-              <span
-                className="hidden items-center gap-1 text-xs md:inline-flex"
-                aria-label="Nhấn Esc để xoá bộ lọc"
-              >
-                <Kbd>Esc</Kbd>
-                <span>xoá</span>
-              </span>
-            )}
+            <IconFilter className="size-4 shrink-0" aria-hidden />
+            <span className="hidden text-sm font-medium sm:inline">Lọc</span>
           </div>
           <Select
             value={ticketStatusFilter}
@@ -618,11 +643,17 @@ export function KdsBoard({
               <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
             <SelectContent>
-              {TICKET_STATUS_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value} className="text-sm">
-                  {opt.label}
-                </SelectItem>
-              ))}
+              <SelectGroup>
+                {TICKET_STATUS_OPTIONS.map((opt) => (
+                  <SelectItem
+                    key={opt.value}
+                    value={opt.value}
+                    className="text-sm"
+                  >
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
           <Select
@@ -639,13 +670,34 @@ export function KdsBoard({
               <SelectValue placeholder="Loại đơn" />
             </SelectTrigger>
             <SelectContent>
-              {ORDER_TYPE_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value} className="text-sm">
-                  {opt.label}
-                </SelectItem>
-              ))}
+              <SelectGroup>
+                {ORDER_TYPE_OPTIONS.map((opt) => (
+                  <SelectItem
+                    key={opt.value}
+                    value={opt.value}
+                    className="text-sm"
+                  >
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
+
+          {hasFilters && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="shrink-0"
+              onClick={() =>
+                replaceQuery({ station: null, status: null, orderType: null })
+              }
+            >
+              <IconX data-icon="inline-start" aria-hidden />
+              Xóa lọc
+            </Button>
+          )}
 
           {displayOrders.length > 0 && (
             <span className="ml-auto text-sm font-semibold tabular-nums text-muted-foreground">
@@ -662,7 +714,7 @@ export function KdsBoard({
             <Empty>
               <EmptyHeader>
                 <EmptyMedia variant="icon">
-                  <ChefHat />
+                  <IconChefHat />
                 </EmptyMedia>
                 <EmptyTitle>
                   {groupedOrders.length > 0
@@ -685,6 +737,7 @@ export function KdsBoard({
                 order={order}
                 onBump={handleBump}
                 onRecall={handleRecall}
+                pendingTicketIds={pendingTicketIds}
               />
             ))}
           </div>

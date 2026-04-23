@@ -1,20 +1,20 @@
 import Link from "next/link";
 import {
-  ArrowDown,
-  ArrowUp,
-  Briefcase,
-  CircleAlert,
-  DollarSign,
-  LayoutTemplate,
-  Monitor,
-  Receipt,
-  Settings,
-  ShieldCheck,
-  TrendingUp,
-  UtensilsCrossed,
-  Wallet,
-  Warehouse,
-} from "lucide-react";
+  IconArrowDown,
+  IconArrowUp,
+  IconBriefcase,
+  IconAlertCircle,
+  IconCurrencyDollar,
+  IconLayoutDashboard,
+  IconDeviceDesktop,
+  IconReceipt,
+  IconSettings,
+  IconShieldCheck,
+  IconTrendingUp,
+  IconToolsKitchen,
+  IconWallet,
+  IconBuildingWarehouse,
+} from "@tabler/icons-react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -62,9 +62,9 @@ function StatCard({ title, value, change, icon: Icon }: StatCardProps) {
           className="mt-3 inline-flex items-center gap-1"
         >
           {isPositive ? (
-            <ArrowUp className="size-3" />
+            <IconArrowUp className="size-3" />
           ) : (
-            <ArrowDown className="size-3" />
+            <IconArrowDown className="size-3" />
           )}
           {Math.abs(change).toFixed(1)}% so với hôm qua
         </Badge>
@@ -125,7 +125,7 @@ export default async function DashboardPage() {
       title: "Thiết lập hệ thống",
       href: "/admin/settings",
       badge: "Quản lý",
-      icon: Settings,
+      icon: IconSettings,
     });
   }
   if (canAccess(claims.user_role, "staff")) {
@@ -133,7 +133,7 @@ export default async function DashboardPage() {
       title: "Nhân viên",
       href: "/admin/staff",
       badge: "Quản lý",
-      icon: ShieldCheck,
+      icon: IconShieldCheck,
     });
   }
 
@@ -143,7 +143,7 @@ export default async function DashboardPage() {
       title: "Thực đơn",
       href: "/menu",
       badge: "Vận hành",
-      icon: LayoutTemplate,
+      icon: IconLayoutDashboard,
     });
   }
   if (canAccess(claims.user_role, "inventory")) {
@@ -151,7 +151,7 @@ export default async function DashboardPage() {
       title: "Điều hành kho",
       href: "/inventory",
       badge: "Vận hành",
-      icon: Warehouse,
+      icon: IconBuildingWarehouse,
     });
   }
   if (canAccess(claims.user_role, "finance")) {
@@ -159,7 +159,7 @@ export default async function DashboardPage() {
       title: "Tài chính",
       href: "/finance",
       badge: "Vận hành",
-      icon: Wallet,
+      icon: IconWallet,
     });
   }
   if (canAccess(claims.user_role, "hr")) {
@@ -167,7 +167,7 @@ export default async function DashboardPage() {
       title: "Nhân sự & lương",
       href: "/hr",
       badge: "Vận hành",
-      icon: Briefcase,
+      icon: IconBriefcase,
     });
   }
   if (claims.branch_id != null && canAccess(claims.user_role, "pos")) {
@@ -175,7 +175,7 @@ export default async function DashboardPage() {
       title: `POS chi nhánh #${claims.branch_id}`,
       href: `/br/${claims.branch_id}/pos`,
       badge: "Vận hành",
-      icon: Monitor,
+      icon: IconDeviceDesktop,
     });
   }
   if (claims.branch_id != null && canAccess(claims.user_role, "kds")) {
@@ -183,7 +183,7 @@ export default async function DashboardPage() {
       title: `KDS chi nhánh #${claims.branch_id}`,
       href: `/br/${claims.branch_id}/kds`,
       badge: "Vận hành",
-      icon: UtensilsCrossed,
+      icon: IconToolsKitchen,
     });
   }
 
@@ -252,7 +252,7 @@ export default async function DashboardPage() {
     <Card>
       <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
         <div className="flex size-14 items-center justify-center rounded-full border bg-muted text-primary">
-          <CircleAlert className="size-5" />
+          <IconAlertCircle className="size-5" />
         </div>
         <div className="space-y-1.5">
           <h3 className="text-2xl font-semibold">Chưa có đơn hàng mới</h3>
@@ -298,19 +298,19 @@ export default async function DashboardPage() {
           title="Doanh thu hôm nay"
           value={formatVND(stats.todayRevenue)}
           change={revenueChange}
-          icon={DollarSign}
+          icon={IconCurrencyDollar}
         />
         <StatCard
           title="Đơn bán hôm nay"
           value={String(stats.todayOrders)}
           change={ordersChange}
-          icon={Receipt}
+          icon={IconReceipt}
         />
         <StatCard
           title="Giá trị trung bình/đơn"
           value={formatVND(Math.round(stats.avgOrderValue))}
           change={avgChange}
-          icon={TrendingUp}
+          icon={IconTrendingUp}
         />
       </div>
 

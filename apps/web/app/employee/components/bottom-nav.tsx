@@ -2,19 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Clock, Home, User } from "lucide-react";
+import { IconCalendarEvent, IconClock, IconHome, IconUser } from "@tabler/icons-react";
 import { Button } from "@comtammatu/ui/components/button";
 
 const NAV_ITEMS = [
-  { href: "/employee", label: "Cổng", icon: Home, exact: true },
+  { href: "/employee", label: "Cổng", icon: IconHome, exact: true },
   {
     href: "/employee/schedule",
     label: "Lịch ca",
-    icon: CalendarDays,
+    icon: IconCalendarEvent,
     exact: false,
   },
-  { href: "/employee/clock", label: "Chấm công", icon: Clock, exact: false },
-  { href: "/employee/profile", label: "Cá nhân", icon: User, exact: false },
+  { href: "/employee/clock", label: "Chấm công", icon: IconClock, exact: false },
+  { href: "/employee/profile", label: "Cá nhân", icon: IconUser, exact: false },
 ] as const;
 
 function isActive(pathname: string, href: string, exact: boolean): boolean {

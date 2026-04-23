@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { DoorOpen } from "lucide-react";
+import { IconDoorEnter } from "@tabler/icons-react";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 
@@ -26,7 +26,7 @@ export function EmployeePortalBackControl({
         title="Quay lại Cổng nhân viên"
         aria-label="Quay lại Cổng nhân viên"
       >
-        <DoorOpen className="size-3 shrink-0 sm:size-3.5" />
+        <IconDoorEnter className="size-3 shrink-0 sm:size-3.5" />
         <span className="hidden sm:inline">Cổng NV</span>
       </Link>
     </Button>

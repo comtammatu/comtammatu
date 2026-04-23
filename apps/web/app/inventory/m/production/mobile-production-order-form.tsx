@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CircleSlash, Plus } from "lucide-react";
+import { IconCircleOff, IconPlus } from "@tabler/icons-react";
 import {
   Controller,
   useFieldArray,
@@ -187,7 +187,7 @@ function LineRowCard({
           onClick={onRemove}
           disabled={!canRemove}
         >
-          <CircleSlash className="mr-2 size-4" />
+          <IconCircleOff className="mr-2 size-4" />
           Bỏ dòng
         </Button>
       </div>
@@ -316,7 +316,7 @@ export function MobileProductionOrderForm({
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
         <Button disabled={!actionsEnabled}>
-          <Plus className="mr-2 size-4" />
+          <IconPlus className="mr-2 size-4" />
           Tạo lệnh sản xuất
         </Button>
       </SheetTrigger>

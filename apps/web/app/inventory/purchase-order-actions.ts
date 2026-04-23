@@ -26,20 +26,24 @@ function canAccessProcurementBranch(
 
 /* ─── fetchPurchaseOrders ─── */
 
-export async function fetchPurchaseOrders(): Promise<ActionResult> {
+export async function fetchPurchaseOrders(
+  branchId?: number,
+): Promise<ActionResult> {
   const ctx = await getAuthContextWithPermission(
     ROLES,
     PERMISSION_KEYS.PROCUREMENT_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
-  const { data, error } = await supabase
+  let query = supabase
     .from("purchase_orders")
     .select(
       "id, po_number, status, ordered_at, notes, supplier_id, branch_id, created_by, suppliers ( id, name ), purchase_order_items ( line_total )",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("ordered_at", { ascending: false });
+  if (branchId != null) query = query.eq("branch_id", branchId);
+  const { data, error } = await query;
   if (error) return { success: false, error: "Không thể tải đơn đặt hàng." };
   return { success: true, data: data ?? [] };
 }

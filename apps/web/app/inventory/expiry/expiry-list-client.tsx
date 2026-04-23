@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { CheckCircle2, Search, Trash2 } from "lucide-react";
+import { IconCircleCheck, IconSearch, IconTrash } from "@tabler/icons-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -55,6 +55,10 @@ import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { InventoryHeader } from "../_components/inventory-header";
+import {
+  InventoryFilterBar,
+  InventoryPageContent,
+} from "../_components/inventory-page-layout";
 import { adjustStock, fetchExpiryAlerts } from "../actions";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import type { BranchOption, ExpiryAlertRow } from "../page";
@@ -203,7 +207,7 @@ export function ExpiryListClient({
             <div className="divide-y">
               {items.length === 0 && (
                 <div className="py-16 text-center">
-                  <CheckCircle2 className="mx-auto size-10 text-success/40" />
+                  <IconCircleCheck className="mx-auto size-10 text-success/40" />
                   <p className="mt-2 text-sm font-medium text-muted-foreground">
                     Không có hàng sắp hết hạn
                   </p>
@@ -249,7 +253,7 @@ export function ExpiryListClient({
                         onClick={() => openWriteOff(alert)}
                         disabled={isPending}
                       >
-                        <Trash2 className="size-3.5" />
+                        <IconTrash className="size-3.5" />
                         Xóa sổ
                       </Button>
                     </ItemActions>
@@ -290,7 +294,7 @@ export function ExpiryListClient({
                     colSpan={7}
                     paddingClassName="py-16"
                     icon={
-                      <CheckCircle2 className="mx-auto size-10 text-success/40" />
+                      <IconCircleCheck className="mx-auto size-10 text-success/40" />
                     }
                     title="Không có hàng sắp hết hạn"
                     description="Tất cả nguyên liệu còn trong hạn sử dụng"
@@ -346,7 +350,7 @@ export function ExpiryListClient({
                         onClick={() => openWriteOff(alert)}
                         disabled={isPending}
                       >
-                        <Trash2 className="size-3.5" />
+                        <IconTrash className="size-3.5" />
                         Xóa sổ
                       </Button>
                     </TableCell>
@@ -363,159 +367,162 @@ export function ExpiryListClient({
   return (
     <>
       <InventoryHeader title="Hạn sử dụng" />
-      <div className="flex-1 overflow-auto p-4">
-      <div className="mx-auto max-w-7xl space-y-4">
+      <InventoryPageContent>
+        {/* IconSearch + branch filter */}
+        <InventoryFilterBar>
+          <InputGroup className="h-10 flex-1">
+            <InputGroupAddon>
+              <IconSearch />
+            </InputGroupAddon>
+            <InputGroupInput
+              placeholder="Tìm nguyên liệu, lô hàng, phiếu nhập..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </InputGroup>
+          {!isBranchLocked && (
+            <Select value={branchFilter} onValueChange={setBranchFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Chi nhánh" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả chi nhánh</SelectItem>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={String(b.id)}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <Badge variant="outline" className="rounded-full">
+            {displayItems.length} mục
+          </Badge>
+        </InventoryFilterBar>
 
-      {/* Search + branch filter */}
-      <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
-        <InputGroup className="h-10 flex-1">
-          <InputGroupAddon>
-            <Search />
-          </InputGroupAddon>
-          <InputGroupInput
-            placeholder="Tìm nguyên liệu, lô hàng, phiếu nhập..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </InputGroup>
-        {!isBranchLocked && (
-          <Select value={branchFilter} onValueChange={setBranchFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Chi nhánh" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả chi nhánh</SelectItem>
-              {branches.map((b) => (
-                <SelectItem key={b.id} value={String(b.id)}>
-                  {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        <Badge variant="outline" className="rounded-full">
-          {displayItems.length} mục
-        </Badge>
-      </CardContent></Card>
-
-      {/* Urgency filter buttons */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="xs"
-          onClick={() =>
-            setUrgencyFilter((prev) => (prev === "expired" ? null : "expired"))
-          }
-          className={cn(
-            "h-auto gap-1.5 rounded-full px-3 py-1 font-medium",
-            urgencyFilter === "expired"
-              ? "bg-destructive/10 text-destructive border-destructive/30"
-              : "bg-muted/50 text-muted-foreground hover:bg-muted",
-          )}
-        >
-          Đã hết hạn
-          <span className="font-mono tabular-nums">
-            {urgencyCounts.expired}
-          </span>
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="xs"
-          onClick={() =>
-            setUrgencyFilter((prev) =>
-              prev === "critical" ? null : "critical",
-            )
-          }
-          className={cn(
-            "h-auto gap-1.5 rounded-full px-3 py-1 font-medium",
-            urgencyFilter === "critical"
-              ? "bg-destructive/10 text-destructive border-destructive/30"
-              : "bg-muted/50 text-muted-foreground hover:bg-muted",
-          )}
-        >
-          Nguy cấp
-          <span className="font-mono tabular-nums">
-            {urgencyCounts.critical}
-          </span>
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="xs"
-          onClick={() =>
-            setUrgencyFilter((prev) => (prev === "warning" ? null : "warning"))
-          }
-          className={cn(
-            "h-auto gap-1.5 rounded-full px-3 py-1 font-medium",
-            urgencyFilter === "warning"
-              ? "bg-warning/10 text-warning border-warning/30"
-              : "bg-muted/50 text-muted-foreground hover:bg-muted",
-          )}
-        >
-          Sắp hết hạn
-          <span className="font-mono tabular-nums">
-            {urgencyCounts.warning}
-          </span>
-        </Button>
-        {urgencyFilter && (
+        {/* Urgency filter buttons */}
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
-            variant="link"
+            variant="outline"
             size="xs"
-            onClick={() => setUrgencyFilter(null)}
-            className="h-auto px-0 text-muted-foreground hover:text-foreground"
+            onClick={() =>
+              setUrgencyFilter((prev) =>
+                prev === "expired" ? null : "expired",
+              )
+            }
+            className={cn(
+              "h-auto gap-1.5 rounded-full px-3 py-1 font-medium",
+              urgencyFilter === "expired"
+                ? "bg-destructive/10 text-destructive border-destructive/30"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted",
+            )}
           >
-            Xóa bộ lọc
+            Đã hết hạn
+            <span className="font-mono tabular-nums">
+              {urgencyCounts.expired}
+            </span>
           </Button>
-        )}
-      </div>
-
-      {/* Tabs */}
-      <Tabs defaultValue="all">
-        <TabsList>
-          <TabsTrigger value="all">Tất cả ({displayItems.length})</TabsTrigger>
-          <TabsTrigger value="expired">
-            Đã hết hạn (
-            {urgencyFilter
-              ? displayItems.filter((a) => a.urgency === "expired").length
-              : expired.length}
-            )
-          </TabsTrigger>
-          <TabsTrigger value="near">
-            Sắp hết hạn (
-            {urgencyFilter
-              ? displayItems.filter(
-                  (a) => a.urgency === "critical" || a.urgency === "warning",
-                ).length
-              : nearExpiry.length}
-            )
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all" className="mt-4">
-          {renderTable(displayItems)}
-        </TabsContent>
-        <TabsContent value="expired" className="mt-4">
-          {renderTable(
-            urgencyFilter
-              ? displayItems.filter((a) => a.urgency === "expired")
-              : expired,
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            onClick={() =>
+              setUrgencyFilter((prev) =>
+                prev === "critical" ? null : "critical",
+              )
+            }
+            className={cn(
+              "h-auto gap-1.5 rounded-full px-3 py-1 font-medium",
+              urgencyFilter === "critical"
+                ? "bg-destructive/10 text-destructive border-destructive/30"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted",
+            )}
+          >
+            Nguy cấp
+            <span className="font-mono tabular-nums">
+              {urgencyCounts.critical}
+            </span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            onClick={() =>
+              setUrgencyFilter((prev) =>
+                prev === "warning" ? null : "warning",
+              )
+            }
+            className={cn(
+              "h-auto gap-1.5 rounded-full px-3 py-1 font-medium",
+              urgencyFilter === "warning"
+                ? "bg-warning/10 text-warning border-warning/30"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted",
+            )}
+          >
+            Sắp hết hạn
+            <span className="font-mono tabular-nums">
+              {urgencyCounts.warning}
+            </span>
+          </Button>
+          {urgencyFilter && (
+            <Button
+              type="button"
+              variant="link"
+              size="xs"
+              onClick={() => setUrgencyFilter(null)}
+              className="h-auto px-0 text-muted-foreground hover:text-foreground"
+            >
+              Xóa bộ lọc
+            </Button>
           )}
-        </TabsContent>
-        <TabsContent value="near" className="mt-4">
-          {renderTable(
-            urgencyFilter
-              ? displayItems.filter(
-                  (a) => a.urgency === "critical" || a.urgency === "warning",
-                )
-              : nearExpiry,
-          )}
-        </TabsContent>
-      </Tabs>
-      </div>
-      </div>
+        </div>
+
+        {/* Tabs */}
+        <Tabs defaultValue="all">
+          <TabsList>
+            <TabsTrigger value="all">
+              Tất cả ({displayItems.length})
+            </TabsTrigger>
+            <TabsTrigger value="expired">
+              Đã hết hạn (
+              {urgencyFilter
+                ? displayItems.filter((a) => a.urgency === "expired").length
+                : expired.length}
+              )
+            </TabsTrigger>
+            <TabsTrigger value="near">
+              Sắp hết hạn (
+              {urgencyFilter
+                ? displayItems.filter(
+                    (a) => a.urgency === "critical" || a.urgency === "warning",
+                  ).length
+                : nearExpiry.length}
+              )
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="all" className="mt-4">
+            {renderTable(displayItems)}
+          </TabsContent>
+          <TabsContent value="expired" className="mt-4">
+            {renderTable(
+              urgencyFilter
+                ? displayItems.filter((a) => a.urgency === "expired")
+                : expired,
+            )}
+          </TabsContent>
+          <TabsContent value="near" className="mt-4">
+            {renderTable(
+              urgencyFilter
+                ? displayItems.filter(
+                    (a) => a.urgency === "critical" || a.urgency === "warning",
+                  )
+                : nearExpiry,
+            )}
+          </TabsContent>
+        </Tabs>
+      </InventoryPageContent>
 
       {/* Write-off AlertDialog */}
       <AlertDialog

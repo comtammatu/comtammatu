@@ -20,7 +20,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@comtammatu/ui/components/dialog";
-import { Lock, Plus, FileSearch } from "lucide-react";
+import { IconLock, IconPlus, IconFileSearch } from "@tabler/icons-react";
 import {
   openFiscalPeriod,
   closeFiscalPeriod,
@@ -158,7 +158,7 @@ export function PeriodsClient({ periods: initial }: Props) {
       <div className="flex items-center justify-between">
         <div />
         <Button onClick={handleOpenCurrent} size="sm" disabled={isPending}>
-          <Plus className="mr-1.5 size-4" />
+          <IconPlus className="mr-1.5 size-4" />
           Mở kỳ tháng hiện tại
         </Button>
       </div>
@@ -216,7 +216,7 @@ export function PeriodsClient({ periods: initial }: Props) {
                             handleViewRecon(p.period_year, p.period_month)
                           }
                         >
-                          <FileSearch className="mr-1 size-3.5" />
+                          <IconFileSearch className="mr-1 size-3.5" />
                           Đối chiếu
                         </Button>
                         {p.status === "open" && (
@@ -226,7 +226,7 @@ export function PeriodsClient({ periods: initial }: Props) {
                             onClick={() => handleClose(p)}
                             disabled={isPending}
                           >
-                            <Lock className="mr-1 size-3.5" />
+                            <IconLock className="mr-1 size-3.5" />
                             Đóng kỳ
                           </Button>
                         )}

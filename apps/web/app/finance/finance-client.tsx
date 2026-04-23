@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
+import { IconAlertTriangle } from "@tabler/icons-react";
 import {
   Tabs,
   TabsContent,
@@ -33,7 +33,7 @@ export function FinanceClient({
         </TabsTrigger>
         <Button asChild variant="ghost" size="sm" className="ml-auto">
           <Link href="/finance/reconciliation">
-            <AlertTriangle className="mr-1 size-4 text-amber-500" />
+            <IconAlertTriangle className="mr-1 size-4 text-amber-500" />
             Đối soát
           </Link>
         </Button>

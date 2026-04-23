@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { cn } from "@comtammatu/ui";
 
@@ -43,7 +43,7 @@ export function DataTablePagination({
           disabled={currentPage <= 1}
           aria-label="Trang trước"
         >
-          <ChevronLeft className="size-4" />
+          <IconChevronLeft className="size-4" />
         </Button>
         <span className="px-2 text-sm font-medium tabular-nums">
           {currentPage}/{totalPages}
@@ -55,7 +55,7 @@ export function DataTablePagination({
           disabled={currentPage >= totalPages}
           aria-label="Trang sau"
         >
-          <ChevronRight className="size-4" />
+          <IconChevronRight className="size-4" />
         </Button>
       </div>
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Plus, Trash2, Layers } from "lucide-react";
+import { IconPlus, IconTrash, IconStack } from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -228,7 +228,7 @@ export function PermissionsClient({
             onClick={handleGrant}
             disabled={isPending || !selectedBranch || !selectedPerm}
           >
-            <Plus className="mr-1 size-4" />
+            <IconPlus className="mr-1 size-4" />
             Gán quyền
           </Button>
         </CardContent>
@@ -283,7 +283,7 @@ export function PermissionsClient({
             disabled={isPending || !templateBranch || !templateId}
             variant="secondary"
           >
-            <Layers className="mr-1 size-4" />
+            <IconStack className="mr-1 size-4" />
             Áp dụng
           </Button>
         </CardContent>
@@ -364,7 +364,7 @@ function GrantList({
               expired
                 ? "border-destructive/40 bg-destructive/10"
                 : expiringSoon
-                ? "border-amber-400/50 bg-amber-50 dark:bg-amber-950/20"
+                ? "border-warning/40 bg-warning/10"
                 : "border-border/60 bg-muted/30"
             }`}
           >
@@ -377,7 +377,7 @@ function GrantList({
                   expired
                     ? "text-destructive"
                     : expiringSoon
-                    ? "text-amber-700 dark:text-amber-300"
+                    ? "text-warning"
                     : "text-muted-foreground"
                 }`}
                 title={new Date(g.validUntil).toLocaleString("vi-VN")}
@@ -393,7 +393,7 @@ function GrantList({
               disabled={disabled}
               onClick={() => onRevoke(g)}
             >
-              <Trash2 className="size-3.5 text-destructive" />
+              <IconTrash className="size-3.5 text-destructive" />
               <span className="sr-only">Thu hồi</span>
             </Button>
           </li>

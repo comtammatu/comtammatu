@@ -4,7 +4,7 @@ import { fetchOrders } from "./actions";
 import { fetchRefunds } from "./refund-actions";
 import { OrdersClient } from "./orders-client";
 import { RefundsClient } from "./refunds-client";
-import { CircleAlert } from "lucide-react";
+import { IconAlertCircle } from "@tabler/icons-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -48,7 +48,7 @@ export default async function OrdersPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
             <div className="flex size-14 items-center justify-center rounded-full border bg-muted text-primary">
-              <CircleAlert className="size-5" />
+              <IconAlertCircle className="size-5" />
             </div>
             <div className="space-y-1.5">
               <h3 className="text-2xl font-semibold">

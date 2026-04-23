@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Pencil, Search } from "lucide-react";
+import { IconPencil, IconSearch } from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
@@ -120,7 +120,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
       <CardContent className="flex flex-wrap items-center gap-3 p-3">
         <InputGroup className="h-10 flex-1">
           <InputGroupAddon>
-            <Search />
+            <IconSearch />
           </InputGroupAddon>
           <InputGroupInput
             value={searchQuery}
@@ -245,7 +245,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
                         aria-label={`Sửa ${item.name}`}
                         className="min-h-10"
                       >
-                        <Pencil className="size-4" />
+                        <IconPencil className="size-4" />
                         <span className="ml-1">Sửa</span>
                       </Button>
                     </div>
@@ -381,7 +381,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
                             onClick={() => openEdit(item)}
                             aria-label={`Sửa ${item.name}`}
                           >
-                            <Pencil className="size-4" />
+                            <IconPencil className="size-4" />
                           </Button>
                         </TableCell>
                       </TableRow>

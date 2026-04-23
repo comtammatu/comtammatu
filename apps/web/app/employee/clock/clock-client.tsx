@@ -2,13 +2,13 @@
 
 import { useState, useCallback, useTransition, useRef } from "react";
 import {
-  MapPin,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Keyboard,
-  Camera,
-} from "lucide-react";
+  IconMapPin,
+  IconCircleCheck,
+  IconCircleX,
+  IconClock,
+  IconKeyboard,
+  IconCamera,
+} from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
@@ -250,7 +250,7 @@ export function ClockClient({
     setState("gps_passed");
   }, []);
 
-  // ── Submit Clock In ──
+  // ── Submit IconClock In ──
   const submitClockIn = useCallback(
     (code: string) => {
       if (!selectedBranchId || !userCoords) return;
@@ -288,7 +288,7 @@ export function ClockClient({
     [selectedBranchId, userCoords, selectedBranch],
   );
 
-  // ── Submit Clock Out ──
+  // ── Submit IconClock Out ──
   const handleClockOut = useCallback(() => {
     startTransition(async () => {
       const result = await clockOut();
@@ -313,7 +313,7 @@ export function ClockClient({
     return (
       <div className="flex flex-col items-center gap-6 py-8">
         <div className="flex size-24 items-center justify-center rounded-full bg-success/12">
-          <CheckCircle2 className="size-12 text-success" />
+          <IconCircleCheck className="size-12 text-success" />
         </div>
         <div className="text-center">
           <h2 className="text-lg font-semibold">Đã hoàn thành chấm công</h2>
@@ -356,7 +356,7 @@ export function ClockClient({
     return (
       <div className="flex flex-col items-center gap-6 py-8">
         <div className="flex size-24 items-center justify-center rounded-full bg-info/12">
-          <Clock className="size-12 text-info" />
+          <IconClock className="size-12 text-info" />
         </div>
         <div className="text-center">
           <h2 className="text-lg font-semibold">Đang làm việc</h2>
@@ -382,7 +382,7 @@ export function ClockClient({
           {isPending ? (
             <Spinner data-icon="inline-start" />
           ) : (
-            <Clock data-icon="inline-start" />
+            <IconClock data-icon="inline-start" />
           )}
           Chấm công ra
         </Button>
@@ -399,7 +399,7 @@ export function ClockClient({
     return (
       <Empty>
         <EmptyMedia variant="icon">
-          <XCircle />
+          <IconCircleX />
         </EmptyMedia>
         <EmptyHeader>
           <EmptyTitle>Chưa thể chấm công</EmptyTitle>
@@ -412,7 +412,7 @@ export function ClockClient({
     );
   }
 
-  // ── Clock-in flow ──
+  // ── IconClock-in flow ──
   return (
     <div className="flex flex-col items-center gap-6 py-4">
       {/* Status ring */}
@@ -423,39 +423,39 @@ export function ClockClient({
         )}
       >
         {state === "idle" && (
-          <MapPin className="size-10 text-muted-foreground" />
+          <IconMapPin className="size-10 text-muted-foreground" />
         )}
         {state === "checking_gps" && (
           <Spinner className={cn("size-10", getStateIconClassName(state))} />
         )}
         {state === "gps_passed" && (
-          <CheckCircle2
+          <IconCircleCheck
             className={cn("size-10", getStateIconClassName(state))}
           />
         )}
         {state === "gps_failed" && (
-          <XCircle className={cn("size-10", getStateIconClassName(state))} />
+          <IconCircleX className={cn("size-10", getStateIconClassName(state))} />
         )}
         {(state === "scanning_code" || state === "entering_code") && (
-          <Camera className={cn("size-10", getStateIconClassName(state))} />
+          <IconCamera className={cn("size-10", getStateIconClassName(state))} />
         )}
         {state === "verifying" && (
           <Spinner className={cn("size-10", getStateIconClassName(state))} />
         )}
         {state === "success" && (
-          <CheckCircle2
+          <IconCircleCheck
             className={cn("size-10", getStateIconClassName(state))}
           />
         )}
         {(state === "code_invalid" || state === "error") && (
-          <XCircle className={cn("size-10", getStateIconClassName(state))} />
+          <IconCircleX className={cn("size-10", getStateIconClassName(state))} />
         )}
       </div>
 
       {/* GPS distance indicator */}
       {gpsDistance != null && (
         <Badge variant={gpsDistance <= 200 ? "success" : "destructive"}>
-          <MapPin data-icon="inline-start" />
+          <IconMapPin data-icon="inline-start" />
           {gpsDistance}m
         </Badge>
       )}
@@ -558,7 +558,7 @@ export function ClockClient({
       {/* Primary action button */}
       {state === "idle" && (
         <Button size="lg" className="w-full max-w-xs" onClick={checkGps}>
-          <MapPin data-icon="inline-start" />
+          <IconMapPin data-icon="inline-start" />
           Bắt đầu chấm công
         </Button>
       )}
@@ -585,7 +585,7 @@ export function ClockClient({
       {state === "gps_passed" && (
         <div className="flex w-full max-w-xs flex-col gap-3">
           <Button size="lg" className="w-full" onClick={startQrScan}>
-            <Camera data-icon="inline-start" />
+            <IconCamera data-icon="inline-start" />
             Quét mã QR
           </Button>
           <Button
@@ -599,7 +599,7 @@ export function ClockClient({
               setError(null);
             }}
           >
-            <Keyboard data-icon="inline-start" />
+            <IconKeyboard data-icon="inline-start" />
             Nhập mã thủ công
           </Button>
         </div>

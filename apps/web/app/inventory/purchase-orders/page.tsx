@@ -1,13 +1,21 @@
 import { fetchPurchaseOrders, fetchSuppliers } from "../procurement-actions";
+import { parseBranchIdParam } from "../_lib/inventory-scope";
 import {
   PurchaseOrdersClient,
   type PurchaseOrderRow,
 } from "./purchase-orders-client";
 import type { SupplierRow } from "../suppliers/suppliers-client";
 
-export default async function PurchaseOrdersPage() {
+export default async function PurchaseOrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const branchFilter = parseBranchIdParam(params.branchId) ?? undefined;
+
   const [poRes, supRes] = await Promise.all([
-    fetchPurchaseOrders(),
+    fetchPurchaseOrders(branchFilter),
     fetchSuppliers(),
   ]);
 

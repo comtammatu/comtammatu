@@ -2,12 +2,12 @@
 
 import { useState, useTransition } from "react";
 import {
-  MoreHorizontal,
-  Pencil,
-  ToggleLeft,
-  ToggleRight,
-  FolderOpen,
-} from "lucide-react";
+  IconDots,
+  IconPencil,
+  IconToggleLeft,
+  IconToggleRight,
+  IconFolderOpen,
+} from "@tabler/icons-react";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -75,7 +75,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                 colSpan={5}
                 title="Chưa có danh mục nào"
                 icon={
-                  <FolderOpen className="mx-auto size-8 text-muted-foreground" />
+                  <IconFolderOpen className="mx-auto size-8 text-muted-foreground" />
                 }
               />
             )}
@@ -117,13 +117,13 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                         size="icon"
                         className="size-9 rounded-full"
                       >
-                        <MoreHorizontal className="size-4" />
+                        <IconDots className="size-4" />
                         <span className="sr-only">Menu</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setEditCategory(cat)}>
-                        <Pencil className="mr-2 size-4" />
+                        <IconPencil className="mr-2 size-4" />
                         Chỉnh sửa
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -131,12 +131,12 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                       >
                         {cat.is_active ? (
                           <>
-                            <ToggleLeft className="mr-2 size-4" />
+                            <IconToggleLeft className="mr-2 size-4" />
                             Vô hiệu hóa
                           </>
                         ) : (
                           <>
-                            <ToggleRight className="mr-2 size-4" />
+                            <IconToggleRight className="mr-2 size-4" />
                             Kích hoạt
                           </>
                         )}

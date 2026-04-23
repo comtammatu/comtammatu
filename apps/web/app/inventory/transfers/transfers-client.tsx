@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Plus, Search, Truck } from "lucide-react";
+import { IconArrowRight, IconPlus, IconSearch, IconTruck } from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
@@ -66,7 +66,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
         title="Điều chuyển nội bộ"
         actions={
           <Button size="sm">
-            <Plus className="size-4" />
+            <IconPlus className="size-4" />
             Tạo phiếu
           </Button>
         }
@@ -98,10 +98,10 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
             ))}
           </div>
 
-          {/* Search */}
+          {/* IconSearch */}
           <InputGroup className="h-10">
             <InputGroupAddon>
-              <Search />
+              <IconSearch />
             </InputGroupAddon>
             <InputGroupInput
               type="search"
@@ -128,7 +128,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
                   {filteredTransfers.length === 0 && (
                     <TableEmptyStateRow
                       colSpan={5}
-                      icon={<Truck className="size-5" />}
+                      icon={<IconTruck className="size-5" />}
                       title="Không tìm thấy phiếu điều chuyển nào"
                     />
                   )}
@@ -145,7 +145,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
                       <TableCell>
                         <div className="flex items-center gap-1 text-sm">
                           <span>{t.fromBranch}</span>
-                          <ArrowRight className="size-3 text-muted-foreground" />
+                          <IconArrowRight className="size-3 text-muted-foreground" />
                           <span>{t.toBranch}</span>
                         </div>
                       </TableCell>
@@ -160,7 +160,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
                       <TableCell>
                         <Button variant="ghost" size="icon-sm" asChild>
                           <Link href={`/inventory/transfers/${t.id}`}>
-                            <ArrowRight className="size-4" />
+                            <IconArrowRight className="size-4" />
                           </Link>
                         </Button>
                       </TableCell>

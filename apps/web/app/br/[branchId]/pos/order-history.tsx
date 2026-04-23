@@ -12,10 +12,10 @@ import {
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
 import {
-  Package,
-  Receipt,
-  UtensilsCrossed,
-} from "lucide-react";
+  IconPackage,
+  IconReceipt,
+  IconToolsKitchen,
+} from "@tabler/icons-react";
 import { formatVND } from "@comtammatu/shared/format";
 
 export interface SessionOrder {
@@ -75,7 +75,7 @@ export function OrderHistory({
     return (
       <Empty className="flex-1 px-6">
         <EmptyMedia variant="icon">
-          <Receipt />
+          <IconReceipt />
         </EmptyMedia>
         <EmptyHeader>
           <EmptyTitle>Chưa có đơn hàng</EmptyTitle>
@@ -163,12 +163,12 @@ export function OrderHistory({
                             <span className="flex items-center gap-1">
                               {order.order_type === "dine_in" ? (
                                 <>
-                                  <UtensilsCrossed className="size-3.5" />
+                                  <IconToolsKitchen className="size-3.5" />
                                   Bàn {order.tables?.number ?? "—"}
                                 </>
                               ) : (
                                 <>
-                                  <Package className="size-3.5" />
+                                  <IconPackage className="size-3.5" />
                                   Mang về
                                 </>
                               )}
@@ -202,7 +202,7 @@ export function OrderHistory({
                           className="h-10 rounded-full px-4 text-xs"
                           onClick={() => onViewBill(order.id)}
                         >
-                          <Receipt className="mr-1 size-3.5" />
+                          <IconReceipt className="mr-1 size-3.5" />
                           {waitingPayment
                             ? "Thanh toán"
                             : readyToCloseTable
@@ -270,12 +270,12 @@ export function OrderHistory({
                             <span className="flex items-center gap-1">
                               {order.order_type === "dine_in" ? (
                                 <>
-                                  <UtensilsCrossed className="size-3.5" />
+                                  <IconToolsKitchen className="size-3.5" />
                                   Bàn {order.tables?.number ?? "—"}
                                 </>
                               ) : (
                                 <>
-                                  <Package className="size-3.5" />
+                                  <IconPackage className="size-3.5" />
                                   Mang về
                                 </>
                               )}
@@ -294,7 +294,7 @@ export function OrderHistory({
                           className="h-10 rounded-full px-4 text-xs"
                           onClick={() => onViewBill(order.id)}
                         >
-                          <Receipt className="mr-1 size-3.5" />
+                          <IconReceipt className="mr-1 size-3.5" />
                           Hóa đơn
                         </Button>
                       </div>

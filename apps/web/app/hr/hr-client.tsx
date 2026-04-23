@@ -23,7 +23,7 @@ import { ShiftAssignmentsTable } from "./shift-assignments-table";
 import type { BranchOption, EmployeeRow, ShiftRow } from "./page";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Button } from "@comtammatu/ui/components/button";
-import { UserPlus } from "lucide-react";
+import { IconUserPlus } from "@tabler/icons-react";
 
 interface HrClientProps {
   employees: EmployeeRow[];
@@ -75,7 +75,7 @@ export function HrClient({ employees, branches }: HrClientProps) {
             {employees.length} nhân viên
           </p>
           <Button onClick={() => setAddOpen(true)}>
-            <UserPlus className="mr-2 size-4" />
+            <IconUserPlus className="mr-2 size-4" />
             Thêm nhân viên
           </Button>
         </div>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   AlertDialog,
@@ -374,7 +374,7 @@ export function ProductionRecipePanel({
               variant="outline"
               onClick={() => openRecipeDialog()}
             >
-              <Plus className="mr-2 size-4" />
+              <IconPlus className="mr-2 size-4" />
               Thêm dòng BOM
             </Button>
           </div>
@@ -416,14 +416,16 @@ export function ProductionRecipePanel({
                   {!editingRecipe && canManageCatalog && (
                     <p className="text-xs text-muted-foreground">
                       Chưa có trong danh sách?{" "}
-                      <button
+                      <Button
                         type="button"
+                        variant="link"
+                        size="sm"
+                        className="h-auto p-0 font-medium"
                         onClick={() => setQuickFinishedGoodDialogOpen(true)}
-                        className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
                       >
-                        <Plus className="size-3.5" />
+                        <IconPlus className="size-3.5" />
                         Tạo thành phẩm mới
-                      </button>
+                      </Button>
                     </p>
                   )}
                   {!editingRecipe &&
@@ -449,14 +451,16 @@ export function ProductionRecipePanel({
                   {!editingRecipe && canManageCatalog && (
                     <p className="text-xs text-muted-foreground">
                       Thiếu nguyên liệu đầu vào?{" "}
-                      <button
+                      <Button
                         type="button"
+                        variant="link"
+                        size="sm"
+                        className="h-auto p-0 font-medium"
                         onClick={() => setQuickRawIngredientDialogOpen(true)}
-                        className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
                       >
-                        <Plus className="size-3.5" />
+                        <IconPlus className="size-3.5" />
                         Tạo nguyên liệu mới
-                      </button>
+                      </Button>
                     </p>
                   )}
                   {!editingRecipe &&
@@ -617,7 +621,7 @@ export function ProductionRecipePanel({
                         size="sm"
                         onClick={() => openRecipeDialog(group.finishedGoodId)}
                       >
-                        <Plus className="mr-2 size-4" />
+                        <IconPlus className="mr-2 size-4" />
                         Thêm nguyên liệu
                       </Button>
                       <Button
@@ -630,7 +634,7 @@ export function ProductionRecipePanel({
                           "md:pointer-events-none md:group-hover/recipe:pointer-events-auto md:group-focus-within/recipe:pointer-events-auto",
                         )}
                       >
-                        <Trash2 className="mr-2 size-4" />
+                        <IconTrash className="mr-2 size-4" />
                         Xóa toàn bộ BOM
                       </Button>
                     </div>
@@ -676,7 +680,7 @@ export function ProductionRecipePanel({
                                 aria-label={`Chỉnh sửa dòng BOM ${recipe.ingredient_name}`}
                                 title="Chỉnh sửa dòng BOM"
                               >
-                                <Pencil className="size-4" />
+                                <IconPencil className="size-4" />
                               </Button>
                               <Button
                                 type="button"
@@ -686,7 +690,7 @@ export function ProductionRecipePanel({
                                 aria-label={`Xóa dòng BOM ${recipe.ingredient_name}`}
                                 title="Xóa dòng BOM"
                               >
-                                <Trash2 className="size-4" />
+                                <IconTrash className="size-4" />
                               </Button>
                             </div>
                           </TableCell>

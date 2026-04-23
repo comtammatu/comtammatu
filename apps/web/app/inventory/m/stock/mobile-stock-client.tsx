@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Search } from "lucide-react";
+import { IconSearch } from "@tabler/icons-react";
 import {
   InputGroup,
   InputGroupAddon,
@@ -125,7 +125,7 @@ export function MobileStockClient({ rows }: { rows: StockRow[] }) {
 
       <InputGroup className="h-12 rounded-lg">
         <InputGroupAddon>
-          <Search />
+          <IconSearch />
         </InputGroupAddon>
         <InputGroupInput
           type="search"
@@ -157,7 +157,7 @@ export function MobileStockClient({ rows }: { rows: StockRow[] }) {
 
       {filtered.length === 0 ? (
         <MobileEmptyState
-          icon={Search}
+          icon={IconSearch}
           title="Không thấy nguyên liệu phù hợp"
           description="Thử bỏ bộ lọc hoặc dùng từ khóa khác."
         />

@@ -36,15 +36,15 @@ function computeLineValue(
 
 type IngredientCost = { unit_cost: number | null } | null;
 
-export async function fetchInventoryValueSystem(): Promise<
-  ActionResult<{ totalValue: number }>
-> {
+export async function fetchInventoryValueSystem(
+  branchId?: number,
+): Promise<ActionResult<{ totalValue: number }>> {
   const ctx = await getAuthContextWithPermission(SYSTEM_ROLES, PERMISSION_KEYS.INVENTORY_READ);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("stock_levels")
     .select(
       `
@@ -54,6 +54,12 @@ export async function fetchInventoryValueSystem(): Promise<
     `,
     )
     .eq("tenant_id", claims.tenant_id);
+
+  if (branchId != null) {
+    query = query.eq("branch_id", branchId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return { success: false, error: "Không thể tính giá trị tồn kho." };

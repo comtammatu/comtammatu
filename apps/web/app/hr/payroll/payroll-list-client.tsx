@@ -14,7 +14,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Plus } from "lucide-react";
+import { IconPlus } from "@tabler/icons-react";
 import { createPayrollPeriod, fetchPayrollPeriods } from "../payroll-actions";
 import type { PayrollPeriodRow } from "./page";
 
@@ -72,7 +72,7 @@ export function PayrollListClient({
           {isPending ? (
             <Spinner className="mr-2" />
           ) : (
-            <Plus className="mr-2 size-4" />
+            <IconPlus className="mr-2 size-4" />
           )}
           Tạo kỳ lương tháng này
         </Button>

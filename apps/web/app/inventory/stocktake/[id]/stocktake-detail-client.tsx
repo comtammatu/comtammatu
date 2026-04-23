@@ -3,13 +3,13 @@
 import { useCallback, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
-  Ban,
-  Check,
-  CheckCircle2,
-  ClipboardCheck,
-  XCircle,
-} from "lucide-react";
+  IconArrowLeft,
+  IconBan,
+  IconCheck,
+  IconCircleCheck,
+  IconClipboardCheck,
+  IconCircleX,
+} from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
@@ -243,7 +243,7 @@ export function StocktakeDetailClient({
             href={routeBase}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
           >
-            <ArrowLeft className="size-4" /> {tRoute("/inventory/stocktake")}
+            <IconArrowLeft className="size-4" /> {tRoute("/inventory/stocktake")}
           </Link>
         }
       />
@@ -271,14 +271,14 @@ export function StocktakeDetailClient({
                 onClick={() => setCancelDialogOpen(true)}
                 disabled={isPending}
               >
-                <Ban className="mr-2 size-4" />
+                <IconBan className="mr-2 size-4" />
                 Hủy kiểm kê
               </Button>
               <Button
                 onClick={() => setCompleteDialogOpen(true)}
                 disabled={isPending}
               >
-                <CheckCircle2 className="mr-2 size-4" />
+                <IconCircleCheck className="mr-2 size-4" />
                 Hoàn tất kiểm kê
               </Button>
             </>
@@ -319,7 +319,7 @@ export function StocktakeDetailClient({
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3 text-sm">
-              <ClipboardCheck className="size-4 text-muted-foreground" />
+              <IconClipboardCheck className="size-4 text-muted-foreground" />
               <span className="text-muted-foreground">
                 Tiến độ:{" "}
                 <span className="font-medium text-foreground">
@@ -342,7 +342,7 @@ export function StocktakeDetailClient({
       {session.status === "cancelled" && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-            <XCircle className="size-8 text-muted-foreground" />
+            <IconCircleX className="size-8 text-muted-foreground" />
             <p className="text-base font-semibold">Phiên kiểm kê đã bị hủy</p>
             <p className="text-sm text-muted-foreground">
               Dữ liệu đếm trước đó không còn hiệu lực và phiên này không thể
@@ -460,7 +460,7 @@ function CountingPhase({
                     </span>
                     {savedLines.has(line.id) && (
                       <span className="inline-flex shrink-0 items-center gap-1 text-xs text-success">
-                        <Check className="size-3" />
+                        <IconCheck className="size-3" />
                         Đã lưu
                       </span>
                     )}
@@ -539,7 +539,7 @@ function CountingPhase({
                       {line.ingredients?.name ?? `#${line.ingredient_id}`}
                       {savedLines.has(line.id) && (
                         <span className="inline-flex items-center gap-0.5 text-xs text-success">
-                          <Check className="size-3" />
+                          <IconCheck className="size-3" />
                           Đã lưu
                         </span>
                       )}

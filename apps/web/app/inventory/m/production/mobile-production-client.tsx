@@ -4,16 +4,16 @@ import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  AlertTriangle,
-  ArrowRight,
-  CheckCircle2,
-  ChefHat,
-  ClipboardList,
-  Factory,
-  PackageCheck,
-  Store,
-  Truck,
-} from "lucide-react";
+  IconAlertTriangle,
+  IconArrowRight,
+  IconCircleCheck,
+  IconChefHat,
+  IconClipboardList,
+  IconBuildingFactory,
+  IconPackageImport,
+  IconBuildingStore,
+  IconTruck,
+} from "@tabler/icons-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -117,17 +117,17 @@ export function MobileProductionClient({
       {
         label: "Lệnh nháp",
         value: String(orderGroups.draft.length),
-        icon: ClipboardList,
+        icon: IconClipboardList,
       },
       {
         label: "Đã hoàn tất",
         value: String(orderGroups.completed.length),
-        icon: PackageCheck,
+        icon: IconPackageImport,
       },
       {
         label: "Bếp hoạt động",
         value: String(centralKitchenBranches.length),
-        icon: Store,
+        icon: IconBuildingStore,
       },
     ],
     [
@@ -189,9 +189,9 @@ export function MobileProductionClient({
           <div className="flex items-start gap-3">
             <span className="flex size-11 items-center justify-center rounded-2xl bg-background text-primary shadow-sm">
               {readinessMessage ? (
-                <AlertTriangle className="size-5" />
+                <IconAlertTriangle className="size-5" />
               ) : (
-                <ChefHat className="size-5" />
+                <IconChefHat className="size-5" />
               )}
             </span>
             <div className="min-w-0 flex-1">
@@ -218,7 +218,7 @@ export function MobileProductionClient({
               />
               <Button type="button" variant="outline" asChild>
                 <Link href="/inventory/m/transfers?tab=dispatch">
-                  <Truck className="mr-2 size-4" />
+                  <IconTruck className="mr-2 size-4" />
                   Mở điều chuyển thành phẩm
                 </Link>
               </Button>
@@ -226,7 +226,7 @@ export function MobileProductionClient({
           ) : canFixReadiness ? (
             <Button type="button" asChild>
               <Link href={recoveryHref}>
-                <Factory className="mr-2 size-4" />
+                <IconBuildingFactory className="mr-2 size-4" />
                 Mở màn hình xử lý
               </Link>
             </Button>
@@ -234,7 +234,7 @@ export function MobileProductionClient({
           <Button type="button" variant="ghost" asChild>
             <Link href="/inventory/production">
               Mở bản đầy đủ
-              <ArrowRight className="ml-2 size-4" />
+              <IconArrowRight className="ml-2 size-4" />
             </Link>
           </Button>
         </CardContent>
@@ -322,7 +322,7 @@ function ProductionOrderCardList({
   if (orders.length === 0) {
     return (
       <MobileEmptyState
-        icon={ClipboardList}
+        icon={IconClipboardList}
         title={emptyTitle}
         description={emptyDescription}
       />
@@ -393,7 +393,7 @@ function ProductionOrderCardList({
                     onClick={() => handleConfirm(order.id)}
                     disabled={isPending}
                   >
-                    <CheckCircle2 className="mr-2 size-4" />
+                    <IconCircleCheck className="mr-2 size-4" />
                     Xác nhận lệnh
                   </Button>
                   <Button
@@ -408,7 +408,7 @@ function ProductionOrderCardList({
               ) : order.status === "completed" ? (
                 <Button type="button" variant="outline" asChild>
                   <Link href="/inventory/m/transfers?tab=dispatch">
-                    <Truck className="mr-2 size-4" />
+                    <IconTruck className="mr-2 size-4" />
                     Sang điều chuyển thành phẩm
                   </Link>
                 </Button>

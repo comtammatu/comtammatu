@@ -1,0 +1,225 @@
+import "dotenv/config";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { renderPayload, type PrintPayload } from "./escpos.js";
+import { sendRawLAN } from "./lan.js";
+import { sendRawUSB } from "./usb.js";
+
+type PrinterRow = {
+  id: number;
+  branch_id: number;
+  role: "receipt" | "kitchen_1" | "kitchen_2";
+  connection_type: "lan" | "usb";
+  lan_host: string | null;
+  lan_port: number | null;
+  usb_vendor_id: string | null;
+  usb_product_id: string | null;
+  paper_width_mm: number;
+  is_active: boolean;
+};
+
+type PrintJobRow = {
+  id: number;
+  tenant_id: number;
+  branch_id: number;
+  printer_id: number;
+  job_type: "kitchen_ticket" | "receipt" | "reprint" | "cancel_ticket";
+  payload: PrintPayload;
+  status: "pending" | "processing" | "printed" | "failed" | "expired" | "cancelled";
+};
+
+const requireEnv = (k: string): string => {
+  const v = process.env[k];
+  if (!v) throw new Error(`Missing env ${k}`);
+  return v;
+};
+
+const config = {
+  supabaseUrl: requireEnv("SUPABASE_URL"),
+  serviceKey: requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
+  branchId: Number(requireEnv("AGENT_BRANCH_ID")),
+  tenantId: Number(requireEnv("AGENT_TENANT_ID")),
+  agentId: process.env.AGENT_ID ?? `agent-${process.pid}`,
+  version: process.env.AGENT_VERSION ?? "0.1.0",
+};
+
+const printerCache = new Map<number, PrinterRow>();
+
+async function loadPrinters(supabase: SupabaseClient): Promise<void> {
+  const { data, error } = await supabase
+    .from("printers")
+    .select(
+      "id, branch_id, role, connection_type, lan_host, lan_port, usb_vendor_id, usb_product_id, paper_width_mm, is_active",
+    )
+    .eq("branch_id", config.branchId)
+    .eq("is_active", true);
+  if (error) throw error;
+  printerCache.clear();
+  for (const p of (data ?? []) as PrinterRow[]) {
+    printerCache.set(p.id, p);
+  }
+  console.log(`[agent] loaded ${printerCache.size} printers for branch ${config.branchId}`);
+}
+
+async function heartbeat(supabase: SupabaseClient): Promise<void> {
+  const { error } = await supabase.from("printer_agents").upsert(
+    {
+      branch_id: config.branchId,
+      tenant_id: config.tenantId,
+      agent_id: config.agentId,
+      version: config.version,
+      last_seen_at: new Date().toISOString(),
+    },
+    { onConflict: "branch_id" },
+  );
+  if (error) console.error("[agent] heartbeat failed:", error.message);
+}
+
+async function claimJob(
+  supabase: SupabaseClient,
+  jobId: number,
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc("claim_print_job", {
+    p_job_id: jobId,
+    p_agent_id: config.agentId,
+  });
+  if (error) {
+    console.error(`[agent] claim ${jobId} failed:`, error.message);
+    return false;
+  }
+  return data === true;
+}
+
+async function completeJob(
+  supabase: SupabaseClient,
+  jobId: number,
+  success: boolean,
+  err?: string,
+): Promise<void> {
+  const { error } = await supabase.rpc("complete_print_job", {
+    p_job_id: jobId,
+    p_success: success,
+    p_error: err ?? null,
+  });
+  if (error) console.error(`[agent] complete ${jobId} failed:`, error.message);
+}
+
+async function dispatch(job: PrintJobRow): Promise<void> {
+  const printer = printerCache.get(job.printer_id);
+  if (!printer) {
+    throw new Error(`printer ${job.printer_id} not in cache / inactive`);
+  }
+  const bytes = renderPayload(job.payload);
+
+  if (printer.connection_type === "lan") {
+    if (!printer.lan_host) throw new Error(`printer ${printer.id} missing lan_host`);
+    await sendRawLAN(printer.lan_host, printer.lan_port ?? 9100, bytes);
+    return;
+  }
+
+  if (printer.connection_type === "usb") {
+    if (!printer.usb_vendor_id) {
+      throw new Error(`printer ${printer.id} missing usb_vendor_id`);
+    }
+    await sendRawUSB(printer.usb_vendor_id, printer.usb_product_id, bytes);
+    return;
+  }
+
+  throw new Error(
+    `printer ${printer.id}: unsupported connection_type=${printer.connection_type}`,
+  );
+}
+
+async function processJob(
+  supabase: SupabaseClient,
+  jobId: number,
+): Promise<void> {
+  const claimed = await claimJob(supabase, jobId);
+  if (!claimed) return;
+
+  const { data, error } = await supabase
+    .from("print_jobs")
+    .select("id, tenant_id, branch_id, printer_id, job_type, payload, status")
+    .eq("id", jobId)
+    .single();
+  if (error || !data) {
+    await completeJob(supabase, jobId, false, `fetch failed: ${error?.message}`);
+    return;
+  }
+  const job = data as unknown as PrintJobRow;
+
+  try {
+    await dispatch(job);
+    await completeJob(supabase, jobId, true);
+    console.log(`[agent] printed job ${jobId} type=${job.job_type}`);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[agent] print failed job=${jobId}:`, msg);
+    await completeJob(supabase, jobId, false, msg);
+  }
+}
+
+async function drainPending(supabase: SupabaseClient): Promise<void> {
+  const { data, error } = await supabase
+    .from("print_jobs")
+    .select("id")
+    .eq("branch_id", config.branchId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: true })
+    .limit(50);
+  if (error) {
+    console.error("[agent] drain failed:", error.message);
+    return;
+  }
+  for (const row of (data ?? []) as Array<{ id: number }>) {
+    await processJob(supabase, row.id);
+  }
+}
+
+async function main() {
+  console.log(`[agent] starting ${config.agentId} v${config.version} branch=${config.branchId}`);
+  const supabase = createClient(config.supabaseUrl, config.serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  await loadPrinters(supabase);
+  await heartbeat(supabase);
+  await drainPending(supabase);
+
+  const channel = supabase
+    .channel(`print_jobs:branch=${config.branchId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "print_jobs",
+        filter: `branch_id=eq.${config.branchId}`,
+      },
+      (payload) => {
+        const row = payload.new as { id: number; status: string };
+        if (row.status === "pending") {
+          void processJob(supabase, row.id);
+        }
+      },
+    )
+    .subscribe((status) => {
+      console.log(`[agent] realtime status=${status}`);
+    });
+
+  setInterval(() => void heartbeat(supabase), 30_000);
+  setInterval(() => void loadPrinters(supabase), 5 * 60_000);
+  setInterval(() => void drainPending(supabase), 60_000);
+
+  const shutdown = () => {
+    console.log("[agent] shutting down");
+    void channel.unsubscribe();
+    process.exit(0);
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
+}
+
+main().catch((err) => {
+  console.error("[agent] fatal:", err);
+  process.exit(1);
+});

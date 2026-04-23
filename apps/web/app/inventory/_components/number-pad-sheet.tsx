@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { DeleteIcon } from "lucide-react";
+import { IconBackspace } from "@tabler/icons-react";
 import {
   Sheet,
   SheetContent,
@@ -94,7 +94,7 @@ export function NumberPadSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="h-auto max-h-[95dvh] gap-0 bg-background p-0 text-foreground"
+        className="h-auto max-h-dvh gap-0 bg-background p-0 text-foreground"
         showCloseButton={false}
       >
         <SheetHeader className="border-b p-4 pb-3">
@@ -120,11 +120,13 @@ export function NumberPadSheet({
                 "flex h-16 items-center justify-center rounded-lg border border-transparent bg-muted text-2xl font-semibold tabular-nums",
                 "transition-transform active:scale-95 active:bg-muted-foreground/20",
                 key === "del" && "text-destructive",
-                key === "." && !allowDecimal && "pointer-events-none opacity-30",
+                key === "." &&
+                  !allowDecimal &&
+                  "pointer-events-none opacity-30",
               )}
               aria-label={key === "del" ? "Xóa" : key}
             >
-              {key === "del" ? <DeleteIcon className="size-6" /> : key}
+              {key === "del" ? <IconBackspace className="size-6" /> : key}
             </button>
           ))}
         </div>

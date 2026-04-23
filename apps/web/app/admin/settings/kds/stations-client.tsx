@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { Plus, Pencil } from "lucide-react";
+import { IconPlus, IconPencil } from "@tabler/icons-react";
 import { StationFormDialog } from "./station-form-dialog";
 import { EmptyStatePanel } from "../../components/empty-state-panel";
 
@@ -112,7 +112,7 @@ export function StationsClient({
               setDialogOpen(true);
             }}
           >
-            <Plus className="mr-2 size-4" />
+            <IconPlus className="mr-2 size-4" />
             Thêm trạm
           </Button>
         </div>
@@ -179,7 +179,7 @@ export function StationsClient({
                           setDialogOpen(true);
                         }}
                       >
-                        <Pencil className="size-4" />
+                        <IconPencil className="size-4" />
                         <span className="sr-only">Chỉnh sửa</span>
                       </Button>
                     </TableCell>

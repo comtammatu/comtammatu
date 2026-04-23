@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@comtammatu/ui/components/button";
-import { LogIn, LogOut } from "lucide-react";
+import { IconLogin, IconLogout } from "@tabler/icons-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { checkIn, checkOut } from "../hr/actions";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
@@ -109,7 +109,7 @@ export function EmployeePortalActions({
             {loading && !hasCheckedIn ? (
               <Spinner data-icon="inline-start" />
             ) : (
-              <LogIn data-icon="inline-start" />
+              <IconLogin data-icon="inline-start" />
             )}
             {hasCheckedIn ? "Đã vào ca" : "Chấm công vào"}
           </Button>
@@ -123,7 +123,7 @@ export function EmployeePortalActions({
             {loading && hasCheckedIn && !hasCheckedOut ? (
               <Spinner data-icon="inline-start" />
             ) : (
-              <LogOut data-icon="inline-start" />
+              <IconLogout data-icon="inline-start" />
             )}
             {hasCheckedOut ? "Đã ra ca" : "Chấm công ra"}
           </Button>

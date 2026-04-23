@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { DeleteIcon } from "lucide-react";
+import { IconBackspace } from "@tabler/icons-react";
 import {
   Sheet,
   SheetContent,
@@ -124,7 +124,7 @@ export function NumberPadSheet({
               )}
               aria-label={key === "del" ? "Xóa" : key}
             >
-              {key === "del" ? <DeleteIcon className="size-6" /> : key}
+              {key === "del" ? <IconBackspace className="size-6" /> : key}
             </button>
           ))}
         </div>

@@ -1,10 +1,10 @@
 import {
-  BadgeCheck,
-  Building2,
-  CalendarDays,
-  LogOut,
-  User,
-} from "lucide-react";
+  IconRosetteDiscountCheck,
+  IconBuilding,
+  IconCalendarEvent,
+  IconLogout,
+  IconUser,
+} from "@tabler/icons-react";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -59,7 +59,7 @@ export default async function ProfilePage() {
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <div className="flex size-16 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <User className="size-8" />
+                <IconUser className="size-8" />
               </div>
               <div className="flex min-w-0 flex-col gap-1">
                 <p className="text-xs font-semibold text-muted-foreground">
@@ -90,7 +90,7 @@ export default async function ProfilePage() {
             {branchName ? (
               <Item variant="outline">
                 <ItemMedia variant="icon">
-                  <Building2 />
+                  <IconBuilding />
                 </ItemMedia>
                 <ItemContent>
                   <ItemTitle>Chi nhánh</ItemTitle>
@@ -102,7 +102,7 @@ export default async function ProfilePage() {
             {employee?.employee_code ? (
               <Item variant="outline">
                 <ItemMedia variant="icon">
-                  <BadgeCheck />
+                  <IconRosetteDiscountCheck />
                 </ItemMedia>
                 <ItemContent>
                   <ItemTitle>Mã nhân viên</ItemTitle>
@@ -116,7 +116,7 @@ export default async function ProfilePage() {
             {employee?.start_date ? (
               <Item variant="outline">
                 <ItemMedia variant="icon">
-                  <CalendarDays />
+                  <IconCalendarEvent />
                 </ItemMedia>
                 <ItemContent>
                   <ItemTitle>Ngày bắt đầu</ItemTitle>
@@ -130,7 +130,7 @@ export default async function ProfilePage() {
 
       <form action="/api/auth/signout" method="post">
         <Button type="submit" variant="outline">
-          <LogOut data-icon="inline-start" />
+          <IconLogout data-icon="inline-start" />
           Đăng xuất
         </Button>
       </form>

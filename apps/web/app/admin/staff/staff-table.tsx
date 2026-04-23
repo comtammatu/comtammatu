@@ -3,13 +3,13 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import {
-  KeyRound,
-  MoreHorizontal,
-  Pencil,
-  ToggleLeft,
-  ToggleRight,
-  Users,
-} from "lucide-react";
+  IconKey,
+  IconDots,
+  IconPencil,
+  IconToggleLeft,
+  IconToggleRight,
+  IconUsers,
+} from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -71,7 +71,7 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
     <>
       {staff.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border px-6 py-16 text-center">
-          <Users className="mx-auto size-8 text-muted-foreground" />
+          <IconUsers className="mx-auto size-8 text-muted-foreground" />
           <p className="mt-3 text-sm font-medium">Chưa có nhân viên nào</p>
         </div>
       ) : null}
@@ -114,18 +114,18 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="rounded-full">
-                    <MoreHorizontal className="size-4" />
+                    <IconDots className="size-4" />
                     Tác vụ
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onSelect={() => setEditStaff(member)}>
-                    <Pencil className="mr-2 size-4" />
+                    <IconPencil className="mr-2 size-4" />
                     Chỉnh sửa
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href={`/admin/staff/${member.id}/permissions`}>
-                      <KeyRound className="mr-2 size-4" />
+                      <IconKey className="mr-2 size-4" />
                       Quyền hạn
                     </Link>
                   </DropdownMenuItem>
@@ -134,12 +134,12 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
                   >
                     {member.is_active !== false ? (
                       <>
-                        <ToggleLeft className="mr-2 size-4" />
+                        <IconToggleLeft className="mr-2 size-4" />
                         Vô hiệu hóa
                       </>
                     ) : (
                       <>
-                        <ToggleRight className="mr-2 size-4" />
+                        <IconToggleRight className="mr-2 size-4" />
                         Kích hoạt
                       </>
                     )}
@@ -179,7 +179,7 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
                 colSpan={6}
                 title="Chưa có nhân viên nào"
                 icon={
-                  <Users className="mx-auto size-8 text-muted-foreground" />
+                  <IconUsers className="mx-auto size-8 text-muted-foreground" />
                 }
               />
             )}
@@ -216,18 +216,18 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon-lg">
-                        <MoreHorizontal className="size-4" />
+                        <IconDots className="size-4" />
                         <span className="sr-only">Menu</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onSelect={() => setEditStaff(member)}>
-                        <Pencil className="mr-2 size-4" />
+                        <IconPencil className="mr-2 size-4" />
                         Chỉnh sửa
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link href={`/admin/staff/${member.id}/permissions`}>
-                          <KeyRound className="mr-2 size-4" />
+                          <IconKey className="mr-2 size-4" />
                           Quyền hạn
                         </Link>
                       </DropdownMenuItem>
@@ -236,12 +236,12 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
                       >
                         {member.is_active !== false ? (
                           <>
-                            <ToggleLeft className="mr-2 size-4" />
+                            <IconToggleLeft className="mr-2 size-4" />
                             Vô hiệu hóa
                           </>
                         ) : (
                           <>
-                            <ToggleRight className="mr-2 size-4" />
+                            <IconToggleRight className="mr-2 size-4" />
                             Kích hoạt
                           </>
                         )}

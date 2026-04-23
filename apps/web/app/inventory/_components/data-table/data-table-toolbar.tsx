@@ -1,9 +1,13 @@
 "use client";
 
-import { Search, X } from "lucide-react";
-import { Input } from "@comtammatu/ui/components/input";
+import { IconSearch, IconX } from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
 import {
   Select,
   SelectContent,
@@ -43,28 +47,25 @@ export function DataTableToolbar({
   const isMobile = useIsMobile();
   const hasActiveFilters =
     (searchValue && searchValue.length > 0) ||
-    (filterValues &&
-      Object.values(filterValues).some((v) => v && v !== "all"));
+    (filterValues && Object.values(filterValues).some((v) => v && v !== "all"));
   const showCount = filteredCount != null && totalCount != null;
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
         {searchable ? (
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
+          <InputGroup className={cn("max-w-sm", isMobile && "h-12")}>
+            <InputGroupAddon>
+              <IconSearch />
+            </InputGroupAddon>
+            <InputGroupInput
               type="search"
               placeholder={searchPlaceholder}
               value={searchValue ?? ""}
               onChange={(e) => onSearchChange?.(e.target.value)}
-              className={cn(
-                "pl-9",
-                isMobile && "h-12",
-              )}
               inputMode="search"
             />
-          </div>
+          </InputGroup>
         ) : null}
 
         {filters?.map((filter) => (
@@ -73,7 +74,7 @@ export function DataTableToolbar({
             value={filterValues?.[filter.key] ?? "all"}
             onValueChange={(value) => onFilterChange?.(filter.key, value)}
           >
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="min-w-40">
               <SelectValue placeholder={filter.placeholder} />
             </SelectTrigger>
             <SelectContent>
@@ -96,7 +97,7 @@ export function DataTableToolbar({
               filters?.forEach((f) => onFilterChange?.(f.key, "all"));
             }}
           >
-            <X className="mr-1 size-4" />
+            <IconX data-icon="inline-start" />
             Xóa lọc
           </Button>
         )}
@@ -108,7 +109,9 @@ export function DataTableToolbar({
         )}
       </div>
 
-      {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+      {actions ? (
+        <div className="flex items-center gap-2">{actions}</div>
+      ) : null}
     </div>
   );
 }

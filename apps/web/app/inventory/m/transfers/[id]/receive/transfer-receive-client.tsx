@@ -3,17 +3,18 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowRight,
-  Check,
-  PackageCheck,
-  Pencil,
-  TriangleAlert,
-} from "lucide-react";
+  IconArrowRight,
+  IconCheck,
+  IconPackageImport,
+  IconPencil,
+  IconAlertTriangle,
+} from "@tabler/icons-react";
 import { Card } from "@comtammatu/ui/components/card";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Button } from "@comtammatu/ui/components/button";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import { cn } from "@comtammatu/ui";
 import { MobilePage } from "../../../../_components/mobile/mobile-page";
 import { MobileSectionHeader } from "../../../../_components/mobile/mobile-section-header";
@@ -133,9 +134,9 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
 
       <Card className="gap-2 p-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
-          <PackageCheck className="size-5 text-primary" />
+          <IconPackageImport className="size-5 text-primary" />
           <span className="truncate">{transfer.fromBranchName}</span>
-          <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+          <IconArrowRight className="size-4 shrink-0 text-muted-foreground" />
           <span className="truncate">{transfer.toBranchName}</span>
         </div>
         <div className="grid grid-cols-2 gap-3 text-sm">
@@ -175,7 +176,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
 
       {needsReceiveMode ? (
         <Alert>
-          <TriangleAlert className="size-4" />
+          <IconAlertTriangle className="size-4" />
           <AlertDescription className="flex flex-col gap-2">
             <span>
               Phiếu đang vận chuyển. Xác nhận bắt đầu kiểm nhận để chỉnh số
@@ -191,7 +192,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
               {startingReceive ? (
                 <Spinner />
               ) : (
-                <Check className="size-4" />
+                <IconCheck className="size-4" />
               )}
               Bắt đầu kiểm nhận
             </Button>
@@ -246,12 +247,14 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
                       disabled={!canAct || needsReceiveMode}
                       aria-label="Chỉnh số lượng"
                     >
-                      <Pencil className="size-4" />
+                      <IconPencil className="size-4" />
                     </Button>
                     {got !== line.sentQty ? (
-                      <button
+                      <Button
                         type="button"
-                        className="text-[11px] font-medium text-primary underline-offset-4 hover:underline"
+                        variant="link"
+                        size="sm"
+                        className="h-auto p-0 text-[11px] font-medium"
                         onClick={() =>
                           setValues((current) => ({
                             ...current,
@@ -260,7 +263,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
                         }
                       >
                         Nhận đủ
-                      </button>
+                      </Button>
                     ) : null}
                   </div>
                 </div>
@@ -279,14 +282,13 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
             Ghi chú thiếu hụt{" "}
             <span className="text-destructive">*</span>
           </label>
-          <textarea
+          <Textarea
             id="short-note"
             value={shortNote}
             onChange={(e) => setShortNote(e.target.value)}
             rows={3}
             maxLength={300}
             placeholder="Ví dụ: thiếu 2kg thịt ba chỉ do giao chưa đủ..."
-            className="w-full resize-none rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
           />
           {!noteOk ? (
             <p className="text-xs text-destructive">
@@ -312,7 +314,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
 
       {error ? (
         <Alert variant="destructive">
-          <TriangleAlert className="size-4" />
+          <IconAlertTriangle className="size-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}

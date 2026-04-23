@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
@@ -327,7 +327,7 @@ export function ItemDetailDialog({
                     className="size-9 shrink-0"
                     onClick={() => removeVariant(idx)}
                   >
-                    <Trash2 className="size-4" />
+                    <IconTrash className="size-4" />
                     <span className="sr-only">Xóa biến thể</span>
                   </Button>
                 </div>
@@ -339,7 +339,7 @@ export function ItemDetailDialog({
                   size="sm"
                   onClick={addVariant}
                 >
-                  <Plus className="mr-1 size-3" />
+                  <IconPlus className="mr-1 size-3" />
                   Thêm biến thể
                 </Button>
                 <Button
@@ -395,7 +395,7 @@ export function ItemDetailDialog({
                     className="size-9 shrink-0"
                     onClick={() => removeModifier(idx)}
                   >
-                    <Trash2 className="size-4" />
+                    <IconTrash className="size-4" />
                     <span className="sr-only">Xóa tùy chọn</span>
                   </Button>
                 </div>
@@ -407,7 +407,7 @@ export function ItemDetailDialog({
                   size="sm"
                   onClick={addModifier}
                 >
-                  <Plus className="mr-1 size-3" />
+                  <IconPlus className="mr-1 size-3" />
                   Thêm tùy chọn
                 </Button>
                 <Button

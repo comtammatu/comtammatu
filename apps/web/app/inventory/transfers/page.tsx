@@ -6,6 +6,7 @@ import {
   fetchBranchesForTransfer,
   fetchInventoryLocationsForBranch,
 } from "../transfer-actions";
+import { parseBranchIdParam } from "../_lib/inventory-scope";
 import type {
   BranchForTransfer,
   InventoryLocation,
@@ -14,7 +15,14 @@ import type {
 import { TransfersListClient } from "./transfers-list-client";
 import type { IngredientRow } from "../page";
 
-export default async function TransfersPage() {
+export default async function TransfersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const branchFilter = parseBranchIdParam(params.branchId) ?? undefined;
+
   const supabase = await createClient();
   const {
     data: { session },
@@ -26,7 +34,7 @@ export default async function TransfersPage() {
   const userBranchId = claims?.branch_id ?? null;
 
   const [trRes, brRes, ingRes, locRes] = await Promise.all([
-    fetchStockTransfers(),
+    fetchStockTransfers(branchFilter),
     fetchBranchesForTransfer(),
     fetchIngredients(),
     userBranchId != null

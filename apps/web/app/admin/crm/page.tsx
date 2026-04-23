@@ -1,4 +1,4 @@
-import { Heart } from "lucide-react";
+import { IconHeart } from "@tabler/icons-react";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 
 export default function CrmPage() {
@@ -21,7 +21,7 @@ export default function CrmPage() {
       <Card className="border-dashed bg-muted/20">
         <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
           <div className="flex size-14 items-center justify-center rounded-full border bg-muted text-primary">
-            <Heart className="size-8 text-primary" />
+            <IconHeart className="size-8 text-primary" />
           </div>
           <div className="space-y-1.5">
             <h3 className="text-2xl font-semibold">

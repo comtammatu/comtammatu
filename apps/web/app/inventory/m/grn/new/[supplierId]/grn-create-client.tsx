@@ -3,13 +3,13 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
-  AlertTriangle,
-  CheckCircle2,
-  ChevronRight,
-  Pencil,
-  Search,
-  Trash2,
-} from "lucide-react";
+  IconAlertTriangle,
+  IconCircleCheck,
+  IconChevronRight,
+  IconPencil,
+  IconSearch,
+  IconTrash,
+} from "@tabler/icons-react";
 import {
   InputGroup,
   InputGroupAddon,
@@ -18,6 +18,7 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Card } from "@comtammatu/ui/components/card";
 import { Button } from "@comtammatu/ui/components/button";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
   Sheet,
   SheetContent,
@@ -280,7 +281,7 @@ export function GrnCreateClient({
               className="h-8 gap-1 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={discardDraft}
             >
-              <Trash2 className="size-4" />
+              <IconTrash className="size-4" />
               Hủy nháp
             </Button>
           ) : undefined
@@ -325,7 +326,7 @@ export function GrnCreateClient({
                     }}
                     aria-label="Sửa dòng"
                   >
-                    <Pencil className="size-4" />
+                    <IconPencil className="size-4" />
                   </Button>
                   <Button
                     type="button"
@@ -335,7 +336,7 @@ export function GrnCreateClient({
                     onClick={() => removeLine(line.ingredientId)}
                     aria-label="Xóa dòng"
                   >
-                    <Trash2 className="size-4" />
+                    <IconTrash className="size-4" />
                   </Button>
                 </div>
               </div>
@@ -346,7 +347,7 @@ export function GrnCreateClient({
 
       <InputGroup className="h-12 rounded-lg">
         <InputGroupAddon>
-          <Search />
+          <IconSearch />
         </InputGroupAddon>
         <InputGroupInput
           type="search"
@@ -361,7 +362,7 @@ export function GrnCreateClient({
       <div className="flex flex-col gap-2">
         {filtered.length === 0 ? (
           <MobileEmptyState
-            icon={Search}
+            icon={IconSearch}
             title="Không thấy nguyên liệu"
             description="Thử từ khóa khác hoặc kiểm tra lại danh mục."
           />
@@ -391,9 +392,9 @@ export function GrnCreateClient({
                   </p>
                 </div>
                 {added ? (
-                  <CheckCircle2 className="size-5 shrink-0 text-success" />
+                  <IconCircleCheck className="size-5 shrink-0 text-success" />
                 ) : (
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                  <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
                 )}
               </button>
             );
@@ -403,7 +404,7 @@ export function GrnCreateClient({
 
       {submitError ? (
         <Alert variant="destructive">
-          <AlertTriangle className="size-4" />
+          <IconAlertTriangle className="size-4" />
           <AlertDescription>{submitError}</AlertDescription>
         </Alert>
       ) : null}
@@ -583,7 +584,7 @@ function LineEditSheet({
 
               {showVarianceWarning && variance != null ? (
                 <Alert variant="destructive">
-                  <AlertTriangle className="size-4" />
+                  <IconAlertTriangle className="size-4" />
                   <AlertDescription>
                     Giá chênh {(variance * 100).toFixed(0)}% so với lần trước —
                     kiểm tra lại trước khi lưu.
@@ -598,14 +599,14 @@ function LineEditSheet({
                 >
                   Ghi chú (tùy chọn)
                 </label>
-                <textarea
+                <Textarea
                   id="line-note"
                   value={edit.note}
                   onChange={(e) => onPatch({ note: e.target.value })}
                   rows={2}
                   maxLength={200}
                   placeholder="Tình trạng, lô, nhiệt độ..."
-                  className="mt-1 w-full resize-none rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                  className="mt-1"
                 />
               </div>
             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { IconCheck } from "@tabler/icons-react";
 import { cn } from "@comtammatu/ui";
 
 interface TimelineStep {
@@ -28,7 +28,7 @@ export function TimelineStepper({ steps }: { steps: TimelineStep[] }) {
               )}
             >
               {step.completed ? (
-                <Check className="size-4" />
+                <IconCheck className="size-4" />
               ) : (
                 (step.icon ?? String(index + 1))
               )}

@@ -2,13 +2,13 @@
 
 import { useState, useTransition } from "react";
 import {
-  MoreHorizontal,
-  Pencil,
-  ToggleLeft,
-  ToggleRight,
-  Settings2,
-  UtensilsCrossed,
-} from "lucide-react";
+  IconDots,
+  IconPencil,
+  IconToggleLeft,
+  IconToggleRight,
+  IconSettings2,
+  IconToolsKitchen,
+} from "@tabler/icons-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -87,7 +87,7 @@ export function ItemTable({ items, categories }: ItemTableProps) {
                 colSpan={5}
                 title="Chưa có món ăn nào"
                 icon={
-                  <UtensilsCrossed className="mx-auto size-8 text-muted-foreground" />
+                  <IconToolsKitchen className="mx-auto size-8 text-muted-foreground" />
                 }
               />
             )}
@@ -132,17 +132,17 @@ export function ItemTable({ items, categories }: ItemTableProps) {
                         size="icon"
                         className="size-9 rounded-full"
                       >
-                        <MoreHorizontal className="size-4" />
+                        <IconDots className="size-4" />
                         <span className="sr-only">Menu</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setEditItem(item)}>
-                        <Pencil className="mr-2 size-4" />
+                        <IconPencil className="mr-2 size-4" />
                         Chỉnh sửa
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setDetailItem(item)}>
-                        <Settings2 className="mr-2 size-4" />
+                        <IconSettings2 className="mr-2 size-4" />
                         Biến thể & Tùy chọn
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -151,12 +151,12 @@ export function ItemTable({ items, categories }: ItemTableProps) {
                       >
                         {item.is_active ? (
                           <>
-                            <ToggleLeft className="mr-2 size-4" />
+                            <IconToggleLeft className="mr-2 size-4" />
                             Vô hiệu hóa
                           </>
                         ) : (
                           <>
-                            <ToggleRight className="mr-2 size-4" />
+                            <IconToggleRight className="mr-2 size-4" />
                             Kích hoạt
                           </>
                         )}

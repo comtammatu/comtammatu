@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 import {
   Controller,
   useFieldArray,
@@ -219,7 +219,7 @@ function LineRowCells({
           disabled={!canRemove}
           aria-label="Xoá dòng"
         >
-          <Trash2 className="size-4 text-muted-foreground" />
+          <IconTrash className="size-4 text-muted-foreground" />
         </Button>
       </div>
       {rowError && (
@@ -426,7 +426,7 @@ export function RecipeLineDialog({
                 size="sm"
                 onClick={() => append(EMPTY_ROW)}
               >
-                <Plus className="size-4" />
+                <IconPlus className="size-4" />
                 Thêm nguyên liệu
               </Button>
             </div>

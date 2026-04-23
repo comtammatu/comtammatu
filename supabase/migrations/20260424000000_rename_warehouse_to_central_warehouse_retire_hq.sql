@@ -112,10 +112,12 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS trg_po_procurement_branch ON public.purchase_orders;
 CREATE TRIGGER trg_po_procurement_branch
   BEFORE INSERT OR UPDATE OF branch_id ON public.purchase_orders
   FOR EACH ROW EXECUTE FUNCTION public.enforce_po_grn_branch_is_procurement();
 
+DROP TRIGGER IF EXISTS trg_grn_procurement_branch ON public.goods_received_notes;
 CREATE TRIGGER trg_grn_procurement_branch
   BEFORE INSERT OR UPDATE OF branch_id ON public.goods_received_notes
   FOR EACH ROW EXECUTE FUNCTION public.enforce_po_grn_branch_is_procurement();
@@ -319,6 +321,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS trg_stock_transfer_direction ON public.stock_transfers;
 CREATE TRIGGER trg_stock_transfer_direction
   BEFORE INSERT OR UPDATE OF from_branch_id, to_branch_id ON public.stock_transfers
   FOR EACH ROW EXECUTE FUNCTION public.enforce_stock_transfer_direction();

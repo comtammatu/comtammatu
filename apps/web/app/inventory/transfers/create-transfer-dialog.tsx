@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -94,7 +94,8 @@ export function CreateTransferDialog({
   const [isPending, startTransition] = useTransition();
 
   const isProcurementBranch = (b: BranchForTransfer) =>
-    b.branch_kind === "central_warehouse" || b.branch_kind === "central_kitchen";
+    b.branch_kind === "central_warehouse" ||
+    b.branch_kind === "central_kitchen";
   const operational = branches.filter((b) => !isProcurementBranch(b));
   const canBranchToBranch = operational.length >= 2;
   const canInternalTransfer = userBranchId != null && locations.length >= 2;
@@ -103,9 +104,10 @@ export function CreateTransferDialog({
     hqBranchId != null && userBranchId != null && userBranchId === hqBranchId;
   const isUserOperational =
     hqBranchId != null && userBranchId != null && userBranchId !== hqBranchId;
-  const isBranchManager = userRole === "branch_manager"
-    || userRole === "warehouse_manager"
-    || userRole === "production_manager";
+  const isBranchManager =
+    userRole === "branch_manager" ||
+    userRole === "warehouse_manager" ||
+    userRole === "production_manager";
 
   const myBranchName = useMemo(() => {
     if (userBranchId == null) return null;
@@ -271,7 +273,15 @@ export function CreateTransferDialog({
       return;
     }
 
-    doCreate(fromId, toId, linesPayload, notes, vehicleInfo, fromLocId, toLocId);
+    doCreate(
+      fromId,
+      toId,
+      linesPayload,
+      notes,
+      vehicleInfo,
+      fromLocId,
+      toLocId,
+    );
   }
 
   const submitDisabled =
@@ -301,7 +311,7 @@ export function CreateTransferDialog({
         if (!o) resetForm();
       }}
     >
-      <DialogContent className="max-h-[min(92vh,900px)] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-dvh overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Tạo phiếu luân chuyển</DialogTitle>
           <DialogDescription>
@@ -315,7 +325,9 @@ export function CreateTransferDialog({
             value={slipKind}
             onValueChange={(v) => setSlipKind(v as SlipKind)}
           >
-            <TabsList className={`grid w-full ${canInternalTransfer ? "grid-cols-3" : "grid-cols-2"}`}>
+            <TabsList
+              className={`grid w-full ${canInternalTransfer ? "grid-cols-3" : "grid-cols-2"}`}
+            >
               <TabsTrigger value="inbound">Phiếu nhập</TabsTrigger>
               <TabsTrigger value="outbound">Phiếu xuất</TabsTrigger>
               {canInternalTransfer && (
@@ -524,7 +536,7 @@ export function CreateTransferDialog({
                 disabled={!pickerIngredientId}
                 aria-label="Thêm nguyên liệu"
               >
-                <Plus className="size-4" />
+                <IconPlus className="size-4" />
               </Button>
             </div>
 
@@ -555,7 +567,9 @@ export function CreateTransferDialog({
                       className="h-8 w-20"
                       placeholder="SL"
                       value={l.quantity}
-                      onValueChange={(value) => updateLine(l.key, { quantity: value })}
+                      onValueChange={(value) =>
+                        updateLine(l.key, { quantity: value })
+                      }
                       maxFractionDigits={3}
                       required
                     />
@@ -575,7 +589,7 @@ export function CreateTransferDialog({
                       onClick={() => removeLine(l.key)}
                       aria-label="Xóa dòng"
                     >
-                      <Trash2 className="size-3.5" />
+                      <IconTrash className="size-3.5" />
                     </Button>
                   </div>
                 ))}

@@ -14,9 +14,8 @@ import { cn } from "@comtammatu/ui";
 type StepTone = "done" | "current" | "pending";
 
 const STEP_TONE_CLASS: Record<StepTone, string> = {
-  done: "border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10",
-  current:
-    "border-amber-200 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10",
+  done: "border-success/30 bg-success/10",
+  current: "border-warning/30 bg-warning/10",
   pending: "border-border bg-muted/30",
 };
 

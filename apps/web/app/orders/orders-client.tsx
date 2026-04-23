@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useMemo } from "react";
-import { ShoppingBag } from "lucide-react";
+import { IconShoppingBag } from "@tabler/icons-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -295,7 +295,7 @@ export function OrdersClient({
         <CardContent className="space-y-4">
           {displayOrders.length === 0 ? (
             <div className="rounded-lg border bg-muted/30 text-card-foreground border-dashed px-6 py-16 text-center">
-              <ShoppingBag className="mx-auto size-8 text-muted-foreground" />
+              <IconShoppingBag className="mx-auto size-8 text-muted-foreground" />
               <p className="mt-3 text-sm font-medium">Không có đơn hàng nào</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 {hasFilters
@@ -406,7 +406,7 @@ export function OrdersClient({
                         : "Hệ thống chưa có đơn nào trong phạm vi đang xem."
                     }
                     icon={
-                      <ShoppingBag className="mx-auto size-8 text-muted-foreground" />
+                      <IconShoppingBag className="mx-auto size-8 text-muted-foreground" />
                     }
                   />
                 )}

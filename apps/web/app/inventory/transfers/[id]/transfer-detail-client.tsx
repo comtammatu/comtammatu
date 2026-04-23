@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, MapPin, CheckCircle, Printer } from "lucide-react";
+import { IconArrowLeft, IconMapPin, IconCircleCheck, IconPrinter } from "@tabler/icons-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -23,6 +23,7 @@ import {
   TableRow,
   TableFooter,
 } from "@comtammatu/ui/components/table";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { InventoryHeader } from "../../_components/inventory-header";
 import { TimelineStepper } from "../../_components/timeline-stepper";
@@ -234,7 +235,7 @@ export function TransferDetailClient({
             href="/inventory/transfers"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
           >
-            <ArrowLeft className="size-4" /> {tRoute("/inventory/transfers")}
+            <IconArrowLeft className="size-4" /> {tRoute("/inventory/transfers")}
           </Link>
         }
       />
@@ -284,12 +285,12 @@ export function TransferDetailClient({
           {
             label: tTerm("fromWarehouse"),
             value: transfer.fromBranch,
-            icon: <MapPin className="size-3 text-primary" />,
+            icon: <IconMapPin className="size-3 text-primary" />,
           },
           {
             label: tTerm("toWarehouse"),
             value: transfer.toBranch,
-            icon: <MapPin className="size-3 text-info" />,
+            icon: <IconMapPin className="size-3 text-info" />,
           },
           {
             label: "Đã ghi nhận",
@@ -554,13 +555,12 @@ export function TransferDetailClient({
               {shortLines} mặt hàng thiếu so với phiếu xuất. Ghi chú tối thiểu 3
               ký tự.
             </p>
-            <textarea
+            <Textarea
               value={shortNote}
               onChange={(e) => setShortNote(e.target.value)}
               rows={3}
               maxLength={300}
               placeholder="Ví dụ: thiếu 2kg thịt ba chỉ do giao chưa đủ..."
-              className="w-full resize-none rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             />
             {!noteOk ? (
               <p className="text-xs text-destructive">
@@ -578,7 +578,7 @@ export function TransferDetailClient({
           variant="outline"
           className="rounded-full px-6 font-bold text-muted-foreground"
         >
-          <Printer className="size-5" />
+          <IconPrinter className="size-5" />
           In phiếu
         </Button>
         <Button
@@ -593,7 +593,7 @@ export function TransferDetailClient({
           className="rounded-full px-10 font-bold shadow-lg"
           onClick={handlePrimaryAction}
         >
-          <CheckCircle className="size-5" />
+          <IconCircleCheck className="size-5" />
           {actionConfig?.label ?? "Phiếu đã hoàn tất"}
         </Button>
       </footer>

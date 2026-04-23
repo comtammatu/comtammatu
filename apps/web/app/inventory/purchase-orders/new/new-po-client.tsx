@@ -4,16 +4,16 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft,
-  ChevronDown,
-  Lightbulb,
-  Package,
-  Plus,
-  PlusCircle,
-  Trash2,
-  TrendingDown,
-  TrendingUp,
-} from "lucide-react";
+  IconArrowLeft,
+  IconChevronDown,
+  IconBulb,
+  IconPackage,
+  IconPlus,
+  IconCirclePlus,
+  IconTrash,
+  IconTrendingDown,
+  IconTrendingUp,
+} from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -296,7 +296,7 @@ export function NewPoClient({
             href={poBasePath}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
           >
-            <ArrowLeft className="size-4" /> Danh sách PO
+            <IconArrowLeft className="size-4" /> Danh sách PO
           </Link>
         }
       />
@@ -505,13 +505,13 @@ function SuggestionsPanel({
                 className="h-auto w-full justify-between rounded-none px-4 py-3 text-left md:px-5"
               >
                 <div className="flex items-center gap-2">
-                  <Lightbulb className="size-4 text-info" />
+                  <IconBulb className="size-4 text-info" />
                   <span className="text-sm font-semibold">Gợi ý đặt hàng</span>
                   {suggestions.length > 0 && (
                     <Badge variant="info">{suggestions.length}</Badge>
                   )}
                 </div>
-                <ChevronDown
+                <IconChevronDown
                   className={`size-4 text-muted-foreground transition-transform ${suggestionsOpen ? "rotate-180" : ""}`}
                 />
               </Button>
@@ -574,7 +574,7 @@ function SuggestionsPanel({
                       className="h-7 text-xs"
                       onClick={onAddAll}
                     >
-                      <PlusCircle className="mr-1 size-3.5" />
+                      <IconCirclePlus className="mr-1 size-3.5" />
                       Thêm tất cả ({addableCount})
                     </Button>
                   )}
@@ -583,7 +583,7 @@ function SuggestionsPanel({
                 {/* Suggestion rows */}
                 {suggestions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-background/35 px-6 py-8 text-center">
-                    <Package className="size-5 text-muted-foreground" />
+                    <IconPackage className="size-5 text-muted-foreground" />
                     <p className="text-base font-semibold">
                       Tồn kho đang ổn định
                     </p>
@@ -649,7 +649,7 @@ function SuggestionsPanel({
                               {alreadyAdded ? (
                                 "Đã thêm"
                               ) : (
-                                <Plus className="size-3.5" />
+                                <IconPlus className="size-3.5" />
                               )}
                             </Button>
                           </ItemActions>
@@ -718,7 +718,7 @@ function SuggestionsPanel({
                                 "Đã thêm"
                               ) : (
                                 <>
-                                  <Plus className="mr-0.5 size-3" />
+                                  <IconPlus className="mr-0.5 size-3" />
                                   Thêm
                                 </>
                               )}
@@ -892,7 +892,7 @@ function LineItemsSection({
                           className="size-7 rounded-lg border-none bg-transparent text-muted-foreground shadow-none hover:bg-destructive/10 hover:text-destructive"
                           aria-label="Xóa dòng"
                         >
-                          <Trash2 className="size-3.5" />
+                          <IconTrash className="size-3.5" />
                         </Button>
                       </div>
                     </div>
@@ -953,7 +953,7 @@ function LineItemsSection({
                 disabled={!ingredientId}
                 className="w-full"
               >
-                <Plus className="mr-1 size-3.5" />
+                <IconPlus className="mr-1 size-3.5" />
                 Thêm dòng
               </Button>
               {addRowDeviation &&
@@ -1046,7 +1046,7 @@ function LineItemsSection({
                         className="size-7 rounded-lg border-none bg-transparent text-muted-foreground shadow-none hover:bg-destructive/10 hover:text-destructive"
                         aria-label="Xóa dòng"
                       >
-                        <Trash2 className="size-3.5" />
+                        <IconTrash className="size-3.5" />
                       </Button>
                     </div>
                   </div>
@@ -1128,7 +1128,7 @@ function LineItemsSection({
                 className="size-7"
                 aria-label="Thêm dòng"
               >
-                <Plus className="size-3.5" />
+                <IconPlus className="size-3.5" />
               </Button>
             </div>
             <span />
@@ -1158,7 +1158,7 @@ function InlineDeviationHint({
   unit: string;
 }) {
   const isExpensive = deviation.deviation_pct > 0;
-  const Icon = isExpensive ? TrendingUp : TrendingDown;
+  const Icon = isExpensive ? IconTrendingUp : IconTrendingDown;
   const sign = isExpensive ? "+" : "";
 
   return (

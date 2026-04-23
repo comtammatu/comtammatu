@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
-import { Plus } from "lucide-react";
+import { IconPlus } from "@tabler/icons-react";
 import { createAccount, updateAccount } from "../accounting-actions";
 import type { AccountRow } from "./page";
 
@@ -99,7 +99,7 @@ export function ChartOfAccountsClient({ accounts: initial }: Props) {
     <>
       <div className="flex justify-end">
         <Button onClick={() => setOpen(true)} size="sm">
-          <Plus className="mr-1.5 size-4" />
+          <IconPlus className="mr-1.5 size-4" />
           Thêm tài khoản
         </Button>
       </div>

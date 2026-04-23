@@ -792,25 +792,114 @@ export async function fetchOrderItemsForReorder(
     };
   }
 
-  const active = new Map(
+  const livePrices = new Map(
     (menuRows ?? [])
       .filter((m) => m.is_active === true)
-      .map((m) => [m.id, m.base_price as number]),
+      .map((m) => [m.id, Number(m.base_price)]),
   );
+
+  const variantIds = [
+    ...new Set(
+      (rows ?? [])
+        .map((r) => r.variant_id)
+        .filter((id): id is number => typeof id === "number"),
+    ),
+  ];
+
+  const liveVariantAdj = new Map<number, number>();
+  if (variantIds.length > 0) {
+    const { data: variantRows, error: variantErr } = await supabase
+      .from("menu_item_variants")
+      .select("id, is_active, price_adjustment")
+      .eq("tenant_id", claims.tenant_id)
+      .in("id", variantIds);
+
+    if (variantErr) {
+      return {
+        success: false,
+        error: "Không thể kiểm tra biến thể thực đơn.",
+      };
+    }
+
+    for (const v of variantRows ?? []) {
+      if (v.is_active === true) {
+        liveVariantAdj.set(v.id, Number(v.price_adjustment ?? 0));
+      }
+    }
+  }
+
+  const modifierIds = [
+    ...new Set(
+      (rows ?? []).flatMap((r) => {
+        const mods = Array.isArray(r.modifiers)
+          ? (r.modifiers as { modifier_id: number }[])
+          : [];
+        return mods.map((m) => m.modifier_id);
+      }),
+    ),
+  ];
+
+  const liveModifierPrices = new Map<number, number>();
+  if (modifierIds.length > 0) {
+    const { data: modifierRows, error: modifierErr } = await supabase
+      .from("menu_item_modifiers")
+      .select("id, is_active, price")
+      .eq("tenant_id", claims.tenant_id)
+      .in("id", modifierIds);
+
+    if (modifierErr) {
+      return {
+        success: false,
+        error: "Không thể kiểm tra tùy chọn thực đơn.",
+      };
+    }
+
+    for (const m of modifierRows ?? []) {
+      if (m.is_active === true) {
+        liveModifierPrices.set(m.id, Number(m.price ?? 0));
+      }
+    }
+  }
 
   const cartItems: CartItem[] = [];
   let skippedCount = 0;
 
   for (const r of rows ?? []) {
-    if (!active.has(r.menu_item_id)) {
+    const basePrice = livePrices.get(r.menu_item_id);
+    if (basePrice === undefined) {
       skippedCount += 1;
       continue;
     }
 
-    const key = `reorder-${r.id}-${r.menu_item_id}`;
-    const mods = Array.isArray(r.modifiers)
+    const variantId = r.variant_id;
+    if (variantId != null && !liveVariantAdj.has(variantId)) {
+      // Cached variant is no longer active — skip line to avoid stale pricing.
+      skippedCount += 1;
+      continue;
+    }
+    const variantAdj = variantId != null ? (liveVariantAdj.get(variantId) ?? 0) : 0;
+
+    const modsRaw = Array.isArray(r.modifiers)
       ? (r.modifiers as { modifier_id: number; name: string; price: number }[])
       : [];
+    const liveMods = modsRaw
+      .map((m) => {
+        const livePrice = liveModifierPrices.get(m.modifier_id);
+        if (livePrice === undefined) return null;
+        return {
+          modifier_id: m.modifier_id,
+          name: m.name,
+          price: livePrice,
+        };
+      })
+      .filter((m): m is NonNullable<typeof m> => m !== null);
+
+    // Preserve line only if all original modifiers are still live.
+    if (liveMods.length !== modsRaw.length) {
+      skippedCount += 1;
+      continue;
+    }
+
     const sidesRaw = Array.isArray(r.sides)
       ? (r.sides as {
           side_item_id: number;
@@ -819,19 +908,16 @@ export async function fetchOrderItemsForReorder(
         }[])
       : [];
 
+    const key = `reorder-${r.id}-${r.menu_item_id}`;
     cartItems.push({
       key,
       menu_item_id: r.menu_item_id,
-      variant_id: r.variant_id ?? undefined,
+      variant_id: variantId ?? undefined,
       item_name: r.item_name,
       variant_name: r.variant_name ?? undefined,
       quantity: r.quantity,
-      unit_price: Number(r.unit_price),
-      modifiers: mods.map((m) => ({
-        modifier_id: m.modifier_id,
-        name: m.name,
-        price: Number(m.price),
-      })),
+      unit_price: basePrice + variantAdj,
+      modifiers: liveMods,
       sides: sidesRaw.map((s) => ({
         side_item_id: s.side_item_id,
         name: s.name,

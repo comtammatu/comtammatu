@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle, PlusCircle, Trash2, X } from "lucide-react";
+import { IconArrowLeft, IconCircleCheck, IconCirclePlus, IconTrash, IconX } from "@tabler/icons-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -208,7 +208,7 @@ export function IssueDetailClient({
               href="/inventory/issues"
               className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
             >
-              <ArrowLeft className="size-4" /> {tRoute("/inventory/issues")}
+              <IconArrowLeft className="size-4" /> {tRoute("/inventory/issues")}
             </Link>
           }
         />
@@ -292,7 +292,7 @@ export function IssueDetailClient({
                 onClick={() => setAddDialogOpen(true)}
                 className="bg-success/10 text-success hover:bg-success/15 hover:text-success"
               >
-                <PlusCircle className="size-4" />
+                <IconCirclePlus className="size-4" />
                 Thêm {tTerm("ingredient", "button").toLowerCase()}
               </Button>
             ) : null}
@@ -339,7 +339,7 @@ export function IssueDetailClient({
                             disabled={isPending}
                             className="text-muted-foreground hover:text-destructive"
                           >
-                            <Trash2 className="size-4" />
+                            <IconTrash className="size-4" />
                           </Button>
                         ) : null}
                       </div>
@@ -449,7 +449,7 @@ export function IssueDetailClient({
                                 disabled={isPending}
                                 className="text-muted-foreground hover:text-destructive"
                               >
-                                <Trash2 className="size-4" />
+                                <IconTrash className="size-4" />
                               </Button>
                             ) : (
                               <span className="text-xs text-muted-foreground">
@@ -502,7 +502,7 @@ export function IssueDetailClient({
               className="text-destructive hover:bg-destructive/8 hover:text-destructive disabled:opacity-60"
               disabled={isPending}
             >
-              <X className="size-5" />
+              <IconX className="size-5" />
               Hủy phiếu
             </Button>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
@@ -515,7 +515,7 @@ export function IssueDetailClient({
                 disabled={isPending || lines.length === 0}
                 className="shadow-lg transition-all hover:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <CheckCircle className="size-5" />
+                <IconCircleCheck className="size-5" />
                 {surface.confirmAction}
               </Button>
             </div>

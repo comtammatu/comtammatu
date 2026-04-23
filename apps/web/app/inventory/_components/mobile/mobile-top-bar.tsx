@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut, Warehouse } from "lucide-react";
+import { IconLogout, IconBuildingWarehouse } from "@tabler/icons-react";
 import { Button } from "@comtammatu/ui/components/button";
 
 interface MobileTopBarProps {
@@ -17,7 +17,7 @@ export function MobileTopBar({ siteName }: MobileTopBarProps) {
         aria-label="Về trang chủ kho"
       >
         <span className="inline-flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Warehouse className="size-5" />
+          <IconBuildingWarehouse className="size-5" />
         </span>
         <span className="text-sm leading-tight">
           <span className="block">Kho Má Tư</span>
@@ -39,7 +39,7 @@ export function MobileTopBar({ siteName }: MobileTopBarProps) {
           className="size-10 rounded-lg text-muted-foreground"
           aria-label="Đăng xuất"
         >
-          <LogOut className="size-5" />
+          <IconLogout className="size-5" />
         </Button>
       </form>
     </header>

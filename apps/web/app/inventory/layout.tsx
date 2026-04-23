@@ -6,7 +6,7 @@ import {
   currentUserHasPermissionAny,
 } from "../_lib/permissions";
 import { InventoryShell } from "./_components/inventory-shell";
-import { fetchInventorySiteContext } from "./_lib/procurement-branches";
+import { resolveInventoryBranchScope } from "./_lib/inventory-scope";
 import {
   canAccessProductionSurface,
   hasCurrentProductionBranchAccess,
@@ -30,11 +30,7 @@ export default async function InventoryLayout({
   children: ReactNode;
 }) {
   const { supabase, session, claims } = await loadAuthState();
-  const siteContext = await fetchInventorySiteContext(
-    supabase,
-    claims.tenant_id,
-    claims.branch_id,
-  );
+  const scope = await resolveInventoryBranchScope(supabase, claims, null);
   const [
     hasProcurementRead,
     canManageCatalog,
@@ -56,19 +52,24 @@ export default async function InventoryLayout({
     canAccessProductionSurface(claims.user_role) &&
     hasProductionPermission &&
     hasProductionBranchAccess;
-  const resolvedSiteContext =
-    siteContext ??
+
+  const defaultBranch = scope.allowedBranches.find(
+    (b) => b.id === scope.defaultBranchId,
+  );
+  const siteName =
+    defaultBranch?.name ??
     (claims.user_role === "super_manager" ||
     claims.user_role === "owner" ||
     claims.user_role === "office"
-        ? {
-          branchName: "Kho tổng",
-          branchKind: "central_warehouse" as const,
-        }
-      : {
-          branchName: "Điểm vận hành",
-          branchKind: "branch" as const,
-        });
+      ? "Kho tổng"
+      : "Điểm vận hành");
+  const siteKind: string =
+    defaultBranch?.branch_kind ??
+    (claims.user_role === "super_manager" ||
+    claims.user_role === "owner" ||
+    claims.user_role === "office"
+      ? "central_warehouse"
+      : "branch");
 
   return (
     <InventoryShell
@@ -79,12 +80,14 @@ export default async function InventoryLayout({
           "",
       }}
       userRole={claims.user_role}
-      siteName={resolvedSiteContext.branchName}
-      siteKind={resolvedSiteContext.branchKind}
+      siteName={siteName}
+      siteKind={siteKind}
       showProcurement={showProcurement}
       showProduction={showProduction}
       showCatalogManagement={canManageCatalog}
       showSettings={canOpenSettings}
+      allowedBranches={scope.allowedBranches}
+      defaultBranchId={scope.defaultBranchId}
     >
       {children}
     </InventoryShell>

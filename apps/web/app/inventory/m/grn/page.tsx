@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  AlertTriangle,
-  ChevronRight,
-  FileClock,
-  Phone,
-  Receipt,
-  Users,
-} from "lucide-react";
+  IconAlertTriangle,
+  IconChevronRight,
+  IconFileTime,
+  IconPhone,
+  IconReceipt,
+  IconUsers,
+} from "@tabler/icons-react";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { createClient } from "@comtammatu/database/supabase/server";
@@ -170,7 +170,7 @@ export default async function MobileGrnSupplierList({
 
       {error ? (
         <Alert variant="destructive">
-          <AlertTriangle className="size-4" />
+          <IconAlertTriangle className="size-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
@@ -200,7 +200,7 @@ export default async function MobileGrnSupplierList({
               >
                 <button type="submit" className="w-full text-left">
                   <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <FileClock className="size-6" />
+                    <IconFileTime className="size-6" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -227,7 +227,7 @@ export default async function MobileGrnSupplierList({
                       <span>{formatOrderedAt(po.ordered_at)}</span>
                     </div>
                   </div>
-                  <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
+                  <IconChevronRight className="size-5 shrink-0 text-muted-foreground" />
                 </button>
               </InteractiveCard>
             </form>
@@ -243,7 +243,7 @@ export default async function MobileGrnSupplierList({
         </div>
         {suppliers.length === 0 ? (
           <MobileEmptyState
-            icon={Users}
+            icon={IconUsers}
             title="Chưa có nhà cung cấp"
             description="Thêm nhà cung cấp ở mục Quản lý trước khi tạo phiếu nhập."
           />
@@ -270,20 +270,20 @@ export default async function MobileGrnSupplierList({
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                       {supplier.phone ? (
                         <span className="inline-flex items-center gap-1">
-                          <Phone className="size-3" />
+                          <IconPhone className="size-3" />
                           {supplier.phone}
                         </span>
                       ) : null}
                       {supplier.recent_grn_count > 0 ? (
                         <span className="inline-flex items-center gap-1">
-                          <Receipt className="size-3" />
+                          <IconReceipt className="size-3" />
                           {supplier.recent_grn_count} phiếu
                         </span>
                       ) : null}
                       {lastLabel ? <span>{lastLabel}</span> : null}
                     </div>
                   </div>
-                  <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
+                  <IconChevronRight className="size-5 shrink-0 text-muted-foreground" />
                 </Link>
               </InteractiveCard>
             );

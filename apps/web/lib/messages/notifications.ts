@@ -1,0 +1,26 @@
+export const notifications = {
+  bellAriaLabel: "Thông báo",
+  empty: "Chưa có thông báo",
+  emptyHint: "Đơn mới, duyệt PO/GRN, cảnh báo tồn kho sẽ hiển thị ở đây.",
+  markAllRead: "Đánh dấu tất cả đã đọc",
+  markAllReadSuccess: "Đã đánh dấu {count} thông báo là đã đọc",
+  viewAll: "Xem tất cả",
+  unreadBadge: "{count} chưa đọc",
+  loadFailed: "Không thể tải thông báo",
+  loadMore: "Tải thêm",
+  pageTitle: "Thông báo",
+  pageDescription: "Cập nhật mới về đơn hàng, kho, và quy trình duyệt",
+  filters: {
+    all: "Tất cả",
+    unread: "Chưa đọc",
+  },
+  kindLabel: {
+    "pos.order_new": "Đơn mới",
+    "workflow.po_sent": "PO đã gửi",
+    "workflow.grn_pending": "GRN chờ chốt",
+    "workflow.transfer_in_transit": "Chuyển kho đang về",
+    "workflow.stocktake_submitted": "Kiểm kê đã nộp",
+    "inventory.stock_low": "Tồn kho thấp",
+    "inventory.expiry_soon": "Sắp hết hạn",
+  } as Record<string, string>,
+} as const

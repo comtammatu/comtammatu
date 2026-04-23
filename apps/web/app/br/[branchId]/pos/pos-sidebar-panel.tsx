@@ -7,7 +7,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
-import { DoorOpen } from "lucide-react";
+import { IconDoorEnter } from "@tabler/icons-react";
 import { CartSidebar } from "./cart-sidebar";
 import { OrderHistory } from "./order-history";
 import type { CartItem, OrderType } from "./types";
@@ -126,7 +126,7 @@ export function PosSidebarContent({
             className="h-9 rounded-full px-3 text-xs"
             onClick={onLoadSessionOrders}
           >
-            <DoorOpen className="mr-1 size-3.5" />
+            <IconDoorEnter className="mr-1 size-3.5" />
             Tải lại
           </Button>
         </div>

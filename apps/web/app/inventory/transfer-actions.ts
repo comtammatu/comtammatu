@@ -51,7 +51,9 @@ export async function fetchStockTransferDetail(
   return { success: true, data: { transfer: enriched, lines: lines ?? [] } };
 }
 
-export async function fetchStockTransfers(): Promise<ActionResult> {
+export async function fetchStockTransfers(
+  branchId?: number,
+): Promise<ActionResult> {
   const ctx = await getAuthContextWithPermission(ROLES, PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
@@ -62,10 +64,11 @@ export async function fetchStockTransfers(): Promise<ActionResult> {
     )
     .eq("tenant_id", claims.tenant_id);
 
-  // Branch manager can only see transfers involving their branch
-  if (claims.branch_id) {
+  // Explicit filter wins; otherwise branch-scoped roles are limited to their own branch.
+  const involvingBranch = branchId ?? claims.branch_id ?? null;
+  if (involvingBranch != null) {
     transferQuery = transferQuery.or(
-      `from_branch_id.eq.${claims.branch_id},to_branch_id.eq.${claims.branch_id}`,
+      `from_branch_id.eq.${involvingBranch},to_branch_id.eq.${involvingBranch}`,
     );
   }
 

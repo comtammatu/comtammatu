@@ -40,14 +40,14 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { toast } from "@comtammatu/ui/components/sonner";
+import { notify } from "@comtammatu/ui/lib/notify";
 import {
-  CheckCircle2,
-  Circle,
-  Loader2,
-  MoreHorizontal,
-  UtensilsCrossed,
-} from "lucide-react";
+  IconCircleCheck,
+  IconCircle,
+  IconLoader2,
+  IconDots,
+  IconToolsKitchen,
+} from "@tabler/icons-react";
 import {
   fetchOrderDetail,
   voidOrderItem,
@@ -56,8 +56,10 @@ import {
   updateOrderStatus,
   fetchOrderItemsForReorder,
 } from "./actions";
+import { sendToKitchen } from "./print-actions";
 import type { CartItem } from "./types";
 import type { BranchTable } from "./page";
+import { messages } from "@lib/messages";
 
 interface OrderItemRow {
   id: number;
@@ -96,44 +98,44 @@ const ORDER_STATUS_LABEL: Record<string, string> = {
 
 function itemStatusMeta(status: string): {
   label: string;
-  Icon: typeof Circle;
+  Icon: typeof IconCircle;
   ariaLabel: string;
 } {
   switch (status) {
     case "pending":
       return {
         label: "Chờ",
-        Icon: Circle,
+        Icon: IconCircle,
         ariaLabel: "Trạng thái món: chờ xử lý",
       };
     case "preparing":
       return {
         label: "Đang làm",
-        Icon: Loader2,
+        Icon: IconLoader2,
         ariaLabel: "Trạng thái món: đang làm",
       };
     case "ready":
       return {
         label: "Sẵn sàng",
-        Icon: CheckCircle2,
+        Icon: IconCircleCheck,
         ariaLabel: "Trạng thái món: sẵn sàng",
       };
     case "served":
       return {
         label: "Đã phục vụ",
-        Icon: UtensilsCrossed,
+        Icon: IconToolsKitchen,
         ariaLabel: "Trạng thái món: đã phục vụ",
       };
     case "cancelled":
       return {
         label: "Đã hủy",
-        Icon: Circle,
+        Icon: IconCircle,
         ariaLabel: "Trạng thái món: đã hủy",
       };
     default:
       return {
         label: status,
-        Icon: Circle,
+        Icon: IconCircle,
         ariaLabel: `Trạng thái món: ${status}`,
       };
   }
@@ -153,6 +155,8 @@ export interface OrderDetailSheetProps {
   onReorderToCart: (items: CartItem[], skippedCount: number) => void;
   tables: BranchTable[];
   onOrderUpdated?: () => void | Promise<void>;
+  /** Called after close so parent can restore focus to the element that opened the sheet. */
+  onAfterClose?: () => void;
 }
 
 export function OrderDetailSheet({
@@ -164,6 +168,7 @@ export function OrderDetailSheet({
   onReorderToCart,
   tables,
   onOrderUpdated,
+  onAfterClose,
 }: OrderDetailSheetProps) {
   const [data, setData] = useState<OrderDetailData | null>(null);
   const [canManage, setCanManage] = useState(false);
@@ -190,7 +195,7 @@ export function OrderDetailSheet({
         setError(null);
       } else {
         setData(null);
-        setError(result.error ?? "Không thể tải đơn");
+        setError(result.error ?? messages.pos.order.loadFailed);
       }
     });
   }, [orderId]);
@@ -205,7 +210,14 @@ export function OrderDetailSheet({
   }, [load, orderId, refreshToken]);
 
   const handleOpenChange = (open: boolean) => {
-    if (!open) onClose();
+    if (!open) {
+      onClose();
+      if (onAfterClose) {
+        requestAnimationFrame(() => {
+          onAfterClose();
+        });
+      }
+    }
   };
 
   const handleVoidConfirm = () => {
@@ -214,16 +226,16 @@ export function OrderDetailSheet({
       const id = voidItemId;
       const r = await voidOrderItem(id, voidReason);
       if (r.success) {
-        toast.success(
+        notify.success(
           r.data?.autoCancelledOrder
-            ? "Đã hủy món — đơn đã được hủy vì không còn món."
-            : "Đã hủy món",
+            ? messages.pos.item.voidedAutoCancelOrder
+            : messages.pos.item.voided,
         );
         setVoidItemId(null);
         setVoidReason("");
         load();
       } else {
-        toast.error(r.error ?? "Không thể hủy món");
+        notify.error(r.error ?? messages.pos.item.voidFailed);
       }
     });
   };
@@ -233,13 +245,13 @@ export function OrderDetailSheet({
     startTransition(async () => {
       const r = await cancelOrder(orderId, cancelReason);
       if (r.success) {
-        toast.success("Đã hủy đơn");
+        notify.success(messages.pos.order.voided);
         setShowCancel(false);
         setCancelReason("");
         await onOrderUpdated?.();
         onClose();
       } else {
-        toast.error(r.error ?? "Không thể hủy đơn");
+        notify.error(r.error ?? messages.pos.order.cancelFailed);
       }
     });
   };
@@ -251,13 +263,13 @@ export function OrderDetailSheet({
     startTransition(async () => {
       const r = await transferOrderTable(orderId, tid);
       if (r.success) {
-        toast.success("Đã chuyển bàn");
+        notify.success(messages.pos.order.transferred);
         setShowTransfer(false);
         setTransferTableId("");
         await onOrderUpdated?.();
         load();
       } else {
-        toast.error(r.error ?? "Không thể chuyển bàn");
+        notify.error(r.error ?? messages.pos.order.transferFailed);
       }
     });
   };
@@ -267,13 +279,15 @@ export function OrderDetailSheet({
     startTransition(async () => {
       const r = await updateOrderStatus(orderId, next);
       if (r.success) {
-        toast.success(
-          next === "served" ? "Đã đánh dấu phục vụ" : "Đã hoàn thành",
+        notify.success(
+          next === "served"
+            ? messages.pos.order.markedServed
+            : messages.pos.order.completed,
         );
         await onOrderUpdated?.();
         load();
       } else {
-        toast.error(r.error ?? "Không thể cập nhật");
+        notify.error(r.error ?? messages.pos.order.statusUpdateFailed);
       }
     });
   };
@@ -286,7 +300,26 @@ export function OrderDetailSheet({
         onReorderToCart(r.data.items, r.data.skippedCount);
         onClose();
       } else {
-        toast.error(r.error ?? "Không thể tải món");
+        notify.error(r.error ?? messages.pos.order.reorderLoadFailed);
+      }
+    });
+  };
+
+  const handleSendKitchen = () => {
+    if (orderId === null) return;
+    startTransition(async () => {
+      const r = await sendToKitchen(orderId);
+      if (r.success && r.data) {
+        const slots = r.data.jobs.length;
+        if (slots === 0) {
+          notify.info("Không có món mới cần gửi bếp");
+        } else {
+          notify.success(`Đã gửi bếp (lần ${r.data.send_seq}, ${slots} tem)`);
+        }
+        await onOrderUpdated?.();
+        load();
+      } else {
+        notify.error(r.error ?? "Không thể gửi bếp");
       }
     });
   };
@@ -542,6 +575,18 @@ export function OrderDetailSheet({
                   </Button>
                 )}
 
+                {canAppendOrderStatus(data.status) && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={isPending}
+                    className="min-h-11 w-full rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
+                    onClick={handleSendKitchen}
+                  >
+                    Gửi bếp
+                  </Button>
+                )}
+
                 <div className="flex flex-wrap gap-2">
                   {["new", "confirmed", "preparing", "ready"].includes(
                     data.status,
@@ -584,7 +629,7 @@ export function OrderDetailSheet({
                       variant="outline"
                       className="min-h-11 w-full rounded-lg"
                     >
-                      <MoreHorizontal className="mr-2 size-4" />
+                      <IconDots className="mr-2 size-4" />
                       Khác…
                     </Button>
                   </DropdownMenuTrigger>

@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { ExternalLink, Pencil, Plus } from "lucide-react";
+import { IconExternalLink, IconPencil, IconPlus } from "@tabler/icons-react";
 import { TerminalFormDialog } from "./terminal-form-dialog";
 import { EmptyStatePanel } from "../../components/empty-state-panel";
 
@@ -87,7 +87,7 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
         {selectedBranchId !== null && (
           <Button variant="outline" size="sm" asChild>
             <Link href={`/br/${selectedBranchId}/pos`}>
-              <ExternalLink className="mr-2 size-4" />
+              <IconExternalLink className="mr-2 size-4" />
               Mở giao diện POS
             </Link>
           </Button>
@@ -103,7 +103,7 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
             }}
             disabled={selectedBranchId === null}
           >
-            <Plus className="mr-2 size-4" />
+            <IconPlus className="mr-2 size-4" />
             Thêm máy POS
           </Button>
         </div>
@@ -150,7 +150,7 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
                           setDialogOpen(true);
                         }}
                       >
-                        <Pencil className="size-4" />
+                        <IconPencil className="size-4" />
                         <span className="sr-only">Chỉnh sửa</span>
                       </Button>
                     </TableCell>

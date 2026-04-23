@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Plus, Search } from "lucide-react";
+import { IconArrowRight, IconPlus, IconSearch } from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
@@ -30,6 +30,10 @@ import {
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { InventoryHeader } from "../_components/inventory-header";
+import {
+  InventoryFilterBar,
+  InventoryPageContent,
+} from "../_components/inventory-page-layout";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
@@ -129,218 +133,210 @@ export function PurchaseOrdersClient({
         actions={
           <Button asChild disabled={suppliers.length === 0}>
             <Link href={`${purchaseOrdersBasePath}/new`}>
-              <Plus className="size-4" />
+              <IconPlus className="size-4" />
               Tạo PO
             </Link>
           </Button>
         }
       />
-      <div className="flex-1 overflow-auto p-4">
-        <div className="mx-auto max-w-7xl space-y-4">
-          {suppliers.length === 0 ? (
-            <Card className="border-warning/40 bg-warning/10">
-              <CardContent className="space-y-4 pt-6">
-                <div>
-                  <p className="text-base font-semibold">
-                    Chưa có nhà cung cấp
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Tạo nhà cung cấp trước khi lập đơn đặt hàng mới.
-                  </p>
-                </div>
-                <Button asChild variant="outline">
-                  <Link href={suppliersPath}>
-                    Đi tới danh sách nhà cung cấp
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {/* Search + filters */}
-          <Card className="py-0">
-            <CardContent className="flex flex-wrap items-center gap-3 p-3">
-              <InputGroup className="h-10 flex-1">
-                <InputGroupAddon>
-                  <Search />
-                </InputGroupAddon>
-                <InputGroupInput
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Tìm theo số PO, nhà cung cấp hoặc ghi chú"
-                />
-              </InputGroup>
-
-              <Select
-                value={statusFilter}
-                onValueChange={(val) =>
-                  setStatusFilter((current) =>
-                    current === val ? ALL_FILTER_VALUE : val,
-                  )
-                }
-              >
-                <SelectTrigger className="h-10 w-44">
-                  <SelectValue placeholder="Trạng thái" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_FILTER_VALUE}>
-                    Tất cả trạng thái
-                  </SelectItem>
-                  {STATUS_KEYS.map((statusKey) => (
-                    <SelectItem key={statusKey} value={statusKey}>
-                      {tStatus(statusKey, "table")} ({statusCounts[statusKey] ?? 0})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Combobox
-                value={supplierFilter}
-                onValueChange={setSupplierFilter}
-                options={[
-                  { value: ALL_FILTER_VALUE, label: "Tất cả nhà cung cấp" },
-                  ...suppliers.map((supplier) => ({
-                    value: String(supplier.id),
-                    label: supplier.name,
-                  })),
-                ]}
-                placeholder="Nhà cung cấp"
-                searchPlaceholder="Tìm nhà cung cấp..."
-                aria-label="Lọc theo nhà cung cấp"
-                triggerClassName="h-10 w-48"
-              />
-
-              <Badge variant="outline" className="rounded-full">
-                {filteredRows.length} / {rows.length} PO
-              </Badge>
+      <InventoryPageContent width={isMobile ? "narrow" : "wide"}>
+        {suppliers.length === 0 ? (
+          <Card className="border-warning/40 bg-warning/10">
+            <CardContent className="space-y-4 pt-6">
+              <div>
+                <p className="text-base font-semibold">Chưa có nhà cung cấp</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Tạo nhà cung cấp trước khi lập đơn đặt hàng mới.
+                </p>
+              </div>
+              <Button asChild variant="outline">
+                <Link href={suppliersPath}>Đi tới danh sách nhà cung cấp</Link>
+              </Button>
             </CardContent>
           </Card>
+        ) : null}
 
-          {/* Table / Mobile list */}
-          <Card>
-            <CardContent className="p-0">
-              {isMobile ? (
-                <div className="divide-y">
+        {/* IconSearch + filters */}
+        <InventoryFilterBar>
+          <InputGroup className="h-10 flex-1">
+            <InputGroupAddon>
+              <IconSearch />
+            </InputGroupAddon>
+            <InputGroupInput
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Tìm theo số PO, nhà cung cấp hoặc ghi chú"
+            />
+          </InputGroup>
+
+          <Select
+            value={statusFilter}
+            onValueChange={(val) =>
+              setStatusFilter((current) =>
+                current === val ? ALL_FILTER_VALUE : val,
+              )
+            }
+          >
+            <SelectTrigger className="h-10 w-44">
+              <SelectValue placeholder="Trạng thái" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_FILTER_VALUE}>
+                Tất cả trạng thái
+              </SelectItem>
+              {STATUS_KEYS.map((statusKey) => (
+                <SelectItem key={statusKey} value={statusKey}>
+                  {tStatus(statusKey, "table")} ({statusCounts[statusKey] ?? 0})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Combobox
+            value={supplierFilter}
+            onValueChange={setSupplierFilter}
+            options={[
+              { value: ALL_FILTER_VALUE, label: "Tất cả nhà cung cấp" },
+              ...suppliers.map((supplier) => ({
+                value: String(supplier.id),
+                label: supplier.name,
+              })),
+            ]}
+            placeholder="Nhà cung cấp"
+            searchPlaceholder="Tìm nhà cung cấp..."
+            aria-label="Lọc theo nhà cung cấp"
+            triggerClassName="h-10 w-48"
+          />
+
+          <Badge variant="outline" className="rounded-full">
+            {filteredRows.length} / {rows.length} PO
+          </Badge>
+        </InventoryFilterBar>
+
+        {/* Table / Mobile list */}
+        <Card>
+          <CardContent className="p-0">
+            {isMobile ? (
+              <div className="divide-y">
+                {filteredRows.length === 0 ? (
+                  <div className="px-4 py-10 text-center">
+                    <p className="text-base font-semibold">
+                      {showEmptyResults
+                        ? "Không tìm thấy đơn đặt hàng phù hợp"
+                        : "Chưa có đơn đặt hàng"}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {showEmptyResults
+                        ? "Thử đổi bộ lọc hoặc từ khóa để xem thêm kết quả."
+                        : 'Nhấn "Tạo PO" để bắt đầu lập đơn mua đầu tiên.'}
+                    </p>
+                  </div>
+                ) : null}
+
+                {filteredRows.map((row) => (
+                  <InteractiveCard
+                    key={row.id}
+                    asChild
+                    minHeight="mobile"
+                    padding="default"
+                  >
+                    <Link
+                      href={`${purchaseOrdersBasePath}/${row.id}`}
+                      className="block"
+                    >
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <p className="font-mono text-sm font-semibold">
+                          {row.po_number}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {row.suppliers?.name ?? "Chưa gắn nhà cung cấp"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Ngày đặt: {formatDate(row.ordered_at)}
+                        </p>
+                        {row.notes ? (
+                          <p className="truncate text-xs text-muted-foreground">
+                            {row.notes}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <StatusBadge status={row.status} size="sm" />
+                        <IconArrowRight className="size-4 text-muted-foreground" />
+                      </div>
+                    </Link>
+                  </InteractiveCard>
+                ))}
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-40">Số PO</TableHead>
+                    <TableHead className="min-w-52">Nhà cung cấp</TableHead>
+                    <TableHead className="min-w-36">Trạng thái</TableHead>
+                    <TableHead className="min-w-32">Ngày đặt</TableHead>
+                    <TableHead>Ghi chú</TableHead>
+                    <TableHead className="w-28 text-right">Thao tác</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {filteredRows.length === 0 ? (
-                    <div className="px-4 py-10 text-center">
-                      <p className="text-base font-semibold">
-                        {showEmptyResults
+                    <TableEmptyStateRow
+                      colSpan={6}
+                      title={
+                        showEmptyResults
                           ? "Không tìm thấy đơn đặt hàng phù hợp"
-                          : "Chưa có đơn đặt hàng"}
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {showEmptyResults
+                          : "Chưa có đơn đặt hàng"
+                      }
+                      description={
+                        showEmptyResults
                           ? "Thử đổi bộ lọc hoặc từ khóa để xem thêm kết quả."
-                          : 'Nhấn "Tạo PO" để bắt đầu lập đơn mua đầu tiên.'}
-                      </p>
-                    </div>
+                          : 'Nhấn "Tạo PO" để bắt đầu lập đơn mua đầu tiên.'
+                      }
+                    />
                   ) : null}
 
                   {filteredRows.map((row) => (
-                    <InteractiveCard
-                      key={row.id}
-                      asChild
-                      minHeight="mobile"
-                      padding="default"
-                    >
-                      <Link
-                        href={`${purchaseOrdersBasePath}/${row.id}`}
-                        className="block"
-                      >
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <p className="font-mono text-sm font-semibold">
-                            {row.po_number}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {row.suppliers?.name ?? "Chưa gắn nhà cung cấp"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Ngày đặt: {formatDate(row.ordered_at)}
-                          </p>
-                          {row.notes ? (
-                            <p className="truncate text-xs text-muted-foreground">
-                              {row.notes}
-                            </p>
-                          ) : null}
-                        </div>
-                        <div className="flex shrink-0 flex-col items-end gap-1">
-                          <StatusBadge status={row.status} size="sm" />
-                          <ArrowRight className="size-4 text-muted-foreground" />
-                        </div>
-                      </Link>
-                    </InteractiveCard>
-                  ))}
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-40">Số PO</TableHead>
-                      <TableHead className="min-w-52">Nhà cung cấp</TableHead>
-                      <TableHead className="min-w-36">Trạng thái</TableHead>
-                      <TableHead className="min-w-32">Ngày đặt</TableHead>
-                      <TableHead>Ghi chú</TableHead>
-                      <TableHead className="w-28 text-right">Thao tác</TableHead>
+                    <TableRow key={row.id}>
+                      <TableCell className="font-mono font-medium">
+                        {row.po_number}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {row.suppliers?.name ?? "Chưa gắn nhà cung cấp"}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={row.status} size="sm" />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(row.ordered_at)}
+                      </TableCell>
+                      <TableCell>
+                        <p
+                          className={cn(
+                            "max-w-md truncate text-sm text-muted-foreground",
+                            !row.notes && "text-muted-foreground/60",
+                          )}
+                        >
+                          {row.notes ?? "Không có ghi chú"}
+                        </p>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`${purchaseOrdersBasePath}/${row.id}`}>
+                            Xem
+                            <IconArrowRight className="size-4" />
+                          </Link>
+                        </Button>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredRows.length === 0 ? (
-                      <TableEmptyStateRow
-                        colSpan={6}
-                        title={
-                          showEmptyResults
-                            ? "Không tìm thấy đơn đặt hàng phù hợp"
-                            : "Chưa có đơn đặt hàng"
-                        }
-                        description={
-                          showEmptyResults
-                            ? "Thử đổi bộ lọc hoặc từ khóa để xem thêm kết quả."
-                            : 'Nhấn "Tạo PO" để bắt đầu lập đơn mua đầu tiên.'
-                        }
-                      />
-                    ) : null}
-
-                    {filteredRows.map((row) => (
-                      <TableRow key={row.id}>
-                        <TableCell className="font-mono font-medium">
-                          {row.po_number}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {row.suppliers?.name ?? "Chưa gắn nhà cung cấp"}
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={row.status} size="sm" />
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {formatDate(row.ordered_at)}
-                        </TableCell>
-                        <TableCell>
-                          <p
-                            className={cn(
-                              "max-w-md truncate text-sm text-muted-foreground",
-                              !row.notes && "text-muted-foreground/60",
-                            )}
-                          >
-                            {row.notes ?? "Không có ghi chú"}
-                          </p>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button asChild size="sm" variant="outline">
-                            <Link href={`${purchaseOrdersBasePath}/${row.id}`}>
-                              Xem
-                              <ArrowRight className="size-4" />
-                            </Link>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </InventoryPageContent>
     </>
   );
 }

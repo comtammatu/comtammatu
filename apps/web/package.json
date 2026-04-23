@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "ui:add": "cd ../../packages/ui && pnpm dlx shadcn@latest add",
+    "ui:add-missing": "cd ../../packages/ui && pnpm dlx shadcn@latest add calendar carousel chart form input-otp resizable --yes --overwrite",
     "dev": "next dev --turbopack",
     "dev:webpack": "next dev",
     "dev:clean": "rm -rf .next && next dev --turbopack",
@@ -12,7 +14,9 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:e2e": "dotenv -e .env.test.local -- playwright test",
-    "test:e2e:ui": "dotenv -e .env.test.local -- playwright test --ui"
+    "test:e2e:ui": "dotenv -e .env.test.local -- playwright test --ui",
+    "ui:add": "pnpm --filter @comtammatu/web ui:add <component>",
+    "ui:add-missing": "pnpm --filter @comtammatu/web ui:add-missing"
   },
   "dependencies": {
     "@comtammatu/database": "workspace:*",
@@ -20,11 +24,13 @@
     "@comtammatu/shared": "workspace:*",
     "@comtammatu/ui": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
+    "@tabler/icons-react": "^3.41.1",
+    "@tanstack/react-query": "^5.99.2",
+    "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "exceljs": "^4.4.0",
     "html5-qrcode": "^2.3.8",
-    "lucide-react": "^1.8.0",
     "next": "^16.2.2",
     "radix-ui": "^1.4.3",
     "react": "^19.2.4",

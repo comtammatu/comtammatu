@@ -6,7 +6,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Card } from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { Plus, X, MapPin } from "lucide-react";
+import { IconPlus, IconX, IconMapPin } from "@tabler/icons-react";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   Select,
@@ -101,7 +101,7 @@ export function AreasManager({ areas, branches }: AreasManagerProps) {
           onClick={handleCreateArea}
           disabled={isPending || !newAreaName.trim()}
         >
-          <Plus className="mr-1 size-4" />
+          <IconPlus className="mr-1 size-4" />
           Tạo khu vực
         </Button>
       </div>
@@ -111,7 +111,7 @@ export function AreasManager({ areas, branches }: AreasManagerProps) {
         <EmptyStatePanel
           title="Chưa có khu vực nào"
           description="Tạo khu vực để phân nhóm chi nhánh."
-          icon={<MapPin className="size-10 text-muted-foreground" />}
+          icon={<IconMapPin className="size-10 text-muted-foreground" />}
           className="p-8"
         />
       ) : (
@@ -147,7 +147,7 @@ export function AreasManager({ areas, branches }: AreasManagerProps) {
                           disabled={isPending}
                           className="size-6 p-0"
                         >
-                          <X className="size-3" />
+                          <IconX className="size-3" />
                         </Button>
                       </div>
                     ))

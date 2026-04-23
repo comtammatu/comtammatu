@@ -1,4 +1,4 @@
-import { UtensilsCrossed } from "lucide-react";
+import { IconToolsKitchen } from "@tabler/icons-react";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage({
@@ -13,7 +13,7 @@ export default async function LoginPage({
       {/* Brand — compact on mobile, full-height panel on desktop */}
       <div className="flex flex-col items-center gap-3 px-6 pt-10 pb-4 lg:justify-center lg:bg-primary lg:p-12">
         <div className="flex size-14 items-center justify-center rounded-xl bg-primary/15 text-primary lg:size-16 lg:bg-primary-foreground/20 lg:text-primary-foreground lg:rounded-2xl">
-          <UtensilsCrossed className="size-6 lg:size-7" />
+          <IconToolsKitchen className="size-6 lg:size-7" />
         </div>
         <h1 className="font-heading text-lg font-semibold lg:text-2xl lg:text-primary-foreground">
           Cơm Tấm Má Tư

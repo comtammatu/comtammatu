@@ -292,6 +292,12 @@ export const adjustStock = withAction(
       data.branchId,
       "issue",
     );
+    if (defaultLocationId == null) {
+      return {
+        success: false,
+        error: "Chi nhánh chưa có kho mặc định. Vui lòng liên hệ quản trị.",
+      };
+    }
 
     const { error } = await supabase.from("stock_movements").insert({
       tenant_id: claims.tenant_id,

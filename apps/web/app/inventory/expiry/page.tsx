@@ -1,11 +1,19 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
 import { fetchExpiryAlerts } from "@/inventory/actions";
+import { parseBranchIdParam } from "@/inventory/_lib/inventory-scope";
 import { ExpiryListClient } from "@/inventory/expiry/expiry-list-client";
 import type { BranchOption, ExpiryAlertRow } from "@/inventory/page";
 import { getBranchSiteDisplayName } from "@/inventory/_lib/branch-site-labels";
 
-export default async function ExpiryPage() {
+export default async function ExpiryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const branchFilter = parseBranchIdParam(params.branchId) ?? undefined;
+
   const supabase = await createClient();
   const {
     data: { session },
@@ -15,7 +23,7 @@ export default async function ExpiryPage() {
     : null;
 
   const [alertsRes, branchesRes] = await Promise.all([
-    fetchExpiryAlerts(),
+    fetchExpiryAlerts(branchFilter),
     supabase
       .from("branches")
       .select("id, name, is_active, branch_kind")

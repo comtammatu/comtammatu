@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { IconTrash } from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
@@ -115,7 +115,7 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
                   <TableCell className="text-right">
                     {item.urgency === "expired" ? (
                       <Button variant="destructive" size="sm" className="gap-1">
-                        <Trash2 className="size-3" /> Hủy hàng
+                        <IconTrash className="size-3" /> Hủy hàng
                       </Button>
                     ) : (
                       <Button variant="outline" size="sm">

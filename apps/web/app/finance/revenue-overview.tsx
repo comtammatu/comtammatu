@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Receipt, TrendingUp } from "lucide-react";
+import { IconChartBar, IconReceipt, IconTrendingUp } from "@tabler/icons-react";
 import {
   Card,
   CardContent,
@@ -54,7 +54,7 @@ export function RevenueOverview({
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Tổng doanh thu 30 ngày
             </CardTitle>
-            <TrendingUp className="size-4 text-muted-foreground" />
+            <IconTrendingUp className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold tabular-nums">
@@ -68,7 +68,7 @@ export function RevenueOverview({
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Số đơn hàng
             </CardTitle>
-            <Receipt className="size-4 text-muted-foreground" />
+            <IconReceipt className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold tabular-nums">
@@ -82,7 +82,7 @@ export function RevenueOverview({
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Trung bình / đơn
             </CardTitle>
-            <BarChart3 className="size-4 text-muted-foreground" />
+            <IconChartBar className="size-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold tabular-nums">

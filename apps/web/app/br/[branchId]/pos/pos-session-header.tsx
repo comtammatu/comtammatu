@@ -2,14 +2,16 @@
 
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Clock, LogOut, Monitor } from "lucide-react";
+import { IconClock, IconLogout, IconDeviceDesktop } from "@tabler/icons-react";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { formatTime } from "./pos-menu-types";
+import { PrinterStatusBadge } from "./printer-status-badge";
 import type { ActiveSession } from "./page";
 import type { OrderType } from "./types";
 
 interface PosSessionHeaderProps {
   session: ActiveSession;
+  branchId: number;
   orderType: OrderType;
   selectedTableNumber: number | undefined;
   activeOrderCount: number;
@@ -18,6 +20,7 @@ interface PosSessionHeaderProps {
 
 export function PosSessionHeader({
   session,
+  branchId,
   orderType,
   selectedTableNumber,
   activeOrderCount,
@@ -37,13 +40,13 @@ export function PosSessionHeader({
           <EmployeePortalBackControl />
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span className="flex min-w-0 items-center gap-1.5 font-medium text-foreground">
-              <Monitor className="size-3.5 shrink-0 text-primary" />
+              <IconDeviceDesktop className="size-3.5 shrink-0 text-primary" />
               <span className="truncate">
                 {session.pos_terminals?.name ?? "POS"}
               </span>
             </span>
             <span className="flex min-w-0 items-center gap-1.5">
-              <Clock className="size-3.5 shrink-0" />
+              <IconClock className="size-3.5 shrink-0" />
               <span className="truncate">
                 <span className="hidden sm:inline">Ca mở lúc </span>
                 {formatTime(session.opened_at)}
@@ -57,6 +60,7 @@ export function PosSessionHeader({
             {contextLabel}
           </Badge>
           <Badge variant="outline">{activeOrderCount} đơn đang phục vụ</Badge>
+          <PrinterStatusBadge branchId={branchId} />
         </div>
 
         <Button
@@ -65,7 +69,7 @@ export function PosSessionHeader({
           className="min-h-11 min-w-11 h-9 shrink-0 gap-1.5 rounded-full px-3 text-xs text-muted-foreground hover:text-destructive"
           onClick={onShowCloseSession}
         >
-          <LogOut className="size-3.5" />
+          <IconLogout className="size-3.5" />
           Đóng ca
         </Button>
       </div>

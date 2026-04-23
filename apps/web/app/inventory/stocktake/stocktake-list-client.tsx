@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ClipboardCheck, Plus, Search } from "lucide-react";
+import { IconArrowRight, IconClipboardCheck, IconPlus, IconSearch } from "@tabler/icons-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -40,6 +40,10 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { InventoryHeader } from "../_components/inventory-header";
+import {
+  InventoryFilterBar,
+  InventoryPageContent,
+} from "../_components/inventory-page-layout";
 import { StatusBadge } from "../_components/status-badge";
 import { InteractiveCard } from "../_components/interactive-card";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
@@ -154,150 +158,152 @@ export function StocktakeListClient({
         title="Kiểm kê"
         actions={
           <Button type="button" onClick={handleCreate} disabled={isPending}>
-            <Plus className="size-4" />
+            <IconPlus className="size-4" />
             Mở phiên kiểm kê
           </Button>
         }
       />
-      <div className="flex-1 overflow-auto p-4">
-        <div className={cn("mx-auto space-y-4", isMobile ? "max-w-xl" : "max-w-7xl")}>
+      <InventoryPageContent width={isMobile ? "narrow" : "wide"}>
+        {/* Filters */}
+        <InventoryFilterBar>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="min-w-44">
+              <SelectValue placeholder="Trạng thái" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả trạng thái</SelectItem>
+              <SelectItem value="in_progress">
+                Đang thực hiện ({statusCounts["in_progress"] ?? 0})
+              </SelectItem>
+              <SelectItem value="completed">
+                Hoàn tất ({statusCounts["completed"] ?? 0})
+              </SelectItem>
+              <SelectItem value="cancelled">
+                Đã hủy ({statusCounts["cancelled"] ?? 0})
+              </SelectItem>
+            </SelectContent>
+          </Select>
 
-          {/* Filters */}
-          <Card className="py-0">
-            <CardContent className="flex flex-wrap items-center gap-3 p-3">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Trạng thái" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                  <SelectItem value="in_progress">
-                    Đang thực hiện ({statusCounts["in_progress"] ?? 0})
-                  </SelectItem>
-                  <SelectItem value="completed">
-                    Hoàn tất ({statusCounts["completed"] ?? 0})
-                  </SelectItem>
-                  <SelectItem value="cancelled">
-                    Đã hủy ({statusCounts["cancelled"] ?? 0})
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+          <InputGroup className={cn("flex-1", isMobile && "h-12 basis-full")}>
+            <InputGroupAddon>
+              <IconSearch />
+            </InputGroupAddon>
+            <InputGroupInput
+              placeholder="Tìm mã phiên hoặc tên chi nhánh..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              inputMode="search"
+            />
+          </InputGroup>
 
-              <InputGroup className={cn("flex-1", isMobile && "h-12 basis-full")}>
-                <InputGroupAddon>
-                  <Search />
-                </InputGroupAddon>
-                <InputGroupInput
-                  placeholder="Tìm mã phiên hoặc tên chi nhánh..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  inputMode="search"
-                />
-              </InputGroup>
+          <Badge variant="outline" className="rounded-full">
+            {filtered.length}/{rows.length}
+          </Badge>
+        </InventoryFilterBar>
 
-              <Badge variant="outline" className="rounded-full">
-                {filtered.length}/{rows.length}
-              </Badge>
+        {/* Content */}
+        {isMobile ? (
+          <div className="flex flex-col gap-2">
+            {filtered.length === 0 ? (
+              <div className="px-4 py-16 text-center">
+                <IconClipboardCheck className="mx-auto size-10 text-muted-foreground/40" />
+                <p className="mt-2 text-sm font-medium text-muted-foreground">
+                  {search || statusFilter !== "all"
+                    ? "Không tìm thấy phiên nào"
+                    : "Chưa có phiên kiểm kê nào"}
+                </p>
+              </div>
+            ) : (
+              filtered.map((r) => (
+                <InteractiveCard
+                  key={r.id}
+                  minHeight="mobile"
+                  padding="default"
+                  asChild
+                >
+                  <Link
+                    href={`${routeBase}/${r.id}`}
+                    className="flex-col items-stretch gap-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-sm font-medium">
+                        KK-{r.id}
+                      </span>
+                      <StatusBadge status={r.status} />
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{r.branches?.name ?? "—"}</span>
+                      <span className="tabular-nums">
+                        {formatDateShort(r.started_at ?? r.created_at)}
+                      </span>
+                    </div>
+                  </Link>
+                </InteractiveCard>
+              ))
+            )}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Mã phiên</TableHead>
+                    <TableHead>Chi nhánh</TableHead>
+                    <TableHead>Ngày bắt đầu</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead className="w-10" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.length === 0 ? (
+                    <TableEmptyStateRow
+                      colSpan={5}
+                      paddingClassName="py-16"
+                      icon={
+                        <IconClipboardCheck className="mx-auto size-10 text-muted-foreground/40" />
+                      }
+                      title={
+                        search || statusFilter !== "all"
+                          ? "Không tìm thấy phiên nào"
+                          : "Chưa có phiên kiểm kê nào"
+                      }
+                    />
+                  ) : null}
+                  {filtered.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-mono text-sm font-medium">
+                        KK-{r.id}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {r.branches?.name ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-sm tabular-nums text-muted-foreground">
+                        {formatDateShort(r.started_at ?? r.created_at)}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={r.status} />
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon-lg"
+                          asChild
+                          aria-label="Chi tiết"
+                        >
+                          <Link href={`${routeBase}/${r.id}`}>
+                            <IconArrowRight className="size-4" />
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
-
-          {/* Content */}
-          {isMobile ? (
-            <div className="flex flex-col gap-2">
-              {filtered.length === 0 ? (
-                <div className="px-4 py-16 text-center">
-                  <ClipboardCheck className="mx-auto size-10 text-muted-foreground/40" />
-                  <p className="mt-2 text-sm font-medium text-muted-foreground">
-                    {search || statusFilter !== "all"
-                      ? "Không tìm thấy phiên nào"
-                      : "Chưa có phiên kiểm kê nào"}
-                  </p>
-                </div>
-              ) : (
-                filtered.map((r) => (
-                  <InteractiveCard
-                    key={r.id}
-                    minHeight="mobile"
-                    padding="default"
-                    asChild
-                  >
-                    <Link href={`${routeBase}/${r.id}`} className="flex-col items-stretch gap-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono text-sm font-medium">KK-{r.id}</span>
-                        <StatusBadge status={r.status} />
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{r.branches?.name ?? "—"}</span>
-                        <span className="tabular-nums">{formatDateShort(r.started_at ?? r.created_at)}</span>
-                      </div>
-                    </Link>
-                  </InteractiveCard>
-                ))
-              )}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Mã phiên</TableHead>
-                      <TableHead>Chi nhánh</TableHead>
-                      <TableHead>Ngày bắt đầu</TableHead>
-                      <TableHead>Trạng thái</TableHead>
-                      <TableHead className="w-10" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.length === 0 ? (
-                      <TableEmptyStateRow
-                        colSpan={5}
-                        paddingClassName="py-16"
-                        icon={
-                          <ClipboardCheck className="mx-auto size-10 text-muted-foreground/40" />
-                        }
-                        title={
-                          search || statusFilter !== "all"
-                            ? "Không tìm thấy phiên nào"
-                            : "Chưa có phiên kiểm kê nào"
-                        }
-                      />
-                    ) : null}
-                    {filtered.map((r) => (
-                      <TableRow key={r.id}>
-                        <TableCell className="font-mono text-sm font-medium">
-                          KK-{r.id}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {r.branches?.name ?? "—"}
-                        </TableCell>
-                        <TableCell className="text-sm tabular-nums text-muted-foreground">
-                          {formatDateShort(r.started_at ?? r.created_at)}
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={r.status} />
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon-lg"
-                            asChild
-                            aria-label="Chi tiết"
-                          >
-                            <Link href={`${routeBase}/${r.id}`}>
-                              <ArrowRight className="size-4" />
-                            </Link>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
+        )}
+      </InventoryPageContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-sm">

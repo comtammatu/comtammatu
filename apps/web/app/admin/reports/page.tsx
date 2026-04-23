@@ -1,15 +1,15 @@
 import Link from "next/link";
 import {
-  ArrowLeftRight,
-  BookOpen,
-  Briefcase,
-  ClipboardList,
-  Package,
-  Receipt,
-  ShieldCheck,
-  TrendingUp,
-  Wallet,
-} from "lucide-react";
+  IconArrowLeftRight,
+  IconBook,
+  IconBriefcase,
+  IconClipboardList,
+  IconPackage,
+  IconReceipt,
+  IconShieldCheck,
+  IconTrendingUp,
+  IconWallet,
+} from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -33,14 +33,14 @@ export default async function ReportsPage() {
     {
       title: "Doanh thu",
       href: "/admin/reports/revenue",
-      icon: TrendingUp,
+      icon: IconTrendingUp,
       tone: "primary" as const,
       badge: "Tổng hợp",
     },
     {
       title: "Giá trị tồn kho",
       href: "/admin/reports/inventory-value",
-      icon: Package,
+      icon: IconPackage,
       tone: "info" as const,
       badge: "Tổng hợp",
     },
@@ -49,7 +49,7 @@ export default async function ReportsPage() {
     executiveCards.push({
       title: "Báo cáo tài chính",
       href: "/finance/statements",
-      icon: Wallet,
+      icon: IconWallet,
       tone: "success",
       badge: "Tổng hợp",
     });
@@ -58,7 +58,7 @@ export default async function ReportsPage() {
     executiveCards.push({
       title: "Toàn cảnh bảng lương",
       href: "/hr/payroll",
-      icon: Briefcase,
+      icon: IconBriefcase,
       tone: "info",
       badge: "Tổng hợp",
     });
@@ -68,7 +68,7 @@ export default async function ReportsPage() {
     {
       title: "Biến động tồn kho",
       href: "/admin/reports/stock-movement",
-      icon: ArrowLeftRight,
+      icon: IconArrowLeftRight,
       tone: "info" as const,
       badge: "Vận hành",
     },
@@ -77,14 +77,14 @@ export default async function ReportsPage() {
     deepDiveCards.push({
       title: "Hệ thống tài khoản",
       href: "/finance/chart-of-accounts",
-      icon: BookOpen,
+      icon: IconBook,
       tone: "success",
       badge: "Kế toán",
     });
     deepDiveCards.push({
       title: "Tài chính",
       href: "/finance",
-      icon: Receipt,
+      icon: IconReceipt,
       tone: "success",
       badge: "Chi tiết",
     });
@@ -93,7 +93,7 @@ export default async function ReportsPage() {
     deepDiveCards.push({
       title: "Kho",
       href: "/inventory/reports",
-      icon: ClipboardList,
+      icon: IconClipboardList,
       tone: "info",
       badge: "Chi tiết",
     });
@@ -102,7 +102,7 @@ export default async function ReportsPage() {
     deepDiveCards.push({
       title: "Nhân sự",
       href: "/hr",
-      icon: ShieldCheck,
+      icon: IconShieldCheck,
       tone: "info",
       badge: "Chi tiết",
     });

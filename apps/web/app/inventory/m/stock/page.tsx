@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Package } from "lucide-react";
+import { IconPackage } from "@tabler/icons-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
   extractClaimsFromAccessToken,
@@ -86,17 +86,10 @@ export default async function MobileStockPage() {
       ? `${entry.ingredient_id}`
       : `${entry.ingredient_id}:${entry.branch_id}`;
     const existing = qtyByKey.get(key);
-    if (claims.branch_id) {
-      qtyByKey.set(key, {
-        qty: Number(entry.current_quantity ?? 0),
-        branchId: entry.branch_id,
-      });
-    } else {
-      qtyByKey.set(key, {
-        qty: (existing?.qty ?? 0) + Number(entry.current_quantity ?? 0),
-        branchId: entry.branch_id,
-      });
-    }
+    qtyByKey.set(key, {
+      qty: (existing?.qty ?? 0) + Number(entry.current_quantity ?? 0),
+      branchId: entry.branch_id,
+    });
   }
 
   const rows: StockRow[] = [];
@@ -170,7 +163,7 @@ export default async function MobileStockPage() {
           title={branchLabel}
         />
         <MobileEmptyState
-          icon={Package}
+          icon={IconPackage}
           title="Chưa có dữ liệu tồn kho"
           description="Thêm nguyên liệu và ghi nhận phiếu nhập để xem tồn kho tại đây."
         />

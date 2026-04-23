@@ -1,5 +1,6 @@
 import { Suspense } from "react";
-import { MonitorSpeaker, TriangleAlert } from "lucide-react";
+import { redirect } from "next/navigation";
+import { IconDeviceDesktop, IconAlertTriangle } from "@tabler/icons-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   fetchMenuForPos,
@@ -22,6 +23,14 @@ export default async function PosPage({
 }) {
   const { branchId } = await params;
   const sp = await searchParams;
+
+  // Feature flag: redirect to /pos-v2 when POS_V2_ENABLED is truthy.
+  // Pilot-gated rollout per docs/plan/m2-order-lifecycle.md. Preserves ?table= param.
+  if (process.env.POS_V2_ENABLED === "1" || process.env.POS_V2_ENABLED === "true") {
+    const qs = sp.table ? `?table=${encodeURIComponent(sp.table)}` : "";
+    redirect(`/br/${branchId}/pos-v2${qs}`);
+  }
+
   const tableParam = sp.table;
   const parsedTable =
     tableParam !== undefined ? Number.parseInt(tableParam, 10) : NaN;
@@ -38,12 +47,12 @@ export default async function PosPage({
   if (!sessionResult.success) {
     return (
       <PosStatusShell
-        icon={<MonitorSpeaker />}
+        icon={<IconDeviceDesktop />}
         title="Không mở được POS"
         description={sessionResult.error ?? "Chưa lấy được ca làm hiện tại."}
         badge={{
           label: "Sự cố tải ca làm",
-          icon: <TriangleAlert className="size-3.5" />,
+          icon: <IconAlertTriangle className="size-3.5" />,
           variant: "destructive",
         }}
         steps={[
@@ -77,14 +86,14 @@ export default async function PosPage({
     if (!terminalsResult.success) {
       return (
         <PosStatusShell
-          icon={<MonitorSpeaker />}
+          icon={<IconDeviceDesktop />}
           title="Không thể tải máy POS"
           description={
             terminalsResult.error ?? "Chưa tải được danh sách máy POS."
           }
           badge={{
             label: "Lỗi tải máy POS",
-            icon: <TriangleAlert className="size-3.5" />,
+            icon: <IconAlertTriangle className="size-3.5" />,
             variant: "warning",
           }}
           steps={[
@@ -147,12 +156,12 @@ export default async function PosPage({
   if (!menuResult.success || !menuResult.data) {
     return (
       <PosStatusShell
-        icon={<MonitorSpeaker />}
+        icon={<IconDeviceDesktop />}
         title="Không thể tải menu bán hàng"
         description={menuResult.error ?? "Ca đã mở nhưng chưa tải được menu."}
         badge={{
           label: "Gián đoạn dữ liệu bán hàng",
-          icon: <TriangleAlert className="size-3.5" />,
+          icon: <IconAlertTriangle className="size-3.5" />,
           variant: "warning",
         }}
         steps={[
@@ -183,7 +192,7 @@ export default async function PosPage({
     <Suspense
       fallback={
         <PosStatusShell
-          icon={<MonitorSpeaker />}
+          icon={<IconDeviceDesktop />}
           title="Đang chuẩn bị quầy POS"
           description="Đang nạp ca làm, bàn và menu."
           badge={{

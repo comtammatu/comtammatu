@@ -1,35 +1,34 @@
-import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
+import { loadAuthState } from "@/_lib/auth";
 import { fetchStockIssues } from "../issue-actions";
 import { formatDate } from "../_lib/format";
+import {
+  parseBranchIdParam,
+  resolveInventoryBranchScope,
+} from "../_lib/inventory-scope";
 import { IssuesClient } from "./issues-client";
 import type { IssueBranchOption, IssueRow } from "./issues-client";
 
-export default async function IssuesPage() {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const claims = session?.user
-    ? extractClaims(session.user.app_metadata)
-    : null;
+export default async function IssuesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const requested = parseBranchIdParam(params.branchId);
+  const { supabase, claims } = await loadAuthState();
+  const scope = await resolveInventoryBranchScope(supabase, claims, requested);
+  const branchFilter = scope.selectedBranchId ?? undefined;
 
-  const [res, branchesRes] = await Promise.all([
-    fetchStockIssues(),
-    supabase
-      .from("branches")
-      .select("id, name")
-      .order("branch_kind")
-      .order("name"),
-  ]);
+  const res = await fetchStockIssues(
+    branchFilter != null ? { branchId: branchFilter } : undefined,
+  );
   const dbRows = res.success
     ? (res.data as Array<Record<string, unknown>>)
     : [];
-  const allBranches = (branchesRes.data ?? []) as IssueBranchOption[];
-  const branches =
-    claims?.branch_id != null
-      ? allBranches.filter((branch) => branch.id === claims.branch_id)
-      : allBranches;
+  const branches: IssueBranchOption[] = scope.allowedBranches.map((b) => ({
+    id: b.id,
+    name: b.name,
+  }));
 
   const issues: IssueRow[] = dbRows.map((row) => ({
     id: row.id as number,
@@ -46,7 +45,7 @@ export default async function IssuesPage() {
     <IssuesClient
       issues={issues}
       branches={branches}
-      defaultBranchId={claims?.branch_id ?? branches[0]?.id ?? null}
+      defaultBranchId={scope.selectedBranchId ?? branches[0]?.id ?? null}
     />
   );
 }

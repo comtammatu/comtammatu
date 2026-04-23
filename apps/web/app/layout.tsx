@@ -1,14 +1,17 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { Inter } from "next/font/google";
+import { JetBrains_Mono } from "next/font/google";
+import { ConfirmDialogProvider } from "@comtammatu/ui/components/confirm-dialog";
 import { Toaster } from "@comtammatu/ui/components/sonner";
+import { ThemeProvider } from "@comtammatu/ui/components/theme-provider";
 import { TooltipProvider } from "@comtammatu/ui/components/tooltip";
+import { NotificationBellFloating } from "./_components/notification-bell-floating";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-const inter = Inter({
-  subsets: ["latin", "latin-ext", "vietnamese"],
-  variable: "--font-inter",
+const fontMono = JetBrains_Mono({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-mono",
   display: "swap",
 });
 
@@ -34,18 +37,27 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="vi"
-      className={cn(inter.variable, "font-sans")}
+      className={cn(fontMono.variable, "font-mono")}
       suppressHydrationWarning
     >
-      <body className="min-h-screen bg-background font-sans text-foreground antialiased">
+      <body className="min-h-screen bg-background font-mono text-foreground antialiased">
         <a
           href="#main-content"
           className="sr-only z-50 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
         >
           Bỏ qua điều hướng
         </a>
-        <TooltipProvider>{children}</TooltipProvider>
-        <Toaster richColors position="top-right" />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <TooltipProvider>{children}</TooltipProvider>
+          <NotificationBellFloating />
+          <Toaster richColors position="top-right" />
+          <ConfirmDialogProvider />
+        </ThemeProvider>
       </body>
     </html>
   );

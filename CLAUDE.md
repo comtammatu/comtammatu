@@ -2,6 +2,11 @@
 
 Single-tenant multi-branch for Cơm Tấm Má Tư CTCP. Hierarchy: `Tenant (L0) → Branch (L1)`.
 
+## Working Principles
+
+> "Minimum code that solves the problem. Nothing speculative."
+> "Touch only what you must. Clean up only your own mess."
+
 ## Commands
 
 ```bash

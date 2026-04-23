@@ -2,13 +2,13 @@
 
 import { useState, useTransition } from "react";
 import {
-  Building2,
-  Clock,
-  MoreHorizontal,
-  Pencil,
-  ToggleLeft,
-  ToggleRight,
-} from "lucide-react";
+  IconBuilding,
+  IconClock,
+  IconDots,
+  IconPencil,
+  IconToggleLeft,
+  IconToggleRight,
+} from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -88,7 +88,7 @@ export function BranchTable({ branches }: BranchTableProps) {
                 colSpan={6}
                 title="Chưa có điểm vận hành nào"
                 icon={
-                  <Building2 className="mx-auto size-8 text-muted-foreground" />
+                  <IconBuilding className="mx-auto size-8 text-muted-foreground" />
                 }
               />
             )}
@@ -126,13 +126,13 @@ export function BranchTable({ branches }: BranchTableProps) {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon-lg">
-                        <MoreHorizontal className="size-4" />
+                        <IconDots className="size-4" />
                         <span className="sr-only">Menu</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setEditBranch(branch)}>
-                        <Pencil className="mr-2 size-4" />
+                        <IconPencil className="mr-2 size-4" />
                         Chỉnh sửa
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -140,12 +140,12 @@ export function BranchTable({ branches }: BranchTableProps) {
                       >
                         {branch.is_active !== false ? (
                           <>
-                            <ToggleLeft className="mr-2 size-4" />
+                            <IconToggleLeft className="mr-2 size-4" />
                             Tạm ngừng
                           </>
                         ) : (
                           <>
-                            <ToggleRight className="mr-2 size-4" />
+                            <IconToggleRight className="mr-2 size-4" />
                             Kích hoạt
                           </>
                         )}
@@ -154,7 +154,7 @@ export function BranchTable({ branches }: BranchTableProps) {
                       <DropdownMenuItem
                         onClick={() => setAttendanceBranch(branch)}
                       >
-                        <Clock className="mr-2 size-4" />
+                        <IconClock className="mr-2 size-4" />
                         Cấu hình chấm công
                       </DropdownMenuItem>
                     </DropdownMenuContent>

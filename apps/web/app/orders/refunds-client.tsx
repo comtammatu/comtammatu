@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { RotateCcw, CheckCircle, XCircle } from "lucide-react";
+import { IconRotate, IconCircleCheck, IconCircleX } from "@tabler/icons-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -162,7 +162,7 @@ export function RefundsClient({
           {isPending ? (
             <Spinner className="mr-1.5 size-3.5" />
           ) : (
-            <RotateCcw className="mr-1.5 size-3.5" />
+            <IconRotate className="mr-1.5 size-3.5" />
           )}
           Làm mới
         </Button>
@@ -180,7 +180,7 @@ export function RefundsClient({
         <CardContent className="space-y-4">
           {refunds.length === 0 ? (
             <div className="rounded-lg border bg-muted/30 text-card-foreground border-dashed px-6 py-16 text-center">
-              <RotateCcw className="mx-auto size-8 text-muted-foreground" />
+              <IconRotate className="mx-auto size-8 text-muted-foreground" />
               <p className="mt-3 text-sm font-medium">
                 Không có yêu cầu hoàn tiền nào
               </p>
@@ -257,7 +257,7 @@ export function RefundsClient({
                         {isPending && actioningId === refund.id ? (
                           <Spinner className="size-3.5" />
                         ) : (
-                          <CheckCircle className="size-3.5" />
+                          <IconCircleCheck className="size-3.5" />
                         )}
                         <span className="ml-1">Duyệt</span>
                       </Button>
@@ -271,7 +271,7 @@ export function RefundsClient({
                         {isPending && actioningId === refund.id ? (
                           <Spinner className="size-3.5" />
                         ) : (
-                          <XCircle className="size-3.5" />
+                          <IconCircleX className="size-3.5" />
                         )}
                         <span className="ml-1">Từ chối</span>
                       </Button>
@@ -316,7 +316,7 @@ export function RefundsClient({
                     title="Không có yêu cầu hoàn tiền nào"
                     description="Dữ liệu trống cho bộ lọc hiện tại."
                     icon={
-                      <RotateCcw className="mx-auto size-8 text-muted-foreground" />
+                      <IconRotate className="mx-auto size-8 text-muted-foreground" />
                     }
                   />
                 )}
@@ -377,7 +377,7 @@ export function RefundsClient({
                               {isPending && actioningId === refund.id ? (
                                 <Spinner className="size-3.5" />
                               ) : (
-                                <CheckCircle className="size-3.5" />
+                                <IconCircleCheck className="size-3.5" />
                               )}
                               <span className="ml-1 hidden sm:inline">
                                 Duyệt
@@ -393,7 +393,7 @@ export function RefundsClient({
                               {isPending && actioningId === refund.id ? (
                                 <Spinner className="size-3.5" />
                               ) : (
-                                <XCircle className="size-3.5" />
+                                <IconCircleX className="size-3.5" />
                               )}
                               <span className="ml-1 hidden sm:inline">
                                 Từ chối

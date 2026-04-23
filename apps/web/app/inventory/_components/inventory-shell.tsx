@@ -4,24 +4,25 @@ import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ArrowDownToLine,
-  BarChart3,
-  ClipboardList,
-  Factory,
-  FileText,
-  Hourglass,
-  LayoutDashboard,
-  LogOut,
-  Package,
-  PackageOpen,
-  Receipt,
-  Settings,
-  ShoppingCart,
-  Store,
-  Truck,
-  Users,
-  UtensilsCrossed,
-} from "lucide-react";
+  IconArrowBarDown,
+  IconChartBar,
+  IconClipboardList,
+  IconBuildingFactory,
+  IconFileText,
+  IconHourglass,
+  IconLayoutDashboard,
+  IconLogout,
+  IconCreditCard,
+  IconPackage,
+  IconPackageOff,
+  IconReceipt,
+  IconSettings,
+  IconShoppingCart,
+  IconBuildingStore,
+  IconTruck,
+  IconUsers,
+  IconToolsKitchen,
+} from "@tabler/icons-react";
 import { ROLE_LABEL_VI, type StaffRole } from "@comtammatu/shared/auth";
 import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
@@ -42,7 +43,10 @@ import {
 } from "@comtammatu/ui/components/sidebar";
 import { isNavItemActive, type ShellNavGroup } from "@/lib/shell-primitives";
 import { tNav } from "../_lib/dictionary";
+import type { InventoryBranchOption } from "../_lib/inventory-scope";
 import { MobileTopBar } from "./mobile/mobile-top-bar";
+import { InventoryBranchFilter } from "./inventory-branch-filter";
+import { InventoryThemeToggle } from "./inventory-theme-toggle";
 
 interface InventoryShellProps {
   children: ReactNode;
@@ -54,6 +58,8 @@ interface InventoryShellProps {
   showProduction: boolean;
   showCatalogManagement: boolean;
   showSettings: boolean;
+  allowedBranches: InventoryBranchOption[];
+  defaultBranchId: number | null;
 }
 
 function buildInventoryGroups({
@@ -75,11 +81,11 @@ function buildInventoryGroups({
     {
       title: "Hôm nay",
       items: [
-        { href: "/inventory", label: "Tổng quan", icon: LayoutDashboard },
+        { href: "/inventory", label: "Tổng quan", icon: IconLayoutDashboard },
         {
           href: "/inventory/stock",
           label: tNav("stock", "navigation"),
-          icon: Package,
+          icon: IconPackage,
         },
       ],
     },
@@ -92,22 +98,32 @@ function buildInventoryGroups({
         {
           href: "/inventory/receiving",
           label: tNav("receiving", "navigation"),
-          icon: ArrowDownToLine,
+          icon: IconArrowBarDown,
         },
         {
           href: "/inventory/purchase-orders",
           label: tNav("purchaseOrders", "navigation"),
-          icon: ShoppingCart,
+          icon: IconShoppingCart,
         },
         {
           href: "/inventory/grn",
           label: tNav("grn", "navigation"),
-          icon: Receipt,
+          icon: IconReceipt,
         },
         {
           href: "/inventory/supplier-invoices",
           label: tNav("supplierInvoices", "navigation"),
-          icon: FileText,
+          icon: IconFileText,
+        },
+        {
+          href: "/inventory/supplier-returns",
+          label: tNav("supplierReturns", "navigation"),
+          icon: IconPackageOff,
+        },
+        {
+          href: "/inventory/supplier-credit-notes",
+          label: tNav("supplierCreditNotes", "navigation"),
+          icon: IconCreditCard,
         },
       ],
     });
@@ -119,7 +135,7 @@ function buildInventoryGroups({
       {
         href: "/inventory/transfers",
         label: tNav("transfers", "navigation"),
-        icon: Truck,
+        icon: IconTruck,
       },
     ],
   });
@@ -127,7 +143,7 @@ function buildInventoryGroups({
   groups.push({
     title: isBranchSite ? "Vận hành chi nhánh" : "Tồn và xuất",
     items: [
-      { href: "/inventory/issues", label: issueLabel, icon: PackageOpen },
+      { href: "/inventory/issues", label: issueLabel, icon: IconPackage },
     ],
   });
 
@@ -138,7 +154,7 @@ function buildInventoryGroups({
         {
           href: "/inventory/production",
           label: tNav("production", "navigation"),
-          icon: Factory,
+          icon: IconBuildingFactory,
         },
       ],
     });
@@ -150,17 +166,17 @@ function buildInventoryGroups({
       {
         href: "/inventory/stocktake",
         label: tNav("stocktake", "navigation"),
-        icon: ClipboardList,
+        icon: IconClipboardList,
       },
       {
         href: "/inventory/expiry",
         label: tNav("expiry", "navigation"),
-        icon: Hourglass,
+        icon: IconHourglass,
       },
       {
         href: "/inventory/reports",
         label: tNav("reports", "navigation"),
-        icon: BarChart3,
+        icon: IconChartBar,
       },
     ],
   });
@@ -173,7 +189,7 @@ function buildInventoryGroups({
             {
               href: "/inventory/settings",
               label: tNav("settings", "navigation"),
-              icon: Settings,
+              icon: IconSettings,
             },
           ]
         : []),
@@ -182,7 +198,7 @@ function buildInventoryGroups({
             {
               href: "/inventory/suppliers",
               label: tNav("suppliers", "navigation"),
-              icon: Users,
+              icon: IconUsers,
             },
           ]
         : []),
@@ -191,7 +207,7 @@ function buildInventoryGroups({
             {
               href: "/inventory/ingredients",
               label: tNav("ingredients", "navigation"),
-              icon: FileText,
+              icon: IconFileText,
             },
           ]
         : []),
@@ -200,7 +216,7 @@ function buildInventoryGroups({
             {
               href: "/inventory/recipes",
               label: tNav("recipes", "navigation"),
-              icon: UtensilsCrossed,
+              icon: IconToolsKitchen,
             },
           ]
         : []),
@@ -223,6 +239,8 @@ export function InventoryShell({
   showProduction,
   showCatalogManagement,
   showSettings,
+  allowedBranches,
+  defaultBranchId,
 }: InventoryShellProps) {
   const pathname = usePathname();
   const groups = useMemo(
@@ -271,15 +289,24 @@ export function InventoryShell({
             </div>
           </div>
           <div className="flex items-center gap-2 rounded-md border bg-sidebar-accent/40 px-2 py-1.5 text-sm group-data-[collapsible=icon]:hidden">
-            <Store className="size-4 shrink-0" />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate text-xs font-medium">{siteName}</span>
-              {showSiteKindLabel ? (
-                <span className="truncate text-xs text-muted-foreground">
-                  {siteKindLabel}
-                </span>
-              ) : null}
-            </div>
+            <IconBuildingStore className="size-4 shrink-0" />
+            {allowedBranches.length > 1 ? (
+              <div className="min-w-0 flex-1">
+                <InventoryBranchFilter
+                  branches={allowedBranches}
+                  defaultBranchId={defaultBranchId}
+                />
+              </div>
+            ) : (
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-xs font-medium">{siteName}</span>
+                {showSiteKindLabel ? (
+                  <span className="truncate text-xs text-muted-foreground">
+                    {siteKindLabel}
+                  </span>
+                ) : null}
+              </div>
+            )}
           </div>
         </SidebarHeader>
 
@@ -325,6 +352,7 @@ export function InventoryShell({
                 {ROLE_LABEL_VI[userRole]}
               </p>
             </div>
+            <InventoryThemeToggle />
             <form action="/api/auth/signout" method="post">
               <Button
                 type="submit"
@@ -334,7 +362,7 @@ export function InventoryShell({
                 aria-label="Đăng xuất"
                 title="Đăng xuất"
               >
-                <LogOut className="size-4" />
+                <IconLogout className="size-4" />
               </Button>
             </form>
           </div>

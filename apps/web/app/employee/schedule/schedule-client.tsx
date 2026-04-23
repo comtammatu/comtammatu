@@ -22,11 +22,11 @@ import {
 } from "@comtammatu/ui/components/item";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import {
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  RefreshCw,
-} from "lucide-react";
+  IconCalendarEvent,
+  IconChevronLeft,
+  IconChevronRight,
+  IconRefresh,
+} from "@tabler/icons-react";
 import { fetchMySchedule, type ScheduleShift } from "./actions";
 
 const DAY_NAMES = [
@@ -151,7 +151,7 @@ export function ScheduleClient({
           disabled={isPending}
           aria-label="Tuần trước"
         >
-          <ChevronLeft />
+          <IconChevronLeft />
         </Button>
 
         <div className="flex flex-1 flex-col items-center gap-1">
@@ -176,7 +176,7 @@ export function ScheduleClient({
           disabled={isPending}
           aria-label="Tuần sau"
         >
-          <ChevronRight />
+          <IconChevronRight />
         </Button>
       </div>
 
@@ -194,7 +194,7 @@ export function ScheduleClient({
               onClick={() => loadWeek(weekStart)}
               disabled={isPending}
             >
-              <RefreshCw data-icon="inline-start" />
+              <IconRefresh data-icon="inline-start" />
               Thử lại
             </Button>
           </EmptyContent>
@@ -226,7 +226,7 @@ export function ScheduleClient({
             weekDates.every((d) => !shiftsByDate.has(d)) && (
               <Empty>
                 <EmptyMedia variant="icon">
-                  <CalendarDays />
+                  <IconCalendarEvent />
                 </EmptyMedia>
                 <EmptyHeader>
                   <EmptyTitle>Chưa có lịch ca tuần này</EmptyTitle>
