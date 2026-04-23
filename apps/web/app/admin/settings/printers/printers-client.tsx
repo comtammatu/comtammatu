@@ -144,6 +144,7 @@ export function PrintersClient(props: {
 
       {(editing || adding) && (
         <PrinterForm
+          branches={branches}
           initial={editing}
           preset={adding}
           onClose={() => {
@@ -157,10 +158,12 @@ export function PrintersClient(props: {
 }
 
 function PrinterForm({
+  branches,
   initial,
   preset,
   onClose,
 }: {
+  branches: Branch[];
   initial: Printer | null;
   preset: { branch_id: number; role: PrinterRole } | null;
   onClose: () => void;
@@ -184,6 +187,10 @@ function PrinterForm({
 
   const save = () => {
     setErr(null);
+    if (!form.branch_id) {
+      setErr("Vui lòng chọn chi nhánh");
+      return;
+    }
     startTransition(async () => {
       const res = await upsertPrinter({
         id: initial?.id,
@@ -229,6 +236,65 @@ function PrinterForm({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Chi nhánh</Label>
+            {branches.length > 1 && !initial ? (
+              <Select
+                value={form.branch_id ? String(form.branch_id) : undefined}
+                onValueChange={(v) =>
+                  setForm({ ...form, branch_id: Number(v) })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn chi nhánh" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={String(b.id)}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                readOnly
+                value={
+                  branches.find((b) => b.id === form.branch_id)?.name ??
+                  `#${form.branch_id}`
+                }
+                className="bg-muted/40"
+              />
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label>Vai trò</Label>
+            {initial ? (
+              <Input
+                readOnly
+                value={ROLE_LABEL[form.role]}
+                className="bg-muted/40"
+              />
+            ) : (
+              <Select
+                value={form.role}
+                onValueChange={(v) =>
+                  setForm({ ...form, role: v as PrinterRole })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLE_ORDER.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {ROLE_LABEL[r]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
           <div className="space-y-2">
             <Label>Tên</Label>
             <Input
