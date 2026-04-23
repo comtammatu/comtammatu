@@ -46,6 +46,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { downloadCsv } from "@/_lib/download-file";
 import { InventoryHeader } from "../_components/inventory-header";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
@@ -91,6 +92,22 @@ const TYPE_FILTER_OPTIONS = [
 
 function issueTypeLabel(type: string): string {
   return ISSUE_TYPES.find((o) => o.value === type)?.label ?? type;
+}
+
+function csvCell(value: string | number): string {
+  const raw = String(value);
+  // Prevent spreadsheet formula injection on cells starting with =, +, -, @, tab, CR.
+  const safe = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
+  return `"${safe.replaceAll('"', '""')}"`;
+}
+
+function toUtf8Base64(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
 }
 
 export function IssuesClient({
@@ -163,6 +180,42 @@ export function IssuesClient({
   }
 
   const hasActiveFilters = activeStatus !== "all" || activeType !== "all" || search.trim().length > 0;
+
+  function handleExportIssuesCsv() {
+    if (filtered.length === 0) {
+      toast.error("Không có dữ liệu để xuất báo cáo.");
+      return;
+    }
+
+    const header = [
+      "Mã phiếu",
+      "Loại xuất",
+      "Chi nhánh",
+      "Ngày tạo",
+      "Trạng thái",
+    ];
+    const rows = filtered.map((row) => [
+      row.code,
+      issueTypeLabel(row.type),
+      row.branchName,
+      row.date,
+      row.status,
+    ]);
+
+    const body = [header, ...rows]
+      .map((line) => line.map((cell) => csvCell(cell)).join(","))
+      .join("\n");
+    // BOM so Excel renders Vietnamese characters correctly on Windows.
+    const csv = `﻿${body}`;
+    const stamp = new Date()
+      .toISOString()
+      .slice(0, 19)
+      .replaceAll(":", "-")
+      .replace("T", "-");
+
+    downloadCsv(toUtf8Base64(csv), `phieu-xuat-kho-${stamp}.csv`);
+    toast.success(`Đã xuất ${String(filtered.length)} phiếu xuất.`);
+  }
 
   const filterBar = (
     <Card className="py-0">
@@ -238,9 +291,13 @@ export function IssuesClient({
         actions={
           <>
             {!isMobile && (
-              <Button type="button" variant="outline" disabled>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleExportIssuesCsv}
+              >
                 <FileDown className="size-4" />
-                Xuất báo cáo (sắp mở)
+                Xuất báo cáo
               </Button>
             )}
             <Button type="button" onClick={() => setCreateOpen(true)}>
