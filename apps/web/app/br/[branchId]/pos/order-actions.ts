@@ -1,11 +1,35 @@
 "use server";
 
 import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { MODULE_ACL, PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { cartStateSchema, calcItemSubtotal, cartItemSchema } from "./types";
 import type { CartState, CartItem } from "./types";
+
+// Best-effort auto kitchen-print after order create/append. Order is the
+// source of truth — never fail the order if printing fails. Returns a
+// human-readable Vietnamese warning string when the user should be told
+// (no printer configured, missing permission, transport error). Returns
+// null when print succeeded or had nothing to send.
+async function autoSendKitchen(
+  supabase: SupabaseClient,
+  orderId: number,
+): Promise<string | null> {
+  const { error } = await supabase.rpc("enqueue_kitchen_print", {
+    p_order_id: orderId,
+  });
+  if (!error) return null;
+  const msg = String(error.message ?? "").toLowerCase();
+  if (msg.includes("no active") && msg.includes("printer")) {
+    return "Đã đặt món, nhưng chi nhánh chưa cấu hình máy in bếp.";
+  }
+  if (msg.includes("permission denied")) {
+    return "Đã đặt món, nhưng tài khoản chưa có quyền gửi bếp.";
+  }
+  return "Đã đặt món, chưa gửi được phiếu bếp. Vui lòng thử Gửi bếp lại.";
+}
 
 /* ─── Constants ─── */
 
@@ -108,6 +132,7 @@ export async function submitOrder(
     sides: item.sides.map((s) => ({
       side_item_id: s.side_item_id,
       name: s.name,
+      price: s.price,
       is_default: s.is_default,
     })),
     subtotal: calcItemSubtotal(item),
@@ -170,9 +195,12 @@ export async function submitOrder(
     };
   }
 
+  const kitchenWarning = await autoSendKitchen(supabase, result.order_id);
+
   return {
     success: true,
     data: { order_id: result.order_id, order_number: result.order_number },
+    ...(kitchenWarning ? { meta: { kitchenWarning } } : {}),
   };
 }
 
@@ -460,6 +488,7 @@ export async function appendOrderItems(
     sides: item.sides.map((s) => ({
       side_item_id: s.side_item_id,
       name: s.name,
+      price: s.price,
       is_default: s.is_default,
     })),
     subtotal: calcItemSubtotal(item),
@@ -501,6 +530,8 @@ export async function appendOrderItems(
     return { success: false, error: "Không thể thêm món. Vui lòng thử lại." };
   }
 
+  const kitchenWarning = await autoSendKitchen(supabase, result.order_id);
+
   return {
     success: true,
     data: {
@@ -508,6 +539,7 @@ export async function appendOrderItems(
       subtotal: Number(result.subtotal),
       total_amount: Number(result.total_amount),
     },
+    ...(kitchenWarning ? { meta: { kitchenWarning } } : {}),
   };
 }
 
@@ -774,7 +806,14 @@ export async function fetchOrderItemsForReorder(
     };
   }
 
-  const menuIds = [...new Set((rows ?? []).map((r) => r.menu_item_id))];
+  const mainIds = (rows ?? []).map((r) => r.menu_item_id);
+  const sideIds = (rows ?? []).flatMap((r) => {
+    const arr = Array.isArray(r.sides)
+      ? (r.sides as { side_item_id: number }[])
+      : [];
+    return arr.map((s) => s.side_item_id);
+  });
+  const menuIds = [...new Set([...mainIds, ...sideIds])];
   if (menuIds.length === 0) {
     return { success: true, data: { items: [], skippedCount: 0 } };
   }
@@ -904,9 +943,28 @@ export async function fetchOrderItemsForReorder(
       ? (r.sides as {
           side_item_id: number;
           name: string;
+          price?: number;
           is_default?: boolean;
         }[])
       : [];
+
+    const liveSides = sidesRaw
+      .map((s) => {
+        const livePrice = livePrices.get(s.side_item_id);
+        if (livePrice === undefined) return null;
+        return {
+          side_item_id: s.side_item_id,
+          name: s.name,
+          price: livePrice,
+          is_default: s.is_default ?? false,
+        };
+      })
+      .filter((s): s is NonNullable<typeof s> => s !== null);
+
+    if (liveSides.length !== sidesRaw.length) {
+      skippedCount += 1;
+      continue;
+    }
 
     const key = `reorder-${r.id}-${r.menu_item_id}`;
     cartItems.push({
@@ -918,11 +976,7 @@ export async function fetchOrderItemsForReorder(
       quantity: r.quantity,
       unit_price: basePrice + variantAdj,
       modifiers: liveMods,
-      sides: sidesRaw.map((s) => ({
-        side_item_id: s.side_item_id,
-        name: s.name,
-        is_default: s.is_default ?? false,
-      })),
+      sides: liveSides,
       note: r.note ?? undefined,
     });
   }

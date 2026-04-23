@@ -29,10 +29,12 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { fetchOrderForBill, updateOrderStatus } from "./actions";
 import {
+  confirmPayment,
   createPayment,
   fetchPaymentForOrder,
   fetchPaymentMethodsForPos,
 } from "./payment-actions";
+import { printReceipt } from "./print-actions";
 import type { CartModifier, CartSide } from "./types";
 
 interface OrderItem {
@@ -92,12 +94,24 @@ export function BillReceipt({
   const [isPending, startTransition] = useTransition();
   const [payPending, startPayTransition] = useTransition();
   const [completePending, startCompleteTransition] = useTransition();
+  const [printPending, startPrintTransition] = useTransition();
   const [refreshTick, setRefreshTick] = useState(0);
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [pendingExtras, setPendingExtras] = useState<{
+    payment_id?: number;
+    provider_ref?: string;
     qr_data?: string;
     redirect_url?: string;
+    qr_info?: {
+      bank_code?: string;
+      bank_bin?: string;
+      account_no?: string;
+      account_name?: string;
+      amount?: string;
+      description?: string;
+    };
   } | null>(null);
+  const [confirmPending, startConfirmTransition] = useTransition();
   const [awaitingAsyncConfirmation, setAwaitingAsyncConfirmation] =
     useState(false);
 
@@ -145,8 +159,16 @@ export function BillReceipt({
   }, [branchId, orderId]);
 
   const handlePrint = useCallback(() => {
-    window.print();
-  }, []);
+    if (orderId === null) return;
+    startPrintTransition(async () => {
+      const result = await printReceipt(orderId);
+      if (result.success) {
+        toast.success("Đã gửi hoá đơn tới máy in");
+      } else {
+        toast.error(result.error ?? "Không thể in hoá đơn");
+      }
+    });
+  }, [orderId]);
 
   const handleOpenChange = useCallback(
     (open: boolean) => {
@@ -183,8 +205,11 @@ export function BillReceipt({
             await onOrderUpdated?.();
             setAwaitingAsyncConfirmation(true);
             setPendingExtras({
+              payment_id: result.data.payment_id,
+              provider_ref: result.data.provider_ref,
               qr_data: result.data.qr_data,
               redirect_url: result.data.redirect_url,
+              qr_info: result.data.qr_info,
             });
             setRefreshTick((t) => t + 1);
           }
@@ -195,6 +220,24 @@ export function BillReceipt({
     },
     [branchId, onOrderUpdated, order, orderId],
   );
+
+  const handleConfirmPayment = useCallback(() => {
+    const paymentId = pendingExtras?.payment_id;
+    if (!paymentId) return;
+    const providerRef = pendingExtras?.provider_ref ?? "";
+    startConfirmTransition(async () => {
+      const result = await confirmPayment(paymentId, providerRef);
+      if (result.success) {
+        toast.success("Đã xác nhận thanh toán");
+        setAwaitingAsyncConfirmation(false);
+        setPendingExtras(null);
+        await onOrderUpdated?.();
+        setRefreshTick((t) => t + 1);
+      } else {
+        toast.error(result.error ?? "Không thể xác nhận thanh toán");
+      }
+    });
+  }, [onOrderUpdated, pendingExtras?.payment_id, pendingExtras?.provider_ref]);
 
   const handleCompleteOrder = useCallback(() => {
     if (orderId === null) return;
@@ -246,39 +289,45 @@ export function BillReceipt({
     setAwaitingAsyncConfirmation(false);
   }, [awaitingAsyncConfirmation, isPaid, onOrderUpdated]);
 
+  // VietQR has no webhook/API back-channel — cashier checks the banking app
+  // on their phone and presses "Đã nhận tiền" to confirm manually. When the
+  // bill is reopened on an order that already has a pending payment record
+  // (e.g. after page reload), fetch that record ONCE so the confirm button
+  // has the payment_id + provider_ref it needs. No interval polling.
   useEffect(() => {
-    if (orderId === null || isPaid || !hasPendingRemotePayment) return;
-
-    const intervalId = window.setInterval(() => {
-      void fetchPaymentForOrder(orderId).then((result) => {
-        if (!result.success) return;
-        if (result.data?.status === "completed") {
-          setRefreshTick((tick) => tick + 1);
-          return;
-        }
-        if (
-          result.data?.status === "pending" &&
-          awaitingAsyncConfirmation
-        ) {
-          setRefreshTick((tick) => tick + 1);
-        }
-      });
-    }, 4000);
-
+    if (
+      orderId === null ||
+      isPaid ||
+      !hasPendingRemotePayment ||
+      pendingExtras?.payment_id
+    )
+      return;
+    let cancelled = false;
+    void fetchPaymentForOrder(orderId).then((result) => {
+      if (cancelled) return;
+      if (!result.success || !result.data) return;
+      if (result.data.status !== "pending") return;
+      setPendingExtras((current) => ({
+        ...current,
+        payment_id: result.data!.id,
+        provider_ref: result.data!.provider_ref ?? undefined,
+      }));
+    });
     return () => {
-      window.clearInterval(intervalId);
+      cancelled = true;
     };
-  }, [
-    awaitingAsyncConfirmation,
-    hasPendingRemotePayment,
-    isPaid,
-    orderId,
-  ]);
+  }, [hasPendingRemotePayment, isPaid, orderId, pendingExtras?.payment_id]);
 
   return (
     <Sheet open={orderId !== null} onOpenChange={handleOpenChange}>
       <SheetContent side="right" className="w-95 p-0 sm:max-w-95">
-        {isPending ? (
+        <SheetHeader className="sr-only">
+          <SheetTitle>Hóa đơn</SheetTitle>
+          <SheetDescription>
+            Xem chi tiết và thanh toán đơn hàng.
+          </SheetDescription>
+        </SheetHeader>
+        {isPending && !order ? (
           <div className="flex h-full items-center justify-center">
             <Spinner className="size-6 text-muted-foreground" />
           </div>
@@ -291,12 +340,12 @@ export function BillReceipt({
           </div>
         ) : order ? (
           <div className="flex h-full flex-col">
-            <SheetHeader className="px-4 pt-4">
-              <SheetTitle className="text-left">Hóa đơn</SheetTitle>
-              <SheetDescription className="text-left">
+            <div className="px-4 pt-4">
+              <h2 className="text-left text-base font-semibold">Hóa đơn</h2>
+              <p className="text-left text-sm text-muted-foreground">
                 #{order.order_number}
-              </SheetDescription>
-            </SheetHeader>
+              </p>
+            </div>
 
             <div className="border-b px-4 py-3 print:hidden">
               <Card className="shadow-sm">
@@ -449,19 +498,43 @@ export function BillReceipt({
                   <tbody>
                     {order.order_items.map((item) => (
                       <tr key={item.id} className="border-b border-dashed">
-                        <td className="py-1">
+                        <td className="py-1 align-top">
                           <span>{item.item_name}</span>
                           {item.variant_name && (
                             <span className="ml-1 text-muted-foreground">
                               ({item.variant_name})
                             </span>
                           )}
+                          {item.modifiers.length > 0 && (
+                            <div className="text-[11px] text-muted-foreground">
+                              {item.modifiers
+                                .map((m) => `+ ${m.name}`)
+                                .join(", ")}
+                            </div>
+                          )}
+                          {item.sides.length > 0 && (
+                            <div className="text-[11px] text-muted-foreground">
+                              Kèm:{" "}
+                              {item.sides
+                                .map((s) =>
+                                  s.price > 0
+                                    ? `${s.name} (${formatVND(s.price)})`
+                                    : s.name,
+                                )
+                                .join(", ")}
+                            </div>
+                          )}
+                          {item.note && (
+                            <div className="text-[11px] italic text-muted-foreground">
+                              * {item.note}
+                            </div>
+                          )}
                         </td>
-                        <td className="py-1 text-center">{item.quantity}</td>
-                        <td className="py-1 text-right">
+                        <td className="py-1 text-center align-top">{item.quantity}</td>
+                        <td className="py-1 text-right align-top">
                           {formatVND(item.unit_price)}
                         </td>
-                        <td className="py-1 text-right font-medium">
+                        <td className="py-1 text-right align-top font-medium">
                           {formatVND(item.subtotal)}
                         </td>
                       </tr>
@@ -501,6 +574,16 @@ export function BillReceipt({
                     <span>{formatVND(order.total_amount)}</span>
                   </div>
                 </div>
+
+                {order.note && (
+                  <>
+                    <Separator className="my-2" />
+                    <div className="text-xs">
+                      <span className="font-medium">Ghi chú: </span>
+                      <span className="text-muted-foreground">{order.note}</span>
+                    </div>
+                  </>
+                )}
 
                 <Separator className="my-2" />
 
@@ -575,26 +658,96 @@ export function BillReceipt({
                           </a>
                         </Button>
                       )}
-                      {pendingExtras?.qr_data &&
-                        pendingExtras.qr_data.startsWith("http") && (
-                          <div className="rounded-lg border border-border/70 bg-card p-3">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={pendingExtras.qr_data}
-                              alt="QR thanh toán"
-                              className="mx-auto max-h-56 w-full max-w-56 object-contain"
-                            />
-                            <p className="mt-2 text-center text-xs text-muted-foreground">
-                              Khách quét mã để hoàn tất thanh toán.
-                            </p>
-                          </div>
-                        )}
-                      {pendingExtras?.qr_data &&
-                        !pendingExtras.qr_data.startsWith("http") && (
-                          <pre className="max-h-32 overflow-auto rounded-lg border bg-muted p-3 text-xs">
-                            {pendingExtras.qr_data}
-                          </pre>
-                        )}
+                      {pendingExtras?.qr_data && (
+                        <div className="rounded-lg border border-border/70 bg-card p-3">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={pendingExtras.qr_data}
+                            alt="QR thanh toán VietQR"
+                            className="mx-auto max-h-72 w-full max-w-72 object-contain"
+                          />
+                          <p className="mt-2 text-center text-xs text-muted-foreground">
+                            Khách quét bằng app ngân hàng để chuyển khoản.
+                          </p>
+                          {pendingExtras.qr_info && (
+                            <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-md bg-muted/50 p-2 text-xs">
+                              {pendingExtras.qr_info.bank_code && (
+                                <>
+                                  <dt className="text-muted-foreground">
+                                    Ngân hàng
+                                  </dt>
+                                  <dd className="font-medium">
+                                    {pendingExtras.qr_info.bank_code}
+                                  </dd>
+                                </>
+                              )}
+                              {pendingExtras.qr_info.account_no && (
+                                <>
+                                  <dt className="text-muted-foreground">
+                                    Số TK
+                                  </dt>
+                                  <dd className="font-mono font-medium">
+                                    {pendingExtras.qr_info.account_no}
+                                  </dd>
+                                </>
+                              )}
+                              {pendingExtras.qr_info.account_name && (
+                                <>
+                                  <dt className="text-muted-foreground">
+                                    Chủ TK
+                                  </dt>
+                                  <dd className="font-medium uppercase">
+                                    {pendingExtras.qr_info.account_name}
+                                  </dd>
+                                </>
+                              )}
+                              {pendingExtras.qr_info.amount && (
+                                <>
+                                  <dt className="text-muted-foreground">
+                                    Số tiền
+                                  </dt>
+                                  <dd className="font-semibold">
+                                    {formatVND(
+                                      Number(pendingExtras.qr_info.amount),
+                                    )}
+                                  </dd>
+                                </>
+                              )}
+                              {pendingExtras.qr_info.description && (
+                                <>
+                                  <dt className="text-muted-foreground">
+                                    Nội dung
+                                  </dt>
+                                  <dd className="font-mono">
+                                    {pendingExtras.qr_info.description}
+                                  </dd>
+                                </>
+                              )}
+                            </dl>
+                          )}
+                          <Button
+                            data-testid="bill-confirm-transfer"
+                            type="button"
+                            variant="default"
+                            className="mt-3 h-11 w-full rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
+                            disabled={
+                              confirmPending || !pendingExtras.payment_id
+                            }
+                            onClick={handleConfirmPayment}
+                          >
+                            {confirmPending ? (
+                              <Spinner className="mr-2" />
+                            ) : (
+                              <IconCircleCheck className="mr-2 size-4" />
+                            )}
+                            Đã nhận tiền — xác nhận thanh toán
+                          </Button>
+                          <p className="mt-2 text-center text-[11px] text-muted-foreground">
+                            Mở app ngân hàng kiểm tra đã có tiền về rồi bấm xác
+                            nhận.
+                          </p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -625,8 +778,11 @@ export function BillReceipt({
                   variant={canCompleteOrder ? "outline" : "default"}
                   className="w-full rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
                   onClick={handlePrint}
+                  disabled={printPending}
                 >
-                {isPaid ? (
+                {printPending ? (
+                  <Spinner className="mr-2" />
+                ) : isPaid ? (
                   <IconCircleCheck className="mr-2 size-4" />
                 ) : (
                   <IconPrinter className="mr-2 size-4" />

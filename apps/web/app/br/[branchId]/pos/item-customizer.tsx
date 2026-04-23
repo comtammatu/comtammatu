@@ -6,6 +6,8 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
+import { Textarea } from "@comtammatu/ui/components/textarea";
+import { Label } from "@comtammatu/ui/components/label";
 import {
   Sheet,
   SheetContent,
@@ -27,6 +29,7 @@ interface ItemCustomizerProps {
     unitPrice: number,
     modifiers: CartModifier[],
     sides: CartSide[],
+    note: string | undefined,
   ) => void;
   /** Thêm món vào đơn đã có (copy nút/tiêu đề) */
   mode?: "new" | "append";
@@ -49,6 +52,7 @@ export function ItemCustomizer({
   const [selectedSideIds, setSelectedSideIds] = useState<Set<number>>(
     new Set(),
   );
+  const [note, setNote] = useState("");
 
   // Reset state when item prop changes
   useEffect(() => {
@@ -62,6 +66,7 @@ export function ItemCustomizer({
             .map((s) => s.side_item.id),
         ),
       );
+      setNote("");
     }
   }, [item]);
 
@@ -79,6 +84,7 @@ export function ItemCustomizer({
             .map((s) => s.side_item.id),
         );
         setSelectedSideIds(defaultSideIds);
+        setNote("");
       }
       if (!open) {
         onClose();
@@ -101,7 +107,14 @@ export function ItemCustomizer({
       .reduce((sum, m) => sum + m.price, 0);
   }, [item, selectedModifierIds]);
 
-  const totalPrice = unitPrice + modifierTotal;
+  const sideTotal = useMemo(() => {
+    if (!item) return 0;
+    return item.menu_item_available_sides
+      .filter((s) => selectedSideIds.has(s.side_item.id))
+      .reduce((sum, s) => sum + s.side_item.base_price, 0);
+  }, [item, selectedSideIds]);
+
+  const totalPrice = unitPrice + modifierTotal + sideTotal;
 
   const handleConfirm = useCallback(() => {
     if (!item) return;
@@ -115,9 +128,11 @@ export function ItemCustomizer({
       .map((s) => ({
         side_item_id: s.side_item.id,
         name: s.side_item.name,
+        price: s.side_item.base_price,
         is_default: s.is_default,
       }));
 
+    const trimmedNote = note.trim();
     onConfirm(
       item,
       selectedVariant?.id,
@@ -125,6 +140,7 @@ export function ItemCustomizer({
       unitPrice,
       modifiers,
       sides,
+      trimmedNote.length > 0 ? trimmedNote : undefined,
     );
   }, [
     item,
@@ -132,6 +148,7 @@ export function ItemCustomizer({
     selectedModifierIds,
     selectedSideIds,
     unitPrice,
+    note,
     onConfirm,
   ]);
 
@@ -258,11 +275,29 @@ export function ItemCustomizer({
                               </span>
                             )}
                           </span>
+                          <span className="text-sm text-muted-foreground">
+                            +{formatVND(s.side_item.base_price)}
+                          </span>
                         </label>
                       ))}
                     </div>
                   </div>
                 )}
+
+                {/* Note */}
+                <div>
+                  <Label htmlFor="item-note" className="mb-2 text-sm font-semibold">
+                    Ghi chú
+                  </Label>
+                  <Textarea
+                    id="item-note"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Ví dụ: ít cay, không hành..."
+                    rows={2}
+                    maxLength={200}
+                  />
+                </div>
               </div>
             </ScrollArea>
 

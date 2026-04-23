@@ -42,6 +42,7 @@ export default async function StocktakeDetailPage({
         id: number;
         name: string;
         unit: string;
+        purchase_unit: string | null;
         category: string | null;
       } | null;
     }>;

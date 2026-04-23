@@ -57,7 +57,7 @@ import {
   fetchOrderItemsForReorder,
 } from "./actions";
 import { sendToKitchen } from "./print-actions";
-import type { CartItem } from "./types";
+import type { CartItem, CartModifier, CartSide } from "./types";
 import type { BranchTable } from "./page";
 import { messages } from "@lib/messages";
 
@@ -69,6 +69,9 @@ interface OrderItemRow {
   unit_price: number;
   subtotal: number;
   status: string;
+  modifiers: CartModifier[];
+  sides: CartSide[];
+  note: string | null;
 }
 
 interface OrderDetailData {
@@ -493,6 +496,30 @@ export function OrderDetailSheet({
                               {row.item_name}
                               {row.variant_name ? ` — ${row.variant_name}` : ""}
                             </p>
+                            {row.modifiers.length > 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                {row.modifiers
+                                  .map((m) => `+ ${m.name}`)
+                                  .join(", ")}
+                              </p>
+                            )}
+                            {row.sides.length > 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                Kèm:{" "}
+                                {row.sides
+                                  .map((s) =>
+                                    s.price > 0
+                                      ? `${s.name} (${formatVND(s.price)})`
+                                      : s.name,
+                                  )
+                                  .join(", ")}
+                              </p>
+                            )}
+                            {row.note && (
+                              <p className="text-xs italic text-muted-foreground">
+                                * {row.note}
+                              </p>
+                            )}
                             <p className="text-xs text-muted-foreground">
                               {meta.label} · x{row.quantity} ·{" "}
                               {formatVND(row.subtotal)}
@@ -582,8 +609,9 @@ export function OrderDetailSheet({
                     disabled={isPending}
                     className="min-h-11 w-full rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
                     onClick={handleSendKitchen}
+                    title="Phiếu bếp đã tự gửi khi đặt món. Nhấn để gửi lại nếu cần."
                   >
-                    Gửi bếp
+                    Gửi lại bếp
                   </Button>
                 )}
 

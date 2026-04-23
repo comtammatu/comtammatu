@@ -20,6 +20,7 @@ export type CartModifier = z.infer<typeof cartModifierSchema>;
 export const cartSideSchema = z.object({
   side_item_id: z.number().int().positive(),
   name: z.string().min(1),
+  price: z.number().min(0),
   is_default: z.boolean(),
 });
 
@@ -56,10 +57,11 @@ export type CartState = z.infer<typeof cartStateSchema>;
 
 /* ─── Computed Helpers ─── */
 
-/** Calculate line subtotal for a cart item (unit_price * quantity + modifiers) */
+/** Calculate line subtotal for a cart item (unit_price * quantity + modifiers + sides) */
 export function calcItemSubtotal(item: CartItem): number {
   const modifierTotal = item.modifiers.reduce((sum, m) => sum + m.price, 0);
-  return (item.unit_price + modifierTotal) * item.quantity;
+  const sidesTotal = item.sides.reduce((sum, s) => sum + s.price, 0);
+  return (item.unit_price + modifierTotal + sidesTotal) * item.quantity;
 }
 
 /** Calculate cart total from all items */

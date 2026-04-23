@@ -240,17 +240,25 @@ export function PosMenu({
       unitPrice?: number,
       modifiers: CartModifier[] = [],
       sides: CartSide[] = [],
+      note?: string,
     ) => {
       const price = unitPrice ?? item.base_price;
-      const key = makeCartKey(item.id, variantId, modifiers, sides);
+      const hasNote = note !== undefined && note.length > 0;
+      const baseKey = makeCartKey(item.id, variantId, modifiers, sides);
+      // Items with notes should not merge with existing cart lines
+      const key = hasNote
+        ? `${baseKey}-n:${crypto.randomUUID()}`
+        : baseKey;
       setShowOrders(false);
 
       setCartItems((prev) => {
-        const existing = prev.find((ci) => ci.key === key);
-        if (existing) {
-          return prev.map((ci) =>
-            ci.key === key ? { ...ci, quantity: ci.quantity + 1 } : ci,
-          );
+        if (!hasNote) {
+          const existing = prev.find((ci) => ci.key === key);
+          if (existing) {
+            return prev.map((ci) =>
+              ci.key === key ? { ...ci, quantity: ci.quantity + 1 } : ci,
+            );
+          }
         }
         const newItem: CartItem = {
           key,
@@ -262,6 +270,7 @@ export function PosMenu({
           unit_price: price,
           modifiers,
           sides,
+          note: hasNote ? note : undefined,
         };
         return [...prev, newItem];
       });
@@ -347,6 +356,10 @@ export function PosMenu({
             onClick: () => setBillOrderId(orderId),
           },
         });
+        const kitchenWarning = result.meta?.kitchenWarning;
+        if (typeof kitchenWarning === "string") {
+          toast.warning(kitchenWarning);
+        }
 
         setCartItems([]);
         setOrderNote("");
@@ -397,6 +410,8 @@ export function PosMenu({
             ]);
             if (r.success) {
               toast.success(`Đã thêm món vào đơn #${appendTarget.orderNumber}`);
+              const kw = r.meta?.kitchenWarning;
+              if (typeof kw === "string") toast.warning(kw);
               setAppendTarget(null);
               focusOrderWorkflow(appendTarget.orderId);
               void refreshOperationalData();
@@ -425,10 +440,15 @@ export function PosMenu({
       unitPrice: number,
       modifiers: CartModifier[],
       sides: CartSide[],
+      note: string | undefined,
     ) => {
       if (appendTarget) {
         startTransition(async () => {
-          const key = makeCartKey(item.id, variantId, modifiers, sides);
+          const hasNote = note !== undefined && note.length > 0;
+          const baseKey = makeCartKey(item.id, variantId, modifiers, sides);
+          const key = hasNote
+            ? `${baseKey}-n:${crypto.randomUUID()}`
+            : baseKey;
           const line: CartItem = {
             key,
             menu_item_id: item.id,
@@ -439,12 +459,15 @@ export function PosMenu({
             unit_price: unitPrice,
             modifiers,
             sides,
+            note,
           };
           const r = await appendOrderItems(branchId, appendTarget.orderId, [
             line,
           ]);
           if (r.success) {
             toast.success(`Đã thêm món vào đơn #${appendTarget.orderNumber}`);
+            const kw = r.meta?.kitchenWarning;
+            if (typeof kw === "string") toast.warning(kw);
             setAppendTarget(null);
             setCustomizerItem(null);
             focusOrderWorkflow(appendTarget.orderId);
@@ -455,7 +478,7 @@ export function PosMenu({
         });
         return;
       }
-      addToCart(item, variantId, variantName, unitPrice, modifiers, sides);
+      addToCart(item, variantId, variantName, unitPrice, modifiers, sides, note);
       setCustomizerItem(null);
     },
     [addToCart, appendTarget, branchId, focusOrderWorkflow, refreshOperationalData],
