@@ -1,3 +1,4 @@
+npm warn Unknown project config "public-hoist-pattern". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
 export type Json =
   | string
   | number

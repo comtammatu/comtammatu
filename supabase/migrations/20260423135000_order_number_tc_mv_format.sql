@@ -20,6 +20,9 @@ ALTER TABLE public.order_daily_counters
   DROP CONSTRAINT IF EXISTS order_daily_counters_tenant_id_branch_id_counter_date_key;
 
 ALTER TABLE public.order_daily_counters
+  DROP CONSTRAINT IF EXISTS order_daily_counters_scope_key;
+
+ALTER TABLE public.order_daily_counters
   ADD CONSTRAINT order_daily_counters_scope_key
   UNIQUE (tenant_id, branch_id, counter_date, order_type);
 
