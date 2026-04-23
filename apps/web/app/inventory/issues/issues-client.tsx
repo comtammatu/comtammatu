@@ -211,7 +211,7 @@ export function IssuesClient({
       .map((line) => line.map((cell) => csvCell(cell)).join(","))
       .join("\n");
     // BOM so Excel renders Vietnamese characters correctly on Windows.
-    const csv = `﻿${body}`;
+    const csv = `\uFEFF${body}`;
     const stamp = new Date()
       .toISOString()
       .slice(0, 19)
