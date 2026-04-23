@@ -6,7 +6,9 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import {
   getPaymentProvider,
   getRegisteredMethods,
+  VietQRProvider,
   type PaymentMethod,
+  type PaymentProvider,
 } from "@comtammatu/shared/providers";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { ensurePaymentProvidersRegistered } from "../../../../lib/payment-providers-init";
@@ -32,8 +34,17 @@ const paymentSchema = z.object({
 export interface CreatePaymentSuccessData {
   payment_id: number;
   status: string;
+  provider_ref?: string;
   qr_data?: string;
   redirect_url?: string;
+  qr_info?: {
+    bank_code?: string;
+    bank_bin?: string;
+    account_no?: string;
+    account_name?: string;
+    amount?: string;
+    description?: string;
+  };
 }
 
 interface OrderPaymentData {
@@ -77,6 +88,44 @@ async function consumeStockForOrderCompat(
   });
 }
 
+async function readVietQrSettings(
+  supabase: PosSupabase,
+  tenantId: number,
+): Promise<{
+  enabled: boolean;
+  bankCode: string;
+  accountNo: string;
+  accountName: string;
+}> {
+  const { data: rows } = await supabase
+    .from("system_settings")
+    .select("key, value")
+    .eq("tenant_id", tenantId)
+    .in("key", [
+      SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR,
+      SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE,
+      SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO,
+      SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME,
+    ]);
+  const s: Record<string, string> = {};
+  if (rows) for (const row of rows) s[row.key] = row.value;
+  return {
+    enabled: truthySetting(s[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR]),
+    bankCode:
+      s[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE] ||
+      process.env.VIETQR_BANK_ID ||
+      "",
+    accountNo:
+      s[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO] ||
+      process.env.VIETQR_ACCOUNT_NO ||
+      "",
+    accountName:
+      s[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME] ||
+      process.env.VIETQR_ACCOUNT_NAME ||
+      "",
+  };
+}
+
 async function resolveAllowedPaymentMethods(
   supabase: PosSupabase,
   tenantId: number,
@@ -105,11 +154,11 @@ async function resolveAllowedPaymentMethods(
   if (registered.has("cash")) {
     methods.push("cash");
   }
-  if (
-    truthySetting(settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR]) &&
-    registered.has("vietqr")
-  ) {
-    methods.push("vietqr");
+  if (truthySetting(settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR])) {
+    const vietqr = await readVietQrSettings(supabase, tenantId);
+    if (vietqr.bankCode && vietqr.accountNo) {
+      methods.push("vietqr");
+    }
   }
   if (
     truthySetting(settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO]) &&
@@ -190,7 +239,7 @@ export async function createPayment(
   // Verify order exists and belongs to branch
   const { data: order, error: orderError } = await supabase
     .from("orders")
-    .select("id, total_amount, payment_status")
+    .select("id, order_number, total_amount, payment_status")
     .eq("id", parsedPayment.data.orderId)
     .eq("branch_id", parsedBranch.data)
     .eq("tenant_id", claims.tenant_id)
@@ -228,10 +277,26 @@ export async function createPayment(
     };
   }
 
-  // Use provider interface — swap implementation without changing this code
-  const provider = getPaymentProvider(
-    parsedPayment.data.method as PaymentMethod,
-  );
+  // Build provider: VietQR reads per-tenant bank config from system_settings
+  // (with ENV fallback) so owners can rotate STK without redeploy.
+  let provider: PaymentProvider | null;
+  if (parsedPayment.data.method === "vietqr") {
+    const vietqr = await readVietQrSettings(supabase, claims.tenant_id);
+    if (!vietqr.bankCode || !vietqr.accountNo) {
+      return {
+        success: false,
+        error: "Chưa cấu hình STK/ngân hàng VietQR cho chi nhánh.",
+      };
+    }
+    provider = new VietQRProvider({
+      apiKey: "",
+      bankAccount: vietqr.accountNo,
+      bankCode: vietqr.bankCode,
+      accountName: vietqr.accountName || undefined,
+    });
+  } else {
+    provider = getPaymentProvider(parsedPayment.data.method as PaymentMethod);
+  }
   if (!provider) {
     return {
       success: false,
@@ -243,7 +308,7 @@ export async function createPayment(
   const providerResult = await provider.createPayment({
     tenantId: claims.tenant_id,
     orderId: parsedPayment.data.orderId,
-    orderNumber: `${parsedBranch.data}-${parsedPayment.data.orderId}`,
+    orderNumber: order.order_number,
     amount: parsedPayment.data.amount,
   });
 
@@ -306,17 +371,39 @@ export async function createPayment(
     }
   }
 
+  const qrInfo = pickVietQrInfo(providerResult.providerData);
+
   return {
     success: true,
     data: {
       payment_id: result.payment_id,
       status: result.status,
+      ...(providerResult.providerRef
+        ? { provider_ref: providerResult.providerRef }
+        : {}),
       ...(providerResult.qrData ? { qr_data: providerResult.qrData } : {}),
       ...(providerResult.redirectUrl
         ? { redirect_url: providerResult.redirectUrl }
         : {}),
+      ...(qrInfo ? { qr_info: qrInfo } : {}),
     },
   };
+}
+
+function pickVietQrInfo(
+  providerData: Record<string, unknown> | undefined,
+): CreatePaymentSuccessData["qr_info"] | null {
+  if (!providerData) return null;
+  const str = (v: unknown) => (typeof v === "string" ? v : undefined);
+  const info = {
+    bank_code: str(providerData.bankCode),
+    bank_bin: str(providerData.bankBin),
+    account_no: str(providerData.accountNo),
+    account_name: str(providerData.accountName),
+    amount: str(providerData.amount),
+    description: str(providerData.description),
+  };
+  return Object.values(info).some((v) => v !== undefined) ? info : null;
 }
 
 /* ─── confirmPayment ─── */

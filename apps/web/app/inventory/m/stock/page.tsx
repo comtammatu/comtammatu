@@ -52,7 +52,7 @@ export default async function MobileStockPage() {
     supabase
       .from("ingredients")
       .select(
-        "id, name, sku, unit, category, min_stock_level, reorder_point, max_stock_level, is_active",
+        "id, name, sku, unit, purchase_unit, category, min_stock_level, reorder_point, max_stock_level, is_active",
       )
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
@@ -104,7 +104,7 @@ export default async function MobileStockPage() {
         ingredientId: ing.id,
         name: ing.name,
         sku: ing.sku,
-        unit: ing.unit,
+        unit: ing.purchase_unit || ing.unit,
         category: ing.category,
         quantity: qty,
         minLevel: min,
@@ -123,7 +123,7 @@ export default async function MobileStockPage() {
         ingredientId: ing.id,
         name: ing.name,
         sku: ing.sku,
-        unit: ing.unit,
+        unit: ing.purchase_unit || ing.unit,
         category: ing.category,
         quantity: totalQty,
         minLevel: min,

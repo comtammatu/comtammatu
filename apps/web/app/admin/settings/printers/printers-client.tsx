@@ -108,7 +108,7 @@ export function PrintersClient(props: {
                         <span className="text-sm text-muted-foreground">
                           {p.name} ·{" "}
                           {p.connection_type === "lan"
-                            ? `${p.lan_host}:${p.lan_port ?? 9100}`
+                            ? `${p.lan_host}${p.lan_port && p.lan_port !== 9100 ? `:${p.lan_port}` : ""}`
                             : `USB ${p.usb_vendor_id}${p.usb_product_id ? `/${p.usb_product_id}` : ""}`}{" "}
                           · {p.paper_width_mm}mm · {p.code_page}
                         </span>
@@ -322,31 +322,20 @@ function PrinterForm({
           </div>
 
           {form.connection_type === "lan" ? (
-            <>
-              <div className="space-y-2">
-                <Label>LAN host / IP</Label>
-                <Input
-                  value={form.lan_host}
-                  onChange={(e) =>
-                    setForm({ ...form, lan_host: e.target.value })
-                  }
-                  placeholder="192.168.1.50"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>LAN port</Label>
-                <Input
-                  type="number"
-                  value={form.lan_port}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      lan_port: Number(e.target.value || 9100),
-                    })
-                  }
-                />
-              </div>
-            </>
+            <div className="space-y-2 md:col-span-2">
+              <Label>LAN host / IP</Label>
+              <Input
+                value={form.lan_host}
+                onChange={(e) =>
+                  setForm({ ...form, lan_host: e.target.value })
+                }
+                placeholder="192.168.1.50"
+              />
+              <p className="text-xs text-muted-foreground">
+                Mặc định port 9100 (ESC/POS raw). Chỉ đổi khi máy in yêu cầu
+                port khác.
+              </p>
+            </div>
           ) : (
             <>
               <div className="space-y-2">

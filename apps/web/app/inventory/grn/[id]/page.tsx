@@ -60,7 +60,12 @@ export default async function GRNDetailPage({
       receiving_temperature: number | null;
       batch_number: string | null;
       expiry_date: string | null;
-      ingredients: { id: number; name: string; unit: string } | null;
+      ingredients: {
+        id: number;
+        name: string;
+        unit: string;
+        purchase_unit: string | null;
+      } | null;
     }>;
   };
 
@@ -75,6 +80,7 @@ export default async function GRNDetailPage({
       id: number;
       name: string;
       unit: string;
+      purchase_unit: string | null;
     } | null;
 
     const qsMap: Record<string, string> = {
@@ -106,7 +112,7 @@ export default async function GRNDetailPage({
           | "wait_backorder"
           | "request_credit"
           | null) ?? null,
-      unit: l.unit ?? ing?.unit ?? "",
+      unit: ing?.purchase_unit || l.unit || ing?.unit || "",
       cost: Number(l.unit_cost ?? 0),
       lot: l.batch_number ?? "",
       expiry: l.expiry_date ?? "",

@@ -2,7 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
 import { IconActivity } from "@tabler/icons-react";
-import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
+import {
+  canManageBranchFloorSettings,
+  TENANT_LEVEL_ROLES,
+} from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { PrintersClient, type Printer, type Agent } from "./printers-client";
 
@@ -31,10 +34,14 @@ export default async function PrintersPage() {
     .from("printer_agent_status")
     .select("branch_id, agent_id, version, last_seen_at, is_online");
 
-  if (claims.branch_id) {
-    branchesQuery = branchesQuery.eq("id", claims.branch_id);
-    printersQuery = printersQuery.eq("branch_id", claims.branch_id);
-    agentsQuery = agentsQuery.eq("branch_id", claims.branch_id);
+  const isTenantLevel = (TENANT_LEVEL_ROLES as readonly string[]).includes(
+    claims.user_role,
+  );
+  const scopedBranch = isTenantLevel ? null : claims.branch_id;
+  if (scopedBranch) {
+    branchesQuery = branchesQuery.eq("id", scopedBranch);
+    printersQuery = printersQuery.eq("branch_id", scopedBranch);
+    agentsQuery = agentsQuery.eq("branch_id", scopedBranch);
   }
 
   const [branchesRes, printersRes, agentsRes] = await Promise.all([

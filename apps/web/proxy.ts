@@ -147,16 +147,33 @@ export async function proxy(request: NextRequest) {
       }
     }
 
-    // POS/KDS are branch-scoped. Enforce two rules in proxy so layouts stay dumb:
-    //   1. URL branchId must match the user's assigned branch_id.
-    //   2. Branch must be operational (not warehouse / central_kitchen).
-    if (moduleKey === "pos" || moduleKey === "kds") {
+    // Branch-scoped routes (POS/KDS + branch_settings) enforce URL branchId
+    // matches the user's assigned branch_id. Admin-level roles
+    // (owner/super_manager/area_manager) may traverse any branch's settings.
+    // POS/KDS also require the branch be operational (not warehouse/central_kitchen).
+    if (
+      moduleKey === "pos" ||
+      moduleKey === "kds" ||
+      moduleKey === "branch_settings"
+    ) {
       const routePath = surface === "beta" ? stripBetaPrefix(pathname) : pathname;
       const pathMatch = routePath.match(/^\/br\/(\d+)\//);
       if (pathMatch) {
         const routeBranchId = Number(pathMatch[1]);
 
-        if (claims.branch_id === null || claims.branch_id !== routeBranchId) {
+        const crossBranchRoles: readonly string[] = [
+          "owner",
+          "super_manager",
+          "area_manager",
+        ];
+        const allowCrossBranch =
+          moduleKey === "branch_settings" &&
+          crossBranchRoles.includes(claims.user_role);
+
+        if (
+          !allowCrossBranch &&
+          (claims.branch_id === null || claims.branch_id !== routeBranchId)
+        ) {
           return redirectToAccessDenied(
             request,
             response,
@@ -164,22 +181,24 @@ export async function proxy(request: NextRequest) {
           );
         }
 
-        const { data: branchRow } = await supabase
-          .from("branches")
-          .select("id, branch_kind")
-          .eq("id", routeBranchId)
-          .eq("tenant_id", claims.tenant_id)
-          .maybeSingle();
-        const kind = branchRow?.branch_kind;
-        if (
-          branchRow &&
-          (kind === "central_warehouse" || kind === "central_kitchen")
-        ) {
-          return redirectToAccessDenied(
-            request,
-            response,
-            "central-warehouse-branch-restricted",
-          );
+        if (moduleKey === "pos" || moduleKey === "kds") {
+          const { data: branchRow } = await supabase
+            .from("branches")
+            .select("id, branch_kind")
+            .eq("id", routeBranchId)
+            .eq("tenant_id", claims.tenant_id)
+            .maybeSingle();
+          const kind = branchRow?.branch_kind;
+          if (
+            branchRow &&
+            (kind === "central_warehouse" || kind === "central_kitchen")
+          ) {
+            return redirectToAccessDenied(
+              request,
+              response,
+              "central-warehouse-branch-restricted",
+            );
+          }
         }
       }
     }

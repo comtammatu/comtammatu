@@ -37,6 +37,7 @@ export interface CategoryRow {
   type: string;
   sort_order: number;
   is_active: boolean;
+  kitchen_printer: number;
 }
 
 interface CategoryTableProps {
@@ -64,6 +65,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
             <TableRow>
               <TableHead>Tên danh mục</TableHead>
               <TableHead className="hidden sm:table-cell">Loại</TableHead>
+              <TableHead className="hidden md:table-cell">Bếp in</TableHead>
               <TableHead className="hidden md:table-cell">Thứ tự</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead className="w-12" />
@@ -72,7 +74,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
           <TableBody>
             {categories.length === 0 && (
               <TableEmptyStateRow
-                colSpan={5}
+                colSpan={6}
                 title="Chưa có danh mục nào"
                 icon={
                   <IconFolderOpen className="mx-auto size-8 text-muted-foreground" />
@@ -97,6 +99,11 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                 <TableCell className="hidden sm:table-cell">
                   <Badge variant="secondary">
                     {CATEGORY_TYPE_LABELS[cat.type] ?? cat.type}
+                  </Badge>
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  <Badge variant="outline">
+                    Bếp {cat.kitchen_printer}
                   </Badge>
                 </TableCell>
                 <TableCell className="hidden text-muted-foreground md:table-cell">

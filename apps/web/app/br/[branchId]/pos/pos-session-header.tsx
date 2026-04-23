@@ -60,7 +60,10 @@ export function PosSessionHeader({
             {contextLabel}
           </Badge>
           <Badge variant="outline">{activeOrderCount} đơn đang phục vụ</Badge>
-          <PrinterStatusBadge branchId={branchId} />
+          <PrinterStatusBadge
+            branchId={branchId}
+            settingsHref={`/br/${branchId}/settings/printers`}
+          />
         </div>
 
         <Button

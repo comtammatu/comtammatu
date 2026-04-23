@@ -123,7 +123,7 @@ export function CartSidebar({
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-background">
-      <div className="border-b border-border/60 px-4 py-4">
+      <div className="shrink-0 border-b border-border/60 px-4 py-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -209,7 +209,7 @@ export function CartSidebar({
         )}
       </div>
 
-      <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+      <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-4 py-3">
         <div className="flex items-center gap-2">
           <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <IconShoppingCart className="size-5" />
@@ -292,7 +292,7 @@ export function CartSidebar({
             </div>
           </div>
 
-          <div className="border-t border-border/60 bg-background px-4 py-4">
+          <div className="shrink-0 border-t border-border/60 bg-background px-4 py-4">
             <div className="mb-3 flex items-end justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -315,7 +315,7 @@ export function CartSidebar({
         </>
       ) : (
         <>
-          <ScrollArea className="flex-1">
+          <ScrollArea className="min-h-0 flex-1">
             <div className="flex flex-col gap-3 p-4">
               {items.map((item) => {
                 const subtotal = calcItemSubtotal(item);
@@ -406,7 +406,7 @@ export function CartSidebar({
             </div>
           </ScrollArea>
 
-          <div className="border-t border-border/60 bg-background px-4 py-4">
+          <div className="shrink-0 border-t border-border/60 bg-background px-4 py-4">
             <div className="flex flex-col gap-1.5">
               <label
                 htmlFor="pos-order-note"

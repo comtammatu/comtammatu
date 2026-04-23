@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { createClient } from "@comtammatu/database/supabase/client";
@@ -7,6 +8,7 @@ import { IconPrinter, IconPrinterOff } from "@tabler/icons-react";
 
 interface PrinterStatusBadgeProps {
   branchId: number;
+  settingsHref?: string;
 }
 
 type AgentStatus = {
@@ -35,7 +37,10 @@ function computeStatus(
   };
 }
 
-export function PrinterStatusBadge({ branchId }: PrinterStatusBadgeProps) {
+export function PrinterStatusBadge({
+  branchId,
+  settingsHref,
+}: PrinterStatusBadgeProps) {
   const [status, setStatus] = useState<AgentStatus>({
     agentId: null,
     lastSeenAt: null,
@@ -95,35 +100,27 @@ export function PrinterStatusBadge({ branchId }: PrinterStatusBadgeProps) {
     };
   }, [branchId]);
 
-  if (!status.hasAgent) {
-    return (
-      <Badge
-        variant="outline"
-        className="gap-1 text-muted-foreground"
-        title="Chưa có print-agent nào kết nối cho chi nhánh này"
-      >
-        <IconPrinter className="size-3.5" />
-        <span className="hidden sm:inline">Máy in: chưa đăng ký</span>
-        <span className="sm:hidden">Chưa có</span>
-      </Badge>
-    );
-  }
-
-  if (status.isOnline) {
-    return (
-      <Badge
-        variant="outline"
-        className="gap-1 border-success/40 text-success"
-        title={`Agent ${status.agentId ?? ""} — online`}
-      >
-        <IconPrinter className="size-3.5" />
-        <span className="hidden sm:inline">Máy in: online</span>
-        <span className="sm:hidden">Online</span>
-      </Badge>
-    );
-  }
-
-  return (
+  const badge = !status.hasAgent ? (
+    <Badge
+      variant="outline"
+      className="gap-1 text-muted-foreground"
+      title="Chưa có print-agent nào kết nối cho chi nhánh này"
+    >
+      <IconPrinter className="size-3.5" />
+      <span className="hidden sm:inline">Máy in: chưa đăng ký</span>
+      <span className="sm:hidden">Chưa có</span>
+    </Badge>
+  ) : status.isOnline ? (
+    <Badge
+      variant="outline"
+      className="gap-1 border-success/40 text-success"
+      title={`Agent ${status.agentId ?? ""} — online`}
+    >
+      <IconPrinter className="size-3.5" />
+      <span className="hidden sm:inline">Máy in: online</span>
+      <span className="sm:hidden">Online</span>
+    </Badge>
+  ) : (
     <Badge
       variant="outline"
       className="gap-1 border-destructive/40 text-destructive"
@@ -134,4 +131,18 @@ export function PrinterStatusBadge({ branchId }: PrinterStatusBadgeProps) {
       <span className="sm:hidden">Offline</span>
     </Badge>
   );
+
+  if (settingsHref) {
+    return (
+      <Link
+        href={settingsHref}
+        className="inline-flex hover:opacity-80"
+        title="Cấu hình máy in của chi nhánh"
+      >
+        {badge}
+      </Link>
+    );
+  }
+
+  return badge;
 }

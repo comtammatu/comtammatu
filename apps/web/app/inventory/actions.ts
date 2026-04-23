@@ -553,7 +553,7 @@ export async function fetchStocktakeDetail(
 
   const { data: lines, error: linesError } = await supabase
     .from("stocktake_lines")
-    .select("*, ingredients(id, name, unit, category)")
+    .select("*, ingredients(id, name, unit, purchase_unit, category)")
     .eq("session_id", parsedId.data)
     .eq("tenant_id", claims.tenant_id)
     .order("ingredients(name)");
@@ -853,7 +853,7 @@ export async function fetchReorderAlerts(
       branch_id,
       branches ( name, branch_kind ),
       ingredients!inner (
-        id, name, unit, reorder_point, max_stock_level, is_active
+        id, name, unit, purchase_unit, reorder_point, max_stock_level, is_active
       )
     `,
     )
@@ -886,6 +886,7 @@ export async function fetchReorderAlerts(
         id: number;
         name: string;
         unit: string;
+        purchase_unit: string | null;
         reorder_point: number;
         max_stock_level: number | null;
       };
@@ -895,7 +896,7 @@ export async function fetchReorderAlerts(
       return {
         ingredient_id: ing.id,
         ingredient_name: ing.name,
-        unit: ing.unit,
+        unit: ing.purchase_unit || ing.unit,
         current_quantity: sl.current_quantity,
         reorder_point: ing.reorder_point,
         max_stock_level: ing.max_stock_level,

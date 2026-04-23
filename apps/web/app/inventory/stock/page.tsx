@@ -56,6 +56,7 @@ export default async function StockPage({
         name: string;
         sku: string | null;
         unit: string;
+        purchase_unit: string;
         category: string | null;
         unit_cost: number | null;
         min_stock_level: number | null;
@@ -119,7 +120,7 @@ export default async function StockPage({
       id: row.id,
       name: row.name,
       sku: row.sku ?? "",
-      unit: row.unit,
+      unit: row.purchase_unit || row.unit,
       category: row.category ?? "",
       qty,
       cost,

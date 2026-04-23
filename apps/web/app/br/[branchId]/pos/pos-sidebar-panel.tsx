@@ -64,21 +64,24 @@ export function PosSidebarTabs({
       >
         <TabsList
           aria-label="POS sidebar"
-          className="grid h-auto grid-cols-2 rounded-lg border bg-card p-2"
+          className="grid h-auto w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)] rounded-lg border bg-card p-2"
         >
-          <TabsTrigger value="new-order" className="gap-2 py-2.5 text-sm font-semibold">
-            Đơn mới
+          <TabsTrigger
+            value="new-order"
+            className="min-w-0 gap-2 py-2.5 text-sm font-semibold"
+          >
+            <span className="truncate">Đơn mới</span>
             {cartQuantity > 0 && (
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="shrink-0 text-xs">
                 {cartQuantity}
               </Badge>
             )}
           </TabsTrigger>
           <TabsTrigger
             value="active-orders"
-            className="gap-2 py-2.5 text-sm font-semibold"
+            className="min-w-0 gap-2 py-2.5 text-sm font-semibold"
           >
-            Đơn đang phục vụ
+            <span className="truncate">Đơn đang phục vụ</span>
           </TabsTrigger>
         </TabsList>
       </Tabs>

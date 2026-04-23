@@ -17,6 +17,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
     "dotenv": "^17.2.0",
+    "iconv-lite": "^0.6.3",
     "usb": "^2.16.0"
   },
   "devDependencies": {

@@ -18,15 +18,17 @@ import {
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from "@comtammatu/ui/components/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { formatVND } from "@comtammatu/shared/format";
 import type { CategoryType } from "@comtammatu/shared";
 import { CATEGORY_TYPE_LABELS } from "@comtammatu/shared/menu";
-import { IconChefHat, IconPlus, IconSearch, IconShoppingCart, IconX } from "@tabler/icons-react";
+import {
+  IconChefHat,
+  IconPlus,
+  IconSearch,
+  IconShoppingCart,
+  IconX,
+} from "@tabler/icons-react";
 import { MENU_ZONE_ORDER } from "./pos-menu-types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
 import type { OrderType } from "./types";
@@ -38,8 +40,6 @@ interface PosMenuGridProps {
   orderType: OrderType;
   selectedTableNumber: number | undefined;
   onItemTap: (item: MenuItem) => void;
-  /** Hide header status badges when sidebar already surfaces them (v2). */
-  showHeaderBadges?: boolean;
 }
 
 export function PosMenuGrid({
@@ -49,7 +49,6 @@ export function PosMenuGrid({
   orderType,
   selectedTableNumber,
   onItemTap,
-  showHeaderBadges = true,
 }: PosMenuGridProps) {
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(
     categories[0]?.id ?? null,
@@ -80,15 +79,16 @@ export function PosMenuGrid({
     () =>
       categories.filter(
         (category) =>
-          category.type === effectiveMenuZone &&
-          category.menu_items.length > 0,
+          category.type === effectiveMenuZone && category.menu_items.length > 0,
       ),
     [categories, effectiveMenuZone],
   );
 
   useEffect(() => {
     setActiveCategoryId((prev) => {
-      const ok = categoriesInActiveZone.some((category) => category.id === prev);
+      const ok = categoriesInActiveZone.some(
+        (category) => category.id === prev,
+      );
       return ok ? prev : (categoriesInActiveZone[0]?.id ?? null);
     });
   }, [categoriesInActiveZone]);
@@ -155,13 +155,11 @@ export function PosMenuGrid({
                 </p>
               </div>
 
-              {showHeaderBadges && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="secondary">{contextLabel}</Badge>
-                  <Badge variant="outline">{cartQuantity} món trong giỏ</Badge>
-                  <Badge variant="outline">{formatVND(cartTotal)}</Badge>
-                </div>
-              )}
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary">{contextLabel}</Badge>
+                <Badge variant="outline">{cartQuantity} món trong giỏ</Badge>
+                <Badge variant="outline">{formatVND(cartTotal)}</Badge>
+              </div>
             </div>
 
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center">

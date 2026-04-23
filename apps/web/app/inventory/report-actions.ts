@@ -135,7 +135,7 @@ export async function fetchStockMovementReport(
   // 1. Get all ingredients
   const { data: ingredients, error: ingErr } = await supabase
     .from("ingredients")
-    .select("id, name, unit")
+    .select("id, name, unit, purchase_unit")
     .eq("tenant_id", claims.tenant_id)
     .eq("is_active", true)
     .order("name");
@@ -262,7 +262,7 @@ export async function fetchStockMovementReport(
       rows.push({
         ingredient_id: ing.id,
         ingredient_name: ing.name,
-        unit: ing.unit,
+        unit: ing.purchase_unit || ing.unit,
         opening,
         grn_receipt: sums?.grn_receipt ?? 0,
         transfer_in: sums?.transfer_in ?? 0,
@@ -629,7 +629,7 @@ export async function fetchConsumptionVariance(
   // Get ingredient names for display
   const { data: ingredients, error: ingErr } = await supabase
     .from("ingredients")
-    .select("id, name, unit")
+    .select("id, name, unit, purchase_unit")
     .eq("tenant_id", claims.tenant_id)
     .eq("is_active", true);
   if (ingErr) return { success: false, error: "Không tải được nguyên liệu." };

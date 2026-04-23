@@ -16,27 +16,6 @@ import type {
  * Constructor config comes from env vars (set at deployment).
  */
 
-// CRC-16/CCITT-FALSE used by EMVCo QR
-function crc16(str: string): string {
-  let crc = 0xffff;
-  for (let i = 0; i < str.length; i++) {
-    crc ^= str.charCodeAt(i) << 8;
-    for (let j = 0; j < 8; j++) {
-      if (crc & 0x8000) {
-        crc = ((crc << 1) ^ 0x1021) & 0xffff;
-      } else {
-        crc = (crc << 1) & 0xffff;
-      }
-    }
-  }
-  return crc.toString(16).toUpperCase().padStart(4, "0");
-}
-
-/** Build a TLV field: tag (2 digits) + length (2 digits) + value */
-function tlv(tag: string, value: string): string {
-  return `${tag}${value.length.toString().padStart(2, "0")}${value}`;
-}
-
 /**
  * NAPAS BIN lookup for major Vietnamese banks.
  * Maps bank shortcode to NAPAS-assigned BIN (Bank Identification Number).
@@ -114,39 +93,27 @@ export class VietQRProvider implements PaymentProvider {
   async createPayment(request: PaymentRequest): Promise<PaymentResult> {
     const providerRef = `VQR-${request.orderId}-${crypto.randomUUID().slice(0, 8)}`;
 
-    const bin = BANK_BINS[this.bankCode] ?? this.bankCode; // fallback: use code as BIN directly
-
-    const amount = Math.round(request.amount).toString(); // VND has no decimals
+    const bin = BANK_BINS[this.bankCode] ?? this.bankCode;
+    const amount = Math.round(request.amount).toString();
     const description = request.description ?? `DH ${request.orderNumber}`;
-    // Truncate description to 25 chars (NAPAS limit)
-    const truncDesc = description.slice(0, 25);
+    const truncDesc = sanitizeAscii(description, 25);
 
-    const merchantAccountInfo =
-      tlv("00", "A000000727") + // NAPAS GUID
-      tlv("01", bin) +
-      tlv("02", this.bankAccount);
-
-    const additionalData = tlv("08", truncDesc);
-
-    let payload =
-      tlv("00", "01") + // Payload Format Indicator
-      tlv("01", "12") + // Dynamic QR
-      tlv("38", merchantAccountInfo) +
-      tlv("52", "5812") + // MCC: Restaurants
-      tlv("53", "704") + // VND
-      tlv("54", amount) +
-      tlv("58", "VN") +
-      tlv("62", additionalData);
-
-    // Tag 63: CRC — calculate over payload + "6304"
-    payload += "6304";
-    const checksum = crc16(payload);
-    payload += checksum;
+    // VietQR.io image API: returns a branded PNG (logo + STK + amount + memo)
+    // ready for direct <img src=...> display. Bank shortcode (TCB/VCB...) and
+    // BIN (970407...) are both accepted in the URL slug.
+    const url = new URL(
+      `https://img.vietqr.io/image/${encodeURIComponent(this.bankCode)}-${encodeURIComponent(this.bankAccount)}-compact.png`,
+    );
+    url.searchParams.set("amount", amount);
+    url.searchParams.set("addInfo", truncDesc);
+    if (this.accountName) {
+      url.searchParams.set("accountName", this.accountName);
+    }
 
     return {
       status: "pending",
       providerRef,
-      qrData: payload,
+      qrData: url.toString(),
       providerData: {
         bankCode: this.bankCode,
         bankBin: bin,
@@ -173,13 +140,18 @@ export class VietQRProvider implements PaymentProvider {
   }
 }
 
-function _sanitizeVietQrContent(v: string): string {
+/**
+ * Strip Vietnamese diacritics and non-ASCII characters; banking apps typically
+ * truncate or reject memos with combining marks.
+ */
+function sanitizeAscii(v: string, max: number): string {
   const ascii = v
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^0-9a-zA-Z ]/g, " ")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .replace(/[^0-9A-Za-z ]/g, " ")
     .trim()
     .replace(/\s+/g, " ");
-
-  return ascii.slice(0, 23) || "Thanh toan";
+  return ascii.slice(0, max);
 }

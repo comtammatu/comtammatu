@@ -10,6 +10,7 @@ import {
   IconLayoutDashboard,
   IconLogout,
   IconDeviceDesktop,
+  IconSettings,
   IconUserCircle,
   IconBuildingWarehouse,
 } from "@tabler/icons-react";
@@ -148,8 +149,17 @@ export default async function EmployeePage() {
   const canInventory = canAccess(claims.user_role, "inventory");
   const canReports = canAccess(claims.user_role, "reports");
   const canHr = canAccess(claims.user_role, "hr");
+  const canBranchSettings =
+    canAccess(claims.user_role, "branch_settings") && branchId && !branchIsHq;
 
   const managementLinks = [
+    canBranchSettings
+      ? {
+          href: `/br/${branchId}/settings`,
+          title: "Thiết lập chi nhánh",
+          icon: <IconSettings className="size-5" />,
+        }
+      : null,
     canDashboard
       ? {
           href: "/admin/dashboard",

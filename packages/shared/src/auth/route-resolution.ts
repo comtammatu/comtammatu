@@ -73,6 +73,7 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (resolvedPathname.startsWith("/menu")) return "menu";
   if (resolvedPathname.startsWith("/orders")) return "orders";
   if (resolvedPathname.startsWith("/hr")) return "hr";
+  if (/^\/br\/\d+\/settings/.test(resolvedPathname)) return "branch_settings";
   if (/^\/br\/\d+\/pos/.test(resolvedPathname)) return "pos";
   if (/^\/br\/\d+\/kds/.test(resolvedPathname)) return "kds";
   if (resolvedPathname.startsWith("/employee")) return "employee";

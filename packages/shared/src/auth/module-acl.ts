@@ -20,6 +20,7 @@ export type ModuleKey =
   | "settings"
   | "pos"
   | "kds"
+  | "branch_settings"
   | "employee";
 
 interface ModuleAcl {
@@ -94,6 +95,11 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/br/*/kds",
     allowedRoles: ["chef", "branch_manager"],
     label: getModuleLabelVi("kds"),
+  },
+  branch_settings: {
+    path: "/br/*/settings",
+    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    label: getModuleLabelVi("branch_settings"),
   },
   employee: {
     path: "/employee",

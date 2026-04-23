@@ -78,7 +78,7 @@ export async function fetchSupplierReturnDetail(
 
   const { data: lines, error: linesErr } = await supabase
     .from("supplier_return_items")
-    .select("*, ingredients ( id, name, unit )")
+    .select("*, ingredients ( id, name, unit, purchase_unit )")
     .eq("return_id", id.data)
     .eq("tenant_id", claims.tenant_id)
     .order("id");

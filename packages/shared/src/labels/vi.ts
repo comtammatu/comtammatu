@@ -14,6 +14,7 @@ export type ModuleLabelKey =
   | "settings"
   | "pos"
   | "kds"
+  | "branch_settings"
   | "employee";
 
 type SiteLike = {
@@ -34,6 +35,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   settings: "Cài đặt",
   pos: "POS",
   kds: "KDS",
+  branch_settings: "Cài đặt chi nhánh",
   employee: "Cổng nhân viên",
 };
 

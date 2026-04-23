@@ -31,6 +31,11 @@ const createPrinterSchema = printerBaseSchema.refine(
 
 type PrinterInput = z.infer<typeof createPrinterSchema>;
 
+function revalidatePrinterPaths(branchId: number) {
+  revalidatePath("/admin/settings/printers");
+  revalidatePath(`/br/${branchId}/settings/printers`);
+}
+
 export async function upsertPrinter(
   input: PrinterInput & { id?: number },
 ): Promise<ActionResult<{ id: number }>> {
@@ -49,6 +54,14 @@ export async function upsertPrinter(
   if (!ctx) return { success: false, error: "Không có quyền quản lý máy in" };
 
   const { supabase, claims } = ctx;
+
+  // Branch Manager can only write to their own branch.
+  if (
+    claims.user_role === "branch_manager" &&
+    (claims.branch_id == null || parsed.data.branch_id !== claims.branch_id)
+  ) {
+    return { success: false, error: "Không có quyền với chi nhánh này" };
+  }
 
   const payload = {
     tenant_id: claims.tenant_id,
@@ -73,6 +86,29 @@ export async function upsertPrinter(
   };
 
   if (input.id) {
+    // Pre-fetch row to verify ownership + prevent cross-branch hijack.
+    const { data: existing } = await supabase
+      .from("printers")
+      .select("branch_id")
+      .eq("id", input.id)
+      .eq("tenant_id", claims.tenant_id)
+      .maybeSingle();
+    if (!existing) {
+      return { success: false, error: "Máy in không tồn tại" };
+    }
+    if (
+      claims.user_role === "branch_manager" &&
+      existing.branch_id !== claims.branch_id
+    ) {
+      return { success: false, error: "Không có quyền với chi nhánh này" };
+    }
+    if (existing.branch_id !== parsed.data.branch_id) {
+      return {
+        success: false,
+        error: "Không được chuyển máy in sang chi nhánh khác",
+      };
+    }
+
     const { data, error } = await supabase
       .from("printers")
       .update(payload)
@@ -83,7 +119,7 @@ export async function upsertPrinter(
     if (error || !data) {
       return { success: false, error: "Không thể cập nhật máy in" };
     }
-    revalidatePath("/admin/settings/printers");
+    revalidatePrinterPaths(parsed.data.branch_id);
     return { success: true, data: { id: data.id } };
   }
 
@@ -102,7 +138,7 @@ export async function upsertPrinter(
     }
     return { success: false, error: "Không thể thêm máy in" };
   }
-  revalidatePath("/admin/settings/printers");
+  revalidatePrinterPaths(parsed.data.branch_id);
   return { success: true, data: { id: data.id } };
 }
 
@@ -122,6 +158,22 @@ export async function deletePrinter(
 
   const { supabase, claims } = ctx;
 
+  const { data: existing } = await supabase
+    .from("printers")
+    .select("branch_id")
+    .eq("id", parsed.data)
+    .eq("tenant_id", claims.tenant_id)
+    .maybeSingle();
+  if (!existing) {
+    return { success: false, error: "Máy in không tồn tại" };
+  }
+  if (
+    claims.user_role === "branch_manager" &&
+    existing.branch_id !== claims.branch_id
+  ) {
+    return { success: false, error: "Không có quyền với chi nhánh này" };
+  }
+
   const { error } = await supabase
     .from("printers")
     .delete()
@@ -130,6 +182,6 @@ export async function deletePrinter(
   if (error) {
     return { success: false, error: "Không thể xoá máy in" };
   }
-  revalidatePath("/admin/settings/printers");
+  revalidatePrinterPaths(existing.branch_id);
   return { success: true, data: null };
 }

@@ -34,6 +34,7 @@ const createCategorySchema = z.object({
   name: z.string().min(1, { error: "Tên danh mục không được để trống" }),
   type: z.enum(CATEGORY_TYPES, { error: "Loại danh mục không hợp lệ" }),
   sort_order: z.coerce.number().int().min(0).default(0),
+  kitchen_printer: z.coerce.number().int().min(1).max(2).default(1),
 });
 
 const updateCategorySchema = z.object({
@@ -41,6 +42,7 @@ const updateCategorySchema = z.object({
   name: z.string().min(1, { error: "Tên danh mục không được để trống" }),
   type: z.enum(CATEGORY_TYPES, { error: "Loại danh mục không hợp lệ" }),
   sort_order: z.coerce.number().int().min(0).default(0),
+  kitchen_printer: z.coerce.number().int().min(1).max(2).default(1),
 });
 
 /* ─── Item Schemas ─── */
@@ -110,6 +112,7 @@ export const createCategory = withFormAction(
       name: fd.get("name"),
       type: fd.get("type"),
       sort_order: fd.get("sort_order") || 0,
+      kitchen_printer: fd.get("kitchen_printer") || 1,
     }),
   },
   async (data, { supabase, claims }) => {
@@ -118,6 +121,7 @@ export const createCategory = withFormAction(
       name: data.name,
       type: data.type,
       sort_order: data.sort_order,
+      kitchen_printer: data.kitchen_printer,
     });
 
     if (error) {
@@ -138,6 +142,7 @@ export const updateCategory = withFormAction(
       name: fd.get("name"),
       type: fd.get("type"),
       sort_order: fd.get("sort_order") || 0,
+      kitchen_printer: fd.get("kitchen_printer") || 1,
     }),
   },
   async (data, { supabase, claims }) => {
@@ -147,6 +152,7 @@ export const updateCategory = withFormAction(
         name: data.name,
         type: data.type,
         sort_order: data.sort_order,
+        kitchen_printer: data.kitchen_printer,
       })
       .eq("id", data.id)
       .eq("tenant_id", claims.tenant_id);

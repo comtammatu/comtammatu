@@ -26,7 +26,12 @@ export default async function PODetailPage({
       unit: string;
       unit_price_est: number | null;
       line_total: number | null;
-      ingredients: { id: number; name: string; unit: string } | null;
+      ingredients: {
+        id: number;
+        name: string;
+        unit: string;
+        purchase_unit: string | null;
+      } | null;
     }>;
   };
 
@@ -37,6 +42,7 @@ export default async function PODetailPage({
       id: number;
       name: string;
       unit: string;
+      purchase_unit: string | null;
     } | null;
     const price = Number(l.unit_price_est ?? 0);
     const total = Number(l.line_total ?? 0);
@@ -44,7 +50,7 @@ export default async function PODetailPage({
       name: ing?.name ?? "—",
       sku: "",
       qty: Number(l.quantity ?? 0),
-      unit: l.unit ?? ing?.unit ?? "",
+      unit: ing?.purchase_unit || l.unit || ing?.unit || "",
       price,
       total,
       variance: 0,

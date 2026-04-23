@@ -31,7 +31,7 @@ export async function fetchStockTransferDetail(
     return { success: false, error: "Không tìm thấy phiếu chuyển." };
   const { data: lines, error: e2 } = await supabase
     .from("stock_transfer_items")
-    .select("*, ingredients ( id, name, unit )")
+    .select("*, ingredients ( id, name, unit, purchase_unit )")
     .eq("transfer_id", id.data)
     .eq("tenant_id", claims.tenant_id);
   if (e2) return { success: false, error: "Không tải được dòng chuyển." };

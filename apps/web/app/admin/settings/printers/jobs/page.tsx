@@ -2,7 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
 import { IconArrowLeft } from "@tabler/icons-react";
-import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
+import {
+  canManageBranchFloorSettings,
+  TENANT_LEVEL_ROLES,
+} from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { PrintJobsClient, type JobRow, type BranchOption } from "./print-jobs-client";
 
@@ -47,15 +50,19 @@ export default async function PrintJobsPage({
       ? sp.job_type
       : null;
 
-  const effectiveBranch = claims.branch_id ?? filterBranch;
+  const isTenantLevel = (TENANT_LEVEL_ROLES as readonly string[]).includes(
+    claims.user_role,
+  );
+  const scopedBranch = isTenantLevel ? null : claims.branch_id;
+  const effectiveBranch = scopedBranch ?? filterBranch;
 
   let branchesQuery = supabase
     .from("branches")
     .select("id, name")
     .eq("is_active", true)
     .order("name");
-  if (claims.branch_id) {
-    branchesQuery = branchesQuery.eq("id", claims.branch_id);
+  if (scopedBranch) {
+    branchesQuery = branchesQuery.eq("id", scopedBranch);
   }
 
   let jobsQuery = supabase
@@ -103,7 +110,7 @@ export default async function PrintJobsPage({
   let agentsQuery = supabase
     .from("printer_agent_status")
     .select("branch_id, is_online");
-  if (claims.branch_id) agentsQuery = agentsQuery.eq("branch_id", claims.branch_id);
+  if (scopedBranch) agentsQuery = agentsQuery.eq("branch_id", scopedBranch);
 
   const [
     branchesRes,
@@ -193,7 +200,7 @@ export default async function PrintJobsPage({
         filterBranch={filterBranch}
         filterStatus={filterStatus}
         filterJobType={filterJobType}
-        currentBranchLocked={claims.branch_id != null}
+        currentBranchLocked={scopedBranch != null}
       />
     </div>
   );

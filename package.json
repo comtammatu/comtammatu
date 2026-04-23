@@ -13,7 +13,7 @@
     "lint:v2-imports": "node scripts/check-v2-imports.mjs",
     "typecheck": "turbo typecheck",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
-    "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > packages/database/src/types/database.types.ts"
+    "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID 2>/dev/null > packages/database/src/types/database.types.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

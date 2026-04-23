@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { redirect } from "next/navigation";
 import { IconDeviceDesktop, IconAlertTriangle } from "@tabler/icons-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -23,13 +22,6 @@ export default async function PosPage({
 }) {
   const { branchId } = await params;
   const sp = await searchParams;
-
-  // Feature flag: redirect to /pos-v2 when POS_V2_ENABLED is truthy.
-  // Pilot-gated rollout per docs/plan/m2-order-lifecycle.md. Preserves ?table= param.
-  if (process.env.POS_V2_ENABLED === "1" || process.env.POS_V2_ENABLED === "true") {
-    const qs = sp.table ? `?table=${encodeURIComponent(sp.table)}` : "";
-    redirect(`/br/${branchId}/pos-v2${qs}`);
-  }
 
   const tableParam = sp.table;
   const parsedTable =

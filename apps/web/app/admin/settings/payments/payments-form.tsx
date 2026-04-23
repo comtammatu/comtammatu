@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { Switch } from "@comtammatu/ui/components/switch";
 import {
@@ -22,6 +23,21 @@ import { updatePaymentSettings } from "./actions";
 const paymentsSchema = z.object({
   enable_vietqr: z.boolean(),
   enable_momo: z.boolean(),
+  vietqr_bank_code: z
+    .string()
+    .trim()
+    .max(32)
+    .regex(/^[A-Za-z0-9]*$/, {
+      error: "Mã NH chỉ chứa chữ và số (vd: TCB, VCB, 970407).",
+    }),
+  vietqr_account_no: z
+    .string()
+    .trim()
+    .max(32)
+    .regex(/^[A-Za-z0-9]*$/, {
+      error: "STK chỉ chứa chữ và số (không khoảng trắng).",
+    }),
+  vietqr_account_name: z.string().trim().max(64),
 });
 
 type PaymentsFormValues = z.infer<typeof paymentsSchema>;
@@ -46,6 +62,12 @@ export function PaymentsForm({
       enable_vietqr:
         settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR] === "true",
       enable_momo: settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO] === "true",
+      vietqr_bank_code:
+        settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE] ?? "",
+      vietqr_account_no:
+        settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO] ?? "",
+      vietqr_account_name:
+        settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME] ?? "",
     },
   });
 
@@ -59,6 +81,18 @@ export function PaymentsForm({
       if (values.enable_momo) {
         fd.set(SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO, "true");
       }
+      fd.set(
+        SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE,
+        values.vietqr_bank_code,
+      );
+      fd.set(
+        SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO,
+        values.vietqr_account_no,
+      );
+      fd.set(
+        SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME,
+        values.vietqr_account_name,
+      );
       const result = await updatePaymentSettings(null, fd);
       if (!result.success) {
         setServerError(result.error ?? "Đã xảy ra lỗi");
@@ -82,51 +116,86 @@ export function PaymentsForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <Controller
-            control={form.control}
-            name="enable_vietqr"
-            render={({ field }) => (
-              <div className="flex flex-row items-start justify-between gap-4 rounded-lg border p-4">
-                <div className="space-y-1">
-                  <Label htmlFor="enable-vietqr" className="text-base">
-                    VietQR (chuyển khoản QR)
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    Cần{" "}
-                    <code className="rounded bg-muted px-1 text-xs">
-                      VIETQR_API_KEY
-                    </code>
-                    ,{" "}
-                    <code className="rounded bg-muted px-1 text-xs">
-                      VIETQR_ACCOUNT_NO
-                    </code>
-                    ,{" "}
-                    <code className="rounded bg-muted px-1 text-xs">
-                      VIETQR_BANK_ID
-                    </code>
-                    .
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Trạng thái env:{" "}
-                    {vietqrEnvConfigured ? (
-                      <span className="text-success">✓ Đã cấu hình</span>
-                    ) : (
-                      <span className="text-warning">
-                        Chưa đủ biến môi trường
-                      </span>
-                    )}
-                  </p>
+          <div className="space-y-3 rounded-lg border p-4">
+            <Controller
+              control={form.control}
+              name="enable_vietqr"
+              render={({ field }) => (
+                <div className="flex flex-row items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="enable-vietqr" className="text-base">
+                      VietQR (chuyển khoản QR)
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Nhập STK ngân hàng dưới đây. Nếu để trống sẽ dùng biến môi
+                      trường <code className="text-[11px]">VIETQR_*</code>{" "}
+                      ({vietqrEnvConfigured ? "✓ có sẵn" : "chưa đặt"}).
+                    </p>
+                  </div>
+                  <Switch
+                    id="enable-vietqr"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    className="mt-1"
+                  />
                 </div>
-                <Switch
-                  id="enable-vietqr"
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  disabled={!vietqrEnvConfigured}
-                  className="mt-1"
+              )}
+            />
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1">
+                <Label htmlFor="vietqr-bank-code" className="text-xs">
+                  Mã ngân hàng
+                </Label>
+                <Input
+                  id="vietqr-bank-code"
+                  placeholder="TCB"
+                  autoCapitalize="characters"
+                  {...form.register("vietqr_bank_code")}
                 />
+                {form.formState.errors.vietqr_bank_code && (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.vietqr_bank_code.message}
+                  </p>
+                )}
               </div>
-            )}
-          />
+              <div className="space-y-1">
+                <Label htmlFor="vietqr-account-no" className="text-xs">
+                  Số tài khoản
+                </Label>
+                <Input
+                  id="vietqr-account-no"
+                  autoCapitalize="characters"
+                  placeholder="19035xxxxxxxx"
+                  {...form.register("vietqr_account_no")}
+                />
+                {form.formState.errors.vietqr_account_no && (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.vietqr_account_no.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="vietqr-account-name" className="text-xs">
+                  Chủ tài khoản
+                </Label>
+                <Input
+                  id="vietqr-account-name"
+                  placeholder="CONG TY CP COM TAM MA TU"
+                  {...form.register("vietqr_account_name")}
+                />
+                {form.formState.errors.vietqr_account_name && (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.vietqr_account_name.message}
+                  </p>
+                )}
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Mã NH: TCB, VCB, BIDV, MB, ACB, TPB, VPB, STB... (Napas BIN cũng
+              chấp nhận, vd 970407 = Techcombank).
+            </p>
+          </div>
 
           <Controller
             control={form.control}
