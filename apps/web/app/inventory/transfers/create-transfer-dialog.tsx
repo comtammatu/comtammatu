@@ -447,11 +447,18 @@ export function CreateTransferDialog({
                       <SelectValue placeholder="Chọn kho nhận" />
                     </SelectTrigger>
                     <SelectContent>
-                      {operational.map((b) => (
-                        <SelectItem key={b.id} value={String(b.id)}>
-                          {formatBranchSiteLabel(b)}
-                        </SelectItem>
-                      ))}
+                      {branches
+                        .filter(
+                          (b) =>
+                            b.is_active &&
+                            b.id !== userBranchId &&
+                            b.branch_kind !== "central_warehouse",
+                        )
+                        .map((b) => (
+                          <SelectItem key={b.id} value={String(b.id)}>
+                            {formatBranchSiteLabel(b)}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
