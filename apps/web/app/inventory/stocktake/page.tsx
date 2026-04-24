@@ -1,7 +1,7 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
 import { fetchStocktakeSessions } from "../actions";
-import { parseBranchIdParam } from "../_lib/inventory-scope";
+import { resolveRequestedBranchId } from "../_lib/inventory-scope";
 import type {
   BranchOption,
   StocktakeSessionRow,
@@ -15,7 +15,8 @@ export default async function StocktakePage({
   searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
   const params = await searchParams;
-  const branchFilter = parseBranchIdParam(params.branchId) ?? undefined;
+  const branchFilter =
+    (await resolveRequestedBranchId(params.branchId)) ?? undefined;
 
   const supabase = await createClient();
   const {

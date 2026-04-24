@@ -1,6 +1,6 @@
 import { fetchGrns } from "../procurement-actions";
 import { formatDate } from "../_lib/format";
-import { parseBranchIdParam } from "../_lib/inventory-scope";
+import { resolveRequestedBranchId } from "../_lib/inventory-scope";
 import { GrnListClient } from "./grn-list-client";
 import type { GrnRow } from "./grn-list-client";
 
@@ -10,7 +10,7 @@ export default async function GRNListPage({
   searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
   const params = await searchParams;
-  const branchId = parseBranchIdParam(params.branchId);
+  const branchId = await resolveRequestedBranchId(params.branchId);
   const res = await fetchGrns(branchId ?? undefined);
   const dbRows = res.success
     ? (res.data as Array<Record<string, unknown>>)

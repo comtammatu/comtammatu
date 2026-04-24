@@ -6,7 +6,10 @@ import {
   currentUserHasPermissionAny,
 } from "../_lib/permissions";
 import { InventoryShell } from "./_components/inventory-shell";
-import { resolveInventoryBranchScope } from "./_lib/inventory-scope";
+import {
+  readBranchIdCookie,
+  resolveInventoryBranchScope,
+} from "./_lib/inventory-scope";
 import {
   canAccessProductionSurface,
   hasCurrentProductionBranchAccess,
@@ -30,7 +33,12 @@ export default async function InventoryLayout({
   children: ReactNode;
 }) {
   const { supabase, session, claims } = await loadAuthState();
-  const scope = await resolveInventoryBranchScope(supabase, claims, null);
+  const cookieBranchId = await readBranchIdCookie();
+  const scope = await resolveInventoryBranchScope(
+    supabase,
+    claims,
+    cookieBranchId,
+  );
   const [
     hasProcurementRead,
     canManageCatalog,
@@ -54,7 +62,7 @@ export default async function InventoryLayout({
     hasProductionBranchAccess;
 
   const defaultBranch = scope.allowedBranches.find(
-    (b) => b.id === scope.defaultBranchId,
+    (b) => b.id === scope.selectedBranchId,
   );
   const siteName =
     defaultBranch?.name ??
@@ -87,7 +95,7 @@ export default async function InventoryLayout({
       showCatalogManagement={canManageCatalog}
       showSettings={canOpenSettings}
       allowedBranches={scope.allowedBranches}
-      defaultBranchId={scope.defaultBranchId}
+      defaultBranchId={scope.selectedBranchId}
     >
       {children}
     </InventoryShell>

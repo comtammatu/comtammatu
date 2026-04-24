@@ -36,6 +36,9 @@ export function InventoryBranchFilter({
 
   const handleChange = useCallback(
     (value: string) => {
+      // Persist for sidebar nav clicks that drop the query param.
+      // Path-scoped to /inventory so it never leaks elsewhere.
+      document.cookie = `inv_branch_id=${value}; path=/inventory; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
       const next = new URLSearchParams(searchParams.toString());
       next.set("branchId", value);
       const query = next.toString();

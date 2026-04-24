@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "@/inventory/_lib/auth";
+import { resolveRequestedBranchId } from "@/inventory/_lib/inventory-scope";
 import {
   WasteApprovalsClient,
   type PendingWasteRow,
@@ -14,11 +15,7 @@ interface PageProps {
 
 export default async function WasteApprovalsPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const branchFilterRaw = Number(params.branchId ?? 0);
-  const branchFilter =
-    Number.isFinite(branchFilterRaw) && branchFilterRaw > 0
-      ? branchFilterRaw
-      : null;
+  const branchFilter = await resolveRequestedBranchId(params.branchId);
 
   const ctx = await getAuthContextWithPermission(
     [],

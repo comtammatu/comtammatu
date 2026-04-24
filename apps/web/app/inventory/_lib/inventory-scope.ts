@@ -1,6 +1,11 @@
 import { cache } from "react";
+import { cookies } from "next/headers";
 import type { JwtClaims } from "@comtammatu/shared/auth";
 import type { TenantSupabase } from "./types";
+
+export const INVENTORY_BRANCH_COOKIE = "inv_branch_id";
+export const INVENTORY_BRANCH_COOKIE_PATH = "/inventory";
+export const INVENTORY_BRANCH_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
 export type InventoryBranchOption = {
   id: number;
@@ -146,4 +151,33 @@ export function parseBranchIdParam(raw: string | string[] | undefined): number |
   const n = Number(value);
   if (!Number.isInteger(n) || n <= 0) return null;
   return n;
+}
+
+/**
+ * Read the persisted branch-id cookie set by `<InventoryBranchFilter>`.
+ * Used as a fallback default when the URL has no `?branchId=`.
+ * The cookie is path-scoped to `/inventory` so it never leaks elsewhere.
+ */
+export async function readBranchIdCookie(): Promise<number | null> {
+  const store = await cookies();
+  const raw = store.get(INVENTORY_BRANCH_COOKIE)?.value;
+  if (!raw) return null;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n <= 0) return null;
+  return n;
+}
+
+/**
+ * Resolve the requested branch id with the precedence:
+ *   URL ?branchId= > inv_branch_id cookie > null
+ * Server pages should use this instead of `parseBranchIdParam` so that
+ * sidebar nav clicks (which drop query params) keep the user's last
+ * selected branch instead of snapping back to the system default.
+ */
+export async function resolveRequestedBranchId(
+  raw: string | string[] | undefined,
+): Promise<number | null> {
+  const fromUrl = parseBranchIdParam(raw);
+  if (fromUrl != null) return fromUrl;
+  return readBranchIdCookie();
 }

@@ -5,6 +5,7 @@ import {
   INVENTORY_FEATURE_FLAGS,
   isFeatureEnabledForBranch,
 } from "@/inventory/_lib/feature-flags";
+import { resolveRequestedBranchId } from "@/inventory/_lib/inventory-scope";
 import { getInventoryDashboard } from "@/inventory/dashboard-actions";
 import { DashboardClientV2 } from "./dashboard-client-v2";
 
@@ -18,9 +19,7 @@ export default async function InventoryDashboardV2Page({
   searchParams,
 }: PageProps) {
   const params = await searchParams;
-  const branchIdRaw = Number(params.branchId ?? 0);
-  const branchId =
-    Number.isFinite(branchIdRaw) && branchIdRaw > 0 ? branchIdRaw : null;
+  const branchId = await resolveRequestedBranchId(params.branchId);
 
   const ctx = await getAuthContextWithAnyPermission(
     [],

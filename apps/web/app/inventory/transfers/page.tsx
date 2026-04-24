@@ -5,7 +5,7 @@ import {
   fetchBranchesForTransfer,
   fetchInventoryLocationsForBranch,
 } from "../transfer-actions";
-import { parseBranchIdParam } from "../_lib/inventory-scope";
+import { resolveRequestedBranchId } from "../_lib/inventory-scope";
 import type {
   BranchForTransfer,
   InventoryLocation,
@@ -20,7 +20,8 @@ export default async function TransfersPage({
   searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
   const params = await searchParams;
-  const branchFilter = parseBranchIdParam(params.branchId) ?? undefined;
+  const branchFilter =
+    (await resolveRequestedBranchId(params.branchId)) ?? undefined;
 
   const { claims } = await loadAuthState();
 

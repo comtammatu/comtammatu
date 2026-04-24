@@ -5,6 +5,7 @@ import {
   INVENTORY_FEATURE_FLAGS,
   isFeatureEnabledForBranch,
 } from "@/inventory/_lib/feature-flags";
+import { resolveRequestedBranchId } from "@/inventory/_lib/inventory-scope";
 import { getWasteCapStatus } from "@/inventory/waste-actions";
 import { WasteCreateClient, type WasteFormContext } from "./waste-create-client";
 
@@ -16,8 +17,7 @@ interface PageProps {
 
 export default async function WasteNewPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const branchIdRaw = Number(params.branchId ?? 0);
-  const branchId = Number.isFinite(branchIdRaw) && branchIdRaw > 0 ? branchIdRaw : null;
+  const branchId = await resolveRequestedBranchId(params.branchId);
 
   const ctx = await getAuthContextWithPermission(
     [],

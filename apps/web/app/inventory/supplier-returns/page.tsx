@@ -1,5 +1,5 @@
 import { fetchSupplierReturns } from "../supplier-return-actions";
-import { parseBranchIdParam } from "../_lib/inventory-scope";
+import { resolveRequestedBranchId } from "../_lib/inventory-scope";
 import { SupplierReturnsClient } from "./supplier-returns-client";
 
 export default async function SupplierReturnsPage({
@@ -8,7 +8,8 @@ export default async function SupplierReturnsPage({
   searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
   const params = await searchParams;
-  const branchFilter = parseBranchIdParam(params.branchId) ?? undefined;
+  const branchFilter =
+    (await resolveRequestedBranchId(params.branchId)) ?? undefined;
   const res = await fetchSupplierReturns(branchFilter);
   const rows = res.success ? ((res.data as ReturnRow[]) ?? []) : [];
   return (

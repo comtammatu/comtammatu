@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchIngredients } from "../actions";
 import {
-  parseBranchIdParam,
   resolveInventoryBranchScope,
+  resolveRequestedBranchId,
 } from "../_lib/inventory-scope";
 import { formatDate } from "../_lib/format";
 import { StockClient } from "./stock-client";
@@ -34,7 +34,7 @@ export default async function StockPage({
 }) {
   const { supabase, claims } = await loadAuthState();
   const params = await searchParams;
-  const requested = parseBranchIdParam(params.branchId);
+  const requested = await resolveRequestedBranchId(params.branchId);
   const scope = await resolveInventoryBranchScope(supabase, claims, requested);
   const branchId = scope.selectedBranchId;
   if (!branchId) redirect("/inventory");

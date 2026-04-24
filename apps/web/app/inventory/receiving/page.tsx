@@ -5,7 +5,7 @@ import {
   fetchRecentActivity,
 } from "../procurement-actions";
 import type { RecentActivityItem } from "../procurement-actions";
-import { parseBranchIdParam } from "../_lib/inventory-scope";
+import { resolveRequestedBranchId } from "../_lib/inventory-scope";
 import { ReceivingClient } from "./receiving-client";
 
 export default async function ReceivingPage({
@@ -14,7 +14,8 @@ export default async function ReceivingPage({
   searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
   const params = await searchParams;
-  const branchFilter = parseBranchIdParam(params.branchId) ?? undefined;
+  const branchFilter =
+    (await resolveRequestedBranchId(params.branchId)) ?? undefined;
 
   const [poRes, grnRes, invoiceRes, activityRes] = await Promise.all([
     fetchPurchaseOrders(branchFilter),
