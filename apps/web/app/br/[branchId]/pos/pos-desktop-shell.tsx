@@ -38,8 +38,9 @@ import { CartPane } from "./_components/cart-pane";
 import { OrderListPane } from "./_components/order-list-pane";
 import { PosSidebarTabs, PosSidebarContent } from "./pos-sidebar-panel";
 import { HotkeyOverlay } from "./_components/hotkey-overlay";
-import { submitOrder, fetchActiveOrderForTable } from "./actions";
+import { fetchActiveOrderForTable } from "./actions";
 import { usePosAppend } from "./_hooks/use-pos-append";
+import { submitPosOrderWithRetry } from "./_utils/submit-with-retry";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
 import type { ActiveSession, BranchTable } from "./page";
@@ -307,42 +308,12 @@ function PosDesktopInner({
     if (!canSubmit) return;
 
     startTransition(async () => {
-      const cartSnapshot = cartStore.getSnapshot();
-      const idempotencyKey = crypto.randomUUID();
-      const backoffMs = [0, 400, 1000] as const;
-
-      let result: Awaited<ReturnType<typeof submitOrder>> = {
-        success: false,
-        error: "Không thể tạo đơn hàng",
-      };
-
-      for (const delay of backoffMs) {
-        if (delay > 0) {
-          await new Promise((r) => setTimeout(r, delay));
-        }
-        result = await submitOrder(
-          branchId,
-          {
-            items: cartSnapshot.items,
-            order_type: cartSnapshot.orderType,
-            table_id: selectedTableId ?? undefined,
-            note: cartSnapshot.note.trim() || undefined,
-          },
-          session.id,
-          idempotencyKey,
-        );
-        if (result.success) break;
-        const err = result.error ?? "";
-        if (
-          err.includes("Giỏ hàng") ||
-          err.includes("không hợp lệ") ||
-          err.includes("quyền") ||
-          err.includes("Phiên đăng nhập") ||
-          err.includes("chi nhánh")
-        ) {
-          break;
-        }
-      }
+      const result = await submitPosOrderWithRetry({
+        branchId,
+        sessionId: session.id,
+        cartSnapshot: cartStore.getSnapshot(),
+        tableId: selectedTableId,
+      });
 
       if (result.success && result.data) {
         const orderId = result.data.order_id;
