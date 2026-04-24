@@ -4,6 +4,7 @@ import {
   IconCalendarEvent,
   IconLogout,
   IconUser,
+  IconShieldCheck,
 } from "@tabler/icons-react";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -23,6 +24,8 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { loadAuthState } from "@/_lib/auth";
+import { getMyTrustScore } from "@/inventory/trust-actions";
+import { TrustScoreBadge } from "@/inventory/_components/trust-score-badge";
 
 export default async function ProfilePage() {
   const { supabase, session, claims } = await loadAuthState();
@@ -46,6 +49,13 @@ export default async function ProfilePage() {
       .maybeSingle();
     branchName = data?.name ?? null;
   }
+
+  // Self-view trust score (S15-min). Only meaningful for branch-scoped users;
+  // tenant-level roles have no per-branch trust row.
+  const trustRes = claims.branch_id
+    ? await getMyTrustScore(claims.branch_id)
+    : null;
+  const trust = trustRes?.success ? trustRes.data : null;
 
   const displayName =
     session.user.user_metadata?.["full_name"] ??
@@ -121,6 +131,30 @@ export default async function ProfilePage() {
                 <ItemContent>
                   <ItemTitle>Ngày bắt đầu</ItemTitle>
                   <p className="text-sm font-medium">{employee.start_date}</p>
+                </ItemContent>
+              </Item>
+            ) : null}
+
+            {trust ? (
+              <Item variant="outline">
+                <ItemMedia variant="icon">
+                  <IconShieldCheck />
+                </ItemMedia>
+                <ItemContent>
+                  <ItemTitle>Điểm tin cậy</ItemTitle>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <TrustScoreBadge
+                      score={trust.score}
+                      computedScore={trust.computedScore}
+                      withTooltip
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      GRN 30 ngày: {trust.grnCount30d}
+                      {trust.varianceIncidents30d > 0
+                        ? ` · Incident: ${trust.varianceIncidents30d}`
+                        : ""}
+                    </span>
+                  </div>
                 </ItemContent>
               </Item>
             ) : null}
