@@ -1,6 +1,6 @@
 "use server";
 
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
 
@@ -99,7 +99,8 @@ export async function getMyTrustScore(
     return { success: false, error: "Branch id không hợp lệ" };
   }
 
-  const ctx = await getAuthContext([]);
+  // Pass STAFF_ROLES (not []) — getAuthContext rejects if role NOT in list.
+  const ctx = await getAuthContext(STAFF_ROLES);
   if (!ctx) return { success: false, error: "Chưa đăng nhập" };
   const { supabase, user } = ctx;
 

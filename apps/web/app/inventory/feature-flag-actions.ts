@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
 import { INVENTORY_FEATURE_FLAG_META } from "./_lib/feature-flag-meta";
@@ -43,7 +43,9 @@ export type FlagMatrix = {
  * through the server action for audit + consistent shape.
  */
 export async function getFeatureFlagMatrix(): Promise<ActionResult<FlagMatrix>> {
-  const ctx = await getAuthContext([]);
+  // Pass STAFF_ROLES (not []) — getAuthContext rejects if role NOT in list;
+  // an empty list would therefore reject every authenticated user.
+  const ctx = await getAuthContext(STAFF_ROLES);
   if (!ctx) return { success: false, error: "Chưa đăng nhập" };
   const { supabase } = ctx;
 
