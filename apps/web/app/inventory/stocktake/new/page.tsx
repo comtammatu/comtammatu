@@ -5,12 +5,20 @@ import {
   INVENTORY_FEATURE_FLAGS,
   isFeatureEnabledForBranch,
 } from "../../_lib/feature-flags";
+import {
+  resolveInventoryBranchScope,
+  resolveRequestedBranchId,
+} from "../../_lib/inventory-scope";
 import { getBranchSiteDisplayName } from "../../_lib/branch-site-labels";
 import { NewStocktakeSessionClient } from "./new-session-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewStocktakeSessionPage() {
+export default async function NewStocktakeSessionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string | string[] }>;
+}) {
   const supabase = await createClient();
   const {
     data: { session },
@@ -20,8 +28,15 @@ export default async function NewStocktakeSessionPage() {
   const claims = extractClaimsFromAccessToken(session.access_token);
   if (!claims) notFound();
 
+  // Sidebar-selected branch drives the feature-flag gate and default session
+  // branch. For tenant-wide roles (owner/super_manager/area_manager) this is
+  // the sidebar picker; for branch-scoped roles it collapses to claims.branch_id.
+  const sp = await searchParams;
+  const requested = await resolveRequestedBranchId(sp.branchId);
+  const scope = await resolveInventoryBranchScope(supabase, claims, requested);
+
   // Feature flag gate — S13a new stocktake UI must be enabled per-branch.
-  const gateBranchId = claims.branch_id;
+  const gateBranchId = scope.selectedBranchId;
   if (gateBranchId !== null) {
     const flagEnabled = await isFeatureEnabledForBranch(
       supabase,
@@ -64,7 +79,7 @@ export default async function NewStocktakeSessionPage() {
     <NewStocktakeSessionClient
       branches={branches}
       locations={locations}
-      defaultBranchId={claims.branch_id ?? branches[0]?.id ?? null}
+      defaultBranchId={scope.selectedBranchId ?? branches[0]?.id ?? null}
     />
   );
 }

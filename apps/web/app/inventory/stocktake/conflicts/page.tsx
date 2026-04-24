@@ -6,7 +6,10 @@ import {
   isFeatureEnabledForBranch,
 } from "../../_lib/feature-flags";
 import { listStocktakeConflicts } from "../../stocktake-actions";
-import { parseBranchIdParam } from "../../_lib/inventory-scope";
+import {
+  resolveInventoryBranchScope,
+  resolveRequestedBranchId,
+} from "../../_lib/inventory-scope";
 import { ConflictsQueueClient } from "./conflicts-queue-client";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +20,7 @@ export default async function StocktakeConflictsPage({
   searchParams: Promise<{ branchId?: string | string[]; resolved?: string }>;
 }) {
   const params = await searchParams;
-  const requested = parseBranchIdParam(params.branchId);
+  const requested = await resolveRequestedBranchId(params.branchId);
   const includeResolved = params.resolved === "1";
 
   const supabase = await createClient();
@@ -29,7 +32,9 @@ export default async function StocktakeConflictsPage({
   const claims = extractClaimsFromAccessToken(session.access_token);
   if (!claims) notFound();
 
-  const branchId = requested ?? claims.branch_id ?? null;
+  // Sidebar-selected branch wins; falls back through URL→cookie→scope default.
+  const scope = await resolveInventoryBranchScope(supabase, claims, requested);
+  const branchId = scope.selectedBranchId;
   if (branchId === null) {
     redirect("/inventory/stocktake?error=branch_required");
   }

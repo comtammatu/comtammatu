@@ -1,6 +1,10 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
 import { fetchExpiryAlerts } from "@/inventory/actions";
+import {
+  readBranchIdCookie,
+  resolveInventoryBranchScope,
+} from "@/inventory/_lib/inventory-scope";
 import { ExpiryListClient } from "@/inventory/expiry/expiry-list-client";
 import type { BranchOption, ExpiryAlertRow } from "@/inventory/page";
 import { getBranchSiteDisplayName } from "@/inventory/_lib/branch-site-labels";
@@ -12,6 +16,13 @@ export default async function ExpirySettingsPage() {
   } = await supabase.auth.getSession();
   const claims = session?.user
     ? extractClaimsFromAccessToken(session.access_token)
+    : null;
+
+  // Sidebar-selected branch (via cookie since this page has no branchId param)
+  // drives client action context for tenant-wide roles.
+  const cookieBranchId = await readBranchIdCookie();
+  const scope = claims
+    ? await resolveInventoryBranchScope(supabase, claims, cookieBranchId)
     : null;
 
   const [alertsRes, branchesRes] = await Promise.all([
@@ -37,7 +48,7 @@ export default async function ExpirySettingsPage() {
       initial={alerts}
       branches={branches}
       userRole={claims?.user_role ?? "branch_manager"}
-      userBranchId={claims?.branch_id ?? null}
+      userBranchId={scope?.selectedBranchId ?? null}
     />
   );
 }

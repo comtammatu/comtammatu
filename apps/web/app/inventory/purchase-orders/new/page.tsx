@@ -2,6 +2,10 @@ import { loadAuthState } from "@/_lib/auth";
 import { fetchIngredients } from "../../actions";
 import { fetchPoSuggestions, fetchSuppliers } from "../../procurement-actions";
 import { fetchProcurementBranches } from "../../_lib/procurement-branches";
+import {
+  readBranchIdCookie,
+  resolveInventoryBranchScope,
+} from "../../_lib/inventory-scope";
 import { NewPoClient, type ProcurementBranchOption } from "./new-po-client";
 import type { SupplierRow } from "../../suppliers/suppliers-client";
 import type { IngredientRow } from "../../page";
@@ -20,12 +24,25 @@ export default async function NewPurchaseOrderPage() {
   }));
 
   // Branch-scoped procurement roles auto-use their assigned branch; others
-  // default to the first central_warehouse (falling back to first procurement branch).
+  // honor the sidebar-selected branch IF it is a procurement branch, else fall
+  // back to the first central_warehouse.
+  const cookieBranchId = await readBranchIdCookie();
+  const scope = await resolveInventoryBranchScope(
+    supabase,
+    claims,
+    cookieBranchId,
+  );
+  const scopeProcurementBranchId =
+    scope.selectedBranchId != null &&
+    procBranches.some((b) => b.id === scope.selectedBranchId)
+      ? scope.selectedBranchId
+      : null;
+
   const isBranchScoped =
     claims.user_role === "warehouse_manager" ||
     claims.user_role === "production_manager";
   const defaultBranchId =
-    (isBranchScoped ? claims.branch_id : null) ??
+    (isBranchScoped ? claims.branch_id : scopeProcurementBranchId) ??
     procBranches.find((b) => b.branch_kind === "central_warehouse")?.id ??
     procBranches[0]?.id ??
     null;

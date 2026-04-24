@@ -5,7 +5,10 @@ import {
   fetchBranchesForTransfer,
   fetchInventoryLocationsForBranch,
 } from "../transfer-actions";
-import { resolveRequestedBranchId } from "../_lib/inventory-scope";
+import {
+  resolveInventoryBranchScope,
+  resolveRequestedBranchId,
+} from "../_lib/inventory-scope";
 import type {
   BranchForTransfer,
   InventoryLocation,
@@ -20,12 +23,14 @@ export default async function TransfersPage({
   searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
   const params = await searchParams;
-  const branchFilter =
-    (await resolveRequestedBranchId(params.branchId)) ?? undefined;
-
-  const { claims } = await loadAuthState();
-
-  const userBranchId = claims.branch_id;
+  const { supabase, claims } = await loadAuthState();
+  const requested = await resolveRequestedBranchId(params.branchId);
+  const scope = await resolveInventoryBranchScope(supabase, claims, requested);
+  // Sidebar-selected branch drives action context. For branch-scoped roles it
+  // collapses to claims.branch_id; for owner/super_manager/area_manager it
+  // reflects the sidebar picker (URL ?branchId= or inv_branch_id cookie).
+  const userBranchId = scope.selectedBranchId;
+  const branchFilter = userBranchId ?? undefined;
 
   const [trRes, brRes, ingRes, locRes] = await Promise.all([
     fetchStockTransfers(branchFilter),
@@ -33,7 +38,7 @@ export default async function TransfersPage({
     fetchIngredients(),
     userBranchId != null
       ? fetchInventoryLocationsForBranch(userBranchId)
-      : Promise.resolve({ success: true as const, data: [] }),
+      : Promise.resolve({ success: true as const, data: [] as never[] }),
   ]);
 
   const rows: TransferListRow[] = trRes.success

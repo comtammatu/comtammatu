@@ -3,13 +3,19 @@ import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
 import { notFound } from "next/navigation";
 import { fetchStockTransferDetail } from "../../transfer-actions";
 import { formatDateTime } from "../../_lib/format";
+import {
+  resolveInventoryBranchScope,
+  resolveRequestedBranchId,
+} from "../../_lib/inventory-scope";
 import { TransferDetailClient } from "./transfer-detail-client";
 import type { TransferDetail } from "./transfer-detail-client";
 
 export default async function TransferDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
   const { id } = await params;
   const res = await fetchStockTransferDetail(Number(id));
@@ -20,6 +26,13 @@ export default async function TransferDetailPage({
   } = await supabase.auth.getSession();
   const claims = session?.user
     ? extractClaimsFromAccessToken(session.access_token)
+    : null;
+
+  // Sidebar-selected branch scopes action enablement for tenant-wide roles.
+  const sp = await searchParams;
+  const requested = await resolveRequestedBranchId(sp.branchId);
+  const scope = claims
+    ? await resolveInventoryBranchScope(supabase, claims, requested)
     : null;
 
   const d = res.data as {
@@ -97,7 +110,7 @@ export default async function TransferDetailPage({
     <TransferDetailClient
       transfer={transfer}
       userRole={claims?.user_role ?? "branch_manager"}
-      userBranchId={claims?.branch_id ?? null}
+      userBranchId={scope?.selectedBranchId ?? null}
     />
   );
 }

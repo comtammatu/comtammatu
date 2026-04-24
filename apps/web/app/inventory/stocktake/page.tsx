@@ -1,7 +1,10 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
 import { fetchStocktakeSessions } from "../actions";
-import { resolveRequestedBranchId } from "../_lib/inventory-scope";
+import {
+  resolveInventoryBranchScope,
+  resolveRequestedBranchId,
+} from "../_lib/inventory-scope";
 import type {
   BranchOption,
   StocktakeSessionRow,
@@ -15,9 +18,6 @@ export default async function StocktakePage({
   searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
   const params = await searchParams;
-  const branchFilter =
-    (await resolveRequestedBranchId(params.branchId)) ?? undefined;
-
   const supabase = await createClient();
   const {
     data: { session },
@@ -25,6 +25,14 @@ export default async function StocktakePage({
   const claims = session?.user
     ? extractClaimsFromAccessToken(session.access_token)
     : null;
+
+  // Sidebar-selected branch drives action context (session branch default +
+  // role-gated filters). Collapses to claims.branch_id for branch-scoped roles.
+  const requested = await resolveRequestedBranchId(params.branchId);
+  const scope = claims
+    ? await resolveInventoryBranchScope(supabase, claims, requested)
+    : null;
+  const branchFilter = scope?.selectedBranchId ?? undefined;
 
   const [sessionsRes, branchesRes] = await Promise.all([
     fetchStocktakeSessions(branchFilter),
@@ -46,7 +54,7 @@ export default async function StocktakePage({
       initial={sessions}
       branches={branches}
       userRole={claims?.user_role ?? "branch_manager"}
-      userBranchId={claims?.branch_id ?? null}
+      userBranchId={scope?.selectedBranchId ?? null}
       routeBase="/inventory/stocktake"
     />
   );
