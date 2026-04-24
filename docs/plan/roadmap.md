@@ -1,7 +1,7 @@
 # Roadmap — Cơm Tấm Má Tư
 
 > Hệ thống Quản lý Vận hành Nhà hàng (Restaurant Operations Management System)
-> Updated: 2026-04-15 | Structure: Module-based
+> Updated: 2026-04-24 | Structure: Module-based
 
 ## Product Identity
 
@@ -18,7 +18,7 @@ Không đi theo hướng CRM độc lập hay ERP đa ngành.
 | M2  | POS         | Cart, table/zone, order submit, bill printing        | SHIPPED |
 | M3  | KDS         | Realtime queue, bump/complete, station config        | SHIPPED |
 | M4  | Payment     | Cash ✅, VietQR/Momo blocked on credentials          | PARTIAL |
-| M5  | Stock       | Ingredients, recipes, stock levels, procurement, GRN | SHIPPED |
+| M5  | Stock       | Ingredients, recipes, procurement, GRN, CW+CK model  | SHIPPED |
 | M6  | Finance     | Dashboard ✅, HĐĐT blocked on credentials, VAS stubs | PARTIAL |
 | M7  | Nhân sự & tiền lương  | Attendance ✅, payroll calc incomplete               | PARTIAL |
 
@@ -481,6 +481,16 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 
 ---
 
+## Post-v1.0 Structural Milestones
+
+| Milestone     | Date       | Summary                                                                                                                                     |
+| ------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Inventory UX  | 2026-04-09 | Task-queue-first inventory dashboard, HQ-only procurement hub, branch "Cấp bếp" labeling, shared data-table + touch-first mobile components |
+| Shadcn M1-M9  | 2026-04-17→24 | Empty/Spinner/Form(RHF+zod+Field)/Item/InputGroup/ToggleGroup/Combobox/Sidebar+Breadcrumb/Kbd shortcuts — full primitive rollout          |
+| Auth v2 α1-α5 | 2026-04-22→23 | Position ⟂ Permission model; 100% RLS cutover; GRN confirm atomic with PO update; 10 legacy-RPCs remain on `auth_role()`                   |
+| Inventory CW  | 2026-04-24 | Retire HQ, adopt multi-instance Kho Tổng (`central_warehouse`) + existing Bếp trung tâm (`central_kitchen`); transfer direction triggers   |
+| POS/KDS polish| 2026-04-18→24 | Charge sides + per-item notes, print agent pilot, branch-scoped settings, VietQR per-tenant config, printer ACL hardening                  |
+
 ## Version History
 
 | Version | Date       | What                                                             |
@@ -490,11 +500,13 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 | M0+M1   | 2026-04-03 | Khung quản trị + Menu shipped (ex Sprint 1)                         |
 | M2      | 2026-04-06 | POS shipped — order, cart, bill, cash                            |
 | M3      | 2026-04-06 | KDS shipped — station config, realtime, bump/complete            |
-| M4      | 2026-04-06 | Payment — cash, VietQR, Momo, refunds                            |
+| M4      | 2026-04-06 | Payment — cash, refunds (VietQR/Momo blocked on credentials)     |
 | M5      | 2026-04-06 | Stock — ingredients, recipes, stock levels                       |
-| M6      | 2026-04-06 | Finance — HĐĐT, revenue dashboard, VAS                           |
-| M7      | 2026-04-06 | Nhân sự & tiền lương — employees, shifts, attendance, payroll              |
+| M6      | 2026-04-06 | Finance — revenue dashboard, VAS, BCTC                           |
+| M7      | 2026-04-06 | Nhân sự & tiền lương — employees, shifts, attendance, payroll    |
 | v1.0.0  | 2026-04-07 | All modules shipped, QA verified, deployed to Vercel             |
 | UX-A    | 2026-04-09 | Inventory UX redesign Session A — PO + GRN + Invoice             |
 | UX-B    | 2026-04-09 | Inventory UX redesign Session B — Transfers + Stocktake + Issues |
 | UX-C    | 2026-04-10 | Inventory UX redesign Session C — Catalog + Support pages        |
+| Auth v2 | 2026-04-22 | Position↔Permission model + Server Action migration              |
+| CW/CK   | 2026-04-24 | Retire HQ, multi-instance Kho Tổng + Bếp Trung Tâm (D000)        |
