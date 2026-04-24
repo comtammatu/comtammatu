@@ -157,10 +157,20 @@ export function StocktakeListClient({
       <InventoryHeader
         title="Kiểm kê"
         actions={
-          <Button type="button" onClick={handleCreate} disabled={isPending}>
-            <IconPlus className="size-4" />
-            Mở phiên kiểm kê
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" asChild>
+              {/* S13a pilot entry. Route is feature-flag gated server-side —
+                  non-pilot branches redirect to list with error=stocktake_v2_not_enabled. */}
+              <Link href={`${routeBase}/new`}>
+                <IconClipboardCheck className="size-4" />
+                Kiểm kê v2
+              </Link>
+            </Button>
+            <Button type="button" onClick={handleCreate} disabled={isPending}>
+              <IconPlus className="size-4" />
+              Mở phiên kiểm kê
+            </Button>
+          </div>
         }
       />
       <InventoryPageContent width={isMobile ? "narrow" : "wide"}>

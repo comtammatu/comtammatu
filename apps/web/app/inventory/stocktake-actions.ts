@@ -1,0 +1,333 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import type { ActionResult } from "@comtammatu/shared/types";
+import { getAuthContextWithPermission } from "./_lib/auth";
+
+/* ─── Start stocktake (S13a) ─── */
+
+const STOCKTAKE_MODES = [
+  "daily",
+  "weekly",
+  "monthly",
+  "quarterly",
+  "spot",
+] as const;
+
+const startStocktakeSchema = z.object({
+  branchId: z.coerce.number().int().positive(),
+  locationId: z.coerce.number().int().positive().optional(),
+  mode: z.enum(STOCKTAKE_MODES),
+  blindMode: z.boolean().optional(),
+  thresholdPct: z.coerce.number().min(0).max(100).optional(),
+  thresholdVnd: z.coerce.number().min(0).optional(),
+});
+
+export type StocktakeStartResult = {
+  sessionId: number;
+  mode: string;
+  blindMode: boolean;
+  isUnaudited: boolean;
+  seededLines: number;
+  abcSnapshotAt: string;
+};
+
+/**
+ * Start a new stocktake session. Wraps `start_stocktake` RPC.
+ * Server seeds round-1 lines from stock_levels snapshot + ABC class.
+ * Blind mode default per mode unless explicit override.
+ */
+export async function startStocktake(
+  input: z.infer<typeof startStocktakeSchema>,
+): Promise<ActionResult<StocktakeStartResult>> {
+  const parsed = startStocktakeSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    [],
+    PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền tạo stocktake" };
+  const { supabase } = ctx;
+
+  const { data, error } = await supabase.rpc("start_stocktake", {
+    p_branch_id: parsed.data.branchId,
+    p_location_id: parsed.data.locationId ?? undefined,
+    p_mode: parsed.data.mode,
+    p_blind_mode: parsed.data.blindMode ?? undefined,
+    p_threshold_pct: parsed.data.thresholdPct ?? undefined,
+    p_threshold_vnd: parsed.data.thresholdVnd ?? undefined,
+  });
+
+  if (error || !data) {
+    return { success: false, error: "Không tạo được stocktake session" };
+  }
+
+  const raw = data as Record<string, unknown>;
+  revalidatePath("/inventory/stocktake");
+
+  return {
+    success: true,
+    data: {
+      sessionId: Number(raw.session_id ?? 0),
+      mode: String(raw.mode ?? parsed.data.mode),
+      blindMode: Boolean(raw.blind_mode),
+      isUnaudited: Boolean(raw.is_unaudited),
+      seededLines: Number(raw.seeded_lines ?? 0),
+      abcSnapshotAt: String(raw.abc_snapshot_at ?? new Date().toISOString()),
+    },
+  };
+}
+
+/* ─── Blind line fetcher (S13a) ─── */
+
+export type StocktakeLineBlind = {
+  lineId: number;
+  ingredientId: number;
+  ingredientName: string;
+  unit: string;
+  abcClass: "A" | "B" | "C" | null;
+  roundNo: number;
+  countedQuantity: number | null;
+  countedBy: string | null;
+  countedAt: string | null;
+  needsRecount: boolean;
+  isFinal: boolean;
+};
+
+/**
+ * Fetch stocktake lines WITHOUT system_quantity (blind mode).
+ * Wraps `get_stocktake_lines_blind` RPC — SECURITY DEFINER strips
+ * system_qty server-side regardless of caller's RLS.
+ */
+export async function getStocktakeLinesBlind(
+  sessionId: number,
+): Promise<ActionResult<StocktakeLineBlind[]>> {
+  const ctx = await getAuthContextWithPermission(
+    [],
+    PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase } = ctx;
+
+  const { data, error } = await supabase.rpc("get_stocktake_lines_blind", {
+    p_session_id: sessionId,
+  });
+
+  if (error || !data) {
+    return { success: false, error: "Không tải được danh sách dòng đếm" };
+  }
+
+  const rows = (data as unknown[]).map((r) => {
+    const raw = r as Record<string, unknown>;
+    return {
+      lineId: Number(raw.line_id ?? 0),
+      ingredientId: Number(raw.ingredient_id ?? 0),
+      ingredientName: String(raw.ingredient_name ?? ""),
+      unit: String(raw.unit ?? ""),
+      abcClass: (raw.abc_class ?? null) as "A" | "B" | "C" | null,
+      roundNo: Number(raw.round_no ?? 1),
+      countedQuantity:
+        raw.counted_quantity === null || raw.counted_quantity === undefined
+          ? null
+          : Number(raw.counted_quantity),
+      countedBy: (raw.counted_by ?? null) as string | null,
+      countedAt: (raw.counted_at ?? null) as string | null,
+      needsRecount: Boolean(raw.needs_recount),
+      isFinal: Boolean(raw.is_final),
+    };
+  });
+
+  return { success: true, data: rows };
+}
+
+/* ─── Submit count round (S13a) ─── */
+
+const submitCountSchema = z.object({
+  sessionId: z.coerce.number().int().positive(),
+  roundNo: z.coerce.number().int().min(1).max(4),
+  counts: z
+    .array(
+      z.object({
+        ingredient_id: z.coerce.number().int().positive(),
+        counted_quantity: z.coerce.number().min(0),
+        client_op_id: z.string().uuid().optional(),
+        offline_created_at: z.string().optional(),
+      }),
+    )
+    .min(1)
+    .max(500),
+});
+
+export async function submitCountRound(
+  input: z.infer<typeof submitCountSchema>,
+): Promise<ActionResult<{ appliedCount: number; conflictCount: number; roundNo: number }>> {
+  const parsed = submitCountSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    [],
+    PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase } = ctx;
+
+  const { data, error } = await supabase.rpc("submit_count_round", {
+    p_session_id: parsed.data.sessionId,
+    p_round_no: parsed.data.roundNo,
+    p_counts: parsed.data.counts,
+  });
+
+  if (error) {
+    if (error.code === "42501") {
+      return { success: false, error: "Không có quyền hoặc kỳ đã đóng" };
+    }
+    return { success: false, error: error.message ?? "Không submit được" };
+  }
+
+  const raw = (data ?? {}) as Record<string, unknown>;
+  revalidatePath(`/inventory/stocktake/${parsed.data.sessionId}`);
+
+  return {
+    success: true,
+    data: {
+      appliedCount: Number(raw.applied_count ?? 0),
+      conflictCount: Number(raw.conflict_count ?? 0),
+      roundNo: Number(raw.round_no ?? parsed.data.roundNo),
+    },
+  };
+}
+
+/* ─── Draft auto-save (S13a) ─── */
+
+const saveDraftSchema = z.object({
+  sessionId: z.coerce.number().int().positive(),
+  draftCounts: z.record(z.string(), z.unknown()),
+});
+
+/**
+ * Auto-save counter's in-progress counts to `stocktake_drafts`.
+ * Debounced 30s from client. Cleared on session finalize (CASCADE).
+ *
+ * Stored shape: `{ [ingredient_id]: { qty: number, note?: string, savedAt: ISO } }`.
+ */
+export async function saveStocktakeDraft(
+  input: z.infer<typeof saveDraftSchema>,
+): Promise<ActionResult<{ lastSavedAt: string }>> {
+  const parsed = saveDraftSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    [],
+    PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, user } = ctx;
+
+  const now = new Date().toISOString();
+  // Cast around missing generated types — table added in migration 20260425180000;
+  // owner regenerates via `pnpm db:types` after `supabase db push`.
+  const { error } = await (supabase.from("stocktake_drafts" as never) as unknown as {
+    upsert: (
+      values: Record<string, unknown>,
+      options: { onConflict: string },
+    ) => Promise<{ error: { message: string } | null }>;
+  }).upsert(
+    {
+      session_id: parsed.data.sessionId,
+      draft_counts: parsed.data.draftCounts,
+      last_saved_at: now,
+      saved_by: user.id,
+    },
+    { onConflict: "session_id" },
+  );
+
+  if (error) {
+    return { success: false, error: "Không lưu draft được" };
+  }
+
+  return { success: true, data: { lastSavedAt: now } };
+}
+
+/* ─── Zone lock lifecycle (S13a) ─── */
+
+export async function acquireZoneLock(
+  sessionId: number,
+  zoneId: string,
+  ttlSeconds = 1800,
+): Promise<ActionResult<{ acquired: boolean; lockedBy: string; expiresAt: string }>> {
+  const ctx = await getAuthContextWithPermission(
+    [],
+    PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase } = ctx;
+
+  const { data, error } = await supabase.rpc("acquire_zone_lock", {
+    p_session_id: sessionId,
+    p_zone_id: zoneId,
+    p_ttl_seconds: ttlSeconds,
+  });
+  if (error || !data) {
+    return { success: false, error: "Không acquire được lock" };
+  }
+  const raw = data as Record<string, unknown>;
+  return {
+    success: true,
+    data: {
+      acquired: Boolean(raw.acquired),
+      lockedBy: String(raw.locked_by ?? ""),
+      expiresAt: String(raw.expires_at ?? ""),
+    },
+  };
+}
+
+export async function heartbeatZoneLock(
+  sessionId: number,
+  zoneId: string,
+  ttlSeconds = 1800,
+): Promise<ActionResult<{ expiresAt: string }>> {
+  const ctx = await getAuthContextWithPermission(
+    [],
+    PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase } = ctx;
+
+  const { data, error } = await supabase.rpc("heartbeat_zone_lock", {
+    p_session_id: sessionId,
+    p_zone_id: zoneId,
+    p_ttl_seconds: ttlSeconds,
+  });
+  if (error) {
+    return { success: false, error: "Lock không còn hoặc mất ownership" };
+  }
+  return { success: true, data: { expiresAt: String(data ?? "") } };
+}
+
+export async function releaseZoneLock(
+  sessionId: number,
+  zoneId: string,
+): Promise<ActionResult<{ released: boolean }>> {
+  const ctx = await getAuthContextWithPermission(
+    [],
+    PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase } = ctx;
+
+  const { data, error } = await supabase.rpc("release_zone_lock", {
+    p_session_id: sessionId,
+    p_zone_id: zoneId,
+  });
+  if (error) return { success: false, error: "Không release được" };
+  return { success: true, data: { released: Boolean(data) } };
+}
