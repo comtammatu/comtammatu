@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+// ─── Shared pieces ───────────────────────────────────────────────────────
+
 const itemModifierSchema = z.object({
   modifier_id: z.number().int().optional(),
   name: z.string().optional(),
@@ -9,6 +11,7 @@ const itemModifierSchema = z.object({
 const itemSideSchema = z.object({
   side_item_id: z.number().int().optional(),
   side_item_name: z.string().optional(),
+  name: z.string().optional(),
   quantity: z.number().int().optional(),
 });
 
@@ -21,10 +24,46 @@ const kitchenItemSchema = z.object({
   note: z.string().nullable().optional(),
 });
 
-const receiptItemSchema = kitchenItemSchema.extend({
+const billItemSchema = kitchenItemSchema.extend({
   unit_price: z.number(),
   subtotal: z.number(),
 });
+
+/** Pre-built QR block for provisional bill — backend assembles the EMVCo/MoMo
+ * content in TS (via packages/shared/src/providers/impl/vietqr.ts) and passes
+ * it to `enqueue_provisional_bill` RPC. Agent just rasterizes + prints. */
+const paymentQrSchema = z.object({
+  type: z.enum(["vietqr", "momo"]),
+  content: z.string().min(1),
+  header_label: z.string(),
+  account_no: z.string().nullable().optional(),
+  account_name: z.string().nullable().optional(),
+  amount: z.number(),
+  description: z.string(),
+});
+
+const billBaseFields = {
+  branch_name: z.string().optional(),
+  branch_address: z.string().optional(),
+  branch_phone: z.string().optional(),
+  branch_tax_code: z.string().nullable().optional(),
+  order_number: z.string(),
+  order_type: z.enum(["dine_in", "takeaway"]),
+  table_number: z.number().int().nullable().optional(),
+  customer_count: z.number().int().nullable().optional(),
+  cashier_name: z.string().optional(),
+  note: z.string().nullable().optional(),
+  items: z.array(billItemSchema).min(1),
+  subtotal: z.number(),
+  tax_amount: z.number().nullable().optional(),
+  service_charge: z.number().nullable().optional(),
+  discount_amount: z.number().nullable().optional(),
+  total_amount: z.number(),
+  created_at: z.string().optional(),
+  printed_at: z.string(),
+};
+
+// ─── Kitchen ticket ──────────────────────────────────────────────────────
 
 export const kitchenTicketPayloadSchema = z.object({
   kind: z.literal("kitchen_ticket"),
@@ -33,29 +72,47 @@ export const kitchenTicketPayloadSchema = z.object({
   table_number: z.number().int().nullable().optional(),
   send_seq: z.number().int(),
   slot: z.number().int().min(1).max(2),
+  /** ≥2 triggers "IN LẠI LẦN #N" banner in the renderer. */
+  reprint_seq: z.number().int().nullable().optional(),
   note: z.string().nullable().optional(),
   items: z.array(kitchenItemSchema).min(1),
   printed_at: z.string(),
 });
 
+// ─── Provisional bill (PHIẾU TẠM TÍNH) ───────────────────────────────────
+
+export const provisionalBillPayloadSchema = z.object({
+  kind: z.literal("provisional_bill"),
+  ...billBaseFields,
+  /** Nullable: tenants without VietQR/MoMo config print bill w/o QR block. */
+  payment_qr: paymentQrSchema.nullable().optional(),
+});
+
+// ─── Final receipt (HOÁ ĐƠN THANH TOÁN) ──────────────────────────────────
+
 export const receiptPayloadSchema = z.object({
   kind: z.literal("receipt"),
-  order_number: z.string(),
-  order_type: z.enum(["dine_in", "takeaway"]),
-  table_number: z.number().int().nullable().optional(),
-  customer_count: z.number().int().nullable().optional(),
-  note: z.string().nullable().optional(),
-  items: z.array(receiptItemSchema).min(1),
-  subtotal: z.number(),
-  total_amount: z.number(),
-  printed_at: z.string(),
+  ...billBaseFields,
+  /** Narrowed to 3 methods accepted by the POS. Unknown values fall through
+   * to the raw key in the renderer. */
+  payment_method: z
+    .union([z.enum(["cash", "bank_transfer", "momo"]), z.string(), z.null()])
+    .optional(),
+  /** Tiền mặt khách đưa. Null / omitted for non-cash payments. */
+  cash_received: z.number().nullable().optional(),
+  /** Tiền trả khách = cash_received - total_amount. Null / 0 for non-cash. */
+  cash_change: z.number().nullable().optional(),
 });
+
+// ─── Union ───────────────────────────────────────────────────────────────
 
 export const printPayloadSchema = z.discriminatedUnion("kind", [
   kitchenTicketPayloadSchema,
+  provisionalBillPayloadSchema,
   receiptPayloadSchema,
 ]);
 
 export type KitchenTicketPayload = z.infer<typeof kitchenTicketPayloadSchema>;
+export type ProvisionalBillPayload = z.infer<typeof provisionalBillPayloadSchema>;
 export type ReceiptPayload = z.infer<typeof receiptPayloadSchema>;
 export type PrintPayload = z.infer<typeof printPayloadSchema>;

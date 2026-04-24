@@ -23,7 +23,13 @@ const STATUSES = [
   "expired",
   "cancelled",
 ] as const;
-const JOB_TYPES = ["kitchen_ticket", "receipt", "reprint", "cancel_ticket"] as const;
+const JOB_TYPES = [
+  "kitchen_ticket",
+  "receipt",
+  "provisional_bill",
+  "reprint",
+  "cancel_ticket",
+] as const;
 
 export default async function PrintJobsPage({
   searchParams,

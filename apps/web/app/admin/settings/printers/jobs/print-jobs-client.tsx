@@ -67,6 +67,7 @@ const STATUS_VARIANT: Record<
 const JOB_TYPE_LABEL: Record<string, string> = {
   kitchen_ticket: "Phiếu bếp",
   receipt: "Hoá đơn",
+  provisional_bill: "Phiếu tạm tính",
   reprint: "In lại",
   cancel_ticket: "Phiếu huỷ",
 };

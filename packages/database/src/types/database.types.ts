@@ -1,4 +1,3 @@
-npm warn Unknown project config "public-hoist-pattern". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
 export type Json =
   | string
   | number
@@ -15,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_periods: {
+        Row: {
+          closed_by: string | null
+          hard_closed_at: string | null
+          month: number
+          soft_closed_at: string | null
+          tenant_id: number
+          year: number
+        }
+        Insert: {
+          closed_by?: string | null
+          hard_closed_at?: string | null
+          month: number
+          soft_closed_at?: string | null
+          tenant_id: number
+          year: number
+        }
+        Update: {
+          closed_by?: string | null
+          hard_closed_at?: string | null
+          month?: number
+          soft_closed_at?: string | null
+          tenant_id?: number
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounting_periods_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       area_branches: {
         Row: {
           area_id: number
@@ -271,6 +305,175 @@ export type Database = {
           },
         ]
       }
+      branch_daily_waste_cap: {
+        Row: {
+          avg_revenue_7d: number
+          branch_id: number
+          cap_vnd: number
+          computed_at: string
+        }
+        Insert: {
+          avg_revenue_7d: number
+          branch_id: number
+          cap_vnd: number
+          computed_at?: string
+        }
+        Update: {
+          avg_revenue_7d?: number
+          branch_id?: number
+          cap_vnd?: number
+          computed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_daily_waste_cap_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branch_express_window: {
+        Row: {
+          branch_id: number
+          enabled: boolean
+          end_time: string
+          start_time: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          branch_id: number
+          enabled?: boolean
+          end_time?: string
+          start_time?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          branch_id?: number
+          enabled?: boolean
+          end_time?: string
+          start_time?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_express_window_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branch_feature_flags: {
+        Row: {
+          branch_id: number
+          created_at: string
+          disabled_at: string | null
+          enabled: boolean
+          enabled_at: string | null
+          enabled_by: string | null
+          flag_key: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          disabled_at?: string | null
+          enabled?: boolean
+          enabled_at?: string | null
+          enabled_by?: string | null
+          flag_key: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          disabled_at?: string | null
+          enabled?: boolean
+          enabled_at?: string | null
+          enabled_by?: string | null
+          flag_key?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_feature_flags_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branch_override_attempts: {
+        Row: {
+          attempted_at: string
+          branch_id: number
+          id: number
+          success: boolean
+          user_id: string
+        }
+        Insert: {
+          attempted_at?: string
+          branch_id: number
+          id?: never
+          success: boolean
+          user_id: string
+        }
+        Update: {
+          attempted_at?: string
+          branch_id?: number
+          id?: never
+          success?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_override_attempts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branch_override_codes: {
+        Row: {
+          branch_id: number
+          code_hash: string
+          rotated_at: string
+          rotated_by: string | null
+        }
+        Insert: {
+          branch_id: number
+          code_hash: string
+          rotated_at?: string
+          rotated_by?: string | null
+        }
+        Update: {
+          branch_id?: number
+          code_hash?: string
+          rotated_at?: string
+          rotated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_override_codes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_zones: {
         Row: {
           branch_id: number
@@ -328,6 +531,7 @@ export type Database = {
           name: string
           phone: string | null
           tenant_id: number
+          timezone: string
           updated_at: string | null
         }
         Insert: {
@@ -341,6 +545,7 @@ export type Database = {
           name: string
           phone?: string | null
           tenant_id: number
+          timezone?: string
           updated_at?: string | null
         }
         Update: {
@@ -354,6 +559,7 @@ export type Database = {
           name?: string
           phone?: string | null
           tenant_id?: number
+          timezone?: string
           updated_at?: string | null
         }
         Relationships: [
@@ -628,6 +834,7 @@ export type Database = {
           branch_id: number
           created_at: string
           created_by: string
+          express_approved: boolean | null
           grn_number: string
           id: number
           journal_entry_id: number | null
@@ -644,6 +851,7 @@ export type Database = {
           branch_id: number
           created_at?: string
           created_by: string
+          express_approved?: boolean | null
           grn_number: string
           id?: never
           journal_entry_id?: number | null
@@ -660,6 +868,7 @@ export type Database = {
           branch_id?: number
           created_at?: string
           created_by?: string
+          express_approved?: boolean | null
           grn_number?: string
           id?: never
           journal_entry_id?: number | null
@@ -724,13 +933,216 @@ export type Database = {
           },
         ]
       }
+      grn_baseline_pause: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: number
+          ingredient_id: number
+          paused_until: string
+          reason: string
+          source_ref: Json | null
+          supplier_id: number
+          tenant_id: number
+          uom: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: never
+          ingredient_id: number
+          paused_until: string
+          reason?: string
+          source_ref?: Json | null
+          supplier_id: number
+          tenant_id: number
+          uom: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: never
+          ingredient_id?: number
+          paused_until?: string
+          reason?: string
+          source_ref?: Json | null
+          supplier_id?: number
+          tenant_id?: number
+          uom?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grn_baseline_pause_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grn_baseline_pause_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grn_baseline_pause_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grn_express_extend_audit: {
+        Row: {
+          branch_id: number
+          created_at: string
+          extend_minutes: number
+          extended_until: string
+          id: number
+          note: string
+          tenant_id: number
+          user_id: string
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          extend_minutes: number
+          extended_until: string
+          id?: never
+          note: string
+          tenant_id: number
+          user_id: string
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          extend_minutes?: number
+          extended_until?: string
+          id?: never
+          note?: string
+          tenant_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grn_express_extend_audit_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grn_express_extend_audit_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grn_hardblock_overrides: {
+        Row: {
+          baseline_avg_30d: number | null
+          branch_id: number
+          evidence_url: string
+          grn_item_id: number
+          id: number
+          ingredient_id: number
+          note: string
+          overridden_at: string
+          overridden_by: string
+          reason_code: string
+          submitted_price: number
+          supplier_id: number
+          tenant_id: number
+          uom: string
+          variance_pct: number
+        }
+        Insert: {
+          baseline_avg_30d?: number | null
+          branch_id: number
+          evidence_url: string
+          grn_item_id: number
+          id?: never
+          ingredient_id: number
+          note: string
+          overridden_at?: string
+          overridden_by: string
+          reason_code: string
+          submitted_price: number
+          supplier_id: number
+          tenant_id: number
+          uom: string
+          variance_pct: number
+        }
+        Update: {
+          baseline_avg_30d?: number | null
+          branch_id?: number
+          evidence_url?: string
+          grn_item_id?: number
+          id?: never
+          ingredient_id?: number
+          note?: string
+          overridden_at?: string
+          overridden_by?: string
+          reason_code?: string
+          submitted_price?: number
+          supplier_id?: number
+          tenant_id?: number
+          uom?: string
+          variance_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grn_hardblock_overrides_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grn_hardblock_overrides_grn_item_id_fkey"
+            columns: ["grn_item_id"]
+            isOneToOne: false
+            referencedRelation: "grn_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grn_hardblock_overrides_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grn_hardblock_overrides_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grn_hardblock_overrides_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grn_items: {
         Row: {
+          baseline_sample_n: number | null
+          baseline_source: string | null
+          baseline_variance_pct: number | null
           batch_number: string | null
           expiry_date: string | null
           grn_id: number
           id: number
           ingredient_id: number
+          is_hard_blocked: boolean
           po_quantity: number | null
           po_unit_price: number | null
           price_override_note: string | null
@@ -748,13 +1160,18 @@ export type Database = {
           total_cost: number
           unit: string
           unit_cost: number
+          variance_tier: number | null
         }
         Insert: {
+          baseline_sample_n?: number | null
+          baseline_source?: string | null
+          baseline_variance_pct?: number | null
           batch_number?: string | null
           expiry_date?: string | null
           grn_id: number
           id?: never
           ingredient_id: number
+          is_hard_blocked?: boolean
           po_quantity?: number | null
           po_unit_price?: number | null
           price_override_note?: string | null
@@ -772,13 +1189,18 @@ export type Database = {
           total_cost: number
           unit: string
           unit_cost: number
+          variance_tier?: number | null
         }
         Update: {
+          baseline_sample_n?: number | null
+          baseline_source?: string | null
+          baseline_variance_pct?: number | null
           batch_number?: string | null
           expiry_date?: string | null
           grn_id?: number
           id?: never
           ingredient_id?: number
+          is_hard_blocked?: boolean
           po_quantity?: number | null
           po_unit_price?: number | null
           price_override_note?: string | null
@@ -796,6 +1218,7 @@ export type Database = {
           total_cost?: number
           unit?: string
           unit_cost?: number
+          variance_tier?: number | null
         }
         Relationships: [
           {
@@ -821,6 +1244,90 @@ export type Database = {
           },
         ]
       }
+      ingredient_abc_class: {
+        Row: {
+          branch_id: number
+          class: string
+          computed_at: string
+          cumulative_share: number
+          ingredient_id: number
+          stock_value: number
+          tenant_id: number
+        }
+        Insert: {
+          branch_id: number
+          class: string
+          computed_at?: string
+          cumulative_share?: number
+          ingredient_id: number
+          stock_value?: number
+          tenant_id: number
+        }
+        Update: {
+          branch_id?: number
+          class?: string
+          computed_at?: string
+          cumulative_share?: number
+          ingredient_id?: number
+          stock_value?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_abc_class_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_abc_class_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_abc_class_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingredient_category_review_policy: {
+        Row: {
+          category: string
+          requires_manual_review: boolean
+          tenant_id: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          category: string
+          requires_manual_review?: boolean
+          tenant_id: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          category?: string
+          requires_manual_review?: boolean
+          tenant_id?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_category_review_policy_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingredients: {
         Row: {
           category: string | null
@@ -835,6 +1342,7 @@ export type Database = {
           purchase_to_measure_factor: number
           purchase_unit: string
           reorder_point: number | null
+          review_override: boolean | null
           shelf_life_days: number | null
           sku: string | null
           storage_type: string
@@ -856,6 +1364,7 @@ export type Database = {
           purchase_to_measure_factor?: number
           purchase_unit: string
           reorder_point?: number | null
+          review_override?: boolean | null
           shelf_life_days?: number | null
           sku?: string | null
           storage_type?: string
@@ -877,6 +1386,7 @@ export type Database = {
           purchase_to_measure_factor?: number
           purchase_unit?: string
           reorder_point?: number | null
+          review_override?: boolean | null
           shelf_life_days?: number | null
           sku?: string | null
           storage_type?: string
@@ -1895,6 +2405,8 @@ export type Database = {
       orders: {
         Row: {
           branch_id: number
+          cash_change: number | null
+          cash_received: number | null
           created_at: string
           created_by: string
           customer_count: number
@@ -1919,6 +2431,8 @@ export type Database = {
         }
         Insert: {
           branch_id: number
+          cash_change?: number | null
+          cash_received?: number | null
           created_at?: string
           created_by: string
           customer_count?: number
@@ -1943,6 +2457,8 @@ export type Database = {
         }
         Update: {
           branch_id?: number
+          cash_change?: number | null
+          cash_received?: number | null
           created_at?: string
           created_by?: string
           customer_count?: number
@@ -2722,6 +3238,7 @@ export type Database = {
           branch_id: number
           last_seen_at: string
           tenant_id: number
+          transport: string
           version: string | null
         }
         Insert: {
@@ -2729,6 +3246,7 @@ export type Database = {
           branch_id: number
           last_seen_at?: string
           tenant_id: number
+          transport?: string
           version?: string | null
         }
         Update: {
@@ -2736,6 +3254,7 @@ export type Database = {
           branch_id?: number
           last_seen_at?: string
           tenant_id?: number
+          transport?: string
           version?: string | null
         }
         Relationships: [
@@ -3487,37 +4006,58 @@ export type Database = {
       }
       stock_issue_items: {
         Row: {
+          approval_required: boolean
           id: number
           ingredient_id: number
           issue_id: number
+          photo_required: boolean
+          photo_urls: string[]
+          qty_ratio: number | null
           quantity: number
           reason: string | null
+          reason_code: string | null
+          rolling_15min_sum: number | null
           tenant_id: number
           total_cost: number | null
           unit: string
           unit_cost: number
+          waste_tier: number | null
         }
         Insert: {
+          approval_required?: boolean
           id?: never
           ingredient_id: number
           issue_id: number
+          photo_required?: boolean
+          photo_urls?: string[]
+          qty_ratio?: number | null
           quantity: number
           reason?: string | null
+          reason_code?: string | null
+          rolling_15min_sum?: number | null
           tenant_id: number
           total_cost?: number | null
           unit: string
           unit_cost?: number
+          waste_tier?: number | null
         }
         Update: {
+          approval_required?: boolean
           id?: never
           ingredient_id?: number
           issue_id?: number
+          photo_required?: boolean
+          photo_urls?: string[]
+          qty_ratio?: number | null
           quantity?: number
           reason?: string | null
+          reason_code?: string | null
+          rolling_15min_sum?: number | null
           tenant_id?: number
           total_cost?: number | null
           unit?: string
           unit_cost?: number
+          waste_tier?: number | null
         }
         Relationships: [
           {
@@ -3545,6 +4085,9 @@ export type Database = {
       }
       stock_issues: {
         Row: {
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
           branch_id: number
           created_at: string
           created_by: string | null
@@ -3553,13 +4096,19 @@ export type Database = {
           issue_type: string
           issued_at: string
           notes: string | null
+          shift_key: string | null
           source_location_id: number | null
+          source_ref: Json | null
+          source_type: string
           status: string
           target_location_id: number | null
           tenant_id: number
           updated_at: string
         }
         Insert: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           branch_id: number
           created_at?: string
           created_by?: string | null
@@ -3568,13 +4117,19 @@ export type Database = {
           issue_type?: string
           issued_at?: string
           notes?: string | null
+          shift_key?: string | null
           source_location_id?: number | null
+          source_ref?: Json | null
+          source_type?: string
           status?: string
           target_location_id?: number | null
           tenant_id: number
           updated_at?: string
         }
         Update: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           branch_id?: number
           created_at?: string
           created_by?: string | null
@@ -3583,7 +4138,10 @@ export type Database = {
           issue_type?: string
           issued_at?: string
           notes?: string | null
+          shift_key?: string | null
           source_location_id?: number | null
+          source_ref?: Json | null
+          source_type?: string
           status?: string
           target_location_id?: number | null
           tenant_id?: number
@@ -3981,12 +4539,96 @@ export type Database = {
           },
         ]
       }
+      stocktake_conflicts: {
+        Row: {
+          client_payload: Json
+          conflict_type: string
+          id: number
+          ingredient_id: number
+          resolution: string | null
+          resolution_note: string | null
+          resolution_qty: number | null
+          resolved_at: string | null
+          resolved_by: string | null
+          round_no: number
+          server_payload: Json | null
+          session_id: number
+          submitted_at: string
+          submitted_by: string | null
+          tenant_id: number
+        }
+        Insert: {
+          client_payload: Json
+          conflict_type: string
+          id?: never
+          ingredient_id: number
+          resolution?: string | null
+          resolution_note?: string | null
+          resolution_qty?: number | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          round_no: number
+          server_payload?: Json | null
+          session_id: number
+          submitted_at?: string
+          submitted_by?: string | null
+          tenant_id: number
+        }
+        Update: {
+          client_payload?: Json
+          conflict_type?: string
+          id?: never
+          ingredient_id?: number
+          resolution?: string | null
+          resolution_note?: string | null
+          resolution_qty?: number | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          round_no?: number
+          server_payload?: Json | null
+          session_id?: number
+          submitted_at?: string
+          submitted_by?: string | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stocktake_conflicts_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stocktake_conflicts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "stocktake_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stocktake_conflicts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stocktake_lines: {
         Row: {
+          abc_class: string | null
+          client_op_id: string | null
+          counted_at: string | null
+          counted_by: string | null
           counted_quantity: number | null
           created_at: string
           id: number
           ingredient_id: number
+          is_final: boolean
+          needs_recount: boolean
+          offline_created_at: string | null
+          round_no: number
           session_id: number
           system_quantity: number
           tenant_id: number
@@ -3994,10 +4636,18 @@ export type Database = {
           variance_reason: string | null
         }
         Insert: {
+          abc_class?: string | null
+          client_op_id?: string | null
+          counted_at?: string | null
+          counted_by?: string | null
           counted_quantity?: number | null
           created_at?: string
           id?: never
           ingredient_id: number
+          is_final?: boolean
+          needs_recount?: boolean
+          offline_created_at?: string | null
+          round_no?: number
           session_id: number
           system_quantity: number
           tenant_id: number
@@ -4005,10 +4655,18 @@ export type Database = {
           variance_reason?: string | null
         }
         Update: {
+          abc_class?: string | null
+          client_op_id?: string | null
+          counted_at?: string | null
+          counted_by?: string | null
           counted_quantity?: number | null
           created_at?: string
           id?: never
           ingredient_id?: number
+          is_final?: boolean
+          needs_recount?: boolean
+          offline_created_at?: string | null
+          round_no?: number
           session_id?: number
           system_quantity?: number
           tenant_id?: number
@@ -4041,42 +4699,91 @@ export type Database = {
       }
       stocktake_sessions: {
         Row: {
+          abc_snapshot_at: string | null
+          auditor_branch_id: number | null
+          auditor_id: string | null
+          blind_mode: boolean
           branch_id: number
           completed_at: string | null
           created_at: string
           created_by: string | null
+          current_round: number
           id: number
+          is_unaudited: boolean
           location_id: number | null
+          mode: string
           notes: string | null
+          offline_enabled: boolean
+          offline_enabled_at: string | null
+          offline_enabled_by: string | null
           started_at: string
           status: string
           tenant_id: number
+          variance_threshold_pct: number
+          variance_threshold_pct_class_a: number
+          variance_threshold_vnd: number
+          variance_threshold_vnd_class_a: number
         }
         Insert: {
+          abc_snapshot_at?: string | null
+          auditor_branch_id?: number | null
+          auditor_id?: string | null
+          blind_mode?: boolean
           branch_id: number
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
+          current_round?: number
           id?: never
+          is_unaudited?: boolean
           location_id?: number | null
+          mode?: string
           notes?: string | null
+          offline_enabled?: boolean
+          offline_enabled_at?: string | null
+          offline_enabled_by?: string | null
           started_at?: string
           status?: string
           tenant_id: number
+          variance_threshold_pct?: number
+          variance_threshold_pct_class_a?: number
+          variance_threshold_vnd?: number
+          variance_threshold_vnd_class_a?: number
         }
         Update: {
+          abc_snapshot_at?: string | null
+          auditor_branch_id?: number | null
+          auditor_id?: string | null
+          blind_mode?: boolean
           branch_id?: number
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
+          current_round?: number
           id?: never
+          is_unaudited?: boolean
           location_id?: number | null
+          mode?: string
           notes?: string | null
+          offline_enabled?: boolean
+          offline_enabled_at?: string | null
+          offline_enabled_by?: string | null
           started_at?: string
           status?: string
           tenant_id?: number
+          variance_threshold_pct?: number
+          variance_threshold_pct_class_a?: number
+          variance_threshold_vnd?: number
+          variance_threshold_vnd_class_a?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "stocktake_sessions_auditor_branch_id_fkey"
+            columns: ["auditor_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stocktake_sessions_branch_id_fkey"
             columns: ["branch_id"]
@@ -4093,6 +4800,54 @@ export type Database = {
           },
           {
             foreignKeyName: "stocktake_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stocktake_zone_locks: {
+        Row: {
+          acquired_at: string
+          expires_at: string
+          id: number
+          last_heartbeat_at: string
+          locked_by: string
+          session_id: number
+          tenant_id: number
+          zone_id: string
+        }
+        Insert: {
+          acquired_at?: string
+          expires_at: string
+          id?: never
+          last_heartbeat_at?: string
+          locked_by: string
+          session_id: number
+          tenant_id: number
+          zone_id: string
+        }
+        Update: {
+          acquired_at?: string
+          expires_at?: string
+          id?: never
+          last_heartbeat_at?: string
+          locked_by?: string
+          session_id?: number
+          tenant_id?: number
+          zone_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stocktake_zone_locks_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "stocktake_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stocktake_zone_locks_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -4305,6 +5060,73 @@ export type Database = {
           },
         ]
       }
+      supplier_items: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: number
+          ingredient_id: number
+          is_active: boolean
+          notes: string | null
+          pack_size: number | null
+          pack_uom: string | null
+          supplier_id: number
+          supplier_sku_code: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: never
+          ingredient_id: number
+          is_active?: boolean
+          notes?: string | null
+          pack_size?: number | null
+          pack_uom?: string | null
+          supplier_id: number
+          supplier_sku_code: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: never
+          ingredient_id?: number
+          is_active?: boolean
+          notes?: string | null
+          pack_size?: number | null
+          pack_uom?: string | null
+          supplier_id?: number
+          supplier_sku_code?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_items_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_payments: {
         Row: {
           amount: number
@@ -4362,6 +5184,85 @@ export type Database = {
           },
           {
             foreignKeyName: "supplier_payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_price_list: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          currency: string
+          effective_from: string
+          effective_to: string | null
+          id: number
+          ingredient_id: number
+          lead_time_days: number | null
+          min_order_qty: number | null
+          priority: number
+          source: string
+          source_ref: Json | null
+          supplier_id: number
+          tenant_id: number
+          unit_price: number
+          uom: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: never
+          ingredient_id: number
+          lead_time_days?: number | null
+          min_order_qty?: number | null
+          priority?: number
+          source: string
+          source_ref?: Json | null
+          supplier_id: number
+          tenant_id: number
+          unit_price: number
+          uom: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: never
+          ingredient_id?: number
+          lead_time_days?: number | null
+          min_order_qty?: number | null
+          priority?: number
+          source?: string
+          source_ref?: Json | null
+          supplier_id?: number
+          tenant_id?: number
+          unit_price?: number
+          uom?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_price_list_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_price_list_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_price_list_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -4845,6 +5746,54 @@ export type Database = {
         }
         Relationships: []
       }
+      user_trust_score: {
+        Row: {
+          branch_id: number
+          grn_count_30d: number
+          last_incident_at: string | null
+          score: number
+          tenant_id: number
+          updated_at: string
+          user_id: string
+          variance_incidents_30d: number
+        }
+        Insert: {
+          branch_id: number
+          grn_count_30d?: number
+          last_incident_at?: string | null
+          score?: number
+          tenant_id: number
+          updated_at?: string
+          user_id: string
+          variance_incidents_30d?: number
+        }
+        Update: {
+          branch_id?: number
+          grn_count_30d?: number
+          last_incident_at?: string | null
+          score?: number
+          tenant_id?: number
+          updated_at?: string
+          user_id?: string
+          variance_incidents_30d?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_trust_score_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_trust_score_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       mv_daily_revenue: {
@@ -4913,6 +5862,124 @@ export type Database = {
           },
         ]
       }
+      mv_grn_price_baseline: {
+        Row: {
+          avg_30d: number | null
+          ingredient_id: number | null
+          last_seen_at: string | null
+          sample_n: number | null
+          supplier_id: number | null
+          tenant_id: number | null
+          uom: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goods_received_notes_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_received_notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grn_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mv_inventory_stock_current: {
+        Row: {
+          avg_unit_cost: number | null
+          branch_id: number | null
+          current_quantity: number | null
+          ingredient_category: string | null
+          ingredient_id: number | null
+          ingredient_is_active: boolean | null
+          ingredient_name: string | null
+          item_kind: string | null
+          last_counted_at: string | null
+          location_id: number | null
+          location_kind: string | null
+          location_name: string | null
+          max_stock_level: number | null
+          min_stock_level: number | null
+          reorder_point: number | null
+          shelf_life_days: number | null
+          stock_value: number | null
+          tenant_id: number | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_levels_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_levels_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_levels_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_levels_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mv_inventory_value_ranking: {
+        Row: {
+          branch_id: number | null
+          ingredient_id: number | null
+          tenant_id: number | null
+          total_value: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_levels_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_levels_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_levels_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mv_top_items: {
         Row: {
           branch_id: number | null
@@ -4955,6 +6022,7 @@ export type Database = {
           is_online: boolean | null
           last_seen_at: string | null
           tenant_id: number | null
+          transport: string | null
           version: string | null
         }
         Insert: {
@@ -4963,6 +6031,7 @@ export type Database = {
           is_online?: never
           last_seen_at?: string | null
           tenant_id?: number | null
+          transport?: string | null
           version?: string | null
         }
         Update: {
@@ -4971,6 +6040,7 @@ export type Database = {
           is_online?: never
           last_seen_at?: string | null
           tenant_id?: number | null
+          transport?: string | null
           version?: string | null
         }
         Relationships: [
@@ -5002,6 +6072,28 @@ export type Database = {
         Returns: number
       }
       _auth_v2_role_to_position: { Args: { p_role: string }; Returns: string }
+      _compute_grn_price_baseline: {
+        Args: {
+          p_ingredient_id: number
+          p_supplier_id: number
+          p_tenant_id: number
+          p_uom?: string
+        }
+        Returns: {
+          avg_30d: number
+          baseline_source: string
+          last_seen_at: string
+          sample_n: number
+        }[]
+      }
+      acquire_zone_lock: {
+        Args: {
+          p_session_id: number
+          p_ttl_seconds?: number
+          p_zone_id: string
+        }
+        Returns: Json
+      }
       admin_update_profile: {
         Args: {
           p_branch_id?: number
@@ -5031,10 +6123,23 @@ export type Database = {
         }
         Returns: number
       }
+      approve_waste: {
+        Args: { p_decision: string; p_issue_id: number; p_note?: string }
+        Returns: undefined
+      }
+      assign_auditor: {
+        Args: {
+          p_auditor_branch_id?: number
+          p_auditor_id: string
+          p_session_id: number
+        }
+        Returns: undefined
+      }
       auth_area_id: { Args: never; Returns: number }
       auth_branch_id: { Args: never; Returns: number }
       auth_role: { Args: never; Returns: string }
       auth_tenant_id: { Args: never; Returns: number }
+      auto_close_periods: { Args: never; Returns: number }
       auto_post_journal: {
         Args: {
           p_branch_id: number
@@ -5077,8 +6182,20 @@ export type Database = {
         }
         Returns: Json
       }
+      close_period_hard: {
+        Args: { p_month: number; p_tenant_id: number; p_year: number }
+        Returns: undefined
+      }
+      close_period_soft: {
+        Args: { p_month: number; p_tenant_id: number; p_year: number }
+        Returns: undefined
+      }
       close_pos_session: {
         Args: { p_closing_cash: number; p_note?: string; p_session_id: number }
+        Returns: Json
+      }
+      close_recount_round: {
+        Args: { p_round_no: number; p_session_id: number }
         Returns: Json
       }
       complete_payment_and_consume_stock: {
@@ -5101,6 +6218,24 @@ export type Database = {
         Returns: undefined
       }
       complete_stocktake: { Args: { p_session_id: number }; Returns: Json }
+      compute_branch_daily_waste_caps: { Args: never; Returns: number }
+      compute_user_trust_score: {
+        Args: { p_branch_id: number; p_user_id: string }
+        Returns: number
+      }
+      configure_express_window: {
+        Args: {
+          p_branch_id: number
+          p_enabled: boolean
+          p_end_time?: string
+          p_start_time?: string
+        }
+        Returns: undefined
+      }
+      confirm_cash_payment: {
+        Args: { p_cash_received: number; p_order_id: number }
+        Returns: Json
+      }
       confirm_goods_receipt_note: { Args: { p_grn_id: number }; Returns: Json }
       confirm_payment_and_post: {
         Args: {
@@ -5204,10 +6339,64 @@ export type Database = {
         }
         Returns: Json
       }
+      create_waste_entry: {
+        Args: {
+          p_branch_id: number
+          p_items: Json
+          p_location_id: number
+          p_notes?: string
+          p_source_ref?: Json
+          p_source_type?: string
+        }
+        Returns: Json
+      }
+      create_waste_from_order: {
+        Args: {
+          p_items: Json
+          p_location_id: number
+          p_note?: string
+          p_order_id: number
+          p_source_type: string
+        }
+        Returns: Json
+      }
       current_position: { Args: never; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      enable_offline_for_session: {
+        Args: { p_session_id: number }
+        Returns: Json
+      }
       enqueue_kitchen_print: { Args: { p_order_id: number }; Returns: Json }
-      enqueue_receipt_print: { Args: { p_order_id: number }; Returns: Json }
+      enqueue_provisional_bill: {
+        Args: {
+          p_order_id: number
+          p_qr_content?: string
+          p_qr_header_label?: string
+        }
+        Returns: Json
+      }
+      enqueue_receipt_print: {
+        Args: {
+          p_cash_change?: number
+          p_cash_received?: number
+          p_order_id: number
+        }
+        Returns: Json
+      }
+      escalate_round_4: {
+        Args: {
+          p_final_qty: number
+          p_ingredient_id: number
+          p_note: string
+          p_session_id: number
+        }
+        Returns: undefined
+      }
+      extend_express_window: {
+        Args: { p_branch_id: number; p_minutes: number; p_note: string }
+        Returns: string
+      }
+      finalize_stocktake: { Args: { p_session_id: number }; Returns: Json }
       find_payment_order_desync: {
         Args: { p_since?: string }
         Returns: {
@@ -5225,6 +6414,55 @@ export type Database = {
           tenant_id: number
         }[]
       }
+      get_grn_price_baseline: {
+        Args: { p_ingredient_id: number; p_supplier_id: number; p_uom?: string }
+        Returns: {
+          avg_30d: number
+          baseline_source: string
+          last_seen_at: string
+          sample_n: number
+        }[]
+      }
+      get_ingredient_abc_class: {
+        Args: { p_branch_id: number; p_ingredient_id: number }
+        Returns: string
+      }
+      get_inventory_alerts: {
+        Args: {
+          p_branch_id: number
+          p_limit?: number
+          p_offset?: number
+          p_types?: string[]
+        }
+        Returns: {
+          alert_type: string
+          current_quantity: number
+          ingredient_id: number
+          ingredient_name: string
+          location_id: number
+          location_name: string
+          reorder_point: number
+          severity_rank: number
+          shortage_ratio: number
+        }[]
+      }
+      get_inventory_dashboard: { Args: { p_branch_id: number }; Returns: Json }
+      get_stocktake_lines_blind: {
+        Args: { p_session_id: number }
+        Returns: {
+          abc_class: string
+          counted_at: string
+          counted_by: string
+          counted_quantity: number
+          ingredient_id: number
+          ingredient_name: string
+          is_final: boolean
+          line_id: number
+          needs_recount: boolean
+          round_no: number
+          unit: string
+        }[]
+      }
       gl_reconciliation: {
         Args: { p_month: number; p_tenant_id: number; p_year: number }
         Returns: Json
@@ -5240,13 +6478,47 @@ export type Database = {
         }
         Returns: number
       }
+      grn_is_auto_approvable: { Args: { p_grn_id: number }; Returns: Json }
       has_permission: {
         Args: { p_branch_id: number; p_key: string }
         Returns: boolean
       }
       has_permission_any: { Args: { p_key: string }; Returns: boolean }
       has_position: { Args: { p_code: string }; Returns: boolean }
+      heartbeat_zone_lock: {
+        Args: {
+          p_session_id: number
+          p_ttl_seconds?: number
+          p_zone_id: string
+        }
+        Returns: string
+      }
+      inventory_requires_manual_review: {
+        Args: { p_ingredient_id: number }
+        Returns: boolean
+      }
+      inventory_shift_key: {
+        Args: { p_at?: string; p_branch_id: number }
+        Returns: string
+      }
+      is_feature_enabled: {
+        Args: { p_branch_id: number; p_flag_key: string }
+        Returns: boolean
+      }
       mark_all_notifications_read: { Args: never; Returns: number }
+      override_grn_hardblock: {
+        Args: {
+          p_evidence_url: string
+          p_grn_item_id: number
+          p_note: string
+          p_reason_code: string
+        }
+        Returns: number
+      }
+      period_status_at: {
+        Args: { p_at: string; p_tenant_id: number }
+        Returns: string
+      }
       post_payroll_journal: {
         Args: { p_payroll_period_id: number }
         Returns: number
@@ -5256,8 +6528,49 @@ export type Database = {
         Args: { p_invoice_id: number }
         Returns: Json
       }
+      refresh_abc_classification: { Args: never; Returns: number }
       refresh_finance_views: { Args: never; Returns: undefined }
+      refresh_inventory_dashboard: { Args: never; Returns: string }
       release_table: { Args: { p_table_id: number }; Returns: undefined }
+      release_zone_lock: {
+        Args: { p_session_id: number; p_zone_id: string }
+        Returns: boolean
+      }
+      reopen_period: {
+        Args: { p_month: number; p_tenant_id: number; p_year: number }
+        Returns: undefined
+      }
+      resolve_po_price: {
+        Args: { p_ingredient_id: number; p_supplier_id: number; p_uom: string }
+        Returns: {
+          effective_from: string
+          lead_time_days: number
+          min_order_qty: number
+          source: string
+          unit_price: number
+        }[]
+      }
+      resolve_po_prices_batch: {
+        Args: { p_items: Json; p_supplier_id: number }
+        Returns: {
+          effective_from: string
+          ingredient_id: number
+          lead_time_days: number
+          min_order_qty: number
+          source: string
+          unit_price: number
+          uom: string
+        }[]
+      }
+      resolve_stocktake_conflict: {
+        Args: {
+          p_conflict_id: number
+          p_manual_qty?: number
+          p_note?: string
+          p_resolution: string
+        }
+        Returns: Json
+      }
       retry_print_job: { Args: { p_job_id: number }; Returns: boolean }
       revoke_permission: {
         Args: {
@@ -5266,6 +6579,10 @@ export type Database = {
           p_target_user: string
         }
         Returns: number
+      }
+      rotate_branch_override_code: {
+        Args: { p_branch_id: number; p_new_code: string }
+        Returns: undefined
       }
       route_order_to_kds: { Args: { p_order_id: number }; Returns: undefined }
       save_item_modifiers: {
@@ -5300,6 +6617,18 @@ export type Database = {
         Args: { p_branch_id: number; p_kind?: string }
         Returns: undefined
       }
+      start_stocktake: {
+        Args: {
+          p_auditor_id?: string
+          p_blind_mode?: boolean
+          p_branch_id: number
+          p_location_id?: number
+          p_mode?: string
+          p_threshold_pct?: number
+          p_threshold_vnd?: number
+        }
+        Returns: Json
+      }
       stock_transfer_confirm_receive: {
         Args: { p_transfer_id: number }
         Returns: Json
@@ -5323,6 +6652,10 @@ export type Database = {
       }
       stock_transfer_receive: {
         Args: { p_items?: Json; p_transfer_id: number }
+        Returns: Json
+      }
+      submit_count_round: {
+        Args: { p_counts: Json; p_round_no: number; p_session_id: number }
         Returns: Json
       }
       sync_insurance_base: {
@@ -5363,6 +6696,7 @@ export type Database = {
         Args: { p_notes?: string; p_return_id: number; p_target_status: string }
         Returns: Json
       }
+      try_auto_approve_grn: { Args: { p_grn_id: number }; Returns: Json }
       update_my_profile: {
         Args: { p_avatar_url?: string; p_full_name?: string; p_phone?: string }
         Returns: undefined
@@ -5383,10 +6717,16 @@ export type Database = {
         Args: { p_entry_id: number }
         Returns: boolean
       }
+      verify_branch_override_code: {
+        Args: { p_branch_id: number; p_code: string }
+        Returns: boolean
+      }
       void_order_item: {
         Args: { p_order_item_id: number; p_reason: string }
         Returns: Json
       }
+      weekly_grn_override_report: { Args: never; Returns: number }
+      weekly_waste_report: { Args: never; Returns: number }
     }
     Enums: {
       [_ in never]: never
