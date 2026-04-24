@@ -6519,6 +6519,13 @@ export type Database = {
         Args: { p_at: string; p_tenant_id: number }
         Returns: string
       }
+      pos_enrich_order_sides: {
+        Args: { p_main_item_id: number; p_sides: Json; p_tenant_id: number }
+        Returns: {
+          enriched_sides: Json
+          sides_sum: number
+        }[]
+      }
       post_payroll_journal: {
         Args: { p_payroll_period_id: number }
         Returns: number
