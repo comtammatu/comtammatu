@@ -77,6 +77,7 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (/^\/br\/\d+\/pos/.test(resolvedPathname)) return "pos";
   if (/^\/br\/\d+\/kds/.test(resolvedPathname)) return "kds";
   if (resolvedPathname.startsWith("/employee")) return "employee";
+  if (resolvedPathname.startsWith("/notifications")) return "notifications";
 
   return null;
 }

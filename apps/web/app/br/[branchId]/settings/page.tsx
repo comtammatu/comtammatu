@@ -8,6 +8,7 @@ import {
   IconDeviceDesktop,
   IconLayoutGrid,
   IconPrinter,
+  IconReceipt2,
 } from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -68,6 +69,12 @@ export default async function BranchSettingsHubPage({
       title: "POS",
       description: "Máy POS đăng ký tại chi nhánh.",
       icon: <IconDeviceDesktop className="size-5" />,
+    },
+    {
+      href: `/br/${branchId}/settings/pos-sessions`,
+      title: "Ca POS",
+      description: "Lịch sử ca, bill, doanh thu, số món và đối soát chênh lệch.",
+      icon: <IconReceipt2 className="size-5" />,
     },
     {
       href: `/br/${branchId}/settings/printers`,

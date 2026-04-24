@@ -85,6 +85,23 @@ export async function getAuthContextWithAnyPermission(
   return null;
 }
 
+export async function getAuthContextWithPermissions(
+  allowedRoles: readonly StaffRole[],
+  permissions: readonly PermissionLike[],
+  branchId?: number | null,
+) {
+  const ctx = await getAuthContext(allowedRoles);
+  if (!ctx) return null;
+
+  for (const permission of permissions) {
+    if (!(await hasPermissionGrant(ctx, permission, branchId))) {
+      return null;
+    }
+  }
+
+  return ctx;
+}
+
 type LoadedAuthState = {
   supabase: Awaited<ReturnType<typeof createClient>>;
   session: Session;

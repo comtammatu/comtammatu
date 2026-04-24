@@ -1,17 +1,10 @@
-import { createClient } from "@comtammatu/database/supabase/server";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
-import { extractClaims } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { loadAuthState } from "@/_lib/auth";
 import { StockMovementClient } from "./stock-movement-client";
 
 export default async function StockMovementReportPage() {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const claims = session?.user
-    ? extractClaims(session.user.app_metadata)
-    : null;
+  const { supabase, claims } = await loadAuthState();
 
   const { data: branches } = await supabase
     .from("branches")
@@ -23,7 +16,7 @@ export default async function StockMovementReportPage() {
     .map((b) => ({ id: b.id, name: b.name }));
 
   const userBranchId =
-    claims?.user_role === "branch_manager" ? claims.branch_id : null;
+    claims.user_role === "branch_manager" ? claims.branch_id : null;
 
   return (
     <div className="space-y-5 lg:space-y-6">

@@ -1,19 +1,12 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
+import { loadAuthState } from "@/_lib/auth";
 import { BranchTable } from "./branch-table";
 import { AddBranchButton } from "./add-branch-button";
 
 export default async function BranchesPage() {
-  const supabase = await createClient();
+  const { supabase, claims } = await loadAuthState();
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const claims = session?.user
-    ? extractClaims(session.user.app_metadata)
-    : null;
-  if (!claims || !["owner", "super_manager"].includes(claims.user_role)) {
+  if (!["owner", "super_manager"].includes(claims.user_role)) {
     redirect("/admin/settings/tables");
   }
 

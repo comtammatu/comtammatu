@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
+import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 
 const weekStartSchema = z
@@ -34,7 +34,10 @@ export async function fetchMySchedule(
 
   if (!user) return { success: false, error: "Chưa đăng nhập" };
 
-  const claims = extractClaims(user.app_metadata);
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const claims = extractClaimsFromAccessToken(session?.access_token);
   if (!claims) return { success: false, error: "Không có quyền" };
 
   // Find employee record for current user

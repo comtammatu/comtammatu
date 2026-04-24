@@ -21,7 +21,8 @@ export type ModuleKey =
   | "pos"
   | "kds"
   | "branch_settings"
-  | "employee";
+  | "employee"
+  | "notifications";
 
 interface ModuleAcl {
   path: string;
@@ -53,7 +54,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   orders: {
     path: "/orders",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager", "cashier"],
     label: getModuleLabelVi("orders"),
   },
   staff: {
@@ -83,7 +84,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   settings: {
     path: "/admin/settings",
-    allowedRoles: ["owner", "super_manager"],
+    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
     label: getModuleLabelVi("settings"),
   },
   pos: {
@@ -105,6 +106,11 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/employee",
     allowedRoles: STAFF_ROLES,
     label: getModuleLabelVi("employee"),
+  },
+  notifications: {
+    path: "/notifications",
+    allowedRoles: STAFF_ROLES,
+    label: getModuleLabelVi("notifications"),
   },
 };
 

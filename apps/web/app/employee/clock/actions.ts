@@ -4,8 +4,11 @@ import { createHmac } from "node:crypto";
 import { z } from "zod";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { extractClaims } from "@comtammatu/shared/auth";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  extractClaimsFromAccessToken,
+  PERMISSION_KEYS,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "../../admin/_lib/auth";
 
@@ -57,7 +60,10 @@ async function getEmployeeContext() {
 
   if (!user) return null;
 
-  const claims = extractClaims(user.app_metadata);
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const claims = extractClaimsFromAccessToken(session?.access_token);
   if (!claims) return null;
 
   return { supabase, claims, user };

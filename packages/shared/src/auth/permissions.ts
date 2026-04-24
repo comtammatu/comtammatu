@@ -29,6 +29,17 @@ export const PERMISSION_KEYS = {
   INVENTORY_WRITEOFF: "inventory:writeoff",
   INVENTORY_PRODUCTION_CREATE: "inventory:production_create",
   INVENTORY_PRODUCTION_CONFIRM: "inventory:production_confirm",
+  // inventory — redesign S0 (waste tier-2, stocktake blind/recount, adjust, GRN express, catalog review)
+  INVENTORY_WASTE_APPROVE: "inventory:waste_approve",
+  INVENTORY_WASTE_BYPASS_PHOTO: "inventory:waste_bypass_photo",
+  INVENTORY_STOCKTAKE_RECOUNT: "inventory:stocktake_recount",
+  INVENTORY_STOCKTAKE_UNBLIND: "inventory:stocktake_unblind",
+  INVENTORY_ADJUST_APPROVE: "inventory:adjust_approve",
+  INVENTORY_GRN_EXPRESS_CONFIGURE: "inventory:grn_express_configure",
+  INVENTORY_GRN_EXPRESS_EXTEND: "inventory:grn_express_extend",
+  INVENTORY_GRN_HARDBLOCK_OVERRIDE: "inventory:grn_hardblock_override",
+  INVENTORY_CATALOG_REVIEW_POLICY_SET: "inventory:catalog_review_policy_set",
+  INVENTORY_ITEM_REVIEW_OVERRIDE_SET: "inventory:item_review_override_set",
 
   // procurement
   PROCUREMENT_READ: "procurement:read",
@@ -39,6 +50,13 @@ export const PERMISSION_KEYS = {
   PROCUREMENT_INVOICE_CREATE: "procurement:invoice_create",
   PROCUREMENT_INVOICE_MATCH: "procurement:invoice_match",
   PROCUREMENT_SUPPLIER_MANAGE: "procurement:supplier_manage",
+  // procurement — redesign S0 (price list + override code)
+  PROCUREMENT_PRICE_LIST_READ: "procurement:price_list_read",
+  PROCUREMENT_PRICE_LIST_WRITE: "procurement:price_list_write",
+  PROCUREMENT_OVERRIDE_CODE_ROTATE: "procurement:override_code_rotate",
+
+  // accounting
+  ACCOUNTING_PERIOD_REOPEN: "accounting:period_reopen",
 
   // supplier returns (QC at receiving + post-receipt returns)
   SUPPLIER_RETURN_READ: "supplier_return:read",
@@ -111,7 +129,7 @@ export const PERMISSION_KEYS = {
 export type PermissionKey = (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];
 
 /** Total count (static assertion — update when adding keys) */
-export const PERMISSION_KEY_COUNT = 68;
+export const PERMISSION_KEY_COUNT = 82;
 
 /**
  * Pure function: check if a permission set contains a given key.

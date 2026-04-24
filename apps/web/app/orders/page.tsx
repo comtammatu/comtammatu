@@ -1,11 +1,9 @@
 import Link from "next/link";
-import { getAuthContext } from "@/_lib/auth";
+import { loadAuthState } from "@/_lib/auth";
 import { fetchOrders } from "./actions";
 import { fetchRefunds } from "./refund-actions";
 import { OrdersClient } from "./orders-client";
 import { RefundsClient } from "./refunds-client";
-import { IconAlertCircle } from "@tabler/icons-react";
-import type { StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
@@ -14,55 +12,14 @@ import {
   CardTitle,
 } from "@comtammatu/ui/components/card";
 import {
-  Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
-
-const ALLOWED_ROLES: StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-  "cashier",
-];
+import { UrlTabs } from "@/_components/url-tabs";
 
 export default async function OrdersPage() {
-  const ctx = await getAuthContext(ALLOWED_ROLES);
-  if (!ctx) {
-    return (
-      <div className="space-y-5 lg:space-y-6">
-        <Card>
-          <CardContent className="p-5 sm:p-6">
-            <div className="space-y-3">
-              <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                Điều phối giao dịch
-              </span>
-              <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                Đơn hàng
-              </h2>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
-            <div className="flex size-14 items-center justify-center rounded-full border bg-muted text-primary">
-              <IconAlertCircle className="size-5" />
-            </div>
-            <div className="space-y-1.5">
-              <h3 className="text-2xl font-semibold">
-                Không có quyền truy cập
-              </h3>
-              <p className="max-w-md text-sm leading-6 text-muted-foreground">
-                Vai trò hiện tại chưa được phép vào khu vực đơn hàng.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const { claims } = await loadAuthState();
 
   const [ordersResult, refundsResult] = await Promise.all([
     fetchOrders(),
@@ -92,10 +49,10 @@ export default async function OrdersPage() {
     : [];
 
   const isManagerOrAbove = ["owner", "super_manager", "area_manager"].includes(
-    ctx.claims.user_role,
+    claims.user_role,
   );
   const canApproveRefund = ["owner", "super_manager"].includes(
-    ctx.claims.user_role,
+    claims.user_role,
   );
 
   const pendingRefundCount = refunds.filter(
@@ -136,7 +93,7 @@ export default async function OrdersPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="orders">
+          <UrlTabs defaultValue="orders">
             <TabsList className="rounded-lg border bg-card shadow-sm h-auto w-full justify-start gap-2 overflow-x-auto p-2">
               <TabsTrigger
                 value="orders"
@@ -169,7 +126,7 @@ export default async function OrdersPage() {
                 canApprove={canApproveRefund}
               />
             </TabsContent>
-          </Tabs>
+          </UrlTabs>
         </CardContent>
       </Card>
     </div>

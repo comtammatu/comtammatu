@@ -209,13 +209,12 @@ test("resolvePostLoginRedirect → branch_manager on own POS → allowed", () =>
   );
 });
 
-test("canAccess → only owner and super_manager can access admin modules", () => {
+test("canAccess → only owner and super_manager can access tenant admin modules", () => {
   const adminModules = [
     "dashboard",
     "staff",
     "crm",
     "reports",
-    "settings",
   ] as const;
   for (const moduleKey of adminModules) {
     assert.equal(canAccess("owner", moduleKey), true);
@@ -232,6 +231,22 @@ test("canAccess → only owner and super_manager can access admin modules", () =
     ] as const) {
       assert.equal(canAccess(role, moduleKey), false);
     }
+  }
+});
+
+test("canAccess → settings includes branch floor setting roles", () => {
+  for (const role of ["owner", "super_manager", "area_manager", "branch_manager"] as const) {
+    assert.equal(canAccess(role, "settings"), true);
+  }
+  for (const role of [
+    "warehouse_manager",
+    "production_manager",
+    "cashier",
+    "waiter",
+    "chef",
+    "office",
+  ] as const) {
+    assert.equal(canAccess(role, "settings"), false);
   }
 });
 

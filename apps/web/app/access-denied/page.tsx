@@ -64,13 +64,15 @@ export default async function AccessDeniedPage({
 
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button asChild className="flex-1">
-            <Link href="/">
+            <Link href="/" replace>
               <IconArrowLeft className="size-4" />
               Về trang mặc định
             </Link>
           </Button>
           <Button asChild variant="outline" className="flex-1">
-            <Link href="/login">Đăng nhập lại</Link>
+            <Link href="/login" replace>
+              Đăng nhập lại
+            </Link>
           </Button>
         </div>
       </CardContent>

@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@comtammatu/database/supabase/server";
+import {
+  extractClaimsFromAccessToken,
+  PERMISSION_KEYS,
+} from "@comtammatu/shared/auth";
 
 function decodeJwtPayload(token: string): unknown {
   const parts = token.split(".");
@@ -16,7 +20,10 @@ function decodeJwtPayload(token: string): unknown {
 }
 
 export async function GET() {
-  if (process.env.NODE_ENV === "production") {
+  if (
+    process.env.NODE_ENV === "production" ||
+    process.env.ENABLE_DEBUG_CLAIMS !== "true"
+  ) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -31,6 +38,19 @@ export async function GET() {
   const {
     data: { session },
   } = await supabase.auth.getSession();
+
+  const claims = extractClaimsFromAccessToken(session?.access_token);
+  if (!claims) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { data: canInspectClaims, error: permissionError } = await supabase.rpc(
+    "has_permission_any",
+    { p_key: PERMISSION_KEYS.STAFF_ASSIGN_PERMISSION },
+  );
+  if (permissionError || canInspectClaims !== true) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const decoded = session?.access_token
     ? decodeJwtPayload(session.access_token)

@@ -1,11 +1,11 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
-  Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
+import { UrlTabs } from "@/_components/url-tabs";
 import { CategoryTable } from "./category-table";
 import { AddCategoryButton } from "./add-category-button";
 import { ItemTable } from "./item-table";
@@ -66,7 +66,7 @@ export default async function MenuPage() {
 
       <Card>
         <CardContent className="p-5 sm:p-6">
-          <Tabs defaultValue="items">
+          <UrlTabs defaultValue="items">
             <TabsList className="h-11 rounded-lg bg-muted/60">
               <TabsTrigger value="items" className="px-5">
                 Món ăn
@@ -99,7 +99,7 @@ export default async function MenuPage() {
                 <CategoryTable categories={categories} />
               </div>
             </TabsContent>
-          </Tabs>
+          </UrlTabs>
         </CardContent>
       </Card>
     </div>
