@@ -12,16 +12,13 @@ export default async function MobileDraftsPage() {
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  if (!session) redirect("/login");
-
-  const claims = extractClaimsFromAccessToken(session.access_token);
-  if (!claims) redirect("/login");
-
+  const claims = extractClaimsFromAccessToken(session?.access_token);
   if (
+    !claims ||
     !PROCUREMENT_ROLES.includes(claims.user_role) ||
     !canAccess(claims.user_role, "inventory_procurement")
   ) {
-    redirect("/inventory/m?forbidden=1");
+    redirect("/access-denied?reason=insufficient-permission");
   }
 
   return (

@@ -144,13 +144,9 @@ export async function loadProductionSurfaceData({
     data: { session },
   } = await supabase.auth.getSession();
 
-  if (!session) {
-    redirect("/login");
-  }
-
-  const claims = extractClaimsFromAccessToken(session.access_token);
+  const claims = extractClaimsFromAccessToken(session?.access_token);
   if (!claims || !canAccessProductionSurface(claims.user_role)) {
-    redirect("/inventory?forbidden=1&reason=insufficient-permission");
+    redirect("/access-denied?reason=insufficient-permission");
   }
 
   const role = claims.user_role;
@@ -177,7 +173,7 @@ export async function loadProductionSurfaceData({
   ]);
 
   if (!canOpenProduction || !hasBranchAccess) {
-    redirect("/inventory?forbidden=1&reason=insufficient-permission");
+    redirect("/access-denied?reason=insufficient-permission");
   }
 
   const recipesPromise = includeRecipes

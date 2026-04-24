@@ -448,7 +448,7 @@ export async function fetchStocktakeSessions(
   let query = supabase
     .from("stocktake_sessions")
     .select(
-      "id, branch_id, location_id, started_at, completed_at, status, notes, created_at, created_by, branches(id, name, branch_kind)",
+      "id, branch_id, location_id, started_at, completed_at, status, notes, created_at, created_by, branches!stocktake_sessions_branch_id_fkey(id, name, branch_kind)",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("created_at", { ascending: false });

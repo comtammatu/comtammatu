@@ -42,10 +42,9 @@ export default async function MobileStockPage() {
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  if (!session) redirect("/login");
-  const claims = extractClaimsFromAccessToken(session.access_token);
+  const claims = extractClaimsFromAccessToken(session?.access_token);
   if (!claims || !INVENTORY_OPS_ROLES.includes(claims.user_role)) {
-    redirect("/inventory/m?forbidden=1");
+    redirect("/access-denied?reason=insufficient-permission");
   }
 
   const [ingredientsRes, stockRes, branchesRes] = await Promise.all([

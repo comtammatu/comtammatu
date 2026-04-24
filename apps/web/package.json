@@ -4,8 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "ui:add": "cd ../../packages/ui && pnpm dlx shadcn@latest add",
-    "ui:add-missing": "cd ../../packages/ui && pnpm dlx shadcn@latest add calendar carousel chart form input-otp resizable --yes --overwrite",
     "dev": "next dev --turbopack",
     "dev:webpack": "next dev",
     "dev:clean": "rm -rf .next && next dev --turbopack",
@@ -27,6 +25,7 @@
     "@tabler/icons-react": "^3.41.1",
     "@tanstack/react-query": "^5.99.2",
     "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.13.24",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "exceljs": "^4.4.0",

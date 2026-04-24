@@ -97,15 +97,6 @@ const VI_DICTIONARY: InventoryDictionary = {
     "/inventory/recipes": { short: "Định mức", long: "Định mức món bán" },
     "/inventory/suppliers": { long: "Nhà cung cấp" },
     "/inventory/settings": { long: "Cài đặt" },
-    "/inventory/settings/ingredients": {
-      short: "Nguyên liệu",
-      long: "Danh mục nguyên liệu",
-    },
-    "/inventory/settings/recipes": {
-      short: "Định mức",
-      long: "Định mức món bán",
-    },
-    "/inventory/settings/suppliers": { long: "Nhà cung cấp" },
     "/inventory/settings/expiry": {
       short: "Hạn dùng",
       long: "Hạn sử dụng",

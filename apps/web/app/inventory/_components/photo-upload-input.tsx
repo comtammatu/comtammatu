@@ -9,7 +9,7 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { IconTrash, IconUpload } from "@tabler/icons-react";
 import { toast } from "@comtammatu/ui/components/sonner";
 
-const BUCKET = "inventory-attachments";
+const DEFAULT_BUCKET = "inventory-attachments";
 
 type Props = {
   tenantId: number;
@@ -20,6 +20,13 @@ type Props = {
   /** Show plain URL input as fallback. Default true. */
   allowPaste?: boolean;
   disabled?: boolean;
+  /** Storage bucket override. Defaults to "inventory-attachments".
+   *  Use "grn-evidence" for S10 hardblock override PDFs. */
+  bucket?: string;
+  /** Restrict MIME — camera-only for waste tier 1 (S11). */
+  acceptTypes?: "image" | "image+pdf";
+  /** Trigger native camera instead of file picker (mobile). */
+  captureCamera?: boolean;
 };
 
 function randomFileSuffix(): string {
@@ -38,14 +45,20 @@ export function PhotoUploadInput({
   onChange,
   allowPaste = true,
   disabled = false,
+  bucket = DEFAULT_BUCKET,
+  acceptTypes = "image+pdf",
+  captureCamera = false,
 }: Props) {
   const [uploading, setUploading] = useState(false);
   const [pasteMode, setPasteMode] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function handleFile(file: File) {
-    if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
-      toast.error("Chỉ chấp nhận ảnh hoặc PDF.");
+    const pdfAllowed = acceptTypes === "image+pdf";
+    const isPdf = file.type === "application/pdf";
+    const isImage = file.type.startsWith("image/");
+    if (!isImage && !(pdfAllowed && isPdf)) {
+      toast.error(pdfAllowed ? "Chỉ chấp nhận ảnh hoặc PDF." : "Chỉ chấp nhận ảnh.");
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
@@ -58,7 +71,7 @@ export function PhotoUploadInput({
       const ext = extFromName(file.name) || ".jpg";
       const path = `${tenantId}/${folder}/${Date.now()}-${randomFileSuffix()}${ext}`;
       const { error: upErr } = await supabase.storage
-        .from(BUCKET)
+        .from(bucket)
         .upload(path, file, {
           cacheControl: "3600",
           upsert: false,
@@ -68,7 +81,7 @@ export function PhotoUploadInput({
         toast.error(upErr.message);
         return;
       }
-      const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+      const { data } = supabase.storage.from(bucket).getPublicUrl(path);
       onChange(data.publicUrl);
       toast.success("Đã tải ảnh lên.");
     } finally {
@@ -128,7 +141,8 @@ export function PhotoUploadInput({
           <input
             ref={inputRef}
             type="file"
-            accept="image/*,application/pdf"
+            accept={acceptTypes === "image" ? "image/*" : "image/*,application/pdf"}
+            {...(captureCamera ? { capture: "environment" } : {})}
             className="hidden"
             disabled={disabled || uploading}
             onChange={(e) => {

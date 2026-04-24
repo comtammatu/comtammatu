@@ -137,14 +137,13 @@ export default async function MobileGrnSupplierList({
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  if (!session) redirect("/login");
-  const claims = extractClaimsFromAccessToken(session.access_token);
-  if (!claims) redirect("/login");
-  if (!PROCUREMENT_ROLES.includes(claims.user_role)) {
-    redirect("/inventory/m?forbidden=1");
-  }
-  if (!canAccess(claims.user_role, "inventory_procurement")) {
-    redirect("/inventory/m?forbidden=1");
+  const claims = extractClaimsFromAccessToken(session?.access_token);
+  if (
+    !claims ||
+    !PROCUREMENT_ROLES.includes(claims.user_role) ||
+    !canAccess(claims.user_role, "inventory_procurement")
+  ) {
+    redirect("/access-denied?reason=insufficient-permission");
   }
 
   const { error } = await searchParams;

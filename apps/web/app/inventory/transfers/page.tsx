@@ -1,5 +1,4 @@
-import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaims } from "@comtammatu/shared/auth";
+import { loadAuthState } from "@/_lib/auth";
 import { fetchIngredients } from "../actions";
 import {
   fetchStockTransfers,
@@ -23,15 +22,9 @@ export default async function TransfersPage({
   const params = await searchParams;
   const branchFilter = parseBranchIdParam(params.branchId) ?? undefined;
 
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const claims = session?.user
-    ? extractClaims(session.user.app_metadata)
-    : null;
+  const { claims } = await loadAuthState();
 
-  const userBranchId = claims?.branch_id ?? null;
+  const userBranchId = claims.branch_id;
 
   const [trRes, brRes, ingRes, locRes] = await Promise.all([
     fetchStockTransfers(branchFilter),
@@ -65,7 +58,7 @@ export default async function TransfersPage({
       locations={locations}
       hqBranchId={hqBranchId}
       userBranchId={userBranchId}
-      userRole={claims?.user_role ?? "branch_manager"}
+      userRole={claims.user_role}
       basePath="/inventory/transfers"
     />
   );

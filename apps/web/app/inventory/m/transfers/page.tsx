@@ -67,11 +67,9 @@ export default async function MobileTransferHome({
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  if (!session) redirect("/login");
-  const claims = extractClaimsFromAccessToken(session.access_token);
-  if (!claims) redirect("/login");
-  if (!INVENTORY_OPS_ROLES.includes(claims.user_role)) {
-    redirect("/inventory/m?forbidden=1");
+  const claims = extractClaimsFromAccessToken(session?.access_token);
+  if (!claims || !INVENTORY_OPS_ROLES.includes(claims.user_role)) {
+    redirect("/access-denied?reason=insufficient-permission");
   }
 
   let query = supabase
