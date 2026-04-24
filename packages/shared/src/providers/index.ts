@@ -24,6 +24,10 @@ export { setInvoiceProvider, getInvoiceProvider } from "./invoice";
 
 // Implementations
 export { CashProvider } from "./impl/cash";
-export { VietQRProvider } from "./impl/vietqr";
+export {
+  VietQRProvider,
+  buildVietQrEmvco,
+  resolveBankBin,
+} from "./impl/vietqr";
 export { MoMoProvider } from "./impl/momo";
 export { MisaProvider } from "./impl/misa";

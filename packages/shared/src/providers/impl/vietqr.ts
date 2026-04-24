@@ -155,3 +155,75 @@ function sanitizeAscii(v: string, max: number): string {
     .replace(/\s+/g, " ");
   return ascii.slice(0, max);
 }
+
+// ─── EMVCo string builder — for thermal QR printing ──────────────────────
+// The VietQRProvider above returns a vietqr.io image URL (for web rendering).
+// For thermal-printer QR codes we need the raw EMVCo payload string per
+// NAPAS spec so the printer's native QR command rasterizes a scannable
+// code independently of any internet image service.
+
+const crc16 = (str: string): string => {
+  let crc = 0xffff;
+  for (let i = 0; i < str.length; i += 1) {
+    crc ^= str.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j += 1) {
+      if (crc & 0x8000) {
+        crc = ((crc << 1) ^ 0x1021) & 0xffff;
+      } else {
+        crc = (crc << 1) & 0xffff;
+      }
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, "0");
+};
+
+const tlv = (tag: string, value: string): string =>
+  `${tag}${value.length.toString().padStart(2, "0")}${value}`;
+
+/** Resolve a bank shortcode (VCB, TCB, ...) to its NAPAS BIN. Returns the
+ * input uppercase if unknown — caller decides whether to reject. */
+export function resolveBankBin(bankCode: string): string {
+  const upper = bankCode.toUpperCase();
+  return BANK_BINS[upper] ?? upper;
+}
+
+/**
+ * Build the VietQR EMVCo payment string for thermal printing. Returns
+ * `null` when required fields are missing so the caller can skip QR
+ * rendering gracefully (e.g. tenant without bank config).
+ */
+export function buildVietQrEmvco(input: {
+  bankCode: string;
+  accountNo: string;
+  amount: number;
+  description?: string;
+  accountName?: string;
+}): string | null {
+  if (!input.bankCode || !input.accountNo || input.amount <= 0) return null;
+  const bin = resolveBankBin(input.bankCode);
+  const amount = Math.round(input.amount).toString();
+  const description = sanitizeAscii(input.description ?? "", 25);
+  const merchantName =
+    sanitizeAscii(input.accountName ?? "", 25) || "MERCHANT";
+
+  const beneficiary = tlv("00", bin) + tlv("01", input.accountNo);
+  const merchantAccountInfo =
+    tlv("00", "A000000727") + tlv("01", beneficiary) + tlv("02", "QRIBFTTA");
+
+  const additionalData = description ? tlv("08", description) : "";
+
+  let payload =
+    tlv("00", "01") +
+    tlv("01", "12") +
+    tlv("38", merchantAccountInfo) +
+    tlv("53", "704") +
+    tlv("54", amount) +
+    tlv("58", "VN") +
+    tlv("59", merchantName) +
+    tlv("60", "VIETNAM") +
+    (additionalData ? tlv("62", additionalData) : "");
+
+  payload += "6304";
+  payload += crc16(payload);
+  return payload;
+}

@@ -630,3 +630,98 @@ export async function fetchDailyReconciliation(
 
   return { success: true, data: summary };
 }
+
+// ─── Confirm cash payment (atomic mark-paid + enqueue receipt) ───────────
+
+const cashConfirmSchema = z.object({
+  orderId: z.coerce.number().int().positive({ error: "Order ID không hợp lệ" }),
+  cashReceived: z.coerce
+    .number()
+    .positive({ error: "Số tiền nhận phải lớn hơn 0" }),
+});
+
+export interface CashPaymentResult {
+  order_id: number;
+  payment_id: number;
+  cash_received: number;
+  cash_change: number;
+  print_job_id: number;
+}
+
+/**
+ * Atomic cashier confirm: validates cash ≥ total, marks paid + consumes
+ * stock, persists cash values on the order, enqueues final receipt — all
+ * in one transaction (see confirm_cash_payment RPC).
+ *
+ * Blocks under-payment hard (use order discount for employee meals).
+ */
+export async function confirmCashPayment(
+  orderId: number,
+  cashReceived: number,
+): Promise<ActionResult<CashPaymentResult>> {
+  const parsed = cashConfirmSchema.safeParse({ orderId, cashReceived });
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Đầu vào không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_PRINT,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền thanh toán" };
+
+  const { supabase } = ctx;
+
+  const { data, error } = await supabase.rpc("confirm_cash_payment", {
+    p_order_id: parsed.data.orderId,
+    p_cash_received: parsed.data.cashReceived,
+  });
+
+  if (error) {
+    const msg = String(error.message ?? "").toLowerCase();
+    if (msg.includes("must be >=") || msg.includes("must be >") || msg.includes("cash_received")) {
+      return {
+        success: false,
+        error: "Tiền nhận phải lớn hơn hoặc bằng tổng cần thu.",
+      };
+    }
+    if (msg.includes("exceeds sane upper bound")) {
+      return {
+        success: false,
+        error: "Số tiền nhận vượt ngưỡng hợp lệ. Vui lòng kiểm tra lại.",
+      };
+    }
+    if (msg.includes("permission denied")) {
+      return { success: false, error: "Không có quyền thanh toán" };
+    }
+    if (msg.includes("tenant mismatch")) {
+      return { success: false, error: "Không có quyền truy cập đơn này" };
+    }
+    if (msg.includes("no active") && msg.includes("printer")) {
+      return {
+        success: false,
+        error: "Chi nhánh chưa cấu hình máy in hoá đơn. Liên hệ quản lý.",
+      };
+    }
+    return {
+      success: false,
+      error: "Không thể xác nhận thanh toán. Vui lòng thử lại.",
+    };
+  }
+
+  const result = data as unknown as {
+    order_id: number;
+    payment_id: number;
+    cash_received: number;
+    cash_change: number;
+    print_job_id: number;
+  } | null;
+  if (!result) {
+    return { success: false, error: "Không thể xác nhận thanh toán." };
+  }
+
+  return { success: true, data: result };
+}
