@@ -4,6 +4,7 @@ export interface ShellNavItem {
   href: string;
   label: string;
   icon: ElementType;
+  exact?: boolean;
   matchPrefixes?: string[];
 }
 
@@ -17,6 +18,9 @@ export function isNavItemActive(
   pathname: string,
 ): boolean {
   if (pathname === item.href) return true;
+  if (item.exact) {
+    return item.matchPrefixes?.some((p) => pathname.startsWith(p)) ?? false;
+  }
   if (pathname.startsWith(item.href + "/")) return true;
   return item.matchPrefixes?.some((p) => pathname.startsWith(p)) ?? false;
 }
