@@ -7,21 +7,26 @@ import {
   IconArrowBarDown,
   IconChartBar,
   IconClipboardList,
+  IconClipboardCheck,
   IconBuildingFactory,
   IconFileText,
   IconHourglass,
   IconLayoutDashboard,
+  IconLayoutGrid,
   IconLogout,
   IconCreditCard,
   IconPackage,
   IconPackageOff,
   IconReceipt,
+  IconRobot,
   IconSettings,
   IconShoppingCart,
   IconBuildingStore,
   IconTruck,
   IconUsers,
   IconToolsKitchen,
+  IconAlertOctagon,
+  IconTrash,
 } from "@tabler/icons-react";
 import { ROLE_LABEL_VI, type StaffRole } from "@comtammatu/shared/auth";
 import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
@@ -82,6 +87,11 @@ function buildInventoryGroups({
       title: "Hôm nay",
       items: [
         { href: "/inventory", label: "Tổng quan", icon: IconLayoutDashboard },
+        {
+          href: "/inventory/dashboard",
+          label: "Dashboard v2",
+          icon: IconLayoutGrid,
+        },
         {
           href: "/inventory/stock",
           label: tNav("stock", "navigation"),
@@ -144,6 +154,17 @@ function buildInventoryGroups({
     title: isBranchSite ? "Vận hành chi nhánh" : "Tồn và xuất",
     items: [
       { href: "/inventory/issues", label: issueLabel, icon: IconPackage },
+      { href: "/inventory/waste/new", label: "Tạo phiếu hao hụt", icon: IconTrash },
+      {
+        href: "/inventory/waste/approvals",
+        label: "Duyệt hao hụt",
+        icon: IconClipboardCheck,
+      },
+      {
+        href: "/inventory/waste/auto",
+        label: "Waste auto-gen",
+        icon: IconRobot,
+      },
     ],
   });
 
@@ -167,6 +188,16 @@ function buildInventoryGroups({
         href: "/inventory/stocktake",
         label: tNav("stocktake", "navigation"),
         icon: IconClipboardList,
+      },
+      {
+        href: "/inventory/stocktake/new",
+        label: "Mở phiên kiểm kê v2",
+        icon: IconClipboardCheck,
+      },
+      {
+        href: "/inventory/stocktake/conflicts",
+        label: "Conflict queue",
+        icon: IconAlertOctagon,
       },
       {
         href: "/inventory/expiry",
@@ -369,7 +400,7 @@ export function InventoryShell({
         </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset>{children}</SidebarInset>
+      <SidebarInset className="min-w-0">{children}</SidebarInset>
     </SidebarProvider>
   );
 }

@@ -5,11 +5,13 @@ export type ModuleLabelKey =
   | "menu"
   | "inventory"
   | "inventory_procurement"
+  | "inventory_admin"
   | "orders"
   | "staff"
   | "hr"
   | "crm"
   | "finance"
+  | "accounting"
   | "reports"
   | "settings"
   | "pos"
@@ -27,11 +29,13 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   menu: "Thực đơn",
   inventory: "Kho hàng",
   inventory_procurement: "Kho hàng — NCC & công thức",
+  inventory_admin: "Cấu hình kho",
   orders: "Đơn hàng bán",
   staff: "Nhân viên",
   hr: "Nhân sự & tiền lương",
   crm: "Khách hàng",
   finance: "Kế toán",
+  accounting: "Kỳ kế toán",
   reports: "Báo cáo",
   settings: "Cài đặt",
   pos: "POS",

@@ -53,6 +53,16 @@ export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
         label: APP_COPY_VI.foundationalStaff,
       },
       {
+        moduleKey: "inventory_admin",
+        icon: "ShieldCheck",
+        label: "Cấu hình kho",
+      },
+      {
+        moduleKey: "accounting",
+        icon: "Receipt",
+        label: "Kỳ kế toán",
+      },
+      {
         moduleKey: "settings",
         icon: "Settings",
         label: APP_COPY_VI.systemSetup,

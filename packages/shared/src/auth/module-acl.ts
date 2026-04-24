@@ -11,11 +11,13 @@ export type ModuleKey =
   | "menu"
   | "inventory"
   | "inventory_procurement"
+  | "inventory_admin"
   | "orders"
   | "staff"
   | "hr"
   | "crm"
   | "finance"
+  | "accounting"
   | "reports"
   | "settings"
   | "pos"
@@ -52,6 +54,22 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     allowedRoles: ["owner", "super_manager", "warehouse_manager", "production_manager"],
     label: getModuleLabelVi("inventory_procurement"),
   },
+  /**
+   * Cấu hình kho — admin tools: trust leaderboard, cold-chain policy,
+   * express windows, feature flags. Route gate passes these roles into
+   * the hub page; each sub-tool keeps its own fine-grained permission gate.
+   */
+  inventory_admin: {
+    path: "/admin/inventory",
+    allowedRoles: [
+      "owner",
+      "super_manager",
+      "area_manager",
+      "branch_manager",
+      "warehouse_manager",
+    ],
+    label: getModuleLabelVi("inventory_admin"),
+  },
   orders: {
     path: "/orders",
     allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager", "cashier"],
@@ -76,6 +94,12 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/finance",
     allowedRoles: ["owner", "super_manager"],
     label: getModuleLabelVi("finance"),
+  },
+  /** Accounting admin — period close / reopen. Gate on period_reopen perm. */
+  accounting: {
+    path: "/admin/accounting",
+    allowedRoles: ["owner", "super_manager"],
+    label: getModuleLabelVi("accounting"),
   },
   reports: {
     path: "/admin/reports",

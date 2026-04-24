@@ -69,6 +69,7 @@ const ADMIN_ICON_MAP: Record<string, React.ElementType> = {
   IconChefHat,
   IconReceipt,
   IconToolsKitchen,
+  IconShieldCheck,
 };
 
 function mapResolvedNavGroups(
