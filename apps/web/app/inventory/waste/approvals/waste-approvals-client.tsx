@@ -15,7 +15,8 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
-import { IconCheck, IconX, IconClock } from "@tabler/icons-react";
+import Link from "next/link";
+import { IconCheck, IconX, IconClock, IconRobot } from "@tabler/icons-react";
 import { WasteTierBadge } from "@/inventory/_components/waste-tier-badge";
 import { approveWaste } from "@/inventory/waste-actions";
 import { formatVND } from "@comtammatu/shared/format";
@@ -73,7 +74,22 @@ export function WasteApprovalsClient({ initial, branchFilter }: Props) {
             {branchFilter !== null ? ` • CN #${branchFilter}` : null}
           </p>
         </div>
-        <Badge variant="secondary">{rows.length} phiếu</Badge>
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="outline" size="sm" asChild>
+            {/* S11-ext gate (inv_s11_ext_auto_waste) — non-pilot branches redirect. */}
+            <Link
+              href={
+                branchFilter !== null
+                  ? `/inventory/waste/auto?branchId=${branchFilter}`
+                  : "/inventory/waste/auto"
+              }
+            >
+              <IconRobot className="size-4" />
+              Auto-waste
+            </Link>
+          </Button>
+          <Badge variant="secondary">{rows.length} phiếu</Badge>
+        </div>
       </div>
 
       {rows.length === 0 ? (

@@ -337,3 +337,140 @@ export async function getIngredientRollingWaste(
     data: { rollingSum, lineCount, tierOneThreshold: 150_000 },
   };
 }
+
+/* ─── Auto-gen waste from POS/KDS (S11-ext) ─── */
+
+const AUTO_WASTE_SOURCE_TYPES = [
+  "pos_return",
+  "kds_cancel_mid_cook",
+  "kds_cancel_after_cook",
+] as const;
+
+const autoWasteItemSchema = z.object({
+  ingredient_id: z.coerce.number().int().positive(),
+  quantity: z.coerce.number().positive(),
+  unit: z.string().min(1),
+  reason_code: z.enum(WASTE_REASON_CODES).optional(),
+});
+
+const createWasteFromOrderSchema = z.object({
+  orderId: z.coerce.number().int().positive(),
+  locationId: z.coerce.number().int().positive(),
+  sourceType: z.enum(AUTO_WASTE_SOURCE_TYPES),
+  items: z.array(autoWasteItemSchema).min(1).max(50),
+  note: z.string().max(1000).optional(),
+});
+
+export type AutoWasteResult = {
+  issueId: number | null;
+  sourceType: (typeof AUTO_WASTE_SOURCE_TYPES)[number];
+  lineCount: number;
+  /** True when the RPC failed — caller should soft-swallow and keep the
+   *  parent void/cancel operation successful (spec: void always succeeds). */
+  softFailed: boolean;
+  /** VN error string when softFailed=true. */
+  softError?: string;
+};
+
+/**
+ * POS/KDS adapter: create an auto waste entry from a voided/cancelled order.
+ *
+ * The caller (POS completePayment handler or KDS cancel button) is expected
+ * to have already expanded the order's recipe into `items[]` with concrete
+ * ingredient quantities. The server RPC `create_waste_from_order` seeds the
+ * waste header + rows, backfilling `reason_code=customer_return` for
+ * `pos_return` and `kds_cancel_*` for the corresponding cancel stages.
+ *
+ * Non-fatal semantics (spec §Tranche 2):
+ *   The parent void/cancel must succeed even when waste creation fails.
+ *   On failure this action returns `{ success: true, data: { softFailed: true } }`
+ *   so the caller can show a "waste sẽ xử lý thủ công" toast without
+ *   aborting the void/cancel flow.
+ */
+export async function createWasteFromOrder(
+  input: z.infer<typeof createWasteFromOrderSchema>,
+): Promise<ActionResult<AutoWasteResult>> {
+  const parsed = createWasteFromOrderSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Input không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    [],
+    PERMISSION_KEYS.INVENTORY_WRITEOFF,
+  );
+  if (!ctx) {
+    // Permission denied on the POS/KDS path — surface softFailed so void/cancel still runs.
+    return {
+      success: true,
+      data: {
+        issueId: null,
+        sourceType: parsed.data.sourceType,
+        lineCount: parsed.data.items.length,
+        softFailed: true,
+        softError: "Không có quyền tạo waste",
+      },
+    };
+  }
+  const { supabase } = ctx;
+
+  try {
+    const { data, error } = await supabase.rpc("create_waste_from_order", {
+      p_order_id: parsed.data.orderId,
+      p_location_id: parsed.data.locationId,
+      p_source_type: parsed.data.sourceType,
+      p_items: parsed.data.items,
+      p_note: parsed.data.note ?? undefined,
+    });
+    if (error) {
+      return {
+        success: true,
+        data: {
+          issueId: null,
+          sourceType: parsed.data.sourceType,
+          lineCount: parsed.data.items.length,
+          softFailed: true,
+          softError: mapWasteRpcError(error.code, error.message),
+        },
+      };
+    }
+    const raw = (data ?? {}) as Record<string, unknown>;
+    revalidatePath("/inventory/waste");
+    return {
+      success: true,
+      data: {
+        issueId:
+          raw.issue_id === null || raw.issue_id === undefined
+            ? null
+            : Number(raw.issue_id),
+        sourceType: parsed.data.sourceType,
+        lineCount: Number(raw.line_count ?? parsed.data.items.length),
+        softFailed: false,
+      },
+    };
+  } catch (e) {
+    return {
+      success: true,
+      data: {
+        issueId: null,
+        sourceType: parsed.data.sourceType,
+        lineCount: parsed.data.items.length,
+        softFailed: true,
+        softError:
+          e instanceof Error
+            ? e.message
+            : "Lỗi không xác định khi tạo waste auto",
+      },
+    };
+  }
+}
+
+function mapWasteRpcError(code: string | undefined, message: string): string {
+  if (code === "42501") return "Không có quyền tạo waste";
+  if (code === "P0002") return "Không tìm thấy order";
+  if (code === "22023") return message;
+  return "Không tạo được waste auto";
+}
