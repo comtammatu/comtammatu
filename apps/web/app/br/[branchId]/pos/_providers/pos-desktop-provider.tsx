@@ -15,6 +15,7 @@ import type { SessionOrder } from "../order-history";
 import { fetchSessionOrders, fetchTablesForBranch } from "../actions";
 import { CartStore } from "./cart-store";
 import { useOrderSync } from "../hooks/use-order-sync";
+import { makeDeduper } from "../_utils/make-deduper";
 import type { OrderType } from "../types";
 
 /* ─── Session context (stable) ─── */
@@ -50,8 +51,21 @@ type OperationalData = {
 };
 
 type OperationalDispatch = {
+  /** Raw promise-returning full refresh (orders + tables). */
   refreshAll: () => Promise<void>;
+  /** Raw promise-returning orders refresh. Used by the manual "Tải lại" button — always immediate. */
   refreshOrders: () => Promise<void>;
+  /**
+   * Deduped, fire-and-forget orders refresh. Bursts coalesce to at
+   * most 2 network calls (current + trailing). Use this from:
+   *   - post-mutation shell paths (submit, append, void, cancel, etc.)
+   *   - realtime `orders` handlers
+   *   - SUBSCRIBED-on-reconnect catch-up
+   *   - stale-visibility polls
+   */
+  refreshOrdersDeduped: () => void;
+  /** Deduped full refresh. Used by SUBSCRIBED catch-up + stale poll. */
+  refreshAllDeduped: () => void;
   setTables: (tables: BranchTable[]) => void;
 };
 
@@ -160,11 +174,22 @@ export function PosDesktopProvider({
   // cold load; `useOrderSync`'s first SUBSCRIBED catch-up is also skipped when
   // the seed is authoritative so there is no duplicate fetch on subscribe.
 
+  // Single deduper instance per (branchId, session.id) window — shared by
+  // realtime / SUBSCRIBED / stale-poll / post-mutation shell paths so a
+  // submit + simultaneous realtime event collapse to 1 fetch, not 2.
+  // Dependencies mirror loadOrders / refreshAll so the deduper is
+  // recreated when the underlying fetch closures change.
+  const refreshOrdersDeduped = useMemo(
+    () => makeDeduper(loadOrders),
+    [loadOrders],
+  );
+  const refreshAllDeduped = useMemo(() => makeDeduper(refreshAll), [refreshAll]);
+
   useOrderSync({
     branchId,
     setTables,
-    refreshOrders: loadOrders,
-    refreshAll,
+    refreshOrders: refreshOrdersDeduped,
+    refreshAll: refreshAllDeduped,
     skipFirstSubscribedRefresh: initialOrdersSeeded,
   });
 
@@ -172,9 +197,11 @@ export function PosDesktopProvider({
     () => ({
       refreshAll,
       refreshOrders: loadOrders,
+      refreshOrdersDeduped,
+      refreshAllDeduped,
       setTables,
     }),
-    [refreshAll, loadOrders],
+    [refreshAll, loadOrders, refreshOrdersDeduped, refreshAllDeduped],
   );
 
   return (

@@ -6,43 +6,21 @@ import type { BranchTable } from "../page";
 
 const STALE_POLL_MS = 20_000;
 
-/**
- * In-flight deduper with trailing follow-up.
- *
- * Guarantees eventual consistency (the LAST caller always produces a
- * fetch) while collapsing bursts of realtime events, SUBSCRIBED
- * reconnects, and stale-poll ticks into at most 2 fetches total
- * (current + one trailing). No artificial time delay — the window is
- * defined by the in-flight fetch itself.
- *
- * NOT used by the manual "Tải lại" button — that path calls the raw
- * refreshOrders dispatcher so the operator always sees an immediate
- * round-trip when they explicitly ask for it.
- */
-function makeDeduper(fn: () => Promise<void>): () => void {
-  let inflight: Promise<void> | null = null;
-  let pending = false;
-  const run = (): void => {
-    if (inflight !== null) {
-      pending = true;
-      return;
-    }
-    inflight = fn().finally(() => {
-      inflight = null;
-      if (pending) {
-        pending = false;
-        run();
-      }
-    });
-  };
-  return run;
-}
-
 export interface UseOrderSyncArgs {
   branchId: number;
   setTables: React.Dispatch<React.SetStateAction<BranchTable[]>>;
-  refreshOrders: () => Promise<void>;
-  refreshAll: () => Promise<void>;
+  /**
+   * Fire-and-forget refresh of the session orders list. MUST already
+   * be deduped by the caller — this hook fires it on every realtime
+   * `orders` postgres_changes event and would otherwise thrash.
+   * Provided by PosDesktopProvider via _utils/make-deduper.
+   */
+  refreshOrders: () => void;
+  /**
+   * Fire-and-forget full refresh (orders + tables). Also caller-deduped.
+   * Invoked on SUBSCRIBED-reconnect and the stale visibility poll.
+   */
+  refreshAll: () => void;
   /**
    * When true, the FIRST `SUBSCRIBED` callback (initial mount subscription)
    * does not fire a catch-up refresh — orders are already seeded by the
@@ -68,21 +46,6 @@ export function useOrderSync({
   const lastSyncRef = useRef<number>(Date.now());
   const initialSubscribeSeenRef = useRef(false);
 
-  // Dedupers for realtime / SUBSCRIBED / stale-poll paths. Lazy-init
-  // so the closures bind to the stable refs above. Each deduper calls
-  // `refreshXRef.current()` at invocation time, which always reflects
-  // the latest callback from the parent provider.
-  const dedupedRefreshOrdersRef = useRef<(() => void) | null>(null);
-  const dedupedRefreshAllRef = useRef<(() => void) | null>(null);
-  if (dedupedRefreshOrdersRef.current === null) {
-    dedupedRefreshOrdersRef.current = makeDeduper(() =>
-      refreshOrdersRef.current(),
-    );
-  }
-  if (dedupedRefreshAllRef.current === null) {
-    dedupedRefreshAllRef.current = makeDeduper(() => refreshAllRef.current());
-  }
-
   useEffect(() => {
     refreshOrdersRef.current = refreshOrders;
     refreshAllRef.current = refreshAll;
@@ -104,7 +67,7 @@ export function useOrderSync({
         },
         () => {
           lastSyncRef.current = Date.now();
-          dedupedRefreshOrdersRef.current?.();
+          refreshOrdersRef.current();
         },
       )
       .on(
@@ -140,7 +103,7 @@ export function useOrderSync({
           initialSubscribeSeenRef.current = true;
           if (skipFirstSubscribedRefresh) return;
         }
-        dedupedRefreshAllRef.current?.();
+        refreshAllRef.current();
       });
 
     return () => {
@@ -152,7 +115,7 @@ export function useOrderSync({
     const intervalId = window.setInterval(() => {
       if (document.visibilityState === "hidden") return;
       if (Date.now() - lastSyncRef.current < STALE_POLL_MS) return;
-      dedupedRefreshAllRef.current?.();
+      refreshAllRef.current();
     }, STALE_POLL_MS);
     return () => {
       window.clearInterval(intervalId);

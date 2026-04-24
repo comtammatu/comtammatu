@@ -127,7 +127,7 @@ function PosDesktopInner({
   const { branchId, session } = usePosSession();
   const orders = usePosOrders();
   const tables = usePosTables();
-  const { refreshOrders } = usePosOperationalDispatch();
+  const { refreshOrders, refreshOrdersDeduped } = usePosOperationalDispatch();
   const cartStore = usePosCartStore();
   const cartOrderType = useCartOrderType();
   const cartItemCount = useCartItemCount();
@@ -199,9 +199,13 @@ function PosDesktopInner({
   }, []);
 
   const refreshOperational = useCallback(async () => {
-    await refreshOrders();
+    // Deduped fire-and-forget: if realtime already fired a fetch for
+    // the same mutation, this call coalesces instead of racing. Detail
+    // sheet refresh-token fires independently so its own refetch kicks
+    // in regardless of orders-list fetch timing.
+    refreshOrdersDeduped();
     bumpDetailRefresh();
-  }, [refreshOrders, bumpDetailRefresh]);
+  }, [refreshOrdersDeduped, bumpDetailRefresh]);
 
   // Clear selected table if it becomes unavailable while in dine-in mode.
   useEffect(() => {
