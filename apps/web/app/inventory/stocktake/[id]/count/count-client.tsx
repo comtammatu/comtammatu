@@ -18,7 +18,9 @@ import {
   type DraftCounts,
 } from "../../../_components/stocktake-draft-saver";
 import { ZoneLockIndicator } from "../../../_components/zone-lock-indicator";
+import { VarianceHeatmapTable } from "../../../_components/variance-heatmap-row";
 import {
+  closeRecountRound,
   submitCountRound,
   type StocktakeLineBlind,
 } from "../../../stocktake-actions";
@@ -76,6 +78,57 @@ export function StocktakeCountClient({
     return out as Partial<Record<1 | 2 | 3 | 4, number>>;
   }, [lines]);
 
+  // Group lines by ingredient for the heatmap (R2+ recount view).
+  const heatmapRows = useMemo(() => {
+    if (currentRound < 2) return [];
+    type Group = {
+      ingredientId: number;
+      ingredientName: string;
+      unit: string;
+      abcClass: "A" | "B" | "C" | null;
+      rounds: Array<{
+        roundNo: 1 | 2 | 3 | 4;
+        countedQuantity: number | null;
+        countedBy: string | null;
+      }>;
+      isFinal: boolean;
+      needsRecount: boolean;
+      thresholdPct: number;
+    };
+    const map = new Map<number, Group>();
+    for (const l of lines) {
+      const existing = map.get(l.ingredientId);
+      const round = {
+        roundNo: Math.min(4, Math.max(1, l.roundNo)) as 1 | 2 | 3 | 4,
+        countedQuantity: l.countedQuantity,
+        countedBy: l.countedBy,
+      };
+      if (existing) {
+        existing.rounds.push(round);
+        existing.isFinal = existing.isFinal || l.isFinal;
+        existing.needsRecount = existing.needsRecount || l.needsRecount;
+      } else {
+        map.set(l.ingredientId, {
+          ingredientId: l.ingredientId,
+          ingredientName: l.ingredientName,
+          unit: l.unit,
+          abcClass: l.abcClass,
+          rounds: [round],
+          isFinal: l.isFinal,
+          needsRecount: l.needsRecount,
+          thresholdPct: l.abcClass === "A" ? 3 : 5,
+        });
+      }
+    }
+    // Filter to rows that have any variance or need recount — hide perfectly
+    // aligned rows so the counter focuses on outliers.
+    return Array.from(map.values()).filter(
+      (g) =>
+        g.needsRecount ||
+        g.rounds.filter((r) => typeof r.countedQuantity === "number").length >= 2,
+    );
+  }, [lines, currentRound]);
+
   function onCountChange(ingredientId: number, qty: number | null) {
     setCounts((prev) => {
       const next = { ...prev };
@@ -122,6 +175,37 @@ export function StocktakeCountClient({
     });
   }
 
+  function closeRound() {
+    startTransition(async () => {
+      const res = await closeRecountRound({
+        sessionId,
+        roundNo: currentRound,
+      });
+      if (!res.success || !res.data) {
+        toast.error(res.error ?? "Không đóng round được");
+        return;
+      }
+      const d = res.data;
+      if (d.round4EscalationRequired) {
+        toast.warning(
+          `Round ${d.roundNo} đóng — còn ${d.needsRecountCount} dòng cần escalation R4`,
+        );
+        router.push(`/inventory/stocktake/${sessionId}/escalate`);
+        return;
+      }
+      if (d.nextRound) {
+        toast.success(
+          `Round ${d.roundNo} đóng — ${d.finalCount} final, ${d.needsRecountCount} chuyển sang R${d.nextRound}`,
+        );
+      } else {
+        toast.success(
+          `Round ${d.roundNo} đóng — ${d.finalCount} dòng đã final. Session sẵn sàng finalize.`,
+        );
+      }
+      router.refresh();
+    });
+  }
+
   return (
     <>
       <InventoryHeader
@@ -153,18 +237,31 @@ export function StocktakeCountClient({
           />
         ) : null}
 
+        {currentRound >= 2 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Biểu đồ variance R1→R{currentRound}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <VarianceHeatmapTable rows={heatmapRows} showEscalateIcon />
+            </CardContent>
+          </Card>
+        ) : null}
+
         <Card>
           <CardHeader>
-            <CardTitle>Danh sách đếm</CardTitle>
+            <CardTitle>
+              {currentRound === 1 ? "Danh sách đếm" : `Recount R${currentRound}`}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <BlindCountingGrid
-              lines={lines}
+              lines={lines.filter((l) => l.roundNo === currentRound)}
               counts={counts}
               onCountChange={onCountChange}
               blindMode={blindMode}
               readOnly={!editable}
-              onlyNeedsRecount={onlyRecount}
+              onlyNeedsRecount={currentRound > 1 ? true : onlyRecount}
             />
             <BlindCountingGridToolbar
               onSubmit={submit}
@@ -172,14 +269,25 @@ export function StocktakeCountClient({
               canSubmit={editable && Object.keys(counts).length > 0}
               onToggleOnlyRecount={
                 currentRound > 1
-                  ? () => setOnlyRecount((v) => !v)
-                  : undefined
+                  ? undefined
+                  : () => setOnlyRecount((v) => !v)
               }
               onlyRecount={onlyRecount}
             >
               {!editable ? (
                 <Button variant="outline" size="sm" disabled>
                   {status === "completed" ? "Đã hoàn thành" : "Không thể sửa"}
+                </Button>
+              ) : null}
+              {editable ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={closeRound}
+                  disabled={pending}
+                >
+                  {pending ? "Đang đóng…" : `Đóng round R${currentRound}`}
                 </Button>
               ) : null}
             </BlindCountingGridToolbar>
