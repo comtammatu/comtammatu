@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
@@ -46,7 +46,7 @@ import type { OrderData } from "./_components/bill/bill-receipt-types";
 // carry extra UI-only fields (status, menu_item_id) used by the detail
 // sheet. Structurally assignable to OrderData → this type can be passed
 // to BillReceipt.initialOrder without conversion.
-type OrderDetailData = Omit<OrderData, "order_items"> & {
+export type OrderDetailData = Omit<OrderData, "order_items"> & {
   order_items: OrderItemRowData[];
 };
 
@@ -58,6 +58,16 @@ export interface OrderDetailSheetProps {
   orderId: number | null;
   orderNumber?: string | null;
   refreshToken?: number;
+  /**
+   * Parent-provided detail payload to seed the sheet on mount. When its
+   * `id === orderId`, the sheet renders immediately from this data and
+   * skips the `fetchOrderDetail` round-trip. `refreshToken` still forces
+   * a fresh fetch when the caller needs it (e.g. after void/cancel).
+   * Handed off by `fetchActiveOrderForTable` via the POS shell.
+   */
+  initialOrder?: OrderDetailData | null;
+  /** canManageOrders hint matching `initialOrder` — mirrors fetchOrderDetail's result.canManageOrders. */
+  initialCanManage?: boolean;
   onClose: () => void;
   /**
    * Hand off to the bill sheet. `seed` is the already-fetched order data —
@@ -75,6 +85,8 @@ export function OrderDetailSheet({
   orderId,
   orderNumber,
   refreshToken,
+  initialOrder,
+  initialCanManage,
   onClose,
   onOpenBill,
   onStartAppend,
@@ -113,9 +125,36 @@ export function OrderDetailSheet({
     });
   }, [orderId]);
 
+  // Latest-value refs for the seed inputs. Reading them from refs (not
+  // deps) keeps the mount effect from re-firing when the shell clears
+  // the seed AFTER it has been applied — re-firing would trigger the
+  // very `load()` we just avoided.
+  const initialOrderRef = useRef(initialOrder);
+  const initialCanManageRef = useRef(initialCanManage);
   useEffect(() => {
+    initialOrderRef.current = initialOrder;
+    initialCanManageRef.current = initialCanManage;
+  }, [initialOrder, initialCanManage]);
+
+  // Mount / orderId-change effect: seed from parent-provided payload
+  // when it matches (no fetch), else call `load()`. `refreshToken` has
+  // its own effect below that always re-fetches — so void/cancel/etc.
+  // still see fresh data.
+  useEffect(() => {
+    if (orderId === null) {
+      setData(null);
+      setError(null);
+      return;
+    }
+    const seed = initialOrderRef.current;
+    if (seed != null && seed.id === orderId) {
+      setData(seed);
+      setCanManage(Boolean(initialCanManageRef.current));
+      setError(null);
+      return;
+    }
     load();
-  }, [load]);
+  }, [load, orderId]);
 
   useEffect(() => {
     if (orderId === null || refreshToken == null) return;

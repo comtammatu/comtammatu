@@ -266,10 +266,25 @@ const activeTableOrderSchema = z.object({
   tableId: z.coerce.number().int().positive({ error: "Bàn không hợp lệ" }),
 });
 
+/**
+ * Look up the active order for a table AND return its full detail in a
+ * single round-trip. Previously this returned only {id, order_number};
+ * that meant the caller (shell → OrderDetailSheet) did two fetches
+ * (lookup + fetchOrderDetail) to open the detail view. Now the caller
+ * can seed OrderDetailSheet directly with the returned payload.
+ *
+ * Shape mirrors fetchOrderDetail so the shell can treat both sources
+ * uniformly.
+ */
 export async function fetchActiveOrderForTable(
   branchId: number,
   tableId: number,
-): Promise<ActionResult<{ id: number; order_number: string } | null>> {
+): Promise<
+  ActionResult<{
+    order: Record<string, unknown>;
+    canManageOrders: boolean;
+  } | null>
+> {
   const parsed = activeTableOrderSchema.safeParse({ branchId, tableId });
   if (!parsed.success) {
     return {
@@ -287,9 +302,53 @@ export async function fetchActiveOrderForTable(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
+  const voidCtx = await getAuthContextWithPermission(
+    POS_VOID_ROLES,
+    PERMISSION_KEYS.POS_VOID_ORDER,
+    claims.branch_id,
+  );
+
   const { data, error } = await supabase
     .from("orders")
-    .select("id, order_number")
+    .select(
+      `
+      id,
+      order_number,
+      order_type,
+      status,
+      payment_status,
+      payment_method,
+      subtotal,
+      tax_amount,
+      service_charge,
+      discount_amount,
+      total_amount,
+      customer_count,
+      note,
+      created_at,
+      table_id,
+      tables (
+        number
+      ),
+      branches (
+        name,
+        address
+      ),
+      order_items (
+        id,
+        item_name,
+        variant_name,
+        quantity,
+        unit_price,
+        subtotal,
+        modifiers,
+        sides,
+        note,
+        status,
+        menu_item_id
+      )
+    `,
+    )
     .eq("branch_id", parsed.data.branchId)
     .eq("tenant_id", claims.tenant_id)
     .eq("table_id", parsed.data.tableId)
@@ -305,7 +364,15 @@ export async function fetchActiveOrderForTable(
     };
   }
 
-  return { success: true, data: data ?? null };
+  if (data === null) return { success: true, data: null };
+
+  return {
+    success: true,
+    data: {
+      order: data,
+      canManageOrders: voidCtx !== null,
+    },
+  };
 }
 
 /* ─── fetchOrderForBill ─── */

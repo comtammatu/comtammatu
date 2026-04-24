@@ -43,6 +43,7 @@ import type { MenuCategory, MenuItem } from "./pos-menu-types";
 import type { ActiveSession, BranchTable } from "./page";
 import type { SessionOrder } from "./order-history";
 import type { OrderData } from "./_components/bill/bill-receipt-types";
+import type { OrderDetailData } from "./order-detail-sheet";
 import {
   PosDesktopProvider,
   usePosOperationalDispatch,
@@ -163,6 +164,16 @@ function PosDesktopInner({
   const [orderDetailNumber, setOrderDetailNumber] = useState<string | null>(
     null,
   );
+  // Seed for OrderDetailSheet's first render. Populated when the cashier
+  // taps an occupied table (`fetchActiveOrderForTable` already returns the
+  // full detail + canManage hint) so the sheet can paint items/total
+  // without its own fetchOrderDetail round-trip. Null for code paths
+  // that only know the orderId (e.g. post-submit `focusOrderWorkflow`,
+  // OrderListPane detail open) → sheet falls back to its normal fetch.
+  const [orderDetailSeed, setOrderDetailSeed] = useState<{
+    order: OrderDetailData;
+    canManage: boolean;
+  } | null>(null);
   const [showOrders, setShowOrders] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [detailRefreshTick, setDetailRefreshTick] = useState(0);
@@ -265,7 +276,14 @@ function PosDesktopInner({
       startTransition(async () => {
         const result = await fetchActiveOrderForTable(branchId, table.id);
         if (result.success && result.data) {
-          focusOrderWorkflow(result.data.id, result.data.order_number);
+          const order = result.data.order as unknown as OrderDetailData;
+          // Seed the detail sheet with the already-fetched payload so it
+          // renders immediately — no second round-trip for the same row.
+          setOrderDetailSeed({
+            order,
+            canManage: result.data.canManageOrders,
+          });
+          focusOrderWorkflow(order.id, order.order_number);
           void refreshOperational();
           return;
         }
@@ -520,8 +538,17 @@ function PosDesktopInner({
 
   const openDetail = useCallback((id: number, orderNumber?: string | null) => {
     setCartDrawerOpen(false);
+    // Clear any table-tap seed: this path (OrderListPane row tap) only
+    // has the id, so OrderDetailSheet must fall back to its own fetch.
+    setOrderDetailSeed(null);
     setOrderDetailId(id);
     setOrderDetailNumber(orderNumber ?? null);
+  }, []);
+
+  const closeOrderDetail = useCallback(() => {
+    setOrderDetailId(null);
+    setOrderDetailNumber(null);
+    setOrderDetailSeed(null);
   }, []);
 
   useKeyboardShortcut([
@@ -813,18 +840,15 @@ function PosDesktopInner({
         orderId={orderDetailId}
         orderNumber={orderDetailNumber}
         refreshToken={detailRefreshTick}
-        onClose={() => {
-          setOrderDetailId(null);
-          setOrderDetailNumber(null);
-        }}
+        initialOrder={orderDetailSeed?.order ?? null}
+        initialCanManage={orderDetailSeed?.canManage ?? false}
+        onClose={closeOrderDetail}
         onOpenBill={(id, seed) => {
-          setOrderDetailId(null);
-          setOrderDetailNumber(null);
+          closeOrderDetail();
           openBill(id, seed);
         }}
         onStartAppend={(oid, onum) => {
-          setOrderDetailId(null);
-          setOrderDetailNumber(null);
+          closeOrderDetail();
           setCartDrawerOpen(false);
           startAppendTarget(oid, onum);
           setShowOrders(false);
