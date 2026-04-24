@@ -13,12 +13,16 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test:codepage": "tsx scripts/test-codepage.ts",
+    "test:bitmap": "tsx scripts/test-bitmap.ts",
+    "test:vn27": "tsx scripts/test-vn27.ts",
+    "test:all": "tsx scripts/test-all.ts",
     "package": "pkg ."
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
     "dotenv": "^17.2.0",
-    "iconv-lite": "^0.6.3"
+    "iconv-lite": "^0.6.3",
+    "pureimage": "^0.4.18"
   },
   "optionalDependencies": {
     "usb": "^2.16.0"
@@ -30,10 +34,13 @@
     "typescript": "^6.0.3"
   },
   "pkg": {
-    "targets": ["node24-win-x64"],
+    "targets": [
+      "node24-win-x64"
+    ],
     "outputPath": "dist-bin",
     "assets": [
-      "node_modules/usb/prebuilds/**/*"
+      "node_modules/usb/prebuilds/**/*",
+      "assets/fonts/**/*"
     ]
   }
 }

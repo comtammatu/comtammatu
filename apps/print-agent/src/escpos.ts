@@ -136,10 +136,10 @@ const padLeft = (s: string, width: number) =>
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
-type ModifierLine = { name?: string; price?: number };
-type SideLine = { name?: string; side_item_name?: string; quantity?: number };
+export type ModifierLine = { name?: string; price?: number };
+export type SideLine = { name?: string; side_item_name?: string; quantity?: number };
 
-type KitchenPayload = {
+export type KitchenPayload = {
   kind: "kitchen_ticket";
   order_number: string;
   order_type: "dine_in" | "takeaway";
@@ -161,7 +161,7 @@ type KitchenPayload = {
 };
 
 /** Pre-built QR content (backend decides VietQR vs MoMo based on tenant setting). */
-type PaymentQR = {
+export type PaymentQR = {
   type: "vietqr" | "momo";
   /** Raw QR payload string, ready to scan (EMV for VietQR, URL/scheme for MoMo). */
   content: string;
@@ -173,7 +173,7 @@ type PaymentQR = {
   description: string;
 };
 
-type BillBase = {
+export type BillBase = {
   branch_name?: string;
   branch_address?: string;
   branch_phone?: string;
@@ -203,13 +203,13 @@ type BillBase = {
   printed_at: string;
 };
 
-type ProvisionalBillPayload = BillBase & {
+export type ProvisionalBillPayload = BillBase & {
   kind: "provisional_bill";
   /** Always present on tạm tính (khách cần QR để chuyển khoản/MoMo). */
   payment_qr: PaymentQR;
 };
 
-type ReceiptPayload = BillBase & {
+export type ReceiptPayload = BillBase & {
   kind: "receipt";
   /** Narrowed to 3 methods (cash | bank_transfer | momo). Unknown values render
    * via fallback to raw key. Optional for backward-compat with old backend

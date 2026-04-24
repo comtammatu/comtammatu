@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { renderPayload, type PrintPayload } from "./escpos.js";
+import { renderPayloadBitmap } from "./escpos-bitmap.js";
 import { sendRawLAN } from "./lan.js";
 
 type PrinterRow = {
@@ -27,6 +28,7 @@ type PrintJobRow = {
 };
 
 type Transport = "lan" | "all";
+type PrintMode = "text" | "bitmap";
 
 const requireEnv = (k: string): string => {
   const v = process.env[k];
@@ -40,6 +42,12 @@ const parseTransport = (raw: string | undefined): Transport => {
   throw new Error(`Invalid AGENT_TRANSPORT=${raw} (expected 'lan' or 'all')`);
 };
 
+const parsePrintMode = (raw: string | undefined): PrintMode => {
+  const v = (raw ?? "text").toLowerCase();
+  if (v === "text" || v === "bitmap") return v;
+  throw new Error(`Invalid PRINT_MODE=${raw} (expected 'text' or 'bitmap')`);
+};
+
 const config = {
   supabaseUrl: requireEnv("SUPABASE_URL"),
   serviceKey: requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
@@ -48,6 +56,7 @@ const config = {
   agentId: process.env.AGENT_ID ?? `agent-${process.pid}`,
   version: process.env.AGENT_VERSION ?? "0.1.0",
   transport: parseTransport(process.env.AGENT_TRANSPORT),
+  printMode: parsePrintMode(process.env.PRINT_MODE),
 };
 
 const printerCache = new Map<number, PrinterRow>();
@@ -155,7 +164,10 @@ async function dispatch(job: PrintJobRow): Promise<void> {
   if (!printer) {
     throw new Error(`printer ${job.printer_id} not in cache / inactive`);
   }
-  const bytes = renderPayload(job.payload);
+  const bytes =
+    config.printMode === "bitmap"
+      ? await renderPayloadBitmap(job.payload)
+      : renderPayload(job.payload);
 
   if (printer.connection_type === "lan") {
     if (!printer.lan_host) throw new Error(`printer ${printer.id} missing lan_host`);
@@ -233,7 +245,7 @@ async function drainPending(supabase: SupabaseClient): Promise<void> {
 
 async function main() {
   console.log(
-    `[agent] starting ${config.agentId} v${config.version} branch=${config.branchId} transport=${config.transport}`,
+    `[agent] starting ${config.agentId} v${config.version} branch=${config.branchId} transport=${config.transport} print_mode=${config.printMode}`,
   );
   if (config.transport === "lan") {
     console.log("[agent] USB dispatch disabled; only LAN (TCP:9100) printers will be served");

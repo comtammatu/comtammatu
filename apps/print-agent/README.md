@@ -82,10 +82,38 @@ Uninstall:
 | `AGENT_ID` | no | Stable identifier (default: `agent-<pid>`) |
 | `AGENT_VERSION` | no | Reported in heartbeat row |
 | `AGENT_TRANSPORT` | no | `all` (default) or `lan`. `lan` skips USB dispatch entirely — safe on hosts without the `usb` native binding. |
-| `PRINT_CODEPAGE_ID` | no | ESC/POS register index for CP1258. Default `38` (Epson). Xprinter often `30`; PDIT PD805KL needs calibration — see below. |
-| `PRINT_ASCII` | no | `1` to strip Vietnamese diacritics (fallback when no CP1258 id works on the printer). Default off — Vietnamese is rendered via CP1258. |
+| `PRINT_MODE` | no | `text` (default) emits ESC/POS text commands using the printer's CP1258 firmware font. `bitmap` rasterizes Vietnamese via Roboto Mono TTF and emits raster image commands — use this on PDIT PD805KL / clones whose firmware has no usable CP1258 font. |
+| `PRINT_CODEPAGE_ID` | no | Text-mode only. ESC/POS register index for CP1258. Default `38` (Epson). Xprinter often `30`. |
+| `PRINT_ASCII` | no | Text-mode fallback. `1` to strip Vietnamese diacritics. |
 
-## Vietnamese encoding calibration
+## Bitmap mode (recommended for PDIT PD805KL)
+
+If the printer firmware has no usable CP1258 font (PDIT PD805KL reports a
+"Vietnam" code page at id 27, but ships with empty glyphs — verified via
+self-test), set `PRINT_MODE=bitmap`:
+
+```bash
+echo "PRINT_MODE=bitmap" >> .env
+```
+
+The agent then rasterizes every line via pureimage + Roboto Mono (TTF
+bundled in `assets/fonts/`), sending `GS v 0` raster image commands
+instead of text bytes. This bypasses firmware font tables entirely — the
+printer just prints pixels. Native ESC/POS QR commands still work.
+
+Layout constraints in bitmap mode (576-dot canvas, Roboto Mono @ 20px):
+- Normal text: max 48 chars/line
+- Double-size banners (BÀN, TỔNG CỘNG, etc.): **max 24 chars/line** —
+  content that exceeds this gets clipped off the right edge.
+
+Smoke-test before enabling in production:
+
+```bash
+PRINTER_HOST=192.168.1.240 TYPE=all pnpm test:all   # receipts + bill
+PRINTER_HOST=192.168.1.241 TYPE=kitchen pnpm test:all
+```
+
+## Vietnamese encoding calibration (text mode only)
 
 Thermal printers decode high-byte characters via an ESC/POS code-page register,
 whose numeric id for CP1258 (Vietnamese) **varies by firmware**. The default
