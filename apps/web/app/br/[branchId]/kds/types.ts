@@ -27,6 +27,21 @@ export interface KdsOrderInfo {
   tables: { number: number } | null;
 }
 
+/** Snapshot shape for `order_items.modifiers` JSONB (per create_orders migration). */
+export interface OrderItemModifier {
+  modifier_id: number;
+  name: string;
+  price: number;
+}
+
+/** Snapshot shape for `order_items.sides` JSONB (per pos_order_sides_pricing migration). */
+export interface OrderItemSide {
+  side_item_id: number;
+  name: string;
+  price: number;
+  is_default: boolean;
+}
+
 /** Order item for KDS display */
 export interface KdsOrderItem {
   id: number;
@@ -36,6 +51,9 @@ export interface KdsOrderItem {
   quantity: number;
   unit_price: number;
   status: string;
+  note: string | null;
+  modifiers: OrderItemModifier[] | null;
+  sides: OrderItemSide[] | null;
 }
 
 /** Grouped order with its tickets and items for display */
@@ -53,6 +71,12 @@ export interface KdsOrder {
 export interface KdsBoardProps {
   branchId: number;
   stations: KdsStation[];
+  /** Stations with zero category mappings — receive unrouted tickets. */
+  fallbackStationIds: number[];
+  /** Whether current user has `kds:mark_ready` (controls bump button). */
+  canMarkReady: boolean;
+  /** Whether current user has `kds:recall` (controls recall button). */
+  canRecall: boolean;
   initialTickets: KdsTicket[];
   initialOrders: KdsOrderInfo[];
   initialOrderItems: KdsOrderItem[];

@@ -1,11 +1,7 @@
 import { IconAlertCircle } from "@tabler/icons-react";
-import { createClient } from "@comtammatu/database/supabase/server";
-import {
-  extractClaimsFromAccessToken,
-  canAccess,
-} from "@comtammatu/shared/auth";
-import { redirect } from "next/navigation";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
+import { loadAuthState } from "@/_lib/auth";
+import { currentUserHasPermission } from "@/_lib/permissions";
 import { KdsBoard } from "./kds-board";
 import type {
   KdsStation,
@@ -19,17 +15,7 @@ export default async function KdsPage({
 }: {
   params: Promise<{ branchId: string }>;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.user) redirect("/login");
-
-  const claims = extractClaimsFromAccessToken(session.access_token);
-  if (!claims || !canAccess(claims.user_role, "kds")) {
-    redirect("/login");
-  }
+  const { supabase } = await loadAuthState();
 
   const { branchId } = await params;
   const branchIdNum = Number(branchId);
@@ -79,6 +65,30 @@ export default async function KdsPage({
   const stations = (rawStations ?? []) as KdsStation[];
   const tickets = (rawTickets ?? []) as KdsTicket[];
 
+  // Fallback station detection: a station with zero category mappings receives
+  // unrouted items. Surface these on the board as "Chưa phân trạm".
+  let fallbackStationIds: number[] = [];
+  if (stations.length > 0) {
+    const { data: mappingRows } = await supabase
+      .from("kds_station_categories")
+      .select("station_id")
+      .in(
+        "station_id",
+        stations.map((s) => s.id),
+      );
+    const mapped = new Set(
+      ((mappingRows ?? []) as { station_id: number }[]).map((r) => r.station_id),
+    );
+    fallbackStationIds = stations
+      .filter((s) => !mapped.has(s.id))
+      .map((s) => s.id);
+  }
+
+  const [canMarkReady, canRecall] = await Promise.all([
+    currentUserHasPermission(branchIdNum, "kds:mark_ready"),
+    currentUserHasPermission(branchIdNum, "kds:recall"),
+  ]);
+
   const orderIds = [...new Set(tickets.map((t) => t.order_id))];
 
   let orders: KdsOrderInfo[] = [];
@@ -95,7 +105,7 @@ export default async function KdsPage({
       supabase
         .from("order_items")
         .select(
-          "id, order_id, item_name, variant_name, quantity, unit_price, status",
+          "id, order_id, item_name, variant_name, quantity, unit_price, status, note, modifiers, sides",
         )
         .in("order_id", orderIds),
     ]);
@@ -108,6 +118,9 @@ export default async function KdsPage({
     <KdsBoard
       branchId={branchIdNum}
       stations={stations}
+      fallbackStationIds={fallbackStationIds}
+      canMarkReady={canMarkReady}
+      canRecall={canRecall}
       initialTickets={tickets}
       initialOrders={orders}
       initialOrderItems={orderItems}
