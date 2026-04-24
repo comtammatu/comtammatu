@@ -12,7 +12,6 @@ import {
   IconFileText,
   IconHourglass,
   IconLayoutDashboard,
-  IconLayoutGrid,
   IconLogout,
   IconCreditCard,
   IconPackage,
@@ -81,16 +80,18 @@ function buildInventoryGroups({
   siteKind: string;
 }): ShellNavGroup[] {
   const isBranchSite = siteKind === "branch";
-  const issueLabel = isBranchSite ? "Cấp bếp" : "Xuất kho";
+  // Sidebar label flips by site kind: operational branch => "Phiếu xuất kho"
+  // (tiêu hao/khác), storage site (CW/CK) => "Phiếu hao hụt kho".
+  const issueLabel = isBranchSite ? "Phiếu xuất kho" : "Phiếu hao hụt kho";
   const groups: ShellNavGroup[] = [
     {
-      title: "Hôm nay",
+      title: "Tổng quan",
       items: [
-        { href: "/inventory", label: "Tổng quan", icon: IconLayoutDashboard },
         {
-          href: "/inventory/dashboard",
-          label: "Dashboard v2",
-          icon: IconLayoutGrid,
+          href: "/inventory",
+          label: "Tổng quan",
+          icon: IconLayoutDashboard,
+          exact: true,
         },
         {
           href: "/inventory/stock",
@@ -103,13 +104,8 @@ function buildInventoryGroups({
 
   if (showProcurement) {
     groups.push({
-      title: "Nhập hàng HQ",
+      title: "Mua hàng",
       items: [
-        {
-          href: "/inventory/receiving",
-          label: tNav("receiving", "navigation"),
-          icon: IconArrowBarDown,
-        },
         {
           href: "/inventory/purchase-orders",
           label: tNav("purchaseOrders", "navigation"),
@@ -140,20 +136,26 @@ function buildInventoryGroups({
   }
 
   groups.push({
-    title: "Điều chuyển nội bộ",
+    title: "Điều chuyển",
     items: [
       {
         href: "/inventory/transfers",
-        label: tNav("transfers", "navigation"),
+        label: "Phiếu điều chuyển",
         icon: IconTruck,
       },
     ],
   });
 
   groups.push({
-    title: isBranchSite ? "Vận hành chi nhánh" : "Tồn và xuất",
+    title: isBranchSite ? "Xuất kho" : "Hao hụt kho",
     items: [
-      { href: "/inventory/issues", label: issueLabel, icon: IconPackage },
+      { href: "/inventory/issues", label: issueLabel, icon: IconArrowBarDown },
+    ],
+  });
+
+  groups.push({
+    title: "Hao hụt",
+    items: [
       { href: "/inventory/waste/new", label: "Tạo phiếu hao hụt", icon: IconTrash },
       {
         href: "/inventory/waste/approvals",
@@ -162,7 +164,7 @@ function buildInventoryGroups({
       },
       {
         href: "/inventory/waste/auto",
-        label: "Waste auto-gen",
+        label: "Phát hiện tự động",
         icon: IconRobot,
       },
     ],
@@ -174,7 +176,7 @@ function buildInventoryGroups({
       items: [
         {
           href: "/inventory/production",
-          label: tNav("production", "navigation"),
+          label: "Lệnh sản xuất",
           icon: IconBuildingFactory,
         },
       ],
@@ -190,13 +192,8 @@ function buildInventoryGroups({
         icon: IconClipboardList,
       },
       {
-        href: "/inventory/stocktake/new",
-        label: "Mở phiên kiểm kê v2",
-        icon: IconClipboardCheck,
-      },
-      {
         href: "/inventory/stocktake/conflicts",
-        label: "Conflict queue",
+        label: "Xử lý lệch",
         icon: IconAlertOctagon,
       },
       {

@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -4256,6 +4256,7 @@ export type Database = {
           ingredient_id: number
           issue_id: number | null
           location_id: number
+          movement_subtype: string | null
           order_id: number | null
           production_order_id: number | null
           quantity_change: number
@@ -4274,6 +4275,7 @@ export type Database = {
           ingredient_id: number
           issue_id?: number | null
           location_id: number
+          movement_subtype?: string | null
           order_id?: number | null
           production_order_id?: number | null
           quantity_change: number
@@ -4292,6 +4294,7 @@ export type Database = {
           ingredient_id?: number
           issue_id?: number | null
           location_id?: number
+          movement_subtype?: string | null
           order_id?: number | null
           production_order_id?: number | null
           quantity_change?: number

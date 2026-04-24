@@ -28,18 +28,22 @@ export default async function IssuesPage({
   const branches: IssueBranchOption[] = scope.allowedBranches.map((b) => ({
     id: b.id,
     name: b.name,
+    branchKind: b.branch_kind,
   }));
 
-  const issues: IssueRow[] = dbRows.map((row) => ({
-    id: row.id as number,
-    code: (row.issue_number as string) ?? "",
-    type: (row.issue_type as string) ?? "consumption",
-    branchName:
-      ((row.branches as Record<string, unknown>)?.name as string) ?? "—",
-    date: row.issued_at ? formatDate(row.issued_at as string) : "—",
-    createdBy: "—",
-    status: (row.status as string) ?? "draft",
-  }));
+  const issues: IssueRow[] = dbRows.map((row) => {
+    const branches = row.branches as Record<string, unknown> | null;
+    return {
+      id: row.id as number,
+      code: (row.issue_number as string) ?? "",
+      type: (row.issue_type as string) ?? "consumption",
+      branchName: (branches?.name as string) ?? "—",
+      branchKind: (branches?.branch_kind as string | null) ?? null,
+      date: row.issued_at ? formatDate(row.issued_at as string) : "—",
+      createdBy: "—",
+      status: (row.status as string) ?? "draft",
+    };
+  });
 
   return (
     <IssuesClient

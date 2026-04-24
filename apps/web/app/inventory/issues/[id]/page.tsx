@@ -29,7 +29,7 @@ export default async function IssueDetailPage({
       notes: string | null;
       issued_at: string;
       branch_id: number;
-      branches: { id: number; name: string } | null;
+      branches: { id: number; name: string; branch_kind?: string | null } | null;
     };
     lines: Array<{
       id: number;

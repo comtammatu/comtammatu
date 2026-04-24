@@ -291,8 +291,10 @@ test.describe("Transfer direction — CW→CW rejected (Scenario 5)", () => {
   });
 });
 
-test.describe("stock_issue kitchen_use scope — CW rejected (Scenario 6)", () => {
-  test("DB trigger rejects kitchen_use issue_type at a central_warehouse branch", async ({
+// kitchen_use was retired 2026-04-25 (CHECK constraint + Zod enum drop).
+// Any attempt to persist `issue_type='kitchen_use'` now trips the CHECK.
+test.describe("stock_issue kitchen_use retired (Scenario 6)", () => {
+  test("DB CHECK constraint rejects kitchen_use issue_type at any branch kind", async ({
     page: _page,
   }) => {
     const supabase = createServiceClient();
@@ -302,49 +304,20 @@ test.describe("stock_issue kitchen_use scope — CW rejected (Scenario 6)", () =
     const adminUser = users[0];
     if (!adminUser) throw new Error("No auth users to use as created_by");
 
-    // Direct insert via service-role bypasses RLS but triggers still fire.
+    // Direct insert via service-role bypasses RLS but CHECK constraint still fires.
     const { error } = await supabase.from("stock_issues").insert({
       tenant_id: fx.tenantId,
-      branch_id: fx.cw1Id,   // central_warehouse — must be rejected
+      branch_id: fx.cw1Id,
       issue_number: `PXK-E2E-SCOPE-${Date.now()}`,
       issue_type: "kitchen_use",
       status: "draft",
       created_by: adminUser.id,
     });
 
-    // enforce_stock_issue_kitchen_use_scope trigger must fire
+    // stock_issues_issue_type_check constraint must fire
     expect(error).not.toBeNull();
     expect(error!.code).toBe("23514");
-    expect(error!.message).toContain("kitchen_use only allowed at operational branch");
-  });
-
-  test("createStockIssueDraft server action surfaces generic error for kitchen_use at CW via UI", async ({
-    page,
-  }) => {
-    const fx = await buildFixtures();
-
-    await page.goto("/inventory/issues/new");
-    await page.waitForLoadState("networkidle");
-
-    const branchSelect = page.locator('[name="branchId"], [data-testid="branch-select"]').first();
-    if (!(await branchSelect.isVisible({ timeout: 5_000 }).catch(() => false))) {
-      test.skip(true, "Issue creation UI not accessible — trigger covered by direct DB assertion above");
-      return;
-    }
-
-    await branchSelect.selectOption({ value: String(fx.cw1Id) });
-
-    const typeSelect = page.locator('[name="issueType"], [data-testid="issue-type-select"]').first();
-    if (await typeSelect.isVisible({ timeout: 3_000 }).catch(() => false)) {
-      await typeSelect.selectOption("kitchen_use");
-    }
-
-    const submitBtn = page.getByRole("button", { name: /tạo phiếu|xác nhận/i });
-    await submitBtn.click();
-
-    // The RLS blocked write returns {data:null,error:null} and the action returns
-    // "Không thể tạo phiếu xuất." (from issue-actions.ts line 131)
-    const errorMsg = page.getByText("Không thể tạo phiếu xuất.");
-    await expect(errorMsg).toBeVisible({ timeout: 10_000 });
+    // PostgREST surfaces CHECK violation on "stock_issues_issue_type_check"
+    expect(error!.message.toLowerCase()).toContain("issue_type");
   });
 });

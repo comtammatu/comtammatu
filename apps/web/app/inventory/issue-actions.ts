@@ -16,17 +16,19 @@ const ROLES = INVENTORY_OPS_ROLES;
 const issueCreateSchema = z.object({
   branchId: z.coerce.number().int().positive(),
   issueType: z
-    .enum(["consumption", "writeoff", "kitchen_use", "other"])
+    .enum(["consumption", "writeoff", "other"])
     .default("consumption"),
   notes: z.string().optional(),
 });
 
+// WAC strict override (see confirm_stock_issue RPC): stock_issue_items.unit_cost
+// is re-written from stock_levels.avg_unit_cost at confirm time. Line callers
+// do not need to pass unitCost — DB DEFAULT 0 applies on INSERT.
 const issueLineSchema = z.object({
   issueId: z.coerce.number().int().positive(),
   ingredientId: z.coerce.number().int().positive(),
   quantity: z.coerce.number().positive(),
   unit: z.string().min(1),
-  unitCost: z.coerce.number().min(0).default(0),
   reason: z.string().trim().optional().nullable(),
 });
 
@@ -102,16 +104,9 @@ export const createStockIssueDraft = withAction(
     d.branchId,
     "issue",
   );
-  const targetLocationId =
-    d.issueType === "kitchen_use"
-      ? await resolveDefaultInventoryLocation(
-          supabase,
-          claims.tenant_id,
-          d.branchId,
-          "consumption",
-        )
-      : null;
 
+  // kitchen_use retired 2026-04-25 — use intra-branch stock_transfer instead.
+  // target_location_id is always NULL for single-site issues.
   const { data, error } = await supabase
     .from("stock_issues")
     .insert({
@@ -122,7 +117,7 @@ export const createStockIssueDraft = withAction(
       notes: d.notes ?? null,
       created_by: user.id,
       source_location_id: sourceLocationId,
-      target_location_id: targetLocationId,
+      target_location_id: null,
     })
     .select("id, source_location_id, target_location_id")
     .single();
@@ -202,6 +197,8 @@ export async function fetchStockIssueDetail(
 export const upsertStockIssueLine = withAction(
   { roles: ROLES, schema: issueLineSchema },
   async (d, { supabase, claims }) => {
+    // unit_cost is populated by confirm_stock_issue RPC from WAC at confirm
+    // time; DEFAULT 0 applies on this draft-only INSERT.
     const { error } = await supabase.from("stock_issue_items").upsert(
       {
         tenant_id: claims.tenant_id,
@@ -209,7 +206,6 @@ export const upsertStockIssueLine = withAction(
         ingredient_id: d.ingredientId,
         quantity: d.quantity,
         unit: d.unit,
-        unit_cost: d.unitCost,
         reason: d.reason ?? null,
       },
       { onConflict: "issue_id,ingredient_id,tenant_id" },

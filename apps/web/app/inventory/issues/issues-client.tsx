@@ -63,6 +63,7 @@ export type IssueRow = {
   code: string;
   type: string;
   branchName: string;
+  branchKind: string | null;
   date: string;
   createdBy: string;
   status: string;
@@ -71,16 +72,32 @@ export type IssueRow = {
 export type IssueBranchOption = {
   id: number;
   name: string;
+  branchKind: string | null;
 };
 
+// Label for `consumption` issue_type flips by branch_kind:
+// - central_warehouse / central_kitchen → "Hao hụt kho" (storage loss)
+// - branch                              → "Tiêu hao" (sale consumption)
+// `writeoff` and `other` keep a single label at all kinds.
+// kitchen_use retired 2026-04-25 (replaced by intra-branch stock_transfer).
 const ISSUE_TYPES = [
   { value: "consumption", label: "Tiêu hao" },
   { value: "writeoff", label: "Hủy hỏng / thanh lý" },
-  { value: "kitchen_use", label: "Cấp phát bếp chi nhánh" },
   { value: "other", label: "Khác" },
 ] as const;
 
 type IssueTypeValue = (typeof ISSUE_TYPES)[number]["value"];
+
+function isStorageBranchKind(kind: string | null | undefined): boolean {
+  return kind === "central_warehouse" || kind === "central_kitchen";
+}
+
+function issueTypeLabel(type: string, branchKind: string | null): string {
+  if (type === "consumption") {
+    return isStorageBranchKind(branchKind) ? "Hao hụt kho" : "Tiêu hao";
+  }
+  return ISSUE_TYPES.find((o) => o.value === type)?.label ?? type;
+}
 
 const STATUS_FILTER_OPTIONS = [
   { value: "all", label: "Tất cả trạng thái" },
@@ -89,14 +106,13 @@ const STATUS_FILTER_OPTIONS = [
   { value: "cancelled", label: "Đã hủy" },
 ];
 
+// Filter options show generic labels (no branch context at the filter level).
 const TYPE_FILTER_OPTIONS = [
   { value: "all", label: "Tất cả loại xuất" },
-  ...ISSUE_TYPES.map((opt) => ({ value: opt.value, label: opt.label })),
+  { value: "consumption", label: "Tiêu hao / Hao hụt kho" },
+  { value: "writeoff", label: "Hủy hỏng / thanh lý" },
+  { value: "other", label: "Khác" },
 ];
-
-function issueTypeLabel(type: string): string {
-  return ISSUE_TYPES.find((o) => o.value === type)?.label ?? type;
-}
 
 function csvCell(value: string | number): string {
   const raw = String(value);
@@ -201,7 +217,7 @@ export function IssuesClient({
     ];
     const rows = filtered.map((row) => [
       row.code,
-      issueTypeLabel(row.type),
+      issueTypeLabel(row.type, row.branchKind),
       row.branchName,
       row.date,
       row.status,
@@ -305,7 +321,7 @@ export function IssuesClient({
             )}
             <Button type="button" onClick={() => setCreateOpen(true)}>
               <IconPlus className="size-4" />
-              Tạo phiếu cấp bếp
+              Tạo phiếu xuất kho
             </Button>
           </>
         }
@@ -342,7 +358,8 @@ export function IssuesClient({
                         {item.branchName}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {issueTypeLabel(item.type)} &middot; {item.date}
+                        {issueTypeLabel(item.type, item.branchKind)} &middot;{" "}
+                        {item.date}
                       </p>
                     </div>
                     <IconArrowRight className="size-4 shrink-0 text-muted-foreground" />
@@ -389,7 +406,7 @@ export function IssuesClient({
                       </TableCell>
                       <TableCell>
                         <span className="text-sm font-medium">
-                          {issueTypeLabel(item.type)}
+                          {issueTypeLabel(item.type, item.branchKind)}
                         </span>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
@@ -430,7 +447,14 @@ export function IssuesClient({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Tạo phiếu xuất kho</DialogTitle>
+            <DialogTitle>
+              {isStorageBranchKind(
+                branches.find((b) => b.id === Number(branchId))?.branchKind ??
+                  null,
+              )
+                ? "Tạo phiếu hao hụt kho"
+                : "Tạo phiếu xuất kho"}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="space-y-1.5">
@@ -459,11 +483,20 @@ export function IssuesClient({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ISSUE_TYPES.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
+                  {ISSUE_TYPES.map((option) => {
+                    const selectedKind =
+                      branches.find((b) => b.id === Number(branchId))
+                        ?.branchKind ?? null;
+                    const label =
+                      option.value === "consumption"
+                        ? issueTypeLabel("consumption", selectedKind)
+                        : option.label;
+                    return (
+                      <SelectItem key={option.value} value={option.value}>
+                        {label}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

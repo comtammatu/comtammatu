@@ -229,9 +229,9 @@ function buildTasks(props: DashboardProps): TaskItem[] {
         severity: "primary",
       });
     items.push({
-      key: "kitchen",
-      title: "Cấp bếp theo nhịp bán",
-      description: "Ghi nhận cấp phát kitchen_use.",
+      key: "issues",
+      title: "Ghi nhận xuất kho nội bộ",
+      description: "Tiêu hao / hủy hỏng / hao hụt kho (khác luân chuyển).",
       href: paths.issues,
       icon: <IconSquareCheck className="size-4" />,
       severity: "info",

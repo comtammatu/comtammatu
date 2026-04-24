@@ -68,7 +68,7 @@ type IssueRecord = {
   notes: string | null;
   issued_at: string;
   branch_id: number;
-  branches: { id: number; name: string } | null;
+  branches: { id: number; name: string; branch_kind?: string | null } | null;
 };
 
 type IssueLine = {
@@ -92,23 +92,40 @@ type AddIssueLineDialogProps = {
   startTransition: React.TransitionStartFunction;
 };
 
-function getIssueSurface(issueType: string) {
-  if (issueType === "kitchen_use") {
+// kitchen_use retired 2026-04-25 (replaced by intra-branch stock_transfer).
+// Label for consumption flips by branch_kind:
+//   central_warehouse / central_kitchen → "Hao hụt kho"
+//   branch                              → "Tiêu hao"
+function getIssueSurface(issueType: string, branchKind: string | null | undefined) {
+  const isStorage =
+    branchKind === "central_warehouse" || branchKind === "central_kitchen";
+
+  if (issueType === "consumption" && isStorage) {
     return {
-      eyebrow: "Van hanh chi nhanh",
-      label: "Cap bep",
-      confirmTitle: "Xac nhan cap bep?",
-      confirmAction: "Xac nhan cap bep",
-      noteLabel: "Ghi chu cap bep",
+      eyebrow: "Hao hụt kho",
+      label: "Phiếu hao hụt",
+      confirmTitle: "Xác nhận hao hụt kho?",
+      confirmAction: "Xác nhận hao hụt",
+      noteLabel: "Ghi chú phiếu hao hụt",
+    };
+  }
+
+  if (issueType === "writeoff") {
+    return {
+      eyebrow: "Hủy hỏng",
+      label: "Phiếu hủy hỏng",
+      confirmTitle: "Xác nhận hủy hỏng?",
+      confirmAction: "Xác nhận hủy hỏng",
+      noteLabel: "Ghi chú phiếu hủy hỏng",
     };
   }
 
   return {
-    eyebrow: "Xuat kho",
-    label: "Phieu xuat",
-    confirmTitle: "Xac nhan xuat kho?",
-    confirmAction: "Xac nhan xuat kho",
-    noteLabel: "Ghi chu phieu xuat",
+    eyebrow: "Xuất kho",
+    label: "Phiếu xuất",
+    confirmTitle: "Xác nhận xuất kho?",
+    confirmAction: "Xác nhận xuất kho",
+    noteLabel: "Ghi chú phiếu xuất",
   };
 }
 
@@ -132,7 +149,10 @@ export function IssueDetailClient({
   const [confirmIssueOpen, setConfirmIssueOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const isDraft = issue.status === "draft";
-  const surface = getIssueSurface(issue.issue_type);
+  const surface = getIssueSurface(
+    issue.issue_type,
+    issue.branches?.branch_kind ?? null,
+  );
 
   const totalAmount = useMemo(
     () => lines.reduce((sum, line) => sum + Number(line.total_cost ?? 0), 0),
@@ -634,21 +654,12 @@ function AddIssueLineDialog({
   const [ingredientId, setIngredientId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("");
-  const [unitCostOverride, setUnitCostOverride] = useState("");
   const [reason, setReason] = useState("");
-
-  const selectedIngredient = useMemo(
-    () =>
-      ingredients.find((ingredient) => ingredient.id === Number(ingredientId)),
-    [ingredientId, ingredients],
-  );
-  const autoFilledCost = selectedIngredient?.unit_cost ?? 0;
 
   function resetForm() {
     setIngredientId("");
     setQuantity("");
     setUnit("");
-    setUnitCostOverride("");
     setReason("");
   }
 
@@ -656,7 +667,6 @@ function AddIssueLineDialog({
     setIngredientId(value);
     const ingredient = ingredients.find((item) => item.id === Number(value));
     setUnit(ingredient?.unit ?? "");
-    setUnitCostOverride("");
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -664,10 +674,6 @@ function AddIssueLineDialog({
 
     const parsedIngredientId = Number(ingredientId);
     const parsedQuantity = Number(quantity);
-    const parsedUnitCost =
-      unitCostOverride.trim().length > 0
-        ? Number(unitCostOverride)
-        : autoFilledCost;
 
     if (!parsedIngredientId) {
       toast.error("Chọn nguyên liệu cần xuất.");
@@ -684,23 +690,19 @@ function AddIssueLineDialog({
       return;
     }
 
-    if (!Number.isFinite(parsedUnitCost) || parsedUnitCost < 0) {
-      toast.error("Đơn giá không hợp lệ.");
-      return;
-    }
-
     if (!reason.trim()) {
       toast.error("Lý do xuất là bắt buộc để lưu vết.");
       return;
     }
 
+    // Đơn giá (WAC) áp dụng từ stock_levels.avg_unit_cost tại thời điểm
+    // confirm phiếu — không cho người dùng nhập tay để tránh lệch giá vốn.
     startTransition(async () => {
       const res = await upsertStockIssueLine({
         issueId,
         ingredientId: parsedIngredientId,
         quantity: parsedQuantity,
         unit: unit.trim(),
-        unitCost: parsedUnitCost,
         reason: reason.trim(),
       });
 
@@ -770,23 +772,8 @@ function AddIssueLineDialog({
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="issue-line-cost">
-              Đơn giá (VNĐ)
-              {selectedIngredient?.unit_cost != null &&
-              unitCostOverride.trim().length === 0 ? (
-                <span className="ml-1 text-xs font-normal text-muted-foreground">
-                  mặc định {formatVND(autoFilledCost)}
-                </span>
-              ) : null}
-            </Label>
-            <FormattedNumberInput
-              id="issue-line-cost"
-              value={unitCostOverride}
-              onValueChange={setUnitCostOverride}
-              maxFractionDigits={0}
-              placeholder={autoFilledCost > 0 ? formatVND(autoFilledCost) : "0"}
-            />
+          <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+            Đơn giá (WAC) tự áp dụng từ tồn kho tại thời điểm xác nhận phiếu.
           </div>
 
           <div className="space-y-1.5">
