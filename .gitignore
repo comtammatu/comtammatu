@@ -44,9 +44,13 @@ supabase/.branches/
 .mcp.json
 
 # Claude Code personal/machine-specific
-.claude/settings.json
-.claude/launch.json
-.claude/worktrees/
+.claude/
+.agents/
+.claire/
+.trae/
+
+# Local agent lockfiles / caches
+skills-lock.json
 
 # IDE
 .vscode/
@@ -57,6 +61,11 @@ npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+codex-*.log
+codex-*.err.log
+
+# local screenshots (manual QA)
+pos-after*.png
 
 # vercel
 .vercel/
