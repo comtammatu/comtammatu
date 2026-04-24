@@ -19,13 +19,7 @@ import {
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import {
-  IconKeyboard,
-  IconLayoutGrid,
-  IconReceipt,
-  IconShoppingCart,
-  IconX,
-} from "@tabler/icons-react";
+import { IconKeyboard, IconX } from "@tabler/icons-react";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
 import { PosTableGate } from "./pos-table-gate";
 import { ItemCustomizer } from "./item-customizer";
@@ -34,9 +28,12 @@ import { BillReceipt } from "./_components/bill/bill-receipt-sheet";
 import { OrderDetailSheet } from "./order-detail-sheet";
 import { PosSessionHeader } from "./pos-session-header";
 import { MenuPane } from "./_components/menu-pane";
-import { CartPane } from "./_components/cart-pane";
-import { OrderListPane } from "./_components/order-list-pane";
-import { PosSidebarTabs, PosSidebarContent } from "./pos-sidebar-panel";
+import { PosMobileActionBar } from "./_components/pos-mobile-action-bar";
+import {
+  SplitSidebar,
+  TabbedSidebar,
+} from "./_components/pos-sidebar-variants";
+import { PosSidebarContent } from "./pos-sidebar-panel";
 import { HotkeyOverlay } from "./_components/hotkey-overlay";
 import { fetchActiveOrderForTable } from "./actions";
 import { usePosAppend } from "./_hooks/use-pos-append";
@@ -684,69 +681,6 @@ function PosDesktopInner({
       </div>
     ) : null;
 
-  const mobileActionBar =
-    isMobile && !isAppendingToOrder ? (
-      <div className="fixed inset-x-3 bottom-3 z-40 flex gap-2 md:hidden">
-        {!menuContextReady && (
-          <Button
-            type="button"
-            variant="secondary"
-            className="min-h-14 min-w-14 flex-1 rounded-full text-base font-bold shadow-lg"
-            onClick={() => {
-              setShowOrders(true);
-              void refreshOrders();
-              setCartDrawerOpen(true);
-            }}
-          >
-            <IconReceipt className="size-5" />
-            <span>Đơn trong ca</span>
-            {orders.length > 0 && (
-              <span className="tabular-nums">{orders.length}</span>
-            )}
-          </Button>
-        )}
-        {menuContextReady &&
-          cartOrderType === "dine_in" &&
-          selectedTableId !== null && (
-            <Button
-              type="button"
-              variant="outline"
-              className="min-h-14 min-w-14 rounded-full bg-background px-3 text-base font-bold shadow-lg"
-              onClick={() => {
-                setShowOrders(false);
-                setCartDrawerOpen(false);
-                handleOrderTypeChange("dine_in");
-                setActiveTable(null);
-              }}
-              aria-label="Xem bàn"
-            >
-              <IconLayoutGrid className="size-5" />
-            </Button>
-          )}
-        {menuContextReady && (
-          <Button
-            type="button"
-            className="min-h-14 min-w-14 flex-1 rounded-full text-base font-bold shadow-lg"
-            onClick={() => {
-              setShowOrders(false);
-              setCartDrawerOpen(true);
-            }}
-            aria-label="Mở giỏ hàng"
-          >
-            <IconShoppingCart className="size-5" />
-            {cartQuantity > 0 ? (
-              <>
-                <span>Giỏ</span>
-                <span className="tabular-nums">{cartQuantity}</span>
-              </>
-            ) : (
-              <span>Giỏ mới</span>
-            )}
-          </Button>
-        )}
-      </div>
-    ) : null;
-
   const mobileSidebarDrawer = isMobile ? (
     <Drawer
       open={cartDrawerOpen}
@@ -767,44 +701,23 @@ function PosDesktopInner({
     </Drawer>
   ) : null;
 
-  const tabbedSidebar = (
-    <div className="hidden w-96 shrink-0 flex-col border-l border-border/60 bg-background md:flex xl:hidden">
-      <PosSessionHeader
+  const sidebars = (
+    <>
+      <TabbedSidebar
         session={session}
         canCloseShift={canCloseShift}
         onShowCloseSession={openCloseSession}
-      />
-      <PosSidebarTabs
         showOrders={showOrders}
         onShowOrdersChange={setShowOrders}
+        sidebarContentProps={sidebarContentProps}
       />
-      <PosSidebarContent {...sidebarContentProps} />
-    </div>
-  );
-
-  const splitSidebar = (
-    <div className="hidden shrink-0 flex-col border-l border-border/60 bg-background xl:flex">
-      <PosSessionHeader
+      <SplitSidebar
         session={session}
         canCloseShift={canCloseShift}
         onShowCloseSession={openCloseSession}
+        sidebarContentProps={sidebarContentProps}
       />
-      <div className="flex min-h-0 flex-1">
-        <div className="flex w-96 shrink-0 flex-col">
-          <CartPane
-            canSubmit={canSubmit}
-            isSubmitting={isPending}
-            onSubmitOrder={handleSubmitOrder}
-            onOrderTypeChange={handleOrderTypeChange}
-            onCustomizeItem={handleCartItemCustomize}
-            onReturnToTables={handleReturnToTables}
-          />
-        </div>
-        <div className="flex w-80 shrink-0 flex-col border-l border-border/60 2xl:w-96">
-          <OrderListPane onViewBill={openBill} onViewDetail={openDetail} />
-        </div>
-      </div>
-    </div>
+    </>
   );
 
   return (
@@ -831,8 +744,7 @@ function PosDesktopInner({
               className="min-h-0 flex-1"
             />
           </div>
-          {tabbedSidebar}
-          {splitSidebar}
+          {sidebars}
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 overflow-hidden bg-background/35">
@@ -841,12 +753,34 @@ function PosDesktopInner({
             {mobileOrderContextRow}
             <MenuPane categories={categories} onItemTap={handleItemTap} />
           </div>
-          {tabbedSidebar}
-          {splitSidebar}
+          {sidebars}
         </div>
       )}
 
-      {mobileActionBar}
+      <PosMobileActionBar
+        isMobile={isMobile}
+        isAppendingToOrder={isAppendingToOrder}
+        menuContextReady={menuContextReady}
+        cartOrderType={cartOrderType}
+        selectedTableId={selectedTableId}
+        cartQuantity={cartQuantity}
+        ordersCount={orders.length}
+        onOpenOrdersDrawer={() => {
+          setShowOrders(true);
+          void refreshOrders();
+          setCartDrawerOpen(true);
+        }}
+        onEnterTablePicker={() => {
+          setShowOrders(false);
+          setCartDrawerOpen(false);
+          handleOrderTypeChange("dine_in");
+          setActiveTable(null);
+        }}
+        onOpenCartDrawer={() => {
+          setShowOrders(false);
+          setCartDrawerOpen(true);
+        }}
+      />
       {mobileSidebarDrawer}
 
       <ItemCustomizer
