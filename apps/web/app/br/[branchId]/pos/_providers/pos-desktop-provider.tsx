@@ -14,6 +14,7 @@ import type { ActiveSession, BranchTable } from "../page";
 import type { SessionOrder } from "../order-history";
 import { fetchSessionOrders, fetchTablesForBranch } from "../actions";
 import { CartStore } from "./cart-store";
+import { useOrderSync } from "../hooks/use-order-sync";
 import type { OrderType } from "../types";
 
 /* ─── Session context (stable) ─── */
@@ -150,6 +151,13 @@ export function PosDesktopProvider({
     loadedRef.current = true;
     void loadOrders();
   }, [loadOrders]);
+
+  useOrderSync({
+    branchId,
+    setTables,
+    refreshOrders: loadOrders,
+    refreshAll,
+  });
 
   const dispatchValue = useMemo<OperationalDispatch>(
     () => ({

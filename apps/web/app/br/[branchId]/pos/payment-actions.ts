@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { MODULE_ACL, PERMISSION_KEYS} from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   getPaymentProvider,
@@ -45,16 +45,6 @@ export interface CreatePaymentSuccessData {
     amount?: string;
     description?: string;
   };
-}
-
-interface OrderPaymentData {
-  id: number;
-  method: string;
-  amount: number;
-  status: string;
-  provider_ref: string | null;
-  paid_at: string | null;
-  created_at: string;
 }
 
 function mapPaymentRpcError(message: string): string | null {
@@ -184,7 +174,10 @@ export async function fetchPaymentMethodsForPos(
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -227,7 +220,10 @@ export async function createPayment(
     };
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -334,6 +330,40 @@ export async function createPayment(
       return { success: false, error: "Số tiền không khớp." };
     }
     if (rpcError.code === "23505") {
+      const { data: existingPayment, error: existingError } = await supabase
+        .from("payments")
+        .select("id, status, provider_ref")
+        .eq("order_id", parsedPayment.data.orderId)
+        .eq("tenant_id", claims.tenant_id)
+        .eq("branch_id", parsedBranch.data)
+        .eq("method", parsedPayment.data.method)
+        .eq("status", "pending")
+        .maybeSingle();
+
+      if (!existingError && existingPayment) {
+        const qrInfo = pickVietQrInfo(providerResult.providerData);
+        const providerRef =
+          providerResult.providerRef ??
+          existingPayment.provider_ref ??
+          undefined;
+
+        return {
+          success: true,
+          data: {
+            payment_id: existingPayment.id,
+            status: existingPayment.status,
+            ...(providerRef ? { provider_ref: providerRef } : {}),
+            ...(providerResult.qrData
+              ? { qr_data: providerResult.qrData }
+              : {}),
+            ...(providerResult.redirectUrl
+              ? { redirect_url: providerResult.redirectUrl }
+              : {}),
+            ...(qrInfo ? { qr_info: qrInfo } : {}),
+          },
+        };
+      }
+
       return {
         success: false,
         error: "Đơn hàng đang có thanh toán chờ xử lý.",
@@ -423,7 +453,10 @@ export async function confirmPayment(
     return { success: false, error: "Payment ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -496,42 +529,6 @@ export async function confirmPayment(
   return { success: true, data };
 }
 
-/* ─── fetchPaymentForOrder ─── */
-
-export async function fetchPaymentForOrder(
-  orderId: number,
-): Promise<ActionResult<OrderPaymentData | null>> {
-  const idSchema = z.coerce.number().int().positive();
-  const parsedId = idSchema.safeParse(orderId);
-  if (!parsedId.success) {
-    return { success: false, error: "Order ID không hợp lệ" };
-  }
-
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  if (claims.branch_id === null) {
-    return { success: false, error: "Không xác định được chi nhánh" };
-  }
-
-  const { data, error } = await supabase
-    .from("payments")
-    .select("id, method, amount, status, provider_ref, paid_at, created_at")
-    .eq("order_id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id)
-    .eq("branch_id", claims.branch_id)
-    .neq("status", "failed")
-    .maybeSingle();
-
-  if (error) {
-    return { success: false, error: "Không thể tải thông tin thanh toán." };
-  }
-
-  return { success: true, data };
-}
-
 /* ─── fetchDailyReconciliation ─── */
 
 /**
@@ -546,7 +543,10 @@ export async function fetchDailyReconciliation(
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -602,11 +602,11 @@ export async function fetchDailyReconciliation(
     date: targetDate,
     total_orders: allOrders.length,
     completed_orders: allOrders.filter(
-      (o) => o.status === "completed" || o.status === "served",
+      (o) => o.status === "completed" && o.payment_status === "paid",
     ).length,
     cancelled_orders: allOrders.filter((o) => o.status === "cancelled").length,
     total_revenue: allOrders
-      .filter((o) => o.status !== "cancelled")
+      .filter((o) => o.payment_status === "paid" && o.status !== "cancelled")
       .reduce((sum, o) => sum + Number(o.total_amount), 0),
     paid_amount: completedPayments.reduce(
       (sum, p) => sum + Number(p.amount),
@@ -667,9 +667,13 @@ export async function confirmCashPayment(
     };
   }
 
+  // Cash confirm yêu cầu POS_CONFIRM_PAYMENT (cashier/branch_manager+).
+  // Waiter chỉ có POS_USE + POS_PRINT → in bill tạm tính OK, nhưng KHÔNG
+  // được chạm két. VietQR/MoMo giữ POS_USE ở createPayment/confirmPayment
+  // (e-wallet = webhook source of truth, không chạm cash drawer).
   const ctx = await getAuthContextWithPermission(
     POS_ROLES,
-    PERMISSION_KEYS.POS_PRINT,
+    PERMISSION_KEYS.POS_CONFIRM_PAYMENT,
   );
   if (!ctx) return { success: false, error: "Không có quyền thanh toán" };
 
@@ -682,7 +686,11 @@ export async function confirmCashPayment(
 
   if (error) {
     const msg = String(error.message ?? "").toLowerCase();
-    if (msg.includes("must be >=") || msg.includes("must be >") || msg.includes("cash_received")) {
+    if (
+      msg.includes("must be >=") ||
+      msg.includes("must be >") ||
+      msg.includes("cash_received")
+    ) {
       return {
         success: false,
         error: "Tiền nhận phải lớn hơn hoặc bằng tổng cần thu.",

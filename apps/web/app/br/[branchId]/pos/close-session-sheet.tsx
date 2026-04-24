@@ -120,13 +120,16 @@ export function CloseSessionSheet({
     Math.abs(summary.cash_difference) > SIGNIFICANT_DIFF_THRESHOLD;
   const needsNoteForSubmit =
     totalCounted === 0 ||
-    (/* first submit on count step can't know diff yet — rely on server-side summary */ false);
+    /* first submit on count step can't know diff yet — rely on server-side summary */ false;
 
   const stepIndex = step === "count" ? 1 : 2;
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent side="right" className="flex w-full flex-col sm:max-w-lg p-0">
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col sm:max-w-lg p-0"
+      >
         <SheetHeader className="border-b px-5 pt-5 pb-3 text-left">
           <SheetTitle>Đóng ca bán hàng</SheetTitle>
           <SheetDescription>
@@ -150,7 +153,7 @@ export function CloseSessionSheet({
                 <div className="flex flex-col gap-2">
                   <label
                     htmlFor="close-note"
-                    className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                    className="text-sm font-semibold uppercase tracking-wide text-muted-foreground"
                   >
                     Ghi chú ca (tuỳ chọn)
                   </label>
@@ -160,9 +163,9 @@ export function CloseSessionSheet({
                     onChange={(e) => setNote(e.target.value)}
                     placeholder="Ví dụ: thu hộ khách lẻ 10k, đổi tờ rách..."
                     rows={3}
-                    className="resize-none rounded-lg text-sm"
+                    className="resize-none rounded-lg text-base"
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Nếu chênh lệch &gt; {formatVND(SIGNIFICANT_DIFF_THRESHOLD)},
                     nên bổ sung lý do ở bước đối soát.
                   </p>
@@ -173,7 +176,7 @@ export function CloseSessionSheet({
             {step === "reconcile" && summary && (
               <div className="flex flex-col gap-4">
                 <div className="rounded-lg border bg-card p-4 shadow-sm">
-                  <div className="flex flex-col gap-3 text-sm">
+                  <div className="flex flex-col gap-3 text-base">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">
                         Kỳ vọng tồn quỹ
@@ -183,9 +186,7 @@ export function CloseSessionSheet({
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Đã đếm được
-                      </span>
+                      <span className="text-muted-foreground">Đã đếm được</span>
                       <span className="font-medium tabular-nums">
                         {formatVND(summary.closing_cash)}
                       </span>
@@ -216,7 +217,7 @@ export function CloseSessionSheet({
 
                 <div
                   className={cn(
-                    "rounded-lg border px-3 py-2.5 text-sm font-medium",
+                    "rounded-lg border px-3 py-2.5 text-base font-medium",
                     summary.cash_difference === 0
                       ? "border-success/20 bg-success/10 text-success"
                       : !significantDiff
@@ -231,13 +232,13 @@ export function CloseSessionSheet({
                       : `Chênh lệch lớn (> ${formatVND(SIGNIFICANT_DIFF_THRESHOLD)}). Đã ghi chú chưa?`}
                 </div>
 
-                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
                   Ca đã được ghi lại trong hệ thống. Nhấn xác nhận để đóng sheet
                   và quay về trang nhân viên.
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Badge variant="outline" className="w-fit text-xs">
+                  <Badge variant="outline" className="w-fit text-sm">
                     Tiền đầu ca: {formatVND(summary.opening_cash)}
                   </Badge>
                 </div>
@@ -258,7 +259,7 @@ export function CloseSessionSheet({
               >
                 Hủy
               </Button>
-              <div className="flex-1 text-right text-sm text-muted-foreground">
+              <div className="flex-1 text-right text-base text-muted-foreground">
                 Đã đếm:{" "}
                 <span className="font-semibold tabular-nums text-foreground">
                   {formatVND(totalCounted)}

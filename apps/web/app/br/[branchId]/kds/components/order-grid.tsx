@@ -38,9 +38,9 @@ export function OrderGrid({
   const gridClass =
     mode === "focus"
       ? "mx-auto grid w-full max-w-2xl grid-cols-1 gap-3 p-2 sm:max-w-3xl sm:gap-4 sm:p-3 md:max-w-4xl md:p-4"
-      : "grid grid-cols-1 gap-2 p-2 sm:grid-cols-2 sm:gap-3 sm:p-3 lg:grid-cols-3 xl:grid-cols-4 xl:p-4 2xl:grid-cols-5";
+      : "columns-1 gap-2 p-2 sm:columns-2 sm:gap-3 sm:p-3 lg:columns-3 xl:columns-4 xl:p-4 2xl:columns-5";
   return (
-    <ScrollArea className="flex-1">
+    <ScrollArea className="min-h-0 flex-1">
       {displayOrders.length === 0 ? (
         <div className="flex min-h-80 items-center justify-center p-6 md:min-h-96">
           <Empty>
@@ -72,6 +72,9 @@ export function OrderGrid({
               pendingTicketIds={pendingTicketIds}
               canMarkReady={canMarkReady}
               canRecall={canRecall}
+              className={
+                mode === "focus" ? undefined : "mb-2 break-inside-avoid sm:mb-3"
+              }
             />
           ))}
         </div>

@@ -10,11 +10,14 @@ import type { ActiveSession } from "./page";
 
 interface PosSessionHeaderProps {
   session: ActiveSession;
+  /** Ẩn nút "Chốt ca" cho role không có `pos:close_shift` (waiter). */
+  canCloseShift: boolean;
   onShowCloseSession: () => void;
 }
 
 function PosSessionHeaderComponent({
   session,
+  canCloseShift,
   onShowCloseSession,
 }: PosSessionHeaderProps) {
   return (
@@ -22,15 +25,15 @@ function PosSessionHeaderComponent({
       <div className="flex w-full items-center justify-between gap-1.5 md:gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <EmployeePortalBackControl />
-          <div className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground md:flex-wrap md:gap-x-3 md:gap-y-1">
+          <div className="flex min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground md:flex-wrap md:gap-x-3 md:gap-y-1">
             <span className="flex min-w-0 items-center gap-1.5 font-medium text-foreground">
-              <IconDeviceDesktop className="size-3.5 shrink-0 text-primary" />
+              <IconDeviceDesktop className="size-4 shrink-0 text-primary" />
               <span className="truncate">
                 {session.pos_terminals?.name ?? "POS"}
               </span>
             </span>
             <span className="hidden min-w-0 items-center gap-1.5 sm:flex">
-              <IconClock className="size-3.5 shrink-0" />
+              <IconClock className="size-4 shrink-0" />
               <span className="truncate">
                 <span className="hidden sm:inline">Ca mở lúc </span>
                 {formatTime(session.opened_at)}
@@ -41,15 +44,17 @@ function PosSessionHeaderComponent({
 
         <div className="flex shrink-0 items-center gap-1">
           <PosThemeToggle />
-          <Button
-          variant="ghost"
-          size="sm"
-          className="min-h-9 h-8 shrink-0 rounded-full px-3 text-xs font-semibold text-muted-foreground hover:text-destructive md:min-h-11 md:h-9 md:px-4"
-          onClick={onShowCloseSession}
-          aria-label="Chốt ca POS"
-        >
-          Chốt ca
-          </Button>
+          {canCloseShift ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="min-h-10 h-9 shrink-0 rounded-full px-3 text-sm font-semibold text-muted-foreground hover:text-destructive md:min-h-11 md:px-4"
+              onClick={onShowCloseSession}
+              aria-label="Chốt ca POS"
+            >
+              Chốt ca
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

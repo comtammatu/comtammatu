@@ -11,7 +11,7 @@ import {
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import { IconArmchair, IconLayoutGrid, IconMapPin } from "@tabler/icons-react";
+import { IconLayoutGrid, IconMapPin } from "@tabler/icons-react";
 import type { BranchTable } from "./page";
 
 interface PosTableGateProps {
@@ -51,7 +51,7 @@ const TableButton = memo(function TableButton({
       type="button"
       aria-label={`Bàn ${String(table.number)} ${statusLabel}`}
       className={cn(
-        "flex min-h-24 flex-col items-start justify-between rounded-lg border p-3 text-left transition-transform hover:-translate-y-0.5 hover:shadow-md sm:min-h-32 sm:p-4 lg:min-h-36",
+        "flex min-h-24 flex-col justify-between rounded-lg border p-3 text-left transition-transform hover:-translate-y-0.5 hover:shadow-md sm:p-4",
         isSelected
           ? "border-primary/30 bg-primary text-primary-foreground shadow-md"
           : isAvailable
@@ -62,15 +62,10 @@ const TableButton = memo(function TableButton({
       )}
       onClick={handleClick}
     >
-      <div className="flex w-full items-start justify-between gap-2">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide opacity-70">
-            Bàn
-          </p>
-          <p className="mt-2 text-4xl font-black leading-none tabular-nums">
-            {table.number}
-          </p>
-        </div>
+      <div className="flex w-full items-center justify-between gap-2">
+        <p className="text-base font-semibold uppercase tracking-wide opacity-70">
+          Bàn
+        </p>
         <Badge
           variant={
             isSelected
@@ -82,7 +77,7 @@ const TableButton = memo(function TableButton({
                   : "secondary"
           }
           className={cn(
-            "text-xs font-semibold",
+            "text-sm font-semibold",
             isSelected &&
               "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground",
           )}
@@ -91,9 +86,13 @@ const TableButton = memo(function TableButton({
         </Badge>
       </div>
 
-      <div className="flex w-full items-center justify-end gap-2 text-base font-medium">
-        <IconArmchair className="size-5" />
-        <span>{table.capacity} chỗ</span>
+      <div className="flex w-full items-end justify-between gap-2">
+        <p className="text-4xl font-black leading-none tabular-nums">
+          {table.number}
+        </p>
+        <p className="text-lg font-semibold tabular-nums">
+          {table.capacity} chỗ
+        </p>
       </div>
     </button>
   );
@@ -143,7 +142,7 @@ function PosTableGateComponent({
         </Empty>
       ) : (
         <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-          <div className="flex w-full flex-col gap-4 px-2 pb-28 pt-2 sm:gap-6 sm:p-6 lg:p-8">
+          <div className="flex w-full flex-col gap-4 px-2 pb-28 pt-2 md:px-4 md:py-4 lg:px-5">
             {tableGroups.map(({ zoneName, zoneTables, availableCount }) => (
               <section key={zoneName} className="flex flex-col gap-4">
                 <div className="flex items-center justify-between gap-3">
@@ -155,7 +154,7 @@ function PosTableGateComponent({
                       <p className="truncate text-base font-semibold text-foreground">
                         {zoneName}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         {zoneTables.length} bàn
                       </p>
                     </div>

@@ -1,6 +1,6 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 13.0.0 | Updated: 2026-04-22 | Status: locked baseline for UI/UX rebuild
+> Version: 13.0.0 | Updated: 2026-04-25 | Status: locked baseline for UI/UX rebuild
 
 ## Decision
 
@@ -8,11 +8,11 @@ The design system is the current shadcn preset plus the runtime tokens and primi
 
 Active runtime:
 
-- `style`: `radix-mira`
+- `style`: `radix-lyra`
 - `preset`: `b1GfmQMCm`
-- `baseColor`: `taupe`
+- `baseColor`: `stone`
 - `cssVariables`: `true`
-- `iconLibrary`: `lucide`
+- `iconLibrary`: `tabler`
 - primitive base: Radix/shadcn
 
 Agents must preserve this decision unless the task explicitly asks to change the design system itself.
@@ -39,7 +39,7 @@ Com Tam Ma Tu is an operational restaurant system. The UI should feel calm, fast
 - Inventory surfaces are workflow-first. The user should see pending tasks, required documents, and exception states before secondary analytics.
 - Employee surfaces are lightweight task portals. Keep them narrow, direct, and consistent with the shared shell.
 
-The visual tone is neutral taupe, warm primary action, restrained borders, semantic status colors, and strong spacing discipline.
+The visual tone is neutral stone, warm primary action, restrained borders, semantic status colors, and strong spacing discipline.
 
 ## Token Contract
 
@@ -88,6 +88,8 @@ Default primitive mapping:
 | route context | `Sidebar`, `Breadcrumb`, `Separator` |
 | keyboard hint | `Kbd`, `KbdGroup` |
 | transient feedback | `Sonner` |
+
+Toast and durable notification behavior is specified in `docs/spec/toast-notification-system.md`.
 
 Allowed app wrappers:
 

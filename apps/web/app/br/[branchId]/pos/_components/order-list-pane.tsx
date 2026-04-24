@@ -12,7 +12,7 @@ import {
 
 interface OrderListPaneProps {
   onViewBill: (orderId: number) => void;
-  onViewDetail: (orderId: number) => void;
+  onViewDetail: (orderId: number, orderNumber: string) => void;
 }
 
 function OrderListPaneComponent({
@@ -21,8 +21,11 @@ function OrderListPaneComponent({
 }: OrderListPaneProps) {
   const orders = usePosOrders();
   const { refreshOrders } = usePosOperationalDispatch();
-  const activeOrderCount = orders.filter((order) =>
-    ["new", "confirmed", "preparing", "ready", "served"].includes(order.status),
+  const activeOrderCount = orders.filter(
+    (order) =>
+      ["new", "confirmed", "preparing", "ready", "served"].includes(
+        order.status,
+      ) && order.payment_status !== "paid",
   ).length;
 
   return (
@@ -31,7 +34,7 @@ function OrderListPaneComponent({
         <div className="flex items-center gap-2">
           <span className="font-semibold">Đơn đang phục vụ</span>
           {activeOrderCount > 0 && (
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-sm">
               {activeOrderCount}
             </Badge>
           )}
@@ -39,7 +42,7 @@ function OrderListPaneComponent({
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 rounded-full px-3 text-xs"
+          className="h-10 rounded-full px-3 text-sm"
           onClick={() => void refreshOrders()}
         >
           <IconDoorEnter className="mr-1 size-3.5" />

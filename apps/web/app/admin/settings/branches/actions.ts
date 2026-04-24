@@ -9,10 +9,15 @@ const SETTINGS_ROLES: StaffRole[] = ["owner", "super_manager"];
 
 /* ─── Schemas ─── */
 
+const optionalText = z.preprocess(
+  (value) => (value === null ? undefined : value),
+  z.string().optional().default(""),
+);
+
 const branchSchema = z.object({
   name: z.string().min(1, { error: "Tên điểm vận hành không được để trống" }),
-  address: z.string().optional().default(""),
-  phone: z.string().optional().default(""),
+  address: optionalText,
+  phone: optionalText,
   branchKind: z.enum(["branch", "central_kitchen", "central_warehouse"]).default("branch"),
 });
 

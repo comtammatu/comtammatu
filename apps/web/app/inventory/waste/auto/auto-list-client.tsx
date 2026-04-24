@@ -80,7 +80,7 @@ export function AutoWasteListClient({ branchId, rows }: Props) {
   return (
     <>
       <InventoryHeader
-        title="Waste auto-generated"
+        title="Hao hụt phát hiện tự động"
         description={`CN #${branchId} · ${rows.length} phiếu · ${pending} chờ duyệt`}
       />
       <InventoryPageContent>

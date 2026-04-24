@@ -1,157 +1,242 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { formatVND } from "@comtammatu/shared/format";
 import type { PaymentMethod } from "@comtammatu/shared/providers";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
-import { Progress } from "@comtammatu/ui/components/progress";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@comtammatu/ui/components/sheet";
-import { IconCircleCheck, IconPrinter, IconReceipt } from "@tabler/icons-react";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@comtammatu/ui/components/dialog";
+import { Input } from "@comtammatu/ui/components/input";
+import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { fetchOrderForBill } from "../../actions";
+import { IconCash, IconCreditCard, IconQrcode } from "@tabler/icons-react";
+import { fetchOrderForBill, updateOrderStatus } from "../../actions";
 import {
+  confirmCashPayment,
   confirmPayment,
   createPayment,
-  fetchPaymentForOrder,
   fetchPaymentMethodsForPos,
 } from "../../payment-actions";
-import { printProvisionalBill, printReceipt } from "../../print-actions";
-import { BillReceiptSummary } from "./bill-receipt-summary";
-import { CashTenderedDialog } from "./cash-tendered-dialog";
-import { BillReceiptPaymentPicker } from "./bill-receipt-payment-picker";
-import { BillReceiptPaymentStatus } from "./bill-receipt-payment-status";
-import { METHOD_LABELS } from "./bill-receipt-types";
 import type { OrderData, PendingExtras } from "./bill-receipt-types";
 
 interface BillReceiptProps {
   branchId: number;
   orderId: number | null;
+  /**
+   * User có `pos:confirm_payment` không. Waiter (không có) sẽ không thấy
+   * phương thức "Tiền mặt" — cash chạm két phải do cashier. VietQR/MoMo
+   * vẫn hiện cho mọi role có POS_USE (e-wallet không chạm drawer).
+   */
+  canConfirmCash: boolean;
   onOrderUpdated?: () => void | Promise<void>;
   onClose: () => void;
-  onMinimize?: (orderId: number, paymentId: number) => void;
+}
+
+type PaymentStep = "confirm-served" | "payment";
+
+const METHOD_META: Record<
+  PaymentMethod,
+  {
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+  }
+> = {
+  cash: { label: "Tiền mặt", icon: IconCash },
+  vietqr: { label: "Chuyển khoản", icon: IconQrcode },
+  momo: { label: "MoMo", icon: IconCreditCard },
+};
+
+function buildCashSuggestions(totalAmount: number): number[] {
+  const total = Math.max(0, Math.round(totalAmount));
+  const nextThousand = Math.ceil((total + 1) / 1000) * 1000;
+  const nextFiveThousand = Math.ceil(total / 5000) * 5000;
+  const nextTenThousand = Math.ceil(total / 10000) * 10000;
+  const nextTwentyThousandAfterTen = nextTenThousand + 10000;
+  const nextLarge =
+    total <= 100000
+      ? 100000
+      : total <= 200000
+        ? 200000
+        : Math.ceil(total / 500000) * 500000;
+
+  return Array.from(
+    new Set([
+      total,
+      nextThousand,
+      nextFiveThousand,
+      nextTenThousand,
+      nextTwentyThousandAfterTen,
+      nextLarge,
+    ]),
+  )
+    .filter((value) => value >= total && value > 0)
+    .sort((a, b) => a - b)
+    .slice(0, 6);
+}
+
+function PaymentSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-2">
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+      </div>
+      <div className="space-y-3 rounded-lg border p-3">
+        <Skeleton className="h-5 w-36" />
+        <Skeleton className="h-10 w-full" />
+        <div className="grid grid-cols-2 gap-2">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function BillReceipt({
   branchId,
   orderId,
+  canConfirmCash,
   onOrderUpdated,
   onClose,
-  onMinimize,
 }: BillReceiptProps) {
   const [order, setOrder] = useState<OrderData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const [payPending, startPayTransition] = useTransition();
-  const [printPending, startPrintTransition] = useTransition();
-  const [provisionalPending, startProvisionalTransition] = useTransition();
-  const [cashDialogOpen, setCashDialogOpen] = useState(false);
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState<PaymentStep>("confirm-served");
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("cash");
+  const [cashInput, setCashInput] = useState("");
   const [pendingExtras, setPendingExtras] = useState<PendingExtras | null>(
     null,
   );
-  const [confirmPending, startConfirmTransition] = useTransition();
-  const [awaitingAsyncConfirmation, setAwaitingAsyncConfirmation] =
-    useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [actionPending, startActionTransition] = useTransition();
+  const [methodPending, startMethodTransition] = useTransition();
+
+  const totalAmount = Number(order?.total_amount ?? 0);
+  const cashReceived = Number(cashInput) || 0;
+  const cashChange = cashReceived - totalAmount;
+  const canConfirmPaid =
+    selectedMethod === "cash"
+      ? cashReceived >= totalAmount && totalAmount > 0
+      : Boolean(pendingExtras?.payment_id);
+
+  const cashSuggestions = useMemo(
+    () => buildCashSuggestions(totalAmount),
+    [totalAmount],
+  );
 
   useEffect(() => {
     if (orderId === null) {
       setOrder(null);
+      setMethods([]);
       setError(null);
+      setStep("confirm-served");
+      setSelectedMethod("cash");
+      setCashInput("");
       setPendingExtras(null);
-      setAwaitingAsyncConfirmation(false);
       return;
     }
 
     let cancelled = false;
-
     startTransition(async () => {
-      const result = await fetchOrderForBill(orderId);
+      const [orderResult, methodsResult] = await Promise.all([
+        fetchOrderForBill(orderId),
+        fetchPaymentMethodsForPos(branchId),
+      ]);
       if (cancelled) return;
-      if (result.success && result.data) {
-        const nextOrder = result.data as OrderData;
+
+      if (orderResult.success && orderResult.data) {
+        const nextOrder = orderResult.data as OrderData;
         setOrder(nextOrder);
         setError(null);
-        setPendingExtras((current) =>
-          nextOrder.payment_status === "paid" ? null : current,
-        );
+        setCashInput(String(Math.round(Number(nextOrder.total_amount))));
+        // Paid / completed orders are already past the serve+pay flow —
+        // jump straight to the payment step which renders a read-only
+        // paid summary. Avoids the `completed → served` invalid transition
+        // that confirm-served would attempt.
+        const isTerminal =
+          nextOrder.payment_status === "paid" ||
+          nextOrder.status === "completed" ||
+          nextOrder.status === "cancelled";
+        setStep(isTerminal ? "payment" : "confirm-served");
       } else {
-        setError(result.error ?? "Không thể tải đơn hàng");
+        setError(orderResult.error ?? "Không thể tải đơn hàng");
+      }
+
+      if (methodsResult.success && methodsResult.data) {
+        // Gate phương thức cash theo pos:confirm_payment.
+        // Waiter (không có) chỉ thấy QR/MoMo; server cũng reject cash nếu
+        // bypass UI (defense in depth).
+        const nextMethods = methodsResult.data.methods.filter(
+          (m) => m !== "cash" || canConfirmCash,
+        );
+        setMethods(nextMethods);
+        setSelectedMethod(
+          nextMethods.includes("cash")
+            ? "cash"
+            : (nextMethods[0] ?? "vietqr"),
+        );
       }
     });
 
     return () => {
       cancelled = true;
     };
-  }, [orderId]);
-
-  useEffect(() => {
-    if (orderId === null) {
-      setMethods([]);
-      return;
-    }
-    void fetchPaymentMethodsForPos(branchId).then((r) => {
-      if (r.success && r.data) {
-        setMethods(r.data.methods);
-      }
-    });
-  }, [branchId, orderId]);
-
-  const handlePrint = useCallback(() => {
-    if (orderId === null) return;
-    startPrintTransition(async () => {
-      const result = await printReceipt(orderId);
-      if (result.success) {
-        toast.success("Đã gửi hoá đơn tới máy in");
-      } else {
-        toast.error(result.error ?? "Không thể in hoá đơn");
-      }
-    });
-  }, [orderId]);
-
-  const handlePrintProvisional = useCallback(() => {
-    if (orderId === null) return;
-    startProvisionalTransition(async () => {
-      const result = await printProvisionalBill(orderId);
-      if (result.success) {
-        toast.success("Đã gửi phiếu tạm tính tới máy in");
-      } else {
-        toast.error(result.error ?? "Không thể in phiếu tạm tính");
-      }
-    });
-  }, [orderId]);
+  }, [branchId, canConfirmCash, orderId]);
 
   const handleOpenChange = useCallback(
     (open: boolean) => {
-      if (!open) {
-        onClose();
-        setOrder(null);
-        setPendingExtras(null);
-      }
+      if (!open) onClose();
     },
     [onClose],
   );
 
-  const handlePay = useCallback(
+  const handleConfirmServed = useCallback(() => {
+    if (orderId === null || !order) return;
+    startActionTransition(async () => {
+      if (order.status !== "served") {
+        const result = await updateOrderStatus(orderId, "served");
+        if (!result.success) {
+          toast.error(result.error ?? "Không thể xác nhận đã phục vụ");
+          return;
+        }
+        await onOrderUpdated?.();
+        setOrder((current) =>
+          current ? { ...current, status: "served" } : current,
+        );
+      }
+      setStep("payment");
+    });
+  }, [onOrderUpdated, order, orderId]);
+
+  const handleSelectMethod = useCallback(
     (method: PaymentMethod) => {
-      if (orderId === null || !order) return;
-      // Cash flow: open dialog to capture tiền nhận + tự động tính tiền
-      // trả khách. The dialog calls confirm_cash_payment RPC which handles
-      // payment creation + mark-paid + enqueue receipt atomically.
+      if (!order || orderId === null) return;
+      setSelectedMethod(method);
+
       if (method === "cash") {
-        setCashDialogOpen(true);
+        setPendingExtras(null);
+        setCashInput(String(Math.round(Number(order.total_amount))));
         return;
       }
-      startPayTransition(async () => {
+
+      startMethodTransition(async () => {
         const result = await createPayment(
           branchId,
           orderId,
@@ -159,45 +244,49 @@ export function BillReceipt({
           Number(order.total_amount),
         );
         if (result.success && result.data) {
-          if (result.data.status === "pending") {
-            toast.message("Đang chờ thanh toán", {
-              description: "Quý khách hoàn tất trên app / chuyển khoản.",
-            });
-            setAwaitingAsyncConfirmation(true);
-            setPendingExtras({
-              payment_id: result.data.payment_id,
-              provider_ref: result.data.provider_ref,
-              qr_data: result.data.qr_data,
-              redirect_url: result.data.redirect_url,
-              qr_info: result.data.qr_info,
-            });
-            setOrder((current) =>
-              current
-                ? {
-                    ...current,
-                    payment_method: method,
-                  }
-                : current,
-            );
-          }
+          setPendingExtras({
+            payment_id: result.data.payment_id,
+            provider_ref: result.data.provider_ref,
+            qr_data: result.data.qr_data,
+            redirect_url: result.data.redirect_url,
+            qr_info: result.data.qr_info,
+          });
+          setOrder((current) =>
+            current ? { ...current, payment_method: method } : current,
+          );
         } else {
-          toast.error(result.error ?? "Không thể thanh toán");
+          toast.error(result.error ?? "Không thể tạo thanh toán");
         }
       });
     },
     [branchId, order, orderId],
   );
 
-  const handleConfirmPayment = useCallback(() => {
-    const paymentId = pendingExtras?.payment_id;
-    if (!paymentId) return;
-    const providerRef = pendingExtras?.provider_ref ?? "";
-    startConfirmTransition(async () => {
-      const result = await confirmPayment(paymentId, providerRef);
+  const handleConfirmPaid = useCallback(() => {
+    if (!order || orderId === null || !canConfirmPaid) return;
+    startActionTransition(async () => {
+      if (selectedMethod === "cash") {
+        const result = await confirmCashPayment(orderId, cashReceived);
+        if (result.success) {
+          toast.success("Đã thanh toán", {
+            description: `Tiền trả khách: ${formatVND(result.data?.cash_change ?? 0)}`,
+          });
+          await onOrderUpdated?.();
+          onClose();
+        } else {
+          toast.error(result.error ?? "Không thể xác nhận thanh toán");
+        }
+        return;
+      }
+
+      const paymentId = pendingExtras?.payment_id;
+      if (!paymentId) return;
+      const result = await confirmPayment(
+        paymentId,
+        pendingExtras.provider_ref ?? "",
+      );
       if (result.success) {
-        toast.success("Đã thanh toán — đơn đã hoàn tất");
-        setAwaitingAsyncConfirmation(false);
-        setPendingExtras(null);
+        toast.success("Đã thanh toán");
         await onOrderUpdated?.();
         onClose();
       } else {
@@ -205,251 +294,268 @@ export function BillReceipt({
       }
     });
   }, [
+    canConfirmPaid,
+    cashReceived,
     onClose,
     onOrderUpdated,
+    order,
+    orderId,
     pendingExtras?.payment_id,
     pendingExtras?.provider_ref,
+    selectedMethod,
   ]);
 
-  const handleRealtimeConfirmed = useCallback(() => {
-    toast.success("Đã nhận tiền — đơn đã hoàn tất");
-    setAwaitingAsyncConfirmation(false);
-    setPendingExtras(null);
-    void onOrderUpdated?.();
-    onClose();
-  }, [onClose, onOrderUpdated]);
-
-  const handleMinimize = useCallback(() => {
-    const paymentId = pendingExtras?.payment_id;
-    if (!onMinimize || orderId === null || !paymentId) return;
-    onMinimize(orderId, paymentId);
-  }, [onMinimize, orderId, pendingExtras?.payment_id]);
-
-  const isPaid = order?.payment_status === "paid";
-  const hasPendingRemotePayment =
-    !isPaid &&
-    (pendingExtras !== null ||
-      order?.payment_method === "vietqr" ||
-      order?.payment_method === "momo");
-  const showPaySection = order && !isPaid && methods.length > 0;
-  const paymentProgressPercent = isPaid
-    ? 100
-    : payPending
-      ? 72
-      : pendingExtras
-        ? 84
-        : methods.length > 0
-          ? 46
-          : 24;
-
-  useEffect(() => {
-    if (!awaitingAsyncConfirmation || !isPaid) return;
-    toast.success("Đã xác nhận thanh toán");
-    void onOrderUpdated?.();
-    setAwaitingAsyncConfirmation(false);
-  }, [awaitingAsyncConfirmation, isPaid, onOrderUpdated]);
-
-  // Reopen: if order already has a pending payment record, fetch it once so
-  // the confirm button has the payment_id + provider_ref it needs. Realtime
-  // subscription on payments table replaces prior interval polling.
-  useEffect(() => {
-    if (
-      orderId === null ||
-      isPaid ||
-      !hasPendingRemotePayment ||
-      pendingExtras?.payment_id
-    )
-      return;
-    let cancelled = false;
-    void fetchPaymentForOrder(orderId).then((result) => {
-      if (cancelled) return;
-      if (!result.success || !result.data) return;
-      if (result.data.status !== "pending") return;
-      setPendingExtras((current) => ({
-        ...current,
-        payment_id: result.data!.id,
-        provider_ref: result.data!.provider_ref ?? undefined,
-      }));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [hasPendingRemotePayment, isPaid, orderId, pendingExtras?.payment_id]);
+  const MethodIcon = METHOD_META[selectedMethod]?.icon ?? IconCreditCard;
 
   return (
-    <>
-      <Sheet open={orderId !== null} onOpenChange={handleOpenChange}>
-        <SheetContent
-          side="right"
-          className="h-dvh max-h-dvh w-full overflow-hidden p-0 sm:max-w-sm"
-        >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Hóa đơn</SheetTitle>
-            <SheetDescription>
-              Xem chi tiết và thanh toán đơn hàng.
-            </SheetDescription>
-          </SheetHeader>
-          {isPending && !order ? (
-            <div className="flex h-full items-center justify-center">
-              <Spinner className="size-6 text-muted-foreground" />
-            </div>
-          ) : error ? (
-            <div className="flex h-full flex-col items-center justify-center gap-2 px-4">
-              <p className="text-sm font-medium text-destructive">{error}</p>
-              <Button variant="outline" size="sm" onClick={() => onClose()}>
-                Đóng
-              </Button>
-            </div>
-          ) : order ? (
-            <div className="flex h-full min-h-0 flex-col overflow-hidden">
-              <div className="shrink-0 px-4 pt-4">
-                <h2 className="text-left text-base font-semibold">Hóa đơn</h2>
-                <p className="text-left text-sm text-muted-foreground">
-                  #{order.order_number}
+    <Dialog open={orderId !== null} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        {step === "confirm-served" ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Xác nhận phục vụ</DialogTitle>
+              <DialogDescription>
+                Xác nhận đã phục vụ đủ món trước khi chuyển sang thanh toán.
+              </DialogDescription>
+            </DialogHeader>
+            {isPending ? (
+              <PaymentSkeleton />
+            ) : error ? (
+              <p className="text-base text-destructive">{error}</p>
+            ) : (
+              <div className="rounded-lg border bg-card p-3">
+                <p className="font-semibold">Đơn #{order?.order_number}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Tổng tạm tính: {formatVND(totalAmount)}
                 </p>
               </div>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={actionPending}
+              >
+                Huỷ
+              </Button>
+              <Button
+                data-testid="bill-confirm-served"
+                type="button"
+                onClick={handleConfirmServed}
+                disabled={isPending || actionPending || Boolean(error)}
+              >
+                {actionPending ? <Spinner className="mr-2" /> : null}
+                Xác nhận đã phục vụ đủ món
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Phương thức thanh toán</DialogTitle>
+              <DialogDescription className="sr-only">
+                Chọn tiền mặt hoặc chuyển khoản và xác nhận thanh toán.
+              </DialogDescription>
+            </DialogHeader>
 
-              <div className="shrink-0 border-b px-4 py-3 print:hidden">
-                <Card className="shadow-sm">
-                  <CardContent className="space-y-3 p-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge
-                        variant={
-                          isPaid
-                            ? "success"
-                            : pendingExtras
-                              ? "warning"
-                              : "outline"
-                        }
-                      >
-                        {isPaid
-                          ? "Đã thanh toán"
-                          : pendingExtras
-                            ? "Chờ khách"
-                            : "Chờ thu ngân"}
-                      </Badge>
-                      <Badge variant="outline">
-                        {order.order_type === "dine_in"
-                          ? `Bàn ${order.tables?.number ?? "—"}`
-                          : "Mang về"}
-                      </Badge>
-                      <Badge variant="outline">
-                        {order.order_items.length} món
-                      </Badge>
-                      {(METHOD_LABELS[order.payment_method ?? ""] ||
-                        pendingExtras) && (
-                        <Badge variant="outline">
-                          {METHOD_LABELS[order.payment_method ?? ""] ?? "—"}
-                        </Badge>
-                      )}
-                    </div>
-
-                    <div className="flex items-baseline justify-between gap-3 rounded-lg border bg-card px-3 py-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Tổng
+            {isPending ? (
+              <PaymentSkeleton />
+            ) : error ? (
+              <p className="text-base text-destructive">{error}</p>
+            ) : order?.payment_status === "paid" ||
+              order?.status === "completed" ||
+              order?.status === "cancelled" ? (
+              <div className="space-y-3">
+                <div className="rounded-lg border bg-card p-4">
+                  <p className="text-base font-semibold">
+                    Đơn #{order.order_number} —{" "}
+                    {order.payment_status === "paid"
+                      ? "Đã thanh toán"
+                      : order.status === "cancelled"
+                        ? "Đã huỷ"
+                        : "Đã hoàn tất"}
+                  </p>
+                  <div className="mt-2 flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Tổng đơn</span>
+                    <span className="font-semibold tabular-nums">
+                      {formatVND(totalAmount)}
+                    </span>
+                  </div>
+                  {order.payment_method && (
+                    <div className="mt-1 flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Phương thức</span>
+                      <span className="font-medium">
+                        {METHOD_META[order.payment_method as PaymentMethod]
+                          ?.label ?? order.payment_method}
                       </span>
-                      <span className="text-xl font-bold text-primary tabular-nums">
-                        {formatVND(order.total_amount)}
-                      </span>
                     </div>
-
-                    <div className="space-y-1.5">
-                      <Progress
-                        value={payPending ? undefined : paymentProgressPercent}
-                        className="h-1.5"
-                      />
-                      {hasPendingRemotePayment && (
-                        <p className="text-xs text-muted-foreground">
-                          Đồng bộ realtime giữa các thiết bị.
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button type="button" onClick={onClose}>
+                    Đóng
+                  </Button>
+                </DialogFooter>
               </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-2">
+                  {methods.map((method) => {
+                    const meta = METHOD_META[method] ?? {
+                      label: method,
+                      icon: IconCreditCard,
+                    };
+                    const Icon = meta.icon;
+                    return (
+                      <Button
+                        key={method}
+                        data-testid={`bill-pay-${method}`}
+                        type="button"
+                        variant={
+                          selectedMethod === method ? "default" : "outline"
+                        }
+                        className="h-20 flex-col gap-2"
+                        onClick={() => handleSelectMethod(method)}
+                        disabled={actionPending || methodPending}
+                      >
+                        <Icon className="size-5" />
+                        {meta.label}
+                      </Button>
+                    );
+                  })}
+                </div>
 
-              <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-                <BillReceiptSummary order={order} />
+                {selectedMethod === "cash" ? (
+                  <div className="space-y-4 rounded-lg border p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm text-muted-foreground">
+                        Tổng tạm tính
+                      </span>
+                      <span className="text-lg font-bold tabular-nums">
+                        {formatVND(totalAmount)}
+                      </span>
+                    </div>
 
-                {showPaySection && (
-                  <div className="border-t px-4 py-3 print:hidden">
-                    <BillReceiptPaymentPicker
-                      methods={methods}
-                      onPay={handlePay}
-                      payPending={payPending}
-                      hasPendingRemotePayment={hasPendingRemotePayment}
-                      pendingExtras={pendingExtras}
-                    />
-                    {pendingExtras?.qr_data && (
-                      <div className="mt-3">
-                        <BillReceiptPaymentStatus
-                          pendingExtras={pendingExtras}
-                          confirmPending={confirmPending}
-                          onConfirm={handleConfirmPayment}
-                          onRealtimeConfirmed={handleRealtimeConfirmed}
-                          onMinimize={
-                            onMinimize && pendingExtras.payment_id
-                              ? handleMinimize
-                              : undefined
-                          }
-                        />
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+                        Tổng nhận
+                      </span>
+                      <Input
+                        id="cash-received"
+                        data-testid="bill-cash-received"
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        step={1000}
+                        value={cashInput}
+                        onChange={(event) => setCashInput(event.target.value)}
+                        onFocus={(event) => event.currentTarget.select()}
+                        disabled={actionPending}
+                        className="h-12 pl-28 pr-3 text-right text-lg font-semibold tabular-nums"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {cashSuggestions.map((amount) => (
+                        <Button
+                          key={amount}
+                          type="button"
+                          variant="outline"
+                          onClick={() => setCashInput(String(amount))}
+                          disabled={actionPending}
+                        >
+                          {formatVND(amount)}
+                        </Button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/50 p-3">
+                      <span className="text-sm font-medium">
+                        Tiền trả khách
+                      </span>
+                      <span className="text-lg font-bold tabular-nums">
+                        {cashReceived < totalAmount
+                          ? `Thiếu ${formatVND(totalAmount - cashReceived)}`
+                          : formatVND(cashChange)}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4 rounded-lg border p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm text-muted-foreground">
+                        Tổng tạm tính
+                      </span>
+                      <span className="text-lg font-bold tabular-nums">
+                        {formatVND(totalAmount)}
+                      </span>
+                    </div>
+
+                    {methodPending ? (
+                      <div className="space-y-3">
+                        <Skeleton className="mx-auto size-48" />
+                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-5 w-4/5" />
                       </div>
+                    ) : (
+                      <>
+                        {pendingExtras?.qr_data ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={pendingExtras.qr_data}
+                            alt="QR chuyển khoản"
+                            className="mx-auto max-h-72 w-full max-w-72 object-contain"
+                          />
+                        ) : (
+                          <div className="mx-auto flex size-48 items-center justify-center rounded-lg border bg-muted/40">
+                            <MethodIcon className="size-10 text-muted-foreground" />
+                          </div>
+                        )}
+                        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
+                          <dt className="text-muted-foreground">STK:</dt>
+                          <dd className="font-mono font-semibold">
+                            {pendingExtras?.qr_info?.account_no ?? "Đang tạo"}
+                          </dd>
+                          <dt className="text-muted-foreground">Nội dung:</dt>
+                          <dd className="font-mono">
+                            {pendingExtras?.qr_info?.description ??
+                              `DH ${order?.order_number ?? ""}`}
+                          </dd>
+                        </dl>
+                      </>
                     )}
                   </div>
                 )}
-              </ScrollArea>
-
-              <div className="shrink-0 border-t p-4 print:hidden">
-                <div className="space-y-2">
-                  {!isPaid && (
-                    <Button
-                      variant="outline"
-                      className="w-full rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
-                      onClick={handlePrintProvisional}
-                      disabled={provisionalPending}
-                    >
-                      {provisionalPending ? (
-                        <Spinner className="mr-2" />
-                      ) : (
-                        <IconReceipt className="mr-2 size-4" />
-                      )}
-                      In phiếu tạm tính
-                    </Button>
-                  )}
-                  <Button
-                    variant="default"
-                    className="w-full rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
-                    onClick={handlePrint}
-                    disabled={printPending || !isPaid}
-                  >
-                    {printPending ? (
-                      <Spinner className="mr-2" />
-                    ) : isPaid ? (
-                      <IconCircleCheck className="mr-2 size-4" />
-                    ) : (
-                      <IconPrinter className="mr-2 size-4" />
-                    )}
-                    In hóa đơn
-                  </Button>
-                </div>
               </div>
-            </div>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+            )}
 
-      {order && orderId !== null && (
-        <CashTenderedDialog
-          open={cashDialogOpen}
-          onOpenChange={setCashDialogOpen}
-          orderId={orderId}
-          totalAmount={Number(order.total_amount)}
-          onSuccess={async () => {
-            await onOrderUpdated?.();
-            onClose();
-          }}
-        />
-      )}
-    </>
+            <DialogFooter>
+              <Button
+                data-testid={
+                  selectedMethod === "cash" ? "bill-confirm-cash" : undefined
+                }
+                type="button"
+                onClick={handleConfirmPaid}
+                disabled={
+                  isPending || methodPending || actionPending || !canConfirmPaid
+                }
+              >
+                {actionPending ? <Spinner className="mr-2" /> : null}
+                Đã thanh toán
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={actionPending}
+              >
+                Huỷ
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

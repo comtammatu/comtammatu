@@ -97,6 +97,10 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 | `POS session` | ca POS | Shift mở trên terminal | ca bán hàng nếu đang nói entity kỹ thuật |
 | `terminal` | máy POS | Thiết bị / điểm POS cụ thể | máy thu ngân |
 | `kds ticket` | phiếu bếp | Ticket hiển thị trên KDS | order bếp |
+| `ready` | sẵn sàng | Món/phiếu bếp đã xong ở bếp; không tự động trả bàn | hoàn thành đơn |
+| `served` | đã phục vụ | Marker phục vụ/fulfillment; không phải payment close | trả bàn, hoàn tất đơn |
+| `completed` | hoàn thành POS | Đơn đã thanh toán và đóng ở POS; bàn được release nếu dine-in | bếp xong |
+| `release table` | trả bàn | Hệ thống release bàn khi đơn POS `completed` hoặc `cancelled` | nút riêng sau thanh toán |
 
 ### Procurement, kho, và sản xuất
 

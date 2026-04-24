@@ -1,30 +1,21 @@
 import { test, expect } from "@playwright/test";
-import {
-  createTestOrder,
-  getOrderPaymentStatus,
-  verifyStockConsumed,
-} from "./helpers/supabase";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@comtammatu/database";
+import {
+  createTestOrder,
+  getKdsTicketStatus,
+  getOrderPaymentStatus,
+  getOrderStatus,
+  getTableStatus,
+  verifyStockConsumed,
+} from "./helpers/supabase";
 
 /**
- * E2E: VietQR confirmPayment flow — verifies that:
- *   1. A pending payment transitions to "completed" via confirmPayment
- *   2. order.payment_status transitions to "paid"
- *   3. consume_stock_for_order is called (non-fatal if it fails)
+ * E2E: VietQR confirmPayment flow.
  *
- * This test creates a payment in "pending" state directly via DB (service role),
- * then calls the confirmPayment Server Action via a test API route.
- *
- * NOTE: This approach bypasses the UI because the VietQR confirm flow
- * is triggered by a webhook/poll, not a direct UI button. Once real VietQR
- * is wired (post-pilot), this test should be updated to drive the poll flow.
- *
- * Pre-conditions (same as payment-cash.spec.ts):
- *   E2E_CASHIER_EMAIL, E2E_CASHIER_PASSWORD
- *   E2E_TEST_TENANT_ID, E2E_TEST_BRANCH_ID, E2E_TEST_MENU_ITEM_ID
+ * Verifies payment confirmation closes the POS order commercially and releases
+ * the dine-in table without forcing KDS ticket state.
  */
-
 function createServiceClient() {
   return createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -34,13 +25,12 @@ function createServiceClient() {
 }
 
 test.describe("VietQR confirmPayment flow", () => {
-  test("confirming a pending VietQR payment marks order as paid and deducts stock", async ({
+  test("confirming a pending VietQR payment completes the order and leaves KDS alone", async ({
     page,
   }) => {
     const testOrder = await createTestOrder();
     const supabase = createServiceClient();
 
-    // Look up the test cashier's user ID for created_by FK
     const cashierEmail = process.env.E2E_CASHIER_EMAIL ?? "";
     const {
       data: { users },
@@ -49,7 +39,6 @@ test.describe("VietQR confirmPayment flow", () => {
     if (!cashier) throw new Error(`Test cashier not found: ${cashierEmail}`);
 
     try {
-      // Create a pending payment for the test order (simulates VietQR payment initiation)
       const { data: payment, error: payErr } = await supabase
         .from("payments")
         .insert({
@@ -69,34 +58,24 @@ test.describe("VietQR confirmPayment flow", () => {
         throw new Error(`Failed to create test payment: ${payErr?.message}`);
       }
 
-      // Navigate to POS (auth cookies are loaded from saved state)
       await page.goto(`/br/${String(testOrder.branchId)}/pos`);
       await page.waitForLoadState("networkidle");
 
-      // Call confirmPayment via the test route
-      // We invoke the Server Action by navigating to a dedicated test endpoint
-      // that wraps confirmPayment (for E2E purposes only).
-      //
-      // Alternative: use page.evaluate to call the fetch endpoint if one exists.
-      //
-      // For now, we simulate it by calling the API directly via request context:
+      const providerRef = `E2E-TEST-${Date.now()}`;
       const response = await page.request.post(`/api/test/confirm-payment`, {
         data: {
           paymentId: payment.id,
-          providerRef: `E2E-TEST-${Date.now()}`,
+          providerRef,
         },
         headers: { "Content-Type": "application/json" },
       });
 
-      // If the test API route doesn't exist yet, skip gracefully
       if (response.status() === 404) {
-        // Fallback: update payment directly via service role to simulate confirm
-        // This tests the DB outcome without going through the Server Action
         await supabase
           .from("payments")
           .update({
             status: "completed",
-            provider_ref: `E2E-TEST-${Date.now()}`,
+            provider_ref: providerRef,
             paid_at: new Date().toISOString(),
           })
           .eq("id", payment.id)
@@ -104,31 +83,47 @@ test.describe("VietQR confirmPayment flow", () => {
 
         await supabase
           .from("orders")
-          .update({ payment_status: "paid" })
+          .update({
+            payment_status: "paid",
+            status: "completed",
+            payment_method: "vietqr",
+          })
           .eq("id", testOrder.orderId)
           .eq("tenant_id", testOrder.tenantId);
 
         console.log(
-          "[e2e] /api/test/confirm-payment not found — used direct DB update as fallback",
-        );
-        console.log(
-          "[e2e] TODO: create /api/test/confirm-payment route that wraps confirmPayment Server Action",
+          "[e2e] /api/test/confirm-payment not found; used direct DB payment-close fallback",
         );
       } else {
         expect(response.ok()).toBeTruthy();
       }
 
-      // Verify order is now paid
-      const paymentStatus = await getOrderPaymentStatus(testOrder.orderId);
-      expect(paymentStatus).toBe("paid");
+      await expect
+        .poll(() => getOrderPaymentStatus(testOrder.orderId), {
+          timeout: 15_000,
+        })
+        .toBe("paid");
+      await expect
+        .poll(() => getOrderStatus(testOrder.orderId), {
+          timeout: 15_000,
+        })
+        .toBe("completed");
+      await expect
+        .poll(() => getTableStatus(testOrder.tableId), {
+          timeout: 15_000,
+        })
+        .toBe("available");
+      await expect
+        .poll(() => getKdsTicketStatus(testOrder.kdsTicketId), {
+          timeout: 15_000,
+        })
+        .toBe("pending");
 
-      // Log stock deduction result
       const stockConsumed = await verifyStockConsumed(testOrder.orderId);
       console.log(
         `[e2e] stock consumed for order ${testOrder.orderId}: ${stockConsumed}`,
       );
     } finally {
-      // Cleanup in reverse dependency order
       await supabase
         .from("stock_movements")
         .delete()

@@ -34,7 +34,7 @@ export function BillReceiptPaymentPicker({
     <Card className="shadow-sm">
       <CardContent className="space-y-3 p-3">
         <div className="flex items-center justify-between gap-2">
-          <h4 className="text-sm font-semibold">Phương thức thanh toán</h4>
+          <h4 className="text-base font-semibold">Phương thức thanh toán</h4>
           <Badge variant="outline">{methods.length}</Badge>
         </div>
 
@@ -47,7 +47,7 @@ export function BillReceiptPaymentPicker({
               variant={m === "cash" ? "default" : "secondary"}
               disabled={payPending || hasPendingRemotePayment}
               className={cn(
-                "h-12 w-full justify-between rounded-lg px-4 text-sm font-semibold shadow-sm transition-transform hover:-translate-y-0.5",
+                "h-12 w-full justify-between rounded-lg px-4 text-base font-semibold shadow-sm transition-transform hover:-translate-y-0.5",
                 m === "cash" && "shadow-md",
               )}
               onClick={() => onPay(m)}

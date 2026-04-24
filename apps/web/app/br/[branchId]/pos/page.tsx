@@ -1,17 +1,64 @@
 import { Suspense } from "react";
 import { IconDeviceDesktop, IconAlertTriangle } from "@tabler/icons-react";
-import { Spinner } from "@comtammatu/ui/components/spinner";
+import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import {
   fetchMenuForPos,
   fetchTablesForBranch,
   fetchActiveSession,
   fetchPosTerminals,
+  fetchPosPermissionFlags,
 } from "./actions";
 import { PosDesktopShell } from "./pos-desktop-shell";
 import type { MenuCategory } from "./pos-menu-types";
 import { SessionGate } from "./session-gate";
 import type { OrderType } from "./types";
 import { PosStatusShell } from "./pos-status-shell";
+
+function PosPageSkeleton() {
+  return (
+    <div className="flex h-dvh min-h-0 flex-col bg-background">
+      <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-4 py-3">
+        <div className="min-w-0 space-y-2">
+          <Skeleton className="h-5 w-36" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-9 w-24 rounded-full" />
+          <Skeleton className="size-9 rounded-full" />
+        </div>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+        <div className="flex min-h-0 flex-col overflow-hidden p-3">
+          <div className="mb-3 flex shrink-0 gap-2">
+            <Skeleton className="h-10 flex-1" />
+            <Skeleton className="h-10 flex-1" />
+          </div>
+          <div className="grid flex-1 auto-rows-min grid-cols-2 gap-3 overflow-hidden sm:grid-cols-3 lg:grid-cols-4">
+            {Array.from({ length: 12 }).map((_, index) => (
+              <div key={index} className="rounded-lg border bg-card p-3">
+                <Skeleton className="mb-3 aspect-square w-full" />
+                <Skeleton className="h-5 w-4/5" />
+                <Skeleton className="mt-2 h-4 w-1/2" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="hidden min-h-0 w-96 border-l border-border/60 p-3 md:flex md:flex-col">
+          <Skeleton className="h-6 w-32" />
+          <div className="mt-4 space-y-3">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="rounded-lg border bg-card p-3">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="mt-2 h-4 w-1/2" />
+              </div>
+            ))}
+          </div>
+          <Skeleton className="mt-auto h-12 w-full" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default async function PosPage({
   params,
@@ -33,8 +80,12 @@ export default async function PosPage({
 
   const branchIdNum = Number(branchId);
 
-  // Check for active session first
-  const sessionResult = await fetchActiveSession(branchIdNum);
+  // Fetch session + perm flags song song — session dùng cho branch gate,
+  // flags dùng cho "mở ca" gate (no-session) và "đóng ca" button (with-session).
+  const [sessionResult, permFlags] = await Promise.all([
+    fetchActiveSession(branchIdNum),
+    fetchPosPermissionFlags(branchIdNum),
+  ]);
 
   if (!sessionResult.success) {
     return (
@@ -71,8 +122,45 @@ export default async function PosPage({
     );
   }
 
-  // No open session → show session gate
+  // No open session → chỉ role có quyền thao tác két (cashier/branch_manager)
+  // mới được tự mở ca. Waiter chỉ có pos:use → chặn tại đây, hướng dẫn liên hệ
+  // thu ngân để tránh dead-end ở form "Mở ca".
   if (!sessionResult.data) {
+    if (!permFlags.canOpenShift) {
+      return (
+        <PosStatusShell
+          icon={<IconDeviceDesktop />}
+          title="Chưa có ca mở"
+          description="Bạn không có quyền mở ca. Liên hệ thu ngân hoặc quản lý chi nhánh để mở ca trước khi nhận đơn."
+          badge={{
+            label: "Chờ mở ca",
+            icon: <IconAlertTriangle className="size-3.5" />,
+            variant: "warning",
+          }}
+          steps={[
+            {
+              label: "Bước 1",
+              title: "Kiểm tra phiên",
+              description: "Chưa có ca mở.",
+              tone: "done",
+            },
+            {
+              label: "Bước 2",
+              title: "Thu ngân mở ca",
+              description: "Yêu cầu thu ngân mở ca trên máy POS.",
+              tone: "current",
+            },
+            {
+              label: "Bước 3",
+              title: "Vào bán hàng",
+              description: "Quay lại sau khi ca đã mở.",
+              tone: "pending",
+            },
+          ]}
+        />
+      );
+    }
+
     const terminalsResult = await fetchPosTerminals(branchIdNum);
 
     if (!terminalsResult.success) {
@@ -138,9 +226,7 @@ export default async function PosPage({
   const tablesList = (tablesResult.data ?? []) as BranchTable[];
   const tableParamValidForDineIn =
     initialTableId != null &&
-    tablesList.some(
-      (t) => t.id === initialTableId && t.status === "available",
-    );
+    tablesList.some((t) => t.id === initialTableId && t.status === "available");
   const initialOrderType: OrderType = tableParamValidForDineIn
     ? "dine_in"
     : tablesList.length > 0
@@ -183,48 +269,15 @@ export default async function PosPage({
   }
 
   return (
-    <Suspense
-      fallback={
-        <PosStatusShell
-          icon={<IconDeviceDesktop />}
-          title="Đang chuẩn bị quầy POS"
-          description="Đang nạp ca làm, bàn và menu."
-          badge={{
-            label: "Đồng bộ quầy bán",
-            icon: (
-              <Spinner className="size-3.5 motion-reduce:animate-none" />
-            ),
-            variant: "info",
-          }}
-          steps={[
-            {
-              label: "Bước 1",
-              title: "Phiên hợp lệ",
-              description: "Ca làm và thiết bị đã sẵn sàng.",
-              tone: "done",
-            },
-            {
-              label: "Bước 2",
-              title: "Dựng mặt bàn",
-              description: "Đang nạp bàn và món.",
-              tone: "current",
-            },
-            {
-              label: "Bước 3",
-              title: "Sẵn sàng nhận order",
-              description: "Mở giao diện POS.",
-              tone: "pending",
-            },
-          ]}
-        />
-      }
-    >
+    <Suspense fallback={<PosPageSkeleton />}>
       <PosDesktopShell
         branchId={branchIdNum}
         categories={menuResult.data as MenuCategory[]}
         tables={tablesList}
         session={session}
         initialOrderType={initialOrderType}
+        canCloseShift={permFlags.canCloseShift}
+        canConfirmCash={permFlags.canConfirmCash}
       />
     </Suspense>
   );

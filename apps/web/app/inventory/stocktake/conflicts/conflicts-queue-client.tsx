@@ -74,7 +74,7 @@ export function ConflictsQueueClient({
   return (
     <>
       <InventoryHeader
-        title="Conflict queue — stocktake offline sync"
+        title="Xử lý lệch kiểm kê"
         description={`CN #${branchId} · ${pending.length} chờ xử lý · ${resolved.length} đã resolve`}
       />
       <InventoryPageContent>

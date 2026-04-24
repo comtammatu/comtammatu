@@ -12,10 +12,7 @@ export const DENOMINATIONS = [
 export type DenominationCounts = Record<number, number>;
 
 export function sumDenominations(counts: DenominationCounts): number {
-  return DENOMINATIONS.reduce(
-    (total, d) => total + d * (counts[d] ?? 0),
-    0,
-  );
+  return DENOMINATIONS.reduce((total, d) => total + d * (counts[d] ?? 0), 0);
 }
 
 interface DenominationInputProps {
@@ -52,10 +49,10 @@ export function DenominationInput({
   return (
     <div className="rounded-lg border bg-card p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Đếm tiền mặt theo mệnh giá
         </p>
-        <p className="text-xs text-muted-foreground">Enter để sang dòng kế</p>
+        <p className="text-sm text-muted-foreground">Enter để sang dòng kế</p>
       </div>
       <div className="flex flex-col gap-2">
         {DENOMINATIONS.map((denom, index) => {
@@ -65,11 +62,11 @@ export function DenominationInput({
             <div key={denom} className="flex items-center gap-2">
               <Label
                 htmlFor={`denom-${String(denom)}`}
-                className="w-20 shrink-0 text-sm font-semibold tabular-nums"
+                className="w-20 shrink-0 text-base font-semibold tabular-nums"
               >
                 {formatVND(denom)}
               </Label>
-              <span className="text-xs text-muted-foreground">×</span>
+              <span className="text-sm text-muted-foreground">×</span>
               <Input
                 id={`denom-${String(denom)}`}
                 ref={(el) => {
@@ -91,7 +88,7 @@ export function DenominationInput({
                 placeholder="0"
                 className="h-10 w-20 text-center tabular-nums"
               />
-              <span className="flex-1 text-right text-sm tabular-nums text-muted-foreground">
+              <span className="flex-1 text-right text-base tabular-nums text-muted-foreground">
                 {subtotal > 0 ? formatVND(subtotal) : "—"}
               </span>
             </div>
@@ -99,7 +96,7 @@ export function DenominationInput({
         })}
       </div>
       <div className="mt-3 flex items-center justify-between border-t pt-3">
-        <span className="text-sm font-semibold">Tổng đếm được</span>
+        <span className="text-base font-semibold">Tổng đếm được</span>
         <span className="text-lg font-bold tabular-nums text-primary">
           {formatVND(total)}
         </span>

@@ -160,7 +160,7 @@ export function StocktakeListClient({
           <div className="flex items-center gap-2">
             <Button type="button" variant="outline" asChild>
               {/* S13b conflict queue. Route gated by inv_s13b_stocktake_recount. */}
-              <Link href={`${routeBase}/conflicts`}>Conflict queue</Link>
+              <Link href={`${routeBase}/conflicts`}>Xử lý lệch</Link>
             </Button>
             <Button type="button" variant="outline" asChild>
               {/* S13a pilot entry. Route is feature-flag gated server-side —

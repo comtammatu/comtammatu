@@ -1,6 +1,5 @@
 "use client";
 
-import { Badge } from "@comtammatu/ui/components/badge";
 import { cn } from "@comtammatu/ui";
 
 interface AgeBadgeProps {
@@ -10,10 +9,10 @@ interface AgeBadgeProps {
 
 export function AgeBadge({ elapsedMinutes, isComplete }: AgeBadgeProps) {
   return (
-    <Badge
-      variant="outline"
+    <div
+      aria-label={`${elapsedMinutes} phút`}
       className={cn(
-        "flex shrink-0 flex-col items-center gap-0 rounded-lg border px-3 py-2",
+        "flex min-h-14 w-16 shrink-0 flex-col items-center justify-center border px-2 py-1 text-center",
         isComplete
           ? "border-success/40 bg-success/15 text-success"
           : elapsedMinutes >= 10
@@ -27,6 +26,6 @@ export function AgeBadge({ elapsedMinutes, isComplete }: AgeBadgeProps) {
         {elapsedMinutes}
       </span>
       <span className="text-xs font-bold uppercase opacity-70">phút</span>
-    </Badge>
+    </div>
   );
 }

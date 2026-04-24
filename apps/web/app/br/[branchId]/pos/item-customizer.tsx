@@ -251,12 +251,12 @@ export function ItemCustomizer({
               </SheetDescription>
             </SheetHeader>
 
-            <ScrollArea className="flex-1 px-4">
-              <div className="flex flex-col gap-4 pb-4">
+            <ScrollArea className="flex-1">
+              <div className="flex flex-col gap-4 px-4 pb-4">
                 {/* Variants */}
                 {item.menu_item_variants.length > 0 && (
                   <div>
-                    <h3 className="mb-2 text-sm font-semibold">Loại</h3>
+                    <h3 className="mb-2 text-base font-semibold">Loại</h3>
                     <div className="flex flex-wrap gap-2">
                       {item.menu_item_variants.map((v) => {
                         const isSelected = selectedVariant?.id === v.id;
@@ -266,7 +266,7 @@ export function ItemCustomizer({
                             key={v.id}
                             type="button"
                             className={cn(
-                              "rounded-lg border px-3 py-2 text-sm transition-colors",
+                              "rounded-lg border px-3 py-2 text-base transition-colors",
                               isSelected
                                 ? "border-primary bg-primary/10 font-medium text-primary"
                                 : "border-border hover:bg-accent",
@@ -274,7 +274,7 @@ export function ItemCustomizer({
                             onClick={() => setSelectedVariant(v)}
                           >
                             <span>{v.name}</span>
-                            <span className="ml-1.5 text-xs opacity-70">
+                            <span className="ml-1.5 text-sm opacity-70">
                               {formatVND(price)}
                             </span>
                           </button>
@@ -287,7 +287,7 @@ export function ItemCustomizer({
                 {/* Modifiers */}
                 {item.menu_item_modifiers.length > 0 && (
                   <div>
-                    <h3 className="mb-2 text-sm font-semibold">Thêm</h3>
+                    <h3 className="mb-2 text-base font-semibold">Thêm</h3>
                     <div className="flex flex-col gap-2">
                       {item.menu_item_modifiers.map((m) => (
                         <label
@@ -298,8 +298,8 @@ export function ItemCustomizer({
                             checked={selectedModifierIds.has(m.id)}
                             onCheckedChange={() => toggleModifier(m.id)}
                           />
-                          <span className="flex-1 text-sm">{m.name}</span>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="flex-1 text-base">{m.name}</span>
+                          <span className="text-base text-muted-foreground">
                             +{formatVND(m.price)}
                           </span>
                         </label>
@@ -311,7 +311,7 @@ export function ItemCustomizer({
                 {/* Available Sides */}
                 {item.menu_item_available_sides.length > 0 && (
                   <div>
-                    <h3 className="mb-2 text-sm font-semibold">Món kèm</h3>
+                    <h3 className="mb-2 text-base font-semibold">Món kèm</h3>
                     <div className="flex flex-col gap-2">
                       {item.menu_item_available_sides.map((s) => {
                         const sideQuantity = selectedSideQuantities.get(
@@ -334,17 +334,17 @@ export function ItemCustomizer({
                             />
                             <Label
                               htmlFor={`side-${String(s.id)}`}
-                              className="min-w-0 flex-1 cursor-pointer text-sm font-normal"
+                              className="min-w-0 flex-1 cursor-pointer text-base font-normal"
                             >
                               {s.side_item.name}
                               {s.is_default && (
-                                <span className="ml-1 text-xs text-muted-foreground">
+                                <span className="ml-1 text-sm text-muted-foreground">
                                   (mặc định)
                                 </span>
                               )}
                             </Label>
                             <div className="flex shrink-0 items-center gap-2">
-                              <span className="w-20 text-right text-sm font-medium tabular-nums">
+                              <span className="w-20 text-right text-base font-medium tabular-nums">
                                 +{formatVND(sideLineTotal)}
                               </span>
                               <div className="flex w-24 items-center justify-end gap-1">
@@ -365,7 +365,7 @@ export function ItemCustomizer({
                                 </Button>
                                 <span
                                   className={cn(
-                                    "w-6 text-center text-sm font-semibold tabular-nums",
+                                    "w-6 text-center text-base font-semibold tabular-nums",
                                     !isSelected && "text-muted-foreground",
                                   )}
                                 >
@@ -397,7 +397,7 @@ export function ItemCustomizer({
                 <div>
                   <Label
                     htmlFor="item-note"
-                    className="mb-2 text-sm font-semibold"
+                    className="mb-2 text-base font-semibold"
                   >
                     Ghi chú
                   </Label>
@@ -417,8 +417,8 @@ export function ItemCustomizer({
             <Separator />
             <div className="flex items-center justify-between gap-3 p-4">
               <div>
-                <p className="text-xs text-muted-foreground">Tạm tính</p>
-                <p className="text-lg font-bold text-primary tabular-nums">
+                <p className="text-sm text-muted-foreground">Tạm tính</p>
+                <p className="text-xl font-bold text-primary tabular-nums">
                   {formatVND(totalPrice)}
                 </p>
               </div>
@@ -434,7 +434,7 @@ export function ItemCustomizer({
                 >
                   -
                 </Button>
-                <span className="w-7 text-center text-sm font-bold tabular-nums">
+                <span className="w-7 text-center text-base font-bold tabular-nums">
                   {quantity}
                 </span>
                 <Button

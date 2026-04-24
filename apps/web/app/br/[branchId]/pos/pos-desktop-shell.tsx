@@ -70,6 +70,21 @@ interface PosDesktopShellProps {
   tables: BranchTable[];
   session: ActiveSession;
   initialOrderType: OrderType;
+  /** User hiện tại có `pos:close_shift` không (ẩn nút "Chốt ca" với waiter). */
+  canCloseShift: boolean;
+  /** `pos:confirm_payment` — gate phương thức "Tiền mặt" trên bill (cashier+). */
+  canConfirmCash: boolean;
+}
+
+function isOrderAwaitingPayment(order: {
+  status: string;
+  payment_status: string | null;
+}) {
+  return (
+    ["new", "confirmed", "preparing", "ready", "served"].includes(
+      order.status,
+    ) && order.payment_status !== "paid"
+  );
 }
 
 export function PosDesktopShell(props: PosDesktopShellProps) {
@@ -80,18 +95,30 @@ export function PosDesktopShell(props: PosDesktopShellProps) {
       initialTables={props.tables}
       initialOrderType={props.initialOrderType}
     >
-      <PosDesktopInner categories={props.categories} />
+      <PosDesktopInner
+        categories={props.categories}
+        canCloseShift={props.canCloseShift}
+        canConfirmCash={props.canConfirmCash}
+      />
     </PosDesktopProvider>
   );
 }
 
 /* ─── Inner (consumes hooks) ─── */
 
-function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
+function PosDesktopInner({
+  categories,
+  canCloseShift,
+  canConfirmCash,
+}: {
+  categories: MenuCategory[];
+  canCloseShift: boolean;
+  canConfirmCash: boolean;
+}) {
   const { branchId, session } = usePosSession();
   const orders = usePosOrders();
   const tables = usePosTables();
-  const { refreshAll, refreshOrders } = usePosOperationalDispatch();
+  const { refreshOrders } = usePosOperationalDispatch();
   const cartStore = usePosCartStore();
   const cartOrderType = useCartOrderType();
   const cartItemCount = useCartItemCount();
@@ -117,24 +144,10 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
   const [isPending, startTransition] = useTransition();
   const [showCloseSession, setShowCloseSession] = useState(false);
   const [billOrderId, setBillOrderId] = useState<number | null>(null);
-  const [minimizedBills, setMinimizedBills] = useState<
-    { orderId: number; paymentId: number }[]
-  >([]);
-
-  const handleBillMinimize = useCallback((oid: number, pid: number) => {
-    setMinimizedBills((prev) =>
-      prev.some((b) => b.orderId === oid)
-        ? prev
-        : [...prev, { orderId: oid, paymentId: pid }],
-    );
-    setBillOrderId(null);
-  }, []);
-
-  const restoreMinimizedBill = useCallback((oid: number) => {
-    setMinimizedBills((prev) => prev.filter((b) => b.orderId !== oid));
-    setBillOrderId(oid);
-  }, []);
   const [orderDetailId, setOrderDetailId] = useState<number | null>(null);
+  const [orderDetailNumber, setOrderDetailNumber] = useState<string | null>(
+    null,
+  );
   const [showOrders, setShowOrders] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [detailRefreshTick, setDetailRefreshTick] = useState(0);
@@ -160,9 +173,9 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
   }, []);
 
   const refreshOperational = useCallback(async () => {
-    await refreshAll();
+    await refreshOrders();
     bumpDetailRefresh();
-  }, [refreshAll, bumpDetailRefresh]);
+  }, [refreshOrders, bumpDetailRefresh]);
 
   // Clear selected table if it becomes unavailable while in dine-in mode.
   useEffect(() => {
@@ -178,13 +191,12 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
 
   const orderContextReady =
     cartOrderType === "takeaway" || selectedTableAvailable;
+  const isAppendingToOrder = appendTarget != null;
+  const menuContextReady = orderContextReady || isAppendingToOrder;
   const selectedTableNumber = selectedTable?.number;
 
   const hasAwaitingPaymentOrder = useMemo(
-    () =>
-      orders.some(
-        (order) => order.status === "served" && order.payment_status !== "paid",
-      ),
+    () => orders.some(isOrderAwaitingPayment),
     [orders],
   );
 
@@ -206,11 +218,15 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
     cartItemCount > 0 &&
     (cartOrderType === "takeaway" || selectedTableAvailable);
 
-  const focusOrderWorkflow = useCallback((orderId: number) => {
-    setShowOrders(true);
-    setOrderDetailId(orderId);
-    setCartDrawerOpen(false);
-  }, []);
+  const focusOrderWorkflow = useCallback(
+    (orderId: number, orderNumber?: string | null) => {
+      setShowOrders(true);
+      setOrderDetailId(orderId);
+      setOrderDetailNumber(orderNumber ?? null);
+      setCartDrawerOpen(false);
+    },
+    [],
+  );
 
   const handleTableSelect = useCallback(
     (table: BranchTable) => {
@@ -227,7 +243,7 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
       startTransition(async () => {
         const result = await fetchActiveOrderForTable(branchId, table.id);
         if (result.success && result.data) {
-          focusOrderWorkflow(result.data.id);
+          focusOrderWorkflow(result.data.id, result.data.order_number);
           void refreshOperational();
           return;
         }
@@ -327,7 +343,7 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
         }
 
         clearCart();
-        focusOrderWorkflow(orderId);
+        focusOrderWorkflow(orderId, orderNumber);
         setActiveTable(null);
         void refreshOperational();
       } else {
@@ -375,7 +391,7 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
               const kw = r.meta?.kitchenWarning;
               if (typeof kw === "string") toast.warning(kw);
               clearAppendTarget();
-              focusOrderWorkflow(target.orderId);
+              focusOrderWorkflow(target.orderId, target.orderNumber);
               void refreshOperational();
             } else {
               toast.error(r.error ?? "Không thể thêm món");
@@ -496,7 +512,7 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
             if (typeof kw === "string") toast.warning(kw);
             clearAppendTarget();
             setCustomizerItem(null);
-            focusOrderWorkflow(target.orderId);
+            focusOrderWorkflow(target.orderId, target.orderNumber);
             void refreshOperational();
           } else {
             toast.error(r.error ?? "Không thể thêm món");
@@ -534,9 +550,10 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
     setBillOrderId(id);
   }, []);
 
-  const openDetail = useCallback((id: number) => {
+  const openDetail = useCallback((id: number, orderNumber?: string | null) => {
     setCartDrawerOpen(false);
     setOrderDetailId(id);
+    setOrderDetailNumber(orderNumber ?? null);
   }, []);
 
   useKeyboardShortcut([
@@ -548,7 +565,7 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
     {
       key: "F10",
       preventDefault: true,
-      handler: openCloseSession,
+      handler: canCloseShift ? openCloseSession : () => {},
     },
     {
       key: "F2",
@@ -571,9 +588,7 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
       key: "F9",
       preventDefault: true,
       handler: () => {
-        const awaiting = orders.find(
-          (o) => o.status === "served" && o.payment_status !== "paid",
-        );
+        const awaiting = orders.find(isOrderAwaitingPayment);
         if (awaiting) {
           openBill(awaiting.id);
         } else {
@@ -582,6 +597,12 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
       },
     },
   ]);
+
+  const handleReturnToTables = useCallback(() => {
+    setShowOrders(false);
+    setCartDrawerOpen(false);
+    setActiveTable(null);
+  }, [setActiveTable]);
 
   const sidebarContentProps = {
     showOrders,
@@ -592,6 +613,7 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
     onCustomizeItem: handleCartItemCustomize,
     onViewBill: openBill,
     onViewDetail: openDetail,
+    onReturnToTables: handleReturnToTables,
   } as const;
 
   const serviceModeSelector = (
@@ -599,7 +621,7 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
       type="single"
       value={cartOrderType}
       variant="outline"
-      className="grid h-8 w-full grid-cols-2 gap-0"
+      className="grid h-10 w-full grid-cols-2 gap-0"
       onValueChange={(value) => {
         if (value === "dine_in" || value === "takeaway") {
           handleOrderTypeChange(value);
@@ -608,14 +630,14 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
     >
       <ToggleGroupItem
         value="dine_in"
-        className="h-full justify-center text-xs font-semibold"
+        className="h-full justify-center text-base font-semibold"
         disabled={cartItemCount > 0 && cartOrderType !== "dine_in"}
       >
         Tại bàn
       </ToggleGroupItem>
       <ToggleGroupItem
         value="takeaway"
-        className="h-full justify-center text-xs font-semibold"
+        className="h-full justify-center text-base font-semibold"
         disabled={cartItemCount > 0 && cartOrderType !== "takeaway"}
       >
         Mang về
@@ -632,7 +654,7 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
         <div className="w-full">
           <div className="rounded-xl border border-warning/20 bg-warning/10 shadow-sm p-3">
             <div className="relative flex items-center justify-between gap-2">
-              <p className="min-w-0 text-sm leading-6 text-foreground">
+              <p className="min-w-0 text-base leading-6 text-foreground">
                 <span className="font-semibold">
                   Thêm món vào đơn #{appendTarget.orderNumber}
                 </span>
@@ -645,7 +667,7 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="min-h-11 min-w-11 h-9 shrink-0 gap-1 rounded-full px-3 text-xs text-foreground hover:bg-warning/25"
+                className="min-h-11 min-w-11 h-9 shrink-0 gap-1 rounded-full px-3 text-sm text-foreground hover:bg-warning/25"
                 onClick={clearAppendTarget}
               >
                 <IconX className="size-3.5" />
@@ -658,111 +680,115 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
     ) : null;
 
   const mobileOrderContextRow =
-    isMobile && orderContextReady ? (
+    isMobile && menuContextReady ? (
       <div className="border-b border-border/60 bg-background/75 px-2 py-2 md:hidden">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-foreground">
-              {cartOrderType === "takeaway"
-                ? "Mang về"
-                : `Bàn ${selectedTableNumber ?? ""}`}
+            <p className="truncate text-base font-semibold text-foreground">
+              {appendTarget != null
+                ? `Thêm món #${appendTarget.orderNumber}`
+                : cartOrderType === "takeaway"
+                  ? "Mang về"
+                  : `Bàn ${selectedTableNumber ?? ""}`}
             </p>
           </div>
-          {cartOrderType === "takeaway" ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="min-h-9 min-w-9 shrink-0 rounded-full px-3 text-xs font-bold"
-              disabled={cartItemCount > 0}
-              onClick={() => {
-                setShowOrders(false);
-                setCartDrawerOpen(false);
-                handleOrderTypeChange("dine_in");
-              }}
-            >
-              Chọn bàn
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="min-h-9 min-w-9 shrink-0 rounded-full px-3 text-xs font-bold"
-              onClick={() => {
-                setShowOrders(false);
-                setCartDrawerOpen(false);
-                setActiveTable(null);
-              }}
-            >
-              Đổi bàn
-            </Button>
-          )}
+          {appendTarget == null &&
+            (cartOrderType === "takeaway" ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="min-h-10 min-w-10 shrink-0 rounded-full px-3 text-sm font-bold"
+                disabled={cartItemCount > 0}
+                onClick={() => {
+                  setShowOrders(false);
+                  setCartDrawerOpen(false);
+                  handleOrderTypeChange("dine_in");
+                }}
+              >
+                Chọn bàn
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="min-h-10 min-w-10 shrink-0 rounded-full px-3 text-sm font-bold"
+                onClick={() => {
+                  setShowOrders(false);
+                  setCartDrawerOpen(false);
+                  setActiveTable(null);
+                }}
+              >
+                Đổi bàn
+              </Button>
+            ))}
         </div>
       </div>
     ) : null;
 
-  const mobileActionBar = isMobile ? (
-    <div className="fixed inset-x-3 bottom-3 z-40 flex gap-2 md:hidden">
-      {!orderContextReady && (
-        <Button
-          type="button"
-          variant="secondary"
-          className="min-h-12 min-w-12 flex-1 rounded-full text-sm font-bold shadow-lg"
-          onClick={() => {
-            setShowOrders(true);
-            void refreshOrders();
-            setCartDrawerOpen(true);
-          }}
-        >
-          <IconReceipt className="size-5" />
-          <span>Đơn trong ca</span>
-          {orders.length > 0 && (
-            <span className="tabular-nums">{orders.length}</span>
-          )}
-        </Button>
-      )}
-      {orderContextReady &&
-        cartOrderType === "dine_in" &&
-        selectedTableId !== null && (
+  const mobileActionBar =
+    isMobile && !isAppendingToOrder ? (
+      <div className="fixed inset-x-3 bottom-3 z-40 flex gap-2 md:hidden">
+        {!menuContextReady && (
           <Button
             type="button"
-            variant="outline"
-            className="min-h-12 min-w-12 rounded-full bg-background px-3 text-sm font-bold shadow-lg"
+            variant="secondary"
+            className="min-h-14 min-w-14 flex-1 rounded-full text-base font-bold shadow-lg"
             onClick={() => {
-              setShowOrders(false);
-              setCartDrawerOpen(false);
-              handleOrderTypeChange("dine_in");
-              setActiveTable(null);
+              setShowOrders(true);
+              void refreshOrders();
+              setCartDrawerOpen(true);
             }}
-            aria-label="Xem bàn"
           >
-            <IconLayoutGrid className="size-5" />
+            <IconReceipt className="size-5" />
+            <span>Đơn trong ca</span>
+            {orders.length > 0 && (
+              <span className="tabular-nums">{orders.length}</span>
+            )}
           </Button>
         )}
-      {orderContextReady && (
-        <Button
-          type="button"
-          className="min-h-12 min-w-12 flex-1 rounded-full text-sm font-bold shadow-lg"
-          onClick={() => {
-            setShowOrders(false);
-            setCartDrawerOpen(true);
-          }}
-          aria-label="Mở giỏ hàng"
-        >
-          <IconShoppingCart className="size-5" />
-          {cartQuantity > 0 ? (
-            <>
-              <span>Giỏ</span>
-              <span className="tabular-nums">{cartQuantity}</span>
-            </>
-          ) : (
-            <span>Giỏ mới</span>
+        {menuContextReady &&
+          cartOrderType === "dine_in" &&
+          selectedTableId !== null && (
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-14 min-w-14 rounded-full bg-background px-3 text-base font-bold shadow-lg"
+              onClick={() => {
+                setShowOrders(false);
+                setCartDrawerOpen(false);
+                handleOrderTypeChange("dine_in");
+                setActiveTable(null);
+              }}
+              aria-label="Xem bàn"
+            >
+              <IconLayoutGrid className="size-5" />
+            </Button>
           )}
-        </Button>
-      )}
-    </div>
-  ) : null;
+        {menuContextReady && (
+          <Button
+            type="button"
+            className="min-h-14 min-w-14 flex-1 rounded-full text-base font-bold shadow-lg"
+            onClick={() => {
+              setShowOrders(false);
+              setCartDrawerOpen(true);
+            }}
+            aria-label="Mở giỏ hàng"
+          >
+            <IconShoppingCart className="size-5" />
+            {cartQuantity > 0 ? (
+              <>
+                <span>Giỏ</span>
+                <span className="tabular-nums">{cartQuantity}</span>
+              </>
+            ) : (
+              <span>Giỏ mới</span>
+            )}
+          </Button>
+        )}
+      </div>
+    ) : null;
 
   const mobileSidebarDrawer = isMobile ? (
     <Drawer
@@ -788,6 +814,7 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
     <div className="hidden w-96 shrink-0 flex-col border-l border-border/60 bg-background md:flex xl:hidden">
       <PosSessionHeader
         session={session}
+        canCloseShift={canCloseShift}
         onShowCloseSession={openCloseSession}
       />
       <PosSidebarTabs
@@ -802,6 +829,7 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
     <div className="hidden shrink-0 flex-col border-l border-border/60 bg-background xl:flex">
       <PosSessionHeader
         session={session}
+        canCloseShift={canCloseShift}
         onShowCloseSession={openCloseSession}
       />
       <div className="flex min-h-0 flex-1">
@@ -812,6 +840,7 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
             onSubmitOrder={handleSubmitOrder}
             onOrderTypeChange={handleOrderTypeChange}
             onCustomizeItem={handleCartItemCustomize}
+            onReturnToTables={handleReturnToTables}
           />
         </div>
         <div className="flex w-80 shrink-0 flex-col border-l border-border/60 2xl:w-96">
@@ -826,11 +855,12 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
       <div className="md:hidden">
         <PosSessionHeader
           session={session}
+          canCloseShift={canCloseShift}
           onShowCloseSession={openCloseSession}
         />
       </div>
 
-      {!orderContextReady ? (
+      {!menuContextReady ? (
         <div className="flex min-h-0 flex-1 overflow-hidden bg-background/35">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {appendBannerRow}
@@ -876,15 +906,21 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
 
       <OrderDetailSheet
         orderId={orderDetailId}
+        orderNumber={orderDetailNumber}
         refreshToken={detailRefreshTick}
-        onClose={() => setOrderDetailId(null)}
+        onClose={() => {
+          setOrderDetailId(null);
+          setOrderDetailNumber(null);
+        }}
         onOpenBill={(id) => {
           setOrderDetailId(null);
+          setOrderDetailNumber(null);
           setCartDrawerOpen(false);
           setBillOrderId(id);
         }}
         onStartAppend={(oid, onum) => {
           setOrderDetailId(null);
+          setOrderDetailNumber(null);
           setCartDrawerOpen(false);
           startAppendTarget(oid, onum);
           setShowOrders(false);
@@ -914,31 +950,10 @@ function PosDesktopInner({ categories }: { categories: MenuCategory[] }) {
       <BillReceipt
         branchId={branchId}
         orderId={billOrderId}
+        canConfirmCash={canConfirmCash}
         onOrderUpdated={() => void refreshOperational()}
         onClose={() => setBillOrderId(null)}
-        onMinimize={handleBillMinimize}
       />
-
-      {minimizedBills.length > 0 && billOrderId === null && (
-        <div className="pointer-events-none fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2">
-          {minimizedBills.map((b) => {
-            const order = orders.find((o) => o.id === b.orderId);
-            const label = order?.order_number ?? String(b.orderId);
-            return (
-              <Button
-                key={b.orderId}
-                type="button"
-                size="sm"
-                variant="secondary"
-                className="pointer-events-auto rounded-full px-4 shadow-lg"
-                onClick={() => restoreMinimizedBill(b.orderId)}
-              >
-                Hoá đơn #{label} · đang chờ
-              </Button>
-            );
-          })}
-        </div>
-      )}
 
       <HotkeyOverlay open={hotkeyOpen} onOpenChange={setHotkeyOpen} />
 

@@ -108,6 +108,7 @@ export function CashTenderedDialog({
             <Label htmlFor="cash-received">Tiền nhận</Label>
             <Input
               id="cash-received"
+              data-testid="bill-cash-received"
               type="number"
               inputMode="numeric"
               min={0}
@@ -166,6 +167,7 @@ export function CashTenderedDialog({
           </Button>
           <Button
             type="button"
+            data-testid="bill-confirm-cash"
             onClick={handleSubmit}
             disabled={!canSubmit}
           >

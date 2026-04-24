@@ -42,3 +42,8 @@
    - Pattern: Used plain `div` / `span` / `p` plus Tailwind classes to imitate preset-backed `Card`, `Badge`, `Button`, `Table`, or other shadcn primitives.
    - Rule: If a surface visually behaves like a primitive, it must use the project primitive directly. Never rebuild the same surface with raw elements, even if the result looks similar.
    - Prevention: Before writing any UI markup, map each visible surface to an existing primitive from `packages/ui/src/components/*`. If no primitive fits, stop and discuss instead of inventing a parallel pattern.
+
+9. **Do not mix POS commercial close with KDS fulfillment**
+   - Pattern: POS required `served` / KDS item completion before cashier could complete an order and release the table.
+   - Rule: Payment closes the POS order; KDS state closes the kitchen work. `served` is fulfillment-only and must not release a table.
+   - Prevention: Any payment or table-release change must test a dine-in order with unfinished KDS tickets: payment succeeds, order becomes `completed`, table becomes `available`, and KDS tickets stay unchanged.

@@ -26,6 +26,7 @@ export {
   fetchTablesForBranch,
   fetchPosTerminals,
   fetchActiveSession,
+  fetchPosPermissionFlags,
   openPosSession,
   closePosSession,
 } from "./session-actions";

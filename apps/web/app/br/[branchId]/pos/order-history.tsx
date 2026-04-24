@@ -53,10 +53,18 @@ function formatTime(dateStr: string): string {
   });
 }
 
+const ACTIVE_POS_STATUSES = [
+  "new",
+  "confirmed",
+  "preparing",
+  "ready",
+  "served",
+];
+
 interface OrderHistoryProps {
   orders: SessionOrder[];
   onViewBill: (orderId: number) => void;
-  onViewDetail: (orderId: number) => void;
+  onViewDetail: (orderId: number, orderNumber: string) => void;
 }
 
 export function OrderHistory({
@@ -64,8 +72,10 @@ export function OrderHistory({
   onViewBill,
   onViewDetail,
 }: OrderHistoryProps) {
-  const activeOrders = orders.filter((order) =>
-    ["new", "confirmed", "preparing", "ready", "served"].includes(order.status),
+  const activeOrders = orders.filter(
+    (order) =>
+      ACTIVE_POS_STATUSES.includes(order.status) &&
+      order.payment_status !== "paid",
   );
   const archivedOrders = orders.filter(
     (order) => !activeOrders.some((active) => active.id === order.id),
@@ -90,7 +100,7 @@ export function OrderHistory({
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
       <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-        <div className="flex flex-col gap-3 px-3 pb-24 pt-3 md:p-3">
+        <div className="flex flex-col gap-2 px-3 pb-24 pt-2 md:p-2">
           <section className="flex flex-col gap-2">
             {activeOrders.length === 0 ? (
               <Empty className="min-h-24 border">
@@ -105,12 +115,7 @@ export function OrderHistory({
                     label: order.status,
                     variant: "outline" as const,
                   };
-                  const waitingPayment =
-                    order.status === "served" &&
-                    order.payment_status !== "paid";
-                  const readyToCloseTable =
-                    order.status === "served" &&
-                    order.payment_status === "paid";
+                  const waitingPayment = order.payment_status !== "paid";
 
                   return (
                     <div
@@ -127,29 +132,23 @@ export function OrderHistory({
                             <Badge
                               variant={statusInfo.variant}
                               className={cn(
-                                "text-xs font-semibold",
+                                "text-sm font-semibold",
                                 statusInfo.variant === "outline" &&
                                   "bg-background",
                               )}
                             >
                               {statusInfo.label}
                             </Badge>
-                            {order.status === "served" && (
+                            {waitingPayment && (
                               <Badge
                                 variant="outline"
-                                className={cn(
-                                  waitingPayment
-                                    ? "border-warning/20 bg-warning/10 text-warning"
-                                    : "border-success/20 bg-success/10 text-success",
-                                )}
+                                className="border-warning/20 bg-warning/10 text-warning"
                               >
-                                {waitingPayment
-                                  ? "Chờ thanh toán"
-                                  : "Đã thu tiền"}
+                                Chờ thanh toán
                               </Badge>
                             )}
                           </div>
-                          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                          <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                             <span>{formatTime(order.created_at)}</span>
                             <span className="flex items-center gap-1">
                               {order.order_type === "dine_in" ? (
@@ -174,34 +173,24 @@ export function OrderHistory({
                       <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
                         <Button
                           data-testid={`pos-order-detail-${order.id}`}
-                          variant={
-                            waitingPayment || readyToCloseTable
-                              ? "secondary"
-                              : "outline"
-                          }
+                          variant="outline"
                           size="sm"
-                          className="h-8 rounded-full px-3 text-xs"
-                          onClick={() => onViewDetail(order.id)}
+                          className="h-10 rounded-full px-3 text-sm"
+                          onClick={() =>
+                            onViewDetail(order.id, order.order_number)
+                          }
                         >
-                          {readyToCloseTable ? "Hoàn tất" : "Điều phối"}
+                          Điều phối
                         </Button>
                         <Button
                           data-testid={`pos-order-bill-${order.id}`}
-                          variant={
-                            waitingPayment || readyToCloseTable
-                              ? "default"
-                              : "ghost"
-                          }
+                          variant={waitingPayment ? "default" : "ghost"}
                           size="sm"
-                          className="h-8 rounded-full px-3 text-xs"
+                          className="h-10 rounded-full px-3 text-sm"
                           onClick={() => onViewBill(order.id)}
                         >
                           <IconReceipt className="mr-1 size-3.5" />
-                          {waitingPayment
-                            ? "Thanh toán"
-                            : readyToCloseTable
-                              ? "Trả bàn"
-                              : "Hóa đơn"}
+                          {waitingPayment ? "Thanh toán" : "Hóa đơn"}
                         </Button>
                       </div>
                     </div>
@@ -214,10 +203,10 @@ export function OrderHistory({
           <section className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2">
-                <p className="text-sm font-semibold text-foreground">
+                <p className="text-base font-semibold text-foreground">
                   Đã hoàn tất
                 </p>
-                <Badge variant="success" className="text-xs">
+                <Badge variant="success" className="text-sm">
                   {archivedOrders.length}
                 </Badge>
               </div>
@@ -245,13 +234,13 @@ export function OrderHistory({
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-semibold tracking-tight text-foreground">
+                            <span className="text-base font-semibold tracking-tight text-foreground">
                               #{order.order_number}
                             </span>
                             <Badge
                               variant={statusInfo.variant}
                               className={cn(
-                                "text-xs font-semibold",
+                                "text-sm font-semibold",
                                 statusInfo.variant === "outline" &&
                                   "bg-background",
                               )}
@@ -259,7 +248,7 @@ export function OrderHistory({
                               {statusInfo.label}
                             </Badge>
                           </div>
-                          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                          <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                             <span>{formatTime(order.created_at)}</span>
                             <span className="flex items-center gap-1">
                               {order.order_type === "dine_in" ? (
@@ -285,7 +274,7 @@ export function OrderHistory({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 rounded-full px-3 text-xs"
+                          className="h-10 rounded-full px-3 text-sm"
                           onClick={() => onViewBill(order.id)}
                         >
                           <IconReceipt className="mr-1 size-3.5" />

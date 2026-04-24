@@ -19,10 +19,11 @@ Doc chot: `docs/spec/design-system.md`.
 
 Tat ca UI/UX rebuild phai di theo contract do truoc khi sua runtime. Design system cua repo la:
 
-- shadcn preset hien hanh (`radix-mira`, preset `b1GfmQMCm`)
+- shadcn preset hien hanh (`radix-lyra`, preset `b1GfmQMCm`)
 - token runtime trong `apps/web/app/globals.css`
 - primitive source trong `packages/ui/src/components/*`
 - glossary/copy source trong `docs/ref/glossary.md` va shared label dictionaries
+- toast/notification contract trong `docs/spec/toast-notification-system.md`
 
 Khong duoc coi design system la mot layer moi tach rieng khoi shadcn. Neu can pattern moi, update `docs/spec/design-system.md` truoc, roi moi rollout vao code.
 
@@ -36,7 +37,7 @@ Read order cho agent khi lam UI:
 
 ## Reset Contract
 
-Reset hien tai duoc thuc hien bang `shadcn` preset `b1GfmQMCm` / `radix-mira` cho `apps/web`.
+Reset hien tai duoc thuc hien bang `shadcn` preset `b1GfmQMCm` / `radix-lyra` cho `apps/web`.
 
 Dieu nay co nghia:
 
@@ -87,6 +88,16 @@ Shortcuts da wire:
   - `Escape` — clear het filter (station + status + orderType) neu co filter nao dang bat
 
 Khi them shortcut moi, update bang nay + cau hinh `aria-keyshortcuts` tuong ung.
+
+## Toast And Notifications
+
+Contract chi tiet: `docs/spec/toast-notification-system.md`.
+
+- Toast la feedback ngan han cho action hien tai, di qua `toast` tu `@comtammatu/ui/components/sonner`.
+- Notification la feed ben vung cho handoff, approval, escalation, SLA, hoac viec can role/branch khac xu ly.
+- Khong dung toast thay audit/work queue. Khong tao notification cho success cuc bo cua form neu khong can nguoi khac xu ly.
+- Copy phai an toan, tieng Viet, va khong bao gio expose raw Supabase/Postgres `error.message`.
+- Notification producer moi phai co `kind`, `severity`, `target_roles`, optional `target_branch_id`, `action_url`, va `dedup_key` khi event co the lap lai.
 
 ## Form Helpers
 

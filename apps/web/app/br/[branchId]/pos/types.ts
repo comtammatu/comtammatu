@@ -49,7 +49,9 @@ export function getPosLineItemDisplayName(item: {
   item_name: string;
   variant_name?: string | null;
 }): string {
-  return item.variant_name ?? item.item_name;
+  return item.variant_name
+    ? `${item.item_name} — ${item.variant_name}`
+    : item.item_name;
 }
 
 /* ─── Cart State ─── */

@@ -20,8 +20,9 @@ import {
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { notify } from "@comtammatu/ui/lib/notify";
-import { IconDots } from "@tabler/icons-react";
+import { IconDots, IconReceipt } from "@tabler/icons-react";
 import {
   fetchOrderDetail,
   voidOrderItem,
@@ -33,6 +34,7 @@ import {
 import type { CartItem } from "./types";
 import type { BranchTable } from "./page";
 import { messages } from "@lib/messages";
+import { printProvisionalBill } from "./print-actions";
 import { OrderItemRow } from "./_components/order-detail/order-item-row";
 import type { OrderItemRowData } from "./_components/order-detail/order-item-row";
 import { VoidItemDialog } from "./_components/order-detail/void-item-dialog";
@@ -92,6 +94,7 @@ export function OrderDetailSheet({
   const [cancelReason, setCancelReason] = useState("");
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferTableId, setTransferTableId] = useState<string>("");
+  const [printPending, startPrintTransition] = useTransition();
 
   const load = useCallback(() => {
     if (orderId === null) {
@@ -209,6 +212,18 @@ export function OrderDetailSheet({
     });
   };
 
+  const handlePrintProvisional = () => {
+    if (orderId === null) return;
+    startPrintTransition(async () => {
+      const r = await printProvisionalBill(orderId);
+      if (r.success) {
+        notify.success("Đã gửi phiếu tạm tính tới máy in");
+      } else {
+        notify.error(r.error ?? "Không thể in phiếu tạm tính");
+      }
+    });
+  };
+
   const availableTables = tables.filter(
     (t) => t.status === "available" || t.id === data?.table_id,
   );
@@ -255,11 +270,7 @@ export function OrderDetailSheet({
                 <span className="text-muted-foreground">·</span>
               )}
               <span className="truncate">
-                {sheetTitle
-                  ? `#${sheetTitle}`
-                  : orderId !== null
-                    ? "Đơn"
-                    : ""}
+                {sheetTitle ? `#${sheetTitle}` : orderId !== null ? "Đơn" : ""}
               </span>
             </SheetTitle>
             <SheetDescription className="sr-only">
@@ -274,21 +285,21 @@ export function OrderDetailSheet({
                   className="flex flex-col gap-2 px-3 py-2 sm:px-4"
                   aria-label="Đang tải danh sách món"
                 >
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <li
-                    key={index}
-                    className="rounded-md border border-border bg-card px-2.5 py-2"
-                  >
-                    <div className="flex items-start gap-3">
-                      <Skeleton className="mt-1 size-4 rounded-full" />
-                      <div className="min-w-0 flex-1 space-y-1.5">
-                        <Skeleton className="h-5 w-4/5" />
-                        <Skeleton className="h-4 w-3/5" />
-                        <Skeleton className="h-4 w-2/5" />
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <li
+                      key={index}
+                      className="rounded-md border border-border bg-card px-2.5 py-2"
+                    >
+                      <div className="flex items-start gap-3">
+                        <Skeleton className="mt-1 size-4 rounded-full" />
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <Skeleton className="h-5 w-4/5" />
+                          <Skeleton className="h-4 w-3/5" />
+                          <Skeleton className="h-4 w-2/5" />
+                        </div>
                       </div>
-                    </div>
-                  </li>
-                ))}
+                    </li>
+                  ))}
                 </ul>
               </ScrollArea>
               <div className="mt-auto flex shrink-0 flex-col gap-2 border-t px-3 py-3 sm:px-4">
@@ -341,17 +352,34 @@ export function OrderDetailSheet({
 
               <div className="mt-auto flex shrink-0 flex-col gap-2 border-t px-3 py-3 sm:px-4">
                 {canShowPaymentAction && (
-                  <Button
-                    type="button"
-                    size="lg"
-                    className="w-full"
-                    onClick={() => {
-                      onOpenBill(data.id);
-                      onClose();
-                    }}
-                  >
-                    Thanh toán - {formatVND(data.total_amount)}
-                  </Button>
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      className="w-full"
+                      disabled={printPending}
+                      onClick={() => void handlePrintProvisional()}
+                    >
+                      {printPending ? (
+                        <Spinner className="mr-2" />
+                      ) : (
+                        <IconReceipt data-icon="inline-start" />
+                      )}
+                      In tạm tính
+                    </Button>
+                    <Button
+                      type="button"
+                      size="lg"
+                      className="w-full"
+                      onClick={() => {
+                        onOpenBill(data.id);
+                        onClose();
+                      }}
+                    >
+                      Thanh toán - {formatVND(data.total_amount)}
+                    </Button>
+                  </>
                 )}
 
                 {(canAppendOrderStatus(data.status) || canMarkServed) && (

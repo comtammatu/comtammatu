@@ -33,7 +33,11 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { IconDeviceDesktop, IconAlertTriangle, IconWallet } from "@tabler/icons-react";
+import {
+  IconDeviceDesktop,
+  IconAlertTriangle,
+  IconWallet,
+} from "@tabler/icons-react";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { openPosSession } from "./actions";
 
@@ -199,10 +203,10 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
               <div className="rounded-lg border bg-muted/35 px-4 py-3">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                       Trạng thái
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-foreground">
+                    <p className="mt-1 text-base font-semibold text-foreground">
                       {statusText}
                     </p>
                   </div>

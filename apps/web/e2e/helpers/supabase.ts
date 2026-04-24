@@ -50,6 +50,8 @@ export interface TestOrder {
   orderNumber: string;
   tenantId: number;
   branchId: number;
+  tableId: number;
+  kdsTicketId: number;
   totalAmount: number;
   paymentId?: number;
   cleanup: () => Promise<void>;
@@ -444,6 +446,11 @@ async function ensureKdsStation(
 export async function createTestOrder(): Promise<TestOrder> {
   const supabase = createServiceClient();
   const context = await resolvePosTestContext();
+  const stationId = await ensureKdsStation(
+    supabase,
+    context.tenantId,
+    context.branchId,
+  );
   const orderNumber = `E2E-${Date.now()}`;
 
   const { data: order, error: orderErr } = await supabase
@@ -454,7 +461,7 @@ export async function createTestOrder(): Promise<TestOrder> {
       table_id: context.tableId,
       order_number: orderNumber,
       order_type: "dine_in",
-      status: "served",
+      status: "confirmed",
       payment_status: "unpaid",
       subtotal: context.unitPrice,
       tax_amount: 0,
@@ -473,21 +480,44 @@ export async function createTestOrder(): Promise<TestOrder> {
     throw new Error(`Failed to create test order: ${orderErr?.message}`);
   }
 
-  const { error: itemErr } = await supabase.from("order_items").insert({
-    tenant_id: context.tenantId,
-    order_id: order.id,
-    menu_item_id: context.menuItemId,
-    item_name: context.menuItemName,
-    quantity: 1,
-    unit_price: context.unitPrice,
-    modifiers: [],
-    sides: [],
-    subtotal: context.unitPrice,
-    status: "served",
-  });
+  const { data: orderItem, error: itemErr } = await supabase
+    .from("order_items")
+    .insert({
+      tenant_id: context.tenantId,
+      order_id: order.id,
+      menu_item_id: context.menuItemId,
+      item_name: context.menuItemName,
+      quantity: 1,
+      unit_price: context.unitPrice,
+      modifiers: [],
+      sides: [],
+      subtotal: context.unitPrice,
+      status: "pending",
+    })
+    .select("id")
+    .single();
 
-  if (itemErr) {
-    throw new Error(`Failed to create test order item: ${itemErr.message}`);
+  if (itemErr || !orderItem) {
+    throw new Error(`Failed to create test order item: ${itemErr?.message}`);
+  }
+
+  const { data: ticket, error: ticketErr } = await supabase
+    .from("kds_tickets")
+    .insert({
+      tenant_id: context.tenantId,
+      branch_id: context.branchId,
+      station_id: stationId,
+      order_id: order.id,
+      order_item_id: orderItem.id,
+      status: "pending",
+      bumped_by: null,
+      bumped_at: null,
+    })
+    .select("id")
+    .single();
+
+  if (ticketErr || !ticket) {
+    throw new Error(`Failed to create test KDS ticket: ${ticketErr?.message}`);
   }
 
   await supabase
@@ -541,6 +571,8 @@ export async function createTestOrder(): Promise<TestOrder> {
     orderNumber,
     tenantId: context.tenantId,
     branchId: context.branchId,
+    tableId: context.tableId,
+    kdsTicketId: ticket.id,
     totalAmount: context.unitPrice,
     cleanup,
   };
@@ -689,6 +721,19 @@ export async function getOrderStatus(orderId: number): Promise<string | null> {
     .from("orders")
     .select("status")
     .eq("id", orderId)
+    .single();
+
+  return data?.status ?? null;
+}
+
+export async function getTableStatus(
+  tableId: number,
+): Promise<string | null> {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("tables")
+    .select("status")
+    .eq("id", tableId)
     .single();
 
   return data?.status ?? null;

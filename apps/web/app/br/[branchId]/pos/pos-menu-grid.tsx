@@ -73,7 +73,7 @@ const MenuItemButton = memo(function MenuItemButton({
           <div className="flex items-start justify-between gap-2">
             <p
               className={cn(
-                "line-clamp-3 min-w-0 text-sm font-semibold leading-snug text-foreground sm:text-base md:text-lg",
+                "line-clamp-3 min-w-0 text-base font-semibold leading-snug text-foreground md:text-lg",
                 sparseMenu && "md:text-3xl",
               )}
             >
@@ -255,7 +255,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
                     <TabsTrigger
                       key={zone}
                       value={zone}
-                      className="h-full shrink-0 px-3 py-0 text-xs font-semibold md:px-4 md:text-sm"
+                      className="h-full shrink-0 px-3 py-0 text-sm font-semibold md:px-4"
                     >
                       {CATEGORY_TYPE_LABELS[zone] ?? zone}
                     </TabsTrigger>
@@ -278,12 +278,12 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
                     <TabsTrigger
                       key={category.id}
                       value={String(category.id)}
-                      className="h-full shrink-0 gap-1.5 px-2.5 py-0 text-xs font-medium md:gap-2 md:px-3 md:text-sm"
+                      className="h-full shrink-0 gap-1.5 px-2.5 py-0 text-sm font-medium md:gap-2 md:px-3"
                     >
                       {category.name}
                       <Badge
                         variant="outline"
-                        className="hidden text-xs sm:inline-flex"
+                        className="hidden text-sm sm:inline-flex"
                       >
                         {category.menu_items.length}
                       </Badge>
@@ -298,7 +298,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
         <ScrollArea className="min-h-0 flex-1 overflow-hidden">
           <div
             className={cn(
-              "grid grid-cols-2 gap-2 px-2 pb-28 pt-2 md:gap-4 md:p-5 lg:p-6",
+              "grid grid-cols-2 gap-2 px-2 pb-28 pt-2 md:gap-3 md:px-3 md:py-3 lg:px-4",
               sparseMenu
                 ? "md:grid-cols-1"
                 : "sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4",

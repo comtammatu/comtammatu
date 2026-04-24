@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
@@ -8,15 +9,10 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
-  ItemMedia,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import {
-  IconCircle,
-  IconCircleCheck,
-  IconLoader2,
-  IconToolsKitchen,
-} from "@tabler/icons-react";
+import { IconX } from "@tabler/icons-react";
+import { getPosLineItemDisplayName } from "../../types";
 import type { CartModifier, CartSide } from "../../types";
 
 export interface OrderItemRowData {
@@ -32,51 +28,6 @@ export interface OrderItemRowData {
   note: string | null;
 }
 
-function itemStatusMeta(status: string): {
-  label: string;
-  Icon: typeof IconCircle;
-  ariaLabel: string;
-} {
-  switch (status) {
-    case "pending":
-      return {
-        label: "Chờ",
-        Icon: IconCircle,
-        ariaLabel: "Trạng thái món: chờ xử lý",
-      };
-    case "preparing":
-      return {
-        label: "Đang làm",
-        Icon: IconLoader2,
-        ariaLabel: "Trạng thái món: đang làm",
-      };
-    case "ready":
-      return {
-        label: "Sẵn sàng",
-        Icon: IconCircleCheck,
-        ariaLabel: "Trạng thái món: sẵn sàng",
-      };
-    case "served":
-      return {
-        label: "Đã phục vụ",
-        Icon: IconToolsKitchen,
-        ariaLabel: "Trạng thái món: đã phục vụ",
-      };
-    case "cancelled":
-      return {
-        label: "Đã hủy",
-        Icon: IconCircle,
-        ariaLabel: "Trạng thái món: đã hủy",
-      };
-    default:
-      return {
-        label: status,
-        Icon: IconCircle,
-        ariaLabel: `Trạng thái món: ${status}`,
-      };
-  }
-}
-
 interface OrderItemRowProps {
   row: OrderItemRowData;
   canManage: boolean;
@@ -84,74 +35,114 @@ interface OrderItemRowProps {
 }
 
 export function OrderItemRow({ row, canManage, onVoid }: OrderItemRowProps) {
-  const meta = itemStatusMeta(row.status);
-  const Icon = meta.Icon;
+  const [isDeleteRevealed, setIsDeleteRevealed] = useState(false);
+  const [dragged, setDragged] = useState(false);
+  const [touchStart, setTouchStart] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const cancelled = row.status === "cancelled";
   const canVoid =
     canManage &&
     !cancelled &&
     ["pending", "preparing", "ready"].includes(row.status);
+  const displayName = getPosLineItemDisplayName(row);
   const lineDetails = [
     row.modifiers.map((m) => `+ ${m.name}`).join(", "),
     row.sides.length > 0
-      ? `Kèm: ${row.sides
-          .map((s) =>
-            s.price > 0 ? `${s.name} (${formatVND(s.price)})` : s.name,
-          )
-          .join(", ")}`
+      ? row.sides
+          .map((s) => (s.quantity > 1 ? `${s.name} x${s.quantity}` : s.name))
+          .join(", ")
       : "",
     row.note ? `* ${row.note}` : "",
   ].filter(Boolean);
 
   return (
-    <Item
-      asChild
-      variant="outline"
-      size="xs"
-      className={cn(
-        "items-start bg-card",
-        cancelled && "border-dashed bg-muted/40",
+    <li className="relative overflow-hidden rounded-md">
+      {canVoid && (
+        <Button
+          type="button"
+          variant="destructive"
+          className="absolute inset-y-0 right-0 h-auto min-h-full w-20 rounded-none sm:hidden"
+          aria-label={`Hủy ${displayName}`}
+          onClick={() => {
+            onVoid(row.id);
+            setIsDeleteRevealed(false);
+          }}
+        >
+          Hủy
+        </Button>
       )}
-    >
-      <li>
-        <ItemMedia variant="icon" className="text-primary" aria-hidden>
-          <Icon
-            className={
-              row.status === "preparing"
-                ? "motion-safe:animate-spin"
-                : undefined
-            }
-          />
-        </ItemMedia>
-        <span className="sr-only">{meta.ariaLabel}</span>
+      <Item
+        variant="outline"
+        size="xs"
+        className={cn(
+          "relative items-start bg-card text-sm transition-transform",
+          isDeleteRevealed && canVoid && "-translate-x-20 sm:translate-x-0",
+          cancelled && "border-dashed bg-muted/40",
+        )}
+        onClick={() => {
+          if (dragged) {
+            setDragged(false);
+            return;
+          }
+          if (isDeleteRevealed) setIsDeleteRevealed(false);
+        }}
+        onTouchStart={(event) => {
+          const touch = event.touches[0];
+          if (!touch || !canVoid) return;
+          setTouchStart({ x: touch.clientX, y: touch.clientY });
+        }}
+        onTouchMove={(event) => {
+          const touch = event.touches[0];
+          if (!touch || !touchStart || !canVoid) return;
+          const deltaX = touch.clientX - touchStart.x;
+          const deltaY = touch.clientY - touchStart.y;
+          if (Math.abs(deltaX) < Math.abs(deltaY)) return;
+          if (Math.abs(deltaX) > 12) setDragged(true);
+          if (deltaX < -32) {
+            setIsDeleteRevealed(true);
+          } else if (deltaX > 32) {
+            setIsDeleteRevealed(false);
+          }
+        }}
+        onTouchEnd={() => setTouchStart(null)}
+      >
         <ItemContent className="min-w-0">
           <ItemTitle
-            className={cn("max-w-full", cancelled && "line-through opacity-70")}
+            className={cn(
+              "max-w-full text-sm",
+              cancelled && "line-through opacity-70",
+            )}
           >
-            {row.item_name}
-            {row.variant_name ? ` — ${row.variant_name}` : ""}
+            <span className="shrink-0 text-muted-foreground tabular-nums">
+              x{row.quantity}
+            </span>
+            {displayName}
           </ItemTitle>
           {lineDetails.length > 0 && (
             <ItemDescription>{lineDetails.join(" · ")}</ItemDescription>
           )}
-          <ItemDescription>
-            {meta.label} · x{row.quantity} · {formatVND(row.subtotal)}
-          </ItemDescription>
+          <ItemDescription>{formatVND(row.subtotal)}</ItemDescription>
         </ItemContent>
         <ItemActions className="shrink-0 self-start">
           {canVoid && (
             <Button
               type="button"
               variant="ghost"
-              size="xs"
-              className="text-destructive"
-              onClick={() => onVoid(row.id)}
+              size="icon-sm"
+              className="hidden text-muted-foreground hover:text-destructive sm:inline-flex"
+              aria-label={`Hủy ${displayName}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onVoid(row.id);
+              }}
             >
-              Hủy
+              <IconX />
             </Button>
           )}
         </ItemActions>
-      </li>
-    </Item>
+      </Item>
+    </li>
   );
 }

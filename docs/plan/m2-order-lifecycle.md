@@ -5,6 +5,24 @@
 > Reviews: CEO (SELECTIVE EXPANSION) + Eng (CLEAR) + Design (8/10)
 > Design doc: ~/.gstack/projects/comtammatu-comtammatu/luongthebinh-main-design-20260406-182451.md
 
+## 2026-04-24 Payment-Close Override
+
+This document originally modeled `served -> completed -> trả bàn` as a cashier-driven order lifecycle. That is now legacy for the normal POS path.
+
+Canonical rule:
+
+- POS commercial close happens on payment confirmation.
+- `orders.status='completed'` means `paid + closed from POS view`, not kitchen done.
+- `served`, `ready`, `preparing`, and KDS ticket states are fulfillment signals only.
+- A dine-in table is released only when the order becomes `completed` or `cancelled`.
+- KDS must continue unfinished tickets after payment; payment must not force `order_items.status` or `kds_tickets.status`.
+
+Implementation source of truth:
+
+- `supabase/migrations/20260426030000_auto_complete_paid_order.sql`
+- `supabase/migrations/20260424142658_pos_payment_close_table_release.sql`
+- `tasks/regressions.md` rules `PAYMENT-AUTO-COMPLETES-ORDER` and `POS-SERVED-NOT-TABLE-TERMINAL`
+
 ## Problem
 
 After order submit, staff cannot modify orders. "Them mon" (add items) is the #1 pain point.
@@ -26,7 +44,7 @@ Pattern: dine-in customers order com suon first, then add nuoc mia/canh/trung op
 - Cancel entire order (role-based auth + reason)
 - Transfer table
 - Quick reorder from order history
-- Update order status from POS (served/completed)
+- Update order status from POS (`served` only in normal flow; `completed` is payment-close)
 
 ## Key Decisions (from reviews)
 
@@ -186,7 +204,7 @@ Query: `orders` with `order_items(id, item_name, variant_name, quantity, unit_pr
 │ Tong cong:                         80,000d      │
 │                                                  │
 │ [Them mon]  (green, primary)                    │
-│ [Phuc vu] [Hoan thanh]  (status, secondary)    │
+│ [Phuc vu] [Thanh toan/Hoa don] (payment close) │
 │ [Khac...▾]  → Huy mon, Chuyen ban, Dat lai,   │
 │               Huy don                            │
 └──────────────────────────────────────────────────┘
@@ -265,17 +283,17 @@ Query: `orders` with `order_items(id, item_name, variant_name, quantity, unit_pr
    - Validate order is dine_in, not completed/cancelled
    - Validate new table exists in same branch
    - UPDATE orders SET table_id = p_new_table_id
-   - Free old table (conditional)
+   - Free old table only when no other `completed/cancelled`-terminal order remains; `served` is still active
    - Occupy new table
    - Log to order_status_history
    - Return success
 
 5. `update_order_status(p_order_id, p_new_status)` RPC
-   - Validate status transition is valid (state machine)
-   - For 'completed': guard that ALL order_items are in terminal state (ready, served, cancelled)
-   - For 'served'/'completed': free table if applicable
-   - Log to order_status_history
-   - Return success
+   - Legacy note: older PR2 notes allowed POS to set `completed` after `served`.
+   - Current normal POS flow only uses `served` as a service marker.
+   - `completed` is now produced by payment confirmation / payment RPCs.
+   - Table release is tied to `completed/cancelled`, never to `served`.
+   - Payment close must not mutate `order_items.status` or `kds_tickets.status`.
 
 **GRANT all to authenticated.**
 
@@ -380,8 +398,9 @@ if (!ctx) return { success: false, error: "Can quyen quan ly de thuc hien" };
 **Update order status:**
 
 - "Phuc vu" button: marks order as 'served'
-- "Hoan thanh" button: marks order as 'completed', frees table
-- "Hoan thanh" disabled if any items are still preparing (guard from RPC)
+- Legacy: old "Hoan thanh" button manually marked order as 'completed' and freed table.
+- Current: payment confirmation marks order `completed`; there is no normal separate "Hoan thanh/tra ban" CTA.
+- `served` never releases table and never gates cashier payment.
 
 **KDS void display:**
 
@@ -402,10 +421,10 @@ if (!ctx) return { success: false, error: "Can quyen quan ly de thuc hien" };
 - [ ] Cancel dialog with warning
 - [ ] Table transfer picker
 - [ ] Quick reorder with stale item filter
-- [ ] Status buttons (phuc vu / hoan thanh)
+- [ ] Status/payment actions (phuc vu / thanh toan)
 - [ ] KDS "DA HUY" overlay
 - [ ] `pnpm typecheck && pnpm lint && pnpm build` passes
-- [ ] Manual QA: full lifecycle test (create -> append -> void -> serve -> complete -> table freed)
+- [ ] Manual QA: full lifecycle test (create -> append -> void -> pay -> table freed; KDS can continue)
 
 ---
 
@@ -419,7 +438,7 @@ if (!ctx) return { success: false, error: "Can quyen quan ly de thuc hien" };
 | Chuyen ban         | Table picker loading      | "Khong co ban"   | Toast "Loi"               | Toast "Da chuyen", update header | N/A                     |
 | Dat lai            | Cart loading              | Past order empty | Toast "Loi"               | Cart pre-filled                  | Items filtered, warning |
 | Item status        | Skeleton rows             | "Chua co mon"    | N/A                       | Status icons                     | Mixed (normal)          |
-| Phuc vu/Hoan thanh | Spinner on btn            | N/A              | Toast (items in-flight)   | Badge updates                    | N/A                     |
+| Phuc vu/Thanh toan | Spinner on btn            | N/A              | Toast / payment error     | Badge updates / bill closes      | KDS unchanged           |
 
 ## Existing Code Reused
 
@@ -434,7 +453,26 @@ if (!ctx) return { success: false, error: "Can quyen quan ly de thuc hien" };
 | Sheet overlay      | bill-receipt.tsx                 | order detail view              |
 | Status badges      | order-history.tsx                | item status icons              |
 
-## State Machine (updated)
+## State Machine (payment-close override)
+
+The historical diagram below is superseded for POS commercial close: `served -> completed -> tra ban` is legacy. Current rule is:
+
+```text
+new / confirmed / preparing / ready / served
+  | payment confirmed
+  v
+completed  (POS terminal, releases dine-in table)
+
+new / confirmed / preparing / ready / served
+  | cancel
+  v
+cancelled  (POS terminal, releases dine-in table)
+
+KDS/order-item fulfillment states stay separate:
+pending -> preparing -> ready -> served
+```
+
+Legacy fulfillment diagram retained for historical PR2 context:
 
 ```text
                     ┌──────────┐
@@ -456,9 +494,9 @@ if (!ctx) return { success: false, error: "Can quyen quan ly de thuc hien" };
             │  │    ┌────▼─────┐
             │  │    │  served  │
             │  │    └────┬─────┘
-            │  │         │ POS: hoan thanh (all items terminal)
+            │  │         │ LEGACY POS: hoan thanh (all items terminal)
             │  │    ┌────▼─────┐
-            │  └───►│completed │ (terminal, frees table)
+            │  └───►│completed │ (legacy manual terminal)
             │       └──────────┘
             │       ┌──────────┐
             └──────►│cancelled │ (terminal, mgr+ role + reason, frees table)
@@ -524,9 +562,9 @@ POS UI                Server Action           RPC                    KDS
 7. Transfer: transfer takeaway order (should reject)
 8. Reorder: reorder from past order -> cart pre-filled
 9. Reorder: reorder with deactivated items -> warning + filter
-10. Status: mark served -> mark completed -> table freed
-11. Status: complete with items still preparing (should reject)
-12. Full lifecycle: create -> append -> void 1 item -> KDS bump rest -> serve -> complete
+10. Status: mark served -> table remains occupied until payment close
+11. Payment: pay while KDS item is pending/preparing -> order completed, table freed, KDS state unchanged
+12. Full lifecycle: create -> append -> void 1 item -> pay -> KDS can continue unfinished tickets
 
 ## Failure Modes
 

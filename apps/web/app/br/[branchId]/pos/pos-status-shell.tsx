@@ -61,7 +61,7 @@ export function PosStatusShell({
                 <EmptyTitle className="text-3xl font-semibold tracking-tight">
                   {title}
                 </EmptyTitle>
-                <EmptyDescription className="max-w-2xl text-sm leading-7">
+                <EmptyDescription className="max-w-2xl text-base leading-7">
                   {description}
                 </EmptyDescription>
               </EmptyHeader>
@@ -82,13 +82,13 @@ export function PosStatusShell({
                     )}
                   >
                     <CardContent className="p-4">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
                         {step.label}
                       </p>
                       <h3 className="mt-2 text-base font-semibold">
                         {step.title}
                       </h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
+                      <p className="mt-1 text-base text-muted-foreground">
                         {step.description}
                       </p>
                     </CardContent>

@@ -38,18 +38,19 @@ function PosSidebarTabsComponent({
         >
           <TabsTrigger
             value="new-order"
-            className="h-full min-w-0 gap-2 px-2 py-0 text-sm font-semibold"
+            className="h-full min-w-0 gap-2 px-2 py-0 text-base font-semibold"
           >
             <span className="truncate">Đơn mới</span>
             {cartQuantity > 0 && (
-              <Badge variant="secondary" className="shrink-0 text-xs">
+              <Badge variant="secondary" className="shrink-0 text-sm">
                 {cartQuantity}
               </Badge>
             )}
           </TabsTrigger>
           <TabsTrigger
             value="active-orders"
-            className="h-full min-w-0 gap-2 px-2 py-0 text-sm font-semibold"
+            data-testid="pos-active-orders-tab"
+            className="h-full min-w-0 gap-2 px-2 py-0 text-base font-semibold"
           >
             <span className="truncate">Đơn đang phục vụ</span>
           </TabsTrigger>
@@ -70,6 +71,7 @@ interface PosSidebarContentProps {
   onCustomizeItem: (item: CartItem) => void;
   onViewBill: (orderId: number) => void;
   onViewDetail: (orderId: number) => void;
+  onReturnToTables?: () => void;
 }
 
 function PosSidebarContentComponent({
@@ -81,6 +83,7 @@ function PosSidebarContentComponent({
   onCustomizeItem,
   onViewBill,
   onViewDetail,
+  onReturnToTables,
 }: PosSidebarContentProps) {
   if (showOrders) {
     return (
@@ -95,6 +98,7 @@ function PosSidebarContentComponent({
       onSubmitOrder={onSubmitOrder}
       onOrderTypeChange={onOrderTypeChange}
       onCustomizeItem={onCustomizeItem}
+      onReturnToTables={onReturnToTables}
     />
   );
 }

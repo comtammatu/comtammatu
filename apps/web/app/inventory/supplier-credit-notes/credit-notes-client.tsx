@@ -141,7 +141,7 @@ export function CreditNotesClient({
 
   return (
     <>
-      <InventoryHeader title="Credit notes nhà cung cấp" />
+      <InventoryHeader title="Ghi có NCC" />
       <InventoryPageContent>
         {error ? (
           <Alert variant="destructive">
@@ -151,10 +151,10 @@ export function CreditNotesClient({
 
         <Alert>
           <AlertDescription>
-            Credit notes phát sinh khi phiếu trả NCC chuyển sang trạng thái{" "}
-            <strong>credited</strong> hoặc <strong>refunded</strong>.
-            Credit_note có thể áp vào hóa đơn còn nợ của cùng NCC để giảm công
-            nợ. Cash_refund được đóng ngay khi phát hành (không áp).
+            Ghi có phát sinh khi phiếu trả NCC chuyển sang trạng thái{" "}
+            <strong>credited</strong> hoặc <strong>refunded</strong>. Phiếu ghi
+            có có thể áp vào hóa đơn còn nợ của cùng NCC để giảm công nợ. Hoàn
+            tiền mặt được đóng ngay khi phát hành (không áp).
           </AlertDescription>
         </Alert>
 
@@ -179,8 +179,8 @@ export function CreditNotesClient({
                 {rows.length === 0 ? (
                   <TableEmptyStateRow
                     colSpan={10}
-                    title="Chưa có credit note nào"
-                    description="Credit notes sẽ tự sinh khi xác nhận credit ở phiếu trả NCC."
+                    title="Chưa có phiếu ghi có nào"
+                    description="Phiếu ghi có sẽ tự sinh khi xác nhận ghi có ở phiếu trả NCC."
                   />
                 ) : null}
                 {rows.map((r) => {

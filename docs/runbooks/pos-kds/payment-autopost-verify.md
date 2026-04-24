@@ -40,9 +40,10 @@ pnpm exec dotenv -e .env.test.local -- playwright test payment-cash.spec.ts --pr
 ```
 
 Kỳ vọng:
-- Test `paying a confirmed order with cash marks it paid and records stock movement` pass
-- Order chuyển `unpaid -> paid -> completed`
-- Bàn dine-in có thể đi tiếp sang luồng `trả bàn`
+- Test `paying a confirmed order completes the order and releases the table without touching KDS` pass
+- Order chuyển `unpaid -> paid`, `orders.status='completed'`
+- Bàn dine-in tự chuyển `available` sau payment-close; không còn bước `trả bàn` riêng
+- KDS ticket chưa xong vẫn giữ trạng thái bếp và tiếp tục hiển thị trên KDS
 
 3. Chạy smoke KDS:
 ```bash

@@ -55,9 +55,11 @@ Out of scope:
 
 - Cashier opens a session per terminal, manages billing, and closes orders.
 - Waiter must lock the correct table before creating a dine-in order.
+- POS closes a sales order through payment confirmation. KDS fulfillment status must not gate payment, completion, or table release.
+- `served` is a service/fulfillment marker only; it must not release a table before payment closes the order.
 - "Append items to existing order" is the correct fix for follow-up requests; never create a second live order for the same table just to add items.
 - The new-order cart is only for orders that have not been submitted yet.
-- After submit, users should return to order detail/history for add-item, service, complete, transfer, or cancel flows.
+- After submit, users should return to order detail/history for add-item, service, payment/bill, transfer, or cancel flows.
 - `ready` means kitchen-ready, not automatically served.
 - KDS works by station and ticket urgency, not by dashboard metrics.
 

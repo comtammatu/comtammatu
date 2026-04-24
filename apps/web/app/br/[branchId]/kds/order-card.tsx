@@ -31,6 +31,7 @@ interface OrderCardProps {
   pendingTicketIds: Set<number>;
   canMarkReady: boolean;
   canRecall: boolean;
+  className?: string;
 }
 
 export function OrderCard({
@@ -40,6 +41,7 @@ export function OrderCard({
   pendingTicketIds,
   canMarkReady,
   canRecall,
+  className,
 }: OrderCardProps) {
   const now = useBoardTick();
 
@@ -106,6 +108,7 @@ export function OrderCard({
         "gap-0 py-0 border-l-2 transition-shadow hover:shadow-md",
         borderClass,
         getCardLeftAccent(overallStatus, elapsed),
+        className,
       )}
     >
       <OrderCardHeader

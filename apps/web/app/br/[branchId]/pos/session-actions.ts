@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContextWithPermission } from "../../_lib/auth";
+import { getAuthContext, getAuthContextWithPermission } from "../../_lib/auth";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 
@@ -140,8 +140,18 @@ export async function fetchPosTerminals(
 /* ─── fetchActiveSession ─── */
 
 /**
- * Fetch the currently open POS session for a branch.
- * Returns null in data if no open session exists.
+ * Trả ca POS đang mở của chi nhánh (bất kỳ ai mở).
+ *
+ * Semantic: session là per-terminal (DB enforce `UNIQUE(terminal_id) WHERE status='open'`).
+ * Cashier mở → waiter/cashier/branch_manager cùng ride. Orders bind `pos_session_id`
+ * của ca đó; `orders.created_by` giữ audit "ai ring", `session.opened_by` giữ
+ * audit "ai chịu trách nhiệm tiền".
+ *
+ * Defer: branch có nhiều terminal mở song song → cần picker UX. MVP lấy ca
+ * latest-opened (ORDER BY opened_at DESC LIMIT 1) để deterministic.
+ *
+ * Regression guard: KHÔNG thêm filter `opened_by = user.id` — sẽ chặn waiter
+ * (không có `pos:open_cashbox`) khỏi ca cashier đã mở, vỡ luồng take-order.
  */
 export async function fetchActiveSession(
   branchId: number,
@@ -159,12 +169,6 @@ export async function fetchActiveSession(
   if (claims.branch_id !== parsedBranchId.data) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
-
-  // Get current user to filter sessions by opener
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { success: false, error: "Phiên đăng nhập hết hạn" };
 
   const { data: session, error } = await supabase
     .from("pos_sessions")
@@ -186,7 +190,8 @@ export async function fetchActiveSession(
     .eq("branch_id", parsedBranchId.data)
     .eq("tenant_id", claims.tenant_id)
     .eq("status", "open")
-    .eq("opened_by", user.id)
+    .order("opened_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (error) {
@@ -197,6 +202,60 @@ export async function fetchActiveSession(
   }
 
   return { success: true, data: session };
+}
+
+/* ─── fetchPosPermissionFlags ─── */
+
+/**
+ * Lấy cờ quyền thao tác POS của user trên chi nhánh (1 call, 3 RPC song song).
+ *
+ * - `canOpenShift` (`pos:open_cashbox`): gate render SessionGate ở page-level.
+ *   Waiter (chỉ có `pos:use`) không mở ca được → hiện màn "liên hệ thu ngân".
+ * - `canCloseShift` (`pos:close_shift`): gate nút "Chốt ca" ở header. Waiter
+ *   ride cashier's session nhưng KHÔNG được thấy nút đóng ca.
+ * - `canConfirmCash` (`pos:confirm_payment`): gate phương thức "Tiền mặt" trên
+ *   bill — cash chạm két vật lý → chỉ cashier/branch_manager+. Waiter vẫn
+ *   thấy/chọn VietQR/MoMo (e-wallet không chạm cash drawer).
+ *
+ * Defense in depth: server-side RPC vẫn reject bất kỳ bypass UI nào.
+ */
+export async function fetchPosPermissionFlags(branchId: number): Promise<{
+  canOpenShift: boolean;
+  canCloseShift: boolean;
+  canConfirmCash: boolean;
+}> {
+  const deny = {
+    canOpenShift: false,
+    canCloseShift: false,
+    canConfirmCash: false,
+  };
+  const parsedBranchId = branchIdSchema.safeParse(branchId);
+  if (!parsedBranchId.success) return deny;
+
+  const ctx = await getAuthContext(POS_ROLES);
+  if (!ctx) return deny;
+  if (ctx.claims.branch_id !== parsedBranchId.data) return deny;
+
+  const [openRes, closeRes, cashRes] = await Promise.all([
+    ctx.supabase.rpc("has_permission", {
+      p_branch_id: parsedBranchId.data,
+      p_key: PERMISSION_KEYS.POS_OPEN_CASHBOX,
+    }),
+    ctx.supabase.rpc("has_permission", {
+      p_branch_id: parsedBranchId.data,
+      p_key: PERMISSION_KEYS.POS_CLOSE_SHIFT,
+    }),
+    ctx.supabase.rpc("has_permission", {
+      p_branch_id: parsedBranchId.data,
+      p_key: PERMISSION_KEYS.POS_CONFIRM_PAYMENT,
+    }),
+  ]);
+
+  return {
+    canOpenShift: !openRes.error && openRes.data === true,
+    canCloseShift: !closeRes.error && closeRes.data === true,
+    canConfirmCash: !cashRes.error && cashRes.data === true,
+  };
 }
 
 /* ─── openPosSession ─── */
@@ -225,8 +284,14 @@ export async function openPosSession(
     };
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
-  if (!ctx) return { success: false, error: "Không có quyền" };
+  // Mở ca = ghi tiền đầu ca → yêu cầu quyền thao tác két (cashier / branch_manager).
+  // Bất đối xứng với close (POS_CLOSE_SHIFT) đã có — đồng bộ để chặn waiter.
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_OPEN_CASHBOX,
+    parsedBranchId.data,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền mở ca" };
 
   const { supabase, claims } = ctx;
 
