@@ -2,7 +2,6 @@ import "dotenv/config";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { renderPayload, type PrintPayload } from "./escpos.js";
 import { sendRawLAN } from "./lan.js";
-import { sendRawUSB } from "./usb.js";
 
 type PrinterRow = {
   id: number;
@@ -27,10 +26,18 @@ type PrintJobRow = {
   status: "pending" | "processing" | "printed" | "failed" | "expired" | "cancelled";
 };
 
+type Transport = "lan" | "all";
+
 const requireEnv = (k: string): string => {
   const v = process.env[k];
   if (!v) throw new Error(`Missing env ${k}`);
   return v;
+};
+
+const parseTransport = (raw: string | undefined): Transport => {
+  const v = (raw ?? "all").toLowerCase();
+  if (v === "lan" || v === "all") return v;
+  throw new Error(`Invalid AGENT_TRANSPORT=${raw} (expected 'lan' or 'all')`);
 };
 
 const config = {
@@ -40,9 +47,28 @@ const config = {
   tenantId: Number(requireEnv("AGENT_TENANT_ID")),
   agentId: process.env.AGENT_ID ?? `agent-${process.pid}`,
   version: process.env.AGENT_VERSION ?? "0.1.0",
+  transport: parseTransport(process.env.AGENT_TRANSPORT),
 };
 
 const printerCache = new Map<number, PrinterRow>();
+
+// Lazy-load the USB sender so LAN-only deployments (Termux, Raspberry Pi)
+// never require the `usb` native binding at startup.
+type UsbSender = (
+  vendorIdHex: string,
+  productIdHex: string | null,
+  bytes: Uint8Array,
+) => Promise<void>;
+let usbSenderPromise: Promise<UsbSender> | null = null;
+const loadUsbSender = (): Promise<UsbSender> => {
+  if (config.transport === "lan") {
+    return Promise.reject(
+      new Error("USB dispatch disabled (AGENT_TRANSPORT=lan)"),
+    );
+  }
+  usbSenderPromise ??= import("./usb.js").then((m) => m.sendRawUSB);
+  return usbSenderPromise;
+};
 
 async function loadPrinters(supabase: SupabaseClient): Promise<void> {
   const { data, error } = await supabase
@@ -58,6 +84,18 @@ async function loadPrinters(supabase: SupabaseClient): Promise<void> {
     printerCache.set(p.id, p);
   }
   console.log(`[agent] loaded ${printerCache.size} printers for branch ${config.branchId}`);
+
+  if (config.transport === "lan") {
+    const usbActive = [...printerCache.values()].filter(
+      (p) => p.connection_type === "usb",
+    );
+    if (usbActive.length > 0) {
+      console.warn(
+        `[agent] WARN transport=lan but ${usbActive.length} USB printer(s) active for branch ${config.branchId}; ` +
+          `jobs targeting them will be left pending for a full agent.`,
+      );
+    }
+  }
 }
 
 async function heartbeat(supabase: SupabaseClient): Promise<void> {
@@ -67,6 +105,7 @@ async function heartbeat(supabase: SupabaseClient): Promise<void> {
       tenant_id: config.tenantId,
       agent_id: config.agentId,
       version: config.version,
+      transport: config.transport,
       last_seen_at: new Date().toISOString(),
     },
     { onConflict: "branch_id" },
@@ -103,6 +142,14 @@ async function completeJob(
   if (error) console.error(`[agent] complete ${jobId} failed:`, error.message);
 }
 
+// Pre-claim capability check: a LAN-only agent must NOT claim a USB job.
+// Claim-then-fail would mark the job `failed` permanently (no requeue path),
+// so we leave the row `pending` for a full agent to pick up.
+function canServePrinter(printer: PrinterRow): boolean {
+  if (config.transport === "all") return true;
+  return printer.connection_type === "lan";
+}
+
 async function dispatch(job: PrintJobRow): Promise<void> {
   const printer = printerCache.get(job.printer_id);
   if (!printer) {
@@ -120,7 +167,8 @@ async function dispatch(job: PrintJobRow): Promise<void> {
     if (!printer.usb_vendor_id) {
       throw new Error(`printer ${printer.id} missing usb_vendor_id`);
     }
-    await sendRawUSB(printer.usb_vendor_id, printer.usb_product_id, bytes);
+    const send = await loadUsbSender();
+    await send(printer.usb_vendor_id, printer.usb_product_id, bytes);
     return;
   }
 
@@ -132,7 +180,15 @@ async function dispatch(job: PrintJobRow): Promise<void> {
 async function processJob(
   supabase: SupabaseClient,
   jobId: number,
+  printerId: number | null,
 ): Promise<void> {
+  if (printerId !== null) {
+    const printer = printerCache.get(printerId);
+    if (printer && !canServePrinter(printer)) {
+      return; // leave pending for a capable agent
+    }
+  }
+
   const claimed = await claimJob(supabase, jobId);
   if (!claimed) return;
 
@@ -161,7 +217,7 @@ async function processJob(
 async function drainPending(supabase: SupabaseClient): Promise<void> {
   const { data, error } = await supabase
     .from("print_jobs")
-    .select("id")
+    .select("id, printer_id")
     .eq("branch_id", config.branchId)
     .eq("status", "pending")
     .order("created_at", { ascending: true })
@@ -170,13 +226,18 @@ async function drainPending(supabase: SupabaseClient): Promise<void> {
     console.error("[agent] drain failed:", error.message);
     return;
   }
-  for (const row of (data ?? []) as Array<{ id: number }>) {
-    await processJob(supabase, row.id);
+  for (const row of (data ?? []) as Array<{ id: number; printer_id: number | null }>) {
+    await processJob(supabase, row.id, row.printer_id);
   }
 }
 
 async function main() {
-  console.log(`[agent] starting ${config.agentId} v${config.version} branch=${config.branchId}`);
+  console.log(
+    `[agent] starting ${config.agentId} v${config.version} branch=${config.branchId} transport=${config.transport}`,
+  );
+  if (config.transport === "lan") {
+    console.log("[agent] USB dispatch disabled; only LAN (TCP:9100) printers will be served");
+  }
   const supabase = createClient(config.supabaseUrl, config.serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
@@ -196,9 +257,13 @@ async function main() {
         filter: `branch_id=eq.${config.branchId}`,
       },
       (payload) => {
-        const row = payload.new as { id: number; status: string };
+        const row = payload.new as {
+          id: number;
+          status: string;
+          printer_id: number | null;
+        };
         if (row.status === "pending") {
-          void processJob(supabase, row.id);
+          void processJob(supabase, row.id, row.printer_id);
         }
       },
     )

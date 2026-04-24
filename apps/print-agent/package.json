@@ -12,12 +12,15 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
+    "test:codepage": "tsx scripts/test-codepage.ts",
     "package": "pkg ."
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
     "dotenv": "^17.2.0",
-    "iconv-lite": "^0.6.3",
+    "iconv-lite": "^0.6.3"
+  },
+  "optionalDependencies": {
     "usb": "^2.16.0"
   },
   "devDependencies": {

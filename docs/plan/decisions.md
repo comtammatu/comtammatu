@@ -127,3 +127,33 @@ Helpers ở `apps/web/` (không ở `packages/ui`) vì: bind với RHF + dự á
 **Consequences:** Client-side validation trước submit. A11y tự động (aria-invalid, role="alert", htmlFor). Schema-as-truth — không duplicate type + validation. Mỗi dialog CRUD giảm ~20-30% LOC sau helpers. Breakeven tại ~3 dialogs migrated.
 
 **Migration status (2026-04-17):** M3 shipped 21/24 dialogs (batches 1-9 + recipe-panel). Skip by design: 2 import-export-menu (1-field file upload), 1 grn-create-client (mobile wizard với localStorage drafts).
+
+## D011: print-agent LAN-only build via runtime flag, not separate package (2026-04-24)
+
+**Context:** Chi nhánh chỉ có máy POS Android (không PC Windows) không thể chạy `apps/print-agent` vì `usb` native binding (WinUSB driver, NSSM service, `.exe` packaging). Nhưng vẫn cần 1 process trong LAN để cầu nối jobs đến printer (browser/server cloud không mở raw TCP socket tới IP LAN private).
+
+**Decision:** Thêm env flag `AGENT_TRANSPORT=lan|all` (default `all`):
+- `lan` — skip USB dispatch hoàn toàn. Dynamic `import('./usb.js')` chỉ chạy khi `transport=all` → Termux/Raspberry Pi không cần `usb` prebuild.
+- `all` — giữ behavior cũ (LAN + USB). Windows `.exe` không đổi.
+
+Di chuyển `usb` từ `dependencies` → `optionalDependencies`. `pnpm install --no-optional` trên ARM/Termux bỏ qua sạch.
+
+**Pre-claim gate** (quan trọng): agent LAN-only phải check `printer.connection_type` **trước** `claimJob` RPC. Nếu claim-then-fail, job bị mark `failed` vĩnh viễn (không có requeue path). Pre-claim skip → job giữ `pending` cho agent khác claim.
+
+**Capability column:** `printer_agents.transport TEXT NOT NULL DEFAULT 'all' CHECK IN ('lan','all')` — heartbeat báo capability để monitoring/future enqueue-side routing.
+
+**Out of scope (Phase 2):**
+- Composite heartbeat key `(branch_id, agent_id)` cho hybrid branch (2 agents cùng 1 branch)
+- TTL/expiry reaper cho jobs không claim được trong N phút
+- Enqueue-side filtering theo capability
+- mDNS printer discovery, Docker image, Bluetooth transport
+
+**Rejected alternatives:**
+- Tách 2 package (`-core`, `-usb`) — versioning hell, 2 CI path
+- Separate `index-lan.ts` entrypoint — 2 `bin` entries, 2 `pkg` target, doc burden
+- Browser gửi TCP trực tiếp — browser không mở raw socket
+- Next.js server (cloud) gọi IP printer — NAT/firewall chặn IP LAN private
+
+**Migration:** `20260425140000_printer_agent_transport.sql`
+
+**Consequences:** Shop chỉ có Android POS có thể chạy agent trên Termux (Node 24) hoặc mini-PC/Raspberry Pi. Shop Windows hiện tại không bị regression (default `all`). Future: khi thêm Bluetooth/serial transport, model lại capability thành `TEXT[]`.
