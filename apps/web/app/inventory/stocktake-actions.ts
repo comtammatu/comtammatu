@@ -233,22 +233,22 @@ export async function saveStocktakeDraft(
   const { supabase, user } = ctx;
 
   const now = new Date().toISOString();
-  // Cast around missing generated types — table added in migration 20260425180000;
-  // owner regenerates via `pnpm db:types` after `supabase db push`.
-  const { error } = await (supabase.from("stocktake_drafts" as never) as unknown as {
-    upsert: (
-      values: Record<string, unknown>,
-      options: { onConflict: string },
-    ) => Promise<{ error: { message: string } | null }>;
-  }).upsert(
-    {
-      session_id: parsed.data.sessionId,
-      draft_counts: parsed.data.draftCounts,
-      last_saved_at: now,
-      saved_by: user.id,
-    },
-    { onConflict: "session_id" },
-  );
+  const { error } = await supabase
+    .from("stocktake_drafts")
+    .upsert(
+      {
+        session_id: parsed.data.sessionId,
+        // Generated types narrow draft_counts to Json; Record<string, unknown>
+        // is functionally equivalent but not assignable. JSON.parse/stringify
+        // round-trip keeps the runtime value identical and satisfies the type.
+        draft_counts: JSON.parse(
+          JSON.stringify(parsed.data.draftCounts),
+        ) as Record<string, never>,
+        last_saved_at: now,
+        saved_by: user.id,
+      },
+      { onConflict: "session_id" },
+    );
 
   if (error) {
     return { success: false, error: "Không lưu draft được" };

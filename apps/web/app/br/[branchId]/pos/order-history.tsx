@@ -88,48 +88,38 @@ export function OrderHistory({
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden bg-background">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
       <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-        <div className="space-y-5 px-4 pb-32 pt-4 md:p-4">
-          <section className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-foreground">Đang phục vụ</p>
-                <p className="text-xs text-muted-foreground">
-                  Ưu tiên các đơn còn đang làm ở bếp hoặc tại bàn.
-                </p>
-              </div>
-              <Badge variant="outline" className="text-xs">
-                {activeOrders.length}
-              </Badge>
-            </div>
-
+        <div className="flex flex-col gap-3 px-3 pb-24 pt-3 md:p-3">
+          <section className="flex flex-col gap-2">
             {activeOrders.length === 0 ? (
-              <Empty className="min-h-32 border">
+              <Empty className="min-h-24 border">
                 <EmptyHeader>
                   <EmptyTitle>Không có đơn đang phục vụ</EmptyTitle>
                 </EmptyHeader>
               </Empty>
             ) : (
-              <div className="space-y-3">
+              <div className="flex flex-col gap-2">
                 {activeOrders.map((order) => {
                   const statusInfo = STATUS_LABELS[order.status] ?? {
                     label: order.status,
                     variant: "outline" as const,
                   };
                   const waitingPayment =
-                    order.status === "served" && order.payment_status !== "paid";
+                    order.status === "served" &&
+                    order.payment_status !== "paid";
                   const readyToCloseTable =
-                    order.status === "served" && order.payment_status === "paid";
+                    order.status === "served" &&
+                    order.payment_status === "paid";
 
                   return (
                     <div
                       key={order.id}
                       data-testid={`pos-order-card-${order.id}`}
-                      className="rounded-xl border border-border bg-card p-4 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md"
+                      className="rounded-lg border border-border bg-card p-3 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md"
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-2">
+                        <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-base font-semibold tracking-tight text-foreground">
                               #{order.order_number}
@@ -138,7 +128,8 @@ export function OrderHistory({
                               variant={statusInfo.variant}
                               className={cn(
                                 "text-xs font-semibold",
-                                statusInfo.variant === "outline" && "bg-background",
+                                statusInfo.variant === "outline" &&
+                                  "bg-background",
                               )}
                             >
                               {statusInfo.label}
@@ -158,7 +149,7 @@ export function OrderHistory({
                               </Badge>
                             )}
                           </div>
-                          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                             <span>{formatTime(order.created_at)}</span>
                             <span className="flex items-center gap-1">
                               {order.order_type === "dine_in" ? (
@@ -175,31 +166,34 @@ export function OrderHistory({
                             </span>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                            Tổng đơn
-                          </p>
-                          <p className="mt-1 text-lg font-bold text-primary">
-                            {formatVND(order.total_amount)}
-                          </p>
-                        </div>
+                        <p className="shrink-0 text-right text-lg font-bold text-primary">
+                          {formatVND(order.total_amount)}
+                        </p>
                       </div>
 
-                      <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                      <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
                         <Button
                           data-testid={`pos-order-detail-${order.id}`}
-                          variant={waitingPayment || readyToCloseTable ? "secondary" : "outline"}
+                          variant={
+                            waitingPayment || readyToCloseTable
+                              ? "secondary"
+                              : "outline"
+                          }
                           size="sm"
-                          className="h-10 rounded-full px-4 text-xs"
+                          className="h-8 rounded-full px-3 text-xs"
                           onClick={() => onViewDetail(order.id)}
                         >
                           {readyToCloseTable ? "Hoàn tất" : "Điều phối"}
                         </Button>
                         <Button
                           data-testid={`pos-order-bill-${order.id}`}
-                          variant={waitingPayment || readyToCloseTable ? "default" : "ghost"}
+                          variant={
+                            waitingPayment || readyToCloseTable
+                              ? "default"
+                              : "ghost"
+                          }
                           size="sm"
-                          className="h-10 rounded-full px-4 text-xs"
+                          className="h-8 rounded-full px-3 text-xs"
                           onClick={() => onViewBill(order.id)}
                         >
                           <IconReceipt className="mr-1 size-3.5" />
@@ -217,27 +211,26 @@ export function OrderHistory({
             )}
           </section>
 
-          <section className="space-y-3">
+          <section className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-foreground">Đã hoàn tất</p>
-                <p className="text-xs text-muted-foreground">
-                  Lưu vết đơn đã kết thúc trong ca hiện tại.
+              <div className="flex min-w-0 items-center gap-2">
+                <p className="text-sm font-semibold text-foreground">
+                  Đã hoàn tất
                 </p>
+                <Badge variant="success" className="text-xs">
+                  {archivedOrders.length}
+                </Badge>
               </div>
-              <Badge variant="success" className="text-xs">
-                {archivedOrders.length}
-              </Badge>
             </div>
 
             {archivedOrders.length === 0 ? (
-              <Empty className="min-h-32 border">
+              <Empty className="min-h-20 border">
                 <EmptyHeader>
                   <EmptyTitle>Chưa có đơn hoàn tất</EmptyTitle>
                 </EmptyHeader>
               </Empty>
             ) : (
-              <div className="space-y-3">
+              <div className="flex flex-col gap-2">
                 {archivedOrders.map((order) => {
                   const statusInfo = STATUS_LABELS[order.status] ?? {
                     label: order.status,
@@ -247,10 +240,10 @@ export function OrderHistory({
                   return (
                     <div
                       key={order.id}
-                      className="rounded-xl border border-border bg-background p-4 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md"
+                      className="rounded-lg border border-border bg-background p-3 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md"
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-2">
+                        <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-sm font-semibold tracking-tight text-foreground">
                               #{order.order_number}
@@ -259,13 +252,14 @@ export function OrderHistory({
                               variant={statusInfo.variant}
                               className={cn(
                                 "text-xs font-semibold",
-                                statusInfo.variant === "outline" && "bg-background",
+                                statusInfo.variant === "outline" &&
+                                  "bg-background",
                               )}
                             >
                               {statusInfo.label}
                             </Badge>
                           </div>
-                          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                             <span>{formatTime(order.created_at)}</span>
                             <span className="flex items-center gap-1">
                               {order.order_type === "dine_in" ? (
@@ -287,11 +281,11 @@ export function OrderHistory({
                         </p>
                       </div>
 
-                      <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                      <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-10 rounded-full px-4 text-xs"
+                          className="h-8 rounded-full px-3 text-xs"
                           onClick={() => onViewBill(order.id)}
                         >
                           <IconReceipt className="mr-1 size-3.5" />

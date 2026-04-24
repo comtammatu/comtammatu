@@ -16,7 +16,7 @@ import {
   SheetDescription,
 } from "@comtammatu/ui/components/sheet";
 import { cn } from "@comtammatu/ui";
-import type { CartModifier, CartSide } from "./types";
+import type { CartItem, CartModifier, CartSide } from "./types";
 import type { MenuItem, MenuVariant } from "./pos-menu-types";
 
 interface ItemCustomizerProps {
@@ -30,10 +30,12 @@ interface ItemCustomizerProps {
     modifiers: CartModifier[],
     sides: CartSide[],
     note: string | undefined,
+    quantity: number,
   ) => void;
   /** Thêm món vào đơn đã có (copy nút/tiêu đề) */
-  mode?: "new" | "append";
+  mode?: "new" | "append" | "edit";
   appendOrderLabel?: string | null;
+  initialCartItem?: CartItem | null;
 }
 
 export function ItemCustomizer({
@@ -42,6 +44,7 @@ export function ItemCustomizer({
   onConfirm,
   mode = "new",
   appendOrderLabel,
+  initialCartItem,
 }: ItemCustomizerProps) {
   const [selectedVariant, setSelectedVariant] = useState<MenuVariant | null>(
     null,
@@ -51,48 +54,65 @@ export function ItemCustomizer({
   );
   const [selectedSideQuantities, setSelectedSideQuantities] = useState<
     Map<number, number>
-  >(
-    new Map(),
-  );
+  >(new Map());
   const [note, setNote] = useState("");
+  const [quantity, setQuantity] = useState(1);
 
-  // Reset state when item prop changes
-  useEffect(() => {
-    if (item) {
-      setSelectedVariant(item.menu_item_variants[0] ?? null);
+  const resetStateForItem = useCallback(
+    (nextItem: MenuItem, cartItem?: CartItem | null) => {
+      if (cartItem) {
+        setSelectedVariant(
+          nextItem.menu_item_variants.find(
+            (variant) => variant.id === cartItem.variant_id,
+          ) ?? null,
+        );
+        setSelectedModifierIds(
+          new Set(cartItem.modifiers.map((modifier) => modifier.modifier_id)),
+        );
+        setSelectedSideQuantities(
+          new Map(
+            cartItem.sides.map(
+              (side) => [side.side_item_id, side.quantity] as const,
+            ),
+          ),
+        );
+        setNote(cartItem.note ?? "");
+        setQuantity(cartItem.quantity);
+        return;
+      }
+
+      setSelectedVariant(nextItem.menu_item_variants[0] ?? null);
       setSelectedModifierIds(new Set());
       setSelectedSideQuantities(
         new Map(
-          item.menu_item_available_sides
+          nextItem.menu_item_available_sides
             .filter((s) => s.is_default)
             .map((s) => [s.side_item.id, 1] as const),
         ),
       );
       setNote("");
+      setQuantity(1);
+    },
+    [],
+  );
+
+  // Reset state when item prop changes
+  useEffect(() => {
+    if (item) {
+      resetStateForItem(item, initialCartItem);
     }
-  }, [item]);
+  }, [initialCartItem, item, resetStateForItem]);
 
   const resetAndSetItem = useCallback(
     (open: boolean) => {
       if (open && item) {
-        // Pre-select first variant if variants exist
-        const firstVariant = item.menu_item_variants[0];
-        setSelectedVariant(firstVariant ?? null);
-        setSelectedModifierIds(new Set());
-        // Pre-select default sides
-        const defaultSideQuantities = new Map(
-          item.menu_item_available_sides
-            .filter((s) => s.is_default)
-            .map((s) => [s.side_item.id, 1] as const),
-        );
-        setSelectedSideQuantities(defaultSideQuantities);
-        setNote("");
+        resetStateForItem(item, initialCartItem);
       }
       if (!open) {
         onClose();
       }
     },
-    [item, onClose],
+    [initialCartItem, item, onClose, resetStateForItem],
   );
 
   const unitPrice = useMemo(() => {
@@ -122,7 +142,8 @@ export function ItemCustomizer({
       );
   }, [item, selectedSideQuantities]);
 
-  const totalPrice = unitPrice + modifierTotal + sideTotal;
+  const lineUnitPrice = unitPrice + modifierTotal + sideTotal;
+  const totalPrice = lineUnitPrice * quantity;
 
   const handleConfirm = useCallback(() => {
     if (!item) return;
@@ -150,6 +171,7 @@ export function ItemCustomizer({
       modifiers,
       sides,
       trimmedNote.length > 0 ? trimmedNote : undefined,
+      quantity,
     );
   }, [
     item,
@@ -158,6 +180,7 @@ export function ItemCustomizer({
     selectedSideQuantities,
     unitPrice,
     note,
+    quantity,
     onConfirm,
   ]);
 
@@ -185,18 +208,25 @@ export function ItemCustomizer({
     });
   }, []);
 
-  const updateSideQuantity = useCallback((sideItemId: number, delta: number) => {
-    setSelectedSideQuantities((prev) => {
-      const current = prev.get(sideItemId);
-      if (current == null) return prev;
+  const updateSideQuantity = useCallback(
+    (sideItemId: number, delta: number) => {
+      setSelectedSideQuantities((prev) => {
+        const current = prev.get(sideItemId);
+        if (current == null) return prev;
 
-      const nextQuantity = Math.min(99, Math.max(1, current + delta));
-      if (nextQuantity === current) return prev;
+        const nextQuantity = Math.min(99, Math.max(1, current + delta));
+        if (nextQuantity === current) return prev;
 
-      const next = new Map(prev);
-      next.set(sideItemId, nextQuantity);
-      return next;
-    });
+        const next = new Map(prev);
+        next.set(sideItemId, nextQuantity);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const updateQuantity = useCallback((delta: number) => {
+    setQuantity((current) => Math.min(99, Math.max(1, current + delta)));
   }, []);
 
   return (
@@ -214,8 +244,10 @@ export function ItemCustomizer({
               >
                 {mode === "append" && appendOrderLabel
                   ? `Thêm món vào đơn #${appendOrderLabel}`
-                  : (item.description ??
-                    "Tùy chọn món (biến thể, topping, món kèm)")}
+                  : mode === "edit"
+                    ? "Cập nhật lựa chọn trong giỏ hàng"
+                    : (item.description ??
+                      "Tùy chọn món (biến thể, topping, món kèm)")}
               </SheetDescription>
             </SheetHeader>
 
@@ -286,6 +318,9 @@ export function ItemCustomizer({
                           s.side_item.id,
                         );
                         const isSelected = sideQuantity != null;
+                        const displaySideQuantity = sideQuantity ?? 1;
+                        const sideLineTotal =
+                          s.side_item.base_price * displaySideQuantity;
 
                         return (
                           <div
@@ -308,14 +343,19 @@ export function ItemCustomizer({
                                 </span>
                               )}
                             </Label>
-                            {isSelected && (
-                              <div className="flex shrink-0 items-center gap-1">
+                            <div className="flex shrink-0 items-center gap-2">
+                              <span className="w-20 text-right text-sm font-medium tabular-nums">
+                                +{formatVND(sideLineTotal)}
+                              </span>
+                              <div className="flex w-24 items-center justify-end gap-1">
                                 <Button
                                   type="button"
                                   variant="outline"
                                   size="icon"
                                   className="size-8"
-                                  disabled={sideQuantity <= 1}
+                                  disabled={
+                                    !isSelected || displaySideQuantity <= 1
+                                  }
                                   aria-label={`Giảm ${s.side_item.name}`}
                                   onClick={() =>
                                     updateSideQuantity(s.side_item.id, -1)
@@ -323,14 +363,20 @@ export function ItemCustomizer({
                                 >
                                   -
                                 </Button>
-                                <span className="w-8 text-center text-sm font-semibold tabular-nums">
-                                  {sideQuantity}
+                                <span
+                                  className={cn(
+                                    "w-6 text-center text-sm font-semibold tabular-nums",
+                                    !isSelected && "text-muted-foreground",
+                                  )}
+                                >
+                                  {displaySideQuantity}
                                 </span>
                                 <Button
                                   type="button"
                                   variant="outline"
                                   size="icon"
                                   className="size-8"
+                                  disabled={!isSelected}
                                   aria-label={`Tăng ${s.side_item.name}`}
                                   onClick={() =>
                                     updateSideQuantity(s.side_item.id, 1)
@@ -339,13 +385,7 @@ export function ItemCustomizer({
                                   +
                                 </Button>
                               </div>
-                            )}
-                            <span className="shrink-0 text-sm text-muted-foreground">
-                              +{formatVND(s.side_item.base_price)}
-                              {isSelected && sideQuantity > 1
-                                ? ` x${String(sideQuantity)}`
-                                : ""}
-                            </span>
+                            </div>
                           </div>
                         );
                       })}
@@ -355,7 +395,10 @@ export function ItemCustomizer({
 
                 {/* Note */}
                 <div>
-                  <Label htmlFor="item-note" className="mb-2 text-sm font-semibold">
+                  <Label
+                    htmlFor="item-note"
+                    className="mb-2 text-sm font-semibold"
+                  >
                     Ghi chú
                   </Label>
                   <Textarea
@@ -372,19 +415,49 @@ export function ItemCustomizer({
 
             {/* Footer */}
             <Separator />
-            <div className="flex items-center justify-between p-4">
+            <div className="flex items-center justify-between gap-3 p-4">
               <div>
-                <p className="text-xs text-muted-foreground">Đơn giá</p>
-                <p className="text-lg font-bold text-primary">
+                <p className="text-xs text-muted-foreground">Tạm tính</p>
+                <p className="text-lg font-bold text-primary tabular-nums">
                   {formatVND(totalPrice)}
                 </p>
               </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="size-9"
+                  disabled={quantity <= 1}
+                  aria-label="Giảm số lượng"
+                  onClick={() => updateQuantity(-1)}
+                >
+                  -
+                </Button>
+                <span className="w-7 text-center text-sm font-bold tabular-nums">
+                  {quantity}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="size-9"
+                  aria-label="Tăng số lượng"
+                  onClick={() => updateQuantity(1)}
+                >
+                  +
+                </Button>
+              </div>
               <Button
                 size="lg"
-                className="min-h-11 min-w-40"
+                className="min-h-11 min-w-32"
                 onClick={handleConfirm}
               >
-                {mode === "append" ? "Thêm vào đơn" : "Thêm vào giỏ"}
+                {mode === "append"
+                  ? "Thêm vào đơn"
+                  : mode === "edit"
+                    ? "Cập nhật"
+                    : "Thêm vào giỏ"}
               </Button>
             </div>
           </div>

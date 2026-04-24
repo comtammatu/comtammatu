@@ -1,6 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+  type ChangeEvent,
+} from "react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -24,32 +33,76 @@ import type { CategoryType } from "@comtammatu/shared";
 import { CATEGORY_TYPE_LABELS } from "@comtammatu/shared/menu";
 import {
   IconChefHat,
-  IconPlus,
   IconSearch,
   IconShoppingCart,
   IconX,
 } from "@tabler/icons-react";
 import { MENU_ZONE_ORDER } from "./pos-menu-types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
-import type { OrderType } from "./types";
 
 interface PosMenuGridProps {
   categories: MenuCategory[];
-  cartQuantity: number;
-  cartTotal: number;
-  orderType: OrderType;
-  selectedTableNumber: number | undefined;
   onItemTap: (item: MenuItem) => void;
 }
 
-export function PosMenuGrid({
-  categories,
-  cartQuantity,
-  cartTotal,
-  orderType,
-  selectedTableNumber,
+interface MenuItemButtonProps {
+  item: MenuItem;
+  sparseMenu: boolean;
+  onItemTap: (item: MenuItem) => void;
+}
+
+const MenuItemButton = memo(function MenuItemButton({
+  item,
+  sparseMenu,
   onItemTap,
-}: PosMenuGridProps) {
+}: MenuItemButtonProps) {
+  const handleClick = useCallback(() => onItemTap(item), [item, onItemTap]);
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      className={cn(
+        "h-auto min-h-32 w-full cursor-pointer flex-col items-stretch justify-between rounded-lg bg-card p-3 text-left whitespace-normal shadow-sm transition-transform hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md active:scale-95 md:min-h-48 md:p-5 lg:min-h-56",
+        sparseMenu && "md:min-h-64 md:p-6",
+      )}
+      onClick={handleClick}
+    >
+      <div className="flex h-full w-full flex-col justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-2">
+          <div className="flex items-start justify-between gap-2">
+            <p
+              className={cn(
+                "line-clamp-3 min-w-0 text-sm font-semibold leading-snug text-foreground sm:text-base md:text-lg",
+                sparseMenu && "md:text-3xl",
+              )}
+            >
+              {item.name}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-auto flex flex-col gap-3 pt-4 md:gap-4 md:pt-6">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <p
+              className={cn(
+                "text-xl font-bold text-primary tabular-nums sm:mt-1 md:text-2xl",
+                sparseMenu && "md:text-4xl",
+              )}
+            >
+              {formatVND(item.base_price)}
+            </p>
+          </div>
+        </div>
+      </div>
+    </Button>
+  );
+});
+
+function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
+  const [, startMenuTransition] = useTransition();
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(
     categories[0]?.id ?? null,
   );
@@ -98,11 +151,10 @@ export function PosMenuGrid({
     [categories, activeCategoryId],
   );
 
-  const activeZoneLabel =
-    CATEGORY_TYPE_LABELS[effectiveMenuZone] ?? effectiveMenuZone;
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
   const activeItems = activeCategory?.menu_items ?? [];
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = deferredQuery.trim().toLowerCase();
   const visibleItems = useMemo(() => {
     if (normalizedQuery === "") return activeItems;
 
@@ -112,14 +164,37 @@ export function PosMenuGrid({
     });
   }, [activeItems, normalizedQuery]);
   const sparseMenu = visibleItems.length <= 2;
-  const contextLabel =
-    orderType === "takeaway"
-      ? "Mang về"
-      : selectedTableNumber != null
-        ? `Bàn ${selectedTableNumber}`
-        : "Chọn bàn";
   const activeCategoryValue =
     activeCategoryId != null ? String(activeCategoryId) : undefined;
+  const handleQueryChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value),
+    [],
+  );
+  const clearQuery = useCallback(() => setQuery(""), []);
+  const handleMenuZoneChange = useCallback(
+    (value: string) => {
+      const nextZone = value as CategoryType;
+      startMenuTransition(() => {
+        setActiveMenuZone((current) =>
+          current === nextZone ? current : nextZone,
+        );
+      });
+    },
+    [startMenuTransition],
+  );
+  const handleCategoryChange = useCallback(
+    (value: string) => {
+      const nextCategoryId = Number(value);
+      if (!Number.isFinite(nextCategoryId)) return;
+
+      startMenuTransition(() => {
+        setActiveCategoryId((current) =>
+          current === nextCategoryId ? current : nextCategoryId,
+        );
+      });
+    },
+    [startMenuTransition],
+  );
 
   if (availableMenuZones.length === 0) {
     return (
@@ -140,37 +215,17 @@ export function PosMenuGrid({
   return (
     <div className="flex min-h-0 flex-1 overflow-hidden bg-background">
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="border-b border-border/60 bg-background px-3 py-4 md:px-5 lg:px-6">
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  {activeZoneLabel}
-                </p>
-                <h2 className="mt-1 text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-                  {activeCategory?.name ?? "Chọn danh mục"}
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Chạm món để đưa vào giỏ. Món cần tuỳ chọn sẽ mở chi tiết.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">{contextLabel}</Badge>
-                <Badge variant="outline">{cartQuantity} món trong giỏ</Badge>
-                <Badge variant="outline">{formatVND(cartTotal)}</Badge>
-              </div>
-            </div>
-
+        <div className="border-b border-border/60 bg-background px-2 py-2 md:px-5 md:py-4 lg:px-6">
+          <div className="flex flex-col gap-2 md:gap-3">
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-              <InputGroup className="h-11 lg:max-w-md">
+              <InputGroup className="h-10 md:h-11 lg:max-w-md">
                 <InputGroupAddon>
                   <IconSearch />
                 </InputGroupAddon>
                 <InputGroupInput
                   id="pos-menu-search"
                   value={query}
-                  onChange={(event) => setQuery(event.target.value)}
+                  onChange={handleQueryChange}
                   placeholder="Tìm món, topping, ghi chú món..."
                   aria-label="Tìm món"
                 />
@@ -179,7 +234,7 @@ export function PosMenuGrid({
                     <InputGroupButton
                       size="icon-xs"
                       aria-label="Xóa tìm kiếm"
-                      onClick={() => setQuery("")}
+                      onClick={clearQuery}
                     >
                       <IconX />
                     </InputGroupButton>
@@ -189,20 +244,18 @@ export function PosMenuGrid({
 
               <Tabs
                 value={effectiveMenuZone}
-                onValueChange={(value) =>
-                  setActiveMenuZone(value as CategoryType)
-                }
-                className="w-full gap-0 lg:flex-1"
+                onValueChange={handleMenuZoneChange}
+                className="min-w-0 w-full gap-0 overflow-x-auto lg:flex-1"
               >
                 <TabsList
                   aria-label="Khu thực đơn"
-                  className="h-auto w-full justify-start gap-2 rounded-lg border bg-card p-1"
+                  className="h-10 w-max min-w-full justify-start gap-1 rounded-lg border bg-card p-1 md:h-11 md:gap-2"
                 >
                   {availableMenuZones.map((zone) => (
                     <TabsTrigger
                       key={zone}
                       value={zone}
-                      className="shrink-0 px-4 py-2 text-sm font-semibold"
+                      className="h-full shrink-0 px-3 py-0 text-xs font-semibold md:px-4 md:text-sm"
                     >
                       {CATEGORY_TYPE_LABELS[zone] ?? zone}
                     </TabsTrigger>
@@ -214,21 +267,24 @@ export function PosMenuGrid({
             {categoriesInActiveZone.length > 1 ? (
               <Tabs
                 value={activeCategoryValue}
-                onValueChange={(value) => setActiveCategoryId(Number(value))}
-                className="w-full gap-0"
+                onValueChange={handleCategoryChange}
+                className="w-full gap-0 overflow-x-auto"
               >
                 <TabsList
                   aria-label="Danh mục món"
-                  className="h-auto w-full justify-start gap-2 rounded-lg border bg-background p-1"
+                  className="h-10 w-max min-w-full justify-start gap-1 rounded-lg border bg-background p-1 md:gap-2"
                 >
                   {categoriesInActiveZone.map((category) => (
                     <TabsTrigger
                       key={category.id}
                       value={String(category.id)}
-                      className="shrink-0 gap-2 px-3 py-2 text-sm font-medium"
+                      className="h-full shrink-0 gap-1.5 px-2.5 py-0 text-xs font-medium md:gap-2 md:px-3 md:text-sm"
                     >
                       {category.name}
-                      <Badge variant="outline" className="text-xs">
+                      <Badge
+                        variant="outline"
+                        className="hidden text-xs sm:inline-flex"
+                      >
                         {category.menu_items.length}
                       </Badge>
                     </TabsTrigger>
@@ -242,101 +298,20 @@ export function PosMenuGrid({
         <ScrollArea className="min-h-0 flex-1 overflow-hidden">
           <div
             className={cn(
-              "grid gap-4 px-3 pb-36 pt-3 md:p-5 lg:p-6",
+              "grid grid-cols-2 gap-2 px-2 pb-28 pt-2 md:gap-4 md:p-5 lg:p-6",
               sparseMenu
-                ? "grid-cols-1"
-                : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4",
+                ? "md:grid-cols-1"
+                : "sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4",
             )}
           >
-            {visibleItems.map((item) => {
-              const hasCustomization =
-                item.menu_item_variants.length > 0 ||
-                item.menu_item_modifiers.length > 0 ||
-                item.menu_item_available_sides.length > 0;
-
-              return (
-                <Button
-                  key={item.id}
-                  type="button"
-                  variant="outline"
-                  className={cn(
-                    "h-auto min-h-48 w-full cursor-pointer flex-col items-stretch justify-between rounded-lg bg-card p-5 text-left whitespace-normal shadow-sm transition-transform hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md active:scale-95 lg:min-h-56",
-                    sparseMenu && "md:min-h-64 md:p-6",
-                  )}
-                  onClick={() => onItemTap(item)}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 flex-col gap-3">
-                      <Badge variant="outline" className="w-fit text-xs">
-                        {activeCategory?.name ?? activeZoneLabel}
-                      </Badge>
-                      <div>
-                        <p
-                          className={cn(
-                            "line-clamp-2 text-lg font-semibold leading-snug text-foreground",
-                            sparseMenu && "md:text-3xl",
-                          )}
-                        >
-                          {item.name}
-                        </p>
-                        <p
-                          className={cn(
-                            "mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground",
-                            sparseMenu && "md:max-w-2xl md:text-base",
-                          )}
-                        >
-                          {item.description ??
-                            "Chạm để thêm nhanh hoặc mở tuỳ chọn của món."}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant={hasCustomization ? "warning" : "success"}>
-                      {hasCustomization ? "Tuỳ chỉnh" : "Thêm nhanh"}
-                    </Badge>
-                  </div>
-
-                  <div className="mt-auto flex flex-col gap-4 pt-6">
-                    <div className="flex flex-wrap gap-2">
-                      {item.menu_item_variants.length > 0 && (
-                        <Badge variant="secondary" className="text-xs">
-                          {item.menu_item_variants.length} lựa chọn
-                        </Badge>
-                      )}
-                      {item.menu_item_modifiers.length > 0 && (
-                        <Badge variant="secondary" className="text-xs">
-                          {item.menu_item_modifiers.length} topping
-                        </Badge>
-                      )}
-                      {item.menu_item_available_sides.length > 0 && (
-                        <Badge variant="secondary" className="text-xs">
-                          {item.menu_item_available_sides.length} món kèm
-                        </Badge>
-                      )}
-                    </div>
-
-                    <div className="flex items-end justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Giá bán
-                        </p>
-                        <p
-                          className={cn(
-                            "mt-1 text-2xl font-bold text-primary tabular-nums",
-                            sparseMenu && "md:text-4xl",
-                          )}
-                        >
-                          {formatVND(item.base_price)}
-                        </p>
-                      </div>
-                      <Badge variant="secondary" className="gap-2 px-3 py-2">
-                        <IconPlus className="size-4" />
-                        Chạm thẻ
-                      </Badge>
-                    </div>
-                  </div>
-                </Button>
-              );
-            })}
+            {visibleItems.map((item) => (
+              <MenuItemButton
+                key={item.id}
+                item={item}
+                sparseMenu={sparseMenu}
+                onItemTap={onItemTap}
+              />
+            ))}
           </div>
 
           {visibleItems.length === 0 && (
@@ -357,3 +332,5 @@ export function PosMenuGrid({
     </div>
   );
 }
+
+export const PosMenuGrid = memo(PosMenuGridComponent);

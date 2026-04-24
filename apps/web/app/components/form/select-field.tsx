@@ -65,7 +65,7 @@ export function SelectField<TFieldValues extends FieldValues>({
       >
         <SelectTrigger
           id={fieldId}
-          className={cn("h-10", className)}
+          className={cn("!h-10 w-full", className)}
           aria-invalid={hasError}
           onBlur={field.onBlur}
           ref={field.ref}

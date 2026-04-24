@@ -25,6 +25,8 @@ pnpm db:types     # Regenerate Supabase types after migration is merged and appl
 - After SQL migration is merged and applied, run `pnpm db:types`.
 - NEVER apply migrations directly. Write migration file → PR → merge → owner applies manually.
 - ACL single source: `packages/shared/src/auth/module-acl.ts`.
+- NEVER add agent notes, dev commit notes, implementation explanations, or internal commentary to project UI.
+- Put durable explanations, guides, operational notes, and task notes in Markdown docs, guides, or note files inside the source tree.
 
 ## Architecture
 

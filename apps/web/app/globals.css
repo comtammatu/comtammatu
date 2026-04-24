@@ -150,6 +150,7 @@
   }
   html {
     @apply font-mono;
+    font-size: 17px;
   }
   ::selection {
     background: color-mix(in oklch, var(--primary) 30%, transparent);

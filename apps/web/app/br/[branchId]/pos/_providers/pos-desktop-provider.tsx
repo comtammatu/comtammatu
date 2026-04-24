@@ -54,15 +54,27 @@ type OperationalDispatch = {
   setTables: (tables: BranchTable[]) => void;
 };
 
-const OperationalDataContext = createContext<OperationalData | null>(null);
+const OrdersContext = createContext<SessionOrder[] | null>(null);
+const TablesContext = createContext<BranchTable[] | null>(null);
 const OperationalDispatchContext = createContext<OperationalDispatch | null>(
   null,
 );
 
 export function usePosOperationalData(): OperationalData {
-  const ctx = useContext(OperationalDataContext);
-  if (!ctx)
-    throw new Error("usePosOperationalData must be used inside PosDesktopProvider");
+  const orders = usePosOrders();
+  const tables = usePosTables();
+  return useMemo(() => ({ orders, tables }), [orders, tables]);
+}
+
+export function usePosOrders(): SessionOrder[] {
+  const ctx = useContext(OrdersContext);
+  if (!ctx) throw new Error("usePosOrders must be used inside PosDesktopProvider");
+  return ctx;
+}
+
+export function usePosTables(): BranchTable[] {
+  const ctx = useContext(TablesContext);
+  if (!ctx) throw new Error("usePosTables must be used inside PosDesktopProvider");
   return ctx;
 }
 
@@ -139,11 +151,6 @@ export function PosDesktopProvider({
     void loadOrders();
   }, [loadOrders]);
 
-  const dataValue = useMemo<OperationalData>(
-    () => ({ orders, tables }),
-    [orders, tables],
-  );
-
   const dispatchValue = useMemo<OperationalDispatch>(
     () => ({
       refreshAll,
@@ -157,9 +164,11 @@ export function PosDesktopProvider({
     <SessionContext.Provider value={sessionValue}>
       <CartStoreContext.Provider value={cartStore}>
         <OperationalDispatchContext.Provider value={dispatchValue}>
-          <OperationalDataContext.Provider value={dataValue}>
-            {children}
-          </OperationalDataContext.Provider>
+          <OrdersContext.Provider value={orders}>
+            <TablesContext.Provider value={tables}>
+              {children}
+            </TablesContext.Provider>
+          </OrdersContext.Provider>
         </OperationalDispatchContext.Provider>
       </CartStoreContext.Provider>
     </SessionContext.Provider>

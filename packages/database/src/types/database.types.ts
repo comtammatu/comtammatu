@@ -4615,6 +4615,35 @@ export type Database = {
           },
         ]
       }
+      stocktake_drafts: {
+        Row: {
+          draft_counts: Json
+          last_saved_at: string
+          saved_by: string | null
+          session_id: number
+        }
+        Insert: {
+          draft_counts?: Json
+          last_saved_at?: string
+          saved_by?: string | null
+          session_id: number
+        }
+        Update: {
+          draft_counts?: Json
+          last_saved_at?: string
+          saved_by?: string | null
+          session_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stocktake_drafts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "stocktake_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stocktake_lines: {
         Row: {
           abc_class: string | null

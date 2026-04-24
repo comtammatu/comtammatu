@@ -5,7 +5,7 @@ import { IconDoorEnter } from "@tabler/icons-react";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 
-/** Compact back link — icon-only on narrow screens; short label from sm+. */
+/** Compact back link to the employee portal. */
 export function EmployeePortalBackControl({
   className,
 }: {
@@ -27,7 +27,7 @@ export function EmployeePortalBackControl({
         aria-label="Quay lại Cổng nhân viên"
       >
         <IconDoorEnter className="size-3 shrink-0 sm:size-3.5" />
-        <span className="hidden sm:inline">Cổng NV</span>
+        <span>Thoát</span>
       </Link>
     </Button>
   );

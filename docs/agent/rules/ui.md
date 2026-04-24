@@ -22,6 +22,7 @@ External references:
 
 - NEVER invent or redesign the UI outside the project's established design system.
 - NEVER exceed authority when editing UI; only make UI changes explicitly requested or clearly required by the task.
+- NEVER put agent notes, dev commit notes, implementation explanations, or internal commentary into user-facing UI.
 - ALWAYS follow project UI rules and regressions before changing any interface.
 - USE `shadcn/ui` components and the project's active preset as the default UI path.
 - NEVER override the visual contract of core primitives through ad-hoc wrappers, custom themes, or parallel surface systems.

@@ -53,12 +53,14 @@ export class CartStore {
       modifiers?: CartModifier[];
       sides?: CartSide[];
       note?: string;
+      quantity?: number;
     } = {},
   ) {
     const modifiers = opts.modifiers ?? [];
     const sides = opts.sides ?? [];
     const price = opts.unitPrice ?? item.base_price;
     const hasNote = opts.note !== undefined && opts.note.length > 0;
+    const quantity = opts.quantity ?? 1;
     const baseKey = makeCartKey(item.id, opts.variantId, modifiers, sides);
     const key = hasNote ? makeNotedCartKey(baseKey) : baseKey;
 
@@ -69,7 +71,9 @@ export class CartStore {
         this.setState({
           ...this.state,
           items: items.map((ci) =>
-            ci.key === key ? { ...ci, quantity: ci.quantity + 1 } : ci,
+            ci.key === key
+              ? { ...ci, quantity: ci.quantity + quantity }
+              : ci,
           ),
         });
         return;
@@ -82,7 +86,7 @@ export class CartStore {
       item_name: item.name,
       variant_id: opts.variantId,
       variant_name: opts.variantName,
-      quantity: 1,
+      quantity,
       unit_price: price,
       modifiers,
       sides,

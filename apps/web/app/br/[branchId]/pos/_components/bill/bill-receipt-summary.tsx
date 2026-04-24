@@ -73,10 +73,10 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
 
       <Separator className="my-2" />
 
-      <table className="w-full text-xs">
+      <table className="w-full table-fixed text-xs">
         <thead>
           <tr className="border-b text-left">
-            <th className="pb-1 font-medium">Món</th>
+            <th className="w-1/2 pb-1 font-medium">Món</th>
             <th className="pb-1 text-center font-medium">SL</th>
             <th className="pb-1 text-right font-medium">Giá</th>
             <th className="pb-1 text-right font-medium">TT</th>
@@ -86,31 +86,35 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
           {order.order_items.map((item) => (
             <tr key={item.id} className="border-b border-dashed">
               <td className="py-1 align-top">
-                <span>{item.item_name}</span>
+                <span className="font-medium leading-snug">
+                  {item.item_name}
+                </span>
                 {item.variant_name && (
                   <span className="ml-1 text-muted-foreground">
                     ({item.variant_name})
                   </span>
                 )}
                 {item.modifiers.length > 0 && (
-                  <div className="text-[11px] text-muted-foreground">
+                  <div className="mt-0.5 text-xs leading-4 text-muted-foreground">
                     {item.modifiers.map((m) => `+ ${m.name}`).join(", ")}
                   </div>
                 )}
                 {item.sides.length > 0 && (
-                  <div className="text-[11px] text-muted-foreground">
+                  <div className="mt-0.5 text-xs leading-4 text-muted-foreground">
                     Kèm:{" "}
                     {item.sides
                       .map((s) =>
                         s.price > 0
-                          ? `${s.name} (${formatVND(s.price)})`
+                          ? `${s.name}${
+                              s.quantity > 1 ? ` x${s.quantity}` : ""
+                            } (${formatVND(s.price * s.quantity)})`
                           : s.name,
                       )
                       .join(", ")}
                   </div>
                 )}
                 {item.note && (
-                  <div className="text-[11px] italic text-muted-foreground">
+                  <div className="mt-0.5 text-xs leading-4 italic text-muted-foreground">
                     * {item.note}
                   </div>
                 )}
@@ -118,6 +122,11 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
               <td className="py-1 text-center align-top">{item.quantity}</td>
               <td className="py-1 text-right align-top">
                 {formatVND(item.unit_price)}
+                {(item.modifiers.length > 0 || item.sides.length > 0) && (
+                  <div className="text-xs leading-4 text-muted-foreground">
+                    gồm tuỳ chọn
+                  </div>
+                )}
               </td>
               <td className="py-1 text-right align-top font-medium">
                 {formatVND(item.subtotal)}

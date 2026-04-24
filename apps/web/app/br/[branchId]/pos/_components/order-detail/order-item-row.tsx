@@ -4,6 +4,14 @@ import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
+import {
   IconCircle,
   IconCircleCheck,
   IconLoader2,
@@ -83,70 +91,67 @@ export function OrderItemRow({ row, canManage, onVoid }: OrderItemRowProps) {
     canManage &&
     !cancelled &&
     ["pending", "preparing", "ready"].includes(row.status);
+  const lineDetails = [
+    row.modifiers.map((m) => `+ ${m.name}`).join(", "),
+    row.sides.length > 0
+      ? `Kèm: ${row.sides
+          .map((s) =>
+            s.price > 0 ? `${s.name} (${formatVND(s.price)})` : s.name,
+          )
+          .join(", ")}`
+      : "",
+    row.note ? `* ${row.note}` : "",
+  ].filter(Boolean);
 
   return (
-    <li
+    <Item
+      asChild
+      variant="outline"
+      size="xs"
       className={cn(
-        "rounded-xl border p-3 transition-transform hover:-translate-y-0.5 hover:shadow-md",
-        cancelled
-          ? "border-dashed bg-muted/40"
-          : "border-border bg-card shadow-sm",
+        "items-start bg-card",
+        cancelled && "border-dashed bg-muted/40",
       )}
     >
-      <div className="flex items-start gap-2">
-        <span className="mt-0.5 shrink-0 text-primary" aria-hidden>
+      <li>
+        <ItemMedia variant="icon" className="text-primary" aria-hidden>
           <Icon
             className={
               row.status === "preparing"
-                ? "size-4 motion-safe:animate-spin"
-                : "size-4"
+                ? "motion-safe:animate-spin"
+                : undefined
             }
           />
-        </span>
+        </ItemMedia>
         <span className="sr-only">{meta.ariaLabel}</span>
-        <div className="min-w-0 flex-1">
-          <p
-            className={
-              cancelled ? "text-sm line-through opacity-70" : "text-sm font-medium"
-            }
+        <ItemContent className="min-w-0">
+          <ItemTitle
+            className={cn("max-w-full", cancelled && "line-through opacity-70")}
           >
             {row.item_name}
             {row.variant_name ? ` — ${row.variant_name}` : ""}
-          </p>
-          {row.modifiers.length > 0 && (
-            <p className="text-xs text-muted-foreground">
-              {row.modifiers.map((m) => `+ ${m.name}`).join(", ")}
-            </p>
+          </ItemTitle>
+          {lineDetails.length > 0 && (
+            <ItemDescription>{lineDetails.join(" · ")}</ItemDescription>
           )}
-          {row.sides.length > 0 && (
-            <p className="text-xs text-muted-foreground">
-              Kèm:{" "}
-              {row.sides
-                .map((s) =>
-                  s.price > 0 ? `${s.name} (${formatVND(s.price)})` : s.name,
-                )
-                .join(", ")}
-            </p>
-          )}
-          {row.note && (
-            <p className="text-xs italic text-muted-foreground">* {row.note}</p>
-          )}
-          <p className="text-xs text-muted-foreground">
+          <ItemDescription>
             {meta.label} · x{row.quantity} · {formatVND(row.subtotal)}
-          </p>
-        </div>
-        {canVoid && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 shrink-0 text-xs text-destructive"
-            onClick={() => onVoid(row.id)}
-          >
-            Hủy món
-          </Button>
-        )}
-      </div>
-    </li>
+          </ItemDescription>
+        </ItemContent>
+        <ItemActions className="shrink-0 self-start">
+          {canVoid && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              className="text-destructive"
+              onClick={() => onVoid(row.id)}
+            >
+              Hủy
+            </Button>
+          )}
+        </ItemActions>
+      </li>
+    </Item>
   );
 }

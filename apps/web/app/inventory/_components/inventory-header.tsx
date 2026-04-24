@@ -21,7 +21,7 @@ export function InventoryHeader({
   return (
     <header
       className={cn(
-        "sticky top-0 z-10 flex min-h-14 items-center gap-3 border-b bg-background px-4 py-2",
+        "sticky top-0 z-10 flex min-h-14 items-center gap-3 overflow-hidden border-b bg-background px-4 py-2",
         className,
       )}
     >

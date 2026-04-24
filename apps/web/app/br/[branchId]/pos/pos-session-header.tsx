@@ -1,52 +1,35 @@
 "use client";
 
-import { Badge } from "@comtammatu/ui/components/badge";
+import { memo } from "react";
 import { Button } from "@comtammatu/ui/components/button";
-import { IconClock, IconLogout, IconDeviceDesktop } from "@tabler/icons-react";
+import { IconClock, IconDeviceDesktop } from "@tabler/icons-react";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { formatTime } from "./pos-menu-types";
-import { PrinterStatusBadge } from "./printer-status-badge";
 import { PosThemeToggle } from "./pos-theme-toggle";
 import type { ActiveSession } from "./page";
-import type { OrderType } from "./types";
 
 interface PosSessionHeaderProps {
   session: ActiveSession;
-  branchId: number;
-  orderType: OrderType;
-  selectedTableNumber: number | undefined;
-  activeOrderCount: number;
   onShowCloseSession: () => void;
 }
 
-export function PosSessionHeader({
+function PosSessionHeaderComponent({
   session,
-  branchId,
-  orderType,
-  selectedTableNumber,
-  activeOrderCount,
   onShowCloseSession,
 }: PosSessionHeaderProps) {
-  const contextLabel =
-    orderType === "takeaway"
-      ? "Mang về"
-      : selectedTableNumber != null
-        ? `Bàn ${selectedTableNumber}`
-        : "Chọn bàn";
-
   return (
-    <div className="border-b border-border/60 px-3 py-2 md:px-4">
-      <div className="mx-auto flex w-full max-w-screen-2xl items-center justify-between gap-2">
+    <div className="border-b border-border/60 px-2 py-1.5 md:px-4 md:py-2">
+      <div className="flex w-full items-center justify-between gap-1.5 md:gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <EmployeePortalBackControl />
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <div className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground md:flex-wrap md:gap-x-3 md:gap-y-1">
             <span className="flex min-w-0 items-center gap-1.5 font-medium text-foreground">
               <IconDeviceDesktop className="size-3.5 shrink-0 text-primary" />
               <span className="truncate">
                 {session.pos_terminals?.name ?? "POS"}
               </span>
             </span>
-            <span className="flex min-w-0 items-center gap-1.5">
+            <span className="hidden min-w-0 items-center gap-1.5 sm:flex">
               <IconClock className="size-3.5 shrink-0" />
               <span className="truncate">
                 <span className="hidden sm:inline">Ca mở lúc </span>
@@ -56,36 +39,21 @@ export function PosSessionHeader({
           </div>
         </div>
 
-        <div className="hidden min-w-0 items-center gap-2 sm:flex">
-          <Badge variant="outline" className="max-w-36 truncate">
-            {contextLabel}
-          </Badge>
-          <Badge variant="outline">{activeOrderCount} đơn đang phục vụ</Badge>
-          <PrinterStatusBadge
-            branchId={branchId}
-            settingsHref={`/br/${branchId}/settings/printers`}
-          />
-        </div>
-
-        <PosThemeToggle />
-
-        <Button
+        <div className="flex shrink-0 items-center gap-1">
+          <PosThemeToggle />
+          <Button
           variant="ghost"
           size="sm"
-          className="min-h-11 min-w-11 h-9 shrink-0 gap-1.5 rounded-full px-3 text-xs text-muted-foreground hover:text-destructive"
+          className="min-h-9 h-8 shrink-0 rounded-full px-3 text-xs font-semibold text-muted-foreground hover:text-destructive md:min-h-11 md:h-9 md:px-4"
           onClick={onShowCloseSession}
+          aria-label="Chốt ca POS"
         >
-          <IconLogout className="size-3.5" />
-          Đóng ca
-        </Button>
-      </div>
-
-      <div className="mt-2 flex items-center gap-2 sm:hidden">
-        <Badge variant="outline" className="min-w-0 truncate">
-          {contextLabel}
-        </Badge>
-        <Badge variant="outline">{activeOrderCount} đơn</Badge>
+          Chốt ca
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
+
+export const PosSessionHeader = memo(PosSessionHeaderComponent);

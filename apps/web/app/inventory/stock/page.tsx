@@ -133,5 +133,38 @@ export default async function StockPage({
     };
   });
 
-  return <StockClient ingredients={ingredients} branchId={branchId} />;
+  const role = claims.user_role;
+  const canViewTotal =
+    role === "owner" ||
+    role === "super_manager" ||
+    role === "warehouse_manager";
+  const canViewBranch =
+    canViewTotal ||
+    role === "area_manager" ||
+    role === "branch_manager";
+
+  const branchValue = canViewBranch
+    ? ingredients.reduce((sum, i) => sum + i.qty * i.cost, 0)
+    : null;
+
+  let totalValue: number | null = null;
+  if (canViewTotal) {
+    const { data: tenantRows } = await supabase
+      .from("stock_levels")
+      .select("current_quantity, avg_unit_cost")
+      .eq("tenant_id", claims.tenant_id);
+    totalValue = (tenantRows ?? []).reduce(
+      (sum, r) => sum + (r.current_quantity ?? 0) * (r.avg_unit_cost ?? 0),
+      0,
+    );
+  }
+
+  return (
+    <StockClient
+      ingredients={ingredients}
+      branchId={branchId}
+      branchValue={branchValue}
+      totalValue={totalValue}
+    />
+  );
 }

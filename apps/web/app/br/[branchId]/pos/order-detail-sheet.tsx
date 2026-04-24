@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import { Progress } from "@comtammatu/ui/components/progress";
 import {
   Sheet,
   SheetContent,
@@ -16,7 +16,9 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -31,7 +33,6 @@ import {
   updateOrderStatus,
   fetchOrderItemsForReorder,
 } from "./actions";
-import { sendToKitchen } from "./print-actions";
 import type { CartItem } from "./types";
 import type { BranchTable } from "./page";
 import { messages } from "@lib/messages";
@@ -68,25 +69,6 @@ const ORDER_STATUS_LABEL: Record<string, string> = {
 
 function canAppendOrderStatus(status: string): boolean {
   return ["new", "confirmed", "preparing", "ready"].includes(status);
-}
-
-function computeOrderProgress(status: string): number {
-  switch (status) {
-    case "completed":
-      return 100;
-    case "cancelled":
-      return 100;
-    case "served":
-      return 84;
-    case "ready":
-      return 70;
-    case "preparing":
-      return 52;
-    case "confirmed":
-      return 38;
-    default:
-      return 22;
-  }
 }
 
 export interface OrderDetailSheetProps {
@@ -239,29 +221,9 @@ export function OrderDetailSheet({
     });
   };
 
-  const handleSendKitchen = () => {
-    if (orderId === null) return;
-    startTransition(async () => {
-      const r = await sendToKitchen(orderId);
-      if (r.success && r.data) {
-        const slots = r.data.jobs.length;
-        if (slots === 0) {
-          notify.info("Không có món mới cần gửi bếp");
-        } else {
-          notify.success(`Đã gửi bếp (lần ${r.data.send_seq}, ${slots} tem)`);
-        }
-        await onOrderUpdated?.();
-        load();
-      } else {
-        notify.error(r.error ?? "Không thể gửi bếp");
-      }
-    });
-  };
-
   const orderStatusLabel = data
     ? (ORDER_STATUS_LABEL[data.status] ?? data.status)
     : "";
-  const orderProgressPercent = data ? computeOrderProgress(data.status) : 0;
 
   const availableTables = tables.filter(
     (t) => t.status === "available" || t.id === data?.table_id,
@@ -269,7 +231,25 @@ export function OrderDetailSheet({
 
   const canShowCancel =
     canManage && data && !["completed", "cancelled"].includes(data.status);
-  const canShowTransfer = data?.order_type === "dine_in" && data.status !== "cancelled";
+  const canShowTransfer =
+    data?.order_type === "dine_in" && data.status !== "cancelled";
+  const canShowReorder =
+    data != null && ["completed", "cancelled"].includes(data.status);
+  const canShowPaymentAction =
+    data != null &&
+    data.status !== "cancelled" &&
+    data.payment_status !== "paid";
+  const canShowBillInMenu =
+    data != null &&
+    data.status !== "cancelled" &&
+    data.payment_status === "paid";
+  const canMarkServed =
+    data != null &&
+    ["new", "confirmed", "preparing", "ready"].includes(data.status);
+  const canCompletePaidServed =
+    data != null && data.status === "served" && data.payment_status === "paid";
+  const canShowMoreMenu =
+    canShowBillInMenu || canShowReorder || canShowTransfer || canShowCancel;
 
   return (
     <>
@@ -311,67 +291,38 @@ export function OrderDetailSheet({
 
           {data && !error && (
             <>
-              <div className="border-b pb-3">
-                <div className="rounded-lg border bg-card shadow-sm p-4">
-                  <div className="space-y-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="secondary">{orderStatusLabel}</Badge>
-                          <Badge variant="outline">
-                            {data.order_type === "dine_in"
-                              ? `Bàn ${data.tables?.number ?? "—"}`
-                              : "Mang về"}
-                          </Badge>
-                          <Badge variant="outline">
-                            {data.order_items.length} món
-                          </Badge>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              data.payment_status === "paid"
-                                ? "border-success/20 bg-success/10 text-success"
-                                : "border-warning/20 bg-warning/10 text-warning",
-                            )}
-                          >
-                            {data.payment_status === "paid"
-                              ? "Đã thanh toán"
-                              : "Chưa thanh toán"}
-                          </Badge>
-                        </div>
-                        <p className="text-lg font-semibold tracking-tight">
-                          #{data.order_number}
-                        </p>
-                        <p className="text-sm leading-6 text-muted-foreground">
-                          {data.status === "served"
-                            ? "Đơn đã phục vụ, có thể chuyển sang thanh toán hoặc hoàn tất."
-                            : data.status === "completed"
-                              ? "Đơn đã kết thúc, kiểm tra hóa đơn hoặc tra cứu lại khi cần."
-                              : data.status === "cancelled"
-                                ? "Đơn đã hủy, chỉ còn thao tác tra cứu và đối soát."
-                                : "Theo dõi món, thêm món hoặc cập nhật phục vụ trong cùng một màn hình."}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Tổng đơn
-                        </p>
-                        <p className="mt-1 text-2xl font-bold text-primary tabular-nums">
-                          {formatVND(data.total_amount)}
-                        </p>
-                      </div>
+              <Card size="sm" className="shrink-0">
+                <CardContent className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="secondary">{orderStatusLabel}</Badge>
+                      <Badge variant="outline">
+                        {data.order_type === "dine_in"
+                          ? `Bàn ${data.tables?.number ?? "—"}`
+                          : "Mang về"}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          data.payment_status === "paid"
+                            ? "border-success/20 bg-success/10 text-success"
+                            : "border-warning/20 bg-warning/10 text-warning",
+                        )}
+                      >
+                        {data.payment_status === "paid"
+                          ? "Đã thanh toán"
+                          : "Chưa thanh toán"}
+                      </Badge>
                     </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground">
-                        <span>Tiến độ phục vụ</span>
-                        <span>{String(Math.round(orderProgressPercent))}%</span>
-                      </div>
-                      <Progress value={orderProgressPercent} className="h-2" />
-                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {data.order_items.length} món trong đơn
+                    </p>
                   </div>
-                </div>
-              </div>
+                  <p className="shrink-0 text-lg font-bold text-primary tabular-nums">
+                    {formatVND(data.total_amount)}
+                  </p>
+                </CardContent>
+              </Card>
 
               <ScrollArea className="min-h-0 flex-1 pr-2">
                 <ul
@@ -397,93 +348,63 @@ export function OrderDetailSheet({
                 )}
               </ScrollArea>
 
-              <div className="pb-2">
-                <div className="rounded-lg border bg-card shadow-sm p-4">
-                  <div className="relative space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Tạm tính</span>
-                      <span>{formatVND(data.subtotal)}</span>
-                    </div>
-                    <div className="flex justify-between text-base font-bold">
-                      <span>Tổng cộng</span>
-                      <span className="text-primary">
-                        {formatVND(data.total_amount)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-auto flex flex-col gap-2 border-t pt-3">
-                {data.status !== "cancelled" && (
+              <div className="mt-auto flex shrink-0 flex-col gap-2 border-t pt-3">
+                {canShowPaymentAction && (
                   <Button
                     type="button"
                     size="lg"
-                    className="min-h-11 w-full rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
+                    className="w-full"
                     onClick={() => {
                       onOpenBill(data.id);
                       onClose();
                     }}
                   >
-                    {data.payment_status === "paid"
-                      ? "Xem hóa đơn"
-                      : "Hóa đơn / thanh toán"}
+                    Thanh toán
                   </Button>
                 )}
 
-                {canAppendOrderStatus(data.status) && (
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="min-h-11 flex-1 rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
-                      onClick={() => {
-                        onStartAppend(data.id, data.order_number);
-                      }}
-                    >
-                      Thêm món
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      disabled={isPending}
-                      className="min-h-11 flex-1 rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
-                      onClick={handleSendKitchen}
-                      title="Phiếu bếp đã tự gửi khi đặt món. Nhấn để gửi lại nếu cần."
-                    >
-                      Gửi lại bếp
-                    </Button>
+                {(canAppendOrderStatus(data.status) ||
+                  canMarkServed ||
+                  canCompletePaidServed) && (
+                  <div className="flex gap-2">
+                    {canAppendOrderStatus(data.status) && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          onStartAppend(data.id, data.order_number);
+                        }}
+                      >
+                        Thêm món
+                      </Button>
+                    )}
+                    {canMarkServed && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="flex-1"
+                        disabled={isPending}
+                        onClick={() => void handleStatus("served")}
+                      >
+                        Phục vụ
+                      </Button>
+                    )}
+                    {canCompletePaidServed && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="flex-1"
+                        disabled={isPending}
+                        onClick={() => void handleStatus("completed")}
+                      >
+                        {data.order_type === "dine_in"
+                          ? "Hoàn tất và trả bàn"
+                          : "Hoàn tất đơn"}
+                      </Button>
+                    )}
                   </div>
                 )}
-
-                <div className="flex flex-wrap gap-2">
-                  {["new", "confirmed", "preparing", "ready"].includes(
-                    data.status,
-                  ) && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="min-h-11 flex-1 rounded-lg"
-                      disabled={isPending}
-                      onClick={() => void handleStatus("served")}
-                    >
-                      Phục vụ
-                    </Button>
-                  )}
-                  {data.status === "served" && data.payment_status === "paid" && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="min-h-11 flex-1 rounded-lg"
-                      disabled={isPending}
-                      onClick={() => void handleStatus("completed")}
-                    >
-                      {data.order_type === "dine_in"
-                        ? "Hoàn tất và trả bàn"
-                        : "Hoàn tất đơn"}
-                    </Button>
-                  )}
-                </div>
 
                 {data.status === "served" && data.payment_status !== "paid" && (
                   <p className="text-center text-xs text-muted-foreground">
@@ -491,59 +412,64 @@ export function OrderDetailSheet({
                   </p>
                 )}
 
-                {(canShowTransfer || canShowCancel) && (
-                  <div className="flex flex-wrap gap-2 border-t pt-3">
-                    {canShowTransfer && (
+                {canShowMoreMenu && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
                       <Button
                         type="button"
-                        variant="outline"
-                        className="min-h-11 flex-1 rounded-lg"
-                        disabled={isPending}
-                        onClick={() => setShowTransfer(true)}
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 w-full rounded-lg text-muted-foreground"
                       >
-                        Chuyển bàn
+                        <IconDots data-icon="inline-start" />
+                        Khác…
                       </Button>
-                    )}
-                    {canShowCancel && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="min-h-11 flex-1 rounded-lg border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        disabled={isPending}
-                        onClick={() => setShowCancel(true)}
-                      >
-                        Hủy đơn
-                      </Button>
-                    )}
-                  </div>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuGroup>
+                        {canShowBillInMenu && (
+                          <DropdownMenuItem
+                            onClick={() => {
+                              onOpenBill(data.id);
+                              onClose();
+                            }}
+                          >
+                            Xem hóa đơn
+                          </DropdownMenuItem>
+                        )}
+                        {canShowReorder && (
+                          <DropdownMenuItem
+                            onClick={() => void handleReorder()}
+                          >
+                            Đặt lại vào giỏ
+                          </DropdownMenuItem>
+                        )}
+                        {canShowTransfer && (
+                          <DropdownMenuItem
+                            disabled={isPending}
+                            onClick={() => setShowTransfer(true)}
+                          >
+                            Chuyển bàn
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuGroup>
+                      {canShowCancel && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuGroup>
+                            <DropdownMenuItem
+                              variant="destructive"
+                              disabled={isPending}
+                              onClick={() => setShowCancel(true)}
+                            >
+                              Hủy đơn
+                            </DropdownMenuItem>
+                          </DropdownMenuGroup>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-9 w-full rounded-lg text-muted-foreground"
-                    >
-                      <IconDots className="mr-2 size-4" />
-                      Khác…
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuItem
-                      onClick={() => {
-                        onOpenBill(data.id);
-                        onClose();
-                      }}
-                    >
-                      Hóa đơn / thanh toán
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => void handleReorder()}>
-                      Đặt lại vào giỏ
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
             </>
           )}

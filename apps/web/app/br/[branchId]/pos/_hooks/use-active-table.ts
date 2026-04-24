@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { usePosOperationalData } from "../_providers/pos-desktop-provider";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { usePosTables } from "../_providers/pos-desktop-provider";
 import type { BranchTable } from "../page";
 
 type UseActiveTableResult = {
@@ -12,23 +12,38 @@ type UseActiveTableResult = {
   setTable: (id: number | null) => void;
 };
 
+function parseTableId(raw: string | null): number | null {
+  if (!raw) return null;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.trunc(parsed);
+}
+
 /**
- * URL is the single source of truth for the selected table.
- * Reads ?table=X and derives validity against current table list.
+ * URL persists the selected table across reloads.
+ * Local state keeps POS interaction instant without App Router navigation.
  */
 export function useActiveTable(): UseActiveTableResult {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { tables } = usePosOperationalData();
+  const tables = usePosTables();
+  const [tableId, setTableId] = useState<number | null>(() =>
+    parseTableId(searchParams.get("table")),
+  );
 
-  const tableId = useMemo(() => {
-    const raw = searchParams.get("table");
-    if (!raw) return null;
-    const parsed = Number.parseInt(raw, 10);
-    if (!Number.isFinite(parsed) || parsed <= 0) return null;
-    return Math.trunc(parsed);
+  useEffect(() => {
+    setTableId(parseTableId(searchParams.get("table")));
   }, [searchParams]);
+
+  useEffect(() => {
+    const syncFromLocation = () => {
+      setTableId(
+        parseTableId(new URLSearchParams(window.location.search).get("table")),
+      );
+    };
+    window.addEventListener("popstate", syncFromLocation);
+    return () => window.removeEventListener("popstate", syncFromLocation);
+  }, []);
 
   const table = useMemo(() => {
     if (tableId == null) return null;
@@ -39,14 +54,19 @@ export function useActiveTable(): UseActiveTableResult {
 
   const setTable = useCallback(
     (id: number | null) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(window.location.search);
       if (id != null) params.set("table", String(id));
       else params.delete("table");
       const q = params.toString();
-      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+      const nextUrl = `${pathname}${q ? `?${q}` : ""}${window.location.hash}`;
+      window.history.replaceState(null, "", nextUrl);
+      setTableId(id);
     },
-    [pathname, router, searchParams],
+    [pathname],
   );
 
-  return { tableId, table, isAvailable, setTable };
+  return useMemo(
+    () => ({ tableId, table, isAvailable, setTable }),
+    [tableId, table, isAvailable, setTable],
+  );
 }

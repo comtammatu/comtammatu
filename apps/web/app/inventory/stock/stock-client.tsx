@@ -75,9 +75,13 @@ const STATUS_PRIORITY: Record<StockIngredient["status"], number> = {
 export function StockClient({
   ingredients,
   branchId,
+  branchValue,
+  totalValue,
 }: {
   ingredients: StockIngredient[];
   branchId: number;
+  branchValue: number | null;
+  totalValue: number | null;
 }) {
   const router = useRouter();
   const isMobile = useIsMobile();
@@ -136,10 +140,50 @@ export function StockClient({
     return result;
   }, [ingredients, activeCategory, stockFilter, searchQuery, isMobile]);
 
+  const showValueSummary = branchValue != null || totalValue != null;
+
   return (
     <>
       <InventoryHeader title="Tồn kho" />
-      <InventoryPageContent width={isMobile ? "narrow" : "wide"}>
+      <InventoryPageContent
+        width={isMobile ? "narrow" : "wide"}
+        contentClassName={isMobile ? undefined : "max-w-none"}
+      >
+        {showValueSummary ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {branchValue != null ? (
+              <Card>
+                <CardContent className="flex flex-col gap-1 p-4">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Giá trị tồn kho chi nhánh
+                  </p>
+                  <p className="text-2xl font-bold tabular-nums">
+                    {formatVND(branchValue)}
+                    <span className="ml-1 text-sm font-normal text-muted-foreground">
+                      đ
+                    </span>
+                  </p>
+                </CardContent>
+              </Card>
+            ) : null}
+            {totalValue != null ? (
+              <Card>
+                <CardContent className="flex flex-col gap-1 p-4">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Giá trị tồn kho toàn bộ
+                  </p>
+                  <p className="text-2xl font-bold tabular-nums">
+                    {formatVND(totalValue)}
+                    <span className="ml-1 text-sm font-normal text-muted-foreground">
+                      đ
+                    </span>
+                  </p>
+                </CardContent>
+              </Card>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* Filters */}
         <InventoryFilterBar>
           <Select value={activeCategory} onValueChange={setActiveCategory}>
@@ -306,6 +350,7 @@ export function StockClient({
                   <TableHeader>
                     <TableRow className="bg-muted/20 hover:bg-muted/20">
                       <TableHead className="min-w-56">Nguyên liệu</TableHead>
+                      <TableHead className="min-w-28">Danh mục</TableHead>
                       <TableHead className="min-w-28">SKU</TableHead>
                       <TableHead className="min-w-24">Đơn vị</TableHead>
                       <TableHead className="min-w-28 text-right">
@@ -325,7 +370,7 @@ export function StockClient({
                   <TableBody>
                     {filtered.length === 0 ? (
                       <TableEmptyStateRow
-                        colSpan={9}
+                        colSpan={10}
                         title={
                           searchQuery.trim()
                             ? "Không tìm thấy nguyên liệu phù hợp"
@@ -343,17 +388,7 @@ export function StockClient({
                       <TableRow key={item.id} className="hover:bg-muted/20">
                         <TableCell>
                           <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <p className="font-semibold">{item.name}</p>
-                              <Badge
-                                className={
-                                  CATEGORY_TONE_CLASS[item.category] ??
-                                  "bg-muted text-muted-foreground"
-                                }
-                              >
-                                {item.category}
-                              </Badge>
-                            </div>
+                            <p className="font-semibold">{item.name}</p>
                             <div className="flex flex-wrap gap-2">
                               <StatusBadge status={item.status} />
                               {item.qty <= item.reorder ? (
@@ -361,6 +396,20 @@ export function StockClient({
                               ) : null}
                             </div>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {item.category ? (
+                            <Badge
+                              className={
+                                CATEGORY_TONE_CLASS[item.category] ??
+                                "bg-muted text-muted-foreground"
+                              }
+                            >
+                              {item.category}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="font-mono text-sm text-muted-foreground">
                           {item.sku}

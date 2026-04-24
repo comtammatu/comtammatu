@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { usePosCartStore } from "../_providers/pos-desktop-provider";
 import type { CartSnapshot } from "../_providers/cart-store";
 import { calcCartTotal } from "../types";
@@ -12,9 +12,38 @@ export function useCartSnapshot(): CartSnapshot {
   return useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
 }
 
-export function useCart() {
+export function useCartOrderType(): OrderType {
   const store = usePosCartStore();
-  const snapshot = useCartSnapshot();
+  const getOrderType = useCallback(
+    () => store.getSnapshot().orderType,
+    [store],
+  );
+  return useSyncExternalStore(store.subscribe, getOrderType, getOrderType);
+}
+
+export function useCartItemCount(): number {
+  const store = usePosCartStore();
+  const getItemCount = useCallback(
+    () => store.getSnapshot().items.length,
+    [store],
+  );
+  return useSyncExternalStore(store.subscribe, getItemCount, getItemCount);
+}
+
+export function useCartQuantity(): number {
+  const store = usePosCartStore();
+  const getQuantity = useCallback(
+    () =>
+      store
+        .getSnapshot()
+        .items.reduce((sum, item) => sum + item.quantity, 0),
+    [store],
+  );
+  return useSyncExternalStore(store.subscribe, getQuantity, getQuantity);
+}
+
+export function useCartActions() {
+  const store = usePosCartStore();
 
   const addItem = useCallback(
     (
@@ -26,6 +55,7 @@ export function useCart() {
         modifiers?: CartModifier[];
         sides?: CartSide[];
         note?: string;
+        quantity?: number;
       },
     ) => {
       store.addItem(item, opts);
@@ -44,21 +74,41 @@ export function useCart() {
   );
 
   const clear = useCallback(() => store.clear(), [store]);
-
-  const setNote = useCallback(
-    (note: string) => store.setNote(note),
-    [store],
-  );
-
+  const setNote = useCallback((note: string) => store.setNote(note), [store]);
   const setOrderType = useCallback(
     (t: OrderType) => store.setOrderType(t),
     [store],
   );
-
   const replaceItems = useCallback(
     (items: CartItem[]) => store.replaceItems(items),
     [store],
   );
+
+  return useMemo(
+    () => ({
+      addItem,
+      updateQuantity,
+      removeItem,
+      clear,
+      setNote,
+      setOrderType,
+      replaceItems,
+    }),
+    [
+      addItem,
+      updateQuantity,
+      removeItem,
+      clear,
+      setNote,
+      setOrderType,
+      replaceItems,
+    ],
+  );
+}
+
+export function useCart() {
+  const snapshot = useCartSnapshot();
+  const actions = useCartActions();
 
   const total = calcCartTotal(snapshot.items);
   const quantity = snapshot.items.reduce((sum, i) => sum + i.quantity, 0);
@@ -69,12 +119,6 @@ export function useCart() {
     orderType: snapshot.orderType,
     total,
     quantity,
-    addItem,
-    updateQuantity,
-    removeItem,
-    clear,
-    setNote,
-    setOrderType,
-    replaceItems,
+    ...actions,
   };
 }

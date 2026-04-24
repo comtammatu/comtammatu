@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { formatVND } from "@comtammatu/shared/format";
 import {
@@ -30,18 +30,17 @@ import {
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
 import {
-  IconMinus,
   IconPackage,
-  IconPlus,
   IconShoppingCart,
   IconTrash,
   IconToolsKitchen,
   IconX,
 } from "@tabler/icons-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import { cn } from "@comtammatu/ui";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
 import { calcItemSubtotal } from "../types";
-import type { OrderType } from "../types";
+import type { CartItem, OrderType } from "../types";
 import { useCart } from "../_hooks/use-cart";
 import { useActiveTable } from "../_hooks/use-active-table";
 
@@ -50,26 +49,34 @@ interface CartPaneProps {
   isSubmitting: boolean;
   onSubmitOrder: () => void;
   onOrderTypeChange: (type: OrderType) => void;
-  onRequestChangeTable: () => void;
+  onCustomizeItem: (item: CartItem) => void;
 }
 
-export function CartPane({
+function CartPaneComponent({
   canSubmit,
   isSubmitting,
   onSubmitOrder,
   onOrderTypeChange,
-  onRequestChangeTable,
+  onCustomizeItem,
 }: CartPaneProps) {
   const cart = useCart();
   const activeTable = useActiveTable();
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const [revealedItemKey, setRevealedItemKey] = useState<string | null>(null);
+  const [draggedItemKey, setDraggedItemKey] = useState<string | null>(null);
+  const [touchStart, setTouchStart] = useState<{
+    key: string;
+    x: number;
+    y: number;
+  } | null>(null);
   const cartDialogOpen = confirmOpen || clearConfirmOpen;
 
   const selectedTableNumber = activeTable.table?.number;
   const totalQuantity = cart.quantity;
   const modeLocked = cart.items.length > 0 || selectedTableNumber != null;
+  const orderReadyLabel = canSubmit ? "Sẵn sàng đặt món" : "Đang tạo";
   const contextLabel =
     cart.orderType === "takeaway"
       ? "Mang về"
@@ -78,7 +85,9 @@ export function CartPane({
         : "Chưa chọn bàn";
 
   const shouldShowOrderTypeSelector =
-    cart.orderType === "dine_in" && selectedTableNumber == null;
+    cart.items.length === 0 &&
+    cart.orderType === "dine_in" &&
+    selectedTableNumber == null;
 
   useKeyboardShortcut([
     {
@@ -106,24 +115,57 @@ export function CartPane({
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-background">
-      <div className="shrink-0 border-b border-border/60 px-4 py-4">
+      <div className="shrink-0 border-b border-border/60 px-3 py-2.5 sm:px-4 sm:py-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Đơn mới
-            </p>
-            <h2 className="mt-1 truncate text-xl font-semibold tracking-tight text-foreground">
-              {contextLabel}
+            <h2 className="truncate text-base font-semibold tracking-tight text-foreground sm:text-xl">
+              {contextLabel} - Giỏ hàng
             </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
               {cart.items.length > 0
-                ? `${totalQuantity} món đang chờ gửi bếp`
-                : "Chọn món từ menu để bắt đầu"}
+                ? `${totalQuantity} món đang chờ xác nhận`
+                : "Chưa có món trong giỏ"}
             </p>
           </div>
-          <Badge variant={canSubmit ? "success" : "outline"}>
-            {canSubmit ? "Gửi được" : "Đang tạo"}
-          </Badge>
+          {cart.items.length > 0 && (
+            <AlertDialog
+              open={clearConfirmOpen}
+              onOpenChange={setClearConfirmOpen}
+            >
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="min-h-9 min-w-9 h-9 shrink-0 rounded-full px-2 text-xs text-muted-foreground sm:min-h-11 sm:min-w-11 sm:px-3"
+                >
+                  <IconTrash className="mr-1 size-3.5" />
+                  Xóa giỏ
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {"X\u00f3a gi\u1ecf h\u00e0ng?"}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tất cả {cart.items.length} món sẽ bị xóa khỏi giỏ hàng. Hành
+                    động này không thể hoàn tác.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Hủy</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      cart.clear();
+                      setClearConfirmOpen(false);
+                    }}
+                  >
+                    Xóa tất cả
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
 
         {shouldShowOrderTypeSelector && (
@@ -165,7 +207,7 @@ export function CartPane({
           </ToggleGroup>
         )}
 
-        <div className="mt-3 grid grid-cols-3 gap-2">
+        <div className="mt-3 hidden grid-cols-3 gap-2 sm:grid">
           <div className="rounded-lg border bg-muted/30 px-3 py-2">
             <p className="text-xs text-muted-foreground">Món</p>
             <p className="mt-1 text-lg font-bold tabular-nums">
@@ -181,97 +223,15 @@ export function CartPane({
           <div className="rounded-lg border bg-muted/30 px-3 py-2">
             <p className="text-xs text-muted-foreground">Trạng thái</p>
             <p className="mt-1 truncate text-sm font-semibold">
-              {canSubmit ? "Sẵn sàng" : "Chờ món"}
+              {orderReadyLabel}
             </p>
           </div>
         </div>
-
-        {cart.orderType === "dine_in" && selectedTableNumber != null && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3 h-9 w-full rounded-lg text-xs"
-            type="button"
-            onClick={onRequestChangeTable}
-          >
-            Đổi bàn
-          </Button>
-        )}
-
-        {cart.orderType === "takeaway" && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3 h-9 w-full rounded-lg text-xs"
-            type="button"
-            disabled={modeLocked}
-            onClick={() => onOrderTypeChange("dine_in")}
-          >
-            Chọn bàn
-          </Button>
-        )}
-      </div>
-
-      <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <IconShoppingCart className="size-5" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground">
-              Giỏ thao tác
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {cart.items.length === 0
-                ? "Chưa có món trong giỏ"
-                : `${totalQuantity} món đang chờ xác nhận`}
-            </p>
-          </div>
-        </div>
-        {cart.items.length > 0 && (
-          <AlertDialog
-            open={clearConfirmOpen}
-            onOpenChange={setClearConfirmOpen}
-          >
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="min-h-11 min-w-11 h-9 rounded-full px-3 text-xs text-muted-foreground"
-              >
-                <IconTrash className="mr-1 size-3.5" />
-                Xóa giỏ
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  {"X\u00f3a gi\u1ecf h\u00e0ng?"}
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  Tất cả {cart.items.length} món sẽ bị xóa khỏi giỏ hàng. Hành
-                  động này không thể hoàn tác.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Hủy</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => {
-                    cart.clear();
-                    setClearConfirmOpen(false);
-                  }}
-                >
-                  Xóa tất cả
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
       </div>
 
       {cart.items.length === 0 ? (
         <>
-          <div className="flex flex-1 flex-col justify-between p-4">
+          <div className="flex flex-1 items-center justify-center p-4">
             <Empty className="py-12">
               <EmptyMedia variant="icon">
                 <IconShoppingCart />
@@ -283,135 +243,150 @@ export function CartPane({
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
-
-            <div className="rounded-lg border bg-muted/30 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Bước tiếp theo
-                  </p>
-                  <p className="mt-1 text-sm font-semibold">
-                    Chọn món, kiểm tra giỏ, rồi gửi bếp.
-                  </p>
-                </div>
-                <Badge variant="outline">0 món</Badge>
-              </div>
-            </div>
           </div>
 
           <div className="shrink-0 border-t border-border/60 bg-background px-4 py-4">
-            <div className="mb-3 flex items-end justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Tổng tạm tính
-                </p>
-                <p className="mt-1 text-2xl font-bold text-primary tabular-nums">
-                  {formatVND(0)}
-                </p>
-              </div>
-              <Badge variant="outline">Chưa có món</Badge>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Tổng tạm tính
+              </p>
+              <p className="text-2xl font-bold text-primary tabular-nums">
+                {formatVND(0)}
+              </p>
             </div>
             <Button
               className="min-h-14 w-full rounded-xl text-base font-bold"
               size="lg"
               disabled
             >
-              Chọn món từ menu
+              Đặt món
             </Button>
           </div>
         </>
       ) : (
         <>
           <ScrollArea className="min-h-0 flex-1">
-            <div className="flex flex-col gap-3 p-4">
+            <div className="flex flex-col gap-2 p-3 pb-4 sm:gap-3 sm:p-4 sm:pb-6">
               {cart.items.map((item) => {
                 const subtotal = calcItemSubtotal(item);
+                const isDeleteRevealed = revealedItemKey === item.key;
 
                 return (
                   <div
                     key={item.key}
-                    className="rounded-xl border border-border bg-card p-4 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md"
+                    className="relative overflow-hidden rounded-xl"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start gap-3">
-                          <Badge
-                            variant="warning"
-                            className="shrink-0 text-sm font-black tabular-nums"
-                          >
-                            {item.quantity}x
-                          </Badge>
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold leading-snug text-foreground">
-                              {item.item_name}
+                    <Button
+                      variant="destructive"
+                      className="absolute inset-y-0 right-0 h-auto min-h-full w-20 rounded-none sm:hidden"
+                      aria-label={`Xóa ${item.item_name} khỏi giỏ`}
+                      onClick={() => {
+                        cart.removeItem(item.key);
+                        setRevealedItemKey(null);
+                      }}
+                    >
+                      Xóa
+                    </Button>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      className={cn(
+                        "relative rounded-xl border border-border bg-card p-3 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md sm:p-4",
+                        isDeleteRevealed && "-translate-x-20 sm:translate-x-0",
+                      )}
+                      onClick={() => {
+                        if (draggedItemKey === item.key) {
+                          setDraggedItemKey(null);
+                          return;
+                        }
+                        if (isDeleteRevealed) return;
+                        onCustomizeItem(item);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          onCustomizeItem(item);
+                        }
+                      }}
+                      onTouchStart={(event) => {
+                        const touch = event.touches[0];
+                        if (!touch) return;
+                        setTouchStart({
+                          key: item.key,
+                          x: touch.clientX,
+                          y: touch.clientY,
+                        });
+                      }}
+                      onTouchMove={(event) => {
+                        if (touchStart?.key !== item.key) return;
+                        const touch = event.touches[0];
+                        if (!touch) return;
+                        const deltaX = touch.clientX - touchStart.x;
+                        const deltaY = touch.clientY - touchStart.y;
+                        if (Math.abs(deltaX) < Math.abs(deltaY)) return;
+                        if (Math.abs(deltaX) > 12) {
+                          setDraggedItemKey(item.key);
+                        }
+                        if (deltaX < -32) {
+                          setRevealedItemKey(item.key);
+                        } else if (deltaX > 32) {
+                          setRevealedItemKey(null);
+                        }
+                      }}
+                      onTouchEnd={() => {
+                        setTouchStart(null);
+                      }}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold leading-snug text-foreground">
+                            {item.item_name}
+                          </p>
+                          {item.variant_name && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {item.variant_name}
                             </p>
-                            {item.variant_name && (
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                {item.variant_name}
-                              </p>
-                            )}
-                            {item.modifiers.length > 0 && (
-                              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                                + {item.modifiers.map((m) => m.name).join(", ")}
-                              </p>
-                            )}
-                            {item.sides.length > 0 && (
-                              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                                Kèm:{" "}
-                                {item.sides
-                                  .map((s) =>
-                                    s.quantity > 1
-                                      ? `${s.name} x${String(s.quantity)}`
-                                      : s.name,
-                                  )
-                                  .join(", ")}
-                              </p>
-                            )}
-                          </div>
+                          )}
+                          {item.modifiers.length > 0 && (
+                            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                              + {item.modifiers.map((m) => m.name).join(", ")}
+                            </p>
+                          )}
+                          {item.sides.length > 0 && (
+                            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                              Kèm:{" "}
+                              {item.sides
+                                .map((s) =>
+                                  s.quantity > 1
+                                    ? `${s.name} x${String(s.quantity)}`
+                                    : s.name,
+                                )
+                                .join(", ")}
+                            </p>
+                          )}
+                          {item.note && (
+                            <p className="mt-1 text-xs italic leading-5 text-muted-foreground">
+                              Ghi chú: {item.note}
+                            </p>
+                          )}
                         </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="min-h-11 min-w-11 size-9 shrink-0 rounded-full text-muted-foreground hover:text-destructive"
-                        aria-label={`Xóa ${item.item_name} khỏi giỏ`}
-                        onClick={() => cart.removeItem(item.key)}
-                      >
-                        <IconX className="size-4" />
-                      </Button>
-                    </div>
-
-                    <div className="mt-4 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="min-h-11 min-w-11 size-11 rounded-lg"
-                          aria-label={`Giảm số lượng ${item.item_name}`}
-                          onClick={() => cart.updateQuantity(item.key, -1)}
-                        >
-                          <IconMinus className="size-4" />
-                        </Button>
-                        <span className="w-10 text-center text-base font-bold tabular-nums">
-                          {item.quantity}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="min-h-11 min-w-11 size-11 rounded-lg"
-                          aria-label={`Tăng số lượng ${item.item_name}`}
-                          onClick={() => cart.updateQuantity(item.key, 1)}
-                        >
-                          <IconPlus className="size-4" />
-                        </Button>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          Thành tiền
-                        </p>
-                        <p className="text-base font-bold text-primary">
-                          {formatVND(subtotal)}
-                        </p>
+                        <div className="flex shrink-0 items-center gap-2 self-center">
+                          <p className="text-base font-bold text-primary tabular-nums">
+                            {formatVND(subtotal)}
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="hidden min-h-11 min-w-11 size-9 shrink-0 rounded-full text-muted-foreground hover:text-destructive sm:inline-flex"
+                            aria-label={`Xóa ${item.item_name} khỏi giỏ`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              cart.removeItem(item.key);
+                            }}
+                          >
+                            <IconX className="size-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -420,7 +395,7 @@ export function CartPane({
             </div>
           </ScrollArea>
 
-          <div className="shrink-0 border-t border-border/60 bg-background px-4 py-4">
+          <div className="shrink-0 border-t border-border/60 bg-background px-3 py-2.5 sm:px-4 sm:py-3">
             <div className="flex flex-col gap-1.5">
               <label
                 htmlFor="pos-order-note"
@@ -434,32 +409,33 @@ export function CartPane({
                 onChange={(e) => cart.setNote(e.target.value)}
                 placeholder="Ví dụ: ít đường, không hành..."
                 maxLength={500}
-                rows={2}
+                rows={1}
                 className="resize-none rounded-lg text-sm"
                 aria-describedby="pos-order-note-hint"
               />
               <p
                 id="pos-order-note-hint"
-                className="text-xs leading-5 text-muted-foreground"
+                className="hidden text-xs leading-5 text-muted-foreground sm:block"
               >
                 Tối đa 500 ký tự. Áp dụng cho toàn đơn.
               </p>
             </div>
 
-            <div className="rounded-xl border bg-card shadow-sm mt-4 p-4">
-              <div className="relative flex flex-col gap-3">
+            <div className="mt-2 rounded-xl border bg-card p-2.5 shadow-sm sm:mt-3 sm:p-4">
+              <div className="relative flex flex-col gap-2 sm:gap-3">
                 <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Tổng tạm tính
-                    </p>
-                    <p className="mt-1 text-2xl font-bold text-primary tabular-nums">
-                      {formatVND(cart.total)}
-                    </p>
-                  </div>
-                  <Badge variant={canSubmit ? "success" : "warning"}>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Tổng tạm tính
+                  </p>
+                  <p className="ml-auto text-xl font-bold text-primary tabular-nums sm:text-2xl">
+                    {formatVND(cart.total)}
+                  </p>
+                  <Badge
+                    variant={canSubmit ? "success" : "warning"}
+                    className="hidden sm:inline-flex"
+                  >
                     {canSubmit
-                      ? "Sẵn sàng gửi bếp"
+                      ? orderReadyLabel
                       : "Chờ hoàn thiện thông tin đơn"}
                   </Badge>
                 </div>
@@ -467,7 +443,7 @@ export function CartPane({
                 <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
                   <AlertDialogTrigger asChild>
                     <Button
-                      className="min-h-14 min-w-14 h-14 w-full rounded-xl text-base font-bold tracking-wide shadow-md transition-transform hover:-translate-y-0.5"
+                      className="min-h-12 min-w-12 h-12 w-full rounded-xl text-base font-bold tracking-wide shadow-md transition-transform hover:-translate-y-0.5 sm:min-h-14 sm:h-14"
                       size="lg"
                       disabled={!canSubmit || isSubmitting}
                       aria-keyshortcuts="Meta+Enter Control+Enter"
@@ -490,7 +466,7 @@ export function CartPane({
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Xác nhận gửi đơn</AlertDialogTitle>
+                      <AlertDialogTitle>Xác nhận đặt món</AlertDialogTitle>
                       <AlertDialogDescription>
                         {cart.orderType === "takeaway"
                           ? `Đơn mang về gồm ${totalQuantity} món, tạm tính ${formatVND(cart.total)}.`
@@ -500,7 +476,7 @@ export function CartPane({
                     <AlertDialogFooter>
                       <AlertDialogCancel>Quay lại</AlertDialogCancel>
                       <AlertDialogAction onClick={onSubmitOrder}>
-                        Gửi đơn
+                        Đặt món
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -521,3 +497,5 @@ export function CartPane({
     </div>
   );
 }
+
+export const CartPane = memo(CartPaneComponent);
