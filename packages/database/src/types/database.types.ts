@@ -2269,6 +2269,7 @@ export type Database = {
           note: string | null
           order_id: number
           quantity: number
+          request_key: string | null
           sent_to_kitchen_at: string | null
           sides: Json
           status: string
@@ -2289,6 +2290,7 @@ export type Database = {
           note?: string | null
           order_id: number
           quantity: number
+          request_key?: string | null
           sent_to_kitchen_at?: string | null
           sides?: Json
           status?: string
@@ -2309,6 +2311,7 @@ export type Database = {
           note?: string | null
           order_id?: number
           quantity?: number
+          request_key?: string | null
           sent_to_kitchen_at?: string | null
           sides?: Json
           status?: string
@@ -6141,7 +6144,7 @@ export type Database = {
         Returns: undefined
       }
       append_order_items: {
-        Args: { p_items: Json; p_order_id: number }
+        Args: { p_idempotency_key?: string; p_items: Json; p_order_id: number }
         Returns: Json
       }
       apply_credit_note_to_invoice: {

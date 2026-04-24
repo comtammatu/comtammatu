@@ -38,11 +38,8 @@ import { CartPane } from "./_components/cart-pane";
 import { OrderListPane } from "./_components/order-list-pane";
 import { PosSidebarTabs, PosSidebarContent } from "./pos-sidebar-panel";
 import { HotkeyOverlay } from "./_components/hotkey-overlay";
-import {
-  submitOrder,
-  appendOrderItems,
-  fetchActiveOrderForTable,
-} from "./actions";
+import { submitOrder, fetchActiveOrderForTable } from "./actions";
+import { usePosAppend } from "./_hooks/use-pos-append";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
 import type { ActiveSession, BranchTable } from "./page";
@@ -228,6 +225,13 @@ function PosDesktopInner({
     [],
   );
 
+  const { performAppend } = usePosAppend({
+    branchId,
+    clearAppendTarget,
+    focusOrderWorkflow,
+    refreshOperational,
+  });
+
   const handleTableSelect = useCallback(
     (table: BranchTable) => {
       if (table.status === "available") {
@@ -374,28 +378,17 @@ function PosDesktopInner({
           setCustomizerItem(item);
         } else {
           const target = appendTarget;
-          startTransition(async () => {
-            const key = makeCartKey(item.id, undefined, [], []);
-            const line: CartItem = {
-              key,
-              menu_item_id: item.id,
-              item_name: item.name,
-              quantity: 1,
-              unit_price: item.base_price,
-              modifiers: [],
-              sides: [],
-            };
-            const r = await appendOrderItems(branchId, target.orderId, [line]);
-            if (r.success) {
-              toast.success(`Đã thêm món vào đơn #${target.orderNumber}`);
-              const kw = r.meta?.kitchenWarning;
-              if (typeof kw === "string") toast.warning(kw);
-              clearAppendTarget();
-              focusOrderWorkflow(target.orderId, target.orderNumber);
-              void refreshOperational();
-            } else {
-              toast.error(r.error ?? "Không thể thêm món");
-            }
+          const line: CartItem = {
+            key: makeCartKey(item.id, undefined, [], []),
+            menu_item_id: item.id,
+            item_name: item.name,
+            quantity: 1,
+            unit_price: item.base_price,
+            modifiers: [],
+            sides: [],
+          };
+          startTransition(() => {
+            void performAppend(target, [line]);
           });
         }
         return;
@@ -409,14 +402,7 @@ function PosDesktopInner({
         addCartItem(item);
       }
     },
-    [
-      addCartItem,
-      appendTarget,
-      branchId,
-      clearAppendTarget,
-      focusOrderWorkflow,
-      refreshOperational,
-    ],
+    [addCartItem, appendTarget, performAppend],
   );
 
   const handleCartItemCustomize = useCallback(
@@ -489,34 +475,25 @@ function PosDesktopInner({
 
       if (appendTarget) {
         const target = appendTarget;
-        startTransition(async () => {
-          const hasNote = note !== undefined && note.length > 0;
-          const baseKey = makeCartKey(item.id, variantId, modifiers, sides);
-          const key = hasNote ? makeNotedCartKey(baseKey) : baseKey;
-          const line: CartItem = {
-            key,
-            menu_item_id: item.id,
-            item_name: item.name,
-            variant_id: variantId,
-            variant_name: variantName,
-            quantity,
-            unit_price: unitPrice,
-            modifiers,
-            sides,
-            note,
-          };
-          const r = await appendOrderItems(branchId, target.orderId, [line]);
-          if (r.success) {
-            toast.success(`Đã thêm món vào đơn #${target.orderNumber}`);
-            const kw = r.meta?.kitchenWarning;
-            if (typeof kw === "string") toast.warning(kw);
-            clearAppendTarget();
-            setCustomizerItem(null);
-            focusOrderWorkflow(target.orderId, target.orderNumber);
-            void refreshOperational();
-          } else {
-            toast.error(r.error ?? "Không thể thêm món");
-          }
+        const hasNote = note !== undefined && note.length > 0;
+        const baseKey = makeCartKey(item.id, variantId, modifiers, sides);
+        const key = hasNote ? makeNotedCartKey(baseKey) : baseKey;
+        const line: CartItem = {
+          key,
+          menu_item_id: item.id,
+          item_name: item.name,
+          variant_id: variantId,
+          variant_name: variantName,
+          quantity,
+          unit_price: unitPrice,
+          modifiers,
+          sides,
+          note,
+        };
+        startTransition(() => {
+          void performAppend(target, [line], {
+            onSuccess: () => setCustomizerItem(null),
+          });
         });
         return;
       }
@@ -535,13 +512,10 @@ function PosDesktopInner({
     [
       addCartItem,
       appendTarget,
-      branchId,
-      clearAppendTarget,
       cartStore,
       editingCartItem,
-      focusOrderWorkflow,
+      performAppend,
       replaceCartItems,
-      refreshOperational,
     ],
   );
 

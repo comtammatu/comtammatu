@@ -492,13 +492,20 @@ const appendItemsSchema = z.object({
   items: z.array(cartItemSchema).min(1, { error: "Cần ít nhất một món" }),
 });
 
-// Skip withAction: positional (branchId, orderId, items) args
+// Skip withAction: positional (branchId, orderId, items, idempotencyKey) args
 export async function appendOrderItems(
   branchId: number,
   orderId: number,
   items: CartItem[],
+  idempotencyKey?: string,
 ): Promise<
-  ActionResult<{ subtotal: number; total_amount: number; order_id: number }>
+  ActionResult<{
+    order_id: number;
+    subtotal: number;
+    total_amount: number;
+    added_count: number;
+    idempotent?: boolean;
+  }>
 > {
   const parsedBranch = branchIdSchema.safeParse(branchId);
   if (!parsedBranch.success) {
@@ -548,6 +555,7 @@ export async function appendOrderItems(
   const { data, error } = await supabase.rpc("append_order_items", {
     p_order_id: parsed.data.orderId,
     p_items: rpcItems,
+    p_idempotency_key: idempotencyKey ?? undefined,
   });
 
   if (error) {
@@ -571,16 +579,22 @@ export async function appendOrderItems(
   }
 
   const result = data as unknown as {
+    success: boolean;
     order_id: number;
+    added_count: number;
     subtotal: number;
     total_amount: number;
+    idempotent?: boolean;
   } | null;
 
   if (!result) {
     return { success: false, error: "Không thể thêm món. Vui lòng thử lại." };
   }
 
-  const kitchenWarning = await autoSendKitchen(supabase, result.order_id);
+  // Skip kitchen reprint on idempotent replay — first call already enqueued.
+  const kitchenWarning = result.idempotent
+    ? null
+    : await autoSendKitchen(supabase, result.order_id);
 
   return {
     success: true,
@@ -588,6 +602,8 @@ export async function appendOrderItems(
       order_id: result.order_id,
       subtotal: Number(result.subtotal),
       total_amount: Number(result.total_amount),
+      added_count: Number(result.added_count),
+      ...(result.idempotent ? { idempotent: true } : {}),
     },
     ...(kitchenWarning ? { meta: { kitchenWarning } } : {}),
   };
