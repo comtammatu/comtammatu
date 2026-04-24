@@ -30,6 +30,7 @@ import {
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
 import {
+  IconLayoutGrid,
   IconPackage,
   IconShoppingCart,
   IconTrash,
@@ -39,7 +40,7 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { cn } from "@comtammatu/ui";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
-import { calcItemSubtotal } from "../types";
+import { calcItemSubtotal, getPosLineItemDisplayName } from "../types";
 import type { CartItem, OrderType } from "../types";
 import { useCart } from "../_hooks/use-cart";
 import { useActiveTable } from "../_hooks/use-active-table";
@@ -50,6 +51,7 @@ interface CartPaneProps {
   onSubmitOrder: () => void;
   onOrderTypeChange: (type: OrderType) => void;
   onCustomizeItem: (item: CartItem) => void;
+  onReturnToTables?: () => void;
 }
 
 function CartPaneComponent({
@@ -58,6 +60,7 @@ function CartPaneComponent({
   onSubmitOrder,
   onOrderTypeChange,
   onCustomizeItem,
+  onReturnToTables,
 }: CartPaneProps) {
   const cart = useCart();
   const activeTable = useActiveTable();
@@ -121,51 +124,71 @@ function CartPaneComponent({
             <h2 className="truncate text-base font-semibold tracking-tight text-foreground sm:text-xl">
               {contextLabel} - Giỏ hàng
             </h2>
-            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+            <p className="mt-1 text-sm text-muted-foreground">
               {cart.items.length > 0
                 ? `${totalQuantity} món đang chờ xác nhận`
                 : "Chưa có món trong giỏ"}
             </p>
           </div>
-          {cart.items.length > 0 && (
-            <AlertDialog
-              open={clearConfirmOpen}
-              onOpenChange={setClearConfirmOpen}
-            >
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="min-h-9 min-w-9 h-9 shrink-0 rounded-full px-2 text-xs text-muted-foreground sm:min-h-11 sm:min-w-11 sm:px-3"
-                >
-                  <IconTrash className="mr-1 size-3.5" />
-                  Xóa giỏ
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    {"X\u00f3a gi\u1ecf h\u00e0ng?"}
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Tất cả {cart.items.length} món sẽ bị xóa khỏi giỏ hàng. Hành
-                    động này không thể hoàn tác.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Hủy</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => {
-                      cart.clear();
-                      setClearConfirmOpen(false);
-                    }}
+          <div className="flex shrink-0 items-center gap-2">
+            {cart.orderType === "dine_in" && selectedTableNumber != null && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="min-h-10 min-w-10 h-10 rounded-full px-3 text-sm text-muted-foreground sm:min-h-11 sm:min-w-11"
+                onClick={() => {
+                  if (onReturnToTables) {
+                    onReturnToTables();
+                  } else {
+                    activeTable.setTable(null);
+                  }
+                }}
+              >
+                <IconLayoutGrid className="mr-1 size-3.5" />
+                Đổi/Hủy bàn
+              </Button>
+            )}
+            {cart.items.length > 0 && (
+              <AlertDialog
+                open={clearConfirmOpen}
+                onOpenChange={setClearConfirmOpen}
+              >
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="min-h-10 min-w-10 h-10 shrink-0 rounded-full px-3 text-sm text-muted-foreground sm:min-h-11 sm:min-w-11"
                   >
-                    Xóa tất cả
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
+                    <IconTrash className="mr-1 size-3.5" />
+                    Xóa giỏ
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {"X\u00f3a gi\u1ecf h\u00e0ng?"}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Tất cả {cart.items.length} món sẽ bị xóa khỏi giỏ hàng.
+                      Hành động này không thể hoàn tác.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Hủy</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        cart.clear();
+                        setClearConfirmOpen(false);
+                      }}
+                    >
+                      Xóa tất cả
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
         </div>
 
         {shouldShowOrderTypeSelector && (
@@ -186,7 +209,7 @@ function CartPaneComponent({
           >
             <ToggleGroupItem
               value="dine_in"
-              className="min-h-12 justify-center gap-2 rounded-lg text-sm font-semibold"
+              className="min-h-12 justify-center gap-2 rounded-lg text-base font-semibold"
               aria-keyshortcuts="D"
               disabled={modeLocked && cart.orderType !== "dine_in"}
             >
@@ -196,7 +219,7 @@ function CartPaneComponent({
             </ToggleGroupItem>
             <ToggleGroupItem
               value="takeaway"
-              className="min-h-12 justify-center gap-2 rounded-lg text-sm font-semibold"
+              className="min-h-12 justify-center gap-2 rounded-lg text-base font-semibold"
               aria-keyshortcuts="T"
               disabled={modeLocked && cart.orderType !== "takeaway"}
             >
@@ -247,7 +270,7 @@ function CartPaneComponent({
 
           <div className="shrink-0 border-t border-border/60 bg-background px-4 py-4">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Tổng tạm tính
               </p>
               <p className="text-2xl font-bold text-primary tabular-nums">
@@ -266,10 +289,11 @@ function CartPaneComponent({
       ) : (
         <>
           <ScrollArea className="min-h-0 flex-1">
-            <div className="flex flex-col gap-2 p-3 pb-4 sm:gap-3 sm:p-4 sm:pb-6">
+            <div className="flex flex-col gap-2 px-3 py-2 sm:px-4 sm:py-3">
               {cart.items.map((item) => {
                 const subtotal = calcItemSubtotal(item);
                 const isDeleteRevealed = revealedItemKey === item.key;
+                const displayName = getPosLineItemDisplayName(item);
 
                 return (
                   <div
@@ -279,7 +303,7 @@ function CartPaneComponent({
                     <Button
                       variant="destructive"
                       className="absolute inset-y-0 right-0 h-auto min-h-full w-20 rounded-none sm:hidden"
-                      aria-label={`Xóa ${item.item_name} khỏi giỏ`}
+                      aria-label={`Xóa ${displayName} khỏi giỏ`}
                       onClick={() => {
                         cart.removeItem(item.key);
                         setRevealedItemKey(null);
@@ -339,21 +363,21 @@ function CartPaneComponent({
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold leading-snug text-foreground">
-                            {item.item_name}
-                          </p>
-                          {item.variant_name && (
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {item.variant_name}
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="shrink-0 text-sm font-bold text-muted-foreground tabular-nums">
+                              x{item.quantity}
+                            </span>
+                            <p className="truncate text-base font-semibold leading-snug text-foreground">
+                              {displayName}
                             </p>
-                          )}
+                          </div>
                           {item.modifiers.length > 0 && (
-                            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                            <p className="mt-1 text-sm leading-5 text-muted-foreground">
                               + {item.modifiers.map((m) => m.name).join(", ")}
                             </p>
                           )}
                           {item.sides.length > 0 && (
-                            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                            <p className="mt-1 text-sm leading-5 text-muted-foreground">
                               Kèm:{" "}
                               {item.sides
                                 .map((s) =>
@@ -365,7 +389,7 @@ function CartPaneComponent({
                             </p>
                           )}
                           {item.note && (
-                            <p className="mt-1 text-xs italic leading-5 text-muted-foreground">
+                            <p className="mt-1 text-sm italic leading-5 text-muted-foreground">
                               Ghi chú: {item.note}
                             </p>
                           )}
@@ -378,7 +402,7 @@ function CartPaneComponent({
                             variant="ghost"
                             size="icon"
                             className="hidden min-h-11 min-w-11 size-9 shrink-0 rounded-full text-muted-foreground hover:text-destructive sm:inline-flex"
-                            aria-label={`Xóa ${item.item_name} khỏi giỏ`}
+                            aria-label={`Xóa ${displayName} khỏi giỏ`}
                             onClick={(event) => {
                               event.stopPropagation();
                               cart.removeItem(item.key);
@@ -399,7 +423,7 @@ function CartPaneComponent({
             <div className="flex flex-col gap-1.5">
               <label
                 htmlFor="pos-order-note"
-                className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                className="text-sm font-semibold uppercase tracking-wide text-muted-foreground"
               >
                 Ghi chú đơn
               </label>
@@ -410,7 +434,7 @@ function CartPaneComponent({
                 placeholder="Ví dụ: ít đường, không hành..."
                 maxLength={500}
                 rows={1}
-                className="resize-none rounded-lg text-sm"
+                className="resize-none rounded-lg text-base"
                 aria-describedby="pos-order-note-hint"
               />
               <p
@@ -424,7 +448,7 @@ function CartPaneComponent({
             <div className="mt-2 rounded-xl border bg-card p-2.5 shadow-sm sm:mt-3 sm:p-4">
               <div className="relative flex flex-col gap-2 sm:gap-3">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                     Tổng tạm tính
                   </p>
                   <p className="ml-auto text-xl font-bold text-primary tabular-nums sm:text-2xl">
@@ -469,8 +493,8 @@ function CartPaneComponent({
                       <AlertDialogTitle>Xác nhận đặt món</AlertDialogTitle>
                       <AlertDialogDescription>
                         {cart.orderType === "takeaway"
-                          ? `Đơn mang về gồm ${totalQuantity} món, tạm tính ${formatVND(cart.total)}.`
-                          : `Đơn tại bàn ${selectedTableNumber ?? "đã chọn"} gồm ${totalQuantity} món, tạm tính ${formatVND(cart.total)}.`}
+                          ? `Mang về • ${totalQuantity} món • ${formatVND(cart.total)}`
+                          : `Bàn ${selectedTableNumber ?? "đã chọn"} • ${totalQuantity} món • ${formatVND(cart.total)}`}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -485,7 +509,7 @@ function CartPaneComponent({
                 {!canSubmit &&
                   cart.items.length > 0 &&
                   cart.orderType === "dine_in" && (
-                    <p className="text-center text-xs text-muted-foreground">
+                    <p className="text-center text-sm text-muted-foreground">
                       Vui lòng chọn bàn để hoàn tất đơn tại chỗ.
                     </p>
                   )}

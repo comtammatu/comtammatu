@@ -2,6 +2,7 @@
 
 import { formatVND } from "@comtammatu/shared/format";
 import { Separator } from "@comtammatu/ui/components/separator";
+import { getPosLineItemDisplayName } from "../../types";
 import { METHOD_LABELS } from "./bill-receipt-types";
 import type { OrderData } from "./bill-receipt-types";
 
@@ -73,68 +74,62 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
 
       <Separator className="my-2" />
 
-      <table className="w-full table-fixed text-xs">
-        <thead>
-          <tr className="border-b text-left">
-            <th className="w-1/2 pb-1 font-medium">Món</th>
-            <th className="pb-1 text-center font-medium">SL</th>
-            <th className="pb-1 text-right font-medium">Giá</th>
-            <th className="pb-1 text-right font-medium">TT</th>
-          </tr>
-        </thead>
-        <tbody>
-          {order.order_items.map((item) => (
-            <tr key={item.id} className="border-b border-dashed">
-              <td className="py-1 align-top">
-                <span className="font-medium leading-snug">
-                  {item.item_name}
-                </span>
-                {item.variant_name && (
-                  <span className="ml-1 text-muted-foreground">
-                    ({item.variant_name})
-                  </span>
-                )}
-                {item.modifiers.length > 0 && (
-                  <div className="mt-0.5 text-xs leading-4 text-muted-foreground">
-                    {item.modifiers.map((m) => `+ ${m.name}`).join(", ")}
+      <div className="text-xs">
+        <div className="flex items-center justify-between border-b pb-1 font-medium text-muted-foreground">
+          <span>Món</span>
+          <span className="text-right">Thành tiền</span>
+        </div>
+        <div className="divide-y divide-dashed">
+          {order.order_items.map((item) => {
+            const displayName = getPosLineItemDisplayName(item);
+
+            return (
+              <div key={item.id} className="flex gap-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <div className="break-words font-medium leading-snug">
+                    {displayName}
                   </div>
-                )}
-                {item.sides.length > 0 && (
-                  <div className="mt-0.5 text-xs leading-4 text-muted-foreground">
-                    Kèm:{" "}
-                    {item.sides
-                      .map((s) =>
-                        s.price > 0
-                          ? `${s.name}${
-                              s.quantity > 1 ? ` x${s.quantity}` : ""
-                            } (${formatVND(s.price * s.quantity)})`
-                          : s.name,
-                      )
-                      .join(", ")}
+                  {item.modifiers.length > 0 && (
+                    <div className="mt-0.5 break-words leading-4 text-muted-foreground">
+                      {item.modifiers.map((m) => `+ ${m.name}`).join(", ")}
+                    </div>
+                  )}
+                  {item.sides.length > 0 && (
+                    <div className="mt-0.5 break-words leading-4 text-muted-foreground">
+                      Kèm:{" "}
+                      {item.sides
+                        .map((s) =>
+                          s.price > 0
+                            ? `${s.name}${
+                                s.quantity > 1 ? ` x${s.quantity}` : ""
+                              } (${formatVND(s.price * s.quantity)})`
+                            : s.name,
+                        )
+                        .join(", ")}
+                    </div>
+                  )}
+                  {item.note && (
+                    <div className="mt-0.5 break-words leading-4 italic text-muted-foreground">
+                      * {item.note}
+                    </div>
+                  )}
+                </div>
+                <div className="shrink-0 whitespace-nowrap text-right tabular-nums">
+                  <div className="font-semibold">
+                    {formatVND(item.subtotal)}
                   </div>
-                )}
-                {item.note && (
-                  <div className="mt-0.5 text-xs leading-4 italic text-muted-foreground">
-                    * {item.note}
+                  <div className="mt-0.5 text-muted-foreground">
+                    {item.quantity} × {formatVND(item.unit_price)}
                   </div>
-                )}
-              </td>
-              <td className="py-1 text-center align-top">{item.quantity}</td>
-              <td className="py-1 text-right align-top">
-                {formatVND(item.unit_price)}
-                {(item.modifiers.length > 0 || item.sides.length > 0) && (
-                  <div className="text-xs leading-4 text-muted-foreground">
-                    gồm tuỳ chọn
-                  </div>
-                )}
-              </td>
-              <td className="py-1 text-right align-top font-medium">
-                {formatVND(item.subtotal)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                  {(item.modifiers.length > 0 || item.sides.length > 0) && (
+                    <div className="text-muted-foreground">gồm tuỳ chọn</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       <Separator className="my-2" />
 

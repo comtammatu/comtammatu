@@ -260,7 +260,7 @@ export function PosSessionsClient({
                             {order.order_items.map((item) => (
                               <div key={item.id} className="flex gap-2">
                                 <span className="font-medium text-foreground">
-                                  {item.quantity}x
+                                  x{item.quantity}
                                 </span>
                                 <span>
                                   {item.item_name}
