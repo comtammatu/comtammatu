@@ -18,7 +18,7 @@ import {
 import { IconCircleCheck, IconPrinter, IconReceipt } from "@tabler/icons-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { fetchOrderForBill, updateOrderStatus } from "../../actions";
+import { fetchOrderForBill } from "../../actions";
 import {
   confirmPayment,
   createPayment,
@@ -52,11 +52,9 @@ export function BillReceipt({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [payPending, startPayTransition] = useTransition();
-  const [completePending, startCompleteTransition] = useTransition();
   const [printPending, startPrintTransition] = useTransition();
   const [provisionalPending, startProvisionalTransition] = useTransition();
   const [cashDialogOpen, setCashDialogOpen] = useState(false);
-  const [refreshTick, setRefreshTick] = useState(0);
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [pendingExtras, setPendingExtras] = useState<PendingExtras | null>(
     null,
@@ -94,7 +92,7 @@ export function BillReceipt({
     return () => {
       cancelled = true;
     };
-  }, [orderId, refreshTick]);
+  }, [orderId]);
 
   useEffect(() => {
     if (orderId === null) {
@@ -197,38 +195,29 @@ export function BillReceipt({
     startConfirmTransition(async () => {
       const result = await confirmPayment(paymentId, providerRef);
       if (result.success) {
-        toast.success("Đã xác nhận thanh toán");
+        toast.success("Đã thanh toán — đơn đã hoàn tất");
         setAwaitingAsyncConfirmation(false);
         setPendingExtras(null);
         await onOrderUpdated?.();
-        setRefreshTick((t) => t + 1);
+        onClose();
       } else {
         toast.error(result.error ?? "Không thể xác nhận thanh toán");
       }
     });
-  }, [onOrderUpdated, pendingExtras?.payment_id, pendingExtras?.provider_ref]);
+  }, [
+    onClose,
+    onOrderUpdated,
+    pendingExtras?.payment_id,
+    pendingExtras?.provider_ref,
+  ]);
 
   const handleRealtimeConfirmed = useCallback(() => {
-    toast.success("Đã nhận tiền — thanh toán hoàn tất");
+    toast.success("Đã nhận tiền — đơn đã hoàn tất");
     setAwaitingAsyncConfirmation(false);
     setPendingExtras(null);
     void onOrderUpdated?.();
-    setRefreshTick((t) => t + 1);
-  }, [onOrderUpdated]);
-
-  const handleCompleteOrder = useCallback(() => {
-    if (orderId === null) return;
-    startCompleteTransition(async () => {
-      const result = await updateOrderStatus(orderId, "completed");
-      if (result.success) {
-        toast.success("Đã hoàn tất đơn");
-        await onOrderUpdated?.();
-        onClose();
-      } else {
-        toast.error(result.error ?? "Không thể hoàn tất đơn");
-      }
-    });
-  }, [onClose, onOrderUpdated, orderId]);
+    onClose();
+  }, [onClose, onOrderUpdated]);
 
   const handleMinimize = useCallback(() => {
     const paymentId = pendingExtras?.payment_id;
@@ -243,7 +232,6 @@ export function BillReceipt({
       order?.payment_method === "vietqr" ||
       order?.payment_method === "momo");
   const showPaySection = order && !isPaid && methods.length > 0;
-  const canCompleteOrder = order?.status === "served" && isPaid;
   const paymentProgressPercent = isPaid
     ? 100
     : payPending
@@ -413,23 +401,6 @@ export function BillReceipt({
 
               <div className="shrink-0 border-t p-4 print:hidden">
                 <div className="space-y-2">
-                  {canCompleteOrder && (
-                    <Button
-                      data-testid="bill-complete-order"
-                      className="w-full rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
-                      onClick={handleCompleteOrder}
-                      disabled={completePending}
-                    >
-                      {completePending ? (
-                        <Spinner className="mr-2" />
-                      ) : (
-                        <IconCircleCheck className="mr-2 size-4" />
-                      )}
-                      {order.order_type === "dine_in"
-                        ? "Hoàn tất và trả bàn"
-                        : "Hoàn tất đơn"}
-                    </Button>
-                  )}
                   {!isPaid && (
                     <Button
                       variant="outline"
@@ -446,7 +417,7 @@ export function BillReceipt({
                     </Button>
                   )}
                   <Button
-                    variant={canCompleteOrder ? "outline" : "default"}
+                    variant="default"
                     className="w-full rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
                     onClick={handlePrint}
                     disabled={printPending || !isPaid}
@@ -475,7 +446,7 @@ export function BillReceipt({
           totalAmount={Number(order.total_amount)}
           onSuccess={async () => {
             await onOrderUpdated?.();
-            setRefreshTick((t) => t + 1);
+            onClose();
           }}
         />
       )}

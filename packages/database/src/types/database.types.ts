@@ -6396,6 +6396,10 @@ export type Database = {
         Args: { p_branch_id: number; p_minutes: number; p_note: string }
         Returns: string
       }
+      finalize_paid_order: {
+        Args: { p_actor_id?: string; p_order_id: number }
+        Returns: undefined
+      }
       finalize_stocktake: { Args: { p_session_id: number }; Returns: Json }
       find_payment_order_desync: {
         Args: { p_since?: string }
