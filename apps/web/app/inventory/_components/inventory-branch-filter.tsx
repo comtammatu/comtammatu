@@ -45,6 +45,9 @@ export function InventoryBranchFilter({
       router.replace(query ? `${pathname}?${query}` : pathname, {
         scroll: false,
       });
+      // Invalidate the layout Router Cache so the server re-reads the cookie
+      // and subsequent bare-path navigations see the fresh default.
+      router.refresh();
     },
     [router, pathname, searchParams],
   );
@@ -53,22 +56,21 @@ export function InventoryBranchFilter({
 
   return (
     <Select value={String(currentId)} onValueChange={handleChange}>
-      <SelectTrigger className="h-8 w-full border-none bg-transparent p-0 text-xs font-medium shadow-none hover:bg-sidebar-accent/60 focus-visible:ring-0">
+      <SelectTrigger className="h-8 w-full border-none bg-transparent p-0 text-xs font-medium shadow-none hover:bg-sidebar-accent/60 focus-visible:ring-0 [&>span]:truncate">
         <SelectValue placeholder="Chọn chi nhánh" />
       </SelectTrigger>
-      <SelectContent align="start">
+      <SelectContent align="start" className="min-w-[14rem]">
         {branches.map((branch) => {
           const kindLabel = getInventorySiteKindLabelVi(branch.branch_kind);
+          const showKind = kindLabel && kindLabel !== branch.name;
           return (
             <SelectItem key={branch.id} value={String(branch.id)}>
-              <div className="flex flex-col">
-                <span className="truncate text-sm">{branch.name}</span>
-                {kindLabel && kindLabel !== branch.name ? (
-                  <span className="text-xs text-muted-foreground">
-                    {kindLabel}
-                  </span>
-                ) : null}
-              </div>
+              <span className="truncate text-sm">{branch.name}</span>
+              {showKind ? (
+                <span className="ml-1.5 text-xs text-muted-foreground">
+                  · {kindLabel}
+                </span>
+              ) : null}
             </SelectItem>
           );
         })}

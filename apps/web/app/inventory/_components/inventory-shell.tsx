@@ -2,7 +2,7 @@
 
 import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   IconArrowBarDown,
   IconChartBar,
@@ -274,6 +274,8 @@ export function InventoryShell({
   defaultBranchId,
 }: InventoryShellProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const branchQuery = searchParams.get("branchId");
   const groups = useMemo(
     () =>
       buildInventoryGroups({
@@ -350,6 +352,9 @@ export function InventoryShell({
                   {group.items.map((item) => {
                     const active = isNavItemActive(item, pathname);
                     const Icon = item.icon;
+                    const href = branchQuery
+                      ? `${item.href}?branchId=${branchQuery}`
+                      : item.href;
                     return (
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton
@@ -357,7 +362,7 @@ export function InventoryShell({
                           isActive={active}
                           tooltip={item.label}
                         >
-                          <Link href={item.href}>
+                          <Link href={href}>
                             <Icon className="size-4" />
                             <span>{item.label}</span>
                           </Link>
