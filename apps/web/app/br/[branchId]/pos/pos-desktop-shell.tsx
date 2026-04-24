@@ -42,6 +42,7 @@ import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
 import type { ActiveSession, BranchTable } from "./page";
 import type { SessionOrder } from "./order-history";
+import type { OrderData } from "./_components/bill/bill-receipt-types";
 import {
   PosDesktopProvider,
   usePosOperationalDispatch,
@@ -151,6 +152,13 @@ function PosDesktopInner({
   const [isPending, startTransition] = useTransition();
   const [showCloseSession, setShowCloseSession] = useState(false);
   const [billOrderId, setBillOrderId] = useState<number | null>(null);
+  // Seed passed to BillReceipt when we just came from OrderDetailSheet
+  // on the same order — lets BillReceipt skip its own fetch. Null for
+  // bill opens from any other path (toast action, order-list direct
+  // open) so BillReceipt falls back to fetchOrderForBill(orderId).
+  const [billInitialOrder, setBillInitialOrder] = useState<OrderData | null>(
+    null,
+  );
   const [orderDetailId, setOrderDetailId] = useState<number | null>(null);
   const [orderDetailNumber, setOrderDetailNumber] = useState<string | null>(
     null,
@@ -499,9 +507,15 @@ function PosDesktopInner({
     ],
   );
 
-  const openBill = useCallback((id: number) => {
+  const openBill = useCallback((id: number, seed?: OrderData) => {
     setCartDrawerOpen(false);
+    setBillInitialOrder(seed ?? null);
     setBillOrderId(id);
+  }, []);
+
+  const closeBill = useCallback(() => {
+    setBillOrderId(null);
+    setBillInitialOrder(null);
   }, []);
 
   const openDetail = useCallback((id: number, orderNumber?: string | null) => {
@@ -803,11 +817,10 @@ function PosDesktopInner({
           setOrderDetailId(null);
           setOrderDetailNumber(null);
         }}
-        onOpenBill={(id) => {
+        onOpenBill={(id, seed) => {
           setOrderDetailId(null);
           setOrderDetailNumber(null);
-          setCartDrawerOpen(false);
-          setBillOrderId(id);
+          openBill(id, seed);
         }}
         onStartAppend={(oid, onum) => {
           setOrderDetailId(null);
@@ -841,9 +854,10 @@ function PosDesktopInner({
       <BillReceipt
         branchId={branchId}
         orderId={billOrderId}
+        initialOrder={billInitialOrder}
         canConfirmCash={canConfirmCash}
         onOrderUpdated={() => void refreshOperational()}
-        onClose={() => setBillOrderId(null)}
+        onClose={closeBill}
       />
 
       <HotkeyOverlay open={hotkeyOpen} onOpenChange={setHotkeyOpen} />

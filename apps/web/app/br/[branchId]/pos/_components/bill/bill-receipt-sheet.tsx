@@ -36,6 +36,15 @@ interface BillReceiptProps {
   branchId: number;
   orderId: number | null;
   /**
+   * Order data already fetched by an upstream sheet (typically
+   * OrderDetailSheet). When this is provided AND its id matches
+   * `orderId`, the mount effect skips its own order round-trip —
+   * UX shows items + total immediately with no second spinner.
+   * When null or mismatched, the effect falls back to
+   * fetchOrderForBill(orderId).
+   */
+  initialOrder?: OrderData | null;
+  /**
    * User có `pos:confirm_payment` không. Waiter (không có) sẽ không thấy
    * phương thức "Tiền mặt" — cash chạm két phải do cashier. VietQR/MoMo
    * vẫn hiện cho mọi role có POS_USE (e-wallet không chạm drawer).
@@ -111,6 +120,7 @@ function PaymentSkeleton() {
 export function BillReceipt({
   branchId,
   orderId,
+  initialOrder,
   canConfirmCash,
   onOrderUpdated,
   onClose,
@@ -153,30 +163,55 @@ export function BillReceipt({
       return;
     }
 
+    // Seed synchronously from the parent's already-fetched order (e.g.
+    // OrderDetailSheet just handed off the same order). Skips the
+    // otherwise redundant fetchOrderForBill round-trip and paints
+    // items + total on first frame. Methods list is fetched either way
+    // — it is independent of the order.
+    const seededOrder =
+      initialOrder != null && initialOrder.id === orderId
+        ? initialOrder
+        : null;
+
+    if (seededOrder !== null) {
+      setOrder(seededOrder);
+      setError(null);
+      setCashInput(String(Math.round(Number(seededOrder.total_amount))));
+      const isTerminal =
+        seededOrder.payment_status === "paid" ||
+        seededOrder.status === "completed" ||
+        seededOrder.status === "cancelled";
+      setStep(isTerminal ? "payment" : "confirm-served");
+    }
+
     let cancelled = false;
     startTransition(async () => {
       const [orderResult, methodsResult] = await Promise.all([
-        fetchOrderForBill(orderId),
+        seededOrder === null
+          ? fetchOrderForBill(orderId)
+          : Promise.resolve(null),
         fetchPaymentMethodsForPos(branchId),
       ]);
       if (cancelled) return;
 
-      if (orderResult.success && orderResult.data) {
-        const nextOrder = orderResult.data as OrderData;
-        setOrder(nextOrder);
-        setError(null);
-        setCashInput(String(Math.round(Number(nextOrder.total_amount))));
-        // Paid / completed orders are already past the serve+pay flow —
-        // jump straight to the payment step which renders a read-only
-        // paid summary. Avoids the `completed → served` invalid transition
-        // that confirm-served would attempt.
-        const isTerminal =
-          nextOrder.payment_status === "paid" ||
-          nextOrder.status === "completed" ||
-          nextOrder.status === "cancelled";
-        setStep(isTerminal ? "payment" : "confirm-served");
-      } else {
-        setError(orderResult.error ?? "Không thể tải đơn hàng");
+      if (orderResult !== null) {
+        if (orderResult.success && orderResult.data) {
+          const nextOrder = orderResult.data as OrderData;
+          setOrder(nextOrder);
+          setError(null);
+          setCashInput(String(Math.round(Number(nextOrder.total_amount))));
+          // Paid / completed orders are already past the serve+pay flow —
+          // jump straight to the payment step which renders a read-only
+          // paid summary. Avoids the `completed → served` invalid transition
+          // that confirm-served would attempt.
+          const isTerminal =
+            nextOrder.payment_status === "paid" ||
+            nextOrder.status === "completed" ||
+            nextOrder.status === "cancelled";
+          setStep(isTerminal ? "payment" : "confirm-served");
+        } else {
+          setError(orderResult.error ?? "Không thể tải đơn hàng");
+        }
       }
 
       if (methodsResult.success && methodsResult.data) {
@@ -198,7 +233,7 @@ export function BillReceipt({
     return () => {
       cancelled = true;
     };
-  }, [branchId, canConfirmCash, orderId]);
+  }, [branchId, canConfirmCash, initialOrder, orderId]);
 
   const handleOpenChange = useCallback(
     (open: boolean) => {

@@ -40,21 +40,15 @@ import type { OrderItemRowData } from "./_components/order-detail/order-item-row
 import { VoidItemDialog } from "./_components/order-detail/void-item-dialog";
 import { CancelOrderDialog } from "./_components/order-detail/cancel-order-dialog";
 import { TransferTableDialog } from "./_components/order-detail/transfer-table-dialog";
+import type { OrderData } from "./_components/bill/bill-receipt-types";
 
-interface OrderDetailData {
-  id: number;
-  order_number: string;
-  order_type: string;
-  status: string;
-  payment_status: string | null;
-  subtotal: number;
-  tax_amount: number;
-  total_amount: number;
-  note: string | null;
-  table_id: number | null;
-  tables: { number: number } | null;
+// Superset of bill's OrderData: same top-level fields, but order_items
+// carry extra UI-only fields (status, menu_item_id) used by the detail
+// sheet. Structurally assignable to OrderData → this type can be passed
+// to BillReceipt.initialOrder without conversion.
+type OrderDetailData = Omit<OrderData, "order_items"> & {
   order_items: OrderItemRowData[];
-}
+};
 
 function canAppendOrderStatus(status: string): boolean {
   return ["new", "confirmed", "preparing", "ready"].includes(status);
@@ -65,7 +59,11 @@ export interface OrderDetailSheetProps {
   orderNumber?: string | null;
   refreshToken?: number;
   onClose: () => void;
-  onOpenBill: (orderId: number) => void;
+  /**
+   * Hand off to the bill sheet. `seed` is the already-fetched order data —
+   * pass it to BillReceipt so it skips its own round-trip.
+   */
+  onOpenBill: (orderId: number, seed: OrderData) => void;
   /** Start append flow: parent closes sheet and sets append target on menu */
   onStartAppend: (orderId: number, orderNumber: string) => void;
   onReorderToCart: (items: CartItem[], skippedCount: number) => void;
@@ -373,7 +371,7 @@ export function OrderDetailSheet({
                       size="lg"
                       className="w-full"
                       onClick={() => {
-                        onOpenBill(data.id);
+                        onOpenBill(data.id, data);
                         onClose();
                       }}
                     >
@@ -428,7 +426,7 @@ export function OrderDetailSheet({
                         {canShowBillInMenu && (
                           <DropdownMenuItem
                             onClick={() => {
-                              onOpenBill(data.id);
+                              onOpenBill(data.id, data);
                               onClose();
                             }}
                           >
