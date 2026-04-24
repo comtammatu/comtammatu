@@ -303,7 +303,10 @@ export async function closePosSession(
     };
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_CLOSE_SHIFT,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase } = ctx;

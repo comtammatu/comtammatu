@@ -1,56 +1,29 @@
 "use client";
 
-import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Tabs,
   TabsList,
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
-import { IconDoorEnter } from "@tabler/icons-react";
-import { CartSidebar } from "./cart-sidebar";
-import { OrderHistory } from "./order-history";
-import type { CartItem, OrderType } from "./types";
-import type { BranchTable } from "./page";
-import type { SessionOrder } from "./order-history";
+import { CartPane } from "./_components/cart-pane";
+import { OrderListPane } from "./_components/order-list-pane";
+import { useCart } from "./_hooks/use-cart";
+import { usePosOperationalDispatch } from "./_providers/pos-desktop-provider";
+import type { OrderType } from "./types";
 
-interface PosSidebarPanelProps {
+interface PosSidebarTabsProps {
   showOrders: boolean;
   onShowOrdersChange: (show: boolean) => void;
-  cartItems: CartItem[];
-  cartTotal: number;
-  cartQuantity: number;
-  orderType: OrderType;
-  selectedTableId: number | null;
-  tables: BranchTable[];
-  canSubmit: boolean;
-  isPending: boolean;
-  sessionOrders: SessionOrder[];
-  orderNote: string;
-  onUpdateQuantity: (key: string, delta: number) => void;
-  onRemoveItem: (key: string) => void;
-  onClearCart: () => void;
-  onOrderTypeChange: (type: OrderType) => void;
-  onRequestChangeTable: () => void;
-  onSubmitOrder: () => void;
-  onOrderNoteChange: (note: string) => void;
-  onViewBill: (orderId: number) => void;
-  onViewDetail: (orderId: number) => void;
-  onLoadSessionOrders: () => void;
 }
 
 export function PosSidebarTabs({
   showOrders,
   onShowOrdersChange,
-  cartQuantity,
-  onLoadSessionOrders,
-}: Pick<
-  PosSidebarPanelProps,
-  | "showOrders"
-  | "onShowOrdersChange"
-  | "cartQuantity"
-  | "onLoadSessionOrders"
->) {
+}: PosSidebarTabsProps) {
+  const cart = useCart();
+  const { refreshOrders } = usePosOperationalDispatch();
+
   return (
     <div className="border-b border-border/60 px-3 py-3">
       <Tabs
@@ -58,7 +31,7 @@ export function PosSidebarTabs({
         onValueChange={(value) => {
           const nextShowOrders = value === "active-orders";
           onShowOrdersChange(nextShowOrders);
-          if (nextShowOrders) onLoadSessionOrders();
+          if (nextShowOrders) void refreshOrders();
         }}
         className="gap-0"
       >
@@ -71,9 +44,9 @@ export function PosSidebarTabs({
             className="min-w-0 gap-2 py-2.5 text-sm font-semibold"
           >
             <span className="truncate">Đơn mới</span>
-            {cartQuantity > 0 && (
+            {cart.quantity > 0 && (
               <Badge variant="secondary" className="shrink-0 text-xs">
-                {cartQuantity}
+                {cart.quantity}
               </Badge>
             )}
           </TabsTrigger>
@@ -89,76 +62,38 @@ export function PosSidebarTabs({
   );
 }
 
+interface PosSidebarContentProps {
+  showOrders: boolean;
+  canSubmit: boolean;
+  isPending: boolean;
+  onSubmitOrder: () => void;
+  onOrderTypeChange: (type: OrderType) => void;
+  onRequestChangeTable: () => void;
+  onViewBill: (orderId: number) => void;
+  onViewDetail: (orderId: number) => void;
+}
+
 export function PosSidebarContent({
   showOrders,
-  cartItems,
-  cartTotal,
-  orderType,
-  selectedTableId,
-  tables,
   canSubmit,
   isPending,
-  sessionOrders,
-  orderNote,
-  onUpdateQuantity,
-  onRemoveItem,
-  onClearCart,
+  onSubmitOrder,
   onOrderTypeChange,
   onRequestChangeTable,
-  onSubmitOrder,
-  onOrderNoteChange,
   onViewBill,
   onViewDetail,
-  onLoadSessionOrders,
-}: PosSidebarPanelProps) {
+}: PosSidebarContentProps) {
   if (showOrders) {
-    return (
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold">Đơn đang phục vụ</span>
-            {sessionOrders.length > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {sessionOrders.length}
-              </Badge>
-            )}
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-9 rounded-full px-3 text-xs"
-            onClick={onLoadSessionOrders}
-          >
-            <IconDoorEnter className="mr-1 size-3.5" />
-            Tải lại
-          </Button>
-        </div>
-        <OrderHistory
-          orders={sessionOrders}
-          onViewBill={onViewBill}
-          onViewDetail={onViewDetail}
-        />
-      </div>
-    );
+    return <OrderListPane onViewBill={onViewBill} onViewDetail={onViewDetail} />;
   }
 
   return (
-    <CartSidebar
-      items={cartItems}
-      total={cartTotal}
-      orderType={orderType}
-      selectedTableId={selectedTableId}
-      tables={tables}
+    <CartPane
       canSubmit={canSubmit}
       isSubmitting={isPending}
-      onUpdateQuantity={onUpdateQuantity}
-      onRemoveItem={onRemoveItem}
-      onClearCart={onClearCart}
+      onSubmitOrder={onSubmitOrder}
       onOrderTypeChange={onOrderTypeChange}
       onRequestChangeTable={onRequestChangeTable}
-      onSubmitOrder={onSubmitOrder}
-      orderNote={orderNote}
-      onOrderNoteChange={onOrderNoteChange}
     />
   );
 }

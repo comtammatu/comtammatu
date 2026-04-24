@@ -7,8 +7,8 @@ import {
   fetchActiveSession,
   fetchPosTerminals,
 } from "./actions";
-import { PosMenu } from "./pos-menu";
-import type { MenuCategory } from "./pos-menu";
+import { PosDesktopShell } from "./pos-desktop-shell";
+import type { MenuCategory } from "./pos-menu-types";
 import { SessionGate } from "./session-gate";
 import type { OrderType } from "./types";
 import { PosStatusShell } from "./pos-status-shell";
@@ -143,7 +143,9 @@ export default async function PosPage({
     );
   const initialOrderType: OrderType = tableParamValidForDineIn
     ? "dine_in"
-    : "takeaway";
+    : tablesList.length > 0
+      ? "dine_in"
+      : "takeaway";
 
   if (!menuResult.success || !menuResult.data) {
     return (
@@ -217,12 +219,11 @@ export default async function PosPage({
         />
       }
     >
-      <PosMenu
+      <PosDesktopShell
         branchId={branchIdNum}
         categories={menuResult.data as MenuCategory[]}
         tables={tablesList}
         session={session}
-        initialTableId={initialTableId}
         initialOrderType={initialOrderType}
       />
     </Suspense>

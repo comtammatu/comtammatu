@@ -89,8 +89,8 @@ export function OrderHistory({
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden bg-background">
-      <ScrollArea className="flex-1">
-        <div className="space-y-5 p-4">
+      <ScrollArea className="min-h-0 flex-1 overflow-hidden">
+        <div className="space-y-5 px-4 pb-32 pt-4 md:p-4">
           <section className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>

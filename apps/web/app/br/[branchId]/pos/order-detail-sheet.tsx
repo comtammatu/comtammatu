@@ -14,40 +14,15 @@ import {
   SheetDescription,
 } from "@comtammatu/ui/components/sheet";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@comtammatu/ui/components/alert-dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { notify } from "@comtammatu/ui/lib/notify";
-import {
-  IconCircleCheck,
-  IconCircle,
-  IconLoader2,
-  IconDots,
-  IconToolsKitchen,
-} from "@tabler/icons-react";
+import { IconDots } from "@tabler/icons-react";
 import {
   fetchOrderDetail,
   voidOrderItem,
@@ -57,22 +32,14 @@ import {
   fetchOrderItemsForReorder,
 } from "./actions";
 import { sendToKitchen } from "./print-actions";
-import type { CartItem, CartModifier, CartSide } from "./types";
+import type { CartItem } from "./types";
 import type { BranchTable } from "./page";
 import { messages } from "@lib/messages";
-
-interface OrderItemRow {
-  id: number;
-  item_name: string;
-  variant_name: string | null;
-  quantity: number;
-  unit_price: number;
-  subtotal: number;
-  status: string;
-  modifiers: CartModifier[];
-  sides: CartSide[];
-  note: string | null;
-}
+import { OrderItemRow } from "./_components/order-detail/order-item-row";
+import type { OrderItemRowData } from "./_components/order-detail/order-item-row";
+import { VoidItemDialog } from "./_components/order-detail/void-item-dialog";
+import { CancelOrderDialog } from "./_components/order-detail/cancel-order-dialog";
+import { TransferTableDialog } from "./_components/order-detail/transfer-table-dialog";
 
 interface OrderDetailData {
   id: number;
@@ -86,7 +53,7 @@ interface OrderDetailData {
   note: string | null;
   table_id: number | null;
   tables: { number: number } | null;
-  order_items: OrderItemRow[];
+  order_items: OrderItemRowData[];
 }
 
 const ORDER_STATUS_LABEL: Record<string, string> = {
@@ -99,53 +66,27 @@ const ORDER_STATUS_LABEL: Record<string, string> = {
   cancelled: "Đã hủy",
 };
 
-function itemStatusMeta(status: string): {
-  label: string;
-  Icon: typeof IconCircle;
-  ariaLabel: string;
-} {
-  switch (status) {
-    case "pending":
-      return {
-        label: "Chờ",
-        Icon: IconCircle,
-        ariaLabel: "Trạng thái món: chờ xử lý",
-      };
-    case "preparing":
-      return {
-        label: "Đang làm",
-        Icon: IconLoader2,
-        ariaLabel: "Trạng thái món: đang làm",
-      };
-    case "ready":
-      return {
-        label: "Sẵn sàng",
-        Icon: IconCircleCheck,
-        ariaLabel: "Trạng thái món: sẵn sàng",
-      };
-    case "served":
-      return {
-        label: "Đã phục vụ",
-        Icon: IconToolsKitchen,
-        ariaLabel: "Trạng thái món: đã phục vụ",
-      };
-    case "cancelled":
-      return {
-        label: "Đã hủy",
-        Icon: IconCircle,
-        ariaLabel: "Trạng thái món: đã hủy",
-      };
-    default:
-      return {
-        label: status,
-        Icon: IconCircle,
-        ariaLabel: `Trạng thái món: ${status}`,
-      };
-  }
-}
-
 function canAppendOrderStatus(status: string): boolean {
   return ["new", "confirmed", "preparing", "ready"].includes(status);
+}
+
+function computeOrderProgress(status: string): number {
+  switch (status) {
+    case "completed":
+      return 100;
+    case "cancelled":
+      return 100;
+    case "served":
+      return 84;
+    case "ready":
+      return 70;
+    case "preparing":
+      return 52;
+    case "confirmed":
+      return 38;
+    default:
+      return 22;
+  }
 }
 
 export interface OrderDetailSheetProps {
@@ -158,8 +99,6 @@ export interface OrderDetailSheetProps {
   onReorderToCart: (items: CartItem[], skippedCount: number) => void;
   tables: BranchTable[];
   onOrderUpdated?: () => void | Promise<void>;
-  /** Called after close so parent can restore focus to the element that opened the sheet. */
-  onAfterClose?: () => void;
 }
 
 export function OrderDetailSheet({
@@ -171,7 +110,6 @@ export function OrderDetailSheet({
   onReorderToCart,
   tables,
   onOrderUpdated,
-  onAfterClose,
 }: OrderDetailSheetProps) {
   const [data, setData] = useState<OrderDetailData | null>(null);
   const [canManage, setCanManage] = useState(false);
@@ -213,14 +151,7 @@ export function OrderDetailSheet({
   }, [load, orderId, refreshToken]);
 
   const handleOpenChange = (open: boolean) => {
-    if (!open) {
-      onClose();
-      if (onAfterClose) {
-        requestAnimationFrame(() => {
-          onAfterClose();
-        });
-      }
-    }
+    if (!open) onClose();
   };
 
   const handleVoidConfirm = () => {
@@ -330,25 +261,15 @@ export function OrderDetailSheet({
   const orderStatusLabel = data
     ? (ORDER_STATUS_LABEL[data.status] ?? data.status)
     : "";
-  const orderProgressPercent = !data
-    ? 0
-    : data.status === "completed"
-      ? 100
-      : data.status === "served"
-        ? 84
-        : data.status === "ready"
-          ? 70
-          : data.status === "preparing"
-            ? 52
-      : data.status === "confirmed"
-              ? 38
-              : data.status === "cancelled"
-                ? 100
-                : 22;
+  const orderProgressPercent = data ? computeOrderProgress(data.status) : 0;
 
   const availableTables = tables.filter(
     (t) => t.status === "available" || t.id === data?.table_id,
   );
+
+  const canShowCancel =
+    canManage && data && !["completed", "cancelled"].includes(data.status);
+  const canShowTransfer = data?.order_type === "dine_in" && data.status !== "cancelled";
 
   return (
     <>
@@ -457,93 +378,14 @@ export function OrderDetailSheet({
                   className="flex flex-col gap-2 py-2"
                   aria-label="Danh sách món"
                 >
-                  {data.order_items.map((row) => {
-                    const meta = itemStatusMeta(row.status);
-                    const Icon = meta.Icon;
-                    const cancelled = row.status === "cancelled";
-                    return (
-                      <li
-                        key={row.id}
-                        className={cn(
-                          "rounded-xl border p-3 transition-transform hover:-translate-y-0.5 hover:shadow-md",
-                          cancelled
-                            ? "border-dashed bg-muted/40"
-                            : "border-border bg-card shadow-sm",
-                        )}
-                      >
-                        <div className="flex items-start gap-2">
-                          <span
-                            className="mt-0.5 shrink-0 text-primary"
-                            aria-hidden
-                          >
-                            <Icon
-                              className={
-                                row.status === "preparing"
-                                  ? "size-4 motion-safe:animate-spin"
-                                  : "size-4"
-                              }
-                            />
-                          </span>
-                          <span className="sr-only">{meta.ariaLabel}</span>
-                          <div className="min-w-0 flex-1">
-                            <p
-                              className={
-                                cancelled
-                                  ? "text-sm line-through opacity-70"
-                                  : "text-sm font-medium"
-                              }
-                            >
-                              {row.item_name}
-                              {row.variant_name ? ` — ${row.variant_name}` : ""}
-                            </p>
-                            {row.modifiers.length > 0 && (
-                              <p className="text-xs text-muted-foreground">
-                                {row.modifiers
-                                  .map((m) => `+ ${m.name}`)
-                                  .join(", ")}
-                              </p>
-                            )}
-                            {row.sides.length > 0 && (
-                              <p className="text-xs text-muted-foreground">
-                                Kèm:{" "}
-                                {row.sides
-                                  .map((s) =>
-                                    s.price > 0
-                                      ? `${s.name} (${formatVND(s.price)})`
-                                      : s.name,
-                                  )
-                                  .join(", ")}
-                              </p>
-                            )}
-                            {row.note && (
-                              <p className="text-xs italic text-muted-foreground">
-                                * {row.note}
-                              </p>
-                            )}
-                            <p className="text-xs text-muted-foreground">
-                              {meta.label} · x{row.quantity} ·{" "}
-                              {formatVND(row.subtotal)}
-                            </p>
-                          </div>
-                          {canManage &&
-                            !cancelled &&
-                            ["pending", "preparing", "ready"].includes(
-                              row.status,
-                            ) && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 shrink-0 text-xs text-destructive"
-                                onClick={() => setVoidItemId(row.id)}
-                              >
-                                Hủy món
-                              </Button>
-                            )}
-                        </div>
-                      </li>
-                    );
-                  })}
+                  {data.order_items.map((row) => (
+                    <OrderItemRow
+                      key={row.id}
+                      row={row}
+                      canManage={canManage}
+                      onVoid={setVoidItemId}
+                    />
+                  ))}
                 </ul>
                 {data.note && (
                   <p className="text-xs text-muted-foreground">
@@ -590,29 +432,28 @@ export function OrderDetailSheet({
                 )}
 
                 {canAppendOrderStatus(data.status) && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="min-h-11 w-full rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
-                    onClick={() => {
-                      onStartAppend(data.id, data.order_number);
-                    }}
-                  >
-                    Thêm món
-                  </Button>
-                )}
-
-                {canAppendOrderStatus(data.status) && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={isPending}
-                    className="min-h-11 w-full rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
-                    onClick={handleSendKitchen}
-                    title="Phiếu bếp đã tự gửi khi đặt món. Nhấn để gửi lại nếu cần."
-                  >
-                    Gửi lại bếp
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-11 flex-1 rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
+                      onClick={() => {
+                        onStartAppend(data.id, data.order_number);
+                      }}
+                    >
+                      Thêm món
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={isPending}
+                      className="min-h-11 flex-1 rounded-lg shadow-sm transition-transform hover:-translate-y-0.5"
+                      onClick={handleSendKitchen}
+                      title="Phiếu bếp đã tự gửi khi đặt món. Nhấn để gửi lại nếu cần."
+                    >
+                      Gửi lại bếp
+                    </Button>
+                  </div>
                 )}
 
                 <div className="flex flex-wrap gap-2">
@@ -650,12 +491,40 @@ export function OrderDetailSheet({
                   </p>
                 )}
 
+                {(canShowTransfer || canShowCancel) && (
+                  <div className="flex flex-wrap gap-2 border-t pt-3">
+                    {canShowTransfer && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="min-h-11 flex-1 rounded-lg"
+                        disabled={isPending}
+                        onClick={() => setShowTransfer(true)}
+                      >
+                        Chuyển bàn
+                      </Button>
+                    )}
+                    {canShowCancel && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="min-h-11 flex-1 rounded-lg border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        disabled={isPending}
+                        onClick={() => setShowCancel(true)}
+                      >
+                        Hủy đơn
+                      </Button>
+                    )}
+                  </div>
+                )}
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       type="button"
-                      variant="outline"
-                      className="min-h-11 w-full rounded-lg"
+                      variant="ghost"
+                      size="sm"
+                      className="h-9 w-full rounded-lg text-muted-foreground"
                     >
                       <IconDots className="mr-2 size-4" />
                       Khác…
@@ -673,20 +542,6 @@ export function OrderDetailSheet({
                     <DropdownMenuItem onClick={() => void handleReorder()}>
                       Đặt lại vào giỏ
                     </DropdownMenuItem>
-                    {data.order_type === "dine_in" && (
-                      <DropdownMenuItem onClick={() => setShowTransfer(true)}>
-                        Chuyển bàn
-                      </DropdownMenuItem>
-                    )}
-                    {canManage &&
-                      !["completed", "cancelled"].includes(data.status) && (
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => setShowCancel(true)}
-                        >
-                          Hủy đơn
-                        </DropdownMenuItem>
-                      )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -695,114 +550,31 @@ export function OrderDetailSheet({
         </SheetContent>
       </Sheet>
 
-      <AlertDialog
+      <VoidItemDialog
         open={voidItemId !== null}
-        onOpenChange={(o) => !o && setVoidItemId(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Hủy món</AlertDialogTitle>
-            <AlertDialogDescription>
-              Nhập lý do hủy (bắt buộc). Chỉ áp dụng cho món chưa phục vụ.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-2 py-2">
-            <Label htmlFor="void-reason">Lý do</Label>
-            <Input
-              id="void-reason"
-              value={voidReason}
-              onChange={(e) => setVoidReason(e.target.value)}
-              placeholder="Ví dụ: khách đổi ý"
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Hủy bỏ</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                handleVoidConfirm();
-              }}
-            >
-              Xác nhận hủy món
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        reason={voidReason}
+        onReasonChange={setVoidReason}
+        onCancel={() => setVoidItemId(null)}
+        onConfirm={handleVoidConfirm}
+      />
 
-      <AlertDialog open={showCancel} onOpenChange={setShowCancel}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Hủy đơn hàng?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tất cả món sẽ bị hủy. Bàn sẽ được giải phóng nếu không còn đơn.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-2 py-2">
-            <Label htmlFor="cancel-reason">Lý do</Label>
-            <Input
-              id="cancel-reason"
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              placeholder="Bắt buộc"
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setCancelReason("")}>
-              Đóng
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={(e) => {
-                e.preventDefault();
-                handleCancelOrder();
-              }}
-            >
-              Xác nhận hủy đơn
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <CancelOrderDialog
+        open={showCancel}
+        onOpenChange={setShowCancel}
+        reason={cancelReason}
+        onReasonChange={setCancelReason}
+        onConfirm={handleCancelOrder}
+      />
 
-      <AlertDialog open={showTransfer} onOpenChange={setShowTransfer}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Chuyển bàn</AlertDialogTitle>
-            <AlertDialogDescription>
-              Chọn bàn trống. Bàn đang được giữ chỗ bởi đơn khác sẽ không hiển
-              thị.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-2 py-2">
-            <Label htmlFor="transfer-table">Bàn</Label>
-            <Select value={transferTableId} onValueChange={setTransferTableId}>
-              <SelectTrigger id="transfer-table">
-                <SelectValue placeholder="Chọn bàn" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableTables.map((t) => (
-                  <SelectItem key={t.id} value={String(t.id)}>
-                    Bàn {t.number}
-                    {t.id === data?.table_id ? " (hiện tại)" : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setTransferTableId("")}>
-              Đóng
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                handleTransfer();
-              }}
-            >
-              Xác nhận
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <TransferTableDialog
+        open={showTransfer}
+        onOpenChange={setShowTransfer}
+        tableId={transferTableId}
+        onTableIdChange={setTransferTableId}
+        currentTableId={data?.table_id ?? null}
+        availableTables={availableTables}
+        onConfirm={handleTransfer}
+      />
     </>
   );
 }

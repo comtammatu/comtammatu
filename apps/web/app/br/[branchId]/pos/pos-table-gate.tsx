@@ -17,7 +17,7 @@ import type { BranchTable } from "./page";
 interface PosTableGateProps {
   tables: BranchTable[];
   selectedTableId: number | null;
-  onTableSelect: (tableId: number | null) => void;
+  onTableSelect: (table: BranchTable) => void;
   className?: string;
 }
 
@@ -32,7 +32,7 @@ export function PosTableGate({
     [tables],
   );
   const occupiedCount = useMemo(
-    () => tables.filter((table) => table.status !== "available").length,
+    () => tables.filter((table) => table.status === "occupied").length,
     [tables],
   );
   const selectedTable = useMemo(
@@ -57,20 +57,20 @@ export function PosTableGate({
         className,
       )}
     >
-      <div className="border-b border-border bg-background px-4 py-3 sm:px-6">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="border-b border-border bg-background px-4 py-4 sm:px-6 lg:px-8">
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <IconLayoutGrid className="size-5" />
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <IconLayoutGrid className="size-6" />
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Chọn bàn
               </p>
-              <h1 className="truncate text-lg font-semibold tracking-tight text-foreground">
+              <h1 className="truncate text-xl font-semibold tracking-tight text-foreground lg:text-2xl">
                 {selectedTable != null
                   ? `Bàn ${selectedTable.number} đã sẵn sàng`
-                  : "Chạm bàn trống để mở menu"}
+                  : "Chạm bàn để mở menu hoặc đơn đang phục vụ"}
               </h1>
             </div>
           </div>
@@ -95,17 +95,17 @@ export function PosTableGate({
           </EmptyHeader>
         </Empty>
       ) : (
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 p-4 sm:p-6">
+        <ScrollArea className="min-h-0 flex-1 overflow-hidden">
+          <div className="flex w-full flex-col gap-6 px-4 pb-32 pt-4 sm:p-6 lg:p-8">
             {Array.from(tablesByZone.entries()).map(([zoneName, zoneTables]) => (
-              <section key={zoneName} className="flex flex-col gap-3">
+              <section key={zoneName} className="flex flex-col gap-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <IconMapPin className="size-4" />
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <IconMapPin className="size-5" />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-foreground">
+                      <p className="truncate text-base font-semibold text-foreground">
                         {zoneName}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -122,37 +122,42 @@ export function PosTableGate({
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
                   {zoneTables.map((table) => {
                     const isAvailable = table.status === "available";
+                    const isOccupied = table.status === "occupied";
                     const isSelected = selectedTableId === table.id;
+                    const statusLabel = isSelected
+                      ? "Đang chọn"
+                      : isAvailable
+                        ? "Trống"
+                        : isOccupied
+                          ? "Đang dùng"
+                          : "Đã đặt";
 
                     return (
                       <button
                         key={table.id}
                         type="button"
-                        disabled={!isAvailable}
-                        aria-label={
-                          isAvailable
-                            ? `Bàn ${String(table.number)}`
-                            : `Bàn ${String(table.number)} đang sử dụng`
-                        }
+                        aria-label={`Bàn ${String(table.number)} ${statusLabel}`}
                         className={cn(
-                          "flex min-h-24 flex-col items-start justify-between rounded-lg border p-3 text-left transition-transform hover:-translate-y-0.5 hover:shadow-md",
+                          "flex min-h-32 flex-col items-start justify-between rounded-lg border p-4 text-left transition-transform hover:-translate-y-0.5 hover:shadow-md lg:min-h-36",
                           isSelected
                             ? "border-primary/30 bg-primary text-primary-foreground shadow-md"
                             : isAvailable
                               ? "border-border bg-card shadow-sm hover:border-primary/25"
-                              : "cursor-not-allowed border-border/50 bg-muted/55 text-muted-foreground/65",
+                              : isOccupied
+                                ? "border-warning/25 bg-warning/10 text-foreground shadow-sm hover:border-warning/35"
+                                : "border-border/70 bg-muted/55 text-muted-foreground shadow-sm hover:border-border",
                         )}
-                        onClick={() => onTableSelect(isSelected ? null : table.id)}
+                        onClick={() => onTableSelect(table)}
                       >
                         <div className="flex w-full items-start justify-between gap-2">
                           <div>
                             <p className="text-xs font-semibold uppercase tracking-wide opacity-70">
                               Bàn
                             </p>
-                            <p className="mt-1 text-2xl font-black leading-none tabular-nums">
+                            <p className="mt-2 text-3xl font-black leading-none tabular-nums">
                               {table.number}
                             </p>
                           </div>
@@ -162,7 +167,9 @@ export function PosTableGate({
                                 ? "outline"
                                 : isAvailable
                                   ? "success"
-                                  : "secondary"
+                                  : isOccupied
+                                    ? "warning"
+                                    : "secondary"
                             }
                             className={cn(
                               "text-xs font-semibold",
@@ -170,16 +177,12 @@ export function PosTableGate({
                                 "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground",
                             )}
                           >
-                            {isSelected
-                              ? "Đang chọn"
-                              : isAvailable
-                                ? "Trống"
-                                : "Đang dùng"}
+                            {statusLabel}
                           </Badge>
                         </div>
 
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                          <IconArmchair className="size-4" />
+                        <div className="flex items-center gap-2 text-base font-medium">
+                          <IconArmchair className="size-5" />
                           <span>{table.capacity} chỗ</span>
                         </div>
                       </button>

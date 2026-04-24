@@ -6,6 +6,7 @@ import { IconClock, IconLogout, IconDeviceDesktop } from "@tabler/icons-react";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { formatTime } from "./pos-menu-types";
 import { PrinterStatusBadge } from "./printer-status-badge";
+import { PosThemeToggle } from "./pos-theme-toggle";
 import type { ActiveSession } from "./page";
 import type { OrderType } from "./types";
 
@@ -65,6 +66,8 @@ export function PosSessionHeader({
             settingsHref={`/br/${branchId}/settings/printers`}
           />
         </div>
+
+        <PosThemeToggle />
 
         <Button
           variant="ghost"

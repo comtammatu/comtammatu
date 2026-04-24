@@ -140,7 +140,7 @@ export function PosMenuGrid({
   return (
     <div className="flex min-h-0 flex-1 overflow-hidden bg-background">
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="border-b border-border/60 bg-background px-3 py-3 md:px-4">
+        <div className="border-b border-border/60 bg-background px-3 py-4 md:px-5 lg:px-6">
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div className="min-w-0">
@@ -168,6 +168,7 @@ export function PosMenuGrid({
                   <IconSearch />
                 </InputGroupAddon>
                 <InputGroupInput
+                  id="pos-menu-search"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Tìm món, topping, ghi chú món..."
@@ -195,8 +196,7 @@ export function PosMenuGrid({
               >
                 <TabsList
                   aria-label="Khu thực đơn"
-                  style={{ height: "auto" }}
-                  className="w-full justify-start gap-2 rounded-lg border bg-card p-1"
+                  className="h-auto w-full justify-start gap-2 rounded-lg border bg-card p-1"
                 >
                   {availableMenuZones.map((zone) => (
                     <TabsTrigger
@@ -219,8 +219,7 @@ export function PosMenuGrid({
               >
                 <TabsList
                   aria-label="Danh mục món"
-                  style={{ height: "auto" }}
-                  className="w-full justify-start gap-2 rounded-lg border bg-background p-1"
+                  className="h-auto w-full justify-start gap-2 rounded-lg border bg-background p-1"
                 >
                   {categoriesInActiveZone.map((category) => (
                     <TabsTrigger
@@ -240,10 +239,10 @@ export function PosMenuGrid({
           </div>
         </div>
 
-        <ScrollArea className="flex-1">
+        <ScrollArea className="min-h-0 flex-1 overflow-hidden">
           <div
             className={cn(
-              "grid gap-3 px-3 pb-24 pt-3 md:p-4",
+              "grid gap-4 px-3 pb-36 pt-3 md:p-5 lg:p-6",
               sparseMenu
                 ? "grid-cols-1"
                 : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4",
@@ -261,7 +260,7 @@ export function PosMenuGrid({
                   type="button"
                   variant="outline"
                   className={cn(
-                    "h-auto min-h-44 w-full cursor-pointer flex-col items-stretch justify-between rounded-lg bg-card p-4 text-left whitespace-normal shadow-sm transition-transform hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md active:scale-95",
+                    "h-auto min-h-48 w-full cursor-pointer flex-col items-stretch justify-between rounded-lg bg-card p-5 text-left whitespace-normal shadow-sm transition-transform hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md active:scale-95 lg:min-h-56",
                     sparseMenu && "md:min-h-64 md:p-6",
                   )}
                   onClick={() => onItemTap(item)}
@@ -329,10 +328,10 @@ export function PosMenuGrid({
                           {formatVND(item.base_price)}
                         </p>
                       </div>
-                      <span className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground">
+                      <Badge variant="secondary" className="gap-2 px-3 py-2">
                         <IconPlus className="size-4" />
-                        Chọn món
-                      </span>
+                        Chạm thẻ
+                      </Badge>
                     </div>
                   </div>
                 </Button>

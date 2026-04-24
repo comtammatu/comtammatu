@@ -40,62 +40,47 @@ import {
 } from "@tabler/icons-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
-import type { CartItem, OrderType } from "./types";
-import { calcItemSubtotal } from "./types";
-import type { BranchTable } from "./page";
+import { calcItemSubtotal } from "../types";
+import type { OrderType } from "../types";
+import { useCart } from "../_hooks/use-cart";
+import { useActiveTable } from "../_hooks/use-active-table";
 
-interface CartSidebarProps {
-  items: CartItem[];
-  total: number;
-  orderType: OrderType;
-  selectedTableId: number | null;
-  tables: BranchTable[];
+interface CartPaneProps {
   canSubmit: boolean;
   isSubmitting: boolean;
-  onUpdateQuantity: (key: string, delta: number) => void;
-  onRemoveItem: (key: string) => void;
-  onClearCart: () => void;
+  onSubmitOrder: () => void;
   onOrderTypeChange: (type: OrderType) => void;
   onRequestChangeTable: () => void;
-  onSubmitOrder: () => void;
-  orderNote: string;
-  onOrderNoteChange: (note: string) => void;
 }
 
-export function CartSidebar({
-  items,
-  total,
-  orderType,
-  selectedTableId,
-  tables,
+export function CartPane({
   canSubmit,
   isSubmitting,
-  onUpdateQuantity,
-  onRemoveItem,
-  onClearCart,
+  onSubmitOrder,
   onOrderTypeChange,
   onRequestChangeTable,
-  onSubmitOrder,
-  orderNote,
-  onOrderNoteChange,
-}: CartSidebarProps) {
+}: CartPaneProps) {
+  const cart = useCart();
+  const activeTable = useActiveTable();
+
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const cartDialogOpen = confirmOpen || clearConfirmOpen;
-  const selectedTableNumber =
-    selectedTableId != null
-      ? tables.find((t) => t.id === selectedTableId)?.number
-      : undefined;
-  const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  const selectedTableNumber = activeTable.table?.number;
+  const totalQuantity = cart.quantity;
+  const modeLocked = cart.items.length > 0 || selectedTableNumber != null;
   const contextLabel =
-    orderType === "takeaway"
+    cart.orderType === "takeaway"
       ? "Mang về"
       : selectedTableNumber != null
         ? `Bàn ${selectedTableNumber}`
         : "Chưa chọn bàn";
 
+  const shouldShowOrderTypeSelector =
+    cart.orderType === "dine_in" && selectedTableNumber == null;
+
   useKeyboardShortcut([
-    // Cmd/Ctrl + Enter: open submit confirmation (works even while typing note)
     {
       key: "Enter",
       meta: true,
@@ -105,18 +90,16 @@ export function CartSidebar({
         if (!cartDialogOpen && canSubmit && !isSubmitting) setConfirmOpen(true);
       },
     },
-    // T: switch to takeaway (ignored while typing)
     {
       key: "t",
       handler: () => {
-        if (!cartDialogOpen) onOrderTypeChange("takeaway");
+        if (!cartDialogOpen && !modeLocked) onOrderTypeChange("takeaway");
       },
     },
-    // D: switch to dine-in
     {
       key: "d",
       handler: () => {
-        if (!cartDialogOpen) onOrderTypeChange("dine_in");
+        if (!cartDialogOpen && !modeLocked) onOrderTypeChange("dine_in");
       },
     },
   ]);
@@ -133,7 +116,7 @@ export function CartSidebar({
               {contextLabel}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {items.length > 0
+              {cart.items.length > 0
                 ? `${totalQuantity} món đang chờ gửi bếp`
                 : "Chọn món từ menu để bắt đầu"}
             </p>
@@ -143,37 +126,44 @@ export function CartSidebar({
           </Badge>
         </div>
 
-        <ToggleGroup
-          type="single"
-          value={orderType}
-          variant="outline"
-          size="lg"
-          className="mt-4 grid w-full grid-cols-2 gap-2"
-          onValueChange={(value) => {
-            if (value === "dine_in" || value === "takeaway") {
-              onOrderTypeChange(value);
-            }
-          }}
-        >
-          <ToggleGroupItem
-            value="dine_in"
-            className="min-h-12 justify-center gap-2 rounded-lg text-sm font-semibold"
-            aria-keyshortcuts="D"
+        {shouldShowOrderTypeSelector && (
+          <ToggleGroup
+            type="single"
+            value={cart.orderType}
+            variant="outline"
+            size="lg"
+            className="mt-4 grid w-full grid-cols-2 gap-2"
+            onValueChange={(value) => {
+              if (
+                !modeLocked &&
+                (value === "dine_in" || value === "takeaway")
+              ) {
+                onOrderTypeChange(value);
+              }
+            }}
           >
-            <IconToolsKitchen className="size-4" />
-            Tại bàn
-            <Kbd className="ml-1 hidden md:inline-flex">D</Kbd>
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value="takeaway"
-            className="min-h-12 justify-center gap-2 rounded-lg text-sm font-semibold"
-            aria-keyshortcuts="T"
-          >
-            <IconPackage className="size-4" />
-            Mang về
-            <Kbd className="ml-1 hidden md:inline-flex">T</Kbd>
-          </ToggleGroupItem>
-        </ToggleGroup>
+            <ToggleGroupItem
+              value="dine_in"
+              className="min-h-12 justify-center gap-2 rounded-lg text-sm font-semibold"
+              aria-keyshortcuts="D"
+              disabled={modeLocked && cart.orderType !== "dine_in"}
+            >
+              <IconToolsKitchen className="size-4" />
+              Tại bàn
+              <Kbd className="ml-1 hidden md:inline-flex">D</Kbd>
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="takeaway"
+              className="min-h-12 justify-center gap-2 rounded-lg text-sm font-semibold"
+              aria-keyshortcuts="T"
+              disabled={modeLocked && cart.orderType !== "takeaway"}
+            >
+              <IconPackage className="size-4" />
+              Mang về
+              <Kbd className="ml-1 hidden md:inline-flex">T</Kbd>
+            </ToggleGroupItem>
+          </ToggleGroup>
+        )}
 
         <div className="mt-3 grid grid-cols-3 gap-2">
           <div className="rounded-lg border bg-muted/30 px-3 py-2">
@@ -185,7 +175,7 @@ export function CartSidebar({
           <div className="rounded-lg border bg-muted/30 px-3 py-2">
             <p className="text-xs text-muted-foreground">Tổng</p>
             <p className="mt-1 text-lg font-bold text-primary tabular-nums">
-              {formatVND(total)}
+              {formatVND(cart.total)}
             </p>
           </div>
           <div className="rounded-lg border bg-muted/30 px-3 py-2">
@@ -196,7 +186,7 @@ export function CartSidebar({
           </div>
         </div>
 
-        {orderType === "dine_in" && selectedTableNumber != null && (
+        {cart.orderType === "dine_in" && selectedTableNumber != null && (
           <Button
             variant="outline"
             size="sm"
@@ -207,6 +197,19 @@ export function CartSidebar({
             Đổi bàn
           </Button>
         )}
+
+        {cart.orderType === "takeaway" && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3 h-9 w-full rounded-lg text-xs"
+            type="button"
+            disabled={modeLocked}
+            onClick={() => onOrderTypeChange("dine_in")}
+          >
+            Chọn bàn
+          </Button>
+        )}
       </div>
 
       <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-4 py-3">
@@ -215,15 +218,17 @@ export function CartSidebar({
             <IconShoppingCart className="size-5" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-foreground">Giỏ thao tác</p>
+            <p className="text-sm font-semibold text-foreground">
+              Giỏ thao tác
+            </p>
             <p className="text-xs text-muted-foreground">
-              {items.length === 0
+              {cart.items.length === 0
                 ? "Chưa có món trong giỏ"
                 : `${totalQuantity} món đang chờ xác nhận`}
             </p>
           </div>
         </div>
-        {items.length > 0 && (
+        {cart.items.length > 0 && (
           <AlertDialog
             open={clearConfirmOpen}
             onOpenChange={setClearConfirmOpen}
@@ -240,17 +245,19 @@ export function CartSidebar({
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Xóa giỏ hàng?</AlertDialogTitle>
+                <AlertDialogTitle>
+                  {"X\u00f3a gi\u1ecf h\u00e0ng?"}
+                </AlertDialogTitle>
                 <AlertDialogDescription>
-                  Tất cả {items.length} món sẽ bị xóa khỏi giỏ hàng. Hành động
-                  này không thể hoàn tác.
+                  Tất cả {cart.items.length} món sẽ bị xóa khỏi giỏ hàng. Hành
+                  động này không thể hoàn tác.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Hủy</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => {
-                    onClearCart();
+                    cart.clear();
                     setClearConfirmOpen(false);
                   }}
                 >
@@ -262,7 +269,7 @@ export function CartSidebar({
         )}
       </div>
 
-      {items.length === 0 ? (
+      {cart.items.length === 0 ? (
         <>
           <div className="flex flex-1 flex-col justify-between p-4">
             <Empty className="py-12">
@@ -317,7 +324,7 @@ export function CartSidebar({
         <>
           <ScrollArea className="min-h-0 flex-1">
             <div className="flex flex-col gap-3 p-4">
-              {items.map((item) => {
+              {cart.items.map((item) => {
                 const subtotal = calcItemSubtotal(item);
 
                 return (
@@ -350,7 +357,14 @@ export function CartSidebar({
                             )}
                             {item.sides.length > 0 && (
                               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                                Kèm: {item.sides.map((s) => s.name).join(", ")}
+                                Kèm:{" "}
+                                {item.sides
+                                  .map((s) =>
+                                    s.quantity > 1
+                                      ? `${s.name} x${String(s.quantity)}`
+                                      : s.name,
+                                  )
+                                  .join(", ")}
                               </p>
                             )}
                           </div>
@@ -361,7 +375,7 @@ export function CartSidebar({
                         size="icon"
                         className="min-h-11 min-w-11 size-9 shrink-0 rounded-full text-muted-foreground hover:text-destructive"
                         aria-label={`Xóa ${item.item_name} khỏi giỏ`}
-                        onClick={() => onRemoveItem(item.key)}
+                        onClick={() => cart.removeItem(item.key)}
                       >
                         <IconX className="size-4" />
                       </Button>
@@ -374,7 +388,7 @@ export function CartSidebar({
                           size="icon"
                           className="min-h-11 min-w-11 size-11 rounded-lg"
                           aria-label={`Giảm số lượng ${item.item_name}`}
-                          onClick={() => onUpdateQuantity(item.key, -1)}
+                          onClick={() => cart.updateQuantity(item.key, -1)}
                         >
                           <IconMinus className="size-4" />
                         </Button>
@@ -386,7 +400,7 @@ export function CartSidebar({
                           size="icon"
                           className="min-h-11 min-w-11 size-11 rounded-lg"
                           aria-label={`Tăng số lượng ${item.item_name}`}
-                          onClick={() => onUpdateQuantity(item.key, 1)}
+                          onClick={() => cart.updateQuantity(item.key, 1)}
                         >
                           <IconPlus className="size-4" />
                         </Button>
@@ -416,9 +430,9 @@ export function CartSidebar({
               </label>
               <Textarea
                 id="pos-order-note"
-                value={orderNote}
-                onChange={(e) => onOrderNoteChange(e.target.value)}
-                placeholder="Ví dụ: ít đường, không hành…"
+                value={cart.note}
+                onChange={(e) => cart.setNote(e.target.value)}
+                placeholder="Ví dụ: ít đường, không hành..."
                 maxLength={500}
                 rows={2}
                 className="resize-none rounded-lg text-sm"
@@ -440,11 +454,13 @@ export function CartSidebar({
                       Tổng tạm tính
                     </p>
                     <p className="mt-1 text-2xl font-bold text-primary tabular-nums">
-                      {formatVND(total)}
+                      {formatVND(cart.total)}
                     </p>
                   </div>
                   <Badge variant={canSubmit ? "success" : "warning"}>
-                    {canSubmit ? "Sẵn sàng gửi bếp" : "Chờ hoàn thiện thông tin đơn"}
+                    {canSubmit
+                      ? "Sẵn sàng gửi bếp"
+                      : "Chờ hoàn thiện thông tin đơn"}
                   </Badge>
                 </div>
 
@@ -465,7 +481,7 @@ export function CartSidebar({
                         <>
                           Đặt món
                           <KbdGroup className="ml-2 hidden md:inline-flex">
-                            <Kbd>⌘</Kbd>
+                            <Kbd>{"⌘"}</Kbd>
                             <Kbd>Enter</Kbd>
                           </KbdGroup>
                         </>
@@ -476,9 +492,9 @@ export function CartSidebar({
                     <AlertDialogHeader>
                       <AlertDialogTitle>Xác nhận gửi đơn</AlertDialogTitle>
                       <AlertDialogDescription>
-                        {orderType === "takeaway"
-                          ? `Đơn mang về gồm ${totalQuantity} món, tạm tính ${formatVND(total)}.`
-                          : `Đơn tại bàn ${selectedTableNumber ?? "đã chọn"} gồm ${totalQuantity} món, tạm tính ${formatVND(total)}.`}
+                        {cart.orderType === "takeaway"
+                          ? `Đơn mang về gồm ${totalQuantity} món, tạm tính ${formatVND(cart.total)}.`
+                          : `Đơn tại bàn ${selectedTableNumber ?? "đã chọn"} gồm ${totalQuantity} món, tạm tính ${formatVND(cart.total)}.`}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -490,11 +506,13 @@ export function CartSidebar({
                   </AlertDialogContent>
                 </AlertDialog>
 
-                {!canSubmit && items.length > 0 && orderType === "dine_in" && (
-                  <p className="text-center text-xs text-muted-foreground">
-                    Vui lòng chọn bàn để hoàn tất đơn tại chỗ.
-                  </p>
-                )}
+                {!canSubmit &&
+                  cart.items.length > 0 &&
+                  cart.orderType === "dine_in" && (
+                    <p className="text-center text-xs text-muted-foreground">
+                      Vui lòng chọn bàn để hoàn tất đơn tại chỗ.
+                    </p>
+                  )}
               </div>
             </div>
           </div>

@@ -11,6 +11,7 @@ export { fetchMenuForPos } from "./menu-actions";
 export {
   submitOrder,
   fetchSessionOrders,
+  fetchActiveOrderForTable,
   fetchOrderForBill,
   fetchOrderDetail,
   appendOrderItems,

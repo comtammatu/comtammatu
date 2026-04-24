@@ -17,7 +17,7 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import { cn } from "@comtammatu/ui";
 import type { CartModifier, CartSide } from "./types";
-import type { MenuItem, MenuVariant } from "./pos-menu";
+import type { MenuItem, MenuVariant } from "./pos-menu-types";
 
 interface ItemCustomizerProps {
   item: MenuItem | null;
@@ -49,8 +49,10 @@ export function ItemCustomizer({
   const [selectedModifierIds, setSelectedModifierIds] = useState<Set<number>>(
     new Set(),
   );
-  const [selectedSideIds, setSelectedSideIds] = useState<Set<number>>(
-    new Set(),
+  const [selectedSideQuantities, setSelectedSideQuantities] = useState<
+    Map<number, number>
+  >(
+    new Map(),
   );
   const [note, setNote] = useState("");
 
@@ -59,11 +61,11 @@ export function ItemCustomizer({
     if (item) {
       setSelectedVariant(item.menu_item_variants[0] ?? null);
       setSelectedModifierIds(new Set());
-      setSelectedSideIds(
-        new Set(
+      setSelectedSideQuantities(
+        new Map(
           item.menu_item_available_sides
             .filter((s) => s.is_default)
-            .map((s) => s.side_item.id),
+            .map((s) => [s.side_item.id, 1] as const),
         ),
       );
       setNote("");
@@ -78,12 +80,12 @@ export function ItemCustomizer({
         setSelectedVariant(firstVariant ?? null);
         setSelectedModifierIds(new Set());
         // Pre-select default sides
-        const defaultSideIds = new Set(
+        const defaultSideQuantities = new Map(
           item.menu_item_available_sides
             .filter((s) => s.is_default)
-            .map((s) => s.side_item.id),
+            .map((s) => [s.side_item.id, 1] as const),
         );
-        setSelectedSideIds(defaultSideIds);
+        setSelectedSideQuantities(defaultSideQuantities);
         setNote("");
       }
       if (!open) {
@@ -110,9 +112,15 @@ export function ItemCustomizer({
   const sideTotal = useMemo(() => {
     if (!item) return 0;
     return item.menu_item_available_sides
-      .filter((s) => selectedSideIds.has(s.side_item.id))
-      .reduce((sum, s) => sum + s.side_item.base_price, 0);
-  }, [item, selectedSideIds]);
+      .filter((s) => selectedSideQuantities.has(s.side_item.id))
+      .reduce(
+        (sum, s) =>
+          sum +
+          s.side_item.base_price *
+            (selectedSideQuantities.get(s.side_item.id) ?? 1),
+        0,
+      );
+  }, [item, selectedSideQuantities]);
 
   const totalPrice = unitPrice + modifierTotal + sideTotal;
 
@@ -124,11 +132,12 @@ export function ItemCustomizer({
       .map((m) => ({ modifier_id: m.id, name: m.name, price: m.price }));
 
     const sides: CartSide[] = item.menu_item_available_sides
-      .filter((s) => selectedSideIds.has(s.side_item.id))
+      .filter((s) => selectedSideQuantities.has(s.side_item.id))
       .map((s) => ({
         side_item_id: s.side_item.id,
         name: s.side_item.name,
         price: s.side_item.base_price,
+        quantity: selectedSideQuantities.get(s.side_item.id) ?? 1,
         is_default: s.is_default,
       }));
 
@@ -146,7 +155,7 @@ export function ItemCustomizer({
     item,
     selectedVariant,
     selectedModifierIds,
-    selectedSideIds,
+    selectedSideQuantities,
     unitPrice,
     note,
     onConfirm,
@@ -165,13 +174,27 @@ export function ItemCustomizer({
   }, []);
 
   const toggleSide = useCallback((sideItemId: number) => {
-    setSelectedSideIds((prev) => {
-      const next = new Set(prev);
+    setSelectedSideQuantities((prev) => {
+      const next = new Map(prev);
       if (next.has(sideItemId)) {
         next.delete(sideItemId);
       } else {
-        next.add(sideItemId);
+        next.set(sideItemId, 1);
       }
+      return next;
+    });
+  }, []);
+
+  const updateSideQuantity = useCallback((sideItemId: number, delta: number) => {
+    setSelectedSideQuantities((prev) => {
+      const current = prev.get(sideItemId);
+      if (current == null) return prev;
+
+      const nextQuantity = Math.min(99, Math.max(1, current + delta));
+      if (nextQuantity === current) return prev;
+
+      const next = new Map(prev);
+      next.set(sideItemId, nextQuantity);
       return next;
     });
   }, []);
@@ -258,28 +281,74 @@ export function ItemCustomizer({
                   <div>
                     <h3 className="mb-2 text-sm font-semibold">Món kèm</h3>
                     <div className="flex flex-col gap-2">
-                      {item.menu_item_available_sides.map((s) => (
-                        <label
-                          key={s.id}
-                          className="flex cursor-pointer items-center gap-3 rounded-md border p-2.5 transition-colors hover:bg-accent"
-                        >
-                          <Checkbox
-                            checked={selectedSideIds.has(s.side_item.id)}
-                            onCheckedChange={() => toggleSide(s.side_item.id)}
-                          />
-                          <span className="flex-1 text-sm">
-                            {s.side_item.name}
-                            {s.is_default && (
-                              <span className="ml-1 text-xs text-muted-foreground">
-                                (mặc định)
-                              </span>
+                      {item.menu_item_available_sides.map((s) => {
+                        const sideQuantity = selectedSideQuantities.get(
+                          s.side_item.id,
+                        );
+                        const isSelected = sideQuantity != null;
+
+                        return (
+                          <div
+                            key={s.id}
+                            className="flex items-center gap-3 rounded-md border p-2.5 transition-colors hover:bg-accent"
+                          >
+                            <Checkbox
+                              id={`side-${String(s.id)}`}
+                              checked={isSelected}
+                              onCheckedChange={() => toggleSide(s.side_item.id)}
+                            />
+                            <Label
+                              htmlFor={`side-${String(s.id)}`}
+                              className="min-w-0 flex-1 cursor-pointer text-sm font-normal"
+                            >
+                              {s.side_item.name}
+                              {s.is_default && (
+                                <span className="ml-1 text-xs text-muted-foreground">
+                                  (mặc định)
+                                </span>
+                              )}
+                            </Label>
+                            {isSelected && (
+                              <div className="flex shrink-0 items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  className="size-8"
+                                  disabled={sideQuantity <= 1}
+                                  aria-label={`Giảm ${s.side_item.name}`}
+                                  onClick={() =>
+                                    updateSideQuantity(s.side_item.id, -1)
+                                  }
+                                >
+                                  -
+                                </Button>
+                                <span className="w-8 text-center text-sm font-semibold tabular-nums">
+                                  {sideQuantity}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  className="size-8"
+                                  aria-label={`Tăng ${s.side_item.name}`}
+                                  onClick={() =>
+                                    updateSideQuantity(s.side_item.id, 1)
+                                  }
+                                >
+                                  +
+                                </Button>
+                              </div>
                             )}
-                          </span>
-                          <span className="text-sm text-muted-foreground">
-                            +{formatVND(s.side_item.base_price)}
-                          </span>
-                        </label>
-                      ))}
+                            <span className="shrink-0 text-sm text-muted-foreground">
+                              +{formatVND(s.side_item.base_price)}
+                              {isSelected && sideQuantity > 1
+                                ? ` x${String(sideQuantity)}`
+                                : ""}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

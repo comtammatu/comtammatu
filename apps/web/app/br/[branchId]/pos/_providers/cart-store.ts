@@ -1,0 +1,127 @@
+import type { CartItem, CartModifier, CartSide, OrderType } from "../types";
+import type { MenuItem } from "../pos-menu-types";
+import { makeCartKey, makeNotedCartKey } from "../_utils/cart-key";
+
+export type CartSnapshot = {
+  items: CartItem[];
+  note: string;
+  orderType: OrderType;
+};
+
+type Listener = () => void;
+
+export class CartStore {
+  private state: CartSnapshot;
+  private listeners = new Set<Listener>();
+
+  constructor(initial?: Partial<CartSnapshot>) {
+    this.state = {
+      items: initial?.items ?? [],
+      note: initial?.note ?? "",
+      orderType: initial?.orderType ?? "takeaway",
+    };
+    this.subscribe = this.subscribe.bind(this);
+    this.getSnapshot = this.getSnapshot.bind(this);
+  }
+
+  subscribe(listener: Listener): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  getSnapshot(): CartSnapshot {
+    return this.state;
+  }
+
+  private emit() {
+    for (const l of this.listeners) l();
+  }
+
+  private setState(next: CartSnapshot) {
+    this.state = next;
+    this.emit();
+  }
+
+  addItem(
+    item: MenuItem,
+    opts: {
+      variantId?: number;
+      variantName?: string;
+      unitPrice?: number;
+      modifiers?: CartModifier[];
+      sides?: CartSide[];
+      note?: string;
+    } = {},
+  ) {
+    const modifiers = opts.modifiers ?? [];
+    const sides = opts.sides ?? [];
+    const price = opts.unitPrice ?? item.base_price;
+    const hasNote = opts.note !== undefined && opts.note.length > 0;
+    const baseKey = makeCartKey(item.id, opts.variantId, modifiers, sides);
+    const key = hasNote ? makeNotedCartKey(baseKey) : baseKey;
+
+    const items = this.state.items;
+    if (!hasNote) {
+      const existing = items.find((ci) => ci.key === key);
+      if (existing) {
+        this.setState({
+          ...this.state,
+          items: items.map((ci) =>
+            ci.key === key ? { ...ci, quantity: ci.quantity + 1 } : ci,
+          ),
+        });
+        return;
+      }
+    }
+
+    const newItem: CartItem = {
+      key,
+      menu_item_id: item.id,
+      item_name: item.name,
+      variant_id: opts.variantId,
+      variant_name: opts.variantName,
+      quantity: 1,
+      unit_price: price,
+      modifiers,
+      sides,
+      note: hasNote ? opts.note : undefined,
+    };
+    this.setState({ ...this.state, items: [...items, newItem] });
+  }
+
+  updateQuantity(key: string, delta: number) {
+    this.setState({
+      ...this.state,
+      items: this.state.items
+        .map((ci) =>
+          ci.key === key ? { ...ci, quantity: ci.quantity + delta } : ci,
+        )
+        .filter((ci) => ci.quantity > 0),
+    });
+  }
+
+  removeItem(key: string) {
+    this.setState({
+      ...this.state,
+      items: this.state.items.filter((ci) => ci.key !== key),
+    });
+  }
+
+  clear() {
+    this.setState({ ...this.state, items: [], note: "" });
+  }
+
+  setNote(note: string) {
+    this.setState({ ...this.state, note });
+  }
+
+  setOrderType(orderType: OrderType) {
+    this.setState({ ...this.state, orderType });
+  }
+
+  replaceItems(items: CartItem[]) {
+    this.setState({ ...this.state, items });
+  }
+}

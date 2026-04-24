@@ -35,12 +35,8 @@ async function autoSendKitchen(
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 
-/** Manager+ — void/cancel order flows */
-const MANAGER_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "branch_manager",
-];
+/** POS operators allowed to void/cancel order flows. */
+const POS_VOID_ROLES: readonly StaffRole[] = POS_ROLES;
 
 /* ─── Input Schemas ─── */
 
@@ -133,6 +129,7 @@ export async function submitOrder(
       side_item_id: s.side_item_id,
       name: s.name,
       price: s.price,
+      quantity: s.quantity,
       is_default: s.is_default,
     })),
     subtotal: calcItemSubtotal(item),
@@ -251,7 +248,9 @@ export async function fetchSessionOrders(
     )
     .eq("branch_id", parsedBranchId.data)
     .eq("tenant_id", claims.tenant_id)
-    .eq("pos_session_id", parsedSessionId.data)
+    .or(
+      `pos_session_id.eq.${String(parsedSessionId.data)},status.in.(new,confirmed,preparing,ready,served)`,
+    )
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -260,6 +259,53 @@ export async function fetchSessionOrders(
   }
 
   return { success: true, data: orders ?? [] };
+}
+
+const activeTableOrderSchema = z.object({
+  branchId: branchIdSchema,
+  tableId: z.coerce.number().int().positive({ error: "Bàn không hợp lệ" }),
+});
+
+export async function fetchActiveOrderForTable(
+  branchId: number,
+  tableId: number,
+): Promise<ActionResult<{ id: number; order_number: string } | null>> {
+  const parsed = activeTableOrderSchema.safeParse({ branchId, tableId });
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  if (claims.branch_id !== parsed.data.branchId) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const { data, error } = await supabase
+    .from("orders")
+    .select("id, order_number")
+    .eq("branch_id", parsed.data.branchId)
+    .eq("tenant_id", claims.tenant_id)
+    .eq("table_id", parsed.data.tableId)
+    .in("status", ["new", "confirmed", "preparing", "ready", "served"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      success: false,
+      error: "Không thể tải đơn của bàn. Vui lòng thử lại.",
+    };
+  }
+
+  return { success: true, data: data ?? null };
 }
 
 /* ─── fetchOrderForBill ─── */
@@ -346,7 +392,7 @@ export async function fetchOrderForBill(
 
 /* ─── fetchOrderDetail — POS sheet (items + status) ─── */
 
-// Skip withAction: complex auth (dual role check POS_ROLES + MANAGER_ROLES)
+// Skip withAction: complex auth (POS view + POS void permission hint)
 export async function fetchOrderDetail(orderId: number): Promise<
   ActionResult<{
     order: Record<string, unknown>;
@@ -361,9 +407,12 @@ export async function fetchOrderDetail(orderId: number): Promise<
   const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const mgr = await getAuthContextWithPermission(MANAGER_ROLES, PERMISSION_KEYS.STAFF_MANAGE);
-
   const { supabase, claims } = ctx;
+  const voidCtx = await getAuthContextWithPermission(
+    POS_VOID_ROLES,
+    PERMISSION_KEYS.POS_VOID_ORDER,
+    claims.branch_id,
+  );
 
   let detailQuery = supabase
     .from("orders")
@@ -428,7 +477,7 @@ export async function fetchOrderDetail(orderId: number): Promise<
     success: true,
     data: {
       order: order as unknown as Record<string, unknown>,
-      canManageOrders: mgr !== null,
+      canManageOrders: voidCtx !== null,
     },
   };
 }
@@ -489,6 +538,7 @@ export async function appendOrderItems(
       side_item_id: s.side_item_id,
       name: s.name,
       price: s.price,
+      quantity: s.quantity,
       is_default: s.is_default,
     })),
     subtotal: calcItemSubtotal(item),
@@ -553,7 +603,7 @@ const voidItemSchema = z.object({
   reason: z.string().trim().min(1, { error: "Nhập lý do hủy món" }),
 });
 
-// Skip withAction: positional (orderItemId, reason) args + MANAGER_ROLES
+// Skip withAction: positional (orderItemId, reason) args + POS_VOID_ROLES
 export async function voidOrderItem(
   orderItemId: number,
   reason: string,
@@ -566,9 +616,12 @@ export async function voidOrderItem(
     };
   }
 
-  const ctx = await getAuthContextWithPermission(MANAGER_ROLES, PERMISSION_KEYS.STAFF_MANAGE);
+  const ctx = await getAuthContextWithPermission(
+    POS_VOID_ROLES,
+    PERMISSION_KEYS.POS_VOID_ORDER,
+  );
   if (!ctx) {
-    return { success: false, error: "Cần quyền quản lý để hủy món." };
+    return { success: false, error: "Cần quyền hủy đơn POS để hủy món." };
   }
 
   const { supabase } = ctx;
@@ -581,7 +634,7 @@ export async function voidOrderItem(
   if (error) {
     const msg = String(error.message ?? "").toLowerCase();
     if (msg.includes("forbidden")) {
-      return { success: false, error: "Cần quyền quản lý để hủy món." };
+      return { success: false, error: "Cần quyền hủy đơn POS để hủy món." };
     }
     if (msg.includes("voidable") || msg.includes("served")) {
       return {
@@ -606,7 +659,7 @@ const cancelOrderSchema = z.object({
   reason: z.string().trim().min(1, { error: "Nhập lý do hủy đơn" }),
 });
 
-// Skip withAction: positional (orderId, reason) args + MANAGER_ROLES
+// Skip withAction: positional (orderId, reason) args + POS_VOID_ROLES
 export async function cancelOrder(
   orderId: number,
   reason: string,
@@ -619,9 +672,12 @@ export async function cancelOrder(
     };
   }
 
-  const ctx = await getAuthContextWithPermission(MANAGER_ROLES, PERMISSION_KEYS.STAFF_MANAGE);
+  const ctx = await getAuthContextWithPermission(
+    POS_VOID_ROLES,
+    PERMISSION_KEYS.POS_VOID_ORDER,
+  );
   if (!ctx) {
-    return { success: false, error: "Cần quyền quản lý để hủy đơn." };
+    return { success: false, error: "Cần quyền hủy đơn POS để hủy đơn." };
   }
 
   const { supabase } = ctx;
@@ -634,7 +690,7 @@ export async function cancelOrder(
   if (error) {
     const msg = String(error.message ?? "").toLowerCase();
     if (msg.includes("forbidden")) {
-      return { success: false, error: "Cần quyền quản lý để hủy đơn." };
+      return { success: false, error: "Cần quyền hủy đơn POS để hủy đơn." };
     }
     if (msg.includes("terminal")) {
       return {
@@ -944,6 +1000,7 @@ export async function fetchOrderItemsForReorder(
           side_item_id: number;
           name: string;
           price?: number;
+          quantity?: number;
           is_default?: boolean;
         }[])
       : [];
@@ -956,6 +1013,7 @@ export async function fetchOrderItemsForReorder(
           side_item_id: s.side_item_id,
           name: s.name,
           price: livePrice,
+          quantity: s.quantity ?? 1,
           is_default: s.is_default ?? false,
         };
       })
