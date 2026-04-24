@@ -92,6 +92,9 @@ export type RenderOpts = {
   bold?: boolean;
   double?: boolean;
   align?: "left" | "center" | "right";
+  /** Inverse video (white text on black) — used for HUỶ MÓN banner on
+   * cancel tickets. Paints a solid black line, writes white glyphs. */
+  inverse?: boolean;
 };
 
 /**
@@ -153,12 +156,12 @@ export const renderLineRaster = (text: string, opts: RenderOpts = {}): Uint8Arra
   // only print black/white — anti-aliased grays become dithered mess.
   ctx.imageSmoothingEnabled = false;
 
-  // White background
-  ctx.fillStyle = "white";
+  // Background: inverse mode paints the whole line black.
+  ctx.fillStyle = opts.inverse ? "black" : "white";
   ctx.fillRect(0, 0, DOTS_WIDTH, lineHeight);
 
-  // Measure + align
-  ctx.fillStyle = "black";
+  // Measure + align (glyph colour flips too).
+  ctx.fillStyle = opts.inverse ? "white" : "black";
   ctx.font = `${fontSize} ${family}`;
   ctx.textBaseline = "top" as never;
 

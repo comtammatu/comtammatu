@@ -2260,6 +2260,7 @@ export type Database = {
       }
       order_items: {
         Row: {
+          cancel_reason: string | null
           created_at: string
           id: number
           item_name: string
@@ -2279,6 +2280,7 @@ export type Database = {
           variant_name: string | null
         }
         Insert: {
+          cancel_reason?: string | null
           created_at?: string
           id?: never
           item_name: string
@@ -2298,6 +2300,7 @@ export type Database = {
           variant_name?: string | null
         }
         Update: {
+          cancel_reason?: string | null
           created_at?: string
           id?: never
           item_name?: string
@@ -6393,6 +6396,10 @@ export type Database = {
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       enable_offline_for_session: {
         Args: { p_session_id: number }
+        Returns: Json
+      }
+      enqueue_cancel_ticket_print: {
+        Args: { p_order_item_id: number; p_reason: string }
         Returns: Json
       }
       enqueue_kitchen_print: { Args: { p_order_id: number }; Returns: Json }

@@ -1,10 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import {
   Sheet,
@@ -21,8 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
-import { Badge } from "@comtammatu/ui/components/badge";
-import { Spinner } from "@comtammatu/ui/components/spinner";
+import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { notify } from "@comtammatu/ui/lib/notify";
 import { IconDots } from "@tabler/icons-react";
 import {
@@ -57,22 +54,13 @@ interface OrderDetailData {
   order_items: OrderItemRowData[];
 }
 
-const ORDER_STATUS_LABEL: Record<string, string> = {
-  new: "Mới",
-  confirmed: "Đã xác nhận",
-  preparing: "Đang làm",
-  ready: "Sẵn sàng",
-  served: "Đã phục vụ",
-  completed: "Hoàn thành",
-  cancelled: "Đã hủy",
-};
-
 function canAppendOrderStatus(status: string): boolean {
   return ["new", "confirmed", "preparing", "ready"].includes(status);
 }
 
 export interface OrderDetailSheetProps {
   orderId: number | null;
+  orderNumber?: string | null;
   refreshToken?: number;
   onClose: () => void;
   onOpenBill: (orderId: number) => void;
@@ -85,6 +73,7 @@ export interface OrderDetailSheetProps {
 
 export function OrderDetailSheet({
   orderId,
+  orderNumber,
   refreshToken,
   onClose,
   onOpenBill,
@@ -147,6 +136,9 @@ export function OrderDetailSheet({
             ? messages.pos.item.voidedAutoCancelOrder
             : messages.pos.item.voided,
         );
+        if (r.data?.printWarning) {
+          notify.warning(r.data.printWarning);
+        }
         setVoidItemId(null);
         setVoidReason("");
         load();
@@ -190,16 +182,12 @@ export function OrderDetailSheet({
     });
   };
 
-  const handleStatus = (next: "served" | "completed") => {
+  const handleStatus = (next: "served") => {
     if (orderId === null) return;
     startTransition(async () => {
       const r = await updateOrderStatus(orderId, next);
       if (r.success) {
-        notify.success(
-          next === "served"
-            ? messages.pos.order.markedServed
-            : messages.pos.order.completed,
-        );
+        notify.success(messages.pos.order.markedServed);
         await onOrderUpdated?.();
         load();
       } else {
@@ -221,10 +209,6 @@ export function OrderDetailSheet({
     });
   };
 
-  const orderStatusLabel = data
-    ? (ORDER_STATUS_LABEL[data.status] ?? data.status)
-    : "";
-
   const availableTables = tables.filter(
     (t) => t.status === "available" || t.id === data?.table_id,
   );
@@ -232,7 +216,8 @@ export function OrderDetailSheet({
   const canShowCancel =
     canManage && data && !["completed", "cancelled"].includes(data.status);
   const canShowTransfer =
-    data?.order_type === "dine_in" && data.status !== "cancelled";
+    data?.order_type === "dine_in" &&
+    !["completed", "cancelled"].includes(data.status);
   const canShowReorder =
     data != null && ["completed", "cancelled"].includes(data.status);
   const canShowPaymentAction =
@@ -246,22 +231,36 @@ export function OrderDetailSheet({
   const canMarkServed =
     data != null &&
     ["new", "confirmed", "preparing", "ready"].includes(data.status);
-  const canCompletePaidServed =
-    data != null && data.status === "served" && data.payment_status === "paid";
   const canShowMoreMenu =
     canShowBillInMenu || canShowReorder || canShowTransfer || canShowCancel;
+  const sheetTitle = data?.order_number ?? orderNumber;
+  const orderContextLabel = data
+    ? data.order_type === "dine_in"
+      ? `Bàn ${data.tables?.number ?? "—"}`
+      : "Mang về"
+    : null;
 
   return (
     <>
       <Sheet open={orderId !== null} onOpenChange={handleOpenChange}>
-        <SheetContent side="right" className="flex w-full flex-col sm:max-w-md">
-          <SheetHeader className="text-left">
-            <SheetTitle>
-              {data
-                ? `Đơn #${data.order_number}`
-                : orderId !== null
-                  ? "Chi tiết đơn"
-                  : ""}
+        <SheetContent
+          side="right"
+          showCloseButton={false}
+          className="flex w-full flex-col sm:max-w-md"
+        >
+          <SheetHeader className="border-b border-border/60 px-3 py-2.5 text-left sm:px-4">
+            <SheetTitle className="flex min-w-0 items-center gap-2 text-base">
+              {orderContextLabel && <span>{orderContextLabel}</span>}
+              {orderContextLabel && sheetTitle && (
+                <span className="text-muted-foreground">·</span>
+              )}
+              <span className="truncate">
+                {sheetTitle
+                  ? `#${sheetTitle}`
+                  : orderId !== null
+                    ? "Đơn"
+                    : ""}
+              </span>
             </SheetTitle>
             <SheetDescription className="sr-only">
               Chi tiết đơn hàng, thêm món và cập nhật trạng thái phục vụ
@@ -269,15 +268,40 @@ export function OrderDetailSheet({
           </SheetHeader>
 
           {isPending && !data && orderId !== null && (
-            <div className="flex flex-1 items-center justify-center py-12">
-              <Spinner className="size-8 text-muted-foreground" />
+            <>
+              <ScrollArea className="min-h-0 flex-1">
+                <ul
+                  className="flex flex-col gap-2 px-3 py-2 sm:px-4"
+                  aria-label="Đang tải danh sách món"
+                >
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <li
+                    key={index}
+                    className="rounded-md border border-border bg-card px-2.5 py-2"
+                  >
+                    <div className="flex items-start gap-3">
+                      <Skeleton className="mt-1 size-4 rounded-full" />
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <Skeleton className="h-5 w-4/5" />
+                        <Skeleton className="h-4 w-3/5" />
+                        <Skeleton className="h-4 w-2/5" />
+                      </div>
+                    </div>
+                  </li>
+                ))}
+                </ul>
+              </ScrollArea>
+              <div className="mt-auto flex shrink-0 flex-col gap-2 border-t px-3 py-3 sm:px-4">
+                <Skeleton className="h-9 w-full" />
+                <Skeleton className="h-7 w-full" />
+              </div>
               <span className="sr-only">Đang tải đơn hàng</span>
-            </div>
+            </>
           )}
 
           {error && (
             <div className="flex flex-col gap-2">
-              <p className="text-sm text-destructive">{error}</p>
+              <p className="text-base text-destructive">{error}</p>
               <Button
                 type="button"
                 variant="outline"
@@ -291,42 +315,9 @@ export function OrderDetailSheet({
 
           {data && !error && (
             <>
-              <Card size="sm" className="shrink-0">
-                <CardContent className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="secondary">{orderStatusLabel}</Badge>
-                      <Badge variant="outline">
-                        {data.order_type === "dine_in"
-                          ? `Bàn ${data.tables?.number ?? "—"}`
-                          : "Mang về"}
-                      </Badge>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          data.payment_status === "paid"
-                            ? "border-success/20 bg-success/10 text-success"
-                            : "border-warning/20 bg-warning/10 text-warning",
-                        )}
-                      >
-                        {data.payment_status === "paid"
-                          ? "Đã thanh toán"
-                          : "Chưa thanh toán"}
-                      </Badge>
-                    </div>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {data.order_items.length} món trong đơn
-                    </p>
-                  </div>
-                  <p className="shrink-0 text-lg font-bold text-primary tabular-nums">
-                    {formatVND(data.total_amount)}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <ScrollArea className="min-h-0 flex-1 pr-2">
+              <ScrollArea className="min-h-0 flex-1">
                 <ul
-                  className="flex flex-col gap-2 py-2"
+                  className="flex flex-col gap-2 px-3 py-2 sm:px-4"
                   aria-label="Danh sách món"
                 >
                   {data.order_items.map((row) => (
@@ -339,7 +330,7 @@ export function OrderDetailSheet({
                   ))}
                 </ul>
                 {data.note && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="px-3 text-sm text-muted-foreground sm:px-4">
                     <span className="font-medium text-foreground">
                       Ghi chú:{" "}
                     </span>
@@ -348,7 +339,7 @@ export function OrderDetailSheet({
                 )}
               </ScrollArea>
 
-              <div className="mt-auto flex shrink-0 flex-col gap-2 border-t pt-3">
+              <div className="mt-auto flex shrink-0 flex-col gap-2 border-t px-3 py-3 sm:px-4">
                 {canShowPaymentAction && (
                   <Button
                     type="button"
@@ -359,13 +350,11 @@ export function OrderDetailSheet({
                       onClose();
                     }}
                   >
-                    Thanh toán
+                    Thanh toán - {formatVND(data.total_amount)}
                   </Button>
                 )}
 
-                {(canAppendOrderStatus(data.status) ||
-                  canMarkServed ||
-                  canCompletePaidServed) && (
+                {(canAppendOrderStatus(data.status) || canMarkServed) && (
                   <div className="flex gap-2">
                     {canAppendOrderStatus(data.status) && (
                       <Button
@@ -390,26 +379,7 @@ export function OrderDetailSheet({
                         Phục vụ
                       </Button>
                     )}
-                    {canCompletePaidServed && (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        className="flex-1"
-                        disabled={isPending}
-                        onClick={() => void handleStatus("completed")}
-                      >
-                        {data.order_type === "dine_in"
-                          ? "Hoàn tất và trả bàn"
-                          : "Hoàn tất đơn"}
-                      </Button>
-                    )}
                   </div>
-                )}
-
-                {data.status === "served" && data.payment_status !== "paid" && (
-                  <p className="text-center text-xs text-muted-foreground">
-                    Thanh toán trước khi hoàn tất đơn và trả bàn.
-                  </p>
                 )}
 
                 {canShowMoreMenu && (

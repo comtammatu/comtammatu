@@ -65,6 +65,11 @@ const boldOn = () => buf([ESC, 0x45, 0x01]);
 const boldOff = () => buf([ESC, 0x45, 0x00]);
 const sizeDouble = () => buf([GS, 0x21, 0x11]);
 const sizeNormal = () => buf([GS, 0x21, 0x00]);
+/** Inverse video (white-on-black). Used by HUỶ MÓN banner on cancel
+ * tickets so the chef spots it across the kitchen. Universally supported
+ * on ESC/POS thermal printers. */
+const inverseOn = () => buf([GS, 0x42, 0x01]);
+const inverseOff = () => buf([GS, 0x42, 0x00]);
 const feed = (n: number) => buf([ESC, 0x64, n]);
 const newline = () => buf([0x0a]);
 
@@ -222,10 +227,35 @@ export type ReceiptPayload = BillBase & {
   cash_change?: number | null;
 };
 
+/** Printed when a waiter/cashier voids an item that was already sent to
+ * kitchen. Backend fills payload from the void RPC path; renderer draws
+ * an inverse-video HUỶ MÓN banner so chef spots it across the room. */
+export type CancelTicketPayload = {
+  kind: "cancel_ticket";
+  order_number: string;
+  order_type: "dine_in" | "takeaway";
+  table_number?: number | null;
+  /** Which kitchen slot originally received the item (1 or 2). */
+  slot: number;
+  /** Items being cancelled. Always length 1 today; array shape leaves
+   * room for a future batched order-level cancel. */
+  items: Array<{
+    item_name: string;
+    variant_name?: string | null;
+    quantity: number;
+    modifiers?: ModifierLine[] | null;
+    sides?: SideLine[] | null;
+  }>;
+  reason: string;
+  voided_by?: string;
+  printed_at: string;
+};
+
 export type PrintPayload =
   | KitchenPayload
   | ProvisionalBillPayload
-  | ReceiptPayload;
+  | ReceiptPayload
+  | CancelTicketPayload;
 
 // ─── Formatting helpers ───────────────────────────────────────────────────
 
@@ -598,6 +628,95 @@ export function renderReceipt(p: ReceiptPayload): Uint8Array {
   return concat(parts);
 }
 
+// ─── Cancel ticket (PHIẾU HUỶ MÓN) ───────────────────────────────────────
+
+export function renderCancelTicket(p: CancelTicketPayload): Uint8Array {
+  const parts: Uint8Array[] = [init()];
+
+  // --- HUỶ MÓN banner — inverse video so chef spots it instantly ---
+  parts.push(divider("="));
+  parts.push(alignCenter(), inverseOn(), sizeDouble(), boldOn());
+  parts.push(line("   HUỶ MÓN   "));
+  parts.push(sizeNormal(), boldOff(), inverseOff());
+  parts.push(divider("="));
+
+  // --- Table + order banner (same size as kitchen ticket header) ---
+  parts.push(sizeDouble(), boldOn());
+  const dest =
+    p.order_type === "dine_in"
+      ? p.table_number
+        ? `BÀN ${p.table_number}`
+        : "TẠI CHỖ"
+      : "MANG VỀ";
+  parts.push(line(`${dest} · ${p.order_number}`));
+  parts.push(sizeNormal(), boldOff());
+  parts.push(divider("="));
+
+  // --- Meta row ---
+  const meta = splitDateTime(p.printed_at);
+  parts.push(alignLeft());
+  parts.push(
+    line(
+      padRight(`Bếp: ${p.slot}`, 24) +
+        padRight(`Giờ: ${meta.time || p.printed_at}`, 24),
+    ),
+  );
+  if (p.voided_by) {
+    parts.push(line(`Người huỷ: ${p.voided_by}`));
+  }
+
+  // --- Items table (same layout as kitchen ticket for visual match) ---
+  parts.push(line(KITCHEN_BORDER));
+  parts.push(boldOn());
+  parts.push(line(" SL | MÓN"));
+  parts.push(boldOff());
+  parts.push(line(KITCHEN_BORDER));
+
+  p.items.forEach((it, idx) => {
+    if (idx > 0) parts.push(line(KITCHEN_BORDER));
+    parts.push(...kitchenItemRow(it.quantity, it.item_name));
+
+    if (it.variant_name) {
+      parts.push(kitchenDetailLine("", `(${it.variant_name})`));
+    }
+    if (it.modifiers && it.modifiers.length > 0) {
+      for (const m of it.modifiers) {
+        if (m.name) parts.push(kitchenDetailLine("+ ", m.name));
+      }
+    }
+    if (it.sides && it.sides.length > 0) {
+      for (const s of it.sides) {
+        const sideName = s.name ?? s.side_item_name;
+        if (sideName) {
+          parts.push(
+            kitchenDetailLine(
+              "- ",
+              `${sideName}${s.quantity ? ` x${s.quantity}` : ""}`,
+            ),
+          );
+        }
+      }
+    }
+  });
+  parts.push(line(KITCHEN_BORDER));
+
+  // --- Reason block — big and obvious so chef understands why ---
+  if (p.reason && p.reason.trim()) {
+    parts.push(divider("="));
+    parts.push(alignCenter(), sizeDouble(), boldOn());
+    parts.push(line("LÝ DO"));
+    parts.push(sizeNormal());
+    for (const chunk of wrapText(p.reason, LINE_WIDTH)) {
+      parts.push(line(chunk));
+    }
+    parts.push(boldOff(), alignLeft());
+    parts.push(divider("="));
+  }
+
+  parts.push(feed(6), cutPartial());
+  return concat(parts);
+}
+
 export function renderPayload(payload: PrintPayload): Uint8Array {
   switch (payload.kind) {
     case "kitchen_ticket":
@@ -606,5 +725,7 @@ export function renderPayload(payload: PrintPayload): Uint8Array {
       return renderProvisionalBill(payload);
     case "receipt":
       return renderReceipt(payload);
+    case "cancel_ticket":
+      return renderCancelTicket(payload);
   }
 }

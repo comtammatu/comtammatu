@@ -15,6 +15,7 @@
 
 import type {
   BillBase,
+  CancelTicketPayload,
   KitchenPayload,
   PrintPayload,
   ProvisionalBillPayload,
@@ -80,6 +81,7 @@ type LineOpts = {
   bold?: boolean;
   double?: boolean;
   align?: "left" | "center" | "right";
+  inverse?: boolean;
 };
 const line = (s: string, opts?: LineOpts): Uint8Array => renderLineRaster(s, opts);
 const bl = (h?: number): Uint8Array => blankLine(h);
@@ -389,6 +391,91 @@ function renderReceiptBitmap(p: ReceiptPayload): Uint8Array {
   return concat(parts);
 }
 
+// ─── Cancel ticket (PHIẾU HUỶ MÓN) ───────────────────────────────────────
+
+function renderCancelTicketBitmap(p: CancelTicketPayload): Uint8Array {
+  const parts: Uint8Array[] = [init(), lineSpacingZero()];
+
+  // HUỶ MÓN banner — inverse video for instant kitchen attention
+  parts.push(divider("="));
+  parts.push(line("HUỶ MÓN", {
+    bold: true,
+    double: true,
+    align: "center",
+    inverse: true,
+  }));
+  parts.push(divider("="));
+
+  // Table + order banner (same style as kitchen ticket)
+  const dest =
+    p.order_type === "dine_in"
+      ? p.table_number
+        ? `BÀN ${p.table_number}`
+        : "TẠI CHỖ"
+      : "MANG VỀ";
+  const banner = `${dest} · ${p.order_number}`;
+  parts.push(line(banner, { bold: true, double: true, align: "center" }));
+  parts.push(divider("="));
+
+  // Meta
+  const meta = splitDateTime(p.printed_at);
+  parts.push(line(
+    padRight(`Bếp: ${p.slot}`, 24) +
+    padRight(`Giờ: ${meta.time || p.printed_at}`, 24),
+  ));
+  if (p.voided_by) {
+    parts.push(line(`Người huỷ: ${p.voided_by}`));
+  }
+
+  // Items — same layout as kitchen ticket so chef maps visually
+  parts.push(line(KITCHEN_BORDER));
+  parts.push(line(" SL | MÓN", { bold: true }));
+  parts.push(line(KITCHEN_BORDER));
+
+  p.items.forEach((it, idx) => {
+    if (idx > 0) parts.push(line(KITCHEN_BORDER));
+    const qtyField = padRight(`x${it.quantity}`, 3);
+    const chunks = wrapText(it.item_name, KITCHEN_NAME_WIDTH_DOUBLE);
+    chunks.forEach((chunk, i) => {
+      const prefixText = i === 0 ? ` ${qtyField}| ` : `    | `;
+      const segs: Segment[] = [
+        { text: prefixText },
+        { text: chunk, bold: true, double: true },
+      ];
+      parts.push(renderMixedRow(segs));
+    });
+
+    if (it.variant_name) parts.push(line(`    |   (${it.variant_name})`));
+    if (it.modifiers && it.modifiers.length > 0) {
+      for (const m of it.modifiers) {
+        if (m.name) parts.push(line(`    |   + ${m.name}`));
+      }
+    }
+    if (it.sides && it.sides.length > 0) {
+      for (const s of it.sides) {
+        const sideName = s.name ?? s.side_item_name;
+        if (sideName) {
+          parts.push(line(`    |   - ${sideName}${s.quantity ? ` x${s.quantity}` : ""}`));
+        }
+      }
+    }
+  });
+  parts.push(line(KITCHEN_BORDER));
+
+  // LÝ DO — big and obvious
+  if (p.reason && p.reason.trim()) {
+    parts.push(divider("="));
+    parts.push(line("LÝ DO", { bold: true, double: true, align: "center" }));
+    for (const chunk of wrapText(p.reason, CHARS_PER_LINE_NORMAL)) {
+      parts.push(line(chunk, { align: "center" }));
+    }
+    parts.push(divider("="));
+  }
+
+  parts.push(lineSpacingDefault(), feed(6), cutPartial());
+  return concat(parts);
+}
+
 // ─── Public dispatcher ───────────────────────────────────────────────────
 
 /**
@@ -404,5 +491,7 @@ export async function renderPayloadBitmap(payload: PrintPayload): Promise<Uint8A
       return renderProvisionalBillBitmap(payload);
     case "receipt":
       return renderReceiptBitmap(payload);
+    case "cancel_ticket":
+      return renderCancelTicketBitmap(payload);
   }
 }

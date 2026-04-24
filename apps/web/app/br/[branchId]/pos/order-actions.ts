@@ -607,7 +607,15 @@ const voidItemSchema = z.object({
 export async function voidOrderItem(
   orderItemId: number,
   reason: string,
-): Promise<ActionResult<{ autoCancelledOrder: boolean }>> {
+): Promise<
+  ActionResult<{
+    autoCancelledOrder: boolean;
+    /** Present when the kitchen cancel-ticket enqueue was attempted but
+     * failed (printer offline / RLS). Void itself always succeeded. UI
+     * surfaces as a toast warning. */
+    printWarning?: string;
+  }>
+> {
   const parsed = voidItemSchema.safeParse({ orderItemId, reason });
   if (!parsed.success) {
     return {
@@ -645,10 +653,44 @@ export async function voidOrderItem(
     return { success: false, error: "Không thể hủy món. Vui lòng thử lại." };
   }
 
-  const result = data as unknown as { auto_cancelled_order?: boolean } | null;
+  const result = data as unknown as {
+    auto_cancelled_order?: boolean;
+    was_sent_to_kitchen?: boolean;
+  } | null;
+
+  // Fire cancel-ticket print when the kitchen actually saw the item.
+  // Print failure is non-fatal — the void itself is already committed;
+  // the worst case is chef continues cooking for a few seconds until
+  // KDS realtime catches up. Surface as a toast warning, not an error.
+  let printWarning: string | undefined;
+  if (result?.was_sent_to_kitchen) {
+    const { error: printError } = await supabase.rpc(
+      "enqueue_cancel_ticket_print",
+      {
+        p_order_item_id: parsed.data.orderItemId,
+        p_reason: parsed.data.reason,
+      },
+    );
+    if (printError) {
+      const msg = String(printError.message ?? "").toLowerCase();
+      if (msg.includes("permission denied")) {
+        printWarning =
+          "Đã huỷ món. Không có quyền in phiếu huỷ — báo bếp thủ công.";
+      } else if (msg.includes("tenant mismatch")) {
+        printWarning = "Đã huỷ món. Lỗi quyền tenant khi in phiếu huỷ.";
+      } else {
+        printWarning =
+          "Đã huỷ món. Không in được phiếu huỷ — kiểm tra máy in bếp.";
+      }
+    }
+  }
+
   return {
     success: true,
-    data: { autoCancelledOrder: result?.auto_cancelled_order === true },
+    data: {
+      autoCancelledOrder: result?.auto_cancelled_order === true,
+      printWarning,
+    },
   };
 }
 
@@ -761,13 +803,13 @@ export async function transferOrderTable(
 
 const updateOrderStatusSchema = z.object({
   orderId: z.coerce.number().int().positive({ error: "Đơn không hợp lệ" }),
-  newStatus: z.enum(["served", "completed"]),
+  newStatus: z.enum(["served"]),
 });
 
 // Skip withAction: positional (orderId, newStatus) args
 export async function updateOrderStatus(
   orderId: number,
-  newStatus: "served" | "completed",
+  newStatus: "served",
 ): Promise<ActionResult> {
   const parsed = updateOrderStatusSchema.safeParse({ orderId, newStatus });
   if (!parsed.success) {

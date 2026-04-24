@@ -104,15 +104,47 @@ export const receiptPayloadSchema = z.object({
   cash_change: z.number().nullable().optional(),
 });
 
+// ─── Cancel ticket (PHIẾU HUỶ MÓN) ───────────────────────────────────────
+
+/** Single cancelled item — shape matches the kitchen ticket item so chefs can
+ * visually map to the original order. Prices intentionally omitted (kitchen
+ * never sees money). */
+const cancelItemSchema = z.object({
+  item_name: z.string(),
+  variant_name: z.string().nullable().optional(),
+  quantity: z.number().int(),
+  modifiers: z.array(itemModifierSchema).nullable().optional(),
+  sides: z.array(itemSideSchema).nullable().optional(),
+});
+
+export const cancelTicketPayloadSchema = z.object({
+  kind: z.literal("cancel_ticket"),
+  order_number: z.string(),
+  order_type: z.enum(["dine_in", "takeaway"]),
+  table_number: z.number().int().nullable().optional(),
+  /** Kitchen slot that originally received the item (1 or 2). */
+  slot: z.number().int().min(1).max(2),
+  /** Array to leave room for a future batched order-level cancel; today
+   * always length 1. */
+  items: z.array(cancelItemSchema).min(1),
+  /** Free-text reason entered by the waiter/cashier in the void dialog. */
+  reason: z.string(),
+  /** Display name of the staff who voided the item (from profiles). */
+  voided_by: z.string().optional(),
+  printed_at: z.string(),
+});
+
 // ─── Union ───────────────────────────────────────────────────────────────
 
 export const printPayloadSchema = z.discriminatedUnion("kind", [
   kitchenTicketPayloadSchema,
   provisionalBillPayloadSchema,
   receiptPayloadSchema,
+  cancelTicketPayloadSchema,
 ]);
 
 export type KitchenTicketPayload = z.infer<typeof kitchenTicketPayloadSchema>;
 export type ProvisionalBillPayload = z.infer<typeof provisionalBillPayloadSchema>;
 export type ReceiptPayload = z.infer<typeof receiptPayloadSchema>;
+export type CancelTicketPayload = z.infer<typeof cancelTicketPayloadSchema>;
 export type PrintPayload = z.infer<typeof printPayloadSchema>;
