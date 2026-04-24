@@ -95,6 +95,15 @@ interface PosDesktopProviderProps {
   session: ActiveSession;
   initialTables: BranchTable[];
   initialOrderType: OrderType;
+  /** RSC-prefetched orders. When seeded, skip mount-time client refetch. */
+  initialOrders: SessionOrder[];
+  /**
+   * True when `initialOrders` is authoritative (RSC fetch succeeded).
+   * Forwarded to `useOrderSync` so the first SUBSCRIBED callback can
+   * skip its redundant catch-up refresh. Subsequent reconnects still
+   * refresh — only the very first mount-time SUBSCRIBED is skipped.
+   */
+  initialOrdersSeeded: boolean;
   children: ReactNode;
 }
 
@@ -103,9 +112,11 @@ export function PosDesktopProvider({
   session,
   initialTables,
   initialOrderType,
+  initialOrders,
+  initialOrdersSeeded,
   children,
 }: PosDesktopProviderProps) {
-  const [orders, setOrders] = useState<SessionOrder[]>([]);
+  const [orders, setOrders] = useState<SessionOrder[]>(initialOrders);
   const [tables, setTables] = useState<BranchTable[]>(initialTables);
 
   const sessionValue = useMemo<SessionContextValue>(
@@ -144,19 +155,17 @@ export function PosDesktopProvider({
     }
   }, [branchId, session.id]);
 
-  // Initial orders load (once)
-  const loadedRef = useRef(false);
-  useEffect(() => {
-    if (loadedRef.current) return;
-    loadedRef.current = true;
-    void loadOrders();
-  }, [loadOrders]);
+  // Initial orders come from RSC seed (see `initialOrders` + `initialOrdersSeeded`
+  // props). Skipping the client-side mount refetch eliminates one round-trip on
+  // cold load; `useOrderSync`'s first SUBSCRIBED catch-up is also skipped when
+  // the seed is authoritative so there is no duplicate fetch on subscribe.
 
   useOrderSync({
     branchId,
     setTables,
     refreshOrders: loadOrders,
     refreshAll,
+    skipFirstSubscribedRefresh: initialOrdersSeeded,
   });
 
   const dispatchValue = useMemo<OperationalDispatch>(

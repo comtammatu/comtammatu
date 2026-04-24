@@ -11,6 +11,13 @@ export interface UseOrderSyncArgs {
   setTables: React.Dispatch<React.SetStateAction<BranchTable[]>>;
   refreshOrders: () => Promise<void>;
   refreshAll: () => Promise<void>;
+  /**
+   * When true, the FIRST `SUBSCRIBED` callback (initial mount subscription)
+   * does not fire a catch-up refresh — orders are already seeded by the
+   * caller (e.g. via RSC prefetch). Later SUBSCRIBED events (genuine
+   * reconnects) always refresh to catch missed events during disconnect.
+   */
+  skipFirstSubscribedRefresh?: boolean;
 }
 
 // Current transport: Supabase Realtime postgres_changes on `orders` + `tables`,
@@ -21,11 +28,13 @@ export function useOrderSync({
   setTables,
   refreshOrders,
   refreshAll,
+  skipFirstSubscribedRefresh = false,
 }: UseOrderSyncArgs): void {
   const supabaseRef = useRef(createClient());
   const refreshOrdersRef = useRef(refreshOrders);
   const refreshAllRef = useRef(refreshAll);
   const lastSyncRef = useRef<number>(Date.now());
+  const initialSubscribeSeenRef = useRef(false);
 
   useEffect(() => {
     refreshOrdersRef.current = refreshOrders;
@@ -74,10 +83,17 @@ export function useOrderSync({
         },
       )
       .subscribe((status) => {
-        // On (re)subscribe, catch any events missed during disconnect.
-        if (status === "SUBSCRIBED") {
-          void refreshAllRef.current();
+        if (status !== "SUBSCRIBED") return;
+        // The FIRST SUBSCRIBED is the initial mount subscription. When the
+        // caller has already seeded state (e.g. from RSC prefetch), skip
+        // this one refresh — it would duplicate work. Every SUBSCRIBED
+        // after that is a genuine reconnect and must refresh to catch
+        // events missed during disconnect.
+        if (!initialSubscribeSeenRef.current) {
+          initialSubscribeSeenRef.current = true;
+          if (skipFirstSubscribedRefresh) return;
         }
+        void refreshAllRef.current();
       });
 
     return () => {

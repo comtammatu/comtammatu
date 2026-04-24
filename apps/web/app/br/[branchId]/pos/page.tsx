@@ -7,9 +7,11 @@ import {
   fetchActiveSession,
   fetchPosTerminals,
   fetchPosPermissionFlags,
+  fetchSessionOrders,
 } from "./actions";
 import { PosDesktopShell } from "./pos-desktop-shell";
 import type { MenuCategory } from "./pos-menu-types";
+import type { SessionOrder } from "./order-history";
 import { SessionGate } from "./session-gate";
 import type { OrderType } from "./types";
 import { PosStatusShell } from "./pos-status-shell";
@@ -218,10 +220,19 @@ export default async function PosPage({
   // Session exists → load menu + tables and show POS
   const session = sessionResult.data as ActiveSession;
 
-  const [menuResult, tablesResult] = await Promise.all([
+  const [menuResult, tablesResult, ordersResult] = await Promise.all([
     fetchMenuForPos(branchIdNum),
     fetchTablesForBranch(branchIdNum),
+    fetchSessionOrders(branchIdNum, session.id),
   ]);
+
+  // Seed the POS provider from RSC so the client does not re-fetch on mount.
+  // On RSC fetch failure, seed empty and let useOrderSync's first SUBSCRIBED
+  // callback still fire a full refresh — preserves old behavior as fallback.
+  const initialOrders = (
+    ordersResult.success ? (ordersResult.data ?? []) : []
+  ) as SessionOrder[];
+  const initialOrdersSeeded = ordersResult.success;
 
   const tablesList = (tablesResult.data ?? []) as BranchTable[];
   const tableParamValidForDineIn =
@@ -276,6 +287,8 @@ export default async function PosPage({
         tables={tablesList}
         session={session}
         initialOrderType={initialOrderType}
+        initialOrders={initialOrders}
+        initialOrdersSeeded={initialOrdersSeeded}
         canCloseShift={permFlags.canCloseShift}
         canConfirmCash={permFlags.canConfirmCash}
       />

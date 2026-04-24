@@ -43,6 +43,7 @@ import { usePosAppend } from "./_hooks/use-pos-append";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
 import type { ActiveSession, BranchTable } from "./page";
+import type { SessionOrder } from "./order-history";
 import {
   PosDesktopProvider,
   usePosOperationalDispatch,
@@ -67,6 +68,15 @@ interface PosDesktopShellProps {
   tables: BranchTable[];
   session: ActiveSession;
   initialOrderType: OrderType;
+  /** Orders prefetched by RSC. Seeds provider state to skip mount-time refetch. */
+  initialOrders: SessionOrder[];
+  /**
+   * True when RSC `fetchSessionOrders` succeeded. Lets the realtime hook skip
+   * its first SUBSCRIBED catch-up refresh (already covered by the RSC seed).
+   * False when RSC fetch failed → fall back to old behavior, first SUBSCRIBED
+   * fires a full refresh as recovery.
+   */
+  initialOrdersSeeded: boolean;
   /** User hiện tại có `pos:close_shift` không (ẩn nút "Chốt ca" với waiter). */
   canCloseShift: boolean;
   /** `pos:confirm_payment` — gate phương thức "Tiền mặt" trên bill (cashier+). */
@@ -91,6 +101,8 @@ export function PosDesktopShell(props: PosDesktopShellProps) {
       session={props.session}
       initialTables={props.tables}
       initialOrderType={props.initialOrderType}
+      initialOrders={props.initialOrders}
+      initialOrdersSeeded={props.initialOrdersSeeded}
     >
       <PosDesktopInner
         categories={props.categories}
