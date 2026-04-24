@@ -5,6 +5,7 @@ import {
   IconSnowflake,
   IconClock,
   IconReceipt2,
+  IconFlag,
   IconArrowRight,
 } from "@tabler/icons-react";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -44,6 +45,13 @@ export default async function InventoryAdminHubPage() {
       </header>
 
       <div className="grid gap-3 sm:grid-cols-2">
+        <ToolCard
+          href="/admin/inventory/feature-flags"
+          title="Feature flags"
+          description="Bật/tắt module kho per chi nhánh. Rollout pilot mà không cần redeploy."
+          icon={<IconFlag className="size-5 text-amber-600" />}
+          badge={{ label: "Nav wiring", tone: "border-amber-300 bg-amber-50 text-amber-900" }}
+        />
         <ToolCard
           href="/admin/inventory/trust"
           title="Trust leaderboard"
