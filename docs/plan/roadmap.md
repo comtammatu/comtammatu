@@ -1,7 +1,7 @@
 # Roadmap — Cơm Tấm Má Tư
 
 > Hệ thống Quản lý Vận hành Nhà hàng (Restaurant Operations Management System)
-> Updated: 2026-04-24 | Structure: Module-based
+> Updated: 2026-04-25 | Structure: Module-based
 
 ## Product Identity
 
@@ -25,6 +25,16 @@ Không đi theo hướng CRM độc lập hay ERP đa ngành.
 **Feature specs (beyond module rows):**
 
 - [M2-Ext: POS Order Lifecycle](m2-order-lifecycle.md) — thêm món sau submit, đồng bộ trạng thái KDS → dòng món, void/cancel/chuyển bàn, đặt lại (PLANNED)
+- **M2-PWA: POS Progressive Web App** (SHIPPED 2026-04-25, commits `aabf7b1` + `73930c5` + `8af3f57`):
+  - Per-branch installable manifest at `/br/[branchId]/pos/manifest.webmanifest` (Route Handler, `id`/`scope`/`start_url` branch-scoped, integer-only branchId validation)
+  - Serwist service worker active (build via `next build --webpack` until Turbopack support lands) with explicit allowlist `runtimeCaching` — NetworkOnly mutations/RSC/Supabase, CacheFirst hashed static, SWR images/icons, NetworkFirst HTML 3s
+  - `PosPwaProvider` + `PosPwaToolbar` (offline banner + "Cài đặt POS" install button); BillReceipt offline gate (`canConfirmPaid` + `handleSelectMethod`)
+  - Native migration path documented: PWA → Capacitor wrap → Flutter rewrite (only if printer fail >5% or scale ≥20 chi nhánh; see `tasks/todo.md` Post-v1.0)
+- **M2-Ext2 PR3: Multi-order per dine-in table** (SHIPPED 2026-04-25, commit `8af3f57`):
+  - `transfer_order_table` RPC accepts target ∈ (available, occupied) — migration `20260429100000_transfer_order_table_allow_occupied.sql`
+  - Transfer-table dialog lists occupied bàn with "N đơn" indicator
+  - Cancel/void reason validation tightened to ≥5 chars
+- **Realtime hardening** (SHIPPED 2026-04-25, commit `8af3f57`): `useRealtimeChannel` helper enforces auth-aware subscribe sequence; 6 callsites migrated. Fixes silent broadcast drops from `claims_role='anon'` race.
 
 ## Pilot-Critical Backlog (blocked on external credentials)
 
