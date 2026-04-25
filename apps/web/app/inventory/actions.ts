@@ -746,8 +746,12 @@ export async function fetchExpiryAlerts(
     .from("grn_items")
     .select(
       `
+      id,
       batch_number,
       expiry_date,
+      received_quantity,
+      unit,
+      unit_cost,
       goods_received_notes!inner (
         branch_id,
         grn_number,
@@ -818,6 +822,8 @@ export async function fetchExpiryAlerts(
       };
 
       return {
+        // Stable composite id so client-side bulk-selection survives reorders.
+        id: `${ingredient.id}::${grn.grn_number}::${item.batch_number ?? ""}::${item.id}`,
         ingredient_id: ingredient.id,
         ingredient_name: ingredient.name,
         batch_number: item.batch_number,
@@ -829,6 +835,9 @@ export async function fetchExpiryAlerts(
           : "",
         days_remaining: daysRemaining,
         urgency,
+        received_quantity: Number(item.received_quantity ?? 0),
+        unit: item.unit,
+        unit_cost: Number(item.unit_cost ?? 0),
       };
     });
 

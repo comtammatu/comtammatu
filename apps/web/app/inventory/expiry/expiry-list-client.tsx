@@ -1,21 +1,17 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { CircleCheck as IconCircleCheck, Search as IconSearch, Trash as IconTrash } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  CircleCheck as IconCircleCheck,
+  Search as IconSearch,
+  Trash as IconTrash,
+} from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@comtammatu/ui/components/alert-dialog";
+import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import {
   InputGroup,
   InputGroupAddon,
@@ -28,7 +24,6 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
   SelectContent,
@@ -50,23 +45,21 @@ import {
   TabsList,
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
-import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { InventoryHeader } from "../_components/inventory-header";
 import {
   InventoryFilterBar,
   InventoryPageContent,
 } from "../_components/inventory-page-layout";
-import { adjustStock, fetchExpiryAlerts } from "../actions";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
+import { InventoryBulkActionBar } from "../_components/bulk-action-bar";
+import {
+  WasteEntryDialog,
+  type WasteEntryItem,
+} from "../_components/waste-entry-dialog";
+import { useInventoryBulkSelection } from "../_lib/use-inventory-bulk-selection";
 import type { BranchOption, ExpiryAlertRow } from "../page";
-
-interface WriteOffTarget {
-  alert: ExpiryAlertRow;
-  quantity: string;
-}
 
 const URGENCY_META: Record<string, { label: string; className: string }> = {
   expired: {
@@ -83,18 +76,43 @@ const URGENCY_META: Record<string, { label: string; className: string }> = {
   },
 };
 
+function alertToWasteItem(alert: ExpiryAlertRow): WasteEntryItem {
+  return {
+    clientId: alert.id,
+    ingredientId: alert.ingredient_id,
+    ingredientName: alert.ingredient_name,
+    branchId: alert.branch_id,
+    branchName: alert.branch_name,
+    unit: alert.unit,
+    unitCost: alert.unit_cost,
+    suggestedQuantity: alert.received_quantity,
+    lot: {
+      batchNumber: alert.batch_number,
+      grnNumber: alert.grn_number,
+      expiryDate: new Date(alert.expiry_date).toLocaleDateString("vi-VN"),
+    },
+  };
+}
+
+interface DialogState {
+  items: ExpiryAlertRow[];
+  branchId: number;
+}
+
 export function ExpiryListClient({
   initial,
   branches,
   userRole,
   userBranchId,
+  defaultLocationByBranch,
 }: {
   initial: ExpiryAlertRow[];
   branches: BranchOption[];
   userRole: StaffRole;
   userBranchId: number | null;
+  defaultLocationByBranch: Record<number, number | null>;
 }) {
-  const [alerts, setAlerts] = useState(initial);
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [branchFilter, setBranchFilter] = useState<string>(
     userRole === "branch_manager" && userBranchId != null
@@ -102,14 +120,13 @@ export function ExpiryListClient({
       : "all",
   );
   const [urgencyFilter, setUrgencyFilter] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const [writeOff, setWriteOff] = useState<WriteOffTarget | null>(null);
+  const [dialogState, setDialogState] = useState<DialogState | null>(null);
   const isMobile = useIsMobile();
 
   const isBranchLocked = userRole === "branch_manager" && userBranchId != null;
 
   const filtered = useMemo(() => {
-    let items = alerts;
+    let items = initial;
 
     if (branchFilter !== "all") {
       const bid = Number(branchFilter);
@@ -128,7 +145,7 @@ export function ExpiryListClient({
     }
 
     return items;
-  }, [alerts, branchFilter, search]);
+  }, [initial, branchFilter, search]);
 
   const urgencyCounts = useMemo(() => {
     const counts = { expired: 0, critical: 0, warning: 0 };
@@ -157,47 +174,47 @@ export function ExpiryListClient({
     [filtered],
   );
 
-  function openWriteOff(alert: ExpiryAlertRow) {
-    setWriteOff({ alert, quantity: "" });
+  // Bulk selection across the currently displayed list (post-filter).
+  const bulkSelection = useInventoryBulkSelection<ExpiryAlertRow>(displayItems);
+
+  // A bulk action requires every selected lot to share a single branch — the
+  // create_waste_entry RPC only accepts one branch per call.
+  const selectedBranchIds = useMemo(
+    () => new Set(bulkSelection.selectedItems.map((it) => it.branch_id)),
+    [bulkSelection.selectedItems],
+  );
+  const bulkSpansBranches = selectedBranchIds.size > 1;
+  const bulkBranchId =
+    selectedBranchIds.size === 1
+      ? (Array.from(selectedBranchIds)[0] ?? null)
+      : null;
+
+  function openSingleWaste(alert: ExpiryAlertRow) {
+    setDialogState({ items: [alert], branchId: alert.branch_id });
   }
 
-  function handleConfirmWriteOff() {
-    if (!writeOff) return;
-    const qty = Number(writeOff.quantity);
-    if (!qty || qty <= 0) {
-      toast.error("Nhập số lượng hợp lệ");
-      return;
-    }
-
-    const { alert } = writeOff;
-    const lotPart = alert.batch_number ? ` lô ${alert.batch_number}` : "";
-    const grnPart = alert.grn_number ? ` (GRN ${alert.grn_number})` : "";
-    const expiryPart = alert.expiry_date ? ` HSD ${alert.expiry_date}` : "";
-    startTransition(async () => {
-      const res = await adjustStock({
-        branchId: alert.branch_id,
-        ingredientId: alert.ingredient_id,
-        quantityChange: -qty,
-        type: "adjustment",
-        reason: `Hết hạn sử dụng — ${alert.ingredient_name}${lotPart}${expiryPart}${grnPart}`,
-      });
-
-      if (!res.success) {
-        toast.error(res.error ?? "Không thể xóa sổ.");
-        return;
-      }
-
-      toast.success(`Đã xóa sổ ${qty} ${alert.ingredient_name}`);
-      setWriteOff(null);
-
-      const again = await fetchExpiryAlerts(
-        branchFilter !== "all" ? Number(branchFilter) : undefined,
-      );
-      if (again.success) {
-        setAlerts((again.data ?? []) as ExpiryAlertRow[]);
-      }
+  function openBulkWaste() {
+    if (bulkBranchId == null) return;
+    setDialogState({
+      items: bulkSelection.selectedItems,
+      branchId: bulkBranchId,
     });
   }
+
+  function handleDialogComplete() {
+    bulkSelection.clear();
+    setDialogState(null);
+    router.refresh();
+  }
+
+  const dialogLocationId =
+    dialogState != null
+      ? (defaultLocationByBranch[dialogState.branchId] ?? null)
+      : null;
+  const dialogItems = useMemo(
+    () => (dialogState ? dialogState.items.map(alertToWasteItem) : []),
+    [dialogState],
+  );
 
   function renderTable(items: ExpiryAlertRow[]) {
     return (
@@ -216,14 +233,14 @@ export function ExpiryListClient({
                   </p>
                 </div>
               )}
-              {items.map((alert, idx) => {
+              {items.map((alert) => {
                 const meta = URGENCY_META[alert.urgency] ?? {
                   label: alert.urgency,
                   className: "bg-muted text-muted-foreground",
                 };
                 return (
                   <Item
-                    key={`${alert.ingredient_id}-${alert.grn_number}-${alert.batch_number ?? ""}-${String(idx)}`}
+                    key={alert.id}
                     size="sm"
                     className="justify-between bg-muted/30"
                   >
@@ -242,7 +259,8 @@ export function ExpiryListClient({
                       </ItemTitle>
                       <ItemDescription className="truncate">
                         Lô: {alert.batch_number ?? "—"} · GRN:{" "}
-                        {alert.grn_number} · {alert.branch_name}
+                        {alert.grn_number} · {alert.branch_name} · Nhập ban
+                        đầu: {alert.received_quantity} {alert.unit}
                       </ItemDescription>
                     </ItemContent>
                     <ItemActions>
@@ -250,11 +268,10 @@ export function ExpiryListClient({
                         variant="destructive"
                         size="sm"
                         className="h-7 gap-1.5 text-xs shrink-0"
-                        onClick={() => openWriteOff(alert)}
-                        disabled={isPending}
+                        onClick={() => openSingleWaste(alert)}
                       >
                         <IconTrash className="size-3.5" />
-                        Xóa sổ
+                        Hao hụt
                       </Button>
                     </ItemActions>
                   </Item>
@@ -265,6 +282,22 @@ export function ExpiryListClient({
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={
+                        bulkSelection.isAllSelected
+                          ? true
+                          : bulkSelection.isSomeSelected
+                            ? "indeterminate"
+                            : false
+                      }
+                      onCheckedChange={(value) => {
+                        if (value) bulkSelection.selectAll();
+                        else bulkSelection.clear();
+                      }}
+                      aria-label="Chọn tất cả"
+                    />
+                  </TableHead>
                   <TableHead className="text-xs font-semibold uppercase tracking-wider">
                     Nguyên liệu
                   </TableHead>
@@ -276,6 +309,9 @@ export function ExpiryListClient({
                   </TableHead>
                   <TableHead className="text-xs font-semibold uppercase tracking-wider">
                     Còn lại
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-right">
+                    Nhập ban đầu
                   </TableHead>
                   <TableHead className="text-xs font-semibold uppercase tracking-wider">
                     Phiếu nhập
@@ -291,7 +327,7 @@ export function ExpiryListClient({
               <TableBody>
                 {items.length === 0 && (
                   <TableEmptyStateRow
-                    colSpan={7}
+                    colSpan={9}
                     paddingClassName="py-16"
                     icon={
                       <IconCircleCheck className="mx-auto size-10 text-success/40" />
@@ -300,62 +336,79 @@ export function ExpiryListClient({
                     description="Tất cả nguyên liệu còn trong hạn sử dụng"
                   />
                 )}
-                {items.map((alert, idx) => (
-                  <TableRow
-                    key={`${alert.ingredient_id}-${alert.grn_number}-${alert.batch_number ?? ""}-${String(idx)}`}
-                    className="hover:bg-muted/30 transition-colors"
-                  >
-                    <TableCell className="text-sm font-medium">
-                      {alert.ingredient_name}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {alert.batch_number ?? "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm tabular-nums text-muted-foreground">
-                      {new Date(alert.expiry_date).toLocaleDateString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      {alert.urgency === "expired" ? (
-                        <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-xs">
-                          Đã hết hạn
-                        </Badge>
-                      ) : (
-                        <span
-                          className={cn(
-                            "text-sm font-medium tabular-nums",
-                            alert.urgency === "critical"
-                              ? "text-destructive"
-                              : "text-warning",
-                          )}
+                {items.map((alert) => {
+                  const isItemSelected = bulkSelection.isSelected(alert.id);
+                  return (
+                    <TableRow
+                      key={alert.id}
+                      className="hover:bg-muted/30 transition-colors"
+                    >
+                      <TableCell className="w-10">
+                        <Checkbox
+                          checked={isItemSelected}
+                          onCheckedChange={(value) =>
+                            bulkSelection.setSelected(alert.id, value === true)
+                          }
+                          aria-label={`Chọn ${alert.ingredient_name}`}
+                        />
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">
+                        {alert.ingredient_name}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {alert.batch_number ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-sm tabular-nums text-muted-foreground">
+                        {new Date(alert.expiry_date).toLocaleDateString(
+                          "vi-VN",
+                          {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          },
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {alert.urgency === "expired" ? (
+                          <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-xs">
+                            Đã hết hạn
+                          </Badge>
+                        ) : (
+                          <span
+                            className={cn(
+                              "text-sm font-medium tabular-nums",
+                              alert.urgency === "critical"
+                                ? "text-destructive"
+                                : "text-warning",
+                            )}
+                          >
+                            {alert.days_remaining} ngày
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm tabular-nums">
+                        {alert.received_quantity} {alert.unit}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {alert.grn_number}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {alert.branch_name}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="h-7 gap-1.5 text-xs"
+                          onClick={() => openSingleWaste(alert)}
                         >
-                          {alert.days_remaining} ngày
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {alert.grn_number}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {alert.branch_name}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="h-7 gap-1.5 text-xs"
-                        onClick={() => openWriteOff(alert)}
-                        disabled={isPending}
-                      >
-                        <IconTrash className="size-3.5" />
-                        Xóa sổ
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          <IconTrash className="size-3.5" />
+                          Hao hụt
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -524,52 +577,40 @@ export function ExpiryListClient({
         </Tabs>
       </InventoryPageContent>
 
-      {/* Write-off AlertDialog */}
-      <AlertDialog
-        open={writeOff != null}
-        onOpenChange={(open) => {
-          if (!open) setWriteOff(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận xóa sổ</AlertDialogTitle>
-            <AlertDialogDescription>
-              {writeOff
-                ? `Xóa sổ ${writeOff.alert.ingredient_name} — lô ${writeOff.alert.batch_number ?? "không có mã lô"}. Hành động này sẽ trừ tồn kho.`
-                : ""}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-3 px-1">
-            <Label htmlFor="writeoff-qty">Số lượng xóa sổ</Label>
-            <FormattedNumberInput
-              id="writeoff-qty"
-              placeholder="Nhập số lượng..."
-              value={writeOff?.quantity ?? ""}
-              onValueChange={(value) =>
-                setWriteOff((prev) =>
-                  prev ? { ...prev, quantity: value } : null,
-                )
-              }
-              maxFractionDigits={3}
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmWriteOff}
-              disabled={
-                isPending ||
-                !writeOff?.quantity ||
-                Number(writeOff.quantity) <= 0
-              }
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isPending ? "Đang xử lý..." : "Xóa sổ"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {!isMobile ? (
+        <InventoryBulkActionBar
+          selectedCount={bulkSelection.selectedCount}
+          itemNoun="lô hàng"
+          actions={[
+            {
+              key: "bulk-waste",
+              label: bulkSpansBranches
+                ? "Chỉ chọn 1 chi nhánh để hao hụt"
+                : `Hao hụt ${bulkSelection.selectedCount} lô`,
+              icon: IconTrash,
+              variant: "destructive",
+              primary: true,
+              disabled: bulkSpansBranches || bulkBranchId == null,
+              onClick: openBulkWaste,
+            },
+          ]}
+          onClear={bulkSelection.clear}
+        />
+      ) : null}
+
+      {dialogState != null ? (
+        <WasteEntryDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setDialogState(null);
+          }}
+          items={dialogItems}
+          branchId={dialogState.branchId}
+          locationId={dialogLocationId}
+          reasonCode="expired"
+          onComplete={handleDialogComplete}
+        />
+      ) : null}
     </>
   );
 }

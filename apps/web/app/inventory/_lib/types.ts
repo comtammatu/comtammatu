@@ -42,6 +42,8 @@ export interface ReorderAlertRow {
 }
 
 export interface ExpiryAlertRow {
+  /** Composite client-side id for bulk-selection. Stable across renders. */
+  id: string;
   ingredient_id: number;
   ingredient_name: string;
   batch_number: string | null;
@@ -51,4 +53,10 @@ export interface ExpiryAlertRow {
   branch_name: string;
   days_remaining: number;
   urgency: "expired" | "critical" | "warning";
+  /** Initial GRN receive quantity. Display hint only — server validates against stock_levels. */
+  received_quantity: number;
+  /** Per-unit cost from GRN — used client-side to estimate waste tier (>= 150k VND triggers tier 1). */
+  unit_cost: number;
+  /** Purchase/storage unit (e.g., "kg", "g", "thùng"). */
+  unit: string;
 }

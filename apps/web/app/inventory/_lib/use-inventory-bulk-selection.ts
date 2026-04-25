@@ -2,17 +2,19 @@
 
 import { useCallback, useMemo, useState } from "react";
 
+export type BulkSelectionId = number | string;
+
 export interface BulkSelectableItem {
-  id: number;
+  id: BulkSelectionId;
 }
 
 export interface InventoryBulkSelection<T extends BulkSelectableItem> {
-  selectedIds: Set<number>;
+  selectedIds: Set<BulkSelectionId>;
   selectedCount: number;
   selectedItems: T[];
-  isSelected: (id: number) => boolean;
-  toggle: (id: number) => void;
-  setSelected: (id: number, value: boolean) => void;
+  isSelected: (id: BulkSelectionId) => boolean;
+  toggle: (id: BulkSelectionId) => void;
+  setSelected: (id: BulkSelectionId, value: boolean) => void;
   selectAll: () => void;
   clear: () => void;
   isAllSelected: boolean;
@@ -31,14 +33,16 @@ export interface InventoryBulkSelection<T extends BulkSelectableItem> {
 export function useInventoryBulkSelection<T extends BulkSelectableItem>(
   items: T[],
 ): InventoryBulkSelection<T> {
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<BulkSelectionId>>(
+    () => new Set(),
+  );
 
   const isSelected = useCallback(
-    (id: number) => selectedIds.has(id),
+    (id: BulkSelectionId) => selectedIds.has(id),
     [selectedIds],
   );
 
-  const setSelected = useCallback((id: number, value: boolean) => {
+  const setSelected = useCallback((id: BulkSelectionId, value: boolean) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (value) next.add(id);
@@ -47,7 +51,7 @@ export function useInventoryBulkSelection<T extends BulkSelectableItem>(
     });
   }, []);
 
-  const toggle = useCallback((id: number) => {
+  const toggle = useCallback((id: BulkSelectionId) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);

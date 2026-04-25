@@ -5,6 +5,7 @@ import {
   parseBranchIdParam,
   resolveInventoryBranchScope,
 } from "@/inventory/_lib/inventory-scope";
+import { resolveDefaultInventoryLocation } from "@/inventory/_lib/inventory-location-compat";
 import { ExpiryListClient } from "@/inventory/expiry/expiry-list-client";
 import type { BranchOption, ExpiryAlertRow } from "@/inventory/page";
 import { getBranchSiteDisplayName } from "@/inventory/_lib/branch-site-labels";
@@ -47,12 +48,39 @@ export default async function ExpirySettingsPage({
       name: getBranchSiteDisplayName(branch),
     })) as BranchOption[];
 
+  // Same location-resolution pattern as the canonical /inventory/expiry page
+  // so the inline waste dialog has a default location ready per branch.
+  const branchIdsWithAlerts = Array.from(
+    new Set(alerts.map((alert) => alert.branch_id)),
+  );
+  const tenantId = claims?.tenant_id ?? null;
+  const locationEntries = tenantId
+    ? await Promise.all(
+        branchIdsWithAlerts.map(async (branchId) => {
+          try {
+            const locationId = await resolveDefaultInventoryLocation(
+              supabase,
+              tenantId,
+              branchId,
+              "issue",
+            );
+            return [branchId, locationId] as const;
+          } catch {
+            return [branchId, null] as const;
+          }
+        }),
+      )
+    : [];
+  const defaultLocationByBranch: Record<number, number | null> =
+    Object.fromEntries(locationEntries);
+
   return (
     <ExpiryListClient
       initial={alerts}
       branches={branches}
       userRole={claims?.user_role ?? "branch_manager"}
       userBranchId={scope?.selectedBranchId ?? null}
+      defaultLocationByBranch={defaultLocationByBranch}
     />
   );
 }

@@ -5,6 +5,7 @@ import {
   resolveInventoryBranchScope,
   resolveRequestedBranchId,
 } from "@/inventory/_lib/inventory-scope";
+import { resolveDefaultInventoryLocation } from "@/inventory/_lib/inventory-location-compat";
 import { ExpiryListClient } from "@/inventory/expiry/expiry-list-client";
 import type { BranchOption, ExpiryAlertRow } from "@/inventory/page";
 import { getBranchSiteDisplayName } from "@/inventory/_lib/branch-site-labels";
@@ -48,12 +49,40 @@ export default async function ExpiryPage({
       name: getBranchSiteDisplayName(branch),
     })) as BranchOption[];
 
+  // Pre-resolve default issue location for every branch that appears in the
+  // alert list — `<WasteEntryDialog>` needs `locationId` ready at click time
+  // (createWasteEntry RPC requires it). Skipped for branches with no alerts.
+  const branchIdsWithAlerts = Array.from(
+    new Set(alerts.map((alert) => alert.branch_id)),
+  );
+  const tenantId = claims?.tenant_id ?? null;
+  const locationEntries = tenantId
+    ? await Promise.all(
+        branchIdsWithAlerts.map(async (branchId) => {
+          try {
+            const locationId = await resolveDefaultInventoryLocation(
+              supabase,
+              tenantId,
+              branchId,
+              "issue",
+            );
+            return [branchId, locationId] as const;
+          } catch {
+            return [branchId, null] as const;
+          }
+        }),
+      )
+    : [];
+  const defaultLocationByBranch: Record<number, number | null> =
+    Object.fromEntries(locationEntries);
+
   return (
     <ExpiryListClient
       initial={alerts}
       branches={branches}
       userRole={claims?.user_role ?? "branch_manager"}
       userBranchId={scope?.selectedBranchId ?? null}
+      defaultLocationByBranch={defaultLocationByBranch}
     />
   );
 }
