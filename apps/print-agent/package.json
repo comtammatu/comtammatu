@@ -16,7 +16,7 @@
     "test:bitmap": "tsx scripts/test-bitmap.ts",
     "test:vn27": "tsx scripts/test-vn27.ts",
     "test:all": "tsx scripts/test-all.ts",
-    "package": "pkg ."
+    "package": "pkg . --output dist-bin/comtammatu-print-agent.exe --public --no-bytecode"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",

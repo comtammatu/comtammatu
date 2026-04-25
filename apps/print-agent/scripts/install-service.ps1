@@ -1,12 +1,15 @@
 # Install Cơm Tấm Má Tư print-agent as a Windows Service via NSSM.
-# Run as Administrator. Reads configuration from .env next to the exe.
+# Runs via Node.js directly (not packaged exe — pkg/yao-pkg has ESM issues
+# with dist/render-bitmap.js as of 2026-04). Requires Node 24+ installed.
+# Run as Administrator. Reads configuration from .env in dist-bin/.
 
 param(
   [string]$ServiceName = "ComTamMaTu-PrintAgent",
-  [string]$ExePath    = (Join-Path $PSScriptRoot "..\dist-bin\comtammatu-print-agent.exe"),
-  [string]$WorkingDir = (Join-Path $PSScriptRoot "..\dist-bin"),
-  [string]$EnvFile    = (Join-Path $PSScriptRoot "..\dist-bin\.env"),
-  [string]$LogDir     = "C:\ProgramData\ComTamMaTu\print-agent\logs"
+  [string]$NodePath    = (Get-Command node.exe -ErrorAction SilentlyContinue).Source,
+  [string]$EntryPath   = (Resolve-Path (Join-Path $PSScriptRoot "..\dist\index.js")).Path,
+  [string]$WorkingDir  = (Resolve-Path (Join-Path $PSScriptRoot "..\dist-bin")).Path,
+  [string]$EnvFile     = (Join-Path $PSScriptRoot "..\dist-bin\.env"),
+  [string]$LogDir      = "C:\ProgramData\ComTamMaTu\print-agent\logs"
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,21 +24,26 @@ function Require-Nssm {
 
 $nssm = Require-Nssm
 
-if (-not (Test-Path $ExePath)) {
-  Write-Error "Agent exe not found at $ExePath. Run 'pnpm -F @comtammatu/print-agent build && pnpm -F @comtammatu/print-agent package' first."
+if (-not $NodePath) {
+  Write-Error "node.exe not found in PATH. Install Node 24+ from https://nodejs.org/."
 }
-
+if (-not (Test-Path $EntryPath)) {
+  Write-Error "dist/index.js not found at $EntryPath. Run 'pnpm -F @comtammatu/print-agent build' first."
+}
 if (-not (Test-Path $EnvFile)) {
   Write-Error ".env not found at $EnvFile. Copy .env.example and fill in SUPABASE_URL / SERVICE_ROLE_KEY / AGENT_TENANT_ID / AGENT_BRANCH_ID."
 }
 
 if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir -Force | Out-Null }
 
-# Remove existing service if present
-& $nssm stop $ServiceName confirm 2>$null | Out-Null
-& $nssm remove $ServiceName confirm 2>$null | Out-Null
+# Remove existing service if present (ignore failures — service may not exist yet)
+$prevPref = $ErrorActionPreference
+$ErrorActionPreference = "SilentlyContinue"
+& $nssm stop $ServiceName confirm *>$null
+& $nssm remove $ServiceName confirm *>$null
+$ErrorActionPreference = $prevPref
 
-& $nssm install $ServiceName $ExePath
+& $nssm install $ServiceName $NodePath $EntryPath
 & $nssm set $ServiceName AppDirectory $WorkingDir
 & $nssm set $ServiceName Description "Cơm Tấm Má Tư thermal print agent (LAN + USB)"
 & $nssm set $ServiceName Start SERVICE_AUTO_START
@@ -59,4 +67,7 @@ if ($envArgs.Count -gt 0) {
 }
 
 & $nssm start $ServiceName
-Write-Host "Service '$ServiceName' installed and started. Logs: $LogDir" -ForegroundColor Green
+Write-Host "Service '$ServiceName' installed and started." -ForegroundColor Green
+Write-Host "  Entry: $NodePath $EntryPath" -ForegroundColor Gray
+Write-Host "  WorkDir: $WorkingDir" -ForegroundColor Gray
+Write-Host "  Logs: $LogDir" -ForegroundColor Gray
