@@ -56,6 +56,24 @@ async function hasPermissionGrant(
   return !error && data === true;
 }
 
+// Cheap permission probe for callers that already have an `AuthContext`
+// (i.e. resolved `getUser()` + `getSession()` once). Use this for UI hints
+// like `canManageOrders` so the action does NOT pay a second `getUser()`
+// HTTP round-trip just to ask "does this user also have key X?".
+//
+// Always parallelize with the data fetch via `Promise.all` — the probe
+// has no dependency on the data result.
+//
+// Fail-safe: returns `false` on any RPC error (deny by default). The
+// authoritative gate is the server-side RPC on the actual mutation.
+export async function probePermission(
+  ctx: AuthContext,
+  permission: PermissionLike,
+  branchId?: number | null,
+): Promise<boolean> {
+  return hasPermissionGrant(ctx, permission, branchId);
+}
+
 export async function getAuthContextWithPermission(
   allowedRoles: readonly StaffRole[],
   permission: PermissionLike,

@@ -1,4 +1,4 @@
-import { IconToolsKitchen } from "@tabler/icons-react";
+import { Utensils as IconToolsKitchen } from "lucide-react";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage({

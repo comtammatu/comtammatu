@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { IconAlertCircle } from "@tabler/icons-react";
+import { CircleAlert as IconAlertCircle } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
