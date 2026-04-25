@@ -257,4 +257,171 @@ export function MobileWasteSheet({
   );
 }
 
+interface MobileBulkWasteSheetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** All targets must share `branchId` — caller (expiry select-mode) enforces. */
+  targets: MobileWasteSheetTarget[];
+  branchId: number;
+  locationId: number | null;
+  onComplete: () => void;
+}
+
+/**
+ * Bulk variant of `<MobileWasteSheet>`. Renders a read-only list of lots,
+ * sums the line value for the user, and submits everything in one
+ * `createWasteEntry` call. Tier-0 filtering happens upstream at the
+ * select-mode layer (`mobile-expiry-client`) so this sheet only sees
+ * lines that already cleared the threshold — keeps the UX promise that
+ * "Hao hụt N lô" actually means N.
+ *
+ * No NumberPad. v1 auto-confirms qty = `received_quantity` per lot. If
+ * the cashier needs to override a single lot, they exit select-mode and
+ * use the per-row flow which already wraps `<NumberPadSheet>`.
+ */
+export function MobileBulkWasteSheet({
+  open,
+  onOpenChange,
+  targets,
+  branchId,
+  locationId,
+  onComplete,
+}: MobileBulkWasteSheetProps) {
+  const router = useRouter();
+  const [isPending, startSubmit] = useTransition();
+
+  const totalValue = useMemo(
+    () =>
+      targets.reduce(
+        (sum, t) => sum + (t.suggestedQuantity * (t.unitCost ?? 0)),
+        0,
+      ),
+    [targets],
+  );
+
+  const canSubmit =
+    !isPending && targets.length > 0 && locationId != null;
+
+  function composeBulkLineNote(t: MobileWasteSheetTarget): string {
+    if (!t.lot) return `Hết hạn — ${t.ingredientName}`;
+    const lotPart = t.lot.batchNumber
+      ? ` lô ${t.lot.batchNumber}`
+      : ` (không có mã lô)`;
+    return `Hết hạn — ${t.ingredientName}${lotPart} HSD ${t.lot.expiryDate} (GRN ${t.lot.grnNumber})`;
+  }
+
+  function handleSubmit() {
+    if (!canSubmit || locationId == null) return;
+    startSubmit(async () => {
+      const res = await createWasteEntry({
+        branchId,
+        locationId,
+        items: targets.map((t) => ({
+          ingredient_id: t.ingredientId,
+          quantity: t.suggestedQuantity,
+          unit: t.unit,
+          unit_cost: t.unitCost > 0 ? t.unitCost : undefined,
+          reason_code: "expired",
+          note: composeBulkLineNote(t),
+        })),
+        sourceType: "manual",
+        notes: `Hao hụt hàng loạt — ${targets.length} lô hết hạn`,
+      });
+      if (!res.success || !res.data) {
+        toast.error(res.error ?? "Không thể tạo phiếu hao hụt.");
+        return;
+      }
+      const data = res.data;
+      const summary = `${data.itemsCreated} lô${data.requiresApproval ? " (chờ duyệt)" : ""}`;
+      toast.success(`Đã tạo phiếu ${data.issueNumber} · ${summary}`);
+      onOpenChange(false);
+      onComplete();
+      if (data.requiresApproval) {
+        router.push("/inventory/waste/approvals");
+      }
+    });
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="rounded-t-2xl pb-4">
+        <SheetHeader>
+          <SheetTitle>Hao hụt {targets.length} lô</SheetTitle>
+          <SheetDescription>
+            Số lượng tự động lấy theo "Nhập ban đầu" của lô. Nếu cần đổi
+            cho từng lô, hãy thoát chế độ chọn nhiều và xử lý từng dòng.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="flex max-h-72 flex-col gap-2 overflow-y-auto px-4">
+          {targets.map((t, idx) => {
+            const lineValue = t.suggestedQuantity * (t.unitCost ?? 0);
+            return (
+              <div
+                key={`${t.ingredientId}-${idx}`}
+                className="flex flex-col gap-1 border bg-muted/20 px-3 py-2"
+              >
+                <p className="truncate font-semibold leading-tight">
+                  {t.ingredientName}
+                </p>
+                {t.lot ? (
+                  <p className="truncate text-xs text-muted-foreground">
+                    Lô: {t.lot.batchNumber ?? "—"} · GRN: {t.lot.grnNumber}
+                  </p>
+                ) : null}
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-mono tabular-nums text-foreground">
+                    {t.suggestedQuantity}
+                  </span>{" "}
+                  {t.unit} ·{" "}
+                  <span className="tabular-nums">
+                    {lineValue.toLocaleString("vi-VN")}đ
+                  </span>
+                </p>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center justify-between border-t px-4 pt-3 text-sm">
+          <span className="text-muted-foreground">Tổng giá trị</span>
+          <span className="font-semibold tabular-nums">
+            {totalValue.toLocaleString("vi-VN")}đ
+          </span>
+        </div>
+
+        {locationId == null ? (
+          <div className="px-4">
+            <Badge variant="warning">
+              Chi nhánh chưa cấu hình kho xuất mặc định
+            </Badge>
+          </div>
+        ) : null}
+
+        <SheetFooter className="gap-2 px-4">
+          <TouchButton
+            type="button"
+            variant="destructive"
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+          >
+            <IconTrash className="size-4" />
+            {isPending
+              ? "Đang xử lý..."
+              : `Xác nhận hao hụt ${targets.length} lô`}
+          </TouchButton>
+          <TouchButton
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={isPending}
+          >
+            Hủy
+          </TouchButton>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 export type { MobileWasteSheetTarget };
