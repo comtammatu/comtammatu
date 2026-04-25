@@ -1,6 +1,9 @@
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
+import { ZERO_DRAFTS, type UserDrafts } from "./user-drafts-types";
+
+export { userDraftsTotal, type UserDrafts } from "./user-drafts-types";
 
 /**
  * Personal-workspace re-entry counts for the "Resume drafts" strip
@@ -12,24 +15,6 @@ import { currentUserHasPermissionAny } from "@/_lib/permissions";
  * branch A still sees it on the strip while browsing branch B, so the
  * draft never gets "lost" by sidebar branch switching.
  */
-export interface UserDrafts {
-  po: number;
-  grn: number;
-  transfer: number;
-  supplierReturn: number;
-  wastePending: number;
-  stocktakeOpen: number;
-}
-
-const ZERO_DRAFTS: UserDrafts = {
-  po: 0,
-  grn: 0,
-  transfer: 0,
-  supplierReturn: 0,
-  wastePending: 0,
-  stocktakeOpen: 0,
-};
-
 export async function loadUserDrafts(): Promise<UserDrafts> {
   try {
     const { supabase, session, claims } = await loadAuthState();
@@ -129,15 +114,4 @@ export async function loadUserDrafts(): Promise<UserDrafts> {
     // never bubble auth/DB errors up to break the entire shell.
     return ZERO_DRAFTS;
   }
-}
-
-export function userDraftsTotal(drafts: UserDrafts): number {
-  return (
-    drafts.po +
-    drafts.grn +
-    drafts.transfer +
-    drafts.supplierReturn +
-    drafts.wastePending +
-    drafts.stocktakeOpen
-  );
 }

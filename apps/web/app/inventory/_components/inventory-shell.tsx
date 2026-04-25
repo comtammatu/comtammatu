@@ -25,7 +25,7 @@ import {
 import { isNavItemActive, type ShellNavGroup } from "@/lib/shell-primitives";
 import { tNav } from "../_lib/dictionary";
 import type { InventoryBranchOption } from "../_lib/inventory-scope";
-import type { UserDrafts } from "../_lib/user-drafts";
+import type { UserDrafts } from "../_lib/user-drafts-types";
 import { MobileTopBar } from "./mobile/mobile-top-bar";
 import { InventoryBranchFilter } from "./inventory-branch-filter";
 import { InventoryThemeToggle } from "./inventory-theme-toggle";

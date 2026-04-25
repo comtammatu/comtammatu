@@ -2,7 +2,7 @@
 
 import { InventoryStatChip } from "./inventory-stat-chip";
 import { branchHrefOrPath } from "../_lib/href";
-import { userDraftsTotal, type UserDrafts } from "../_lib/user-drafts";
+import { userDraftsTotal, type UserDrafts } from "../_lib/user-drafts-types";
 
 interface UserDraftsStripProps {
   drafts: UserDrafts;

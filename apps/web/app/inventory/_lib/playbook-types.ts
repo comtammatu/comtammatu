@@ -11,6 +11,15 @@
 
 export type PlaybookSeverity = "destructive" | "warning" | "info" | "primary";
 
+/**
+ * GRN price-variance threshold (in percent). Lines with `|baseline_variance_pct|`
+ * above this trigger the "needs price review" task in the playbook AND the
+ * row badge + filter chip on `/inventory/grn`. Lives here (not in
+ * `playbook-data.ts`) so client components like `grn-list-client.tsx` can
+ * import it without dragging the server-only auth/Supabase modules along.
+ */
+export const PRICE_VARIANCE_THRESHOLD_PCT = 5;
+
 export type PlaybookSeverityBucket = "now" | "warning" | "watch";
 
 export interface PlaybookPoRow {

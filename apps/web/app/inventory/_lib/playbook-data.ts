@@ -15,6 +15,7 @@ import { fetchStockTransfers } from "../transfer-actions";
 import { resolveInventoryBranchScope } from "./inventory-scope";
 import { formatDate } from "./format";
 import {
+  PRICE_VARIANCE_THRESHOLD_PCT,
   sortPlaybookTasks,
   type PlaybookExpiryLot,
   type PlaybookGrnDraft,
@@ -33,13 +34,6 @@ function isProcurementKind(kind: string): boolean {
   return kind === "central_warehouse" || kind === "central_kitchen";
 }
 
-/**
- * GRN price-variance threshold (in percent). Lines with `|baseline_variance_pct|`
- * above this trigger the "needs price review" task in the playbook AND the
- * row badge + filter chip on `/inventory/grn`. Exported so the GRN list page
- * stays in lockstep with the dashboard/playbook signals.
- */
-export const PRICE_VARIANCE_THRESHOLD_PCT = 5;
 const EXPIRY_URGENT_DAYS = 3;
 
 export interface InventoryPlaybook {

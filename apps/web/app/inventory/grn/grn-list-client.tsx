@@ -38,7 +38,7 @@ import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { formatVND } from "../_lib/format";
 import { tNav } from "../_lib/dictionary";
-import { PRICE_VARIANCE_THRESHOLD_PCT } from "../_lib/playbook-data";
+import { PRICE_VARIANCE_THRESHOLD_PCT } from "../_lib/playbook-types";
 
 export type GrnRow = {
   id: number;
