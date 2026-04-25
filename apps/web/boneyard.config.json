@@ -1,0 +1,9 @@
+{
+  "breakpoints": [375, 768, 1280],
+  "out": "./app/bones",
+  "wait": 800,
+  "routes": ["/employee/schedule", "/notifications", "/br/1/pos"],
+  "color": "var(--muted)",
+  "darkColor": "var(--muted)",
+  "animate": "pulse"
+}

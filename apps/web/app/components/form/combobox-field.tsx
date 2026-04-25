@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Control, FieldPath, FieldValues } from "react-hook-form";
 import { useController } from "react-hook-form";
-import { IconCheck, IconSelector } from "@tabler/icons-react";
+import { Check as IconCheck, ChevronsUpDown as IconSelector } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import {

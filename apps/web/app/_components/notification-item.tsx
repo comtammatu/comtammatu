@@ -2,15 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { cn } from "@comtammatu/ui";
-import {
-  IconAlertTriangle,
-  IconCircleCheck,
-  IconClipboardList,
-  IconInfoCircle,
-  IconPackageExport,
-  IconShoppingBag,
-  IconTruck,
-} from "@tabler/icons-react";
+import { TriangleAlert as IconAlertTriangle, CircleCheck as IconCircleCheck, ClipboardList as IconClipboardList, Info as IconInfoCircle, PackageOpen as IconPackageExport, ShoppingBag as IconShoppingBag, Truck as IconTruck } from "lucide-react";
 import type { NotificationItem as NotificationItemModel } from "@/_actions/notifications";
 import { messages } from "@lib/messages";
 

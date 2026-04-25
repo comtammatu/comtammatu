@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IconBell } from "@tabler/icons-react";
+import { Bell as IconBell } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Popover,

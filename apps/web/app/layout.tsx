@@ -5,8 +5,9 @@ import { ConfirmDialogProvider } from "@comtammatu/ui/components/confirm-dialog"
 import { Toaster } from "@comtammatu/ui/components/sonner";
 import { ThemeProvider } from "@comtammatu/ui/components/theme-provider";
 import { TooltipProvider } from "@comtammatu/ui/components/tooltip";
+import { BoneyardRegistry } from "./_components/boneyard-registry";
 import { NotificationBellFloating } from "./_components/notification-bell-floating";
-import "./globals.css";
+import "@comtammatu/ui/globals.css";
 import { cn } from "@/lib/utils";
 
 const fontMono = JetBrains_Mono({
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           enableSystem
           disableTransitionOnChange
         >
+          <BoneyardRegistry />
           <TooltipProvider>{children}</TooltipProvider>
           <NotificationBellFloating />
           <Toaster richColors position="top-right" />

@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import { IconInbox } from "@tabler/icons-react";
+import { Skeleton } from "@comtammatu/ui/components/skeleton";
+import { Inbox as IconInbox } from "lucide-react";
 import type { NotificationItem as NotificationItemModel } from "@/_actions/notifications";
 import { messages, m } from "@lib/messages";
+import { AppBoneyardSkeleton } from "./boneyard-skeleton";
 import { NotificationItem } from "./notification-item";
 
 interface Props {
@@ -16,6 +18,99 @@ interface Props {
   onMarkAll: () => void;
   onItemNavigate?: () => void;
   showViewAll?: boolean;
+}
+
+const NOTIFICATION_SKELETON_ITEMS: NotificationItemModel[] = [
+  {
+    id: 1,
+    tenant_id: 1,
+    target_branch_id: 1,
+    target_roles: ["cashier"],
+    kind: "pos.order_new",
+    severity: "info",
+    title: "Don moi can xu ly",
+    body: "Ban 04 vua tao don moi.",
+    entity_type: "order",
+    entity_id: 1,
+    action_url: "/br/1/pos",
+    meta: {},
+    created_at: new Date(2026, 0, 5, 8, 15).toISOString(),
+    expires_at: null,
+    read_at: null,
+  },
+  {
+    id: 2,
+    tenant_id: 1,
+    target_branch_id: 1,
+    target_roles: ["branch_manager"],
+    kind: "inventory.stock_low",
+    severity: "warning",
+    title: "Nguyen lieu sap het",
+    body: "Suon cot let can kiem tra ton kho.",
+    entity_type: "ingredient",
+    entity_id: 2,
+    action_url: "/inventory/stock",
+    meta: {},
+    created_at: new Date(2026, 0, 5, 8, 10).toISOString(),
+    expires_at: null,
+    read_at: null,
+  },
+  {
+    id: 3,
+    tenant_id: 1,
+    target_branch_id: null,
+    target_roles: ["office"],
+    kind: "workflow.grn_pending",
+    severity: "info",
+    title: "GRN dang cho duyet",
+    body: "Phieu nhap can doi chieu chung tu.",
+    entity_type: "grn",
+    entity_id: 3,
+    action_url: "/inventory/receiving",
+    meta: {},
+    created_at: new Date(2026, 0, 5, 8, 5).toISOString(),
+    expires_at: null,
+    read_at: new Date(2026, 0, 5, 8, 8).toISOString(),
+  },
+];
+
+function NotificationRows({
+  items,
+  onItemNavigate,
+  onRead,
+}: Pick<Props, "items" | "onItemNavigate" | "onRead">) {
+  return (
+    <>
+      {items.map((item) => (
+        <NotificationItem
+          key={item.id}
+          item={item}
+          onRead={onRead}
+          onNavigate={onItemNavigate}
+        />
+      ))}
+    </>
+  );
+}
+
+function NotificationListSkeletonFallback() {
+  return (
+    <>
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div
+          key={index}
+          className="flex items-start gap-3 rounded-lg border bg-card p-3"
+        >
+          <Skeleton className="size-8 shrink-0 rounded-full" />
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-1/3" />
+          </div>
+        </div>
+      ))}
+    </>
+  );
 }
 
 export function NotificationList({
@@ -54,7 +149,19 @@ export function NotificationList({
       </div>
 
       <ScrollArea className="h-[360px]">
-        <div className="flex flex-col gap-2 p-3">
+        <AppBoneyardSkeleton
+          name="notifications-list"
+          loading={loading}
+          className="flex flex-col gap-2 p-3"
+          fixture={
+            <NotificationRows
+              items={NOTIFICATION_SKELETON_ITEMS}
+              onRead={() => undefined}
+            />
+          }
+          fallback={<NotificationListSkeletonFallback />}
+          snapshotConfig={{ excludeSelectors: ["svg"] }}
+        >
           {items.length === 0 && !loading ? (
             <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
               <IconInbox className="size-8 text-muted-foreground" aria-hidden />
@@ -66,16 +173,13 @@ export function NotificationList({
               </p>
             </div>
           ) : (
-            items.map((item) => (
-              <NotificationItem
-                key={item.id}
-                item={item}
-                onRead={onRead}
-                onNavigate={onItemNavigate}
-              />
-            ))
+            <NotificationRows
+              items={items}
+              onRead={onRead}
+              onItemNavigate={onItemNavigate}
+            />
           )}
-        </div>
+        </AppBoneyardSkeleton>
       </ScrollArea>
 
       {showViewAll ? (

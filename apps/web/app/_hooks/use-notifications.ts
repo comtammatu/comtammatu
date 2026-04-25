@@ -41,6 +41,8 @@ export function useNotifications({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inflightRef = useRef(false);
+  const refreshRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  const initialSubscribeSeenRef = useRef(false);
 
   const refresh = useCallback(async () => {
     if (inflightRef.current) return;
@@ -93,6 +95,10 @@ export function useNotifications({
   }, []);
 
   useEffect(() => {
+    refreshRef.current = refresh;
+  }, [refresh]);
+
+  useEffect(() => {
     const supabase = createClient();
     const channel = supabase
       .channel(`notifications-${tenantId}`)
@@ -105,13 +111,23 @@ export function useNotifications({
           filter: `tenant_id=eq.${String(tenantId)}`,
         },
         () => {
-          void refresh();
+          void refreshRef.current();
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status !== "SUBSCRIBED") return;
+        // Skip the FIRST SUBSCRIBED — list/unread are seeded from RSC
+        // props. Every SUBSCRIBED after that is a reconnect: refetch to
+        // catch any INSERTs that fired during the disconnect window.
+        if (!initialSubscribeSeenRef.current) {
+          initialSubscribeSeenRef.current = true;
+          return;
+        }
+        void refreshRef.current();
+      });
 
     const handleVisibility = () => {
-      if (document.visibilityState === "visible") void refresh();
+      if (document.visibilityState === "visible") void refreshRef.current();
     };
     document.addEventListener("visibilitychange", handleVisibility);
 
@@ -119,7 +135,7 @@ export function useNotifications({
       document.removeEventListener("visibilitychange", handleVisibility);
       void supabase.removeChannel(channel);
     };
-  }, [tenantId, refresh]);
+  }, [tenantId]);
 
   return { items, unreadCount, loading, error, refresh, markRead, markAll };
 }
