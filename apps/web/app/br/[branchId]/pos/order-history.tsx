@@ -78,7 +78,13 @@ export const ACTIVE_POS_STATUSES = [
 interface OrderHistoryProps {
   orders: SessionOrder[];
   onViewBill: (orderId: number) => void;
-  onViewDetail: (orderId: number, orderNumber: string) => void;
+  /** `summary` is the row the cashier just tapped — used by OrderDetailSheet
+   * to render the header (bàn, type, số đơn) instantly while items fetch. */
+  onViewDetail: (
+    orderId: number,
+    orderNumber: string,
+    summary: SessionOrder,
+  ) => void;
 }
 
 export function OrderHistory({
@@ -190,7 +196,7 @@ export function OrderHistory({
                             size="sm"
                             className="h-10 px-3 text-sm"
                             onClick={() =>
-                              onViewDetail(order.id, order.order_number)
+                              onViewDetail(order.id, order.order_number, order)
                             }
                           >
                             Xử lý đơn
