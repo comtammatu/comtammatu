@@ -49,6 +49,13 @@
   toggle_profile_active
   ```
 
+## Next Local-DB Session Queue
+
+> Cần local env + DB connection để chạy. Schedule khi ngồi máy có kết nối Supabase dev.
+
+- [ ] **Employee page WIP fix** (item ở "Pre-deploy Fixes" bên dưới): cast `as Type[]` sai trong `app/employee/{attendance,payslip,schedule}/page.tsx`. Cần `pnpm db:types` regen trước, rồi fix type signature hoặc map/normalize FK relations. Scope nhỏ, ~30-60 phút.
+- [ ] **POS perf Tier 2 RLS migration** (item ở "Pre-deploy Fixes" bên dưới): init-plan fix + dual-permissive consolidation 7 tables + index `order_items.variant_id`. Cần DB cho EXPLAIN before/after + advisor diff + persona test matrix. Risk medium, tách PR riêng. ~1-2 ngày.
+
 ## Pre-deploy Fixes (pending)
 
 - [ ] Uptime monitor on `/api/health` (UptimeRobot — ops task, không phải code)

@@ -71,6 +71,8 @@ export function usePosAppend(args: UsePosAppendArgs): UsePosAppendReturn {
         const kitchenWarning = result.meta?.kitchenWarning;
         if (typeof kitchenWarning === "string") {
           toast.warning(kitchenWarning);
+        } else if (result.meta?.kitchenSent === true) {
+          toast.success("Đã gửi phiếu bếp", { duration: 2000 });
         }
 
         opts?.onSuccess?.();

@@ -170,6 +170,13 @@ function PosDesktopInner({
   const [orderDetailNumber, setOrderDetailNumber] = useState<string | null>(
     null,
   );
+  // Lightweight summary handed to OrderDetailSheet so its header (số đơn,
+  // bàn / mang về) renders immediately on a list-row tap. Fresh fetch always
+  // wins for items + totals; this only fills the gap during the items
+  // skeleton phase. Cleared on sheet close + on table-tap (which provides
+  // full data via orderDetailSeed instead).
+  const [orderDetailSummary, setOrderDetailSummary] =
+    useState<SessionOrder | null>(null);
   // Seed for OrderDetailSheet's first render. Populated when the cashier
   // taps an occupied table (`fetchActiveOrderForTable` already returns the
   // full detail + canManage hint) so the sheet can paint items/total
@@ -504,6 +511,8 @@ function PosDesktopInner({
         const kitchenWarning = result.meta?.kitchenWarning;
         if (typeof kitchenWarning === "string") {
           toast.warning(kitchenWarning);
+        } else if (result.meta?.kitchenSent === true) {
+          toast.success("Đã gửi phiếu bếp", { duration: 2000 });
         }
 
         clearCart();
@@ -697,19 +706,27 @@ function PosDesktopInner({
     setBillInitialOrder(null);
   }, []);
 
-  const openDetail = useCallback((id: number, orderNumber?: string | null) => {
-    setCartDrawerOpen(false);
-    // Clear any table-tap seed: this path (OrderListPane row tap) only
-    // has the id, so OrderDetailSheet must fall back to its own fetch.
-    setOrderDetailSeed(null);
-    setOrderDetailId(id);
-    setOrderDetailNumber(orderNumber ?? null);
-  }, []);
+  const openDetail = useCallback(
+    (id: number, orderNumber?: string | null, summary?: SessionOrder) => {
+      setCartDrawerOpen(false);
+      // Clear any table-tap seed: this path (OrderListPane row tap) does
+      // NOT have the full detail with items, so OrderDetailSheet falls
+      // back to its own fetch. The summary, when available, lets the
+      // sheet header (số đơn, bàn / mang về) render instantly while items
+      // load — saves the 500-1000ms blank-modal flash on slow networks.
+      setOrderDetailSeed(null);
+      setOrderDetailSummary(summary ?? null);
+      setOrderDetailId(id);
+      setOrderDetailNumber(orderNumber ?? null);
+    },
+    [],
+  );
 
   const closeOrderDetail = useCallback(() => {
     setOrderDetailId(null);
     setOrderDetailNumber(null);
     setOrderDetailSeed(null);
+    setOrderDetailSummary(null);
   }, []);
 
   useKeyboardShortcut([
@@ -1024,6 +1041,7 @@ function PosDesktopInner({
         refreshToken={detailRefreshTick}
         initialOrder={orderDetailSeed?.order ?? null}
         initialCanManage={orderDetailSeed?.canManage ?? false}
+        initialSummary={orderDetailSummary}
         onClose={closeOrderDetail}
         onOpenBill={(id, seed) => {
           closeOrderDetail();

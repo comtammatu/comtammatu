@@ -10,6 +10,7 @@ import {
   useTransition,
   type ChangeEvent,
 } from "react";
+import Image from "next/image";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -70,10 +71,27 @@ const MenuItemButton = memo(function MenuItemButton({
     >
       <div className="flex h-full w-full flex-col justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-2">
+          {item.image_url ? (
+            <div className="relative aspect-square w-full overflow-hidden rounded-md bg-muted">
+              <Image
+                src={item.image_url}
+                alt=""
+                fill
+                sizes="(min-width: 1536px) 16vw, (min-width: 1280px) 22vw, (min-width: 640px) 33vw, 50vw"
+                className="object-cover"
+                unoptimized
+              />
+            </div>
+          ) : (
+            <div
+              className="aspect-square w-full rounded-md bg-muted/40"
+              aria-hidden
+            />
+          )}
           <div className="flex items-start justify-between gap-2">
             <p
               className={cn(
-                "line-clamp-3 min-w-0 text-base font-semibold leading-snug text-foreground md:text-lg",
+                "line-clamp-2 min-w-0 text-base font-semibold leading-snug text-foreground md:text-lg",
                 sparseMenu && "md:text-3xl",
               )}
             >

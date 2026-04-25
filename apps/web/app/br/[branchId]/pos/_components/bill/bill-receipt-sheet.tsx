@@ -287,6 +287,12 @@ export function BillReceipt({
   const [actionPending, startActionTransition] = useTransition();
   const [methodPending, startMethodTransition] = useTransition();
   const isOnline = useIsOnline();
+  // When the cashier taps a non-cash method while offline, remember the
+  // intent so we can auto-restore it on reconnect. Without this, every
+  // wifi flicker forces a re-tap. Cleared on: explicit method pick (any
+  // method including cash), sheet close, orderId change.
+  const [pendingOfflineMethod, setPendingOfflineMethod] =
+    useState<PaymentMethod | null>(null);
 
   const totalAmount = Number(order?.total_amount ?? 0);
   const cashReceived = Number(cashInput) || 0;
@@ -316,6 +322,7 @@ export function BillReceipt({
       setCashInput("");
       setPendingExtras(null);
       setInvoiceForm(EMPTY_INVOICE_FORM);
+      setPendingOfflineMethod(null);
       return;
     }
 
@@ -438,9 +445,11 @@ export function BillReceipt({
     (method: PaymentMethod) => {
       if (!order || orderId === null) return;
       if (!isOnline && method !== "cash") {
-        toast.error("Mất kết nối — chuyển khoản chưa khả dụng.");
+        setPendingOfflineMethod(method);
+        toast.error("Mất kết nối — sẽ tự thử lại khi có mạng.");
         return;
       }
+      setPendingOfflineMethod(null);
       setSelectedMethod(method);
 
       if (method === "cash") {
@@ -474,6 +483,17 @@ export function BillReceipt({
     },
     [branchId, isOnline, order, orderId],
   );
+
+  // Auto-restore the offline-blocked method when the network comes back.
+  // Re-uses handleSelectMethod so the offline guard is the single
+  // enforcement point (regression PWA-OFFLINE-GATE-CASH-ONLY): if isOnline
+  // flipped back to false in the same tick, the call short-circuits and
+  // pending stays set.
+  useEffect(() => {
+    if (pendingOfflineMethod === null) return;
+    if (!isOnline) return;
+    handleSelectMethod(pendingOfflineMethod);
+  }, [isOnline, pendingOfflineMethod, handleSelectMethod]);
 
   const handleConfirmPaid = useCallback(() => {
     if (!order || orderId === null || !canConfirmPaid) return;
@@ -650,6 +670,16 @@ export function BillReceipt({
                   );
                 })}
               </div>
+
+              {pendingOfflineMethod !== null && (
+                <p className="text-sm text-muted-foreground">
+                  Sẽ tự chọn{" "}
+                  <span className="font-medium text-foreground">
+                    {METHOD_META[pendingOfflineMethod].label}
+                  </span>{" "}
+                  khi có mạng.
+                </p>
+              )}
 
               {selectedMethod === "cash" ? (
                 <Card size="sm">

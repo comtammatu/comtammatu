@@ -145,8 +145,8 @@ export function OrderItemRow({ row, canManage, onVoid }: OrderItemRowProps) {
             <Button
               type="button"
               variant="ghost"
-              size="icon-sm"
-              className="hidden text-muted-foreground hover:text-destructive sm:inline-flex"
+              size="icon"
+              className="hidden min-h-11 min-w-11 size-9 text-muted-foreground hover:text-destructive sm:inline-flex"
               aria-label={`Hủy ${displayName}`}
               onClick={(event) => {
                 event.stopPropagation();
