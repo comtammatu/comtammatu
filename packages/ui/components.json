@@ -5,19 +5,18 @@
   "tsx": true,
   "tailwind": {
     "config": "",
-    "css": "../../apps/web/app/globals.css",
-    "baseColor": "stone",
-    "cssVariables": true,
-    "prefix": ""
+    "css": "src/styles/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true
   },
   "aliases": {
-    "components": "src/components",
-    "utils": "src/lib/utils",
-    "ui": "src/components",
-    "lib": "src/lib",
-    "hooks": "src/hooks"
+    "components": "@comtammatu/ui/components",
+    "utils": "@comtammatu/ui/lib/utils",
+    "ui": "@comtammatu/ui/components",
+    "lib": "@comtammatu/ui/lib",
+    "hooks": "@comtammatu/ui/hooks"
   },
-  "iconLibrary": "tabler",
+  "iconLibrary": "lucide",
   "rtl": false,
   "menuColor": "default",
   "menuAccent": "subtle"

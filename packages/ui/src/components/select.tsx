@@ -4,7 +4,11 @@ import * as React from "react"
 import { Select as SelectPrimitive } from "radix-ui"
 
 import { cn } from '../lib/utils'
-import { IconChevronDown, IconCheck, IconChevronUp } from "@tabler/icons-react"
+import {
+  Check as IconCheck,
+  ChevronDown as IconChevronDown,
+  ChevronUp as IconChevronUp,
+} from "lucide-react"
 
 function Select({
   ...props

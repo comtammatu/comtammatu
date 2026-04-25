@@ -3,7 +3,10 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "paths": {
+      "@comtammatu/ui/*": ["./src/*"]
+    }
   },
   "include": ["src"]
 }

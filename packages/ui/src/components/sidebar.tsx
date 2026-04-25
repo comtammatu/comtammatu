@@ -22,7 +22,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from './tooltip'
-import { IconLayoutSidebarLeftCollapse } from "@tabler/icons-react"
+import { PanelLeftClose as IconLayoutSidebarLeftCollapse } from "lucide-react"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7

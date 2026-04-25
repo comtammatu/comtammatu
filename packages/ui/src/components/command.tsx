@@ -15,7 +15,7 @@ import {
   InputGroup,
   InputGroupAddon,
 } from './input-group'
-import { IconSearch, IconCheck } from "@tabler/icons-react"
+import { Check as IconCheck, Search as IconSearch } from "lucide-react"
 
 function Command({
   className,
