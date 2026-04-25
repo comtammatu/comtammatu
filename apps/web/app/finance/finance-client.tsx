@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { IconAlertTriangle } from "@tabler/icons-react";
+import { TriangleAlert as IconAlertTriangle } from "lucide-react";
 import {
   Tabs,
   TabsContent,

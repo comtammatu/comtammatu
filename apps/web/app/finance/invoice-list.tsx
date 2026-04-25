@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { IconFileX, IconReceipt } from "@tabler/icons-react";
+import { FileX as IconFileX, Receipt as IconReceipt } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {

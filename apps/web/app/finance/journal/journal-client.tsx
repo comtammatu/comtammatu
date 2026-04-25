@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
+import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
 import { createJournalEntry } from "../accounting-actions";
 import type { JournalEntryRow, AccountOption } from "./page";
 

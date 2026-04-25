@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@comtammatu/ui/components/tabs";
+import { TriangleAlert as IconAlertTriangle, CircleCheck as IconCircleCheck, LoaderCircle as IconLoader2 } from "lucide-react";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -18,395 +20,295 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { Spinner } from "@comtammatu/ui/components/spinner";
-import { toast } from "@comtammatu/ui/components/sonner";
 import {
-  generateBalanceSheet,
-  generateIncomeStatement,
-  generateVatSummary,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
+import { toast } from "@comtammatu/ui/components/sonner";
+import { formatVND } from "@comtammatu/shared/format";
+import {
+  generateB01DN,
+  generateB02DN,
+  generateForm01Gtgt,
+  type Tt200ReportEnvelope,
+  type Tt200ReportLine,
 } from "../statement-actions";
 
-const fmt = (n: number) =>
-  n.toLocaleString("vi-VN", { maximumFractionDigits: 0 });
+type B01Report = Tt200ReportEnvelope<{ as_of_date: string }>;
+type B02Report = Tt200ReportEnvelope<{ start_date: string; end_date: string }>;
+type GtgtReport = Tt200ReportEnvelope<{ period: string }>;
 
 export function StatementsClient() {
   const [isPending, startTransition] = useTransition();
 
-  // Balance sheet state
-  const [bsDate, setBsDate] = useState(new Date().toISOString().slice(0, 10));
-  const [bsData, setBsData] = useState<Record<string, unknown> | null>(null);
+  const today = new Date().toISOString().slice(0, 10);
+  const monthStart = `${today.slice(0, 7)}-01`;
+  const monthOnly = today.slice(0, 7);
 
-  // Income statement state
-  const [isStart, setIsStart] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-  });
-  const [isEnd, setIsEnd] = useState(new Date().toISOString().slice(0, 10));
-  const [isData, setIsData] = useState<Record<string, unknown> | null>(null);
+  const [b01Date, setB01Date] = useState(today);
+  const [b01Data, setB01Data] = useState<B01Report | null>(null);
 
-  // VAT summary state
-  const [vatPeriod, setVatPeriod] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  });
-  const [vatData, setVatData] = useState<Record<string, unknown> | null>(null);
+  const [b02Start, setB02Start] = useState(monthStart);
+  const [b02End, setB02End] = useState(today);
+  const [b02Data, setB02Data] = useState<B02Report | null>(null);
 
-  function handleBalanceSheet() {
+  const [vatPeriod, setVatPeriod] = useState(monthOnly);
+  const [vatData, setVatData] = useState<GtgtReport | null>(null);
+
+  function handleB01() {
     startTransition(async () => {
-      const result = await generateBalanceSheet({ asOfDate: bsDate });
-      if (result.success) {
-        setBsData(result.data as Record<string, unknown>);
+      const res = await generateB01DN({ asOfDate: b01Date });
+      if (res.success) {
+        setB01Data(res.data as B01Report);
       } else {
-        toast.error(result.error ?? "Lỗi");
+        toast.error(res.error ?? "Lỗi tạo báo cáo.");
       }
     });
   }
 
-  function handleIncomeStatement() {
+  function handleB02() {
     startTransition(async () => {
-      const result = await generateIncomeStatement({ startDate: isStart, endDate: isEnd });
-      if (result.success) {
-        setIsData(result.data as Record<string, unknown>);
+      const res = await generateB02DN({
+        startDate: b02Start,
+        endDate: b02End,
+      });
+      if (res.success) {
+        setB02Data(res.data as B02Report);
       } else {
-        toast.error(result.error ?? "Lỗi");
+        toast.error(res.error ?? "Lỗi tạo báo cáo.");
       }
     });
   }
 
-  function handleVatSummary() {
+  function handleGtgt() {
     startTransition(async () => {
-      const result = await generateVatSummary({ period: vatPeriod });
-      if (result.success) {
-        setVatData(result.data as Record<string, unknown>);
+      const res = await generateForm01Gtgt({ period: vatPeriod });
+      if (res.success) {
+        setVatData(res.data as GtgtReport);
       } else {
-        toast.error(result.error ?? "Lỗi");
+        toast.error(res.error ?? "Lỗi tạo báo cáo.");
       }
     });
   }
 
   return (
-    <Tabs defaultValue="balance-sheet">
-      <TabsList>
-        <TabsTrigger value="balance-sheet">Bảng CĐKT</TabsTrigger>
-        <TabsTrigger value="income">Kết quả KD</TabsTrigger>
-        <TabsTrigger value="vat">Tổng hợp VAT</TabsTrigger>
+    <Tabs defaultValue="b01" className="space-y-4">
+      <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto p-2">
+        <TabsTrigger value="b01">B01-DN · CĐKT</TabsTrigger>
+        <TabsTrigger value="b02">B02-DN · KQKD</TabsTrigger>
+        <TabsTrigger value="gtgt">01/GTGT · Thuế GTGT</TabsTrigger>
       </TabsList>
 
-      {/* ─── Balance Sheet ─── */}
-      <TabsContent value="balance-sheet" className="mt-4 space-y-4">
-        <div className="flex items-end gap-3">
-          <div>
-            <Label>Đến ngày</Label>
-            <Input
-              type="date"
-              value={bsDate}
-              onChange={(e) => setBsDate(e.target.value)}
-              className="w-44"
-            />
-          </div>
-          <Button onClick={handleBalanceSheet} disabled={isPending}>
-            {isPending && <Spinner className="mr-2" />}
-            Tạo báo cáo
-          </Button>
-        </div>
+      <TabsContent value="b01" className="mt-0 space-y-4">
+        <Card>
+          <CardContent className="grid gap-3 p-4 sm:grid-cols-[1fr_auto] sm:items-end">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Đến ngày
+              </Label>
+              <Input
+                type="date"
+                value={b01Date}
+                onChange={(e) => setB01Date(e.target.value)}
+                className="max-w-xs"
+              />
+            </div>
+            <Button onClick={handleB01} disabled={isPending}>
+              {isPending ? <IconLoader2 className="size-4 animate-spin" /> : null}
+              Tạo Bảng cân đối
+            </Button>
+          </CardContent>
+        </Card>
 
-        {bsData && <BalanceSheetView data={bsData} />}
+        {b01Data ? (
+          <Tt200Report
+            title="B01-DN — Bảng Cân Đối Kế Toán"
+            subtitle={`Đến ngày ${b01Data.meta.as_of_date}`}
+            data={b01Data}
+            assertion={(lines) => assertEquality(lines, "270", "440")}
+          />
+        ) : (
+          <EmptyState />
+        )}
       </TabsContent>
 
-      {/* ─── Income Statement ─── */}
-      <TabsContent value="income" className="mt-4 space-y-4">
-        <div className="flex items-end gap-3">
-          <div>
-            <Label>Từ ngày</Label>
-            <Input
-              type="date"
-              value={isStart}
-              onChange={(e) => setIsStart(e.target.value)}
-              className="w-44"
-            />
-          </div>
-          <div>
-            <Label>Đến ngày</Label>
-            <Input
-              type="date"
-              value={isEnd}
-              onChange={(e) => setIsEnd(e.target.value)}
-              className="w-44"
-            />
-          </div>
-          <Button onClick={handleIncomeStatement} disabled={isPending}>
-            {isPending && <Spinner className="mr-2" />}
-            Tạo báo cáo
-          </Button>
-        </div>
+      <TabsContent value="b02" className="mt-0 space-y-4">
+        <Card>
+          <CardContent className="grid gap-3 p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Từ ngày
+              </Label>
+              <Input
+                type="date"
+                value={b02Start}
+                onChange={(e) => setB02Start(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Đến ngày
+              </Label>
+              <Input
+                type="date"
+                value={b02End}
+                onChange={(e) => setB02End(e.target.value)}
+              />
+            </div>
+            <Button onClick={handleB02} disabled={isPending}>
+              {isPending ? <IconLoader2 className="size-4 animate-spin" /> : null}
+              Tạo KQKD
+            </Button>
+          </CardContent>
+        </Card>
 
-        {isData && <IncomeStatementView data={isData} />}
+        {b02Data ? (
+          <Tt200Report
+            title="B02-DN — Báo Cáo Kết Quả Kinh Doanh"
+            subtitle={`${b02Data.meta.start_date} → ${b02Data.meta.end_date}`}
+            data={b02Data}
+          />
+        ) : (
+          <EmptyState />
+        )}
       </TabsContent>
 
-      {/* ─── VAT Summary ─── */}
-      <TabsContent value="vat" className="mt-4 space-y-4">
-        <div className="flex items-end gap-3">
-          <div>
-            <Label>Kỳ (YYYY-MM)</Label>
-            <Input
-              type="month"
-              value={vatPeriod}
-              onChange={(e) => setVatPeriod(e.target.value)}
-              className="w-44"
-            />
-          </div>
-          <Button onClick={handleVatSummary} disabled={isPending}>
-            {isPending && <Spinner className="mr-2" />}
-            Tạo báo cáo
-          </Button>
-        </div>
+      <TabsContent value="gtgt" className="mt-0 space-y-4">
+        <Card>
+          <CardContent className="grid gap-3 p-4 sm:grid-cols-[1fr_auto] sm:items-end">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Kỳ kê khai (YYYY-MM)
+              </Label>
+              <Input
+                type="month"
+                value={vatPeriod}
+                onChange={(e) => setVatPeriod(e.target.value)}
+                className="max-w-xs"
+              />
+            </div>
+            <Button onClick={handleGtgt} disabled={isPending}>
+              {isPending ? <IconLoader2 className="size-4 animate-spin" /> : null}
+              Tạo Tờ khai
+            </Button>
+          </CardContent>
+        </Card>
 
-        {vatData && <VatSummaryView data={vatData} />}
+        {vatData ? (
+          <Tt200Report
+            title="01/GTGT — Tờ Khai Thuế Giá Trị Gia Tăng"
+            subtitle={`Kỳ ${vatData.meta.period}`}
+            data={vatData}
+          />
+        ) : (
+          <EmptyState />
+        )}
       </TabsContent>
     </Tabs>
   );
 }
 
-/* ─── Sub-views ─── */
-
-interface AccountLine {
-  account_code: string;
-  account_name: string;
-  balance: number;
+function EmptyState() {
+  return (
+    <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+      Chọn kỳ và nhấn nút <strong>Tạo</strong> để xem báo cáo.
+    </p>
+  );
 }
 
-function BalanceSheetView({ data }: { data: Record<string, unknown> }) {
-  const assets = (data.assets as AccountLine[]) ?? [];
-  const liabilities = (data.liabilities as AccountLine[]) ?? [];
-  const equity = (data.equity as AccountLine[]) ?? [];
-  const retainedEarnings = (data.retainedEarnings as number) ?? 0;
+interface Tt200ReportProps<TMeta extends object> {
+  title: string;
+  subtitle: string;
+  data: Tt200ReportEnvelope<TMeta>;
+  assertion?: (lines: Tt200ReportLine[]) => string | null;
+}
+
+function Tt200Report<TMeta extends object>({
+  title,
+  subtitle,
+  data,
+  assertion,
+}: Tt200ReportProps<TMeta>) {
+  const isDraft = data.status !== "final";
+  const violation = assertion?.(data.lines) ?? null;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      {/* Assets */}
-      <div className="rounded-md border">
-        <div className="border-b bg-muted/50 px-4 py-2 font-semibold">
-          TÀI SẢN
+    <Card>
+      <CardHeader className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <CardTitle className="text-base">{title}</CardTitle>
+          {isDraft ? (
+            <Badge variant="destructive" className="gap-1">
+              <IconAlertTriangle className="size-3" /> BẢN NHÁP — kế toán phải
+              đối chiếu trước khi nộp
+            </Badge>
+          ) : (
+            <Badge variant="secondary" className="gap-1">
+              <IconCircleCheck className="size-3" /> Kỳ đã khóa sổ
+            </Badge>
+          )}
         </div>
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
+        {violation ? (
+          <p className="rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
+            {violation}
+          </p>
+        ) : null}
+      </CardHeader>
+      <CardContent className="p-0">
         <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50 hover:bg-muted/50">
+              <TableHead className="w-24 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Mã số
+              </TableHead>
+              <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Chỉ tiêu
+              </TableHead>
+              <TableHead className="w-44 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Số tiền (VND)
+              </TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
-            {assets.map((a) => (
-              <TableRow key={a.account_code}>
-                <TableCell className="font-mono text-sm">
-                  {a.account_code}
+            {data.lines.map((line) => (
+              <TableRow
+                key={line.line_code}
+                className={line.is_total ? "bg-muted/30 font-semibold" : ""}
+              >
+                <TableCell className="font-mono text-xs">
+                  {line.line_code}
                 </TableCell>
-                <TableCell>{a.account_name}</TableCell>
+                <TableCell
+                  style={{ paddingLeft: `${(line.level - 1) * 1.5}rem` }}
+                >
+                  {line.line_label}
+                </TableCell>
                 <TableCell className="text-right font-mono">
-                  {fmt(a.balance)}
+                  {formatVND(Number(line.amount))}
                 </TableCell>
               </TableRow>
             ))}
-            <TableRow className="font-bold">
-              <TableCell colSpan={2}>Tổng tài sản</TableCell>
-              <TableCell className="text-right font-mono">
-                {fmt(data.totalAssets as number)}
-              </TableCell>
-            </TableRow>
           </TableBody>
         </Table>
-      </div>
-
-      {/* Liabilities + Equity */}
-      <div className="rounded-md border">
-        <div className="border-b bg-muted/50 px-4 py-2 font-semibold">
-          NỢ PHẢI TRẢ & VỐN CHỦ SỞ HỮU
-        </div>
-        <Table>
-          <TableBody>
-            {liabilities.map((a) => (
-              <TableRow key={a.account_code}>
-                <TableCell className="font-mono text-sm">
-                  {a.account_code}
-                </TableCell>
-                <TableCell>{a.account_name}</TableCell>
-                <TableCell className="text-right font-mono">
-                  {fmt(a.balance)}
-                </TableCell>
-              </TableRow>
-            ))}
-            {equity.map((a) => (
-              <TableRow key={a.account_code}>
-                <TableCell className="font-mono text-sm">
-                  {a.account_code}
-                </TableCell>
-                <TableCell>{a.account_name}</TableCell>
-                <TableCell className="text-right font-mono">
-                  {fmt(a.balance)}
-                </TableCell>
-              </TableRow>
-            ))}
-            {retainedEarnings !== 0 && (
-              <TableRow>
-                <TableCell className="font-mono text-sm">421</TableCell>
-                <TableCell>LN chưa phân phối (kỳ này)</TableCell>
-                <TableCell className="text-right font-mono">
-                  {fmt(retainedEarnings)}
-                </TableCell>
-              </TableRow>
-            )}
-            <TableRow className="font-bold">
-              <TableCell colSpan={2}>Tổng nguồn vốn</TableCell>
-              <TableCell className="text-right font-mono">
-                {fmt(data.totalEquity as number)}
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
-interface IncomeItem {
-  account_code: string;
-  account_name: string;
-  amount: number;
-}
-
-function IncomeStatementView({ data }: { data: Record<string, unknown> }) {
-  const revenue = (data.revenue as IncomeItem[]) ?? [];
-  const expenses = (data.expenses as IncomeItem[]) ?? [];
-  const netProfit = (data.netProfit as number) ?? 0;
-
-  return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-24">Mã TK</TableHead>
-            <TableHead>Khoản mục</TableHead>
-            <TableHead className="w-40 text-right">Số tiền (VND)</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow className="bg-muted/30">
-            <TableCell colSpan={3} className="font-semibold">
-              DOANH THU
-            </TableCell>
-          </TableRow>
-          {revenue.map((r) => (
-            <TableRow key={r.account_code}>
-              <TableCell className="font-mono text-sm">
-                {r.account_code}
-              </TableCell>
-              <TableCell>{r.account_name}</TableCell>
-              <TableCell className="text-right font-mono">
-                {fmt(r.amount)}
-              </TableCell>
-            </TableRow>
-          ))}
-          <TableRow className="font-bold">
-            <TableCell colSpan={2}>Tổng doanh thu</TableCell>
-            <TableCell className="text-right font-mono">
-              {fmt(data.totalRevenue as number)}
-            </TableCell>
-          </TableRow>
-
-          <TableRow className="bg-muted/30">
-            <TableCell colSpan={3} className="font-semibold">
-              CHI PHÍ
-            </TableCell>
-          </TableRow>
-          {expenses.map((e) => (
-            <TableRow key={e.account_code}>
-              <TableCell className="font-mono text-sm">
-                {e.account_code}
-              </TableCell>
-              <TableCell>{e.account_name}</TableCell>
-              <TableCell className="text-right font-mono">
-                {fmt(e.amount)}
-              </TableCell>
-            </TableRow>
-          ))}
-          <TableRow className="font-bold">
-            <TableCell colSpan={2}>Tổng chi phí</TableCell>
-            <TableCell className="text-right font-mono">
-              {fmt(data.totalExpenses as number)}
-            </TableCell>
-          </TableRow>
-
-          <TableRow className="bg-primary/5 text-lg font-bold">
-            <TableCell colSpan={2}>LỢI NHUẬN THUẦN</TableCell>
-            <TableCell
-              className={`text-right font-mono ${netProfit >= 0 ? "text-success" : "text-destructive"}`}
-            >
-              {fmt(netProfit)}
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
-
-function VatSummaryView({ data }: { data: Record<string, unknown> }) {
-  const output = data.output as {
-    invoiceCount: number;
-    subtotal: number;
-    vatAmount: number;
-  };
-  const input = data.input as {
-    invoiceCount: number;
-    subtotal: number;
-    vatAmount: number;
-  };
-  const vatPayable = (data.vatPayable as number) ?? 0;
-
-  return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Khoản mục</TableHead>
-            <TableHead className="text-right">Số HĐ</TableHead>
-            <TableHead className="text-right">Doanh thu/Chi phí</TableHead>
-            <TableHead className="text-right">Thuế GTGT</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow>
-            <TableCell className="font-medium">
-              GTGT đầu ra (bán hàng)
-            </TableCell>
-            <TableCell className="text-right">{output.invoiceCount}</TableCell>
-            <TableCell className="text-right font-mono">
-              {fmt(output.subtotal)}
-            </TableCell>
-            <TableCell className="text-right font-mono">
-              {fmt(output.vatAmount)}
-            </TableCell>
-          </TableRow>
-          <TableRow>
-            <TableCell className="font-medium">
-              GTGT đầu vào (mua hàng)
-            </TableCell>
-            <TableCell className="text-right">{input.invoiceCount}</TableCell>
-            <TableCell className="text-right font-mono">
-              {fmt(input.subtotal)}
-            </TableCell>
-            <TableCell className="text-right font-mono">
-              {fmt(input.vatAmount)}
-            </TableCell>
-          </TableRow>
-          <TableRow className="bg-primary/5 text-lg font-bold">
-            <TableCell colSpan={3}>THUẾ GTGT PHẢI NỘP</TableCell>
-            <TableCell
-              className={`text-right font-mono ${vatPayable >= 0 ? "text-destructive" : "text-success"}`}
-            >
-              {fmt(vatPayable)}
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-      <p className="px-4 py-2 text-xs text-muted-foreground">
-        Số liệu này phục vụ tham khảo. Việc kê khai chính thức thực hiện qua
-        eTax hoặc phần mềm kế toán.
-      </p>
-    </div>
-  );
+function assertEquality(
+  lines: Tt200ReportLine[],
+  codeA: string,
+  codeB: string,
+): string | null {
+  const a = lines.find((l) => l.line_code === codeA);
+  const b = lines.find((l) => l.line_code === codeB);
+  if (!a || !b) return null;
+  const diff = Math.abs(Number(a.amount) - Number(b.amount));
+  if (diff > 1) {
+    return `Cảnh báo: ${codeA} (${formatVND(Number(a.amount))}) ≠ ${codeB} (${formatVND(Number(b.amount))}); chênh lệch ${formatVND(diff)}. Kiểm tra bút toán trước khi nộp.`;
+  }
+  return null;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { IconChartBar, IconReceipt, IconTrendingUp } from "@tabler/icons-react";
+import { ChartBar as IconChartBar, Receipt as IconReceipt, TrendingUp as IconTrendingUp } from "lucide-react";
 import {
   Card,
   CardContent,

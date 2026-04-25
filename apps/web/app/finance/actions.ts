@@ -32,12 +32,26 @@ const REPORT_ROLES: readonly StaffRole[] = [
 
 /* ─── HĐĐT: Create Invoice ─── */
 
-const createInvoiceSchema = z.object({
-  orderId: z.coerce.number().int().positive(),
-  buyerName: z.string().optional(),
-  buyerTaxCode: z.string().optional(),
-  buyerAddress: z.string().optional(),
-});
+const MST_REGEX = /^\d{10}(-\d{3})?$/;
+
+const createInvoiceSchema = z
+  .object({
+    orderId: z.coerce.number().int().positive(),
+    buyerName: z.string().trim().max(200).optional(),
+    buyerTaxCode: z
+      .string()
+      .trim()
+      .regex(MST_REGEX, { error: "MST phải có dạng 10 số hoặc 10-3 số" })
+      .optional(),
+    buyerAddress: z.string().trim().max(500).optional(),
+  })
+  .refine(
+    (v) => !v.buyerTaxCode || (v.buyerName && v.buyerName.length > 0),
+    {
+      error: "Có MST thì phải nhập tên người mua",
+      path: ["buyerName"],
+    },
+  );
 
 /**
  * Create a draft tax invoice for an order.
@@ -204,7 +218,7 @@ export async function createTaxInvoice(
     return { success: false, error: "Không thể tạo hóa đơn." };
   }
 
-  logAudit(supabase, {
+  await logAudit(supabase, {
     tenantId: claims.tenant_id,
     userId: user.id,
     action: "create",
@@ -218,17 +232,31 @@ export async function createTaxInvoice(
 
 /* ─── Cancel Invoice ─── */
 
+const cancelInvoiceSchema = z.object({
+  invoiceId: z.coerce.number().int().positive(),
+  reason: z
+    .string()
+    .min(20, "Lý do hủy phải có ít nhất 20 ký tự")
+    .max(500, "Lý do hủy quá dài")
+    .optional(),
+});
+
 export async function cancelTaxInvoice(
   invoiceId: number,
   reason?: string,
 ): Promise<ActionResult> {
-  const parsedId = z.coerce.number().int().positive().safeParse(invoiceId);
-  if (!parsedId.success) {
-    return { success: false, error: "Invoice ID không hợp lệ" };
+  const parsed = cancelInvoiceSchema.safeParse({ invoiceId, reason });
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
   }
 
-  // Only owner/super_manager can cancel
-  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, PERMISSION_KEYS.SETTINGS_TENANT);
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
   if (!ctx) return { success: false, error: "Không có quyền hủy hóa đơn." };
 
   const { supabase, claims, user } = ctx;
@@ -236,7 +264,7 @@ export async function cancelTaxInvoice(
   const { data: invoice, error: fetchErr } = await supabase
     .from("tax_invoices")
     .select("id, status, provider_ref, provider")
-    .eq("id", parsedId.data)
+    .eq("id", parsed.data.invoiceId)
     .eq("tenant_id", claims.tenant_id)
     .single();
 
@@ -248,8 +276,8 @@ export async function cancelTaxInvoice(
     return { success: false, error: "Chỉ có thể hủy hóa đơn đã phát hành." };
   }
 
-  // Call provider cancel API if configured
-  const cancelReason = reason ?? "Hủy theo yêu cầu";
+  const cancelReason = parsed.data.reason ?? "Hủy theo yêu cầu";
+
   if (invoice.provider_ref && invoice.provider !== "mock") {
     ensureInvoiceProviderRegistered();
     const invoiceProvider = getInvoiceProvider();
@@ -265,30 +293,68 @@ export async function cancelTaxInvoice(
     }
   }
 
-  const { error } = await supabase
-    .from("tax_invoices")
-    .update({
-      status: "cancelled",
-      cancelled_at: new Date().toISOString(),
-      provider_data: { cancel_reason: cancelReason },
-    })
-    .eq("id", parsedId.data);
+  // Atomic transition through state machine RPC — preserves provider_data
+  // history in tax_invoice_events instead of overwriting on tax_invoices.
+  const { error: rpcErr } = await supabase.rpc("transition_tax_invoice_state", {
+    p_tax_invoice_id: parsed.data.invoiceId,
+    p_to_status: "cancelled",
+    p_payload: { cancel_reason: cancelReason },
+    p_note: cancelReason,
+  });
 
-  if (error) {
+  if (rpcErr) {
+    if (rpcErr.code === "22023") {
+      return { success: false, error: "Trạng thái hóa đơn không cho phép hủy." };
+    }
+    if (rpcErr.code === "42501") {
+      return { success: false, error: "Không có quyền hủy hóa đơn." };
+    }
     return { success: false, error: "Không thể hủy hóa đơn." };
   }
 
-  logAudit(supabase, {
+  await logAudit(supabase, {
     tenantId: claims.tenant_id,
     userId: user.id,
     action: "cancel",
     entityType: "tax_invoice",
-    entityId: parsedId.data,
+    entityId: parsed.data.invoiceId,
     oldData: { status: "issued" },
     newData: { status: "cancelled", reason: cancelReason },
   });
 
   return { success: true };
+}
+
+/* ─── Fetch Invoice Audit Trail ─── */
+
+export async function fetchTaxInvoiceEvents(
+  invoiceId: number,
+): Promise<ActionResult> {
+  const parsed = z.coerce.number().int().positive().safeParse(invoiceId);
+  if (!parsed.success) {
+    return { success: false, error: "Invoice ID không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  const { data, error } = await supabase
+    .from("tax_invoice_events")
+    .select("id, from_status, to_status, payload, note, actor_id, created_at")
+    .eq("tax_invoice_id", parsed.data)
+    .eq("tenant_id", claims.tenant_id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return { success: false, error: "Không thể tải nhật ký hóa đơn." };
+  }
+
+  return { success: true, data: data ?? [] };
 }
 
 /* ─── Fetch Invoices ─── */

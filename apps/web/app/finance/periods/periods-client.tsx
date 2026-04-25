@@ -20,7 +20,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@comtammatu/ui/components/dialog";
-import { IconLock, IconPlus, IconFileSearch } from "@tabler/icons-react";
+import { Lock as IconLock, Plus as IconPlus, FileSearch as IconFileSearch } from "lucide-react";
 import {
   openFiscalPeriod,
   closeFiscalPeriod,

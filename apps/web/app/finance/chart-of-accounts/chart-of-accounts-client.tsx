@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
-import { IconPlus } from "@tabler/icons-react";
+import { Plus as IconPlus } from "lucide-react";
 import { createAccount, updateAccount } from "../accounting-actions";
 import type { AccountRow } from "./page";
 

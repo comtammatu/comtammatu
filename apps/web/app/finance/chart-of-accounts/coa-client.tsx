@@ -14,7 +14,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { IconCircleOff, IconPlus, IconRefresh } from "@tabler/icons-react";
+import { CircleOff as IconCircleOff, Plus as IconPlus, RefreshCw as IconRefresh } from "lucide-react";
 import type { AccountRow } from "./page";
 import {
   seedChartOfAccounts,

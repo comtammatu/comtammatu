@@ -10,16 +10,38 @@ const STATEMENT_ROLES: readonly StaffRole[] = [
   "area_manager",
 ];
 
+export interface Tt200ReportLine {
+  line_code: string;
+  line_label: string;
+  parent: string | null;
+  level: number;
+  amount: number;
+  is_total: boolean;
+}
+
+export interface Tt200ReportEnvelope<TMeta extends object = object> {
+  form: string;
+  status: "draft" | "final";
+  generated_at: string;
+  lines: Tt200ReportLine[];
+  meta: TMeta;
+}
+
 /* ─── Schemas ─── */
 
 const balanceSheetSchema = z.object({
   asOfDate: z.string().date("Ngày không hợp lệ (YYYY-MM-DD)"),
 });
 
-const incomeStatementSchema = z.object({
-  startDate: z.string().date("Ngày không hợp lệ (YYYY-MM-DD)"),
-  endDate: z.string().date("Ngày không hợp lệ (YYYY-MM-DD)"),
-});
+const incomeStatementSchema = z
+  .object({
+    startDate: z.string().date("Ngày không hợp lệ (YYYY-MM-DD)"),
+    endDate: z.string().date("Ngày không hợp lệ (YYYY-MM-DD)"),
+  })
+  .refine((d) => d.startDate <= d.endDate, {
+    error: "Ngày bắt đầu phải trước ngày kết thúc",
+    path: ["endDate"],
+  });
 
 const vatSummarySchema = z.object({
   period: z.string().regex(/^\d{4}-\d{2}$/, "Kỳ không hợp lệ (YYYY-MM)"),
@@ -296,6 +318,143 @@ export const generateVatSummary = withAction(
         },
         vatPayable: totalVatOut - totalVatIn,
       },
+    };
+  },
+);
+
+/* ─── TT200 BCTC: B01-DN (Bảng Cân Đối Kế Toán) ─── */
+
+export const generateB01DN = withAction(
+  {
+    roles: STATEMENT_ROLES,
+    schema: balanceSheetSchema,
+    permission: PERMISSION_KEYS.FINANCE_VIEW,
+  },
+  async (data, { supabase, claims }) => {
+    const { data: result, error } = await supabase.rpc("fn_generate_b01_dn", {
+      p_tenant_id: claims.tenant_id,
+      p_as_of_date: data.asOfDate,
+    });
+
+    if (error) {
+      return { success: false, error: "Không thể tạo Bảng cân đối kế toán." };
+    }
+
+    const env = result as unknown as {
+      form: string;
+      tenant_id: number;
+      as_of_date: string;
+      status: "draft" | "final";
+      generated_at: string;
+      lines: Tt200ReportLine[];
+    };
+
+    return {
+      success: true,
+      data: {
+        form: env.form,
+        status: env.status,
+        generated_at: env.generated_at,
+        lines: env.lines.map((l) => ({ ...l, amount: Number(l.amount) })),
+        meta: { as_of_date: env.as_of_date },
+      } as Tt200ReportEnvelope<{ as_of_date: string }>,
+    };
+  },
+);
+
+/* ─── TT200 BCTC: B02-DN (Báo cáo Kết quả Kinh doanh) ─── */
+
+export const generateB02DN = withAction(
+  {
+    roles: STATEMENT_ROLES,
+    schema: incomeStatementSchema,
+    permission: PERMISSION_KEYS.FINANCE_VIEW,
+  },
+  async (data, { supabase, claims }) => {
+    const { data: result, error } = await supabase.rpc("fn_generate_b02_dn", {
+      p_tenant_id: claims.tenant_id,
+      p_start_date: data.startDate,
+      p_end_date: data.endDate,
+    });
+
+    if (error) {
+      if (error.code === "22023") {
+        return { success: false, error: "Khoảng ngày không hợp lệ." };
+      }
+      return { success: false, error: "Không thể tạo Báo cáo KQKD." };
+    }
+
+    const env = result as unknown as {
+      form: string;
+      tenant_id: number;
+      start_date: string;
+      end_date: string;
+      status: "draft" | "final";
+      generated_at: string;
+      lines: Tt200ReportLine[];
+    };
+
+    return {
+      success: true,
+      data: {
+        form: env.form,
+        status: env.status,
+        generated_at: env.generated_at,
+        lines: env.lines.map((l) => ({ ...l, amount: Number(l.amount) })),
+        meta: { start_date: env.start_date, end_date: env.end_date },
+      } as Tt200ReportEnvelope<{ start_date: string; end_date: string }>,
+    };
+  },
+);
+
+/* ─── TT200 form 01-GTGT (Tờ khai thuế GTGT) ─── */
+
+export const generateForm01Gtgt = withAction(
+  {
+    roles: STATEMENT_ROLES,
+    schema: vatSummarySchema,
+    permission: PERMISSION_KEYS.FINANCE_VIEW,
+  },
+  async (data, { supabase, claims }) => {
+    const [yearStr, monthStr] = data.period.split("-");
+    const year = Number(yearStr);
+    const month = Number(monthStr);
+    if (!year || !month) {
+      return { success: false, error: "Kỳ không hợp lệ." };
+    }
+
+    const { data: result, error } = await supabase.rpc(
+      "fn_generate_form_01_gtgt",
+      {
+        p_tenant_id: claims.tenant_id,
+        p_year: year,
+        p_month: month,
+      },
+    );
+
+    if (error) {
+      return { success: false, error: "Không thể tạo Tờ khai 01/GTGT." };
+    }
+
+    const env = result as unknown as {
+      form: string;
+      tenant_id: number;
+      year: number;
+      month: number;
+      status: "draft" | "final";
+      generated_at: string;
+      lines: Tt200ReportLine[];
+    };
+
+    return {
+      success: true,
+      data: {
+        form: env.form,
+        status: env.status,
+        generated_at: env.generated_at,
+        lines: env.lines.map((l) => ({ ...l, amount: Number(l.amount) })),
+        meta: { period: data.period },
+      } as Tt200ReportEnvelope<{ period: string }>,
     };
   },
 );
