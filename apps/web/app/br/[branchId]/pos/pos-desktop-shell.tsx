@@ -914,7 +914,10 @@ function PosDesktopInner({
               : "Giỏ đơn mới"}
         </DrawerTitle>
         <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-          <PosSidebarContent {...sidebarContentProps} />
+          <PosSidebarContent
+            {...sidebarContentProps}
+            onClosePane={() => setCartDrawerOpen(false)}
+          />
         </div>
       </DrawerContent>
     </Drawer>

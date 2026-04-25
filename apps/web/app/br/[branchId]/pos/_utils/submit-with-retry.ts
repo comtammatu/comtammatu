@@ -1,5 +1,9 @@
 import { submitOrder } from "../actions";
 import type { CartSnapshot } from "../_providers/cart-store";
+import {
+  POS_ERROR_CODES,
+  isRetryablePosErrorCode,
+} from "./error-codes";
 
 /**
  * Retry schedule for the POS submit round-trip.
@@ -16,24 +20,17 @@ export const SUBMIT_RETRY_BACKOFF_MS = [0, 400, 1000] as const;
 
 /**
  * Vietnamese substrings that indicate a NON-retryable submit error.
- * These are the short-circuit conditions — retrying them just burns
- * time and shows the cashier spinner longer for no benefit.
+ * KEPT AS A FALLBACK ONLY — the primary check is `errorCode` from
+ * `submitOrder` (typed via `POS_ERROR_CODES`). The substring list
+ * still catches:
+ *   - Pre-`errorCode` callers that haven't been migrated
+ *   - Errors thrown outside `submitOrder` (e.g. action wrapper)
+ *   - Defensive coverage if a code is forgotten
  *
- * KEEP IN SYNC with the error strings returned by
- *   `submitOrder()` in apps/web/app/br/[branchId]/pos/order-actions.ts
- *
- * Categories:
- *   - "Giỏ hàng"        : empty cart / invalid cart state
- *   - "không hợp lệ"     : Zod validation failure (invalid branch/session/etc.)
- *   - "quyền"            : permission denied
- *   - "Phiên đăng nhập"  : session expired / not authenticated
- *   - "chi nhánh"        : branch-id mismatch with JWT claim
- *
- * If the server action renames any of these strings, retry behavior
- * for that category silently regresses to "retry 3 times, then error" —
- * which burns ~1.4 s of cashier time before the real error surfaces.
- * Long-term fix: use explicit error codes on the server side, not
- * substring matching. Deferred.
+ * If the server action renames any of these strings AND the corresponding
+ * `errorCode` is also missing, retry behavior for that category silently
+ * regresses to "retry 3 times, then error" — which burns ~1.4 s of
+ * cashier time. The errorCode path is the durable contract.
  */
 const NON_RETRYABLE_ERROR_SUBSTRINGS: readonly string[] = [
   "Giỏ hàng",
@@ -43,7 +40,34 @@ const NON_RETRYABLE_ERROR_SUBSTRINGS: readonly string[] = [
   "chi nhánh",
 ];
 
-/** Testable predicate. Pure — no side effects. */
+/**
+ * Decide if a failed submit attempt is worth retrying.
+ *
+ * Decision order:
+ *   1. If `errorCode` is set, branch on that — stable contract.
+ *   2. Otherwise fall back to substring matching against `error`.
+ *
+ * Pure — no side effects. Exported for tests.
+ */
+export function shouldRetrySubmit(
+  errorCode: string | undefined,
+  error: string | undefined,
+): boolean {
+  // Path 1 (preferred): explicit machine-readable code.
+  if (errorCode !== undefined) {
+    return isRetryablePosErrorCode(errorCode);
+  }
+  // Path 2 (fallback): legacy substring match.
+  if (error === undefined) return false;
+  return !NON_RETRYABLE_ERROR_SUBSTRINGS.some((substring) =>
+    error.includes(substring),
+  );
+}
+
+/**
+ * Legacy alias — kept for any caller that still imports it.
+ * New code should use `shouldRetrySubmit(errorCode, error)`.
+ */
 export function isNonRetryableSubmitError(error: string): boolean {
   return NON_RETRYABLE_ERROR_SUBSTRINGS.some((substring) =>
     error.includes(substring),
@@ -66,7 +90,7 @@ type SubmitResult = Awaited<ReturnType<typeof submitOrder>>;
  *   so a dropped response on attempt N is safely deduped by the server
  *   on attempt N+1 via `orders.idempotency_key`.
  * - Walks SUBMIT_RETRY_BACKOFF_MS, sleeping between attempts.
- * - Breaks early on non-retryable errors (see isNonRetryableSubmitError).
+ * - Breaks early on non-retryable errors (see shouldRetrySubmit).
  * - Never throws. The returned ActionResult surfaces the final outcome;
  *   callers own toast / UI orchestration.
  */
@@ -78,6 +102,7 @@ export async function submitPosOrderWithRetry(
   let result: SubmitResult = {
     success: false,
     error: "Không thể tạo đơn hàng",
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
   };
 
   for (const delay of SUBMIT_RETRY_BACKOFF_MS) {
@@ -96,7 +121,7 @@ export async function submitPosOrderWithRetry(
       idempotencyKey,
     );
     if (result.success) break;
-    if (isNonRetryableSubmitError(result.error ?? "")) break;
+    if (!shouldRetrySubmit(result.errorCode, result.error)) break;
   }
 
   return result;

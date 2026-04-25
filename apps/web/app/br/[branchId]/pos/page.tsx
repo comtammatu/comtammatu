@@ -6,7 +6,7 @@ import {
 import {
   fetchMenuForPos,
   fetchTablesForBranch,
-  fetchActiveSession,
+  fetchActiveSessionsForBranch,
   fetchPosTerminals,
   fetchPosPermissionFlags,
   fetchSessionOrders,
@@ -18,13 +18,17 @@ import { SessionGate } from "./session-gate";
 import type { OrderType } from "./types";
 import { PosStatusShell } from "./pos-status-shell";
 import { PosPageSkeleton } from "./pos-page-skeleton";
+import {
+  MultiSessionPicker,
+  type OpenSessionForPicker,
+} from "./_components/multi-session-picker";
 
 export default async function PosPage({
   params,
   searchParams,
 }: {
   params: Promise<{ branchId: string }>;
-  searchParams: Promise<{ table?: string }>;
+  searchParams: Promise<{ table?: string; terminal?: string }>;
 }) {
   const { branchId } = await params;
   const sp = await searchParams;
@@ -37,21 +41,34 @@ export default async function PosPage({
       ? Math.trunc(parsedTable)
       : undefined;
 
+  // ?terminal=X — disambiguates which open POS session to bind orders to
+  // when the branch has 2+ ca mở simultaneously. Set by MultiSessionPicker
+  // (one-tap by cashier on first arrival) and persists via URL so a tab
+  // refresh keeps the same session.
+  const terminalParam = sp.terminal;
+  const parsedTerminal =
+    terminalParam !== undefined ? Number.parseInt(terminalParam, 10) : NaN;
+  const requestedTerminalId =
+    Number.isFinite(parsedTerminal) && parsedTerminal > 0
+      ? Math.trunc(parsedTerminal)
+      : null;
+
   const branchIdNum = Number(branchId);
 
-  // Fetch session + perm flags song song — session dùng cho branch gate,
-  // flags dùng cho"mở ca" gate (no-session) và"đóng ca" button (with-session).
-  const [sessionResult, permFlags] = await Promise.all([
-    fetchActiveSession(branchIdNum),
+  // Fetch ALL open sessions + perm flags song song. Returning the full
+  // list (instead of a single latest-opened) lets us disambiguate when
+  // 2+ terminals are open at the same branch — see MultiSessionPicker.
+  const [sessionsResult, permFlags] = await Promise.all([
+    fetchActiveSessionsForBranch(branchIdNum),
     fetchPosPermissionFlags(branchIdNum),
   ]);
 
-  if (!sessionResult.success) {
+  if (!sessionsResult.success) {
     return (
       <PosStatusShell
         icon={<IconDeviceDesktop />}
         title="Không mở được POS"
-        description={sessionResult.error ?? "Chưa lấy được ca làm hiện tại."}
+        description={sessionsResult.error ?? "Chưa lấy được ca làm hiện tại."}
         badge={{
           label: "Sự cố tải ca làm",
           icon: <IconAlertTriangle className="size-3.5" />,
@@ -81,10 +98,12 @@ export default async function PosPage({
     );
   }
 
+  const openSessions = (sessionsResult.data ?? []) as ActiveSession[];
+
   // No open session → chỉ role có quyền thao tác két (cashier/branch_manager)
   // mới được tự mở ca. Waiter chỉ có pos:use → chặn tại đây, hướng dẫn liên hệ
   // thu ngân để tránh dead-end ở form"Mở ca".
-  if (!sessionResult.data) {
+  if (openSessions.length === 0) {
     if (!permFlags.canOpenShift) {
       return (
         <PosStatusShell
@@ -174,8 +193,40 @@ export default async function PosPage({
     );
   }
 
-  // Session exists → load menu + tables and show POS
-  const session = sessionResult.data as ActiveSession;
+  // 1+ open sessions exist. Disambiguate which one to bind to.
+  let session: ActiveSession;
+
+  if (openSessions.length === 1) {
+    // Single ca mở — use it. Preserves legacy single-terminal/branch UX.
+    const only = openSessions[0];
+    if (only === undefined) {
+      // Defensive — TS narrowing, can't happen given length check.
+      return null;
+    }
+    session = only;
+  } else {
+    // 2+ ca mở. Try to match the URL-pinned terminal first.
+    const matched =
+      requestedTerminalId !== null
+        ? openSessions.find((s) => s.terminal_id === requestedTerminalId)
+        : undefined;
+
+    if (matched !== undefined) {
+      session = matched;
+    } else {
+      // No URL pin OR pin doesn't match an open session — render picker.
+      // Picker writes ?terminal=X to URL → page re-renders → matched path
+      // hits next time. Wrapping in PosStatusShell-like layout for visual
+      // parity with other "ca chưa sẵn sàng" surfaces.
+      return (
+        <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:py-8">
+          <MultiSessionPicker
+            sessions={openSessions as unknown as OpenSessionForPicker[]}
+          />
+        </div>
+      );
+    }
+  }
 
   const [menuResult, tablesResult, ordersResult] = await Promise.all([
     fetchMenuForPos(branchIdNum),

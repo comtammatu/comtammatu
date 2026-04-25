@@ -2,14 +2,19 @@
 -- M2-Ext2 PR3: Align transfer_order_table with multi-order-per-table
 --
 -- Context: PR3 Gộp bàn Option A allowed creating a 2nd order on an
--- already-occupied dine-in table. transfer_order_table still blocked
+-- already-occupied dine-in table. transfer_order_table previously blocked
 -- target with status='occupied', producing an inconsistent UX:
 --   - Cashier CAN tap occupied bàn → "Tạo đơn mới" → bàn now has 2 orders
 --   - Cashier CANNOT transfer order from bàn A onto bàn B that has 1 order
 --
--- Fix: allow target ∈ (available, occupied). Continue blocking reserved
--- and maintenance — those statuses signal the bàn is intentionally
--- unavailable for new orders.
+-- Fix #1: relax target check — allow `available` and `occupied`. Block
+-- only `reserved` and `maintenance` (intentionally unavailable).
+--
+-- Fix #2: role lookup uses Auth-v2 pattern (`positions.legacy_role_code`
+-- via `profiles.position_id` LEFT JOIN). The legacy `profiles.role` column
+-- was dropped during Auth v2 cutover; the original M2-Ext body
+-- (20260409100000) referenced it and was already silently broken in
+-- Auth v2's pre-cutover window — this migration fixes both at once.
 -- =============================================================
 
 CREATE OR REPLACE FUNCTION public.transfer_order_table(
@@ -36,9 +41,10 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  SELECT p.tenant_id, p.branch_id, p.role::text
+  SELECT p.tenant_id, p.branch_id, COALESCE(po.legacy_role_code, 'office')
   INTO v_prof_tenant, v_prof_branch, v_prof_role
   FROM public.profiles p
+  LEFT JOIN public.positions po ON po.id = p.position_id
   WHERE p.id = v_uid;
 
   IF NOT FOUND THEN

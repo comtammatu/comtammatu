@@ -11,6 +11,7 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission, probePermission } from "../../_lib/auth";
 import { cartStateSchema, calcItemSubtotal, cartItemSchema } from "./types";
 import type { CartState, CartItem } from "./types";
+import { POS_ERROR_CODES } from "./_utils/error-codes";
 
 // Best-effort auto kitchen-print after order create/append. Order is the
 // source of truth — never fail the order if printing fails. Returns a
@@ -74,29 +75,49 @@ export async function submitOrder(
 ): Promise<ActionResult<{ order_id: number; order_number: string }>> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
+    return {
+      success: false,
+      error: "Branch ID không hợp lệ",
+      errorCode: POS_ERROR_CODES.INPUT_INVALID_BRANCH,
+    };
   }
 
   const parsedCart = cartStateSchema.safeParse(cart);
   if (!parsedCart.success) {
-    return { success: false, error: "Dữ liệu giỏ hàng không hợp lệ" };
+    return {
+      success: false,
+      error: "Dữ liệu giỏ hàng không hợp lệ",
+      errorCode: POS_ERROR_CODES.INPUT_INVALID_CART,
+    };
   }
 
   if (parsedCart.data.items.length === 0) {
-    return { success: false, error: "Giỏ hàng trống" };
+    return {
+      success: false,
+      error: "Giỏ hàng trống",
+      errorCode: POS_ERROR_CODES.CART_EMPTY,
+    };
   }
 
   // Validate optional posSessionId
   const posSessionIdSchema = z.coerce.number().int().positive().optional();
   const parsedSessionId = posSessionIdSchema.safeParse(posSessionId);
   if (!parsedSessionId.success) {
-    return { success: false, error: "Session ID không hợp lệ" };
+    return {
+      success: false,
+      error: "Session ID không hợp lệ",
+      errorCode: POS_ERROR_CODES.INPUT_INVALID_SESSION,
+    };
   }
 
   if (idempotencyKey !== undefined) {
     const parsedKey = z.string().uuid().safeParse(idempotencyKey);
     if (!parsedKey.success) {
-      return { success: false, error: "Mã giao dịch không hợp lệ" };
+      return {
+        success: false,
+        error: "Mã giao dịch không hợp lệ",
+        errorCode: POS_ERROR_CODES.INPUT_INVALID_IDEMPOTENCY,
+      };
     }
   }
 
@@ -104,20 +125,34 @@ export async function submitOrder(
     POS_ROLES,
     PERMISSION_KEYS.POS_USE,
   );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+  if (!ctx)
+    return {
+      success: false,
+      error: "Không có quyền",
+      errorCode: POS_ERROR_CODES.AUTH_NO_PERMISSION,
+    };
 
   const { supabase, claims } = ctx;
 
   // Verify branch_id matches JWT claim
   if (claims.branch_id !== parsedBranchId.data) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+    return {
+      success: false,
+      error: "Không có quyền truy cập chi nhánh này",
+      errorCode: POS_ERROR_CODES.SCOPE_BRANCH_MISMATCH,
+    };
   }
 
   // Get user ID for created_by
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { success: false, error: "Phiên đăng nhập hết hạn" };
+  if (!user)
+    return {
+      success: false,
+      error: "Phiên đăng nhập hết hạn",
+      errorCode: POS_ERROR_CODES.AUTH_SESSION_EXPIRED,
+    };
 
   // Transform cart items to RPC JSONB format
   const rpcItems = parsedCart.data.items.map((item) => ({
@@ -168,6 +203,7 @@ export async function submitOrder(
         success: false,
         error:
           "Không có quyền tạo đơn (hệ thống). Vui lòng đăng nhập lại hoặc liên hệ quản lý.",
+        errorCode: POS_ERROR_CODES.DB_PERMISSION_DENIED,
       };
     }
     // Postgres advisory lock not available (another order creation in-flight)
@@ -176,14 +212,20 @@ export async function submitOrder(
       return {
         success: false,
         error: "Đang có đơn khác được tạo. Vui lòng thử lại sau vài giây.",
+        errorCode: POS_ERROR_CODES.DB_LOCK_NOT_AVAILABLE,
       };
     }
     if (error.message?.includes("empty")) {
-      return { success: false, error: "Giỏ hàng trống" };
+      return {
+        success: false,
+        error: "Giỏ hàng trống",
+        errorCode: POS_ERROR_CODES.CART_EMPTY,
+      };
     }
     return {
       success: false,
       error: "Không thể tạo đơn hàng. Vui lòng thử lại.",
+      errorCode: POS_ERROR_CODES.RPC_GENERIC,
     };
   }
 
@@ -196,6 +238,7 @@ export async function submitOrder(
     return {
       success: false,
       error: "Không thể tạo đơn hàng. Vui lòng thử lại.",
+      errorCode: POS_ERROR_CODES.RPC_GENERIC,
     };
   }
 

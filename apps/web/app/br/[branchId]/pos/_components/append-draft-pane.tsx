@@ -39,6 +39,7 @@ interface AppendDraftPaneProps {
   isSubmitting: boolean;
   onSubmit: () => void;
   onCancel: () => void;
+  onClosePane?: () => void;
   onRemoveItem: (key: string) => void;
 }
 
@@ -48,6 +49,7 @@ function AppendDraftPaneComponent({
   isSubmitting,
   onSubmit,
   onCancel,
+  onClosePane,
   onRemoveItem,
 }: AppendDraftPaneProps) {
   const quantity = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -74,9 +76,9 @@ function AppendDraftPaneComponent({
             variant="ghost"
             size="icon-sm"
             className="shrink-0 text-muted-foreground"
-            aria-label="Hủy thêm món"
+            aria-label={onClosePane ? "Đóng món thêm" : "Hủy thêm món"}
             disabled={isSubmitting}
-            onClick={onCancel}
+            onClick={onClosePane ?? onCancel}
           >
             <IconX />
           </Button>

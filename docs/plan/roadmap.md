@@ -1,7 +1,7 @@
 # Roadmap — Cơm Tấm Má Tư
 
 > Hệ thống Quản lý Vận hành Nhà hàng (Restaurant Operations Management System)
-> Updated: 2026-04-24 | Structure: Module-based
+> Updated: 2026-04-25 | Structure: Module-based
 
 ## Product Identity
 
@@ -25,6 +25,16 @@ Không đi theo hướng CRM độc lập hay ERP đa ngành.
 **Feature specs (beyond module rows):**
 
 - [M2-Ext: POS Order Lifecycle](m2-order-lifecycle.md) — thêm món sau submit, đồng bộ trạng thái KDS → dòng món, void/cancel/chuyển bàn, đặt lại (PLANNED)
+- **M2-PWA: POS Progressive Web App** (SHIPPED 2026-04-25, commits `aabf7b1` + `73930c5` + `8af3f57`):
+  - Per-branch installable manifest at `/br/[branchId]/pos/manifest.webmanifest` (Route Handler, `id`/`scope`/`start_url` branch-scoped, integer-only branchId validation)
+  - Serwist service worker active (build via `next build --webpack` until Turbopack support lands) with explicit allowlist `runtimeCaching` — NetworkOnly mutations/RSC/Supabase, CacheFirst hashed static, SWR images/icons, NetworkFirst HTML 3s
+  - `PosPwaProvider` + `PosPwaToolbar` (offline banner + "Cài đặt POS" install button); BillReceipt offline gate (`canConfirmPaid` + `handleSelectMethod`)
+  - Native migration path documented: PWA → Capacitor wrap → Flutter rewrite (only if printer fail >5% or scale ≥20 chi nhánh; see `tasks/todo.md` Post-v1.0)
+- **M2-Ext2 PR3: Multi-order per dine-in table** (SHIPPED 2026-04-25, commit `8af3f57`):
+  - `transfer_order_table` RPC accepts target ∈ (available, occupied) — migration `20260429100000_transfer_order_table_allow_occupied.sql`
+  - Transfer-table dialog lists occupied bàn with "N đơn" indicator
+  - Cancel/void reason validation tightened to ≥5 chars
+- **Realtime hardening** (SHIPPED 2026-04-25, commit `8af3f57`): `useRealtimeChannel` helper enforces auth-aware subscribe sequence; 6 callsites migrated. Fixes silent broadcast drops from `claims_role='anon'` race.
 
 ## Pilot-Critical Backlog (blocked on external credentials)
 
@@ -300,7 +310,7 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 ## M6: Finance — Tài chính & HĐĐT
 
 > Status: PARTIAL | Depends: M4, M5
-> Dashboard ✅, HĐĐT blocked on MISA credentials, VAS journal stubs only
+> Dashboard ✅, HĐĐT skeleton ✅ (chờ MISA real creds), BCTC TT200 ✅
 > Ref: `docs/ref/einvoice-tax.md`
 > North Star: "Sổ sách đúng chuẩn VAS, HĐĐT tự động, kế toán không cần Excel."
 
@@ -308,7 +318,7 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 
 **Không bao gồm:** Phân tích nâng cao (Post-v1.0).
 
-**Tables owned:** tax_invoices, chart_of_accounts, journal_entries, journal_entry_lines, audit_logs, mv_daily_revenue, mv_top_items, mv_food_cost
+**Tables owned:** tax_invoices, tax_invoice_events, chart_of_accounts, journal_entries, journal_entry_lines, audit_logs, vas_report_lines, mv_daily_revenue, mv_top_items, mv_food_cost
 
 | Session | Task                                    | Tables                               | Status |
 | ------- | --------------------------------------- | ------------------------------------ | ------ |
@@ -320,15 +330,24 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 | S6      | Journal entries                         | journal_entries, journal_entry_lines | ✅     |
 | S7      | Financial statements (BCTC)             | —                                    | ✅     |
 | S8      | MV refresh + auto-journal + integration | —                                    | ✅     |
+| S9-D    | MV pg_cron daily refresh (23:15 UTC)    | —                                    | ✅ 2026-04-25 |
+| S9-B    | Reconciliation period RPC + drilldown UI | —                                   | ✅ 2026-04-25 |
+| S9-C    | BCTC TT200 (B01-DN/B02-DN/01-GTGT)      | vas_report_lines                     | ✅ 2026-04-25 |
+| S9-A    | HĐĐT state machine + audit events       | tax_invoice_events                   | ✅ 2026-04-25 |
+| S9-A2   | POS Bill Sheet HĐĐT form (cash path v1) | —                                    | ✅ 2026-04-25 |
 
 **Ship criteria:**
 
+- [x] HĐĐT state machine + audit events (skeleton ready, mock provider)
+- [x] HĐĐT form vào POS Bill Sheet (cash path v1, payment-first fail-soft)
 - [ ] HĐĐT xuất/hủy hoạt động với MISA real API (blocked on credentials)
 - [x] Dashboard doanh thu chính xác
-- [x] Food cost report đúng
+- [x] Dashboard MV pg_cron auto-refresh daily
+- [x] Food cost report đúng (sửa bug GROUP BY/unique-index)
 - [x] Hệ thống tài khoản VAS
 - [x] Bút toán kế toán (journal entries)
-- [x] BCTC theo chuẩn VAS (CĐKT, KQKD, VAT summary)
+- [x] BCTC theo chuẩn VAS — config-driven TT200 (B01-DN, B02-DN, 01/GTGT) với draft/final flag
+- [x] Reconciliation kỳ — subledger ↔ GL diff với drilldown
 - [x] Reports hub links
 - [ ] `/cso` passes (sensitive: finance)
 - [x] `/verify` + `/review` passes

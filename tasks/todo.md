@@ -1,7 +1,7 @@
 # Current Tasks
 
 > Active work items for the current session/phase.
-> Updated: 2026-04-24
+> Updated: 2026-04-25
 
 ## Module Status
 
@@ -10,6 +10,7 @@
 - [x] M0: Admin Shell — layout, sidebar, branches, staff, settings
 - [x] M1: Menu — categories, items, variants, modifiers, sides
 - [x] M2: POS — cart, table/zone, order submit, bill printing, charge sides, per-item notes
+- [x] M2-Ext PR3: Multi-order per dine-in table (Gộp bàn Option A); `transfer_order_table` accepts target ∈ (available, occupied) — migration `20260429100000`. Cancel/void reason ≥5 chars
 - [x] M3: KDS — realtime queue, bump/complete, station config, keyboard shortcuts
 - [x] M4: Payment — cash ✅ (VietQR/Momo wire blocked on merchant credentials)
 - [x] M5: Stock — ingredients, recipes, stock levels, procurement, GRN, stocktake, transfers, central kitchen production hub, supplier returns/credit notes
@@ -18,6 +19,13 @@
 - [x] M7: Nhân sự — employees, shifts, attendance, employment contracts, payslip, employee portal (BHXH/PIT calc deferred to post-pilot)
 - [x] Auth v2: Position ⟂ Permission model, 100% RLS cutover (verified 2026-04-23). `has_permission()` / `has_permission_any()` source of truth
 - [x] Branch-scoped settings, VietQR per-tenant config, printer ACL hardening, print agent pilot
+- [x] **PWA cho POS** (shipped 2026-04-25, commits `aabf7b1` + `73930c5` + `8af3f57`):
+  - Per-branch installable manifest (`/br/[branchId]/pos/manifest.webmanifest` Route Handler, `id`/`scope`/`start_url` branch-scoped)
+  - Serwist service worker active (`public/sw.js` 51 KB, build switched to `next build --webpack` — turbopack incompat documented in commit `73930c5`)
+  - Explicit allowlist `runtimeCaching`: NetworkOnly mutations / RSC / Next-Action / Supabase REST/Auth/host; CacheFirst hashed Next static; SWR images/icons/fonts; NetworkFirst HTML 3s
+  - PWA Provider + toolbar (`useIsOnline`, `useInstallPrompt`) — offline banner + "Cài đặt POS" button (auto-hide khi online + chưa có install prompt)
+  - BillReceipt `canConfirmPaid` gated by `isOnline`; non-cash select khi offline → toast block (defense for HDDT-PAYMENT-FIRST-FAILSOFT-ORPHAN)
+- [x] **Realtime hardening** (shipped 2026-04-25, commit `8af3f57`): `useRealtimeChannel` helper awaits `auth.getSession()` + `realtime.setAuth()` trước `.subscribe()`; 6 callsites migrated (notifications, KDS, POS order sync, order detail, printer status, bill receipt). Fixes silent broadcast drop từ `claims_role='anon'` race
 
 **Shadcn primitive migration — COMPLETE:**
 - [x] M1 Empty consolidation
@@ -53,7 +61,7 @@
   - `CREATE INDEX CONCURRENTLY ON order_items (variant_id)` (FK unindexed)
   - **Required artifacts trước merge**: persona test matrix (owner/cashier/waiter/disabled) cho 7 table, EXPLAIN before/after cho `staff_permissions` policy, `.insert().select()` audit cho 7 table, advisor diff (8 lints clear), down-migration trong `supabase/migrations/_rollback/`
   - Risk: medium. Tách PR riêng khỏi Tier 1, không bundle.
-- [ ] **`pnpm db:types` regen** — current `apps/web/app/finance/{actions,reconciliation-actions,statement-actions}.ts` typecheck fail vì DB types thiếu các RPC mới: `transition_tax_invoice_state`, `fn_reconcile_period`, `fn_reconcile_drilldown`, `fn_generate_b01_dn`, `fn_generate_b02_dn`, `fn_generate_form_01_gtgt` + table `tax_invoice_events` (với column `tax_invoice_id`). Đang block `pnpm build` nhưng không phải lỗi runtime. Chạy `pnpm db:types` sau khi confirm migration đã apply, rồi commit lại file types.
+- [ ] **`pnpm db:types` regen** — finance/tax-invoice RPC types previously missing; verify still missing or regenerated cleanly. Latest typecheck (2026-04-25, commit `8af3f57`) passed silent — possibly resolved out-of-band. Re-check before next finance change.
 - [ ] **Pre-existing employee page WIP** (sau khi `pnpm db:types`): `app/employee/{attendance,payslip,schedule}/page.tsx` cast `as <Type>[]` đang sai — supabase-js trả foreign-key relation thành array, không object. Fix bằng cách đổi type signature hoặc map/normalize trước cast.
 
 ## Pilot-Critical Backlog (blocked on external credentials)
@@ -61,7 +69,7 @@
 - [ ] P0: Wire VietQR real bank API (merchant credentials)
 - [ ] P0: Wire Momo real API (merchant credentials)
 - [ ] P0: Wire MISA HĐĐT real API call (MISA provider credentials — pháp lý NĐ70/2025)
-- [ ] P1: VietQR payment status — Supabase realtime listener trong POS payment panel
+- [x] P1: VietQR payment status — Supabase realtime listener (BillReceipt subscribes to `orders` + `payments` postgres_changes via `useRealtimeChannel`, shipped commit `8af3f57`)
 - [ ] P1: Momo webhook atomic RPC `complete_payment_and_consume_stock`
 
 ## Branch Kitchen Site Split (Phase 1)

@@ -153,13 +153,101 @@ export async function fetchPosTerminals(
  * của ca đó; `orders.created_by` giữ audit "ai ring", `session.opened_by` giữ
  * audit "ai chịu trách nhiệm tiền".
  *
- * Defer: branch có nhiều terminal mở song song → cần picker UX. MVP lấy ca
- * latest-opened (ORDER BY opened_at DESC LIMIT 1) để deterministic.
+ * `terminalId` (optional): khi caller chuyên biệt 1 máy (ví dụ URL ?terminal=X
+ * sau khi user pick từ MultiSessionPicker), filter về session của terminal đó.
+ * Khi không truyền, fallback latest-opened — preserve legacy behavior cho
+ * single-terminal branches mà không cần URL param.
  *
  * Regression guard: KHÔNG thêm filter `opened_by = user.id` — sẽ chặn waiter
  * (không có `pos:open_cashbox`) khỏi ca cashier đã mở, vỡ luồng take-order.
  */
 export async function fetchActiveSession(
+  branchId: number,
+  terminalId?: number,
+): Promise<ActionResult> {
+  const parsedBranchId = branchIdSchema.safeParse(branchId);
+  if (!parsedBranchId.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  let parsedTerminalId: number | undefined;
+  if (terminalId !== undefined) {
+    const result = z.coerce
+      .number()
+      .int()
+      .positive({ error: "Terminal ID không hợp lệ" })
+      .safeParse(terminalId);
+    if (!result.success) {
+      return { success: false, error: "Terminal ID không hợp lệ" };
+    }
+    parsedTerminalId = result.data;
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  if (claims.branch_id !== parsedBranchId.data) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  let query = supabase
+    .from("pos_sessions")
+    .select(
+      `
+      id,
+      terminal_id,
+      opened_by,
+      opened_at,
+      opening_cash,
+      status,
+      note,
+      pos_terminals (
+        id,
+        name
+      )
+    `,
+    )
+    .eq("branch_id", parsedBranchId.data)
+    .eq("tenant_id", claims.tenant_id)
+    .eq("status", "open");
+
+  if (parsedTerminalId !== undefined) {
+    query = query.eq("terminal_id", parsedTerminalId);
+  }
+
+  const { data: session, error } = await query
+    .order("opened_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      success: false,
+      error: "Không thể tải thông tin ca. Vui lòng thử lại.",
+    };
+  }
+
+  return { success: true, data: session };
+}
+
+/* ─── fetchActiveSessionsForBranch ─── */
+
+/**
+ * Trả TẤT CẢ ca POS đang mở của chi nhánh — phục vụ multi-terminal disambiguation.
+ *
+ * Khi branch có 2+ terminal cùng mở, page-level orchestration cần biết để
+ * render `MultiSessionPicker` cho cashier chọn terminal họ đang dùng. Sau
+ * khi pick, URL được stamp `?terminal=X`; lần load tiếp theo gọi thẳng
+ * `fetchActiveSession(branchId, terminalId)` thay vì list này.
+ *
+ * Sort by opened_at desc để picker hiển thị ca mới nhất trước (UX bias).
+ */
+export async function fetchActiveSessionsForBranch(
   branchId: number,
 ): Promise<ActionResult> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
@@ -179,7 +267,7 @@ export async function fetchActiveSession(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  const { data: session, error } = await supabase
+  const { data: sessions, error } = await supabase
     .from("pos_sessions")
     .select(
       `
@@ -199,18 +287,16 @@ export async function fetchActiveSession(
     .eq("branch_id", parsedBranchId.data)
     .eq("tenant_id", claims.tenant_id)
     .eq("status", "open")
-    .order("opened_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order("opened_at", { ascending: false });
 
   if (error) {
     return {
       success: false,
-      error: "Không thể tải thông tin ca. Vui lòng thử lại.",
+      error: "Không thể tải danh sách ca. Vui lòng thử lại.",
     };
   }
 
-  return { success: true, data: session };
+  return { success: true, data: sessions ?? [] };
 }
 
 /* ─── fetchPosPermissionFlags ─── */
