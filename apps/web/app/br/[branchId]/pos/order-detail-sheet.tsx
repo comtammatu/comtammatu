@@ -44,6 +44,7 @@ import { VoidItemDialog } from "./_components/order-detail/void-item-dialog";
 import { CancelOrderDialog } from "./_components/order-detail/cancel-order-dialog";
 import { TransferTableDialog } from "./_components/order-detail/transfer-table-dialog";
 import type { OrderData } from "./_components/bill/bill-receipt-types";
+import type { SessionOrder } from "./order-history";
 
 // Superset of bill's OrderData: same top-level fields, but order_items
 // carry extra UI-only fields (status, menu_item_id) used by the detail
@@ -191,6 +192,14 @@ export interface OrderDetailSheetProps {
   initialOrder?: OrderDetailData | null;
   /** canManageOrders hint matching `initialOrder` — mirrors fetchOrderDetail's result.canManageOrders. */
   initialCanManage?: boolean;
+  /**
+   * Lightweight summary from the orders LIST tap. Renders header (số đơn,
+   * bàn / mang về) instantly while items fetch streams in. Distinct from
+   * `initialOrder` (full detail with items). Money totals + status are
+   * intentionally NOT taken from this — those fields can drift between
+   * the list snapshot and the fresh fetch and would mislead the cashier.
+   */
+  initialSummary?: SessionOrder | null;
   onClose: () => void;
   /**
    * Hand off to the bill sheet. `seed` is the already-fetched order data —
@@ -214,6 +223,7 @@ export function OrderDetailSheet({
   refreshToken,
   initialOrder,
   initialCanManage,
+  initialSummary,
   onClose,
   onOpenBill,
   onStartAppend,
@@ -493,12 +503,23 @@ export function OrderDetailSheet({
   const voidItem = data?.order_items.find((item) => item.id === voidItemId);
   const activeItemCount =
     data?.order_items.filter((item) => item.status !== "cancelled").length ?? 0;
-  const sheetTitle = data?.order_number ?? orderNumber;
+  // Use summary only when it matches the open order — stale summary from a
+  // prior tap would otherwise leak into the header for a different order.
+  const summaryForCurrentOrder =
+    initialSummary != null && initialSummary.id === orderId
+      ? initialSummary
+      : null;
+  const sheetTitle =
+    data?.order_number ?? orderNumber ?? summaryForCurrentOrder?.order_number;
   const orderContextLabel = data
     ? data.order_type === "dine_in"
       ? `Bàn ${data.tables?.number ?? "—"}`
       : "Mang về"
-    : null;
+    : summaryForCurrentOrder
+      ? summaryForCurrentOrder.order_type === "dine_in"
+        ? `Bàn ${summaryForCurrentOrder.tables?.number ?? "—"}`
+        : "Mang về"
+      : null;
 
   return (
     <>

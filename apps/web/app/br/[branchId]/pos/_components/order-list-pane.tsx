@@ -4,7 +4,7 @@ import { memo } from "react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { LogIn as IconDoorEnter } from "lucide-react";
-import { OrderHistory } from "../order-history";
+import { OrderHistory, type SessionOrder } from "../order-history";
 import {
   usePosOperationalDispatch,
   usePosOrders,
@@ -12,7 +12,11 @@ import {
 
 interface OrderListPaneProps {
   onViewBill: (orderId: number) => void;
-  onViewDetail: (orderId: number, orderNumber: string) => void;
+  onViewDetail: (
+    orderId: number,
+    orderNumber: string,
+    summary: SessionOrder,
+  ) => void;
 }
 
 function OrderListPaneComponent({
