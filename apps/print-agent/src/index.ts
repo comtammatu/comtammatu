@@ -258,6 +258,8 @@ async function main() {
   await heartbeat(supabase);
   await drainPending(supabase);
 
+  let initialSubscribeSeen = false;
+
   const channel = supabase
     .channel(`print_jobs:branch=${config.branchId}`)
     .on(
@@ -281,11 +283,25 @@ async function main() {
     )
     .subscribe((status) => {
       console.log(`[agent] realtime status=${status}`);
+      if (status !== "SUBSCRIBED") return;
+      // Skip the FIRST SUBSCRIBED — drainPending() ran on startup above.
+      // Every SUBSCRIBED after that is a reconnect (CHANNEL_ERROR /
+      // TIMED_OUT / CLOSED → SUBSCRIBED): re-drain so any print_jobs
+      // INSERTed while the WebSocket was down get picked up immediately
+      // instead of waiting for the next interval tick.
+      if (!initialSubscribeSeen) {
+        initialSubscribeSeen = true;
+        return;
+      }
+      console.log("[agent] reconnected — re-draining pending jobs");
+      void drainPending(supabase);
     });
 
   setInterval(() => void heartbeat(supabase), 30_000);
   setInterval(() => void loadPrinters(supabase), 5 * 60_000);
-  setInterval(() => void drainPending(supabase), 60_000);
+  // Worst-case latency for a job INSERTed during a WS disconnect:
+  // bounded by this interval (was 60_000 — too slow for a kitchen).
+  setInterval(() => void drainPending(supabase), 15_000);
 
   const shutdown = () => {
     console.log("[agent] shutting down");
