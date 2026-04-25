@@ -1,14 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import {
-  IconBuilding,
-  IconClock,
-  IconDots,
-  IconPencil,
-  IconToggleLeft,
-  IconToggleRight,
-} from "@tabler/icons-react";
+import { Building as IconBuilding, Clock as IconClock, Ellipsis as IconDots, Pencil as IconPencil, ToggleLeft as IconToggleLeft, ToggleRight as IconToggleRight } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {

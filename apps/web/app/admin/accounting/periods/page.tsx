@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { ADMIN_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "@/inventory/_lib/auth";
 import { PeriodAdminClient, type PeriodRow } from "./period-admin-client";
 
@@ -9,7 +9,7 @@ const MONTHS_BACK = 13;
 
 export default async function PeriodsAdminPage() {
   const ctx = await getAuthContextWithPermission(
-    [],
+    ADMIN_ROLES,
     PERMISSION_KEYS.ACCOUNTING_PERIOD_REOPEN,
   );
   if (!ctx) redirect("/");

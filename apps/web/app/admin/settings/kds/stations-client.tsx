@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { IconPlus, IconPencil } from "@tabler/icons-react";
+import { Plus as IconPlus, Pencil as IconPencil } from "lucide-react";
 import { StationFormDialog } from "./station-form-dialog";
 import { EmptyStatePanel } from "../../components/empty-state-panel";
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { IconArrowLeft, IconHistory } from "@tabler/icons-react";
+import { ArrowLeft as IconArrowLeft, History as IconHistory } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";

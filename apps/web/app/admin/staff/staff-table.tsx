@@ -2,14 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import {
-  IconKey,
-  IconDots,
-  IconPencil,
-  IconToggleLeft,
-  IconToggleRight,
-  IconUsers,
-} from "@tabler/icons-react";
+import { Key as IconKey, Ellipsis as IconDots, Pencil as IconPencil, ToggleLeft as IconToggleLeft, ToggleRight as IconToggleRight, Users as IconUsers } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {

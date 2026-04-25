@@ -1,15 +1,5 @@
 import Link from "next/link";
-import {
-  IconArrowLeftRight,
-  IconBook,
-  IconBriefcase,
-  IconClipboardList,
-  IconPackage,
-  IconReceipt,
-  IconShieldCheck,
-  IconTrendingUp,
-  IconWallet,
-} from "@tabler/icons-react";
+import { ArrowLeftRight as IconArrowLeftRight, Book as IconBook, Briefcase as IconBriefcase, ClipboardList as IconClipboardList, Package as IconPackage, Receipt as IconReceipt, ShieldCheck as IconShieldCheck, TrendingUp as IconTrendingUp, Wallet as IconWallet } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { IconPlus, IconTrash, IconStack } from "@tabler/icons-react";
+import { Plus as IconPlus, Trash as IconTrash, Layers as IconStack } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
-import { IconActivity } from "@tabler/icons-react";
+import { Activity as IconActivity } from "lucide-react";
 import {
   canManageBranchFloorSettings,
   TENANT_LEVEL_ROLES,

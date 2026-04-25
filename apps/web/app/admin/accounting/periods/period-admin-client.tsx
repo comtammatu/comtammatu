@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { IconCalendarStats } from "@tabler/icons-react";
+import { CalendarCheck as IconCalendarStats } from "lucide-react";
 import {
   PeriodCloseCard,
   type PeriodRow,

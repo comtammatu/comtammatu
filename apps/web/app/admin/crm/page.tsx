@@ -1,4 +1,4 @@
-import { IconHeart } from "@tabler/icons-react";
+import { Heart as IconHeart } from "lucide-react";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 
 export default function CrmPage() {

@@ -3,22 +3,8 @@
 import { Fragment, useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  IconChartBar,
-  IconBriefcase,
-  IconChefHat,
-  IconLayoutDashboard,
-  IconLogout,
-  IconDeviceDesktop,
-  IconPackage,
-  IconReceipt,
-  IconSettings,
-  IconShieldCheck,
-  IconUsers,
-  IconToolsKitchen,
-  IconWallet,
-} from "@tabler/icons-react";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { ChartBar as IconChartBar, Briefcase as IconBriefcase, ChefHat as IconChefHat, LayoutDashboard as IconLayoutDashboard, LogOut as IconLogout, Monitor as IconDeviceDesktop, Package as IconPackage, Receipt as IconReceipt, Settings as IconSettings, ShieldCheck as IconShieldCheck, Users as IconUsers, Utensils as IconToolsKitchen, Wallet as IconWallet } from "lucide-react";
+import { canAccess, type StaffRole } from "@comtammatu/shared/auth";
 import {
   ROLE_LABEL_VI,
   resolveAdminNavGroups,
@@ -58,18 +44,18 @@ import {
 } from "@/lib/shell-primitives";
 
 const ADMIN_ICON_MAP: Record<string, React.ElementType> = {
-  IconLayoutDashboard,
-  IconChartBar,
-  IconUsers,
-  IconWallet,
-  IconPackage,
-  IconBriefcase,
-  IconDeviceDesktop,
-  IconSettings,
-  IconChefHat,
-  IconReceipt,
-  IconToolsKitchen,
-  IconShieldCheck,
+  LayoutDashboard: IconLayoutDashboard,
+  BarChart3: IconChartBar,
+  Users: IconUsers,
+  Wallet: IconWallet,
+  Package: IconPackage,
+  Briefcase: IconBriefcase,
+  Monitor: IconDeviceDesktop,
+  Settings: IconSettings,
+  ChefHat: IconChefHat,
+  Receipt: IconReceipt,
+  ToolsKitchen: IconToolsKitchen,
+  ShieldCheck: IconShieldCheck,
 };
 
 function mapResolvedNavGroups(
@@ -247,11 +233,13 @@ export function AdminShell({
             <Button asChild variant="outline" size="sm">
               <Link href="/employee">Cổng nhân viên</Link>
             </Button>
-            <Button asChild size="sm">
-              <Link href="/admin/reports">
-                {APP_COPY_VI.executiveReporting}
-              </Link>
-            </Button>
+            {canAccess(role, "reports") && (
+              <Button asChild size="sm">
+                <Link href="/admin/reports">
+                  {APP_COPY_VI.executiveReporting}
+                </Link>
+              </Button>
+            )}
           </div>
         </header>
 

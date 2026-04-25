@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { IconRefresh, IconRotate } from "@tabler/icons-react";
+import { RefreshCw as IconRefresh, RotateCcw as IconRotate } from "lucide-react";
 import { retryJobFromMonitor } from "./actions";
 
 export type JobRow = {

@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { IconExternalLink, IconPencil, IconPlus } from "@tabler/icons-react";
+import { ExternalLink as IconExternalLink, Pencil as IconPencil, Plus as IconPlus } from "lucide-react";
 import { TerminalFormDialog } from "./terminal-form-dialog";
 import { EmptyStatePanel } from "../../components/empty-state-panel";
 

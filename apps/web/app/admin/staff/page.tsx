@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { StaffTable } from "./staff-table";
@@ -70,29 +69,13 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   const branchOptions = branches ?? [];
 
   return (
-    <div className="space-y-5 lg:space-y-6">
-      <Card>
-        <CardContent className="p-5 sm:p-6">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div className="space-y-3">
-              <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                Quản lý nhân viên
-              </span>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                  Nhân viên
-                </h2>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 self-start">
-              <AddStaffButton branches={branchOptions} />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      <Suspense>
-        <StaffFilters branches={branchOptions} />
-      </Suspense>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Suspense>
+          <StaffFilters branches={branchOptions} />
+        </Suspense>
+        <AddStaffButton branches={branchOptions} />
+      </div>
       <StaffTable staff={staff} branches={branchOptions} />
     </div>
   );

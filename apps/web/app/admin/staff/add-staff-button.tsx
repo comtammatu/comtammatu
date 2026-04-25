@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IconUserPlus } from "@tabler/icons-react";
+import { UserPlus as IconUserPlus } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { StaffFormDialog } from "./staff-form-dialog";
 import type { BranchOption } from "./staff-table";

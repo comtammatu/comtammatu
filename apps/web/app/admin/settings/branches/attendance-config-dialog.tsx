@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { IconKey, IconMapPin, IconCopy, IconRefresh, IconCurrentLocation } from "@tabler/icons-react";
+import { Key as IconKey, MapPin as IconMapPin, Copy as IconCopy, RefreshCw as IconRefresh, LocateFixed as IconCurrentLocation } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {

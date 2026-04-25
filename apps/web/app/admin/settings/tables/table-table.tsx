@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IconDots, IconPencil, IconTrash, IconToolsKitchen } from "@tabler/icons-react";
+import { Ellipsis as IconDots, Pencil as IconPencil, Trash as IconTrash, Utensils as IconToolsKitchen } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {

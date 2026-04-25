@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { IconDots, IconPencil, IconTrash, IconMapPin } from "@tabler/icons-react";
+import { Ellipsis as IconDots, Pencil as IconPencil, Trash as IconTrash, MapPin as IconMapPin } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   DropdownMenu,

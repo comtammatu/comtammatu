@@ -7,6 +7,7 @@ import {
   BRANCH_FLOOR_SETTINGS_ROLES,
   type StaffRole,
 } from "@comtammatu/shared/auth";
+import { Separator } from "@comtammatu/ui/components/separator";
 
 interface Tab {
   href: string;
@@ -63,8 +64,11 @@ export function SettingsNav({ role }: { role: StaffRole }) {
   const visibleTabs = TABS.filter((tab) => tab.allowedRoles.includes(role));
 
   return (
-    <nav className="overflow-x-auto pb-1" aria-label="Mục cài đặt quản trị">
-      <div className="flex min-w-max items-center gap-2 border-b border-border/40 pb-2">
+    <>
+      <nav
+        className="flex items-center gap-1 overflow-x-auto"
+        aria-label="Mục cài đặt"
+      >
         {visibleTabs.map((tab) => {
           const isActive = pathname.startsWith(tab.href);
           return (
@@ -72,10 +76,10 @@ export function SettingsNav({ role }: { role: StaffRole }) {
               key={tab.href}
               href={tab.href}
               className={cn(
-                "inline-flex rounded-full whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background relative -mb-2 inline-flex min-h-11 items-center rounded-full border px-4 py-2.5 text-sm font-semibold transition-all duration-150",
+                "inline-flex h-9 items-center whitespace-nowrap rounded-md px-3 text-sm font-medium transition-colors",
                 isActive
-                  ? "border-primary/20 bg-primary/10 text-primary shadow-sm"
-                  : "border-transparent bg-transparent text-muted-foreground hover:border-border/60 hover:bg-muted/70 hover:text-foreground",
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
               aria-current={isActive ? "page" : undefined}
             >
@@ -83,7 +87,8 @@ export function SettingsNav({ role }: { role: StaffRole }) {
             </Link>
           );
         })}
-      </div>
-    </nav>
+      </nav>
+      <Separator />
+    </>
   );
 }

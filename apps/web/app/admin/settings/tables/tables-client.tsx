@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Button } from "@comtammatu/ui/components/button";
-import { IconPlus } from "@tabler/icons-react";
+import { Plus as IconPlus } from "lucide-react";
 import { ZoneTable } from "./zone-table";
 import { ZoneFormDialog } from "./zone-form-dialog";
 import { TableTable } from "./table-table";

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { Button } from "@comtammatu/ui/components/button";
 import {

@@ -6,7 +6,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Card } from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { IconPlus, IconX, IconMapPin } from "@tabler/icons-react";
+import { Plus as IconPlus, X as IconX, MapPin as IconMapPin } from "lucide-react";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   Select,
