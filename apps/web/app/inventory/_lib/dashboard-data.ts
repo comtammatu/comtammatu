@@ -216,6 +216,16 @@ export async function loadInventoryDashboardData(
         }))
       : [];
 
+  // Real counts for KPI strip (replaces previous hardcoded zeros).
+  const [priceReviewCount, pendingSupplierReturns] = await Promise.all([
+    showProcurement
+      ? fetchPriceReviewCount(supabase, claims.tenant_id, branchFilter)
+      : 0,
+    showProcurement
+      ? fetchPendingSupplierReturnCount(supabase, claims.tenant_id, branchFilter)
+      : 0,
+  ]);
+
   return {
     siteName,
     siteKind,
@@ -224,11 +234,60 @@ export async function loadInventoryDashboardData(
     pendingPO,
     activeTransfers,
     activeStocktakes,
-    priceReviewCount: 0,
-    pendingSupplierReturns: 0,
+    priceReviewCount,
+    pendingSupplierReturns,
     reorderAlerts,
     expiryAlerts,
     transfers,
     stocktakeSessions,
   };
+}
+
+const PRICE_VARIANCE_THRESHOLD_PCT = 5;
+
+async function fetchPriceReviewCount(
+  supabase: Awaited<ReturnType<typeof loadAuthState>>["supabase"],
+  tenantId: number,
+  branchId: number | undefined,
+): Promise<number> {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  const cutoffIso = cutoff.toISOString().slice(0, 10);
+
+  let query = supabase
+    .from("grn_items")
+    .select(
+      "baseline_variance_pct, goods_received_notes!inner ( branch_id, status, received_date )",
+    )
+    .eq("tenant_id", tenantId)
+    .eq("goods_received_notes.status", "confirmed")
+    .gte("goods_received_notes.received_date", cutoffIso)
+    .not("baseline_variance_pct", "is", null);
+  if (branchId != null) {
+    query = query.eq("goods_received_notes.branch_id", branchId);
+  }
+
+  const { data, error } = await query;
+  if (error || !data) return 0;
+  return data.filter(
+    (row) =>
+      row.baseline_variance_pct != null &&
+      Math.abs(row.baseline_variance_pct) > PRICE_VARIANCE_THRESHOLD_PCT,
+  ).length;
+}
+
+async function fetchPendingSupplierReturnCount(
+  supabase: Awaited<ReturnType<typeof loadAuthState>>["supabase"],
+  tenantId: number,
+  branchId: number | undefined,
+): Promise<number> {
+  let query = supabase
+    .from("supplier_returns")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", tenantId)
+    .in("status", ["draft", "pending"]);
+  if (branchId != null) query = query.eq("branch_id", branchId);
+  const { count, error } = await query;
+  if (error) return 0;
+  return count ?? 0;
 }

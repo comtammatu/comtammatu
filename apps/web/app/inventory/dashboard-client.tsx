@@ -1,30 +1,26 @@
 "use client";
 
-import type { ReactNode } from "react";
 import Link from "next/link";
-import { TriangleAlert as IconAlertTriangle, ArrowLeftRight as IconArrowLeftRight, ArrowRight as IconArrowRight, ChartBar as IconChartBar, SquareCheck as IconSquareCheck, ChefHat as IconChefHat, ClipboardList as IconClipboardList, Clock as IconClock, Factory as IconBuildingFactory, Hourglass as IconHourglass, Lightbulb as IconBulb, Package as IconPackage, PackageX as IconPackageOff, Receipt as IconReceipt, ShoppingCart as IconShoppingCart, Truck as IconTruck } from "lucide-react";
+import {
+  ArrowLeftRight as IconArrowLeftRight,
+  ChartBar as IconChartBar,
+  ClipboardList as IconClipboardList,
+  Factory as IconBuildingFactory,
+  Package as IconPackage,
+  Receipt as IconReceipt,
+  ShoppingCart as IconShoppingCart,
+} from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
-import { Progress } from "@comtammatu/ui/components/progress";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { InventoryHeader } from "./_components/inventory-header";
 import { InventoryPageContent } from "./_components/inventory-page-layout";
-import { StatusBadge } from "./_components/status-badge";
+import { PlaybookFeed } from "./_components/playbook-feed";
 import { formatVND } from "./_lib/format";
 import { getInventoryPaths, type InventoryRouteBase } from "./_lib/paths";
-import { tNav, tStatus } from "./_lib/dictionary";
-
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
+import { tNav } from "./_lib/dictionary";
+import type { PlaybookTask } from "./_lib/playbook-types";
 
 type DashboardSiteKind = "central_warehouse" | "central_kitchen" | "branch";
 
@@ -69,12 +65,17 @@ export type DashboardProps = {
     progress: number;
     status: string;
   }>;
+  playbookTasks: PlaybookTask[];
+  playbookBranchId: number | null;
+  playbookBranchKind: DashboardSiteKind;
+  defaultSupplyBranchId: number | null;
 };
 
-/* ------------------------------------------------------------------ */
-/*  Quick actions per site kind                                        */
-/* ------------------------------------------------------------------ */
-
+/**
+ * Quick actions per site kind. Lives below the KPI strip and above the
+ * playbook feed — secondary navigation entry points that the playbook may
+ * not surface (e.g. blank PO, blank transfer).
+ */
 function buildQuickActions(
   siteKind: DashboardSiteKind,
   routeBase: InventoryRouteBase,
@@ -110,177 +111,44 @@ function buildQuickActions(
   return [
     {
       label: "Nhận điều chuyển",
-      icon: IconTruck,
+      icon: IconArrowLeftRight,
       href: p.transfers,
       primary: true,
     },
-    { label: tNav("issues"), icon: IconChefHat, href: p.issues },
     { label: tNav("stock"), icon: IconPackage, href: p.stock },
+    { label: tNav("issues"), icon: IconReceipt, href: p.issues },
     { label: tNav("stocktake"), icon: IconClipboardList, href: p.stocktake },
   ];
 }
 
-/* ------------------------------------------------------------------ */
-/*  Task / alert builders                                              */
-/* ------------------------------------------------------------------ */
-
-function isTransferOpen(status: string) {
-  return [
-    "draft",
-    "confirmed",
-    "confirmed_ship",
-    "in_transit",
-    "confirmed_receive",
-  ].includes(status);
+/**
+ * Slim KPI metric for the top strip. No big cards — single line, tabular
+ * numbers, optional warning tone.
+ */
+function KpiMetric({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  tone?: "default" | "warning" | "destructive";
+}) {
+  return (
+    <div className="flex min-w-fit items-center gap-2 px-3 py-2">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span
+        className={cn(
+          "text-sm font-semibold tabular-nums",
+          tone === "destructive" && "text-destructive",
+          tone === "warning" && "text-warning",
+        )}
+      >
+        {value}
+      </span>
+    </div>
+  );
 }
-
-type TaskItem = {
-  key: string;
-  title: string;
-  description: string;
-  href: string;
-  icon: ReactNode;
-  severity: "destructive" | "warning" | "info" | "success" | "primary";
-};
-
-function buildTasks(props: DashboardProps): TaskItem[] {
-  const {
-    siteKind,
-    siteName,
-    showProcurement,
-    pendingPO,
-    activeTransfers,
-    reorderAlerts,
-    expiryAlerts,
-    transfers,
-  } = props;
-  const paths = getInventoryPaths(props.routeBase);
-  const items: TaskItem[] = [];
-  const open = transfers.filter((t) => isTransferOpen(t.status));
-  const inbound = open.filter((t) => t.toBranch === siteName);
-  const outbound = open.filter((t) => t.fromBranch === siteName);
-
-  if (siteKind === "central_warehouse") {
-    if (pendingPO > 0)
-      items.push({
-        key: "po",
-        title: `${pendingPO} PO cần theo dõi`,
-        description: "Đẩy nhanh đơn mở trước GRN.",
-        href: paths.purchaseOrders,
-        icon: <IconShoppingCart className="size-4" />,
-        severity: "primary",
-      });
-    if (outbound.length > 0 || activeTransfers > 0)
-      items.push({
-        key: "tf-out",
-        title: `${outbound.length || activeTransfers} phiếu xuất đang mở`,
-        description: "Theo dõi phiếu rời kho HQ.",
-        href: paths.transfers,
-        icon: <IconTruck className="size-4" />,
-        severity: "info",
-      });
-  }
-
-  if (siteKind === "central_kitchen") {
-    items.push({
-      key: "ck",
-      title: "Chốt nhịp sản xuất",
-      description: "Tạo/xác nhận lệnh sản xuất.",
-      href: paths.production,
-      icon: <IconBulb className="size-4" />,
-      severity: "primary",
-    });
-    if (inbound.length > 0 || outbound.length > 0)
-      items.push({
-        key: "ck-tf",
-        title: `${inbound.length || outbound.length} phiếu cần theo dõi`,
-        description: "Nhận NL hoặc xuất TP.",
-        href: paths.transfers,
-        icon: <IconTruck className="size-4" />,
-        severity: "info",
-      });
-  }
-
-  if (siteKind === "branch") {
-    if (inbound.length > 0)
-      items.push({
-        key: "recv",
-        title: `${inbound.length} phiếu đến cần xác nhận`,
-        description: "Nhận hàng nội bộ.",
-        href: paths.transfers,
-        icon: <IconTruck className="size-4" />,
-        severity: "primary",
-      });
-    items.push({
-      key: "issues",
-      title: "Ghi nhận xuất kho nội bộ",
-      description: "Tiêu hao / hủy hỏng / hao hụt kho (khác luân chuyển).",
-      href: paths.issues,
-      icon: <IconSquareCheck className="size-4" />,
-      severity: "info",
-    });
-  }
-
-  if (props.activeStocktakes > 0)
-    items.push({
-      key: "st",
-      title: `${props.activeStocktakes} phiên kiểm kê đang mở`,
-      description: "Hoàn tất để khóa chênh lệch.",
-      href: paths.stocktake,
-      icon: <IconClipboardList className="size-4" />,
-      severity: "success",
-    });
-  if (expiryAlerts.length > 0)
-    items.push({
-      key: "exp",
-      title: `${expiryAlerts.length} lô cần xử lý hạn dùng`,
-      description: "Ưu tiên xuất các lô cận hạn.",
-      href: paths.expiry,
-      icon: <IconHourglass className="size-4" />,
-      severity: "warning",
-    });
-  if (showProcurement && reorderAlerts.length > 0)
-    items.push({
-      key: "reorder",
-      title: `${reorderAlerts.length} nguyên liệu chạm ngưỡng`,
-      description: "Chuẩn bị PO.",
-      href: paths.purchaseOrders,
-      icon: <IconShoppingCart className="size-4" />,
-      severity: "destructive",
-    });
-  if (showProcurement && props.priceReviewCount > 0)
-    items.push({
-      key: "price-review",
-      title: `${props.priceReviewCount} dòng GRN cần kiểm tra giá`,
-      description: "Giá nhập lệch lớn so với PO trong 30 ngày qua.",
-      href: paths.grn,
-      icon: <IconReceipt className="size-4" />,
-      severity: "warning",
-    });
-  if (showProcurement && props.pendingSupplierReturns > 0)
-    items.push({
-      key: "returns",
-      title: `${props.pendingSupplierReturns} phiếu trả NCC chờ xử lý`,
-      description: "Xác nhận hoặc ghi credit/hoàn tiền.",
-      href: paths.supplierReturns,
-      icon: <IconPackageOff className="size-4" />,
-      severity: "warning",
-    });
-
-  return items.slice(0, 6);
-}
-
-const severityDot: Record<string, string> = {
-  destructive: "bg-destructive",
-  warning: "bg-warning",
-  info: "bg-info",
-  success: "bg-success",
-  primary: "bg-primary",
-};
-
-/* ------------------------------------------------------------------ */
-/*  Component                                                          */
-/* ------------------------------------------------------------------ */
 
 export function DashboardClient(props: DashboardProps) {
   const {
@@ -291,37 +159,18 @@ export function DashboardClient(props: DashboardProps) {
     totalStockValue,
     pendingPO,
     activeTransfers,
-    reorderAlerts,
+    activeStocktakes,
+    priceReviewCount,
+    pendingSupplierReturns,
     expiryAlerts,
-    transfers,
-    stocktakeSessions,
+    playbookTasks,
+    playbookBranchId,
+    playbookBranchKind,
+    defaultSupplyBranchId,
   } = props;
 
   const isMobile = useIsMobile();
-  const paths = getInventoryPaths(routeBase);
   const quickActions = buildQuickActions(siteKind, routeBase);
-  const tasks = buildTasks(props);
-
-  const activeTransferList = transfers
-    .filter((t) =>
-      [
-        "in_transit",
-        "confirmed",
-        "confirmed_ship",
-        "confirmed_receive",
-      ].includes(t.status),
-    )
-    .slice(isMobile ? 2 : 3);
-  const activeStocktakeList = stocktakeSessions.filter(
-    (s) => s.status === "in_progress",
-  );
-
-  const siteKindLabel =
-    siteKind === "central_warehouse"
-      ? "HQ"
-      : siteKind === "central_kitchen"
-        ? "Bếp TT"
-        : "Chi nhánh";
 
   return (
     <>
@@ -332,383 +181,76 @@ export function DashboardClient(props: DashboardProps) {
 
       <InventoryPageContent
         width={isMobile ? "narrow" : "wide"}
-        contentClassName="gap-6"
+        contentClassName="gap-4"
       >
-        {/* KPI cards */}
-        <div
-          className={cn(
-            "grid gap-3",
-            isMobile ? "grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-4",
-          )}
-        >
-          {[
-            {
-              label: "Giá trị tồn kho",
-              value: `${formatVND(totalStockValue)}đ`,
-              tone: "default" as const,
-            },
-            {
-              label: "PO đang chờ",
-              value: String(pendingPO),
-              tone: "default" as const,
-            },
-            {
-              label: "Transfer đang xử lý",
-              value: String(activeTransfers),
-              tone: "default" as const,
-            },
-            {
-              label: "Cảnh báo hết hạn",
-              value: String(expiryAlerts.length),
-              tone:
-                expiryAlerts.length > 0
-                  ? ("warning" as const)
-                  : ("default" as const),
-            },
-            ...(showProcurement
-              ? [
-                  {
-                    label: "GRN cần kiểm tra giá (30d)",
-                    value: String(props.priceReviewCount),
-                    tone:
-                      props.priceReviewCount > 0
-                        ? ("destructive" as const)
-                        : ("default" as const),
-                  },
-                  {
-                    label: "Phiếu trả NCC đang mở",
-                    value: String(props.pendingSupplierReturns),
-                    tone:
-                      props.pendingSupplierReturns > 0
-                        ? ("warning" as const)
-                        : ("default" as const),
-                  },
-                ]
-              : []),
-          ].map((kpi) => (
-            <Card
-              key={kpi.label}
-              className={cn(
-                kpi.tone === "destructive" &&
-                  "border-destructive/40 bg-destructive/5",
-                kpi.tone === "warning" && "border-warning/40 bg-warning/10",
-              )}
+        {/* Slim KPI strip — one row, signal only. No big cards. */}
+        <div className="flex flex-wrap items-center divide-x overflow-hidden border bg-card">
+          <KpiMetric
+            label="Giá trị tồn"
+            value={`${formatVND(totalStockValue)}đ`}
+          />
+          <KpiMetric label="PO đang mở" value={String(pendingPO)} />
+          <KpiMetric
+            label="Phiếu chuyển đang xử lý"
+            value={String(activeTransfers)}
+          />
+          <KpiMetric
+            label="Phiên kiểm kê đang mở"
+            value={String(activeStocktakes)}
+          />
+          <KpiMetric
+            label="Cảnh báo hết hạn"
+            value={String(expiryAlerts.length)}
+            tone={expiryAlerts.length > 0 ? "warning" : "default"}
+          />
+          {showProcurement ? (
+            <>
+              <KpiMetric
+                label="GRN cần kiểm giá (30d)"
+                value={String(priceReviewCount)}
+                tone={priceReviewCount > 0 ? "destructive" : "default"}
+              />
+              <KpiMetric
+                label="Phiếu trả NCC mở"
+                value={String(pendingSupplierReturns)}
+                tone={pendingSupplierReturns > 0 ? "warning" : "default"}
+              />
+            </>
+          ) : null}
+        </div>
+
+        {/* Quick actions — slim row of common navigation shortcuts. */}
+        <div className="flex flex-wrap items-center gap-2 border bg-card p-2">
+          <Badge variant="outline" className="text-xs">
+            Thao tác nhanh
+          </Badge>
+          {quickActions.map((a) => (
+            <Button
+              key={a.label}
+              asChild
+              size="sm"
+              variant={a.primary ? "default" : "outline"}
             >
-              <CardContent className="p-4">
-                <p className={cn("text-muted-foreground text-xs")}>
-                  {kpi.label}
-                </p>
-                <p
-                  className={cn(
-                    "font-bold tabular-nums",
-                    isMobile ? "mt-0.5 text-lg" : "mt-1 text-2xl",
-                    kpi.tone === "destructive" && "text-destructive",
-                    kpi.tone === "warning" && "text-warning",
-                  )}
-                >
-                  {kpi.value}
-                </p>
-              </CardContent>
-            </Card>
+              <Link href={a.href}>
+                <a.icon className="size-3.5" />
+                {a.label}
+              </Link>
+            </Button>
           ))}
         </div>
 
-        {/* Quick actions */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Thao tác nhanh</CardTitle>
-            <CardDescription className="text-xs">
-              {siteKind === "central_warehouse" &&
-                "Các thao tác phổ biến tại trụ sở"}
-              {siteKind === "central_kitchen" &&
-                "Các thao tác phổ biến tại bếp trung tâm"}
-              {siteKind === "branch" && "Các thao tác phổ biến tại chi nhánh"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div
-              className={cn("flex gap-2", isMobile ? "flex-col" : "flex-wrap")}
-            >
-              {quickActions.map((a) => (
-                <Button
-                  key={a.label}
-                  variant={a.primary ? "default" : "outline"}
-                  size={isMobile ? "lg" : "sm"}
-                  className={cn(isMobile && "justify-start")}
-                  asChild
-                >
-                  <Link href={a.href}>
-                    <a.icon className="mr-2 size-4" />
-                    {a.label}
-                  </Link>
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Tasks + Alerts */}
-        <div
-          className={cn(
-            "grid gap-4",
-            isMobile ? "grid-cols-1" : "lg:grid-cols-2",
-          )}
-        >
-          {/* Tasks */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-sm">
-                    Việc cần làm ngay trong ca
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    {tasks.length} việc đang chờ xử lý
-                  </CardDescription>
-                </div>
-                <Badge variant="secondary" className="h-6">
-                  <IconClock className="mr-1 size-3" />
-                  {siteKindLabel}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {tasks.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                  Không có việc cần xử lý gấp.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {tasks.map((task) => (
-                    <Link
-                      key={task.key}
-                      href={task.href}
-                      className={cn(
-                        "flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent active:scale-[0.99]",
-                        isMobile && "min-h-14",
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "mt-1.5 size-2 shrink-0 rounded-full",
-                          severityDot[task.severity],
-                        )}
-                      />
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <p className="text-sm font-medium leading-tight">
-                          {task.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {task.description}
-                        </p>
-                      </div>
-                      <IconArrowRight className="mt-1 size-4 shrink-0 text-muted-foreground" />
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Alerts */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-sm">
-                    Cảnh báo và luồng ưu tiên
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    Các vấn đề cần chú ý
-                  </CardDescription>
-                </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href={paths.expiry}>Xem tất cả</Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {reorderAlerts.slice(0, isMobile ? 2 : 3).map((item) => (
-                  <Link
-                    key={`r-${item.ingredientId}-${item.branchId}`}
-                    href={showProcurement ? paths.purchaseOrders : paths.stock}
-                    className={cn(
-                      "flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/5 p-3 transition-colors hover:bg-accent",
-                      isMobile && "min-h-14",
-                    )}
-                  >
-                    <IconAlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-tight">
-                        {item.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Tồn {item.current}
-                        {item.unit} / Ngưỡng {item.reorder}
-                        {item.unit}
-                      </p>
-                    </div>
-                    <Badge variant="destructive" className="shrink-0 text-xs">
-                      Tái đặt
-                    </Badge>
-                  </Link>
-                ))}
-                {expiryAlerts.slice(0, isMobile ? 2 : 3).map((item) => (
-                  <Link
-                    key={`e-${item.id}`}
-                    href={paths.expiry}
-                    className={cn(
-                      "flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent",
-                      item.urgency === "critical"
-                        ? "border-destructive/50 bg-destructive/5"
-                        : "border-warning/50 bg-warning/5",
-                      isMobile && "min-h-14",
-                    )}
-                  >
-                    <IconAlertTriangle
-                      className={cn(
-                        "mt-0.5 size-4 shrink-0",
-                        item.urgency === "critical"
-                          ? "text-destructive"
-                          : "text-warning",
-                      )}
-                    />
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-tight">
-                        {item.ingredientName}
-                        {item.lot ? ` • ${item.lot}` : ""}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.daysLeft <= 0
-                          ? `Quá hạn ${Math.abs(item.daysLeft)} ngày`
-                          : `Còn ${item.daysLeft} ngày`}
-                      </p>
-                    </div>
-                    <Badge
-                      variant={
-                        item.urgency === "critical" ? "destructive" : "warning"
-                      }
-                      className="shrink-0 text-xs"
-                    >
-                      {item.daysLeft <= 0
-                        ? tStatus("expired", "badge")
-                        : tStatus("critical", "badge")}
-                    </Badge>
-                  </Link>
-                ))}
-                {reorderAlerts.length === 0 && expiryAlerts.length === 0 && (
-                  <p className="py-8 text-center text-sm text-muted-foreground">
-                    Không có cảnh báo nào.
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Transfer tracking + Stocktake progress */}
-        <div
-          className={cn(
-            "grid gap-4",
-            isMobile ? "grid-cols-1" : "lg:grid-cols-2",
-          )}
-        >
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-sm">
-                    Theo dõi điều chuyển
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    {activeTransferList.length} phiếu đang xử lý
-                  </CardDescription>
-                </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href={paths.transfers}>Xem tất cả</Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {activeTransferList.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                  Không có điều chuyển đang xử lý
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {activeTransferList.map((t) => (
-                    <Link
-                      key={t.id}
-                      href={paths.transferDetail(t.id)}
-                      className={cn(
-                        "block rounded-lg border p-3 transition-colors hover:bg-accent active:scale-[0.99]",
-                        isMobile && "min-h-14",
-                      )}
-                    >
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="text-sm font-medium">{t.code}</span>
-                        <StatusBadge status={t.status} />
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{t.fromBranch}</span>
-                        <IconArrowRight className="size-3" />
-                        <span>{t.toBranch}</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-sm">Tiến độ kiểm kê</CardTitle>
-                  <CardDescription className="text-xs">
-                    {activeStocktakeList.length} phiên đang thực hiện
-                  </CardDescription>
-                </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href={paths.stocktake}>Xem tất cả</Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {activeStocktakeList.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                  Không có phiên kiểm kê đang thực hiện
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {activeStocktakeList.map((s) => (
-                    <Link
-                      key={s.id}
-                      href={paths.stocktakeDetail(s.id)}
-                      className={cn(
-                        "block rounded-lg border p-3 transition-colors hover:bg-accent active:scale-[0.99]",
-                        isMobile && "min-h-14",
-                      )}
-                    >
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="text-sm font-medium">{s.code}</span>
-                        <Badge variant="secondary" className="text-xs">
-                          {s.progress}%
-                        </Badge>
-                      </div>
-                      <p className="mb-2 text-xs text-muted-foreground">
-                        {s.branchName}
-                      </p>
-                      <Progress value={s.progress} className="h-2" />
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        {/* Today's Playbook — primary surface */}
+        <PlaybookFeed
+          tasks={playbookTasks}
+          branchId={playbookBranchId}
+          branchKind={playbookBranchKind}
+          emptySnapshot={{
+            pendingPoCount: pendingPO,
+            activeTransfers,
+            activeStocktakes,
+          }}
+          defaultSupplyBranchId={defaultSupplyBranchId}
+        />
       </InventoryPageContent>
     </>
   );
