@@ -1,13 +1,5 @@
 import Link from "next/link";
-import {
-  IconArrowRight,
-  IconChartBar,
-  IconClipboardList,
-  IconBuildingFactory,
-  IconPackage,
-  IconReceipt,
-  IconTruck,
-} from "@tabler/icons-react";
+import { ArrowRight as IconArrowRight, ChartBar as IconChartBar, ClipboardList as IconClipboardList, Factory as IconBuildingFactory, Package as IconPackage, Receipt as IconReceipt, Truck as IconTruck } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
   extractClaimsFromAccessToken,

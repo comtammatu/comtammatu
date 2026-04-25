@@ -4,12 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  IconLock,
-  IconLockOpen,
-  IconAlertTriangle,
-  IconRefresh,
-} from "@tabler/icons-react";
+import { Lock as IconLock, LockOpen as IconLockOpen, TriangleAlert as IconAlertTriangle, RefreshCw as IconRefresh } from "lucide-react";
 import {
   acquireZoneLock,
   heartbeatZoneLock,
@@ -25,6 +20,7 @@ interface ZoneLockIndicatorProps {
   heartbeatMs?: number;
   /** Called when lock is lost (another user took it / expired). */
   onLost?: () => void;
+  onStateChange?: (state: LockState["kind"]) => void;
   className?: string;
 }
 
@@ -55,6 +51,7 @@ export function ZoneLockIndicator({
   ttlSeconds = 1800,
   heartbeatMs,
   onLost,
+  onStateChange,
   className,
 }: ZoneLockIndicatorProps) {
   const effectiveHeartbeat = heartbeatMs ?? Math.floor((ttlSeconds * 1000) / 3);
@@ -98,6 +95,10 @@ export function ZoneLockIndicator({
         : prev,
     );
   }, [sessionId, zoneId, ttlSeconds, onLost]);
+
+  useEffect(() => {
+    onStateChange?.(state.kind);
+  }, [onStateChange, state.kind]);
 
   // Acquire once on mount, release on unmount.
   useEffect(() => {

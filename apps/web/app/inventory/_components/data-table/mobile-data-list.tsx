@@ -1,6 +1,5 @@
 "use client";
 
-import type { Icon } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import { InteractiveCard } from "../interactive-card";
 
@@ -8,9 +7,6 @@ interface MobileDataListProps<T> {
   data: T[];
   getRowKey: (row: T) => string | number;
   renderCard: (row: T) => ReactNode;
-  emptyIcon?: Icon;
-  emptyTitle?: string;
-  emptyDescription?: string;
 }
 
 export function MobileDataList<T>({

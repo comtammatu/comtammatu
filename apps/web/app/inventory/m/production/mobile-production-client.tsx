@@ -3,17 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  IconAlertTriangle,
-  IconArrowRight,
-  IconCircleCheck,
-  IconChefHat,
-  IconClipboardList,
-  IconBuildingFactory,
-  IconPackageImport,
-  IconBuildingStore,
-  IconTruck,
-} from "@tabler/icons-react";
+import { TriangleAlert as IconAlertTriangle, ArrowRight as IconArrowRight, CircleCheck as IconCircleCheck, ChefHat as IconChefHat, ClipboardList as IconClipboardList, Factory as IconBuildingFactory, PackagePlus as IconPackageImport, Store as IconBuildingStore, Truck as IconTruck } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,

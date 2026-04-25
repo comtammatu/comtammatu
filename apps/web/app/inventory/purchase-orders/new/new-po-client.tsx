@@ -3,17 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  IconArrowLeft,
-  IconChevronDown,
-  IconBulb,
-  IconPackage,
-  IconPlus,
-  IconCirclePlus,
-  IconTrash,
-  IconTrendingDown,
-  IconTrendingUp,
-} from "@tabler/icons-react";
+import { ArrowLeft as IconArrowLeft, ChevronDown as IconChevronDown, Lightbulb as IconBulb, Package as IconPackage, Plus as IconPlus, CirclePlus as IconCirclePlus, Trash as IconTrash, TrendingDown as IconTrendingDown, TrendingUp as IconTrendingUp } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -243,6 +233,10 @@ export function NewPoClient({
       toast.error("Chọn nhà cung cấp");
       return;
     }
+    if (!branchId) {
+      toast.error("Chọn kho nhận hàng");
+      return;
+    }
     if (lines.length === 0) {
       toast.error("Thêm ít nhất 1 nguyên liệu");
       return;
@@ -250,6 +244,7 @@ export function NewPoClient({
     startTransition(async () => {
       const poRes = await createPurchaseOrder({
         supplierId: Number(supplierId),
+        branchId,
         notes: notes || undefined,
       });
       if (!poRes.success || !poRes.data) {
@@ -267,12 +262,12 @@ export function NewPoClient({
         });
         if (!lineRes.success) {
           toast.error(`Lỗi "${line.ingredientName}": ${lineRes.error}`);
-          router.push(`${poBasePath}/${poId}`);
+          router.push(`${poBasePath}/${poId}?branchId=${branchId}`);
           return;
         }
       }
       toast.success("Đã tạo đơn đặt hàng");
-      router.push(`${poBasePath}/${poId}`);
+      router.push(`${poBasePath}/${poId}?branchId=${branchId}`);
     });
   }
 
@@ -372,7 +367,11 @@ export function NewPoClient({
           {/* Footer */}
           <div className="flex items-center justify-between pt-1">
             <Button variant="ghost" asChild>
-              <Link href={poBasePath}>Hủy</Link>
+              <Link
+                href={branchId ? `${poBasePath}?branchId=${branchId}` : poBasePath}
+              >
+                Hủy
+              </Link>
             </Button>
             <div className="flex items-center gap-3">
               {lines.length > 0 && (

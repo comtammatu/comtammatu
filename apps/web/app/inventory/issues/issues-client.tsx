@@ -3,14 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  IconArrowRight,
-  IconFileDownload,
-  IconFilterX,
-  IconDotsVertical,
-  IconPlus,
-  IconSearch,
-} from "@tabler/icons-react";
+import { ArrowRight as IconArrowRight, FileDown as IconFileDownload, FilterX as IconFilterX, EllipsisVertical as IconDotsVertical, Plus as IconPlus, Search as IconSearch } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";

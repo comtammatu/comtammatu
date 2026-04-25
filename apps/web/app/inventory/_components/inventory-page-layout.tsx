@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import type { Icon } from "@tabler/icons-react";
-import { IconCircleCheck } from "@tabler/icons-react";
+import type { LucideIcon } from "lucide-react";
+import { CircleCheck as IconCircleCheck } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
@@ -25,7 +25,12 @@ export function InventoryPageContent({
   width = "wide",
 }: InventoryPageContentProps) {
   return (
-    <div className={cn("flex-1 overflow-auto p-4", className)}>
+    <div
+      className={cn(
+        "no-scrollbar min-h-0 flex-1 overflow-auto p-4",
+        className,
+      )}
+    >
       <div
         className={cn(
           "mx-auto flex w-full flex-col gap-4",
@@ -62,7 +67,7 @@ export function InventoryFilterBar({
 interface InventoryEmptyStateProps {
   title: string;
   description?: string;
-  icon?: Icon;
+  icon?: LucideIcon;
   className?: string;
 }
 

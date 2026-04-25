@@ -1,6 +1,6 @@
 "use client";
 
-import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
+import { ChevronLeft as IconChevronLeft, ChevronRight as IconChevronRight } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { cn } from "@comtammatu/ui";
 

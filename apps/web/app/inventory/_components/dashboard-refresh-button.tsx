@@ -6,7 +6,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
-import { IconRefresh } from "@tabler/icons-react";
+import { RefreshCw as IconRefresh } from "lucide-react";
 import { refreshDashboardMv } from "../dashboard-actions";
 
 const CLIENT_COOLDOWN_MS = 60_000;

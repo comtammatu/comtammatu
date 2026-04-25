@@ -1,6 +1,6 @@
 "use client";
 
-import { IconSearch, IconX } from "@tabler/icons-react";
+import { Search as IconSearch, X as IconX } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { IconPackage } from "@tabler/icons-react";
+import { Package as IconPackage } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
   extractClaimsFromAccessToken,

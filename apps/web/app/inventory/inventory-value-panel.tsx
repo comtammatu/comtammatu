@@ -7,7 +7,7 @@ import {
   useTransition,
   type ReactNode,
 } from "react";
-import { IconRefresh } from "@tabler/icons-react";
+import { RefreshCw as IconRefresh } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import type { InventoryValueVisibility } from "@comtammatu/shared/auth";

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { IconSearch } from "@tabler/icons-react";
+import { Search as IconSearch } from "lucide-react";
 import {
   InputGroup,
   InputGroupAddon,

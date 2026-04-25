@@ -16,7 +16,7 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import Link from "next/link";
-import { IconCheck, IconX, IconClock, IconRobot } from "@tabler/icons-react";
+import { Check as IconCheck, X as IconX, Clock as IconClock, Bot as IconRobot } from "lucide-react";
 import { WasteTierBadge } from "@/inventory/_components/waste-tier-badge";
 import { approveWaste } from "@/inventory/waste-actions";
 import { formatVND } from "@comtammatu/shared/format";

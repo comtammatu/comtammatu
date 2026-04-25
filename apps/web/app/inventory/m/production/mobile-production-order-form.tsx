@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { IconCircleOff, IconPlus } from "@tabler/icons-react";
+import { CircleOff as IconCircleOff, Plus as IconPlus } from "lucide-react";
 import {
   Controller,
   useFieldArray,

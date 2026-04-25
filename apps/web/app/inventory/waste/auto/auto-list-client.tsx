@@ -5,12 +5,7 @@ import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
-import {
-  IconShoppingCartX,
-  IconFlame,
-  IconChefHat,
-  IconExternalLink,
-} from "@tabler/icons-react";
+import { ShoppingCart as IconShoppingCartX, Flame as IconFlame, ChefHat as IconChefHat, ExternalLink as IconExternalLink } from "lucide-react";
 import { InventoryHeader } from "../../_components/inventory-header";
 import { InventoryPageContent } from "../../_components/inventory-page-layout";
 

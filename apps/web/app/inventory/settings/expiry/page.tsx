@@ -2,14 +2,19 @@ import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
 import { fetchExpiryAlerts } from "@/inventory/actions";
 import {
-  readBranchIdCookie,
+  parseBranchIdParam,
   resolveInventoryBranchScope,
 } from "@/inventory/_lib/inventory-scope";
 import { ExpiryListClient } from "@/inventory/expiry/expiry-list-client";
 import type { BranchOption, ExpiryAlertRow } from "@/inventory/page";
 import { getBranchSiteDisplayName } from "@/inventory/_lib/branch-site-labels";
 
-export default async function ExpirySettingsPage() {
+export default async function ExpirySettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string | string[] }>;
+}) {
+  const params = await searchParams;
   const supabase = await createClient();
   const {
     data: { session },
@@ -18,11 +23,10 @@ export default async function ExpirySettingsPage() {
     ? extractClaimsFromAccessToken(session.access_token)
     : null;
 
-  // Sidebar-selected branch (via cookie since this page has no branchId param)
-  // drives client action context for tenant-wide roles.
-  const cookieBranchId = await readBranchIdCookie();
+  // URL-selected branch drives client action context for tenant-wide roles.
+  const requestedBranchId = parseBranchIdParam(params.branchId);
   const scope = claims
-    ? await resolveInventoryBranchScope(supabase, claims, cookieBranchId)
+    ? await resolveInventoryBranchScope(supabase, claims, requestedBranchId)
     : null;
 
   const [alertsRes, branchesRes] = await Promise.all([

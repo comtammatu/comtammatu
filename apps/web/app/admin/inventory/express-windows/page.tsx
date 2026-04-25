@@ -1,14 +1,13 @@
 import { redirect } from "next/navigation";
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getAuthContextWithAnyPermission } from "@/inventory/_lib/auth";
 import { ExpressWindowsClient, type BranchRow } from "./express-windows-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function ExpressWindowsAdminPage() {
-  // Admin needs either config or rotate_code to see this page.
   const ctx = await getAuthContextWithAnyPermission(
-    [],
+    MODULE_ACL.inventory_admin.allowedRoles,
     [
       PERMISSION_KEYS.INVENTORY_GRN_EXPRESS_CONFIGURE,
       PERMISSION_KEYS.PROCUREMENT_OVERRIDE_CODE_ROTATE,

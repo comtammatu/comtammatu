@@ -15,12 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  IconSearch,
-  IconShieldCheck,
-  IconAlertTriangle,
-  IconFlame,
-} from "@tabler/icons-react";
+import { Search as IconSearch, ShieldCheck as IconShieldCheck, TriangleAlert as IconAlertTriangle, Flame as IconFlame } from "lucide-react";
 import { TrustScoreBadge } from "@/inventory/_components/trust-score-badge";
 import type { TrustScoreRow } from "@/inventory/trust-actions";
 

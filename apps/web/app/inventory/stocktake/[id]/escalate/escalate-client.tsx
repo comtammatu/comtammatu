@@ -9,11 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@comtammatu/ui/compone
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  IconAlertTriangle,
-  IconCheck,
-  IconShieldCheck,
-} from "@tabler/icons-react";
+import { TriangleAlert as IconAlertTriangle, Check as IconCheck, ShieldCheck as IconShieldCheck } from "lucide-react";
 import { InventoryHeader } from "../../../_components/inventory-header";
 import { InventoryPageContent } from "../../../_components/inventory-page-layout";
 import { AbcClassChip } from "../../../_components/abc-class-chip";

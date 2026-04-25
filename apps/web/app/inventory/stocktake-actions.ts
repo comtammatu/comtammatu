@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "./_lib/auth";
 
@@ -48,7 +48,7 @@ export async function startStocktake(
   }
 
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
   );
   if (!ctx) return { success: false, error: "Không có quyền tạo stocktake" };
@@ -108,7 +108,7 @@ export async function getStocktakeLinesBlind(
   sessionId: number,
 ): Promise<ActionResult<StocktakeLineBlind[]>> {
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -172,7 +172,7 @@ export async function submitCountRound(
   }
 
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -188,7 +188,7 @@ export async function submitCountRound(
     if (error.code === "42501") {
       return { success: false, error: "Không có quyền hoặc kỳ đã đóng" };
     }
-    return { success: false, error: error.message ?? "Không submit được" };
+    return { success: false, error: "Không submit được vòng đếm." };
   }
 
   const raw = (data ?? {}) as Record<string, unknown>;
@@ -226,7 +226,7 @@ export async function saveStocktakeDraft(
   }
 
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -265,7 +265,7 @@ export async function acquireZoneLock(
   ttlSeconds = 1800,
 ): Promise<ActionResult<{ acquired: boolean; lockedBy: string; expiresAt: string }>> {
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -296,7 +296,7 @@ export async function heartbeatZoneLock(
   ttlSeconds = 1800,
 ): Promise<ActionResult<{ expiresAt: string }>> {
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -318,7 +318,7 @@ export async function releaseZoneLock(
   zoneId: string,
 ): Promise<ActionResult<{ released: boolean }>> {
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -361,7 +361,7 @@ export async function closeRecountRound(
   }
 
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_STOCKTAKE_RECOUNT,
   );
   if (!ctx) return { success: false, error: "Không có quyền đóng round" };
@@ -373,7 +373,7 @@ export async function closeRecountRound(
   });
   if (error) {
     if (error.code === "42501") return { success: false, error: "Không có quyền đóng round" };
-    return { success: false, error: error.message ?? "Không đóng được round" };
+    return { success: false, error: "Không đóng được vòng đếm." };
   }
 
   const raw = (data ?? {}) as Record<string, unknown>;
@@ -415,7 +415,7 @@ export async function escalateRound4(
   }
 
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_STOCKTAKE_RECOUNT,
   );
   if (!ctx) return { success: false, error: "Không có quyền escalate" };
@@ -429,8 +429,13 @@ export async function escalateRound4(
   });
   if (error) {
     if (error.code === "42501") return { success: false, error: "Không có quyền escalate" };
-    if (error.code === "22023") return { success: false, error: error.message };
-    return { success: false, error: error.message ?? "Không escalate được" };
+    if (error.code === "22023") {
+      return {
+        success: false,
+        error: "Escalation không hợp lệ hoặc thiếu ghi chú bắt buộc.",
+      };
+    }
+    return { success: false, error: "Không escalation được dòng kiểm kê." };
   }
 
   revalidatePath(`/inventory/stocktake/${parsed.data.sessionId}`);
@@ -458,7 +463,7 @@ export async function finalizeStocktake(
   }
 
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_STOCKTAKE_COMPLETE,
   );
   if (!ctx) return { success: false, error: "Không có quyền finalize" };
@@ -469,8 +474,13 @@ export async function finalizeStocktake(
   });
   if (error) {
     if (error.code === "42501") return { success: false, error: "Không có quyền finalize" };
-    if (error.code === "22023") return { success: false, error: error.message };
-    return { success: false, error: error.message ?? "Không finalize được" };
+    if (error.code === "22023") {
+      return {
+        success: false,
+        error: "Chưa thể hoàn tất: còn dòng chưa final hoặc còn xung đột cần xử lý.",
+      };
+    }
+    return { success: false, error: "Không hoàn tất được kiểm kê." };
   }
 
   const raw = (data ?? {}) as Record<string, unknown>;
@@ -516,7 +526,7 @@ export async function listStocktakeConflicts(
     return { success: false, error: "Branch id không hợp lệ" };
   }
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_STOCKTAKE_RECOUNT,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -589,7 +599,7 @@ export async function resolveStocktakeConflict(
   }
 
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_STOCKTAKE_RECOUNT,
   );
   if (!ctx) return { success: false, error: "Không có quyền resolve" };
@@ -603,8 +613,13 @@ export async function resolveStocktakeConflict(
   });
   if (error) {
     if (error.code === "42501") return { success: false, error: "Không có quyền resolve" };
-    if (error.code === "22023") return { success: false, error: error.message };
-    return { success: false, error: error.message ?? "Không resolve được" };
+    if (error.code === "22023") {
+      return {
+        success: false,
+        error: "Cách xử lý xung đột không hợp lệ hoặc thiếu số lượng thủ công.",
+      };
+    }
+    return { success: false, error: "Không xử lý được xung đột kiểm kê." };
   }
 
   const raw = (data ?? {}) as Record<string, unknown>;

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { IconDotsVertical, IconPlus, IconReceipt, IconSearch } from "@tabler/icons-react";
+import { EllipsisVertical as IconDotsVertical, Plus as IconPlus, Receipt as IconReceipt, Search as IconSearch } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";

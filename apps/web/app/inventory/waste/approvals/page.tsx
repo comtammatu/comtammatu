@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "@/inventory/_lib/auth";
 import { resolveRequestedBranchId } from "@/inventory/_lib/inventory-scope";
 import {
@@ -18,7 +18,7 @@ export default async function WasteApprovalsPage({ searchParams }: PageProps) {
   const branchFilter = await resolveRequestedBranchId(params.branchId);
 
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
   );
   if (!ctx) redirect("/");

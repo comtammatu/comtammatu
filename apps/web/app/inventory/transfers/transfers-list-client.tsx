@@ -3,16 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  IconArrowRight,
-  IconCircleCheck,
-  IconChevronRight,
-  IconPackageImport,
-  IconPackageOff,
-  IconPlus,
-  IconSearch,
-  IconSend,
-} from "@tabler/icons-react";
+import { ArrowRight as IconArrowRight, CircleCheck as IconCircleCheck, ChevronRight as IconChevronRight, PackagePlus as IconPackageImport, PackageX as IconPackageOff, Plus as IconPlus, Search as IconSearch, Send as IconSend } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";

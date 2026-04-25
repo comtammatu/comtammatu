@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { IconCircleCheck, IconSearch, IconTrash } from "@tabler/icons-react";
+import { CircleCheck as IconCircleCheck, Search as IconSearch, Trash as IconTrash } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";

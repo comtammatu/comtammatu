@@ -1,12 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  IconChartBar,
-  IconTrendingUp,
-  IconArrowLeftRight,
-  IconPackage,
-} from "@tabler/icons-react";
+import { ChartBar as IconChartBar, TrendingUp as IconTrendingUp, ArrowLeftRight as IconArrowLeftRight, Package as IconPackage } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";

@@ -2,7 +2,7 @@
 
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { IconCheck } from "@tabler/icons-react";
+import { Check as IconCheck } from "lucide-react";
 
 interface RoundProgressStepperProps {
   /** Current round the session is in (1..4). */

@@ -1,6 +1,6 @@
 "use client";
 
-import { IconCheck } from "@tabler/icons-react";
+import { Check as IconCheck } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 
 interface TimelineStep {

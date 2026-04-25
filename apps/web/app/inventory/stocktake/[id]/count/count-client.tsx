@@ -44,10 +44,13 @@ export function StocktakeCountClient({
   const [lines] = useState<StocktakeLineBlind[]>(initialLines);
   const [counts, setCounts] = useState<DraftCounts>({});
   const [onlyRecount, setOnlyRecount] = useState(false);
-  const [lockLost, setLockLost] = useState(false);
+  const [lockState, setLockState] = useState<
+    "idle" | "acquiring" | "held" | "blocked" | "lost" | "error"
+  >("idle");
   const [pending, startTransition] = useTransition();
 
-  const editable = status === "in_progress" && !lockLost;
+  const canCount = status === "in_progress";
+  const editable = canCount && lockState === "held";
 
   const { status: saveStatus, lastSavedAt, flush } = useStocktakeDraftSaver({
     sessionId,
@@ -61,6 +64,18 @@ export function StocktakeCountClient({
   // Blind mode flag — derived per-round (R1 blind by mode default, R2+ counter
   // should see variance). For now we treat all as blind; R4 flips when escalated.
   const blindMode = currentRound < 4;
+
+  const currentRoundLines = useMemo(
+    () => lines.filter((line) => line.roundNo === currentRound),
+    [currentRound, lines],
+  );
+
+  const canCloseRound =
+    editable &&
+    currentRoundLines.length > 0 &&
+    currentRoundLines.every(
+      (line) => line.isFinal || line.countedQuantity !== null,
+    );
 
   const finalByRound: Partial<Record<1 | 2 | 3 | 4, number>> = useMemo(() => {
     const out: Record<number, number> = {};
@@ -176,6 +191,11 @@ export function StocktakeCountClient({
   }
 
   function closeRound() {
+    if (!canCloseRound) {
+      toast.error("Còn dòng chưa submit, chưa thể đóng round.");
+      return;
+    }
+
     startTransition(async () => {
       const res = await closeRecountRound({
         sessionId,
@@ -226,12 +246,12 @@ export function StocktakeCountClient({
           />
         </div>
 
-        {editable ? (
+        {canCount ? (
           <ZoneLockIndicator
             sessionId={sessionId}
             zoneId={zoneId}
+            onStateChange={setLockState}
             onLost={() => {
-              setLockLost(true);
               toast.error("Mất zone lock — ngừng nhập số đếm");
             }}
           />
@@ -256,7 +276,7 @@ export function StocktakeCountClient({
           </CardHeader>
           <CardContent className="space-y-3">
             <BlindCountingGrid
-              lines={lines.filter((l) => l.roundNo === currentRound)}
+              lines={currentRoundLines}
               counts={counts}
               onCountChange={onCountChange}
               blindMode={blindMode}
@@ -285,7 +305,7 @@ export function StocktakeCountClient({
                   variant="outline"
                   size="sm"
                   onClick={closeRound}
-                  disabled={pending}
+                  disabled={pending || !canCloseRound}
                 >
                   {pending ? "Đang đóng…" : `Đóng round R${currentRound}`}
                 </Button>

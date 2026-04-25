@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { fetchStocktakeDetail } from "../../actions";
 import { StocktakeDetailClient } from "./stocktake-detail-client";
 
@@ -26,6 +26,8 @@ export default async function StocktakeDetailPage({
       started_at: string | null;
       completed_at: string | null;
       status: string;
+      blind_mode: boolean;
+      current_round: number;
       notes: string | null;
       created_at: string;
       created_by: string;
@@ -47,6 +49,12 @@ export default async function StocktakeDetailPage({
       } | null;
     }>;
   };
+
+  if (stocktakeSession.status === "in_progress") {
+    redirect(
+      `/inventory/stocktake/${sessionId}/count?branchId=${stocktakeSession.branch_id}`,
+    );
+  }
 
   return (
     <StocktakeDetailClient

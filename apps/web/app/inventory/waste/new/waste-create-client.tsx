@@ -23,7 +23,7 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { IconTrash } from "@tabler/icons-react";
+import { Trash as IconTrash } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { SearchableSelect } from "@/inventory/_components/searchable-select";
 import { WasteReasonDropdown, isAlwaysTier2Reason, isRiskyReason } from "@/inventory/_components/waste-reason-dropdown";

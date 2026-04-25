@@ -7,12 +7,7 @@ import {
   CardTitle,
 } from "@comtammatu/ui/components/card";
 import { cn } from "@comtammatu/ui";
-import {
-  IconAlertTriangle,
-  IconBox,
-  IconCoin,
-  IconTruckDelivery,
-} from "@tabler/icons-react";
+import { TriangleAlert as IconAlertTriangle, Box as IconBox, Coins as IconCoin, Truck as IconTruckDelivery } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import type { DashboardSummary, DashboardInTransit } from "../dashboard-actions";
 

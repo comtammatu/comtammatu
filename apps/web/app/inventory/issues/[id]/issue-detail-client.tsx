@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { IconArrowLeft, IconCircleCheck, IconCirclePlus, IconTrash, IconX } from "@tabler/icons-react";
+import { ArrowLeft as IconArrowLeft, CircleCheck as IconCircleCheck, CirclePlus as IconCirclePlus, Trash as IconTrash, X as IconX } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,

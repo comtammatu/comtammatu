@@ -2,13 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import {
-  IconArrowRight,
-  IconCheck,
-  IconPackageImport,
-  IconPencil,
-  IconAlertTriangle,
-} from "@tabler/icons-react";
+import { ArrowRight as IconArrowRight, Check as IconCheck, PackagePlus as IconPackageImport, Pencil as IconPencil, TriangleAlert as IconAlertTriangle } from "lucide-react";
 import { Card } from "@comtammatu/ui/components/card";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";

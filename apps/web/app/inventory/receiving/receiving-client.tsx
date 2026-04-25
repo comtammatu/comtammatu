@@ -1,13 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  IconArrowRight,
-  IconClipboardCheck,
-  IconFileText,
-  IconShoppingCart,
-  IconBolt,
-} from "@tabler/icons-react";
+import { ArrowRight as IconArrowRight, ClipboardCheck as IconClipboardCheck, FileText as IconFileText, ShoppingCart as IconShoppingCart, Bolt as IconBolt } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {

@@ -26,7 +26,7 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
-import { IconLock, IconLockOpen, IconShieldLock } from "@tabler/icons-react";
+import { Lock as IconLock, LockOpen as IconLockOpen, ShieldCheck as IconShieldLock } from "lucide-react";
 import {
   closePeriodSoft,
   closePeriodHard,

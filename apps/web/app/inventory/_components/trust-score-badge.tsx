@@ -2,12 +2,7 @@
 
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
-import {
-  IconShieldCheck,
-  IconShieldHalf,
-  IconShieldX,
-  IconShield,
-} from "@tabler/icons-react";
+import { ShieldCheck as IconShieldCheck, ShieldHalf as IconShieldHalf, ShieldX as IconShieldX, Shield as IconShield } from "lucide-react";
 
 interface TrustScoreBadgeProps {
   score: number;

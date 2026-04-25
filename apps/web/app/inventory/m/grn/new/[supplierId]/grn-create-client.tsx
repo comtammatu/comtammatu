@@ -2,14 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import {
-  IconAlertTriangle,
-  IconCircleCheck,
-  IconChevronRight,
-  IconPencil,
-  IconSearch,
-  IconTrash,
-} from "@tabler/icons-react";
+import { TriangleAlert as IconAlertTriangle, CircleCheck as IconCircleCheck, ChevronRight as IconChevronRight, Pencil as IconPencil, Search as IconSearch, Trash as IconTrash } from "lucide-react";
 import {
   InputGroup,
   InputGroupAddon,
@@ -194,12 +187,16 @@ export function GrnCreateClient({
 
   async function submit() {
     if (!draft || draft.lines.length === 0) return;
+    if (!branchId) {
+      setSubmitError("Chưa có kho nhận hàng cho phiếu nhập.");
+      return;
+    }
     setSubmitting(true);
     setSubmitError(null);
     try {
       const createRes = await createGrnDraft({
         supplierId: supplier.id,
-        branchId: branchId ?? undefined,
+        branchId,
       });
       if (!createRes.success) {
         setSubmitError(createRes.error ?? "Không thể tạo phiếu nhập.");

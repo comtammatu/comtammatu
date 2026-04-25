@@ -20,7 +20,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Switch } from "@comtammatu/ui/components/switch";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { IconDeviceFloppy } from "@tabler/icons-react";
+import { Save as IconDeviceFloppy } from "lucide-react";
 import { InventoryHeader } from "../../_components/inventory-header";
 import { saveQcSettings } from "../../notifications-actions";
 

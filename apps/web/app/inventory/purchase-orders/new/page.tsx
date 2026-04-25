@@ -3,7 +3,7 @@ import { fetchIngredients } from "../../actions";
 import { fetchPoSuggestions, fetchSuppliers } from "../../procurement-actions";
 import { fetchProcurementBranches } from "../../_lib/procurement-branches";
 import {
-  readBranchIdCookie,
+  parseBranchIdParam,
   resolveInventoryBranchScope,
 } from "../../_lib/inventory-scope";
 import { NewPoClient, type ProcurementBranchOption } from "./new-po-client";
@@ -11,7 +11,12 @@ import type { SupplierRow } from "../../suppliers/suppliers-client";
 import type { IngredientRow } from "../../page";
 import type { PoSuggestionRow } from "../../procurement-actions";
 
-export default async function NewPurchaseOrderPage() {
+export default async function NewPurchaseOrderPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string | string[] }>;
+}) {
+  const params = await searchParams;
   const { supabase, claims } = await loadAuthState();
   const procBranches = await fetchProcurementBranches(
     supabase,
@@ -24,13 +29,13 @@ export default async function NewPurchaseOrderPage() {
   }));
 
   // Branch-scoped procurement roles auto-use their assigned branch; others
-  // honor the sidebar-selected branch IF it is a procurement branch, else fall
-  // back to the first central_warehouse.
-  const cookieBranchId = await readBranchIdCookie();
+  // honor the URL branch IF it is a procurement branch, else fall back to
+  // the first central_warehouse.
+  const requestedBranchId = parseBranchIdParam(params.branchId);
   const scope = await resolveInventoryBranchScope(
     supabase,
     claims,
-    cookieBranchId,
+    requestedBranchId,
   );
   const scopeProcurementBranchId =
     scope.selectedBranchId != null &&

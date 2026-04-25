@@ -3,30 +3,7 @@
 import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import {
-  IconArrowBarDown,
-  IconChartBar,
-  IconClipboardList,
-  IconClipboardCheck,
-  IconBuildingFactory,
-  IconFileText,
-  IconHourglass,
-  IconLayoutDashboard,
-  IconLogout,
-  IconCreditCard,
-  IconPackage,
-  IconPackageOff,
-  IconReceipt,
-  IconRobot,
-  IconSettings,
-  IconShoppingCart,
-  IconBuildingStore,
-  IconTruck,
-  IconUsers,
-  IconToolsKitchen,
-  IconAlertOctagon,
-  IconTrash,
-} from "@tabler/icons-react";
+import { ArrowDownToLine as IconArrowBarDown, ChartBar as IconChartBar, ClipboardList as IconClipboardList, ClipboardCheck as IconClipboardCheck, Factory as IconBuildingFactory, FileText as IconFileText, Hourglass as IconHourglass, LayoutDashboard as IconLayoutDashboard, LogOut as IconLogout, CreditCard as IconCreditCard, Package as IconPackage, PackageX as IconPackageOff, Receipt as IconReceipt, Bot as IconRobot, Settings as IconSettings, ShoppingCart as IconShoppingCart, Store as IconBuildingStore, Truck as IconTruck, Users as IconUsers, Utensils as IconToolsKitchen, OctagonAlert as IconAlertOctagon, Trash as IconTrash } from "lucide-react";
 import { ROLE_LABEL_VI, type StaffRole } from "@comtammatu/shared/auth";
 import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
@@ -273,6 +250,29 @@ export function InventoryShell({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const branchQuery = searchParams.get("branchId");
+  const activeBranchId = useMemo(() => {
+    if (branchQuery) {
+      const parsed = Number(branchQuery);
+      if (
+        Number.isInteger(parsed) &&
+        parsed > 0 &&
+        allowedBranches.some((branch) => branch.id === parsed)
+      ) {
+        return parsed;
+      }
+    }
+    return defaultBranchId;
+  }, [allowedBranches, branchQuery, defaultBranchId]);
+  const activeBranch = useMemo(
+    () =>
+      activeBranchId == null
+        ? null
+        : (allowedBranches.find((branch) => branch.id === activeBranchId) ??
+          null),
+    [activeBranchId, allowedBranches],
+  );
+  const effectiveSiteName = activeBranch?.name ?? siteName;
+  const effectiveSiteKind = activeBranch?.branch_kind ?? siteKind;
   const groups = useMemo(
     () =>
       buildInventoryGroups({
@@ -280,31 +280,31 @@ export function InventoryShell({
         showProduction,
         showCatalogManagement,
         showSettings,
-        siteKind,
+        siteKind: effectiveSiteKind,
       }),
     [
+      effectiveSiteKind,
       showCatalogManagement,
       showProcurement,
       showProduction,
       showSettings,
-      siteKind,
     ],
   );
 
   const isMobileRoute = pathname?.startsWith("/inventory/m") ?? false;
-  const siteKindLabel = getInventorySiteKindLabelVi(siteKind);
-  const showSiteKindLabel = siteKindLabel !== siteName;
+  const siteKindLabel = getInventorySiteKindLabelVi(effectiveSiteKind);
+  const showSiteKindLabel = siteKindLabel !== effectiveSiteName;
   if (isMobileRoute) {
     return (
       <div className="flex min-h-dvh flex-col bg-background">
-        <MobileTopBar siteName={siteName} />
+        <MobileTopBar siteName={effectiveSiteName} />
         <main className="flex-1 pb-24">{children}</main>
       </div>
     );
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className="h-svh overflow-hidden">
       <Sidebar collapsible="icon">
         <SidebarHeader className="gap-3 p-3">
           <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
@@ -318,26 +318,28 @@ export function InventoryShell({
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-2 rounded-md border bg-sidebar-accent/40 px-2 py-1.5 text-sm group-data-[collapsible=icon]:hidden">
-            <IconBuildingStore className="size-4 shrink-0" />
-            {allowedBranches.length > 1 ? (
-              <div className="min-w-0 flex-1">
-                <InventoryBranchFilter
-                  branches={allowedBranches}
-                  defaultBranchId={defaultBranchId}
-                />
-              </div>
-            ) : (
+          {allowedBranches.length > 1 ? (
+            <div className="group-data-[collapsible=icon]:hidden">
+              <InventoryBranchFilter
+                branches={allowedBranches}
+                defaultBranchId={defaultBranchId}
+              />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 rounded-md border bg-sidebar-accent/40 px-2 py-1.5 text-sm group-data-[collapsible=icon]:hidden">
+              <IconBuildingStore className="size-4 shrink-0" />
               <div className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-xs font-medium">{siteName}</span>
+                <span className="truncate text-xs font-medium">
+                  {effectiveSiteName}
+                </span>
                 {showSiteKindLabel ? (
                   <span className="truncate text-xs text-muted-foreground">
                     {siteKindLabel}
                   </span>
                 ) : null}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </SidebarHeader>
 
         <SidebarContent>
@@ -349,8 +351,8 @@ export function InventoryShell({
                   {group.items.map((item) => {
                     const active = isNavItemActive(item, pathname);
                     const Icon = item.icon;
-                    const href = branchQuery
-                      ? `${item.href}?branchId=${branchQuery}`
+                    const href = activeBranchId
+                      ? `${item.href}?branchId=${activeBranchId}`
                       : item.href;
                     return (
                       <SidebarMenuItem key={item.href}>
@@ -402,7 +404,9 @@ export function InventoryShell({
         </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset className="min-w-0">{children}</SidebarInset>
+      <SidebarInset className="min-h-0 min-w-0 overflow-hidden">
+        {children}
+      </SidebarInset>
     </SidebarProvider>
   );
 }

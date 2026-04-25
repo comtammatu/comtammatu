@@ -21,14 +21,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  IconArrowLeft,
-  IconCircleCheck,
-  IconCreditCard,
-  IconInfoCircle,
-  IconWallet,
-  IconCircleX,
-} from "@tabler/icons-react";
+import { ArrowLeft as IconArrowLeft, CircleCheck as IconCircleCheck, CreditCard as IconCreditCard, Info as IconInfoCircle, Wallet as IconWallet, CircleX as IconCircleX } from "lucide-react";
 import { InventoryHeader } from "../../_components/inventory-header";
 import { formatVND, formatDate } from "../../_lib/format";
 import {

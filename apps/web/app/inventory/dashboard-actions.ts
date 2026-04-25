@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission, getAuthContextWithAnyPermission } from "./_lib/auth";
 
@@ -66,7 +66,7 @@ export async function getInventoryDashboard(
   branchId: number,
 ): Promise<ActionResult<InventoryDashboard>> {
   const ctx = await getAuthContextWithAnyPermission(
-    [],
+    STAFF_ROLES,
     [
       PERMISSION_KEYS.INVENTORY_READ,
       PERMISSION_KEYS.REPORTS_VIEW_BRANCH,
@@ -165,7 +165,7 @@ export async function getInventoryAlerts(
   }
 
   const ctx = await getAuthContextWithAnyPermission(
-    [],
+    STAFF_ROLES,
     [
       PERMISSION_KEYS.INVENTORY_READ,
       PERMISSION_KEYS.REPORTS_VIEW_BRANCH,
@@ -213,7 +213,7 @@ export async function refreshDashboardMv(): Promise<
   ActionResult<{ refreshedAt: string }>
 > {
   const ctx = await getAuthContextWithAnyPermission(
-    [],
+    STAFF_ROLES,
     [
       PERMISSION_KEYS.REPORTS_VIEW_BRANCH,
       PERMISSION_KEYS.REPORTS_VIEW_TENANT,
@@ -252,7 +252,7 @@ async function callPeriodRpc(
   }
 
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.ACCOUNTING_PERIOD_REOPEN,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };

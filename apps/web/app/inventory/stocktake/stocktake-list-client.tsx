@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { IconArrowRight, IconClipboardCheck, IconPlus, IconSearch } from "@tabler/icons-react";
+import { ArrowRight as IconArrowRight, ClipboardCheck as IconClipboardCheck, Plus as IconPlus, Search as IconSearch } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";

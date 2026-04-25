@@ -34,7 +34,7 @@ export async function getTrustLeaderboard(
   }
 
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.REPORTS_VIEW_BRANCH,
   );
   if (!ctx) return { success: false, error: "Không có quyền xem trust score" };

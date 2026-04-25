@@ -52,7 +52,7 @@ export async function fetchPurchaseOrders(
 
 const poCreateSchema = z.object({
   supplierId: z.coerce.number().int().positive(),
-  branchId: z.coerce.number().int().positive().optional(),
+  branchId: z.coerce.number().int().positive(),
   notes: z.string().optional(),
 });
 
@@ -63,25 +63,19 @@ export const createPurchaseOrder = withAction(
     permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
   },
   async (data, { supabase, claims, user }) => {
-    let targetBranchId = data.branchId;
-
-    if (!targetBranchId && isBranchScopedProcurementRole(claims.user_role)) {
-      targetBranchId = claims.branch_id ?? undefined;
-    }
-
-    if (!targetBranchId) {
-      // Fallback: first procurement branch (backward compat)
-      const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
-      targetBranchId = branches[0]?.id;
-    }
-
-    if (!targetBranchId) {
-      return { success: false, error: "Chưa cấu hình kho tổng hoặc bếp trung tâm." };
-    }
+    const targetBranchId = data.branchId;
 
     // Branch-scoped roles must match their assigned procurement branch.
     if (!canAccessProcurementBranch(claims, targetBranchId)) {
       return { success: false, error: "Bạn chỉ được tạo PO cho kho của mình." };
+    }
+
+    const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
+    if (!branches.some((branch) => branch.id === targetBranchId)) {
+      return {
+        success: false,
+        error: "Chi nhánh không hợp lệ (phải là Kho Tổng hoặc Bếp Trung Tâm).",
+      };
     }
 
     const poNumber = `PO-${randomUUID().slice(0, 8)}`;

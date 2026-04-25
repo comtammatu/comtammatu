@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Store as IconBuildingStore } from "lucide-react";
 import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
 import {
   Select,
@@ -40,18 +41,12 @@ export function InventoryBranchFilter({
 
   const handleChange = useCallback(
     (value: string) => {
-      // Persist for sidebar nav clicks that drop the query param.
-      // Path-scoped to /inventory so it never leaks elsewhere.
-      document.cookie = `inv_branch_id=${value}; path=/inventory; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
       const next = new URLSearchParams(searchParams.toString());
       next.set("branchId", value);
       const query = next.toString();
       router.replace(query ? `${pathname}?${query}` : pathname, {
         scroll: false,
       });
-      // Invalidate the layout Router Cache so the server re-reads the cookie
-      // and subsequent bare-path navigations see the fresh default.
-      router.refresh();
     },
     [router, pathname, searchParams],
   );
@@ -60,14 +55,21 @@ export function InventoryBranchFilter({
 
   return (
     <Select value={String(currentId)} onValueChange={handleChange}>
-      <SelectTrigger className="h-8 min-w-0 w-full overflow-hidden border-none bg-transparent p-0 text-xs font-medium shadow-none hover:bg-sidebar-accent/60 focus-visible:ring-0 [&_[data-slot=select-value]]:min-w-0 [&_[data-slot=select-value]]:truncate">
+      <SelectTrigger className="h-9 min-w-0 w-full justify-start overflow-hidden rounded-md border bg-sidebar-accent/40 px-2 py-1.5 text-left text-sm font-medium text-sidebar-foreground shadow-none hover:bg-sidebar-accent/60 focus-visible:ring-sidebar-ring [&>svg:last-child]:ml-auto [&_[data-slot=select-value]]:min-w-0 [&_[data-slot=select-value]]:flex-1 [&_[data-slot=select-value]]:truncate">
+        <IconBuildingStore className="size-4 shrink-0" />
         <SelectValue placeholder="Chọn chi nhánh">
           <span className="block min-w-0 truncate">
             {currentBranch?.name ?? "Chọn chi nhánh"}
           </span>
         </SelectValue>
       </SelectTrigger>
-      <SelectContent align="start" className="min-w-56">
+      <SelectContent
+        align="start"
+        className="no-scrollbar max-h-64 min-w-56 [&_[data-position=popper]]:h-auto"
+        position="popper"
+        side="bottom"
+        sideOffset={4}
+      >
         {branches.map((branch) => {
           const kindLabel = getInventorySiteKindLabelVi(branch.branch_kind);
           const showKind = kindLabel && kindLabel !== branch.name;

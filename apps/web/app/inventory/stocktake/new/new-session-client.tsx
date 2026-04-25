@@ -12,11 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { Switch } from "@comtammatu/ui/components/switch";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { InventoryHeader } from "../../_components/inventory-header";
 import { InventoryPageContent } from "../../_components/inventory-page-layout";
-import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import {
   StocktakeModeSelector,
   getModeMeta,
@@ -51,13 +49,10 @@ export function NewStocktakeSessionClient({
   const [mode, setMode] = useState<StocktakeMode>("daily");
   const [branchId, setBranchId] = useState<number | null>(defaultBranchId);
   const [locationId, setLocationId] = useState<number | null>(null);
-  const [blindOverride, setBlindOverride] = useState<boolean | null>(null);
-  const [pct, setPct] = useState<string>("");
-  const [vnd, setVnd] = useState<string>("");
   const [pending, startTransition] = useTransition();
 
   const meta = getModeMeta(mode);
-  const effectiveBlind = blindOverride ?? meta.defaultBlind;
+  const effectiveBlind = meta.defaultBlind;
 
   const branchLocations = useMemo(
     () => (branchId ? locations.filter((l) => l.branchId === branchId) : []),
@@ -74,9 +69,6 @@ export function NewStocktakeSessionClient({
         branchId,
         locationId: locationId ?? undefined,
         mode,
-        blindMode: blindOverride ?? undefined,
-        thresholdPct: pct ? Number(pct) : undefined,
-        thresholdVnd: vnd ? Number(vnd) : undefined,
       });
       if (!res.success || !res.data) {
         toast.error(res.error ?? "Không tạo được session");
@@ -157,36 +149,12 @@ export function NewStocktakeSessionClient({
                   <div className="font-medium text-sm">Blind mode</div>
                   <div className="text-xs text-muted-foreground">
                     Mặc định theo mode: <b>{meta.defaultBlind ? "BẬT" : "TẮT"}</b>.
-                    Override nếu cần.
+                    Chỉ thay đổi qua chính sách kiểm kê đã audit.
                   </div>
                 </div>
-                <Switch
-                  checked={effectiveBlind}
-                  onCheckedChange={(c) =>
-                    setBlindOverride(c === meta.defaultBlind ? null : c)
-                  }
-                />
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>Ngưỡng % override</Label>
-                  <FormattedNumberInput
-                    value={pct}
-                    onValueChange={setPct}
-                    placeholder="mặc định theo ABC"
-                    maxFractionDigits={2}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Ngưỡng VND override</Label>
-                  <FormattedNumberInput
-                    value={vnd}
-                    onValueChange={setVnd}
-                    placeholder="mặc định theo ABC"
-                    maxFractionDigits={0}
-                  />
-                </div>
+                <span className="rounded-md border bg-muted px-2 py-1 text-xs font-medium">
+                  {effectiveBlind ? "BẬT" : "TẮT"}
+                </span>
               </div>
             </CardContent>
           </Card>

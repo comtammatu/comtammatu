@@ -33,7 +33,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { IconCreditCard } from "@tabler/icons-react";
+import { CreditCard as IconCreditCard } from "lucide-react";
 import { InventoryHeader } from "../_components/inventory-header";
 import { InventoryPageContent } from "../_components/inventory-page-layout";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";

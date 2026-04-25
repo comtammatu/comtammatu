@@ -7,7 +7,7 @@ import {
   AUTO_APPROVE_CONDITION_LABELS_VI,
   AUTO_APPROVE_FAIL_REASON_VI,
 } from "@comtammatu/shared/labels";
-import { IconCheck, IconX } from "@tabler/icons-react";
+import { Check as IconCheck, X as IconX } from "lucide-react";
 import type { AutoApproveEvaluation } from "../variance-actions";
 
 interface AutoApproveEvalPanelProps {

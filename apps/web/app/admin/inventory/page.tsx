@@ -1,13 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  IconShieldCheck,
-  IconSnowflake,
-  IconClock,
-  IconReceipt2,
-  IconFlag,
-  IconArrowRight,
-} from "@tabler/icons-react";
+import { ShieldCheck as IconShieldCheck, Snowflake as IconSnowflake, Clock as IconClock, ReceiptText as IconReceipt2, Flag as IconFlag, ArrowRight as IconArrowRight } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Card,

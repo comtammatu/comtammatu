@@ -1,4 +1,4 @@
-import type { Icon } from "@tabler/icons-react";
+import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import {
   Empty,
@@ -11,7 +11,7 @@ import {
 import { cn } from "@comtammatu/ui";
 
 interface MobileEmptyStateProps {
-  icon: Icon;
+  icon: LucideIcon;
   title: string;
   description?: string;
   action?: ReactNode;

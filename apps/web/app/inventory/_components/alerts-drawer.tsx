@@ -13,11 +13,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { cn } from "@comtammatu/ui";
-import {
-  IconAlertTriangle,
-  IconAlertOctagon,
-  IconAlertCircle,
-} from "@tabler/icons-react";
+import { TriangleAlert as IconAlertTriangle, OctagonAlert as IconAlertOctagon, CircleAlert as IconAlertCircle } from "lucide-react";
 import {
   getInventoryAlerts,
   type DashboardAlert,

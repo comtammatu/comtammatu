@@ -13,7 +13,7 @@ import {
 } from "@comtammatu/ui/components/card";
 import { Switch } from "@comtammatu/ui/components/switch";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { IconFlag, IconBolt, IconInfoCircle } from "@tabler/icons-react";
+import { Flag as IconFlag, Bolt as IconBolt, Info as IconInfoCircle } from "lucide-react";
 import {
   setBranchFeatureFlag,
   bulkEnablePilotFlags,

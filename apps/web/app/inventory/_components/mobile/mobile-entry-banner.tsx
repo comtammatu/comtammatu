@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { IconArrowRight, IconDeviceMobile } from "@tabler/icons-react";
+import { ArrowRight as IconArrowRight, Smartphone as IconDeviceMobile } from "lucide-react";
 
 export function MobileEntryBanner() {
   return (

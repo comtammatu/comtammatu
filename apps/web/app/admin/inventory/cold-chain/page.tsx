@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "@/inventory/_lib/auth";
 import { getCategoryReviewPolicies } from "@/inventory/catalog-policy-actions";
 import { ColdChainClient } from "./cold-chain-client";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ColdChainAdminPage() {
   const ctx = await getAuthContextWithPermission(
-    [],
+    MODULE_ACL.inventory_admin.allowedRoles,
     PERMISSION_KEYS.INVENTORY_CATALOG_REVIEW_POLICY_SET,
   );
   if (!ctx) redirect("/");

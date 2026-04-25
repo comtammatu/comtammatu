@@ -133,13 +133,13 @@ export async function setBranchFeatureFlag(
 
   // Use branch-scoped perm check first; fall back to tenant-wide perm.
   let ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.SETTINGS_BRANCH,
     parsed.data.branchId,
   );
   if (!ctx) {
     ctx = await getAuthContextWithPermission(
-      [],
+      STAFF_ROLES,
       PERMISSION_KEYS.SETTINGS_TENANT,
     );
   }
@@ -204,13 +204,13 @@ export async function bulkEnablePilotFlags(
   }
 
   let ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.SETTINGS_BRANCH,
     parsed.data.branchId,
   );
   if (!ctx) {
     ctx = await getAuthContextWithPermission(
-      [],
+      STAFF_ROLES,
       PERMISSION_KEYS.SETTINGS_TENANT,
     );
   }

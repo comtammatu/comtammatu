@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "./_lib/auth";
 
@@ -24,7 +24,7 @@ export async function getCategoryReviewPolicies(): Promise<
   ActionResult<CategoryReviewPolicyRow[]>
 > {
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -99,7 +99,7 @@ export async function setCategoryReviewPolicy(
   }
 
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_CATALOG_REVIEW_POLICY_SET,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };

@@ -4,11 +4,7 @@ import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Label } from "@comtammatu/ui/components/label";
 import { Slider } from "@comtammatu/ui/components/slider";
-import {
-  IconFlame,
-  IconFlameOff,
-  IconChefHat,
-} from "@tabler/icons-react";
+import { Flame as IconFlame, FlameKindling as IconFlameOff, ChefHat as IconChefHat } from "lucide-react";
 
 export type KdsCancelStage =
   | "before_cook"

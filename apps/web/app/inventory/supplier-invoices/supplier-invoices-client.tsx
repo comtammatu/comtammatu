@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { IconAlertTriangle, IconCircleCheck, IconSearch } from "@tabler/icons-react";
+import { TriangleAlert as IconAlertTriangle, CircleCheck as IconCircleCheck, Search as IconSearch } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {

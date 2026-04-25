@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@comtammatu/ui";
 

@@ -2,24 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import {
-  IconAlertTriangle,
-  IconArrowLeftRight,
-  IconArrowRight,
-  IconChartBar,
-  IconSquareCheck,
-  IconChefHat,
-  IconClipboardList,
-  IconClock,
-  IconBuildingFactory,
-  IconHourglass,
-  IconBulb,
-  IconPackage,
-  IconPackageOff,
-  IconReceipt,
-  IconShoppingCart,
-  IconTruck,
-} from "@tabler/icons-react";
+import { TriangleAlert as IconAlertTriangle, ArrowLeftRight as IconArrowLeftRight, ArrowRight as IconArrowRight, ChartBar as IconChartBar, SquareCheck as IconSquareCheck, ChefHat as IconChefHat, ClipboardList as IconClipboardList, Clock as IconClock, Factory as IconBuildingFactory, Hourglass as IconHourglass, Lightbulb as IconBulb, Package as IconPackage, PackageX as IconPackageOff, Receipt as IconReceipt, ShoppingCart as IconShoppingCart, Truck as IconTruck } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";

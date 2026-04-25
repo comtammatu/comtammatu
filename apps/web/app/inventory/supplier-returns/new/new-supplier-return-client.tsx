@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { IconArrowLeft, IconPlus, IconDeviceFloppy, IconTrash } from "@tabler/icons-react";
+import { ArrowLeft as IconArrowLeft, Plus as IconPlus, Save as IconDeviceFloppy, Trash as IconTrash } from "lucide-react";
 import { InventoryHeader } from "../../_components/inventory-header";
 import { PhotoUploadInput } from "../../_components/photo-upload-input";
 import { formatVND } from "../../_lib/format";

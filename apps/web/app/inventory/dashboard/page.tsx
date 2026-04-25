@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import { getAuthContextWithAnyPermission } from "@/inventory/_lib/auth";
 import {
   INVENTORY_FEATURE_FLAGS,
@@ -22,7 +22,7 @@ export default async function InventoryDashboardV2Page({
   const branchId = await resolveRequestedBranchId(params.branchId);
 
   const ctx = await getAuthContextWithAnyPermission(
-    [],
+    STAFF_ROLES,
     [
       PERMISSION_KEYS.INVENTORY_READ,
       PERMISSION_KEYS.REPORTS_VIEW_BRANCH,

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { IconBackspace } from "@tabler/icons-react";
+import { Delete as IconBackspace } from "lucide-react";
 import {
   Sheet,
   SheetContent,

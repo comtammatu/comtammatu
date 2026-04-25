@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
+import { Pencil as IconPencil, Plus as IconPlus, Trash as IconTrash } from "lucide-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   AlertDialog,

@@ -23,7 +23,7 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
-import { IconShieldLock } from "@tabler/icons-react";
+import { ShieldCheck as IconShieldLock } from "lucide-react";
 import { HARDBLOCK_REASON_LABELS_VI } from "@comtammatu/shared/labels";
 import { PhotoUploadInput } from "./photo-upload-input";
 import { submitHardblockOverride } from "../variance-actions";

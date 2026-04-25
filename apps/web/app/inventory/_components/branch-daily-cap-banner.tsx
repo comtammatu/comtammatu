@@ -2,7 +2,7 @@
 
 import { cn } from "@comtammatu/ui";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
-import { IconAlertTriangle } from "@tabler/icons-react";
+import { TriangleAlert as IconAlertTriangle } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 
 interface BranchDailyCapBannerProps {

@@ -13,7 +13,7 @@ import { Label } from "@comtammatu/ui/components/label";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { IconSnowflake } from "@tabler/icons-react";
+import { Snowflake as IconSnowflake } from "lucide-react";
 import {
   setCategoryReviewPolicy,
   type CategoryReviewPolicyRow,

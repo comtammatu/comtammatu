@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { IconLogout, IconBuildingWarehouse } from "@tabler/icons-react";
+import { LogOut as IconLogout, Warehouse as IconBuildingWarehouse } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 
 interface MobileTopBarProps {

@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { getAuthContextWithPermission } from "@/inventory/_lib/auth";
 import { parseBranchIdParam } from "@/inventory/_lib/inventory-scope";
@@ -18,7 +18,7 @@ export default async function TrustLeaderboardAdminPage({
   }>;
 }) {
   const ctx = await getAuthContextWithPermission(
-    [],
+    MODULE_ACL.inventory_admin.allowedRoles,
     PERMISSION_KEYS.REPORTS_VIEW_BRANCH,
   );
   if (!ctx) redirect("/");

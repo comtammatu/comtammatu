@@ -23,14 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  IconAlertTriangle,
-  IconArrowLeft,
-  IconCircleCheck,
-  IconInfoCircle,
-  IconPackageOff,
-  IconDeviceFloppy,
-} from "@tabler/icons-react";
+import { TriangleAlert as IconAlertTriangle, ArrowLeft as IconArrowLeft, CircleCheck as IconCircleCheck, Info as IconInfoCircle, PackageX as IconPackageOff, Save as IconDeviceFloppy } from "lucide-react";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { notify } from "@comtammatu/ui/lib/notify";
 import { InventoryHeader } from "../../_components/inventory-header";

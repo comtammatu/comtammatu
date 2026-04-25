@@ -6,10 +6,7 @@ import {
   currentUserHasPermissionAny,
 } from "../_lib/permissions";
 import { InventoryShell } from "./_components/inventory-shell";
-import {
-  readBranchIdCookie,
-  resolveInventoryBranchScope,
-} from "./_lib/inventory-scope";
+import { resolveInventoryBranchScope } from "./_lib/inventory-scope";
 import {
   canAccessProductionSurface,
   hasCurrentProductionBranchAccess,
@@ -33,12 +30,7 @@ export default async function InventoryLayout({
   children: ReactNode;
 }) {
   const { supabase, session, claims } = await loadAuthState();
-  const cookieBranchId = await readBranchIdCookie();
-  const scope = await resolveInventoryBranchScope(
-    supabase,
-    claims,
-    cookieBranchId,
-  );
+  const scope = await resolveInventoryBranchScope(supabase, claims, null);
   const [
     hasProcurementRead,
     canManageCatalog,

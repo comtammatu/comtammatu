@@ -6,7 +6,7 @@ import { createClient } from "@comtammatu/database/supabase/client";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { IconTrash, IconUpload } from "@tabler/icons-react";
+import { Trash as IconTrash, Upload as IconUpload } from "lucide-react";
 import { toast } from "@comtammatu/ui/components/sonner";
 
 const DEFAULT_BUCKET = "inventory-attachments";

@@ -2,7 +2,7 @@
 
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { IconAlertOctagon, IconFlag3, IconCheck } from "@tabler/icons-react";
+import { OctagonAlert as IconAlertOctagon, FlagTriangleRight as IconFlag3, Check as IconCheck } from "lucide-react";
 import { AbcClassChip } from "./abc-class-chip";
 
 interface RoundCount {

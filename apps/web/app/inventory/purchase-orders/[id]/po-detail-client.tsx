@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { IconArrowLeft, IconCircleX, IconCircleCheck } from "@tabler/icons-react";
+import { ArrowLeft as IconArrowLeft, CircleX as IconCircleX, CircleCheck as IconCircleCheck } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {

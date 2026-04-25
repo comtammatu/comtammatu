@@ -241,6 +241,7 @@ export default async function StockPage({
   };
   const permissions: StockActionPermissions = {
     canReceiveGrn,
+    canCreateIssue: canAdjustException,
     canCreateTransfer,
     canCreateStocktake,
     canWriteoff,

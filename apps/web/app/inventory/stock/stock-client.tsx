@@ -1,20 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  IconArrowBarRight,
-  IconClipboardList,
-  IconPencil,
-  IconReceipt,
-  IconSearch,
-  IconShoppingCart,
-  IconTrash,
-  IconTruck,
-} from "@tabler/icons-react";
+import { ArrowRightToLine as IconArrowBarRight, ClipboardList as IconClipboardList, Pencil as IconPencil, Receipt as IconReceipt, Search as IconSearch, ShoppingCart as IconShoppingCart, Trash as IconTrash, Truck as IconTruck } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@comtammatu/ui/components/dialog";
+import { Input } from "@comtammatu/ui/components/input";
+import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
   SelectContent,
@@ -27,6 +27,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
+import { toast } from "@comtammatu/ui/components/sonner";
 import {
   Table,
   TableBody,
@@ -35,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { InventoryHeader } from "../_components/inventory-header";
@@ -45,8 +47,10 @@ import {
 import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { InteractiveCard } from "../_components/interactive-card";
+import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { formatDateTime, formatQty, formatVND } from "../_lib/format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
+import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";
 import { AdjustStockDialog } from "./adjust-stock-dialog";
 
 export type StockIngredient = {
@@ -75,6 +79,7 @@ export type StockWorkSummary = {
 
 export type StockActionPermissions = {
   canReceiveGrn: boolean;
+  canCreateIssue: boolean;
   canCreateTransfer: boolean;
   canCreateStocktake: boolean;
   canWriteoff: boolean;
@@ -102,6 +107,11 @@ type StockFilter = "all" | "in_stock" | "low" | "out";
 type RiskFilter = "all" | "reorder" | "not_counted";
 type SortMode = "priority" | "name" | "value_desc";
 type MovementBadgeVariant = "success" | "destructive" | "secondary";
+type QuickIssueType = "consumption" | "writeoff" | "other";
+type QuickIssueTarget = {
+  ingredient: StockIngredient;
+  issueType: QuickIssueType;
+};
 
 const stockFilterOptions: { value: StockFilter; label: string }[] = [
   { value: "all", label: "Tất cả" },
@@ -120,6 +130,28 @@ const sortOptions: { value: SortMode; label: string }[] = [
   { value: "priority", label: "Ưu tiên cần xử lý" },
   { value: "name", label: "Tên A-Z" },
   { value: "value_desc", label: "Giá trị cao trước" },
+];
+
+const quickIssueTypeOptions: {
+  value: QuickIssueType;
+  label: string;
+  reasonPlaceholder: string;
+}[] = [
+  {
+    value: "consumption",
+    label: "Xuất / tiêu hao",
+    reasonPlaceholder: "Ví dụ: cấp phát cho bếp ca chiều",
+  },
+  {
+    value: "writeoff",
+    label: "Hao hụt / hủy hỏng",
+    reasonPlaceholder: "Ví dụ: chai vỡ, đổ, hàng hỏng",
+  },
+  {
+    value: "other",
+    label: "Xuất khác",
+    reasonPlaceholder: "Nhập rõ lý do xuất kho",
+  },
 ];
 
 const STATUS_PRIORITY: Record<StockIngredient["status"], number> = {
@@ -224,6 +256,188 @@ function QuickActionButton({
   );
 }
 
+function QuickStockIssueDialog({
+  branchId,
+  open,
+  target,
+  onOpenChange,
+}: {
+  branchId: number;
+  open: boolean;
+  target: QuickIssueTarget;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const router = useRouter();
+  const [issueType, setIssueType] = useState<QuickIssueType>(target.issueType);
+  const [quantity, setQuantity] = useState("");
+  const [unit, setUnit] = useState(target.ingredient.unit);
+  const [reason, setReason] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const activeIssueType = quickIssueTypeOptions.find(
+    (option) => option.value === issueType,
+  );
+  const title = issueType === "writeoff" ? "Hao hụt nhanh" : "Xuất kho nhanh";
+
+  function resetForm() {
+    setIssueType(target.issueType);
+    setQuantity("");
+    setUnit(target.ingredient.unit);
+    setReason("");
+  }
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const parsedQuantity = Number(quantity);
+    if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
+      toast.error("Số lượng phải lớn hơn 0.");
+      return;
+    }
+    if (parsedQuantity > target.ingredient.qty) {
+      toast.error("Số lượng vượt tồn hiện tại.");
+      return;
+    }
+    if (!unit.trim()) {
+      toast.error("Đơn vị không được để trống.");
+      return;
+    }
+    if (!reason.trim()) {
+      toast.error("Lý do là bắt buộc để lưu vết.");
+      return;
+    }
+
+    startTransition(async () => {
+      const draftRes = await createStockIssueDraft({
+        branchId,
+        issueType,
+        notes: `Tạo nhanh từ tồn kho: ${target.ingredient.name}`,
+      });
+      if (!draftRes.success || !draftRes.data) {
+        toast.error(draftRes.error ?? "Không thể tạo phiếu xuất kho.");
+        return;
+      }
+
+      const issueId = Number((draftRes.data as { id: number }).id);
+      const lineRes = await upsertStockIssueLine({
+        issueId,
+        ingredientId: target.ingredient.id,
+        quantity: parsedQuantity,
+        unit: unit.trim(),
+        reason: reason.trim(),
+      });
+      if (!lineRes.success) {
+        toast.error(
+          lineRes.error ??
+            "Đã tạo phiếu nhưng chưa thêm được dòng nguyên liệu.",
+        );
+        router.push(`/inventory/issues/${issueId}`);
+        return;
+      }
+
+      toast.success(`Đã tạo phiếu có sẵn ${target.ingredient.name}.`);
+      onOpenChange(false);
+      resetForm();
+      router.push(`/inventory/issues/${issueId}`);
+    });
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        onOpenChange(nextOpen);
+        if (!nextOpen) resetForm();
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="rounded-md border bg-muted/20 px-3 py-2">
+            <p className="font-medium">{target.ingredient.name}</p>
+            <p className="text-xs text-muted-foreground">
+              {target.ingredient.sku}
+              {target.ingredient.category
+                ? ` · ${target.ingredient.category}`
+                : ""}{" "}
+              · Tồn {formatQty(target.ingredient.qty)} {target.ingredient.unit}
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>Nghiệp vụ</Label>
+            <Select
+              value={issueType}
+              onValueChange={(value) => setIssueType(value as QuickIssueType)}
+              disabled={isPending}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {quickIssueTypeOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="quick-issue-qty">Số lượng</Label>
+              <FormattedNumberInput
+                id="quick-issue-qty"
+                value={quantity}
+                onValueChange={setQuantity}
+                maxFractionDigits={3}
+                placeholder="0"
+                disabled={isPending}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="quick-issue-unit">Đơn vị</Label>
+              <Input
+                id="quick-issue-unit"
+                value={unit}
+                onChange={(event) => setUnit(event.target.value)}
+                disabled={isPending}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="quick-issue-reason">Lý do</Label>
+            <Textarea
+              id="quick-issue-reason"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              rows={3}
+              placeholder={activeIssueType?.reasonPlaceholder}
+              disabled={isPending}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isPending}
+            >
+              Hủy
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Đang tạo..." : "Tạo phiếu"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function StockClient({
   ingredients,
   branchId,
@@ -254,6 +468,8 @@ export function StockClient({
   const [adjustTarget, setAdjustTarget] = useState<StockIngredient | null>(
     null,
   );
+  const [quickIssueTarget, setQuickIssueTarget] =
+    useState<QuickIssueTarget | null>(null);
 
   const categories = useMemo(() => {
     const values = [
@@ -593,13 +809,19 @@ export function StockClient({
                         </Link>
                       </Button>
                     ) : null}
-                    {permissions.canCreateTransfer ? (
-                      <Button asChild size="xs" variant="outline">
-                        <Link
-                          href={branchHref(branchId, "/inventory/transfers")}
-                        >
-                          Xuất
-                        </Link>
+                    {permissions.canCreateIssue ? (
+                      <Button
+                        type="button"
+                        size="xs"
+                        variant="outline"
+                        onClick={() =>
+                          setQuickIssueTarget({
+                            ingredient: item,
+                            issueType: "consumption",
+                          })
+                        }
+                      >
+                        Xuất
                       </Button>
                     ) : null}
                     {permissions.canCreateStocktake ? (
@@ -813,14 +1035,20 @@ export function StockClient({
                         </Link>
                       </Button>
                     ) : null}
-                    {permissions.canCreateTransfer ? (
-                      <Button asChild size="sm" variant="outline">
-                        <Link
-                          href={branchHref(branchId, "/inventory/transfers")}
-                        >
-                          <IconTruck className="size-3.5" />
-                          Xuất kho
-                        </Link>
+                    {permissions.canCreateIssue ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          setQuickIssueTarget({
+                            ingredient: selected,
+                            issueType: "consumption",
+                          })
+                        }
+                      >
+                        <IconTruck className="size-3.5" />
+                        Xuất kho
                       </Button>
                     ) : null}
                     {permissions.canCreateStocktake ? (
@@ -834,13 +1062,19 @@ export function StockClient({
                       </Button>
                     ) : null}
                     {permissions.canWriteoff ? (
-                      <Button asChild size="sm" variant="outline">
-                        <Link
-                          href={branchHref(branchId, "/inventory/waste/new")}
-                        >
-                          <IconTrash className="size-3.5" />
-                          Hao hụt
-                        </Link>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          setQuickIssueTarget({
+                            ingredient: selected,
+                            issueType: "writeoff",
+                          })
+                        }
+                      >
+                        <IconTrash className="size-3.5" />
+                        Hao hụt
                       </Button>
                     ) : null}
                     <Button asChild size="sm" variant="ghost">
@@ -960,6 +1194,18 @@ export function StockClient({
             onAdjusted={() => {
               setAdjustTarget(null);
               router.refresh();
+            }}
+          />
+        ) : null}
+
+        {quickIssueTarget ? (
+          <QuickStockIssueDialog
+            key={`${quickIssueTarget.ingredient.id}-${quickIssueTarget.issueType}`}
+            branchId={branchId}
+            open={quickIssueTarget !== null}
+            target={quickIssueTarget}
+            onOpenChange={(open) => {
+              if (!open) setQuickIssueTarget(null);
             }}
           />
         ) : null}

@@ -706,12 +706,13 @@ export async function fetchConsumptionVariance(
     }
   }
 
-  // 2. Actual consumption from stock_movements WHERE type='consumption'
+  // 2. Actual sale consumption from stock_movements movement_subtype.
+  // `type='consumption'` also includes writeoff/other operational issues.
   let movQuery = supabase
     .from("stock_movements")
     .select("ingredient_id, quantity_change")
     .eq("tenant_id", claims.tenant_id)
-    .eq("type", "consumption")
+    .eq("movement_subtype", "sale_consumption")
     .gte("created_at", `${startDate}T00:00:00`)
     .lte("created_at", `${endDate}T23:59:59`);
   if (effectiveBranchId) {

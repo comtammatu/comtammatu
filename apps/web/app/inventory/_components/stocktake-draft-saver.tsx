@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@comtammatu/ui";
-import { IconCloudCheck, IconCloudUpload, IconAlertCircle } from "@tabler/icons-react";
+import { CloudCheck as IconCloudCheck, CloudUpload as IconCloudUpload, CircleAlert as IconAlertCircle } from "lucide-react";
 import { saveStocktakeDraft } from "../stocktake-actions";
 
 export type DraftCounts = Record<

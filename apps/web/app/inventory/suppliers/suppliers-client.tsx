@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { IconPencil, IconPlus, IconSearch, IconTrash } from "@tabler/icons-react";
+import { Pencil as IconPencil, Plus as IconPlus, Search as IconSearch, Trash as IconTrash } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";

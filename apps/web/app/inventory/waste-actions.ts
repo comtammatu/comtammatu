@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "./_lib/auth";
 
@@ -79,7 +79,7 @@ export async function createWasteEntry(
   }
 
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_WRITEOFF,
   );
   if (!ctx) return { success: false, error: "Không có quyền tạo phiếu huỷ" };
@@ -99,7 +99,10 @@ export async function createWasteEntry(
       return { success: false, error: "Không có quyền hoặc thiếu ảnh tier 1" };
     }
     if (error.code === "22023") {
-      return { success: false, error: error.message ?? "Không tạo được phiếu huỷ" };
+      return {
+        success: false,
+        error: "Dữ liệu huỷ hàng không hợp lệ hoặc thiếu bằng chứng bắt buộc.",
+      };
     }
     return { success: false, error: "Không tạo được phiếu huỷ" };
   }
@@ -145,7 +148,7 @@ export async function approveWaste(
   }
 
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
   );
   if (!ctx) return { success: false, error: "Không có quyền duyệt waste" };
@@ -198,7 +201,7 @@ export async function getWasteCapStatus(
   branchId: number,
 ): Promise<ActionResult<WasteCapStatus>> {
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_WRITEOFF,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -296,7 +299,7 @@ export async function getIngredientRollingWaste(
   ingredientId: number,
 ): Promise<ActionResult<IngredientRollingStatus>> {
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_WRITEOFF,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -399,7 +402,7 @@ export async function createWasteFromOrder(
   }
 
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_WRITEOFF,
   );
   if (!ctx) {
@@ -451,7 +454,7 @@ export async function createWasteFromOrder(
         softFailed: false,
       },
     };
-  } catch (e) {
+  } catch {
     return {
       success: true,
       data: {
@@ -459,18 +462,15 @@ export async function createWasteFromOrder(
         sourceType: parsed.data.sourceType,
         lineCount: parsed.data.items.length,
         softFailed: true,
-        softError:
-          e instanceof Error
-            ? e.message
-            : "Lỗi không xác định khi tạo waste auto",
+        softError: "Lỗi không xác định khi tạo waste auto",
       },
     };
   }
 }
 
-function mapWasteRpcError(code: string | undefined, message: string): string {
+function mapWasteRpcError(code: string | undefined, _message: string): string {
   if (code === "42501") return "Không có quyền tạo waste";
   if (code === "P0002") return "Không tìm thấy order";
-  if (code === "22023") return message;
+  if (code === "22023") return "Dữ liệu waste auto không hợp lệ";
   return "Không tạo được waste auto";
 }

@@ -10,15 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@comtammatu/ui/compone
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  IconAlertOctagon,
-  IconClock,
-  IconCheck,
-  IconArrowRight,
-  IconArrowLeft,
-  IconPencil,
-  IconBan,
-} from "@tabler/icons-react";
+import { OctagonAlert as IconAlertOctagon, Clock as IconClock, Check as IconCheck, ArrowRight as IconArrowRight, ArrowLeft as IconArrowLeft, Pencil as IconPencil, Ban as IconBan } from "lucide-react";
 import { InventoryHeader } from "../../_components/inventory-header";
 import { InventoryPageContent } from "../../_components/inventory-page-layout";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";

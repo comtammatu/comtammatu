@@ -23,7 +23,7 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
-import { IconClockPlus } from "@tabler/icons-react";
+import { AlarmClockPlus as IconClockPlus } from "lucide-react";
 import { extendExpressWindow } from "../variance-actions";
 
 const NOTE_MIN = 10;

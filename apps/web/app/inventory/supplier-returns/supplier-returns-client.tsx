@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { Button } from "@comtammatu/ui/components/button";
-import { IconPlus } from "@tabler/icons-react";
+import { Plus as IconPlus } from "lucide-react";
 import { InventoryHeader } from "../_components/inventory-header";
 import { InventoryPageContent } from "../_components/inventory-page-layout";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";

@@ -1,13 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  IconAlertTriangle,
-  IconChevronRight,
-  IconFileTime,
-  IconPhone,
-  IconReceipt,
-  IconUsers,
-} from "@tabler/icons-react";
+import { TriangleAlert as IconAlertTriangle, ChevronRight as IconChevronRight, FileClock as IconFileTime, Phone as IconPhone, Receipt as IconReceipt, Users as IconUsers } from "lucide-react";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { createClient } from "@comtammatu/database/supabase/server";

@@ -16,7 +16,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
-import { IconClockHour6, IconKey } from "@tabler/icons-react";
+import { Clock6 as IconClockHour6, Key as IconKey } from "lucide-react";
 import {
   configureExpressWindow,
   rotateOverrideCode,

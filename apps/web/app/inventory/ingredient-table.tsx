@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { IconPackage, IconPencil, IconPlus, IconSearch } from "@tabler/icons-react";
+import { Package as IconPackage, Pencil as IconPencil, Plus as IconPlus, Search as IconSearch } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "./_lib/auth";
 
@@ -34,7 +34,7 @@ export async function getBaselinePrice(
   uom: string | null,
 ): Promise<ActionResult<BaselineInfo>> {
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.PROCUREMENT_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -113,7 +113,7 @@ export async function evaluateAutoApprove(
   grnId: number,
 ): Promise<ActionResult<AutoApproveEvaluation>> {
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -183,7 +183,7 @@ export async function verifyOverrideCode(
   code: string,
 ): Promise<ActionResult<{ verified: boolean }>> {
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -241,7 +241,7 @@ export async function submitHardblockOverride(
   }
 
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_GRN_HARDBLOCK_OVERRIDE,
   );
   if (!ctx) return { success: false, error: "Không có quyền override hardblock" };
@@ -293,7 +293,7 @@ export async function rotateOverrideCode(
   }
 
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.PROCUREMENT_OVERRIDE_CODE_ROTATE,
   );
   if (!ctx) return { success: false, error: "Không có quyền rotate code" };
@@ -343,7 +343,7 @@ export async function configureExpressWindow(
   }
 
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_GRN_EXPRESS_CONFIGURE,
   );
   if (!ctx) return { success: false, error: "Không có quyền cấu hình" };
@@ -387,7 +387,7 @@ export async function extendExpressWindow(
   }
 
   const ctx = await getAuthContextWithPermission(
-    [],
+    STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_GRN_EXPRESS_EXTEND,
   );
   if (!ctx) return { success: false, error: "Không có quyền extend window" };

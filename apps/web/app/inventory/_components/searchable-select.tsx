@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { IconCheck, IconChevronDown } from "@tabler/icons-react";
+import { Check as IconCheck, ChevronDown as IconChevronDown } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import {

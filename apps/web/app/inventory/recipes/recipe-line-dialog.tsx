@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
+import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
 import {
   Controller,
   useFieldArray,

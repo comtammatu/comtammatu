@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { IconDeviceDesktop, IconMoon, IconSun } from "@tabler/icons-react";
+import { Monitor as IconDeviceDesktop, Moon as IconMoon, Sun as IconSun } from "lucide-react";
 import { useTheme } from "@comtammatu/ui/components/theme-provider";
 import { Button } from "@comtammatu/ui/components/button";
 import {

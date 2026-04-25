@@ -2,14 +2,7 @@
 
 import { useCallback, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import {
-  IconArrowLeft,
-  IconBan,
-  IconCheck,
-  IconCircleCheck,
-  IconClipboardCheck,
-  IconCircleX,
-} from "@tabler/icons-react";
+import { ArrowLeft as IconArrowLeft, Ban as IconBan, Check as IconCheck, CircleCheck as IconCircleCheck, ClipboardCheck as IconClipboardCheck, CircleX as IconCircleX } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";

@@ -1,14 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  IconArrowRight,
-  IconCircleCheck,
-  IconChevronRight,
-  IconHistory,
-  IconPackageImport,
-  IconPackageOff,
-  IconSend,
-} from "@tabler/icons-react";
+import { ArrowRight as IconArrowRight, CircleCheck as IconCircleCheck, ChevronRight as IconChevronRight, History as IconHistory, PackagePlus as IconPackageImport, PackageX as IconPackageOff, Send as IconSend } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
   extractClaimsFromAccessToken,
