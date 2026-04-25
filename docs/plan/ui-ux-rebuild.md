@@ -15,14 +15,14 @@ The rebuild should make daily operation faster, reduce visual drift between modu
 - UI implementation rules: `docs/modules/ui.md`
 - Regression rules: `tasks/regressions.md`
 - Copy and vocabulary: `docs/ref/glossary.md`
-- Runtime preset: `apps/web/components.json`, `packages/ui/components.json`, `apps/web/app/globals.css`
+- Runtime preset: `apps/web/components.json`, `packages/ui/components.json`, `packages/ui/src/styles/globals.css`
 
 No rebuild wave may introduce a parallel theme, fake primitive, route-specific visual system, or new vocabulary source.
 
 ## Visual Direction
 
 - Operational, not decorative.
-- Taupe neutral base with warm primary action.
+- Neutral base with warm primary action.
 - Semantic state colors for success, warning, info, and destructive states.
 - Dense but readable admin tables.
 - Touch-safe POS/KDS actions.

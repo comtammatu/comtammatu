@@ -45,7 +45,7 @@ Cleanup wave for remaining hardcoded color classes is completed for:
 - `apps/web/app/admin/inventory/grn/grn-list-client.tsx`
 - `apps/web/app/admin/inventory/transfers/transfers-list-client.tsx`
 - `apps/web/app/admin/settings/payments/payments-form.tsx`
-- `apps/web/app/admin/orders/order-detail-sheet.tsx`
+- (order-detail-sheet lives under POS routes, not admin)
 
 Current status:
 

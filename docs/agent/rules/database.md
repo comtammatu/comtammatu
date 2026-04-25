@@ -19,12 +19,12 @@ Use this file before changing Supabase queries, migrations, RLS, auth, ACL, Serv
 
 ## Migration Policy
 
-- NEVER apply migrations directly.
-- Write the SQL migration file.
-- Open a PR.
-- Merge the PR.
-- The owner applies the migration manually.
-- After the migration is merged and applied, run `pnpm db:types`.
+- Write the SQL migration file before applying it.
+- Agents MAY apply migrations directly on approved dev/test Supabase servers for verification.
+- Before applying to dev/test, verify the target project/environment and confirm it is not production.
+- NEVER apply migrations directly to production.
+- Production flow: open a PR, merge the PR, then the owner applies the migration manually.
+- After the migration is applied to the schema used for generated types, run `pnpm db:types`.
 
 ## DB Type Boundaries
 

@@ -1,6 +1,6 @@
 # UI/UX Page Contracts
 
-> Updated: 2026-04-23 | Use with `docs/spec/design-system.md`
+> Updated: 2026-04-25 | Use with `docs/spec/design-system.md`
 
 ## Page Order
 
@@ -12,12 +12,13 @@ Priority order for the rebuild:
 4. `/admin/dashboard`
 5. `/admin/settings/*`
 6. `/admin/staff`
-7. `/admin/menu`
-8. `/admin/orders`
-9. `/inventory/*`
-10. `/finance/*`
-11. `/hr/*`
-12. `/employee/*`
+7. `/admin/staff/[id]/permissions`
+8. `/inventory/*`
+9. `/finance/*`
+10. `/hr/*`
+11. `/employee/*`
+
+Runtime routes for menu and orders are `/menu` and `/orders`, not `/admin/menu` or `/admin/orders`. Do not add `/admin/menu` or `/admin/orders` routes.
 
 Each page contract must state the surface, primary user job, change type, primitives, risks, and acceptance criteria before runtime edits.
 
@@ -201,6 +202,15 @@ UX decision:
 - Existing order mutation/payment lives in order history/detail/bill flows, not in the cart.
 - Mobile uses menu as the main workspace and opens cart/order history through a bottom drawer/action.
 - Desktop uses menu workspace plus right-side operational panel.
+
+Implementation lock after POS workflow debate:
+
+- Blocked POS states render one direct problem state, not multi-step progress cards.
+- `Giỏ đơn mới` is the only cart vocabulary and is used only before submitting a new order.
+- `Thêm món` on an existing order creates a client-local append draft. Menu taps and customizer confirmation add lines to that draft; only `Gửi món thêm` calls the append mutation.
+- Payment opens directly to method selection. `served` is a service marker only; the bill sheet may warn when an order is not served, but must not call `updateOrderStatus(..., "served")` or block payment.
+- Paid orders use `Đã thanh toán` / `Hóa đơn POS`; cancelled orders use `Đã hủy`.
+- Active served-but-unpaid orders remain in `Đơn cần xử lý` until payment closes the order.
 
 Target layout:
 
@@ -530,3 +540,790 @@ Acceptance:
 - Keyboard shortcuts remain documented in `docs/modules/ui.md` when changed.
 - No fake primitives, arbitrary Tailwind dimensions, static presentation inline styles, or vocabulary drift.
 - `pnpm typecheck && pnpm lint && pnpm build` passes after implementation.
+
+## `/admin` — Khung quản trị và hệ thống route
+
+Surface: Admin, `P1`.
+
+Primary user job:
+
+- Manager/admin staff manage tenant-level operations: staff, settings, reports, inventory admin, accounting, CRM.
+
+Route contract inventory:
+
+| Route | Primary Job | Module Key | Initial Wave |
+| --- | --- | --- | --- |
+| `/admin` | Redirect to `/admin/dashboard` | `dashboard` | Gate 0 |
+| `/admin/dashboard` | Action hub and operational snapshot | `dashboard` | MVP |
+| `/admin/settings` | Settings index redirect | `settings` | MVP |
+| `/admin/settings/branches` | Tenant branch setup | `settings` | MVP |
+| `/admin/settings/general` | Tenant general setup | `settings` | MVP |
+| `/admin/settings/payments` | Payment configuration | `settings` | MVP |
+| `/admin/settings/areas` | Area/branch grouping | `settings` | MVP |
+| `/admin/settings/tables` | Branch floor/table setup | `settings` | MVP |
+| `/admin/settings/pos` | POS terminal setup | `settings` | MVP |
+| `/admin/settings/kds` | Kitchen station setup | `settings` | MVP |
+| `/admin/settings/printers` | Printer setup | `settings` | MVP if linked in settings nav |
+| `/admin/settings/printers/jobs` | Print job monitoring | `settings` | Later wave |
+| `/admin/staff` | Staff management | `staff` | MVP |
+| `/admin/staff/audit` | Staff/admin audit trail | `staff` | Later wave |
+| `/admin/staff/[id]/permissions` | Permission grant/revoke/template | `staff` | MVP |
+| `/admin/inventory/*` | Inventory admin tools | `inventory_admin` | Later wave |
+| `/admin/reports/*` | Executive reports | `reports` | Later wave |
+| `/admin/accounting/periods` | Accounting period close/reopen | `accounting` | Later wave |
+| `/admin/crm` | CRM placeholder | `crm` | Later wave |
+
+Change type:
+
+- Visual refactor: yes.
+- UX flow change: minor, standardize heading rhythm and shell.
+- Copy change: yes, keep Vietnamese utility copy.
+- Behavior change: only route/ACL/nav reconciliation fixes.
+
+ACL policy:
+
+- Proxy no longer uses a blanket `dashboard` gate for all `/admin/*` routes. Each admin route resolves to its own `ModuleKey` via `resolveModuleFromPath`, and `canAccess(role, moduleKey)` gates each route independently.
+- `dashboard` module: `owner`, `super_manager`.
+- `settings` module: `owner`, `super_manager`, `area_manager`, `branch_manager`.
+- `staff` module: `owner`, `super_manager`.
+- `reports` module: `owner`, `super_manager`.
+- `inventory_admin` module: `owner`, `super_manager`, `area_manager`, `branch_manager`, `warehouse_manager`.
+- `accounting` module: `owner`, `super_manager`.
+- `crm` module: `owner`, `super_manager`.
+- Settings sub-pages have additional role restrictions:
+  - `/admin/settings/branches`: owner, super_manager only.
+  - `/admin/settings/general`: owner, super_manager only.
+  - `/admin/settings/payments`: owner, super_manager only.
+  - `/admin/settings/areas`: owner, super_manager only.
+  - `/admin/settings/tables`, `pos`, `kds`: BRANCH_FLOOR_SETTINGS_ROLES (super_manager, area_manager, branch_manager).
+- Owner does NOT manage branch-floor settings directly (tables, POS terminals, KDS stations). Owner sees tenant strategy: branches, general, payments, areas.
+
+Primitives:
+
+- `Sidebar`, `SidebarContent`, `SidebarHeader`, `SidebarFooter`, `SidebarGroup`, `SidebarMenu`
+- `Breadcrumb`, `BreadcrumbItem`, `BreadcrumbList`
+- `Button`, `Badge`, `Separator`
+- `Card`, `Table`, `Dialog`, `AlertDialog`, `DropdownMenu`
+- `Empty`, `Spinner`, `Skeleton`
+- Form helpers from `@/components/form`
+
+Acceptance:
+
+- Admin route contract names the surface, user job, route family, change type, primitives, risks, and acceptance tests.
+- Admin pages share one shell/header rhythm and do not duplicate page identity in nested cards.
+- Each MVP page has a clear toolbar/filter row, count/status context, table/list content, and approved empty/loading/error state.
+- CRUD dialogs use shared form helpers or real shadcn field composition.
+- Filters and scope are URL-addressable when they affect what data or branch is being managed.
+- Navigation, proxy ACL, module ACL, page guards, and Server Actions agree.
+- No raw Supabase/Postgres error message reaches clients.
+- No fake primitive, arbitrary Tailwind dimension, route theme CSS, static presentation inline style, or vocabulary drift is introduced.
+- `pnpm typecheck && pnpm lint && pnpm build` passes before implementation is marked complete.
+
+## `/admin/dashboard` — Admin Dashboard
+
+Surface: Admin Dashboard, `P1`.
+
+Files:
+
+- `apps/web/app/admin/dashboard/page.tsx`
+- `apps/web/app/admin/dashboard/actions.ts`
+
+Primary user job:
+
+- Manager sees an operational snapshot and quick-access links to management actions.
+
+Change type:
+
+- Visual refactor: yes, reduce decorative stat-card mosaics.
+- UX flow change: yes, shift from decorative dashboard to action hub.
+
+Current assessment:
+
+- Dashboard correctly links to management surfaces via `SurfaceLinkCard`.
+- Stat cards (revenue, orders, avg value) are acceptable if they directly support management decisions.
+- The recent orders card is useful for quick scanning.
+- Hero heading "Tổng quan vận hành hôm nay" with description text is too decorative for a management workspace.
+- Badge counts "X mục quản lý" / "X mục vận hành" are decorative chrome.
+- Dashboard should focus on action links and operational alerts, not marketing-style copy.
+
+UX decision:
+
+- Keep dashboard as a route/action hub.
+- Stat cards are allowed only when they directly support a management decision.
+- Remove decorative count badges and hero-style copy.
+- Recent orders and quick-access links are the primary content.
+
+Allowed primitives:
+
+- `Card`, `CardHeader`, `CardTitle`, `CardContent`
+- `Button`, `Badge`
+- `Table` (for recent orders if converted from custom list)
+- `Empty`, `Spinner`, `Skeleton`
+
+Acceptance:
+
+- Dashboard focuses on actionable information, not decorative summaries.
+- Quick-access links are the primary navigation method.
+- No duplicate hero headings (AdminShell header already provides context).
+- `pnpm typecheck && pnpm lint && pnpm build` passes.
+
+## `/admin/staff` — Staff Management
+
+Surface: Admin Staff, `P1`.
+
+Files:
+
+- `apps/web/app/admin/staff/page.tsx`
+- `apps/web/app/admin/staff/staff-table.tsx`
+- `apps/web/app/admin/staff/staff-filters.tsx`
+- `apps/web/app/admin/staff/staff-form-dialog.tsx`
+- `apps/web/app/admin/staff/add-staff-button.tsx`
+- `apps/web/app/admin/staff/actions.ts`
+- `apps/web/app/admin/staff/role-labels.ts`
+
+Primary user job:
+
+- Manager views, filters, creates, edits, and toggles staff members.
+
+Change type:
+
+- Visual refactor: yes.
+- UX flow change: minor, standardize filter/table pattern.
+
+Current assessment:
+
+- Staff page correctly uses URL params for filters (`?role=`, `?branch=`, `?status=`).
+- Hero card with "Nhân viên" heading and "Quản lý nhân viên" badge duplicates what AdminShell already provides.
+- Raw `span` badge imitation for "Quản lý nhân viên" — should use `Badge`.
+- `StaffTable` and `StaffFilters` are well-structured.
+- Server Actions use proper auth context and permission checks.
+
+UX decision:
+
+- Remove the hero card. AdminShell provides page context.
+- Use a toolbar row: filters + count + add button.
+- Keep staff list as the primary content.
+
+Allowed primitives:
+
+- `Table`, `Badge`, `Button`, `DropdownMenu`
+- `Dialog` or `FormDialog`
+- `Select`, `Input`
+- `Empty`, `Spinner`
+
+Acceptance:
+
+- Staff list is the primary content area.
+- Filters are URL-addressable.
+- Add/edit dialogs use form helpers.
+- No hero card duplicating AdminShell context.
+- `pnpm typecheck && pnpm lint && pnpm build` passes.
+
+## `/admin/staff/[id]/permissions` — Permission Management
+
+Surface: Admin Permissions, `P1`.
+
+Files:
+
+- `apps/web/app/admin/staff/[id]/permissions/page.tsx`
+- `apps/web/app/admin/staff/[id]/permissions/permissions-client.tsx`
+- `apps/web/app/admin/staff/[id]/permissions/actions.ts`
+
+Primary user job:
+
+- Manager views, grants, and revokes permissions for a specific staff member.
+
+Change type:
+
+- Visual refactor: yes.
+- UX flow change: minor, standardize permission grant/revoke UX.
+
+Current assessment:
+
+- Permission management uses Auth v2 `staff_permissions` table.
+- Grant/revoke actions use `SECURITY DEFINER` RPCs with audit logging.
+- Owner permissions are protected from modification.
+
+Acceptance:
+
+- Permission list clearly shows granted vs available permissions.
+- Grant/revoke uses `AlertDialog` confirmation.
+- Audit trail is accessible.
+- `pnpm typecheck && pnpm lint && pnpm build` passes.
+
+## `/admin/settings/*` — Settings
+
+Surface: Admin Settings, `P1`.
+
+Files:
+
+- `apps/web/app/admin/settings/layout.tsx`
+- `apps/web/app/admin/settings/page.tsx`
+- `apps/web/app/admin/settings/settings-nav.tsx`
+- `apps/web/app/admin/settings/branches/*`
+- `apps/web/app/admin/settings/general/*`
+- `apps/web/app/admin/settings/payments/*`
+- `apps/web/app/admin/settings/areas/*`
+- `apps/web/app/admin/settings/tables/*`
+- `apps/web/app/admin/settings/pos/*`
+- `apps/web/app/admin/settings/kds/*`
+- `apps/web/app/admin/settings/printers/*`
+
+Primary user job:
+
+- Manager configures tenant strategy (branches, general, payments, areas) and branch-floor settings (tables, POS terminals, KDS stations, printers).
+
+Change type:
+
+- Visual refactor: yes.
+- UX flow change: minor, standardize settings nav and form patterns.
+
+Current assessment:
+
+- Settings layout has a hero card with "Cài đặt" heading — duplicates AdminShell.
+- Settings nav uses custom pill-style links — should use `Tabs` or `ToggleGroup`.
+- Settings sub-pages correctly enforce role restrictions via `SettingsNav.allowedRoles`.
+- Branch-floor settings pages correctly filter by branch scope.
+
+ACL policy:
+
+- Tenant strategy pages (branches, general, payments, areas): owner, super_manager.
+- Branch-floor pages (tables, POS, KDS): super_manager, area_manager, branch_manager.
+- Owner sees only tenant strategy pages in settings nav.
+- Branch-floor pages must use URL `?branchId=` for branch scope.
+
+UX decision:
+
+- Remove hero card. AdminShell provides page context.
+- Settings nav should use `Tabs` or `ToggleGroup` instead of custom pill links.
+- Each settings page should have: title, optional description, primary action, table/list content.
+
+Acceptance:
+
+- Settings nav uses approved primitives.
+- No hero card duplicating AdminShell context.
+- Branch-floor settings use URL params for branch scope.
+- `pnpm typecheck && pnpm lint && pnpm build` passes.
+
+## `/admin/inventory/*` — Inventory Admin Tools
+
+Surface: Admin Inventory, later wave.
+
+Files:
+
+- `apps/web/app/admin/inventory/page.tsx`
+- `apps/web/app/admin/inventory/feature-flags/page.tsx`
+- `apps/web/app/admin/inventory/cold-chain/page.tsx`
+- `apps/web/app/admin/inventory/express-windows/page.tsx`
+- `apps/web/app/admin/inventory/trust/page.tsx`
+
+Primary user job:
+
+- Admin manages inventory policy and configuration tools: feature flags, cold-chain review policies, GRN express windows, and trust leaderboard.
+
+Change type:
+
+- Auth/nav: yes — Gate 0 fix for empty allowlists (completed).
+- Visual refactor: later wave.
+- UX flow: later wave.
+- Copy: later wave.
+- Behavior: no policy change.
+
+Data source:
+
+- `branch_express_window`, `category_review_policies`, `user_trust_score`, feature flag tables.
+
+Mutation path:
+
+- Existing Server Actions under each inventory admin sub-route.
+- Keep Zod validation and mapped errors.
+
+Permission and ACL:
+
+- Module ACL: `inventory_admin`
+- Allowed roles: owner, super_manager, area_manager, branch_manager, warehouse_manager.
+- Sub-page permission gates:
+  - Feature flags: `inventory:catalog_review_policy_set` (or appropriate key).
+  - Cold-chain: `inventory:catalog_review_policy_set`.
+  - Express windows: `inventory:grn_express_configure` or `procurement:override_code_rotate`.
+  - Trust leaderboard: `reports:view_branch`.
+
+Scope rule:
+
+- Branch-sensitive tools use explicit branch scope and server validation.
+- Trust leaderboard is a cross-user report and must be gated separately from self-view trust score.
+- `RLS-NOT-APPLIED-ON-MV` applies if any data source uses materialized views.
+
+UI primitives:
+
+- `Table`, `Badge`, `Button`, `Card`
+- `Select`, `Input` for branch filters
+- `Dialog` or `FormDialog` for CRUD
+- `Empty`, `Spinner`, `Skeleton`
+
+Regression risks:
+
+- Empty role allowlists were fixed in Gate 0.
+- Arbitrary Tailwind values may exist in current inventory admin UI.
+- Inventory admin can be confused with operational `/inventory/*`.
+
+Acceptance:
+
+- Route contract clearly labels these as policy/admin tools, not inventory operations.
+- Fine-grained permission gates are documented per page.
+- No raw Supabase/Postgres error message reaches clients.
+
+## `/admin/reports/*` — Executive Reports
+
+Surface: Admin Reports, later wave.
+
+Files:
+
+- `apps/web/app/admin/reports/page.tsx`
+- `apps/web/app/admin/reports/revenue/page.tsx`
+- `apps/web/app/admin/reports/stock-movement/page.tsx`
+- `apps/web/app/admin/reports/inventory-value/page.tsx`
+
+Primary user job:
+
+- Owner and super_manager review revenue, stock movement, and inventory value reports.
+
+Change type:
+
+- Auth/nav: yes, through Gate 0 module mapping.
+- Visual refactor: later wave.
+- UX flow: later wave.
+- Copy: later wave.
+- Behavior: no metric semantics change.
+
+Data source:
+
+- Materialized views: `mv_top_items`, `mv_food_cost`, and others.
+- Supabase reads through SECURITY DEFINER functions.
+
+Permission and ACL:
+
+- Module ACL: `reports`
+- Allowed roles: owner, super_manager.
+
+Scope rule:
+
+- Report filters must be URL-addressable.
+- Branch filters must be permission-checked.
+- `RLS-NOT-APPLIED-ON-MV`: materialized views must not be queried directly by `authenticated` role. Access through SECURITY DEFINER functions that re-check tenant_id, branch_id, and has_permission.
+
+UI primitives:
+
+- `Card`, `Table`, `Badge`, `Button`
+- `Select`, `Input` for date/branch filters
+- `Empty`, `Spinner`, `Skeleton`
+
+Regression risks:
+
+- Materialized views bypass RLS if queried directly.
+- Date/time filters can drift from business-day rules.
+- Arbitrary Tailwind values may exist in current report UI.
+
+Acceptance:
+
+- Route contract exists before UI changes.
+- No report implementation relies on sidebar visibility as access control.
+- MV access always goes through SECURITY DEFINER functions.
+
+## `/admin/accounting/periods` — Accounting Period Control
+
+Surface: Admin Accounting, later wave, high security.
+
+Files:
+
+- `apps/web/app/admin/accounting/periods/page.tsx`
+- `apps/web/app/admin/accounting/periods/period-admin-client.tsx`
+
+Primary user job:
+
+- Owner and super_manager review soft/hard-close state and perform approved period reopen/control actions.
+
+Change type:
+
+- Auth/nav: yes — Gate 0 fix for empty allowlist (completed).
+- Visual refactor: later wave.
+- UX flow: later wave.
+- Copy: later wave.
+- Behavior: no period close/reopen semantics change.
+
+Data source:
+
+- `accounting_periods`
+
+Mutation path:
+
+- Period reopen actions require `accounting:period_reopen` permission.
+- High-risk actions require explicit confirmation.
+
+Permission and ACL:
+
+- Module ACL: `accounting`
+- Allowed roles: owner, super_manager.
+- Permission key: `accounting:period_reopen`.
+
+Scope rule:
+
+- Tenant-wide accounting control.
+- High-risk actions require explicit confirmation and any policy-required 2FA flow.
+
+UI primitives:
+
+- `Table`, `Badge`, `Button`
+- `AlertDialog` for destructive/reopen confirmations
+- `Empty`, `Spinner`
+
+Regression risks:
+
+- Empty role allowlist was fixed in Gate 0.
+- Period close rules are accounting-sensitive and must not be bypassed by UI-only logic.
+- Backdated inventory/finance behavior must remain governed by database policy (`PERIOD-CLOSE-SOFT-HARD`).
+
+Acceptance:
+
+- Route contract exists before UI changes.
+- Reopen/control actions remain permission-gated and auditable.
+- Period close semantics are governed by database triggers, not UI logic.
+
+## `/admin/crm` — CRM Placeholder
+
+Surface: Admin CRM, later wave.
+
+Files:
+
+- `apps/web/app/admin/crm/page.tsx`
+
+Primary user job:
+
+- Not fully defined yet. Placeholder for future customer relationship tool.
+
+Change type:
+
+- Auth/nav: yes, through Gate 0 module mapping.
+- Visual refactor: later wave.
+- UX flow: N/A until business requirements exist.
+- Copy: later wave.
+- Behavior: no change.
+
+Permission and ACL:
+
+- Module ACL: `crm`
+- Allowed roles: owner, super_manager.
+
+Scope rule:
+
+- Do not expand CRM behavior without a separate business contract.
+
+Regression risks:
+
+- Placeholder can become a decorative dead-end.
+- CRM can overlap orders/customers without a defined source of truth.
+
+Acceptance:
+
+- Keep out of MVP.
+- Do not add new CRM workflow until requirements exist.
+
+## `/employee/*` — Cổng nhân viên (Employee Self-Service Portal)
+
+Surface: Employee Self-Service, `P1`.
+
+Rebuild plan: `docs/plan/employee-portal-rebuild-plan.md`.
+
+Files:
+
+- `apps/web/app/employee/layout.tsx`
+- `apps/web/app/employee/page.tsx`
+- `apps/web/app/employee/_lib/employee-context.ts`
+- `apps/web/app/employee/_lib/vn-business-date.ts`
+- `apps/web/app/employee/_lib/action-messages.ts`
+- `apps/web/app/employee/clock/page.tsx`
+- `apps/web/app/employee/clock/clock-client.tsx`
+- `apps/web/app/employee/clock/actions.ts`
+- `apps/web/app/employee/schedule/page.tsx`
+- `apps/web/app/employee/schedule/schedule-client.tsx`
+- `apps/web/app/employee/schedule/actions.ts`
+- `apps/web/app/employee/attendance/page.tsx`
+- `apps/web/app/employee/payslip/page.tsx`
+- `apps/web/app/employee/payslip/payslip-client.tsx`
+- `apps/web/app/employee/profile/page.tsx`
+- `apps/web/app/employee/permissions/page.tsx`
+- `apps/web/app/employee/components/mobile-header.tsx`
+- `apps/web/app/employee/components/bottom-nav.tsx`
+
+Primary user job:
+
+- Staff starts or reviews their workday: clock in/out, view schedule, check attendance history, view released payslips, confirm profile/support data, and jump to POS/KDS when authorized.
+
+Change type:
+
+- Visual refactor: yes, remove hero/dashboard feel.
+- UX flow change: yes, task ordering and removal of management-shell drift.
+- Copy change: yes, Vietnamese utility copy and glossary terms.
+- Behavior/data contract change: yes, self-service reads and writes need RPC/RLS cleanup.
+
+Route contract inventory:
+
+| Route | Primary Job | Change |
+| --- | --- | --- |
+| `/employee` | Today task hub: clock state, next shift, compact links | Rebuild — remove hero card, stat cards, management launcher drift |
+| `/employee/clock` | GPS + QR/manual code clock-in, clock-out | Keep — server actions already safe; polish state machine |
+| `/employee/schedule` | Weekly self schedule | Keep — enforce self-only data below app filtering |
+| `/employee/attendance` | Last 30 days attendance history | Keep — compact, self-scoped |
+| `/employee/payslip` | Released/paid self payslips | Keep — add paid-only filter, privacy boundary |
+| `/employee/profile` | User profile, branch, employee code | Keep — mask/omit sensitive data |
+| `/employee/permissions` | Auth v2 self-debug | Hide from normal nav or convert to plain-language support summary |
+
+ACL policy:
+
+- Module ACL: `employee`
+- Allowed roles: all staff roles (`STAFF_ROLES`)
+- Self-service only: every route resolves `auth.uid()` → `employees.profile_id` → `employees.id` server-side
+- Never accept `employeeId` from URL or client state for self-service routes
+
+Data contract risks:
+
+1. `employee-portal-actions.tsx` imports HR `checkIn`/`checkOut` gated by `SHIFT_ROLES` (manager-only), blocking normal staff. Must be removed.
+2. Payslip reads fetch all `payroll_entries` regardless of period status (`draft`, `calculated` visible). Must filter to `paid` only.
+3. Every page redundantly resolves the employee context. Extract to shared `_lib/employee-context.ts`.
+4. `shift_assignments` reads are app-layer filtered only. RLS or RPC should enforce self scope.
+
+Primitives:
+
+- `Button`, `Badge`, `Card`, `Item`, `ItemGroup`, `Table`, `Tabs`, `Sheet`/`Drawer`, `Alert`, `Empty`, `Spinner`, `Skeleton`, `Input`, `Select`, `Label`, `Separator`
+
+Do not use:
+
+- Hero/status cards, dashboard stat mosaics, decorative admin cards
+- Management launcher navigation sections
+- Route-specific theme layer, fake primitives, arbitrary Tailwind dimensions
+- `employeeId` from URL or client state for self-service operations
+
+Acceptance:
+
+- First mobile viewport on `/employee` shows the next staff action (clock state or next shift).
+- Manager users see their own portal state first; management links are compact secondary handoffs only.
+- No HR/admin management content is embedded in the portal.
+- Payslip shows only `paid`/released self records.
+- A staff member without HR permissions can use all self-service routes.
+- No raw Supabase/Postgres error message reaches the client.
+- No `"use client"` component imports `@comtammatu/database` barrel.
+- UI follows radix-lyra, stone, tabler, and existing shadcn primitive catalog.
+- `pnpm typecheck && pnpm lint && pnpm build` passes.
+
+### `/employee` — Portal Home (Task Hub)
+
+Surface: Employee Home, `P1`.
+
+Primary user job:
+
+- Staff opens the portal and immediately answers: am I clocked in? What is my next shift? Where do I go next?
+
+Current assessment:
+
+- Hero card with "Bắt đầu ca làm nhanh chóng" heading and descriptive copy.
+- Three stat cards (Vai trò, Ca làm, Vị trí) duplicate information already in the header badges.
+- "Việc trong ngày" section has four action links — acceptable pattern but competes with hero for first viewport.
+- "Không gian làm việc" section is a management launcher with POS, KDS, admin, inventory, reports, HR links. This creates dashboard/admin drift.
+- `employee-portal-actions.tsx` is imported nowhere visible — dead code with HR action dependency.
+
+UX decision:
+
+- Remove hero card and stat cards entirely.
+- First viewport: today's clock state and primary action.
+- Second block: next shift / current shift summary.
+- Third block: compact link grid to schedule, attendance, payslip, profile.
+- POS/KDS handoff links only when route access and branch context allow — compact secondary placement.
+- Logout button at bottom.
+
+Layout:
+
+Mobile:
+
+```text
++--------------------------------+
+| Cổng nhân viên  [Badge] [Badge]|
++--------------------------------+
+| Chấm công hôm nay              |
+| [Trạng thái: Đang làm / Chưa]  |
+| Vào: 07:32  Ra: —              |
+| [Chấm công ra]                 |
++--------------------------------+
+| Ca tiếp theo                    |
+| Ca sáng  07:00 – 14:00         |
+| Chi nhánh ABC                   |
++--------------------------------+
+| +------+ +------+ +------+     |
+| |Lịch  | |Lịch  | |Phiếu |     |
+| |ca    | |sử    | |lương |     |
+| +------+ +------+ +------+     |
+| +------+ +------+              |
+| |Cá    | |POS   |              |
+| |nhân  | |/KDS  |              |
+| +------+ +------+              |
++--------------------------------+
+| [Đăng xuất]                    |
++--------------------------------+
+```
+
+Desktop: same single-column layout, max-w-4xl, with link grid widening to 4 columns.
+
+Allowed primitives:
+
+- `Card`, `CardContent`, `CardHeader`, `CardTitle`
+- `Button`, `Badge`
+- `Item`, `ItemGroup`
+- `Empty`, `Spinner`, `Skeleton`
+
+Acceptance:
+
+- No hero card, no stat cards, no management launcher section.
+- Clock state visible in first mobile viewport.
+- POS/KDS links are compact, role-gated, and secondary.
+- No `employeeId` prop drilling to client components.
+
+### `/employee/clock` — Clock In/Out
+
+Surface: Employee Clock, `P1`.
+
+Primary user job:
+
+- Staff clocks in with GPS proximity + QR/manual code, or clocks out.
+
+Current assessment:
+
+- Server Actions (`clock/actions.ts`) are already properly self-service: `getEmployeeContext()` resolves from `auth.uid()`, validates GPS, validates daily code, prevents duplicates.
+- Client state machine (`ClockClient`) handles GPS check → QR scan → code entry → verification → success.
+- Branch selection needs limiting to assigned/scheduled branches only (deferred for MVP — current all-branches-with-GPS list is acceptable).
+
+Change type:
+
+- Visual refactor: minor, polish state machine UX.
+- Behavior change: no — server actions are already safe.
+- Data contract: no — already resolves employee from `auth.uid()`.
+
+Acceptance:
+
+- GPS denied, GPS too far, no GPS config, wrong code, valid manual code, camera fallback, duplicate check-in, checkout before check-in, second checkout all handled with safe Vietnamese messages.
+- No raw error messages.
+- No `employeeId` from client state.
+
+### `/employee/schedule` — Weekly Schedule
+
+Surface: Employee Schedule, `P1`.
+
+Primary user job:
+
+- Staff views their assigned shifts for the current and adjacent weeks.
+
+Current assessment:
+
+- Reads `shift_assignments` with `.eq("employee_id", employee.id)` — app-layer filter only.
+- Week navigation works correctly.
+- Skeleton loading via boneyard is implemented.
+
+Change type:
+
+- Visual refactor: minimal — already uses proper primitives.
+- Data contract: add self-enforcement through shared context helper.
+
+Acceptance:
+
+- Self-only rows guaranteed by server-side employee resolution.
+- Clear empty state when no shifts assigned.
+- Week controls functional.
+
+### `/employee/attendance` — Attendance History
+
+Surface: Employee Attendance, `P1`.
+
+Primary user job:
+
+- Staff views the last 30 days of their own attendance records.
+
+Current assessment:
+
+- Server component reads directly from `attendance_records` with `.eq("employee_id", employee.id)`.
+- Mobile list and desktop table views both implemented.
+- Status labels and badge variants are correct.
+
+Change type:
+
+- Visual refactor: minimal.
+- Data contract: use shared employee context helper.
+
+Acceptance:
+
+- Self-only rows, 30-day range.
+- Status labels follow glossary.
+- Compact mobile list and desktop table.
+
+### `/employee/payslip` — Payslip
+
+Surface: Employee Payslip, `P1`.
+
+Primary user job:
+
+- Staff views only released/paid payslip periods with net/gross/insurance/PIT breakdown.
+
+Current assessment:
+
+- **Privacy risk**: reads all `payroll_entries` for the employee regardless of `payroll_periods.status`. Draft and calculated periods are visible.
+- Client component `PayslipClient` shows period status badges including `draft` and `calculated`.
+
+Change type:
+
+- Behavior change: yes — filter to `paid` periods only on the server query.
+- Data contract: add period status filter to the query.
+
+Acceptance:
+
+- Only `paid` period entries appear in the list and network payload.
+- Clear empty state when no paid periods exist.
+- No draft/calculated/other-employee data in UI or network.
+
+### `/employee/profile` — Profile
+
+Surface: Employee Profile, `P1`.
+
+Primary user job:
+
+- Staff views their personal summary: name, email, branch, employee code, start date.
+
+Current assessment:
+
+- Imports `getMyTrustScore` from `@/inventory/trust-actions` — cross-module dependency.
+- Shows trust score details (GRN 30d, incidents) which are inventory-specific.
+
+Change type:
+
+- Visual refactor: minor.
+- Dependency cleanup: evaluate trust score inclusion — keep if it provides self-service value, but decouple from inventory action import.
+
+Acceptance:
+
+- Non-sensitive data only (no CCCD, bank details, GPS coordinates, raw permissions).
+- Cross-module imports are justified or decoupled.
+
+### `/employee/permissions` — Permission Debug
+
+Surface: Employee Permission Debug, hidden from normal navigation.
+
+Primary user job:
+
+- QA/staff can verify their current permission grants and position code during Auth v2 rollout.
+
+Change type:
+
+- Hide from bottom nav and normal navigation.
+- Keep the route accessible via direct URL for support/QA purposes.
+
+Acceptance:
+
+- Not linked from any normal portal navigation.
+- Still renders correctly when accessed directly.
+- Uses plain-language descriptions where possible.

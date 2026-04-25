@@ -14,9 +14,9 @@ External references:
 
 - Shadcn UI Docs: https://ui.shadcn.com/docs/
 - Installation: https://ui.shadcn.com/docs/installation/
-- Preset: https://ui.shadcn.com/create?preset=b1GfmQMCm
+- Preset: https://ui.shadcn.com/create?preset=b6G3vbGue
 - Components: https://ui.shadcn.com/docs/components/
-- Preset command: `pnpm dlx shadcn@latest init --preset b1GfmQMCm --template next`
+- Preset command: `pnpm dlx shadcn@latest init --preset b6G3vbGue --template next --monorepo --base radix`
 
 ## Guardrails
 

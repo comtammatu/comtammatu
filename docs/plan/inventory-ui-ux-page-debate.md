@@ -55,6 +55,257 @@ Navigation grouping target:
 - Control: `Kiểm kê`, `Xử lý lệch`, `Hạn sử dụng`, `Báo cáo`
 - Data: `Nguyên liệu`, `Nhà cung cấp`, `Định mức`, `Cài đặt`
 
+## 1A. Domain Model Map
+
+Mục này tách Inventory thành các model vận hành. Khi debate UI, mỗi page phải chỉ ra nó đang đọc/ghi model nào, thao tác nào làm thay đổi trạng thái, và nhân viên cần thấy gì để không phải đoán.
+
+| Model | Nghĩa vận hành | Workflow chính | Page chính | Nhân viên phải nhìn thấy |
+| --- | --- | --- | --- | --- |
+| `inventory_site` | Điểm tồn kho: CW, CK, branch, bin/khu nếu có | Chọn phạm vi làm việc, chuyển kho, kiểm kê | Shell, Stock, Transfer, Stocktake | Đang làm ở site nào, site loại gì, quyền thao tác nào được phép |
+| `ingredient` | Mã nguyên liệu / bán thành phẩm / thành phẩm tồn kho | Catalog, mua hàng, nhận hàng, sản xuất, xuất kho | Ingredients, Stock, PO, GRN, Production | Tên, đơn vị mua, đơn vị tồn, quy đổi, trạng thái dùng/khóa |
+| `stock_level` | Số lượng tồn hiện tại theo site/item/lot nếu có | Theo dõi tồn, cảnh báo, kiểm kê | Stock, Dashboard, Expiry, Reports | On hand, reserved/committed nếu có, reorder point, WAC, hạn dùng |
+| `stock_movement` | Nhật ký mọi biến động tồn | Audit, báo cáo, điều tra lệch | Stock detail, Reports, document detail | Tăng/giảm từ chứng từ nào, ai xác nhận, lúc nào, giá trị bao nhiêu |
+| `supplier` | Nhà cung cấp và điều kiện mua | PO, GRN, invoice, return, credit note | Suppliers, PO, GRN, Invoice | Liên hệ, mặt hàng thường mua, lead time, công nợ/chứng từ mở |
+| `purchase_order` | Đề nghị/đơn mua trước khi nhận | Procurement to stock | PO list, PO new, PO detail | Trạng thái, dòng hàng, số lượng còn phải nhận, hành động kế tiếp |
+| `goods_received_note` | Phiếu nhận hàng thực tế vào kho | Receiving | Receiving, GRN list, GRN detail, mobile GRN | Supplier, PO link, dòng nhận, lệch giá/số lượng/QC, nút xác nhận |
+| `supplier_invoice` | Hóa đơn NCC cần đối chiếu | 3-way match | Supplier invoices | PO-GRN-invoice có khớp không, lệch nào chặn hạch toán |
+| `supplier_return` | Trả hàng về NCC | Return and credit | Supplier returns, GRN detail | Dòng trả, lý do, chứng cứ, liên kết credit note |
+| `supplier_credit_note` | Ghi nhận giảm trừ từ NCC | Accounting reconciliation | Credit notes | Return/invoice liên quan, số tiền, trạng thái đối chiếu |
+| `stock_transfer` | Chuyển hàng giữa CW/CK/branch | Replenishment / internal movement | Transfers, transfer detail, mobile receive | From/to, trạng thái ship/receive, số lượng gửi/nhận/lệch |
+| `stock_issue` | Xuất kho nội bộ hợp lệ theo schema | Branch issue / storage loss | Issues, issue detail | Lý do hợp lệ, item, WAC không sửa tay, người xác nhận |
+| `waste` | Hao hụt, hủy, mất do vận hành | Waste capture and approval | Waste new, approvals, auto waste | Lý do, bằng chứng, giá trị WAC, cần duyệt hay tự ghi nhận |
+| `production_recipe` | BOM/định mức sản xuất hoặc recipe bán | Production readiness | Recipes, Production | Input, output, yield, hao hụt định mức, cảnh báo thiếu |
+| `production_order` | Lệnh sản xuất ở CK | Central kitchen production | Production, mobile production | Cần gì, thiếu gì, sản lượng dự kiến/thực tế, post stock như thế nào |
+| `stocktake_session` | Kỳ kiểm kê theo site/phạm vi | Count, recount, finalize | Stocktake list, new, detail, count, conflicts | Phạm vi, chế độ blind, tiến độ, lệch, quyền finalize |
+| `expiry_alert` | Lô/hàng có rủi ro hạn dùng | Expiry review / write-off | Expiry, Dashboard | Hạn còn lại, qty rủi ro, hành động chuyển dùng/ghi waste |
+| `policy_settings` | Quy tắc tồn kho: QC, expiry, approval, period | Governance | Settings, dashboard blockers | Quy tắc nào đang bật, thay đổi ảnh hưởng workflow nào |
+
+Debate trọng tâm:
+
+- Nếu một model có thể đổi trạng thái, page phải có timeline hoặc audit strip.
+- Nếu một thao tác làm thay đổi tồn, page phải hiển thị nguồn chứng từ và tác động tồn trước khi xác nhận.
+- Nếu nhân viên không có quyền hoặc thiếu điều kiện, nút chính không biến mất im lặng; nó chuyển thành trạng thái disabled có lý do.
+- Không có page nào cho phép "sửa tồn tay" như workflow mặc định. Điều chỉnh tồn phải đi qua stocktake, issue/waste, transfer, GRN, hoặc production.
+
+## 1B. Workflow Playbooks
+
+### W1. Procurement To Stock: PO -> GRN -> Stock -> Invoice
+
+Mục tiêu: nhân viên mua/nhận hàng biết cần mua gì, nhận gì, lệch gì, và khi nào hàng đã vào tồn.
+
+| Bước | Page | UI phải hiện | Thao tác chính | Chặn/kiểm tra | Sau khi xong |
+| --- | --- | --- | --- | --- | --- |
+| 1. Nhận biết cần mua | `/inventory`, `/inventory/stock` | Card `Need reorder`, item dưới min, supplier gợi ý, site đang thiếu | Mở tạo PO từ item | Không có supplier mặc định thì yêu cầu chọn supplier | Đi đến PO new với dòng đã prefill |
+| 2. Tạo PO | `/inventory/purchase-orders/new` | Supplier, site nhận, dòng item, đơn vị mua, quy đổi, giá dự kiến, ngày cần hàng | Lưu nháp hoặc gửi PO | Thiếu supplier, item inactive, quy đổi sai, qty <= 0 | PO detail trạng thái Draft/Sent |
+| 3. Theo dõi PO | `/inventory/purchase-orders/[id]` | Status stepper: Draft -> Sent -> Partial Received -> Closed | Gửi NCC, sửa nháp, tạo GRN | Không sửa dòng đã nhận nếu ảnh hưởng GRN | PO vào queue receiving |
+| 4. Nhận hàng | `/inventory/grn/[id]` hoặc mobile GRN | Dòng PO bên trái, dòng nhận thực tế bên phải, lệch qty/price/QC | Nhập số nhận, chọn QC pass/fail, thêm ảnh/note | Nhận vượt tolerance, item không thuộc PO, period đóng | GRN Ready to post |
+| 5. Post GRN | GRN detail | Tóm tắt tác động tồn: +qty, site, WAC dự kiến, chứng từ liên quan | Confirm receive | Thiếu quyền, thiếu QC, mismatch chưa xử lý | Tồn tăng, PO cập nhật received |
+| 6. Đối chiếu invoice | `/inventory/supplier-invoices` | 3 cột PO / GRN / Invoice, lệch màu rõ | Match, mark exception, approve | Invoice không khớp tolerance | Hạch toán hoặc tạo exception |
+| 7. Return/Credit nếu lỗi | `/inventory/supplier-returns`, `/inventory/supplier-credit-notes` | Dòng trả, lý do, liên kết GRN/invoice | Tạo return, ghi credit note | Không trả quá số đã nhận còn tồn | Tồn giảm hoặc credit đối chiếu |
+
+Đủ cho nhân viên sử dụng khi:
+
+- Mở dashboard là thấy PO/GRN nào cần xử lý hôm nay.
+- Tạo GRN không cần nhớ PO đang ở đâu; từ PO detail có nút tạo GRN và từ receiving hub có queue.
+- Mỗi dòng nhận hàng có trạng thái riêng: ok, thiếu, dư, lỗi QC, cần duyệt.
+- Xác nhận GRN luôn cho xem tác động tồn trước khi post.
+
+### W2. Transfer: CW/CK/Branch Movement
+
+Mục tiêu: chuyển kho không nhầm nguồn/đích, không mất dấu hàng đang đi đường, và mobile nhận hàng đủ nhanh.
+
+| Bước | Page | UI phải hiện | Thao tác chính | Chặn/kiểm tra | Sau khi xong |
+| --- | --- | --- | --- | --- | --- |
+| 1. Nhìn queue chuyển | `/inventory/transfers` | Tabs: Need to ship, In transit, Need to receive, Exceptions | Mở transfer hoặc tạo mới | Scope URL phải rõ site nguồn/đích | Người dùng thấy đúng việc của site mình |
+| 2. Tạo transfer | Transfer create pattern từ list/detail | From site, to site, dòng item, available qty, unit, note | Save draft, submit, ship | Không đủ tồn, from/to sai loại, period đóng | Transfer chờ ship hoặc in phiếu |
+| 3. Ship hàng | `/inventory/transfers/[id]` | Pick list, packed qty, người ship, time | Confirm ship | Qty ship > available, thiếu dòng bắt buộc | Hàng vào trạng thái in transit |
+| 4. Nhận hàng | Mobile transfer receive | Card từng transfer, dòng item lớn dễ bấm, shipped vs received | Confirm receive, report variance | Nhận lệch phải bắt lý do/ảnh nếu vượt tolerance | Tồn tăng ở site nhận, variance vào exception |
+| 5. Xử lý lệch | Transfer detail | Variance panel, movement timeline | Approve variance hoặc tạo follow-up | Thiếu quyền duyệt | Transfer closed hoặc pending approval |
+
+Đủ cho nhân viên sử dụng khi:
+
+- List mặc định lọc theo "việc tôi cần làm", không bắt nhân viên hiểu toàn bộ network.
+- Trên mobile, nhận hàng chỉ cần mở transfer, nhập số nhận, xác nhận; lệch mới mở thêm lý do.
+- Transfer detail có timeline rõ: created, shipped, received, variance, closed.
+
+### W3. Branch Replenishment And Internal Issue
+
+Mục tiêu: branch biết hàng nào thiếu, hàng nào cần xuất/ghi nhận hao hụt theo lý do hợp lệ, không dùng đường tắt sửa tồn.
+
+| Bước | Page | UI phải hiện | Thao tác chính | Chặn/kiểm tra | Sau khi xong |
+| --- | --- | --- | --- | --- | --- |
+| 1. Branch nhận cảnh báo | `/inventory`, `/inventory/stock` | Low stock, expiry risk, pending transfer | Request transfer hoặc mở item | Không có quyền tạo transfer thì hiện người phụ trách | Queue chuyển kho hoặc yêu cầu bổ sung |
+| 2. Nhận transfer | Mobile transfer receive | Transfer inbound của branch | Confirm receive | Variance cần lý do | Stock branch cập nhật |
+| 3. Xuất nội bộ hợp lệ | `/inventory/issues` hoặc issue detail | Loại issue hợp lệ trong schema, dòng item, WAC chỉ đọc | Create issue | Không dùng `kitchen_use` nếu enum đã retire; không cho sửa WAC | Tồn giảm và movement có audit |
+| 4. Ghi hao hụt vận hành | `/inventory/waste/new` | Item, qty, reason, evidence, cost impact | Submit waste | Vượt ngưỡng cần duyệt | Waste pending hoặc posted |
+
+Đủ cho nhân viên sử dụng khi:
+
+- Branch manager không cần biết model nội bộ; họ thấy "Cần nhận hàng", "Sắp hết", "Sắp hết hạn", "Cần kiểm kê".
+- Mọi thao tác giảm tồn hiển thị giá trị ảnh hưởng bằng WAC nhưng không cho nhập giá tùy ý.
+- Lý do xuất/hao hụt được chọn từ danh sách chuẩn, không nhập text tự do làm hỏng báo cáo.
+
+### W4. Central Kitchen Production
+
+Mục tiêu: CK biết có đủ nguyên liệu để sản xuất không, sản xuất xong tồn input/output thay đổi như thế nào.
+
+| Bước | Page | UI phải hiện | Thao tác chính | Chặn/kiểm tra | Sau khi xong |
+| --- | --- | --- | --- | --- | --- |
+| 1. Kiểm tra readiness | `/inventory/production` | Recipe/order cards: can produce, missing input, blocked | Chọn production order | Thiếu input, recipe inactive | Mở order detail hoặc tạo transfer request |
+| 2. Quản lý BOM | `/inventory/recipes` | Output item, input list, yield, loss allowance | Create/update recipe | Unit conversion thiếu, duplicate ingredient, invalid yield | Recipe ready for production |
+| 3. Tạo lệnh sản xuất | Production hub/detail | Output target qty, required inputs, expected cost | Start order | Không đủ tồn input nếu policy chặn | Order in progress |
+| 4. Confirm sản xuất | Production detail/mobile | Actual input used, actual output, variance, cost impact | Post production | Variance vượt ngưỡng cần lý do/duyệt | Input giảm, output tăng, movement audit |
+
+Đủ cho nhân viên sử dụng khi:
+
+- Production hub không chỉ là bảng; nó phải trả lời câu "hôm nay làm được món nào, thiếu gì".
+- Khi thiếu input, UI đưa thẳng đến transfer/request thay vì chỉ báo lỗi.
+- Confirm production có preview biến động tồn input/output.
+
+### W5. Waste And Evidence
+
+Mục tiêu: hao hụt được ghi nhanh, đủ bằng chứng, và rõ trường hợp nào cần duyệt.
+
+| Bước | Page | UI phải hiện | Thao tác chính | Chặn/kiểm tra | Sau khi xong |
+| --- | --- | --- | --- | --- | --- |
+| 1. Tạo waste | `/inventory/waste/new` | Site, item search, qty, reason, evidence, WAC impact | Submit | Qty > on hand, reason thiếu, threshold vượt | Posted hoặc pending approval |
+| 2. Duyệt waste | `/inventory/waste/approvals` | Queue theo risk/cost, evidence preview, requester | Approve/reject/request info | Thiếu quyền duyệt | Tồn giảm hoặc trả về người tạo |
+| 3. Auto waste | `/inventory/waste/auto` | Rule-generated candidates, confidence, source event | Review/post batch | Candidate không đủ dữ liệu thì cần manual review | Waste movement posted |
+
+Đủ cho nhân viên sử dụng khi:
+
+- Nhân viên sàn tạo waste trong dưới một phút trên mobile/desktop.
+- Người duyệt nhìn thấy cost impact và bằng chứng trước nút approve.
+- Auto waste không post mù; luôn có queue và audit.
+
+### W6. Stocktake: Count, Recount, Conflict, Finalize
+
+Mục tiêu: kiểm kê đủ chặt để tránh sửa tồn tùy tiện nhưng vẫn dễ thao tác khi đếm thực tế.
+
+| Bước | Page | UI phải hiện | Thao tác chính | Chặn/kiểm tra | Sau khi xong |
+| --- | --- | --- | --- | --- | --- |
+| 1. Tạo kỳ kiểm kê | `/inventory/stocktake/new` | Site, scope, categories/items, blind mode, freeze window | Start session | Scope thiếu, session overlap, period đóng | Session active |
+| 2. Đếm | `/inventory/stocktake/[id]/count` | One-item focus, unit, expected hidden nếu blind, progress | Enter count, mark unavailable, add note | Negative count, invalid unit | Count saved, next item |
+| 3. Review detail | `/inventory/stocktake/[id]` | Progress, counted/unaccounted, variance summary, evidence | Request recount, finalize if clear | Uncounted items, unresolved variance | Ready to finalize hoặc conflict queue |
+| 4. Resolve conflict | `/inventory/stocktake/conflicts` | Variance sorted by value/risk, count history, movement history | Accept count, request recount, adjust via RPC | Conflict resolution must go through RPC, not client math | Posted stock adjustment with audit |
+| 5. Finalize | Stocktake detail | Final impact preview: qty/value by item | Confirm finalize | Missing approval, period closed | Stock levels updated |
+
+Đủ cho nhân viên sử dụng khi:
+
+- Người đếm chỉ thấy màn hình đếm, không bị kéo vào báo cáo.
+- Blind mode thực sự không lộ expected qty trên counting surface.
+- Conflict page giải thích vì sao lệch, không chỉ hiện số âm/dương.
+
+### W7. Expiry And Write-Off
+
+Mục tiêu: hàng sắp hết hạn được xử lý chủ động trước khi thành waste lớn.
+
+| Bước | Page | UI phải hiện | Thao tác chính | Chặn/kiểm tra | Sau khi xong |
+| --- | --- | --- | --- | --- | --- |
+| 1. Review risk | `/inventory/expiry` | Tabs: today, 3 days, 7 days, expired; qty and value | Filter by site/category | Không có lot/expiry thì flag data quality | Chọn hành động |
+| 2. Hành động | Expiry page/detail | Options theo policy: transfer, use first, waste/write-off | Create transfer, create waste, mark reviewed | Expired item không cho move nếu policy chặn | Action document created |
+| 3. Theo dõi | Dashboard/report | Open expiry actions | Close follow-up | Follow-up quá hạn | Risk reduced |
+
+Đủ cho nhân viên sử dụng khi:
+
+- Hàng có rủi ro cao xuất hiện ngay dashboard.
+- Mỗi item có hành động rõ ràng, không chỉ là cảnh báo.
+
+### W8. Catalog And Import
+
+Mục tiêu: master data đủ sạch để các workflow không vỡ ở lúc thao tác.
+
+| Bước | Page | UI phải hiện | Thao tác chính | Chặn/kiểm tra | Sau khi xong |
+| --- | --- | --- | --- | --- | --- |
+| 1. Ingredient catalog | `/inventory/ingredients` | Status, units, conversions, default supplier, reorder config | Create/edit/import | Unit conversion missing, inactive item in active recipe | Item usable in PO/GRN/stock |
+| 2. Supplier catalog | `/inventory/suppliers` | Active suppliers, linked items, contact, lead time | Create/edit/import | Duplicate supplier, missing required contact if policy | Supplier usable in PO |
+| 3. Recipe catalog | `/inventory/recipes` | Output, input, yield, cost preview | Create/edit/import BOM | Invalid conversion, missing ingredient | Recipe usable in production |
+
+Đủ cho nhân viên sử dụng khi:
+
+- Catalog list có cột "Ready / Blocked" để thấy dữ liệu nào chưa dùng được.
+- Import không chỉ báo fail; nó chỉ dòng lỗi, cột lỗi, và cách sửa.
+
+### W9. Settings, Period, And Policy
+
+Mục tiêu: OPS biết rule nào đang chi phối workflow, nhưng nhân viên thường ngày không bị lộ cấu hình phức tạp.
+
+| Bước | Page | UI phải hiện | Thao tác chính | Chặn/kiểm tra | Sau khi xong |
+| --- | --- | --- | --- | --- | --- |
+| 1. QC settings | `/inventory/settings/*` | Tolerance, required evidence, approval thresholds | Update policy | Thay đổi phải audit | Workflow nhận hàng/waste áp dụng rule mới |
+| 2. Expiry settings | Settings + Expiry | Warning windows, action rules | Update policy | Rule mâu thuẫn | Expiry alerts recalculated |
+| 3. Period close | Settings/report area | Open/closed period, blockers, unposted docs | Close/reopen if allowed | Unresolved stocktake/GRN/transfer | Period locked |
+
+Đủ cho nhân viên sử dụng khi:
+
+- Nhân viên không phải vào settings để hiểu vì sao bị chặn; blocker xuất hiện ngay page thao tác.
+- OPS có một nơi xem toàn bộ rule ảnh hưởng Inventory.
+
+## 1C. Staff Journey View
+
+### Warehouse Operator At CW
+
+```text
+Dashboard -> Receiving queue -> GRN detail -> Stock check -> Transfer outbound -> Transfer detail
+```
+
+UI cần ưu tiên:
+
+- Bảng việc theo ngày, không phải dashboard marketing.
+- Nút chính theo trạng thái: `Receive`, `Post GRN`, `Ship transfer`.
+- Mobile receiving dùng item rows lớn, ít text, thao tác được khi đang ở kho.
+
+### Central Kitchen Operator
+
+```text
+Dashboard -> Transfer receive -> Production readiness -> Production order -> Finished goods transfer
+```
+
+UI cần ưu tiên:
+
+- Production hub trả lời "hôm nay làm gì được".
+- Thiếu nguyên liệu phải có đường đi tiếp: nhận transfer, request transfer, hoặc đổi kế hoạch.
+- Confirm production preview cả input giảm và output tăng.
+
+### Branch Manager
+
+```text
+Dashboard -> Receive transfer -> Stock risk -> Waste / Issue -> Stocktake count
+```
+
+UI cần ưu tiên:
+
+- First viewport chỉ có việc branch cần làm.
+- Cảnh báo tồn thấp/hết hạn chuyển thành hành động cụ thể.
+- Mobile count/waste phải thao tác được bằng một tay, không dùng bảng dày.
+
+### OPS / Accounting
+
+```text
+Dashboard -> Supplier invoice match -> Returns / credit notes -> Reports -> Period close
+```
+
+UI cần ưu tiên:
+
+- Màn hình đối chiếu chứng từ, không chỉ danh sách.
+- Lệch PO/GRN/invoice có mức nghiêm trọng và owner xử lý.
+- Period close có checklist blocker rõ ràng.
+
+## 1D. Enough For Staff To Use Checklist
+
+Một page Inventory được coi là đủ dùng cho nhân viên khi đạt các điều kiện này:
+
+1. First viewport trả lời được: tôi đang ở site nào, việc gì đang cần làm, nút chính là gì.
+2. Chỉ có một primary action theo trạng thái hiện tại; action phụ và destructive action được tách khỏi đường chính.
+3. Mọi action bị khóa đều có lý do và cách xử lý tiếp theo.
+4. Mỗi status gắn với next step cụ thể, không chỉ là label màu.
+5. Empty state phải recoverable: tạo mới, import, đổi filter, hoặc xem tài liệu vận hành.
+6. Mobile page không dùng bảng desktop thu nhỏ; mỗi thao tác chính là card/list row có target bấm đủ lớn.
+7. Detail page phải có 4 vùng: summary, line items, blockers/exceptions, timeline/audit.
+8. List page mặc định lọc theo "việc tôi có thể xử lý", sau đó mới cho mở rộng tất cả.
+9. Không workflow nào cho sửa tồn trực tiếp; mọi thay đổi tồn đi qua chứng từ hoặc RPC có audit.
+10. Success state phải nói rõ chứng từ tiếp theo hoặc queue tiếp theo, ví dụ "GRN posted, PO còn 2 dòng chưa nhận".
+
 ## 2. `/inventory` - Work Queue Dashboard
 
 ### Debate

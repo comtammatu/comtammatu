@@ -47,6 +47,14 @@
 - [ ] Inventory: chạy manual smoke theo `docs/runbooks/inventory/pre-release-qa.md` trước pilot
 - [ ] Momo webhook: atomic `complete_payment_and_consume_stock` RPC (migration needed when M4 wired)
 - [ ] Ops reconciliation query (before Momo go-live) — payment/order desync surfacing in /admin/finance
+- [ ] **POS perf Tier 2 — RLS migration** (filed 2026-04-25 sau Tier 1). Single migration file, scope đóng:
+  - Rewrite `staff_permissions_select_self`: `auth.uid()` → `(select auth.uid())` (init-plan fix per advisor `0003_auth_rls_initplan`)
+  - Hợp nhất dual-permissive SELECT trên 7 table: `staff_permissions`, `tables`, `branches`, `pos_terminals`, `menu_item_variants`, `menu_item_modifiers`, `menu_item_available_sides` (giữ regression rule [2026-04-22] **RLS-PERMISSIVE-POLICIES-OR** — không widen access)
+  - `CREATE INDEX CONCURRENTLY ON order_items (variant_id)` (FK unindexed)
+  - **Required artifacts trước merge**: persona test matrix (owner/cashier/waiter/disabled) cho 7 table, EXPLAIN before/after cho `staff_permissions` policy, `.insert().select()` audit cho 7 table, advisor diff (8 lints clear), down-migration trong `supabase/migrations/_rollback/`
+  - Risk: medium. Tách PR riêng khỏi Tier 1, không bundle.
+- [ ] **`pnpm db:types` regen** — current `apps/web/app/finance/{actions,reconciliation-actions,statement-actions}.ts` typecheck fail vì DB types thiếu các RPC mới: `transition_tax_invoice_state`, `fn_reconcile_period`, `fn_reconcile_drilldown`, `fn_generate_b01_dn`, `fn_generate_b02_dn`, `fn_generate_form_01_gtgt` + table `tax_invoice_events` (với column `tax_invoice_id`). Đang block `pnpm build` nhưng không phải lỗi runtime. Chạy `pnpm db:types` sau khi confirm migration đã apply, rồi commit lại file types.
+- [ ] **Pre-existing employee page WIP** (sau khi `pnpm db:types`): `app/employee/{attendance,payslip,schedule}/page.tsx` cast `as <Type>[]` đang sai — supabase-js trả foreign-key relation thành array, không object. Fix bằng cách đổi type signature hoặc map/normalize trước cast.
 
 ## Pilot-Critical Backlog (blocked on external credentials)
 

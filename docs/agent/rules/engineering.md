@@ -9,7 +9,7 @@ pnpm dev          # Start dev server (Turbopack)
 pnpm build        # Production build
 pnpm typecheck    # Type checking across all packages
 pnpm lint         # ESLint
-pnpm db:types     # Regenerate Supabase types after migration is merged and applied
+pnpm db:types     # Regenerate Supabase types after migration is applied to the type source schema
 ```
 
 ## Core Constraints
@@ -22,8 +22,9 @@ pnpm db:types     # Regenerate Supabase types after migration is merged and appl
 - NEVER import `@comtammatu/database` barrel in `"use client"` components.
 - NEVER store scope in `localStorage` or React Context. Scope belongs in URL params only.
 - Multi-item atomic writes MUST use a Postgres RPC function.
-- After SQL migration is merged and applied, run `pnpm db:types`.
-- NEVER apply migrations directly. Write migration file → PR → merge → owner applies manually.
+- Agents MAY apply migrations directly on approved dev/test Supabase servers only, after verifying the target environment.
+- NEVER apply migrations directly to production. Production flow: write migration file → PR → merge → owner applies manually.
+- After SQL migration is applied to the schema used for generated types, run `pnpm db:types`.
 - ACL single source: `packages/shared/src/auth/module-acl.ts`.
 - NEVER add agent notes, dev commit notes, implementation explanations, or internal commentary to project UI.
 - Put durable explanations, guides, operational notes, and task notes in Markdown docs, guides, or note files inside the source tree.

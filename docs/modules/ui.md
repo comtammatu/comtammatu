@@ -8,7 +8,7 @@ Source of truth:
 
 1. `apps/web/components.json`
 2. `packages/ui/components.json`
-3. `apps/web/app/globals.css`
+3. `packages/ui/src/styles/globals.css`
 4. `apps/web/app/layout.tsx`
 5. `docs/spec/design-system.md`
 6. `tasks/regressions.md`
@@ -19,8 +19,8 @@ Doc chot: `docs/spec/design-system.md`.
 
 Tat ca UI/UX rebuild phai di theo contract do truoc khi sua runtime. Design system cua repo la:
 
-- shadcn preset hien hanh (`radix-lyra`, preset `b1GfmQMCm`)
-- token runtime trong `apps/web/app/globals.css`
+- shadcn preset hien hanh (`radix-lyra`, preset `b6G3vbGue`, `neutral`, `lucide`)
+- token runtime trong `packages/ui/src/styles/globals.css`
 - primitive source trong `packages/ui/src/components/*`
 - glossary/copy source trong `docs/ref/glossary.md` va shared label dictionaries
 - toast/notification contract trong `docs/spec/toast-notification-system.md`
@@ -37,7 +37,7 @@ Read order cho agent khi lam UI:
 
 ## Reset Contract
 
-Reset hien tai duoc thuc hien bang `shadcn` preset `b1GfmQMCm` / `radix-lyra` cho `apps/web`.
+Reset hien tai duoc thuc hien bang `shadcn` preset `b6G3vbGue` / `radix-lyra` cho monorepo `apps/web` + `packages/ui`.
 
 Dieu nay co nghia:
 
@@ -80,10 +80,12 @@ Convention:
 
 Shortcuts da wire:
 
-- POS cart (`cart-sidebar.tsx`):
+- POS cart (`cart-pane.tsx`):
   - `Cmd/Ctrl + Enter` — mo dialog xac nhan gui bep (works khi dang go note)
   - `T` — chuyen sang Mang ve
   - `D` — chuyen sang Tai ban
+- POS append draft (`append-draft-pane.tsx`):
+  - Khong co shortcut rieng; append vao don cu phai qua nut `Gui mon them`, khong gui ngay khi cham mon.
 - KDS (`kds-board.tsx`):
   - `Escape` — clear het filter (station + status + orderType) neu co filter nao dang bat
 

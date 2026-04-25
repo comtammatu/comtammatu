@@ -1,6 +1,6 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 13.0.0 | Updated: 2026-04-25 | Status: locked baseline for UI/UX rebuild
+> Version: 14.0.0 | Updated: 2026-04-25 | Status: locked baseline for UI/UX rebuild
 
 ## Decision
 
@@ -9,10 +9,10 @@ The design system is the current shadcn preset plus the runtime tokens and primi
 Active runtime:
 
 - `style`: `radix-lyra`
-- `preset`: `b1GfmQMCm`
-- `baseColor`: `stone`
+- `preset`: `b6G3vbGue`
+- `baseColor`: `neutral`
 - `cssVariables`: `true`
-- `iconLibrary`: `tabler`
+- `iconLibrary`: `lucide`
 - primitive base: Radix/shadcn
 
 Agents must preserve this decision unless the task explicitly asks to change the design system itself.
@@ -21,7 +21,7 @@ Agents must preserve this decision unless the task explicitly asks to change the
 
 When sources disagree, use this order:
 
-1. Runtime config: `apps/web/components.json`, `packages/ui/components.json`, `apps/web/app/globals.css`, `apps/web/app/layout.tsx`
+1. Runtime config: `apps/web/components.json`, `packages/ui/components.json`, `packages/ui/src/styles/globals.css`, `apps/web/app/layout.tsx`
 2. Primitive source: `packages/ui/src/components/*`
 3. This contract: `docs/spec/design-system.md`
 4. Implementation guide: `docs/modules/ui.md`
@@ -39,7 +39,7 @@ Com Tam Ma Tu is an operational restaurant system. The UI should feel calm, fast
 - Inventory surfaces are workflow-first. The user should see pending tasks, required documents, and exception states before secondary analytics.
 - Employee surfaces are lightweight task portals. Keep them narrow, direct, and consistent with the shared shell.
 
-The visual tone is neutral stone, warm primary action, restrained borders, semantic status colors, and strong spacing discipline.
+The visual tone is neutral foundation, warm primary action, restrained borders, semantic status colors, and strong spacing discipline.
 
 ## Token Contract
 
@@ -51,7 +51,7 @@ Allowed token families:
 - Data: `chart-1` through `chart-5`
 - Navigation: `sidebar-*`
 - Radius: preset radius tokens only
-- Typography: runtime font variables from `apps/web/app/layout.tsx` and `apps/web/app/globals.css`
+- Typography: runtime font variables from `apps/web/app/layout.tsx` and `packages/ui/src/styles/globals.css`
 
 Rules:
 
@@ -64,7 +64,7 @@ Rules:
 - Do not scale typography with viewport width.
 - Do not change primitive radius, color, focus, or disabled behavior from a page wrapper.
 
-If a new token is truly needed, it must be added to `apps/web/app/globals.css`, documented here, and checked against `tasks/regressions.md`.
+If a new token is truly needed, it must be added to `packages/ui/src/styles/globals.css`, documented here, and checked against `tasks/regressions.md`.
 
 ## Component Authority
 

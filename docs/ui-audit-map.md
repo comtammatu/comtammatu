@@ -60,8 +60,7 @@ Updated: 2026-04-09
   - `apps/web/app/admin/components/empty-state-panel.tsx`
   - `apps/web/app/admin/components/table-empty-state-row.tsx`
   - `apps/web/app/admin/dashboard/page.tsx`
-  - `apps/web/app/admin/menu/page.tsx`
-  - `apps/web/app/admin/orders/page.tsx`
+  - Runtime routes for menu and orders are `/menu` and `/orders` (not `/admin/menu` or `/admin/orders`)
   - `apps/web/app/admin/hr/page.tsx`
   - `apps/web/app/admin/staff/page.tsx`
   - `apps/web/app/admin/finance/page.tsx`
@@ -118,8 +117,8 @@ Updated: 2026-04-09
   - `packages/ui/src/components/*`
   - `packages/ui/src/lib/utils.ts`
   - `packages/ui/src/index.ts`
-- App-level tokens and global styles:
-  - `apps/web/app/globals.css`
+- Shared tokens and global styles:
+  - `packages/ui/src/styles/globals.css`
   - `docs/spec/design-system.md`
 
 ## Rollout order reference
