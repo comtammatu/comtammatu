@@ -25,9 +25,11 @@ import {
 import { isNavItemActive, type ShellNavGroup } from "@/lib/shell-primitives";
 import { tNav } from "../_lib/dictionary";
 import type { InventoryBranchOption } from "../_lib/inventory-scope";
+import type { UserDrafts } from "../_lib/user-drafts";
 import { MobileTopBar } from "./mobile/mobile-top-bar";
 import { InventoryBranchFilter } from "./inventory-branch-filter";
 import { InventoryThemeToggle } from "./inventory-theme-toggle";
+import { UserDraftsStrip } from "./user-drafts-strip";
 
 interface InventoryShellProps {
   children: ReactNode;
@@ -41,6 +43,7 @@ interface InventoryShellProps {
   showSettings: boolean;
   allowedBranches: InventoryBranchOption[];
   defaultBranchId: number | null;
+  userDrafts: UserDrafts;
 }
 
 function buildInventoryGroups({
@@ -246,6 +249,7 @@ export function InventoryShell({
   showSettings,
   allowedBranches,
   defaultBranchId,
+  userDrafts,
 }: InventoryShellProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -404,8 +408,9 @@ export function InventoryShell({
         </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset className="min-h-0 min-w-0 overflow-hidden">
-        {children}
+      <SidebarInset className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+        <UserDraftsStrip drafts={userDrafts} branchId={activeBranchId} />
+        <div className="min-h-0 flex-1 overflow-auto">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );

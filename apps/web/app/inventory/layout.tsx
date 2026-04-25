@@ -7,6 +7,7 @@ import {
 } from "../_lib/permissions";
 import { InventoryShell } from "./_components/inventory-shell";
 import { resolveInventoryBranchScope } from "./_lib/inventory-scope";
+import { loadUserDrafts } from "./_lib/user-drafts";
 import {
   canAccessProductionSurface,
   hasCurrentProductionBranchAccess,
@@ -37,14 +38,15 @@ export default async function InventoryLayout({
     canOpenSettings,
     hasProductionPermission,
     hasProductionBranchAccess,
-  ] =
-    await Promise.all([
-      currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ),
-      currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS),
-      currentUserHasAnyPermissionAny(INVENTORY_SETTINGS_PERMISSIONS),
-      currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS),
-      hasCurrentProductionBranchAccess(supabase, claims),
-    ]);
+    userDrafts,
+  ] = await Promise.all([
+    currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ),
+    currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS),
+    currentUserHasAnyPermissionAny(INVENTORY_SETTINGS_PERMISSIONS),
+    currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS),
+    hasCurrentProductionBranchAccess(supabase, claims),
+    loadUserDrafts(),
+  ]);
   const showProcurement =
     canAccess(claims.user_role, "inventory_procurement") &&
     hasProcurementRead;
@@ -88,6 +90,7 @@ export default async function InventoryLayout({
       showSettings={canOpenSettings}
       allowedBranches={scope.allowedBranches}
       defaultBranchId={scope.selectedBranchId}
+      userDrafts={userDrafts}
     >
       {children}
     </InventoryShell>
