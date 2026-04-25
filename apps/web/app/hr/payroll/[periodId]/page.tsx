@@ -1,5 +1,5 @@
 import { fetchPayrollEntries } from "../../payroll-actions";
-import { IconAlertTriangle } from "@tabler/icons-react";
+import { TriangleAlert as IconAlertTriangle } from "lucide-react";
 import {
   Card,
   CardContent,

@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@comtammatu/ui";
-import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
+import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Card,
   CardContent,
@@ -21,17 +21,7 @@ const fmt = (n: number) =>
   n.toLocaleString("vi-VN", { maximumFractionDigits: 0 });
 
 const PERIOD_STATUS_LABELS: Record<string, string> = {
-  draft: "Nháp",
-  calculated: "Đã tính",
-  approved: "Đã duyệt",
   paid: "Đã trả",
-};
-
-const PERIOD_STATUS_VARIANTS: Record<string, BadgeProps["variant"]> = {
-  draft: "outline",
-  calculated: "secondary",
-  approved: "info",
-  paid: "success",
 };
 
 export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
@@ -51,8 +41,8 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
   return (
     <div className="flex flex-col gap-4">
       {entries.map((entry) => {
-        const period = entry.payroll_periods;
-        const status = period?.status ?? "draft";
+        const period = entry.payroll_periods?.[0];
+        const status = period?.status ?? "paid";
         const statusLabel = PERIOD_STATUS_LABELS[status] ?? status;
 
         return (
@@ -64,7 +54,7 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
                     ? `Tháng ${period.period_month}/${period.period_year}`
                     : "Kỳ lương"}
                 </CardTitle>
-                <Badge variant={PERIOD_STATUS_VARIANTS[status] ?? "secondary"}>
+                <Badge variant="success">
                   {statusLabel}
                 </Badge>
               </div>

@@ -1,13 +1,7 @@
 "use client";
 
 import { useState, useTransition, useCallback } from "react";
-import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconCalendarEvent,
-  IconPlus,
-  IconX,
-} from "@tabler/icons-react";
+import { ChevronLeft as IconChevronLeft, ChevronRight as IconChevronRight, CalendarDays as IconCalendarEvent, Plus as IconPlus, X as IconX } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {

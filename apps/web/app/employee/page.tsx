@@ -1,141 +1,104 @@
 import Link from "next/link";
-import {
-  IconArrowRight,
-  IconChartBar,
-  IconBriefcase,
-  IconCalendarEvent,
-  IconChefHat,
-  IconCreditCard,
-  IconDoorEnter,
-  IconLayoutDashboard,
-  IconLogout,
-  IconDeviceDesktop,
-  IconSettings,
-  IconUserCircle,
-  IconBuildingWarehouse,
-} from "@tabler/icons-react";
-import { ROLE_LABEL_VI, canAccess } from "@comtammatu/shared/auth";
-import { loadAuthState } from "@/_lib/auth";
-import { Badge } from "@comtammatu/ui/components/badge";
+import { ArrowRight as IconArrowRight, CalendarDays as IconCalendarEvent, ChefHat as IconChefHat, Clock as IconClock, CreditCard as IconCreditCard, Monitor as IconDeviceDesktop, LogIn as IconDoorEnter, LogOut as IconLogout, CircleUserRound as IconUserCircle } from "lucide-react";
+import { canAccess } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@comtammatu/ui/components/card";
-
-function ActionLink({
-  href,
-  title,
-  description,
-  icon,
-  badge,
-  disabled,
-}: {
-  href: string;
-  title: string;
-  description?: string;
-  icon: React.ReactNode;
-  badge?: string;
-  disabled?: boolean;
-}) {
-  if (disabled) {
-    return (
-      <Card className="rounded-lg border bg-muted/30 text-card-foreground">
-        <CardContent className="space-y-1.5 p-4">
-          <div className="flex items-center gap-4">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-              {icon}
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">{title}</p>
-              {description ? (
-                <p className="text-sm leading-6 text-muted-foreground">
-                  {description}
-                </p>
-              ) : null}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="rounded-lg border bg-muted/30 text-card-foreground">
-      <CardContent className="p-1">
-        <Button
-          asChild
-          variant="ghost"
-          className="group h-auto w-full justify-start rounded-2xl p-0"
-        >
-          <Link
-            href={href}
-            className="flex min-h-16 w-full items-center gap-4 px-3 py-3"
-          >
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              {icon}
-            </span>
-            <div className="min-w-0 flex-1 text-left">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-semibold text-foreground">{title}</p>
-                {badge ? (
-                  <Badge variant="warning" className="h-5 rounded-full">
-                    {badge}
-                  </Badge>
-                ) : null}
-              </div>
-              {description ? (
-                <p className="text-sm leading-6 text-muted-foreground">
-                  {description}
-                </p>
-              ) : null}
-            </div>
-            <IconArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
-          </Link>
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
-
-function ActionNotice({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <Card className="rounded-lg border bg-muted/30 text-card-foreground">
-      <CardContent className="space-y-1.5 p-4">
-        <div className="flex items-start gap-2">
-          <Badge variant="warning">{title}</Badge>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+import {
+  Item,
+  ItemContent,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
+import { getEmployeeContext } from "./_lib/employee-context";
+import { loadAuthState } from "@/_lib/auth";
+import { getTodayVN, formatTimeVN } from "./_lib/vn-business-date";
 
 export default async function EmployeePage() {
-  const { supabase, claims } = await loadAuthState();
+  const { claims } = await loadAuthState();
+  const ctx = await getEmployeeContext();
 
   const canPos = canAccess(claims.user_role, "pos");
   const canKds = canAccess(claims.user_role, "kds");
-  const branchId = claims.branch_id;
+  const branchId = ctx?.branchId ?? claims.branch_id;
 
+  // Today's attendance status
+  let clockState: "not_started" | "working" | "done" = "not_started";
+  let checkInTime: string | null = null;
+  let checkOutTime: string | null = null;
+  let clockBranchName: string | null = null;
+
+  if (ctx) {
+    const today = getTodayVN();
+    const { data: record } = await ctx.supabase
+      .from("attendance_records")
+      .select("check_in, check_out, branches ( name )")
+      .eq("employee_id", ctx.employeeId)
+      .eq("tenant_id", claims.tenant_id)
+      .eq("date", today)
+      .maybeSingle();
+
+    if (record?.check_in && !record.check_out) {
+      clockState = "working";
+      checkInTime = record.check_in;
+      const branchData = record.branches as unknown as { name: string } | null;
+      clockBranchName = branchData?.name ?? null;
+    } else if (record?.check_out) {
+      clockState = "done";
+      checkInTime = record.check_in;
+      checkOutTime = record.check_out;
+      const branchData = record.branches as unknown as { name: string } | null;
+      clockBranchName = branchData?.name ?? null;
+    }
+  }
+
+  // Next shift — today or the next day with an assignment
+  let nextShift: {
+    date: string;
+    shiftName: string;
+    startTime: string;
+    endTime: string;
+  } | null = null;
+
+  if (ctx) {
+    const today = getTodayVN();
+    const { data: upcoming } = await ctx.supabase
+      .from("shift_assignments")
+      .select("date, shifts ( name, start_time, end_time )")
+      .eq("employee_id", ctx.employeeId)
+      .eq("tenant_id", claims.tenant_id)
+      .gte("date", today)
+      .order("date")
+      .limit(1)
+      .maybeSingle();
+
+    if (upcoming) {
+      const shift = upcoming.shifts as unknown as {
+        name: string;
+        start_time: string;
+        end_time: string;
+      } | null;
+      nextShift = {
+        date: upcoming.date,
+        shiftName: shift?.name ?? "Ca làm",
+        startTime: shift?.start_time ?? "—",
+        endTime: shift?.end_time ?? "—",
+      };
+    }
+  }
+
+  // Branch info for POS/KDS links
   let branchIsHq = false;
-  let branchName: string | null = null;
-  if (branchId) {
-    const { data } = await supabase
+  if (branchId && ctx) {
+    const { data } = await ctx.supabase
       .from("branches")
-      .select("name, branch_kind")
+      .select("branch_kind")
       .eq("id", branchId)
       .eq("tenant_id", claims.tenant_id)
       .maybeSingle();
-    branchName = data?.name ?? null;
     branchIsHq =
       data?.branch_kind === "central_warehouse" ||
       data?.branch_kind === "central_kitchen";
@@ -145,213 +108,264 @@ export default async function EmployeePage() {
   const kdsHref = branchId ? `/br/${branchId}/kds` : "/employee";
   const posDisabled = !canPos || !branchId || branchIsHq;
   const kdsDisabled = !canKds || !branchId || branchIsHq;
-  const canDashboard = canAccess(claims.user_role, "dashboard");
-  const canInventory = canAccess(claims.user_role, "inventory");
-  const canReports = canAccess(claims.user_role, "reports");
-  const canHr = canAccess(claims.user_role, "hr");
-  const canBranchSettings =
-    canAccess(claims.user_role, "branch_settings") && branchId && !branchIsHq;
-
-  const managementLinks = [
-    canBranchSettings
-      ? {
-          href: `/br/${branchId}/settings`,
-          title: "Thiết lập chi nhánh",
-          icon: <IconSettings className="size-5" />,
-        }
-      : null,
-    canDashboard
-      ? {
-          href: "/admin/dashboard",
-          title: "Quản trị",
-          icon: <IconLayoutDashboard className="size-5" />,
-        }
-      : null,
-    canInventory
-      ? {
-          href: "/inventory",
-          title: "Kho hàng",
-          icon: <IconBuildingWarehouse className="size-5" />,
-        }
-      : null,
-    canReports
-      ? {
-          href: "/admin/reports",
-          title: "Báo cáo",
-          icon: <IconChartBar className="size-5" />,
-        }
-      : null,
-    canHr
-      ? {
-          href: "/hr",
-          title: "Nhân sự & tiền lương",
-          icon: <IconBriefcase className="size-5" />,
-        }
-      : null,
-  ].filter(Boolean) as Array<{
-    href: string;
-    title: string;
-    icon: React.ReactNode;
-  }>;
 
   return (
-    <div className="space-y-6">
-      <Card className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
-        <CardContent className="space-y-5 p-5 sm:p-6">
-          <div className="grid gap-5 xl:grid-cols-2">
-            <div className="space-y-4">
-              <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                Trang chủ nhân viên
-              </span>
-              <div className="space-y-3">
-                <CardTitle className="font-heading text-3xl sm:text-4xl">
-                  Bắt đầu ca làm nhanh chóng.
-                </CardTitle>
-                <p className="max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
-                  Xem lịch, chấm công, mở POS hoặc KDS và vào các mục công việc
-                  được phân quyền cho bạn.
-                </p>
+    <div className="flex flex-col gap-5">
+      {/* Clock state — first viewport on mobile */}
+      <Card>
+        <CardContent className="flex flex-col gap-4 p-5">
+          {clockState === "working" && (
+            <>
+              <div className="flex items-center gap-3">
+                <div className="flex size-12 items-center justify-center rounded-xl bg-info/12 text-info">
+                  <IconClock className="size-6" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Đang làm việc</p>
+                  {clockBranchName && (
+                    <p className="text-xs text-muted-foreground">
+                      {clockBranchName}
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="info">
-                  {branchName ?? "Chưa gắn chi nhánh"}
-                </Badge>
-                <Badge variant={branchIsHq ? "warning" : "success"}>
-                  {branchIsHq ? "Đang ở trụ sở" : "Chi nhánh vận hành"}
-                </Badge>
-                <Badge variant="outline">
-                  {ROLE_LABEL_VI[claims.user_role]}
-                </Badge>
+              <div className="flex gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Vào </span>
+                  <span className="font-mono font-medium">
+                    {checkInTime ? formatTimeVN(checkInTime) : "—"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Ra </span>
+                  <span className="font-mono font-medium">—</span>
+                </div>
               </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-              <Card className="rounded-lg border bg-muted/30 text-card-foreground">
-                <CardContent className="space-y-1.5 p-5">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Vai trò
+              <Button asChild className="w-full">
+                <Link href="/employee/clock">
+                  <IconDoorEnter data-icon="inline-start" />
+                  Chấm công ra
+                </Link>
+              </Button>
+            </>
+          )}
+
+          {clockState === "done" && (
+            <>
+              <div className="flex items-center gap-3">
+                <div className="flex size-12 items-center justify-center rounded-xl bg-success/12 text-success">
+                  <IconClock className="size-6" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">
+                    Đã hoàn thành hôm nay
                   </p>
-                  <p className="font-heading text-2xl font-semibold text-foreground">
-                    {ROLE_LABEL_VI[claims.user_role]}
+                  {clockBranchName && (
+                    <p className="text-xs text-muted-foreground">
+                      {clockBranchName}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Vào </span>
+                  <span className="font-mono font-medium">
+                    {checkInTime ? formatTimeVN(checkInTime) : "—"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Ra </span>
+                  <span className="font-mono font-medium">
+                    {checkOutTime ? formatTimeVN(checkOutTime) : "—"}
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
+
+          {clockState === "not_started" && (
+            <>
+              <div className="flex items-center gap-3">
+                <div className="flex size-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                  <IconDoorEnter className="size-6" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">Chưa chấm công</p>
+                  <p className="text-xs text-muted-foreground">
+                    Bắt đầu ca làm của bạn
                   </p>
-                </CardContent>
-              </Card>
-              <Card className="rounded-lg border bg-muted/30 text-card-foreground">
-                <CardContent className="space-y-1.5 p-5">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Ca làm
-                  </p>
-                  <p className="text-lg font-semibold text-foreground">
-                    Sẵn sàng vào ca
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="rounded-lg border bg-muted/30 text-card-foreground">
-                <CardContent className="space-y-1.5 p-5">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                    Vị trí
-                  </p>
-                  <p className="text-lg font-semibold text-foreground">
-                    {branchIsHq ? "Trụ sở" : "Chi nhánh"}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+                </div>
+              </div>
+              <Button asChild className="w-full">
+                <Link href="/employee/clock">
+                  <IconDoorEnter data-icon="inline-start" />
+                  Chấm công vào
+                </Link>
+              </Button>
+            </>
+          )}
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
-          <CardHeader>
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Việc trong ngày
-            </p>
-            <CardTitle className="mt-2 font-heading text-2xl">
-              Bắt đầu ca
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <ActionLink
-              href="/employee/clock"
-              title="Chấm công"
-              icon={<IconDoorEnter className="size-5" />}
-              badge="Hôm nay"
-            />
-            <ActionLink
+      {/* Next shift summary */}
+      {nextShift && (
+        <Card>
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <IconCalendarEvent className="size-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">
+                {nextShift.shiftName}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {nextShift.startTime} – {nextShift.endTime}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {nextShift.date === getTodayVN() ? "Hôm nay" : nextShift.date}
+              </p>
+            </div>
+            <Button asChild variant="ghost" size="icon">
+              <Link href="/employee/schedule">
+                <IconArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Self-service links */}
+      <ItemGroup>
+        <Item variant="outline" className="items-center">
+          <Button
+            asChild
+            variant="ghost"
+            className="group h-auto w-full justify-start rounded-xl p-0"
+          >
+            <Link
               href="/employee/schedule"
-              title="Lịch ca"
-              icon={<IconCalendarEvent className="size-5" />}
-            />
-            <ActionLink
+              className="flex w-full items-center gap-4 px-4 py-3"
+            >
+              <ItemMedia variant="icon">
+                <IconCalendarEvent />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>Lịch ca</ItemTitle>
+              </ItemContent>
+              <IconArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </Button>
+        </Item>
+
+        <Item variant="outline" className="items-center">
+          <Button
+            asChild
+            variant="ghost"
+            className="group h-auto w-full justify-start rounded-xl p-0"
+          >
+            <Link
+              href="/employee/attendance"
+              className="flex w-full items-center gap-4 px-4 py-3"
+            >
+              <ItemMedia variant="icon">
+                <IconClock />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>Lịch sử chấm công</ItemTitle>
+              </ItemContent>
+              <IconArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </Button>
+        </Item>
+
+        <Item variant="outline" className="items-center">
+          <Button
+            asChild
+            variant="ghost"
+            className="group h-auto w-full justify-start rounded-xl p-0"
+          >
+            <Link
               href="/employee/payslip"
-              title="Phiếu lương"
-              icon={<IconCreditCard className="size-5" />}
-            />
-            <ActionLink
+              className="flex w-full items-center gap-4 px-4 py-3"
+            >
+              <ItemMedia variant="icon">
+                <IconCreditCard />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>Phiếu lương</ItemTitle>
+              </ItemContent>
+              <IconArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </Button>
+        </Item>
+
+        <Item variant="outline" className="items-center">
+          <Button
+            asChild
+            variant="ghost"
+            className="group h-auto w-full justify-start rounded-xl p-0"
+          >
+            <Link
               href="/employee/profile"
-              title="Cá nhân"
-              icon={<IconUserCircle className="size-5" />}
-            />
-          </CardContent>
-        </Card>
+              className="flex w-full items-center gap-4 px-4 py-3"
+            >
+              <ItemMedia variant="icon">
+                <IconUserCircle />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>Cá nhân</ItemTitle>
+              </ItemContent>
+              <IconArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </Button>
+        </Item>
+      </ItemGroup>
 
-        <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
-          <CardHeader>
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Không gian làm việc
-            </p>
-            <CardTitle className="mt-2 font-heading text-2xl">
-              Theo vai trò hiện tại
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <ActionLink
-              href={posHref}
-              title="POS"
-              description={
-                posDisabled ? "Không dùng tại vai trò hoặc chi nhánh này" : undefined
-              }
-              icon={<IconDeviceDesktop className="size-5" />}
-              badge={posDisabled ? undefined : "Vận hành"}
+      {/* POS/KDS handoff links — compact secondary placement */}
+      {(canPos || canKds) && (
+        <div className="flex gap-2">
+          {canPos && (
+            <Button
+              asChild
+              variant={posDisabled ? "outline" : "secondary"}
+              className="flex-1"
               disabled={posDisabled}
-            />
-            <ActionLink
-              href={kdsHref}
-              title="KDS"
-              description={
-                kdsDisabled ? "Không dùng tại vai trò hoặc chi nhánh này" : undefined
-              }
-              icon={<IconChefHat className="size-5" />}
-              badge={kdsDisabled ? undefined : "Bếp"}
+            >
+              <Link href={posHref}>
+                <IconDeviceDesktop data-icon="inline-start" />
+                POS
+              </Link>
+            </Button>
+          )}
+          {canKds && (
+            <Button
+              asChild
+              variant={kdsDisabled ? "outline" : "secondary"}
+              className="flex-1"
               disabled={kdsDisabled}
-            />
+            >
+              <Link href={kdsHref}>
+                <IconChefHat data-icon="inline-start" />
+                KDS
+              </Link>
+            </Button>
+          )}
+        </div>
+      )}
 
-            {managementLinks.map((link) => (
-              <ActionLink
-                key={link.href}
-                href={link.href}
-                title={link.title}
-                icon={link.icon}
-                badge="Quản lý"
-              />
-            ))}
+      {!branchId && (canPos || canKds) && (
+        <p className="text-xs text-muted-foreground">
+          Chưa gắn chi nhánh — không thể mở POS/KDS. Liên hệ quản lý.
+        </p>
+      )}
+      {branchId && branchIsHq && (canPos || canKds) && (
+        <p className="text-xs text-muted-foreground">
+          Trụ sở không dùng POS/KDS.
+        </p>
+      )}
 
-            {!branchId && (canPos || canKds) && (
-              <ActionNotice
-                title="Thông tin"
-                description="Chưa gắn chi nhánh. Liên hệ quản lý."
-              />
-            )}
-            {branchId && branchIsHq && (canPos || canKds) && (
-              <ActionNotice
-                title="Thông tin"
-                description="Trụ sở không dùng POS/KDS."
-              />
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
+      {/* Logout */}
       <form
         action="/api/auth/signout"
         method="post"

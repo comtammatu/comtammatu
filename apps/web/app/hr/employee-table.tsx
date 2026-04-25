@@ -1,6 +1,6 @@
 "use client";
 
-import { IconUsers } from "@tabler/icons-react";
+import { Users as IconUsers } from "lucide-react";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {

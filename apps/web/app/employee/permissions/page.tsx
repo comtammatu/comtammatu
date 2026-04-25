@@ -1,4 +1,4 @@
-import { IconShieldCheck } from "@tabler/icons-react";
+import { ShieldCheck as IconShieldCheck } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Card,

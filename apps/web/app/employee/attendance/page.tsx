@@ -1,4 +1,4 @@
-import { loadAuthState } from "@/_lib/auth";
+import { getEmployeeContext } from "../_lib/employee-context";
 import {
   Card,
   CardContent,
@@ -45,17 +45,9 @@ const STATUS_VARIANTS: Record<string, BadgeProps["variant"]> = {
 };
 
 export default async function EmployeeAttendancePage() {
-  const { supabase, session, claims } = await loadAuthState();
+  const ctx = await getEmployeeContext();
 
-  // Find employee
-  const { data: employee } = await supabase
-    .from("employees")
-    .select("id")
-    .eq("profile_id", session.user.id)
-    .eq("tenant_id", claims.tenant_id)
-    .maybeSingle();
-
-  if (!employee) {
+  if (!ctx) {
     return (
       <Empty>
         <EmptyHeader>
@@ -69,6 +61,8 @@ export default async function EmployeeAttendancePage() {
     );
   }
 
+  const { supabase, claims, employeeId } = ctx;
+
   // Get last 30 days attendance
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
     .toISOString()
@@ -77,13 +71,12 @@ export default async function EmployeeAttendancePage() {
   const { data: records } = await supabase
     .from("attendance_records")
     .select("id, date, check_in, check_out, status, note, shifts ( name )")
-    .eq("employee_id", employee.id)
+    .eq("employee_id", employeeId)
     .eq("tenant_id", claims.tenant_id)
     .gte("date", thirtyDaysAgo)
     .order("date", { ascending: false });
 
-  const attendance = (records ?? []) as AttendanceRow[];
-
+  const attendance = (records ?? []) as unknown as AttendanceRow[];
   // Summary
   const present = attendance.filter(
     (r) => r.status === "present" || r.status === "late",
@@ -140,7 +133,7 @@ export default async function EmployeeAttendancePage() {
                     <ItemContent>
                       <ItemTitle className="font-mono">{r.date}</ItemTitle>
                       <ItemDescription>
-                        {r.shifts?.name ?? "Không có ca"}
+                        {r.shifts?.[0]?.name ?? "Không có ca"}
                       </ItemDescription>
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
@@ -202,7 +195,7 @@ export default async function EmployeeAttendancePage() {
                           {r.date}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {r.shifts?.name ?? "—"}
+                          {r.shifts?.[0]?.name ?? "—"}
                         </TableCell>
                         <TableCell className="font-mono text-sm">
                           {r.check_in
@@ -250,5 +243,5 @@ interface AttendanceRow {
   check_out: string | null;
   status: string;
   note: string | null;
-  shifts: { name: string } | null;
+  shifts: { name: string }[] | null;
 }

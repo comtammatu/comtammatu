@@ -23,7 +23,7 @@ import { ShiftAssignmentsTable } from "./shift-assignments-table";
 import type { BranchOption, EmployeeRow, ShiftRow } from "./page";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Button } from "@comtammatu/ui/components/button";
-import { IconUserPlus } from "@tabler/icons-react";
+import { UserPlus as IconUserPlus } from "lucide-react";
 
 interface HrClientProps {
   employees: EmployeeRow[];

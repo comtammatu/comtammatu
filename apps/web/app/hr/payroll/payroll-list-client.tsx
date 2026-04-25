@@ -14,7 +14,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { IconPlus } from "@tabler/icons-react";
+import { Plus as IconPlus } from "lucide-react";
 import { createPayrollPeriod, fetchPayrollPeriods } from "../payroll-actions";
 import type { PayrollPeriodRow } from "./page";
 

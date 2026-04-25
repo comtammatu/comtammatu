@@ -21,22 +21,30 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
-import {
-  IconCalendarEvent,
-  IconChevronLeft,
-  IconChevronRight,
-  IconRefresh,
-} from "@tabler/icons-react";
+import { CalendarDays as IconCalendarEvent, ChevronLeft as IconChevronLeft, ChevronRight as IconChevronRight, RefreshCw as IconRefresh } from "lucide-react";
+import { AppBoneyardSkeleton } from "../../_components/boneyard-skeleton";
 import { fetchMySchedule, type ScheduleShift } from "./actions";
 
+const TEXT = {
+  currentWeek: "Tu\u1ea7n n\u00e0y",
+  emptyDescription: "Li\u00ean h\u1ec7 qu\u1ea3n l\u00fd x\u1ebfp ca.",
+  emptyTitle: "Ch\u01b0a c\u00f3 l\u1ecbch ca tu\u1ea7n n\u00e0y",
+  loadError: "Kh\u00f4ng t\u1ea3i \u0111\u01b0\u1ee3c l\u1ecbch ca.",
+  nextWeek: "Tu\u1ea7n sau",
+  prevWeek: "Tu\u1ea7n tr\u01b0\u1edbc",
+  rest: "Ngh\u1ec9",
+  retry: "Th\u1eed l\u1ea1i",
+  today: "H\u00f4m nay",
+} as const;
+
 const DAY_NAMES = [
-  "Chủ Nhật",
-  "Thứ Hai",
-  "Thứ Ba",
-  "Thứ Tư",
-  "Thứ Năm",
-  "Thứ Sáu",
-  "Thứ Bảy",
+  "Ch\u1ee7 Nh\u1eadt",
+  "Th\u1ee9 Hai",
+  "Th\u1ee9 Ba",
+  "Th\u1ee9 T\u01b0",
+  "Th\u1ee9 N\u0103m",
+  "Th\u1ee9 S\u00e1u",
+  "Th\u1ee9 B\u1ea3y",
 ] as const;
 
 function formatDate(dateStr: string): string {
@@ -55,7 +63,6 @@ function getDayName(dateStr: string): string {
 function getMonday(date: Date): Date {
   const d = new Date(date);
   const day = d.getDay();
-  // getDay() returns 0 for Sunday, 1 for Monday...
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   return d;
@@ -79,9 +86,127 @@ function generateWeekDates(mondayStr: string): string[] {
   return dates;
 }
 
+const SCHEDULE_SKELETON_FIXTURE_DATES = generateWeekDates("2026-01-05");
+const SCHEDULE_SKELETON_TODAY = "2026-01-06";
+const SCHEDULE_SKELETON_FIXTURE_SHIFTS: ScheduleShift[] = [
+  {
+    date: "2026-01-05",
+    shift_name: "Ca s\u00e1ng",
+    start_time: "07:00",
+    end_time: "14:00",
+  },
+  {
+    date: "2026-01-06",
+    shift_name: "Ca chi\u1ec1u",
+    start_time: "14:00",
+    end_time: "22:00",
+  },
+  {
+    date: "2026-01-08",
+    shift_name: "Ca s\u00e1ng",
+    start_time: "07:00",
+    end_time: "14:00",
+  },
+  {
+    date: "2026-01-10",
+    shift_name: "Ca t\u1ed1i",
+    start_time: "16:00",
+    end_time: "23:00",
+  },
+];
+
 interface ScheduleClientProps {
   initialShifts: ScheduleShift[];
   initialWeekStart: string;
+}
+
+function ScheduleSkeletonFallback() {
+  return (
+    <div className="flex flex-col gap-3">
+      {Array.from({ length: 7 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 rounded-xl border p-4">
+          <Skeleton className="size-10 rounded-lg" />
+          <div className="flex flex-1 flex-col gap-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ScheduleWeekList({
+  shifts,
+  todayStr,
+  weekDates,
+}: {
+  shifts: ScheduleShift[];
+  todayStr: string;
+  weekDates: string[];
+}) {
+  const shiftsByDate = new Map<string, ScheduleShift>();
+  for (const shift of shifts) {
+    shiftsByDate.set(shift.date, shift);
+  }
+
+  const hasSchedule =
+    shifts.length > 0 || weekDates.some((d) => shiftsByDate.has(d));
+
+  return (
+    <div className="flex flex-col gap-3">
+      {!hasSchedule && (
+        <Empty>
+          <EmptyMedia variant="icon">
+            <IconCalendarEvent />
+          </EmptyMedia>
+          <EmptyHeader>
+            <EmptyTitle>{TEXT.emptyTitle}</EmptyTitle>
+            <EmptyDescription>{TEXT.emptyDescription}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      )}
+
+      <ItemGroup>
+        {(hasSchedule ? weekDates : []).map((dateStr) => {
+          const shift = shiftsByDate.get(dateStr);
+          const isToday = dateStr === todayStr;
+
+          return (
+            <Item
+              key={dateStr}
+              variant="outline"
+              className={cn(
+                "items-center",
+                isToday && "border-primary/50 bg-primary/5",
+              )}
+            >
+              <ItemContent>
+                <ItemTitle className={cn(isToday && "text-primary")}>
+                  {getDayName(dateStr)}
+                  {isToday ? <Badge variant="info">{TEXT.today}</Badge> : null}
+                </ItemTitle>
+                <ItemDescription>{formatDate(dateStr)}</ItemDescription>
+              </ItemContent>
+
+              <ItemActions className="text-right">
+                {shift ? (
+                  <div>
+                    <p className="text-sm font-medium">{shift.shift_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {shift.start_time} {"\u2013"} {shift.end_time}
+                    </p>
+                  </div>
+                ) : (
+                  <Badge variant="outline">{TEXT.rest}</Badge>
+                )}
+              </ItemActions>
+            </Item>
+          );
+        })}
+      </ItemGroup>
+    </div>
+  );
 }
 
 export function ScheduleClient({
@@ -106,7 +231,7 @@ export function ScheduleClient({
       if (result.success) {
         setShifts(result.data ?? []);
       } else {
-        setError(result.error ?? "Không tải được lịch ca.");
+        setError(result.error ?? TEXT.loadError);
         setShifts([]);
       }
     });
@@ -128,28 +253,20 @@ export function ScheduleClient({
     loadWeek(currentMonday);
   }
 
-  // Build shift lookup by date
-  const shiftsByDate = new Map<string, ScheduleShift>();
-  for (const shift of shifts) {
-    shiftsByDate.set(shift.date, shift);
-  }
-
-  // Week range label
   const weekEndStr = weekDates[6];
   const weekLabel = weekEndStr
-    ? `${formatDate(weekStart)} – ${formatDate(weekEndStr)}`
+    ? `${formatDate(weekStart)} \u2013 ${formatDate(weekEndStr)}`
     : formatDate(weekStart);
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Week navigation */}
       <div className="flex items-center justify-between gap-2">
         <Button
           variant="outline"
           size="icon"
           onClick={goToPrevWeek}
           disabled={isPending}
-          aria-label="Tuần trước"
+          aria-label={TEXT.prevWeek}
         >
           <IconChevronLeft />
         </Button>
@@ -164,7 +281,7 @@ export function ScheduleClient({
               onClick={goToCurrentWeek}
               disabled={isPending}
             >
-              Tuần này
+              {TEXT.currentWeek}
             </Button>
           )}
         </div>
@@ -174,17 +291,16 @@ export function ScheduleClient({
           size="icon"
           onClick={goToNextWeek}
           disabled={isPending}
-          aria-label="Tuần sau"
+          aria-label={TEXT.nextWeek}
         >
           <IconChevronRight />
         </Button>
       </div>
 
-      {/* Error state */}
       {error && (
         <Empty className="border border-destructive/30 bg-destructive/5">
           <EmptyHeader>
-            <EmptyTitle>Không tải được lịch ca</EmptyTitle>
+            <EmptyTitle>{TEXT.loadError}</EmptyTitle>
             <EmptyDescription>{error}</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
@@ -195,90 +311,32 @@ export function ScheduleClient({
               disabled={isPending}
             >
               <IconRefresh data-icon="inline-start" />
-              Thử lại
+              {TEXT.retry}
             </Button>
           </EmptyContent>
         </Empty>
       )}
 
-      {/* Loading skeleton */}
-      {isPending && (
-        <div className="flex flex-col gap-3">
-          {Array.from({ length: 7 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-3 rounded-xl border p-4"
-            >
-              <Skeleton className="size-10 rounded-lg" />
-              <div className="flex flex-1 flex-col gap-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-3 w-32" />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Day list */}
-      {!isPending && !error && (
-        <div className="flex flex-col gap-3">
-          {shifts.length === 0 &&
-            weekDates.every((d) => !shiftsByDate.has(d)) && (
-              <Empty>
-                <EmptyMedia variant="icon">
-                  <IconCalendarEvent />
-                </EmptyMedia>
-                <EmptyHeader>
-                  <EmptyTitle>Chưa có lịch ca tuần này</EmptyTitle>
-                  <EmptyDescription>Liên hệ quản lý xếp ca.</EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            )}
-
-          <ItemGroup>
-            {(shifts.length > 0 || weekDates.some((d) => shiftsByDate.has(d))
-              ? weekDates
-              : []
-            ).map((dateStr) => {
-              const shift = shiftsByDate.get(dateStr);
-              const isToday = dateStr === todayStr;
-
-              return (
-                <Item
-                  key={dateStr}
-                  variant="outline"
-                  className={cn(
-                    "items-center",
-                    isToday && "border-primary/50 bg-primary/5",
-                  )}
-                >
-                  <ItemContent>
-                    <ItemTitle className={cn(isToday && "text-primary")}>
-                      {getDayName(dateStr)}
-                      {isToday ? <Badge variant="info">Hôm nay</Badge> : null}
-                    </ItemTitle>
-                    <ItemDescription>{formatDate(dateStr)}</ItemDescription>
-                  </ItemContent>
-
-                  <ItemActions className="text-right">
-                    {shift ? (
-                      <div>
-                        <p className="text-sm font-medium">
-                          {shift.shift_name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {shift.start_time} – {shift.end_time}
-                        </p>
-                      </div>
-                    ) : (
-                      <Badge variant="outline">Nghỉ</Badge>
-                    )}
-                  </ItemActions>
-                </Item>
-              );
-            })}
-          </ItemGroup>
-        </div>
+      {!error && (
+        <AppBoneyardSkeleton
+          name="employee-schedule-week"
+          loading={isPending}
+          fixture={
+            <ScheduleWeekList
+              shifts={SCHEDULE_SKELETON_FIXTURE_SHIFTS}
+              todayStr={SCHEDULE_SKELETON_TODAY}
+              weekDates={SCHEDULE_SKELETON_FIXTURE_DATES}
+            />
+          }
+          fallback={<ScheduleSkeletonFallback />}
+          snapshotConfig={{ excludeSelectors: ["svg"] }}
+        >
+          <ScheduleWeekList
+            shifts={shifts}
+            todayStr={todayStr}
+            weekDates={weekDates}
+          />
+        </AppBoneyardSkeleton>
       )}
     </div>
   );

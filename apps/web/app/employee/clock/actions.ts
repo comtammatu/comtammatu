@@ -330,7 +330,7 @@ export async function getAttendanceStatus(): Promise<
     };
   }
 
-  const branchData = record.branches as { name: string } | null;
+  const branchData = record.branches as unknown as { name: string } | null;
 
   return {
     success: true,

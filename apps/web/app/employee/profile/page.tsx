@@ -1,11 +1,4 @@
-import {
-  IconRosetteDiscountCheck,
-  IconBuilding,
-  IconCalendarEvent,
-  IconLogout,
-  IconUser,
-  IconShieldCheck,
-} from "@tabler/icons-react";
+import { BadgeCheck as IconRosetteDiscountCheck, Building as IconBuilding, CalendarDays as IconCalendarEvent, LogOut as IconLogout, User as IconUser, ShieldCheck as IconShieldCheck } from "lucide-react";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -24,36 +17,28 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { loadAuthState } from "@/_lib/auth";
+import { getEmployeeContext } from "../_lib/employee-context";
 import { getMyTrustScore } from "@/inventory/trust-actions";
 import { TrustScoreBadge } from "@/inventory/_components/trust-score-badge";
 
 export default async function ProfilePage() {
-  const { supabase, session, claims } = await loadAuthState();
+  const { session, claims } = await loadAuthState();
+  const ctx = await getEmployeeContext();
 
   const roleLabel = ROLE_LABEL_VI[claims.user_role] ?? claims.user_role;
 
-  const { data: employee } = await supabase
-    .from("employees")
-    .select("employee_code, start_date")
-    .eq("profile_id", session.user.id)
-    .eq("tenant_id", claims.tenant_id)
-    .maybeSingle();
+  const { data: employee } = ctx
+    ? await ctx.supabase
+        .from("employees")
+        .select("employee_code, start_date")
+        .eq("id", ctx.employeeId)
+        .eq("tenant_id", claims.tenant_id)
+        .maybeSingle()
+    : { data: null };
 
-  let branchName: string | null = null;
-  if (claims.branch_id) {
-    const { data } = await supabase
-      .from("branches")
-      .select("name")
-      .eq("id", claims.branch_id)
-      .eq("tenant_id", claims.tenant_id)
-      .maybeSingle();
-    branchName = data?.name ?? null;
-  }
-
-  // Self-view trust score (S15-min). Only meaningful for branch-scoped users;
-  // tenant-level roles have no per-branch trust row.
-  const trustRes = claims.branch_id
-    ? await getMyTrustScore(claims.branch_id)
+  // Self-view trust score. Only meaningful for branch-scoped users.
+  const trustRes = ctx?.branchId
+    ? await getMyTrustScore(ctx.branchId)
     : null;
   const trust = trustRes?.success ? trustRes.data : null;
 
@@ -97,14 +82,14 @@ export default async function ProfilePage() {
         </CardHeader>
         <CardContent>
           <ItemGroup>
-            {branchName ? (
+            {ctx?.branchName ? (
               <Item variant="outline">
                 <ItemMedia variant="icon">
                   <IconBuilding />
                 </ItemMedia>
                 <ItemContent>
                   <ItemTitle>Chi nhánh</ItemTitle>
-                  <p className="text-sm font-medium">{branchName}</p>
+                  <p className="text-sm font-medium">{ctx.branchName}</p>
                 </ItemContent>
               </Item>
             ) : null}

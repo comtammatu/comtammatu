@@ -73,7 +73,7 @@ export async function fetchMySchedule(
   }
 
   const shifts: ScheduleShift[] = (data ?? []).map((row) => {
-    const shift = row.shifts as {
+    const shift = row.shifts as unknown as {
       name: string;
       start_time: string;
       end_time: string;

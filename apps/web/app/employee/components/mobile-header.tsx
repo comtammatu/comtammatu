@@ -1,22 +1,14 @@
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { getEmployeeContext } from "../_lib/employee-context";
 import { loadAuthState } from "@/_lib/auth";
 
 export async function MobileHeader() {
-  const { supabase, claims } = await loadAuthState();
+  const { claims } = await loadAuthState();
+  const ctx = await getEmployeeContext();
 
   const roleLabel = ROLE_LABEL_VI[claims.user_role] ?? claims.user_role;
-
-  let branchName: string | null = null;
-  if (claims.branch_id) {
-    const { data } = await supabase
-      .from("branches")
-      .select("name")
-      .eq("id", claims.branch_id)
-      .eq("tenant_id", claims.tenant_id)
-      .maybeSingle();
-    branchName = data?.name ?? null;
-  }
+  const branchName = ctx?.branchName ?? null;
 
   return (
     <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">

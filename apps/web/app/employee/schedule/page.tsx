@@ -1,4 +1,4 @@
-import { loadAuthState } from "@/_lib/auth";
+import { getEmployeeContext } from "../_lib/employee-context";
 import { ScheduleClient } from "./schedule-client";
 import type { ScheduleShift } from "./actions";
 import {
@@ -13,30 +13,12 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
-
-function getMonday(date: Date): string {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dayStr = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${dayStr}`;
-}
+import { getMondayOfWeek, toDateStr } from "../_lib/vn-business-date";
 
 export default async function SchedulePage() {
-  const { supabase, session, claims } = await loadAuthState();
+  const ctx = await getEmployeeContext();
 
-  // Find employee record for current user
-  const { data: employee } = await supabase
-    .from("employees")
-    .select("id")
-    .eq("profile_id", session.user.id)
-    .eq("tenant_id", claims.tenant_id)
-    .maybeSingle();
-
-  if (!employee) {
+  if (!ctx) {
     return (
       <Empty>
         <EmptyHeader>
@@ -49,26 +31,25 @@ export default async function SchedulePage() {
     );
   }
 
+  const { supabase, claims, employeeId } = ctx;
+
   // Fetch current week's schedule
-  const weekStart = getMonday(new Date());
+  const weekStart = toDateStr(getMondayOfWeek(new Date()));
   const weekEnd = new Date(weekStart + "T00:00:00");
   weekEnd.setDate(weekEnd.getDate() + 6);
-  const wy = weekEnd.getFullYear();
-  const wm = String(weekEnd.getMonth() + 1).padStart(2, "0");
-  const wd = String(weekEnd.getDate()).padStart(2, "0");
-  const weekEndStr = `${wy}-${wm}-${wd}`;
+  const weekEndStr = toDateStr(weekEnd);
 
   const { data } = await supabase
     .from("shift_assignments")
     .select("date, shifts ( name, start_time, end_time )")
-    .eq("employee_id", employee.id)
+    .eq("employee_id", employeeId)
     .eq("tenant_id", claims.tenant_id)
     .gte("date", weekStart)
     .lte("date", weekEndStr)
     .order("date");
 
   const initialShifts: ScheduleShift[] = (data ?? []).map((row) => {
-    const shift = row.shifts as {
+    const shift = row.shifts as unknown as {
       name: string;
       start_time: string;
       end_time: string;

@@ -1,14 +1,7 @@
 "use client";
 
 import { useState, useCallback, useTransition, useRef } from "react";
-import {
-  IconMapPin,
-  IconCircleCheck,
-  IconCircleX,
-  IconClock,
-  IconKeyboard,
-  IconCamera,
-} from "@tabler/icons-react";
+import { MapPin as IconMapPin, CircleCheck as IconCircleCheck, CircleX as IconCircleX, Clock as IconClock, Keyboard as IconKeyboard, Camera as IconCamera } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";

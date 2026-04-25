@@ -3,16 +3,7 @@
 import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  IconArrowLeft,
-  IconChartBar,
-  IconBriefcase,
-  IconCalendarEvent,
-  IconClipboardList,
-  IconLogout,
-  IconUsers,
-  IconWallet,
-} from "@tabler/icons-react";
+import { ArrowLeft as IconArrowLeft, ChartBar as IconChartBar, Briefcase as IconBriefcase, CalendarDays as IconCalendarEvent, ClipboardList as IconClipboardList, LogOut as IconLogout, Users as IconUsers, Wallet as IconWallet } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";

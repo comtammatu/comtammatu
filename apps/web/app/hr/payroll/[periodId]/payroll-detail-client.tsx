@@ -12,7 +12,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { IconCalculator, IconCircleCheck, IconCreditCard } from "@tabler/icons-react";
+import { Calculator as IconCalculator, CircleCheck as IconCircleCheck, CreditCard as IconCreditCard } from "lucide-react";
 import {
   calculatePayroll,
   approvePayroll,

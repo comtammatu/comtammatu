@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconCalendarEvent, IconClock, IconHome, IconUser } from "@tabler/icons-react";
+import { CalendarDays as IconCalendarEvent, Clock as IconClock, Home as IconHome, User as IconUser } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 
 const NAV_ITEMS = [

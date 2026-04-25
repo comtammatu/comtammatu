@@ -1,4 +1,4 @@
-import { loadAuthState } from "@/_lib/auth";
+import { getEmployeeContext } from "../_lib/employee-context";
 import { ClockClient } from "./clock-client";
 import {
   Empty,
@@ -6,19 +6,12 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
+import { getTodayVN } from "../_lib/vn-business-date";
 
 export default async function ClockPage() {
-  const { supabase, session, claims } = await loadAuthState();
+  const ctx = await getEmployeeContext();
 
-  // Find employee record
-  const { data: employee } = await supabase
-    .from("employees")
-    .select("id")
-    .eq("profile_id", session.user.id)
-    .eq("tenant_id", claims.tenant_id)
-    .maybeSingle();
-
-  if (!employee) {
+  if (!ctx) {
     return (
       <Empty>
         <EmptyHeader>
@@ -31,14 +24,14 @@ export default async function ClockPage() {
     );
   }
 
+  const { supabase, claims, employeeId } = ctx;
+
   // Get today's attendance status
-  const today = new Date().toLocaleDateString("sv-SE", {
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
+  const today = getTodayVN();
   const { data: record } = await supabase
     .from("attendance_records")
     .select("check_in, check_out, branch_id, branches ( name )")
-    .eq("employee_id", employee.id)
+    .eq("employee_id", employeeId)
     .eq("tenant_id", claims.tenant_id)
     .eq("date", today)
     .maybeSingle();
@@ -60,7 +53,7 @@ export default async function ClockPage() {
       lng: Number(b.longitude),
     }));
 
-  const branchData = record?.branches as { name: string } | null;
+  const branchData = record?.branches as unknown as { name: string } | null | undefined;
 
   return (
     <ClockClient

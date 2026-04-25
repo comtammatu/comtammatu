@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { IconDoorEnter } from "@tabler/icons-react";
+import { LogIn as IconDoorEnter } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 
