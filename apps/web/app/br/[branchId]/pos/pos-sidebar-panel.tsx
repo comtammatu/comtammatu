@@ -75,6 +75,7 @@ interface PosSidebarContentProps {
     onCancel: () => void;
     onRemoveItem: (key: string) => void;
   };
+  onClosePane?: () => void;
   onSubmitOrder: () => void;
   onOrderTypeChange: (type: OrderType) => void;
   onCustomizeItem: (item: CartItem) => void;
@@ -88,6 +89,7 @@ function PosSidebarContentComponent({
   canSubmit,
   isPending,
   appendDraft,
+  onClosePane,
   onSubmitOrder,
   onOrderTypeChange,
   onCustomizeItem,
@@ -103,6 +105,7 @@ function PosSidebarContentComponent({
         isSubmitting={appendDraft.isSubmitting}
         onSubmit={appendDraft.onSubmit}
         onCancel={appendDraft.onCancel}
+        onClosePane={onClosePane}
         onRemoveItem={appendDraft.onRemoveItem}
       />
     );
@@ -110,7 +113,11 @@ function PosSidebarContentComponent({
 
   if (showOrders) {
     return (
-      <OrderListPane onViewBill={onViewBill} onViewDetail={onViewDetail} />
+      <OrderListPane
+        onViewBill={onViewBill}
+        onViewDetail={onViewDetail}
+        onClosePane={onClosePane}
+      />
     );
   }
 
@@ -121,6 +128,7 @@ function PosSidebarContentComponent({
       onSubmitOrder={onSubmitOrder}
       onOrderTypeChange={onOrderTypeChange}
       onCustomizeItem={onCustomizeItem}
+      onClosePane={onClosePane}
       onReturnToTables={onReturnToTables}
     />
   );

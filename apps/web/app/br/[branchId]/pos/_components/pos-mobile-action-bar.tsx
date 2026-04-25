@@ -93,6 +93,19 @@ function PosMobileActionBarComponent({
             <IconLayoutGrid />
           </Button>
         )}
+      {menuContextReady && ordersCount > 0 && (
+        <Button
+          type="button"
+          variant="secondary"
+          className="min-h-14 min-w-14 bg-background px-3 text-base font-bold shadow-lg"
+          onClick={onOpenOrdersDrawer}
+          aria-label="Mở đơn trong ca"
+        >
+          <IconReceipt />
+          <span className="sr-only">Đơn trong ca</span>
+          <span className="tabular-nums">{ordersCount}</span>
+        </Button>
+      )}
       {menuContextReady && (
         <Button
           type="button"

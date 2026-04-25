@@ -44,9 +44,6 @@ test.describe("Cash payment -> POS close", () => {
         .getByTestId(`pos-order-bill-${String(testOrder.orderId)}`)
         .click();
 
-      // New flow: dialog opens at confirm-served step; advance to payment.
-      await page.getByTestId("bill-confirm-served").click();
-
       const cashButton = page.getByTestId("bill-pay-cash");
       await expect(cashButton).toBeVisible({ timeout: 5_000 });
       await cashButton.click();

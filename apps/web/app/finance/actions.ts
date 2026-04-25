@@ -215,6 +215,11 @@ export async function createTaxInvoice(
     .single();
 
   if (insertErr) {
+    if (insertErr.code === "23505") {
+      // UNIQUE partial idx uq_tax_invoices_active_per_order — concurrent
+      // double-click slipped past the maybeSingle() pre-check above.
+      return { success: false, error: "Đơn hàng đã có hóa đơn." };
+    }
     return { success: false, error: "Không thể tạo hóa đơn." };
   }
 
@@ -278,23 +283,11 @@ export async function cancelTaxInvoice(
 
   const cancelReason = parsed.data.reason ?? "Hủy theo yêu cầu";
 
-  if (invoice.provider_ref && invoice.provider !== "mock") {
-    ensureInvoiceProviderRegistered();
-    const invoiceProvider = getInvoiceProvider();
-    if (invoiceProvider) {
-      try {
-        await invoiceProvider.cancelInvoice(invoice.provider_ref, cancelReason);
-      } catch {
-        return {
-          success: false,
-          error: "Không thể hủy hóa đơn phía nhà cung cấp. Vui lòng thử lại.",
-        };
-      }
-    }
-  }
-
-  // Atomic transition through state machine RPC — preserves provider_data
-  // history in tax_invoice_events instead of overwriting on tax_invoices.
+  // DB transition runs FIRST so that the app's source of truth flips
+  // atomically to 'cancelled'. Provider cancel runs after — if it fails,
+  // we surface a soft warning and rely on Finance to retry the provider
+  // call asynchronously (DB is already cancelled, no asymmetric "MISA
+  // cancelled but DB issued" state).
   const { error: rpcErr } = await supabase.rpc("transition_tax_invoice_state", {
     p_tax_invoice_id: parsed.data.invoiceId,
     p_to_status: "cancelled",
@@ -312,6 +305,20 @@ export async function cancelTaxInvoice(
     return { success: false, error: "Không thể hủy hóa đơn." };
   }
 
+  let providerCancelWarning: string | null = null;
+  if (invoice.provider_ref && invoice.provider !== "mock") {
+    ensureInvoiceProviderRegistered();
+    const invoiceProvider = getInvoiceProvider();
+    if (invoiceProvider) {
+      try {
+        await invoiceProvider.cancelInvoice(invoice.provider_ref, cancelReason);
+      } catch {
+        providerCancelWarning =
+          "Hóa đơn đã hủy trong hệ thống — sẽ thử hủy lại phía nhà cung cấp.";
+      }
+    }
+  }
+
   await logAudit(supabase, {
     tenantId: claims.tenant_id,
     userId: user.id,
@@ -319,10 +326,17 @@ export async function cancelTaxInvoice(
     entityType: "tax_invoice",
     entityId: parsed.data.invoiceId,
     oldData: { status: "issued" },
-    newData: { status: "cancelled", reason: cancelReason },
+    newData: {
+      status: "cancelled",
+      reason: cancelReason,
+      provider_cancel_warning: providerCancelWarning,
+    },
   });
 
-  return { success: true };
+  return {
+    success: true,
+    data: providerCancelWarning ? { warning: providerCancelWarning } : null,
+  };
 }
 
 /* ─── Fetch Invoice Audit Trail ─── */

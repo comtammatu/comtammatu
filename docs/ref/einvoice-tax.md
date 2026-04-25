@@ -78,6 +78,56 @@ draft → signing → submitted → issued   ← trạng thái cuối (hợp l�
 | `cancelled` | Đã hủy             | Không               |
 | `replaced`  | Đã thay thế        | Không               |
 
+#### Allowed transitions (DB enforced)
+
+State machine được DB enforce qua RPC `transition_tax_invoice_state(id, to_status, payload?, note?)` (`supabase/migrations/20260425035346_tax_invoice_state_machine.sql`). Mọi UPDATE status phải đi qua RPC — không cho phép client UPDATE trực tiếp.
+
+```
+draft     → signing, cancelled
+signing   → submitted, issued, draft (retry on fail), cancelled
+submitted → issued, cancelled
+issued    → cancelled, replaced
+cancelled → (terminal)
+replaced  → (terminal)
+```
+
+RPC raise `illegal_transition` (ERRCODE 22023) khi cố gắng nhảy ngoài matrix.
+
+#### Permission split
+
+| Transition target           | Required permission   |
+| --------------------------- | --------------------- |
+| `cancelled` / `replaced`    | `settings:tenant`     |
+| Tất cả transition khác      | `orders:write`        |
+
+`cancel`/`replace` cần owner/super_manager (kèm biên bản hủy theo TT 78). Issuance flow (`draft → signing → submitted → issued`) cho phép cashier+ thực hiện.
+
+#### Idempotency
+
+UNIQUE partial index `uq_tax_invoices_active_per_order` chặn duplicate active invoice cho cùng `order_id` (`status NOT IN ('cancelled','replaced')`). Cashier double-click sẽ nhận error rõ ràng "Đơn này đã có HĐ #N", không phải raw constraint violation.
+
+#### Audit trail — `tax_invoice_events`
+
+Mỗi state transition write 1 row vào `tax_invoice_events`:
+
+```sql
+CREATE TABLE tax_invoice_events (
+  id              BIGINT PRIMARY KEY,
+  tax_invoice_id  BIGINT NOT NULL REFERENCES tax_invoices(id),
+  tenant_id       BIGINT NOT NULL REFERENCES tenants(id),
+  from_status     TEXT,
+  to_status       TEXT NOT NULL,
+  actor_id        UUID REFERENCES profiles(id),
+  payload         JSONB,                  -- state-specific data (e.g. cancel_reason, MISA receipt)
+  note            TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+- RLS: `finance:view` permission required
+- INSERT only via `transition_tax_invoice_state` RPC (no DML grants to authenticated)
+- `tax_invoices.provider_data` accumulates per-state via JSONB merge (`||`) — cancel KHÔNG ghi đè MISA payload gốc; full history ở `tax_invoice_events`
+
 ### 3.4 Database — bảng `tax_invoices`
 
 ```sql

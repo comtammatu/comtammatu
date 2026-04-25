@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useRef, useState } from "react";
 import { formatVND } from "@comtammatu/shared/format";
 import {
   AlertDialog,
@@ -46,12 +46,27 @@ import type { CartItem, OrderType } from "../types";
 import { useCart } from "../_hooks/use-cart";
 import { useActiveTable } from "../_hooks/use-active-table";
 
+const DELETE_REVEAL_WIDTH = 80;
+const SWIPE_ACTIVATION_PX = 8;
+const SWIPE_REVEAL_THRESHOLD_PX = 40;
+
+interface SwipeState {
+  key: string;
+  pointerId: number;
+  startX: number;
+  startY: number;
+  startOffset: number;
+  offset: number;
+  dragging: boolean;
+}
+
 interface CartPaneProps {
   canSubmit: boolean;
   isSubmitting: boolean;
   onSubmitOrder: () => void;
   onOrderTypeChange: (type: OrderType) => void;
   onCustomizeItem: (item: CartItem) => void;
+  onClosePane?: () => void;
   onReturnToTables?: () => void;
 }
 
@@ -61,6 +76,7 @@ function CartPaneComponent({
   onSubmitOrder,
   onOrderTypeChange,
   onCustomizeItem,
+  onClosePane,
   onReturnToTables,
 }: CartPaneProps) {
   const cart = useCart();
@@ -69,12 +85,8 @@ function CartPaneComponent({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [revealedItemKey, setRevealedItemKey] = useState<string | null>(null);
-  const [draggedItemKey, setDraggedItemKey] = useState<string | null>(null);
-  const [touchStart, setTouchStart] = useState<{
-    key: string;
-    x: number;
-    y: number;
-  } | null>(null);
+  const swipeStateRef = useRef<SwipeState | null>(null);
+  const suppressClickKeyRef = useRef<string | null>(null);
   const cartDialogOpen = confirmOpen || clearConfirmOpen;
 
   const selectedTableNumber = activeTable.table?.number;
@@ -117,6 +129,21 @@ function CartPaneComponent({
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-background">
       <div className="shrink-0 border-b border-border/60 px-3 py-2.5 sm:px-4 sm:py-4">
+        {onClosePane ? (
+          <div className="mb-2 flex items-center justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground"
+              aria-label="Đóng giỏ đơn"
+              onClick={onClosePane}
+            >
+              <IconX />
+            </Button>
+          </div>
+        ) : null}
+
         {!shouldShowOrderTypeSelector && (
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -291,7 +318,7 @@ function CartPaneComponent({
                       asChild
                       variant="outline"
                       className={cn(
-                        "relative p-3 pr-12 text-left shadow-sm hover:shadow-md sm:p-4 sm:pr-14",
+                        "relative touch-pan-y p-3 pr-12 text-left shadow-sm transition-transform duration-150 ease-out hover:shadow-md sm:p-4 sm:pr-14",
                         isDeleteRevealed && "-translate-x-20 sm:translate-x-0",
                       )}
                     >
@@ -299,41 +326,115 @@ function CartPaneComponent({
                         type="button"
                         variant="ghost"
                         className="h-auto w-full justify-start p-0 text-left whitespace-normal hover:bg-transparent"
-                        onClick={() => {
-                          if (draggedItemKey === item.key) {
-                            setDraggedItemKey(null);
+                        onClick={(event) => {
+                          if (suppressClickKeyRef.current === item.key) {
+                            suppressClickKeyRef.current = null;
+                            event.preventDefault();
+                            event.stopPropagation();
                             return;
                           }
-                          if (isDeleteRevealed) return;
+                          if (isDeleteRevealed) {
+                            setRevealedItemKey(null);
+                            return;
+                          }
                           onCustomizeItem(item);
                         }}
-                        onTouchStart={(event) => {
-                          const touch = event.touches[0];
-                          if (!touch) return;
-                          setTouchStart({
-                            key: item.key,
-                            x: touch.clientX,
-                            y: touch.clientY,
-                          });
-                        }}
-                        onTouchMove={(event) => {
-                          if (touchStart?.key !== item.key) return;
-                          const touch = event.touches[0];
-                          if (!touch) return;
-                          const deltaX = touch.clientX - touchStart.x;
-                          const deltaY = touch.clientY - touchStart.y;
-                          if (Math.abs(deltaX) < Math.abs(deltaY)) return;
-                          if (Math.abs(deltaX) > 12) {
-                            setDraggedItemKey(item.key);
-                          }
-                          if (deltaX < -32) {
-                            setRevealedItemKey(item.key);
-                          } else if (deltaX > 32) {
+                        onPointerDown={(event) => {
+                          if (event.pointerType !== "touch") return;
+                          if (
+                            revealedItemKey !== null &&
+                            revealedItemKey !== item.key
+                          ) {
                             setRevealedItemKey(null);
                           }
+                          event.currentTarget.setPointerCapture(
+                            event.pointerId,
+                          );
+                          swipeStateRef.current = {
+                            key: item.key,
+                            pointerId: event.pointerId,
+                            startX: event.clientX,
+                            startY: event.clientY,
+                            startOffset: isDeleteRevealed
+                              ? -DELETE_REVEAL_WIDTH
+                              : 0,
+                            offset: isDeleteRevealed
+                              ? -DELETE_REVEAL_WIDTH
+                              : 0,
+                            dragging: false,
+                          };
                         }}
-                        onTouchEnd={() => {
-                          setTouchStart(null);
+                        onPointerMove={(event) => {
+                          const state = swipeStateRef.current;
+                          if (
+                            state == null ||
+                            state.key !== item.key ||
+                            state.pointerId !== event.pointerId
+                          ) {
+                            return;
+                          }
+                          const deltaX = event.clientX - state.startX;
+                          const deltaY = event.clientY - state.startY;
+                          const horizontal =
+                            Math.abs(deltaX) > Math.abs(deltaY) &&
+                            Math.abs(deltaX) > SWIPE_ACTIVATION_PX;
+                          if (!horizontal && !state.dragging) return;
+
+                          event.preventDefault();
+                          event.stopPropagation();
+
+                          const nextOffset = Math.min(
+                            0,
+                            Math.max(
+                              -DELETE_REVEAL_WIDTH,
+                              state.startOffset + deltaX,
+                            ),
+                          );
+                          swipeStateRef.current = {
+                            ...state,
+                            offset: nextOffset,
+                            dragging: true,
+                          };
+                        }}
+                        onPointerUp={(event) => {
+                          const state = swipeStateRef.current;
+                          if (
+                            state == null ||
+                            state.key !== item.key ||
+                            state.pointerId !== event.pointerId
+                          ) {
+                            return;
+                          }
+
+                          if (
+                            event.currentTarget.hasPointerCapture(
+                              event.pointerId,
+                            )
+                          ) {
+                            event.currentTarget.releasePointerCapture(
+                              event.pointerId,
+                            );
+                          }
+
+                          if (state.dragging) {
+                            const shouldReveal =
+                              state.offset <= -SWIPE_REVEAL_THRESHOLD_PX;
+                            setRevealedItemKey(shouldReveal ? item.key : null);
+                            suppressClickKeyRef.current = item.key;
+                            event.preventDefault();
+                            event.stopPropagation();
+                          }
+
+                          swipeStateRef.current = null;
+                        }}
+                        onPointerCancel={(event) => {
+                          const state = swipeStateRef.current;
+                          if (
+                            state?.key === item.key &&
+                            state.pointerId === event.pointerId
+                          ) {
+                            swipeStateRef.current = null;
+                          }
                         }}
                       >
                         <div className="flex items-center justify-between gap-3">
