@@ -246,7 +246,7 @@ export function PrintJobsClient({
                     {formatTime(j.printed_at)}
                   </td>
                   <td
-                    className="max-w-[24ch] truncate px-3 py-2 text-xs text-destructive"
+                    className="max-w-xs truncate px-3 py-2 text-xs text-destructive"
                     title={j.last_error ?? ""}
                   >
                     {j.last_error ?? ""}

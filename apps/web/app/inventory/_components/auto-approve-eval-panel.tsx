@@ -54,7 +54,7 @@ export function AutoApproveEvalPanel({
             {evaluation.inWindow ? (
               <Badge
                 variant="outline"
-                className="bg-blue-100 text-blue-900 border-blue-300"
+                className="bg-info/15 text-info border-info/40"
               >
                 Trong Express window
                 {evaluation.inExtendedWindow ? " (extended)" : ""}
@@ -82,9 +82,9 @@ export function AutoApproveEvalPanel({
                 data-ok={ok}
               >
                 {ok ? (
-                  <IconCheck className="size-4 text-green-600" />
+                  <IconCheck className="size-4 text-success" />
                 ) : (
-                  <IconX className="size-4 text-red-600" />
+                  <IconX className="size-4 text-destructive" />
                 )}
                 <span className="flex-1">
                   {AUTO_APPROVE_CONDITION_LABELS_VI[key]}

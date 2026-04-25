@@ -123,7 +123,7 @@ export function FeatureFlagsClient({ matrix }: Props) {
     <div className="container mx-auto max-w-6xl space-y-4 py-6">
       <header>
         <h1 className="flex items-center gap-2 text-2xl font-semibold">
-          <IconFlag className="size-6 text-amber-600" />
+          <IconFlag className="size-6 text-warning-foreground" />
           Feature flags kho hàng
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -173,15 +173,15 @@ export function FeatureFlagsClient({ matrix }: Props) {
                   >
                     <td className="sticky left-0 z-10 bg-background px-3 py-2">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-[10px]">
+                        <Badge variant="outline" className="text-3xs">
                           {meta.sprint}
                         </Badge>
                         <span className="font-medium">{meta.label}</span>
                       </div>
-                      <p className="mt-0.5 max-w-[340px] text-xs text-muted-foreground">
+                      <p className="mt-0.5 max-w-80 text-xs text-muted-foreground">
                         {meta.description}
                       </p>
-                      <code className="mt-0.5 block text-[11px] text-muted-foreground">
+                      <code className="mt-0.5 block text-2xs text-muted-foreground">
                         {meta.key}
                       </code>
                     </td>
@@ -247,7 +247,7 @@ export function FeatureFlagsClient({ matrix }: Props) {
                   pending && "opacity-60",
                 )}
               >
-                <IconBolt className="size-4 text-amber-600" />
+                <IconBolt className="size-4 text-warning-foreground" />
                 Bật pilot — {b.name}
               </Button>
             ))}

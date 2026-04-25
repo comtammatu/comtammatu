@@ -151,7 +151,7 @@ export default async function MobileTransferHome({
               {TAB_LABELS[tab]}
               {counts[tab] > 0 ? (
                 <span
-                  className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] ${
+                  className={`ml-1.5 rounded-full px-1.5 py-0.5 text-3xs ${
                     active ? "bg-primary/15 text-primary" : "bg-muted"
                   }`}
                 >
@@ -264,7 +264,7 @@ function TransferRowCard({
               {row.transfer_number}
             </p>
             <span
-              className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${style.className}`}
+              className={`shrink-0 rounded-full px-2 py-0.5 text-3xs font-medium ${style.className}`}
             >
               {style.label}
             </span>
@@ -275,7 +275,7 @@ function TransferRowCard({
             <span className="truncate">{row.to_branch_name}</span>
           </p>
           {row.shipped_at || row.created_at ? (
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
+            <p className="mt-0.5 text-2xs text-muted-foreground">
               {formatDate(row.shipped_at ?? row.created_at ?? "")}
               {viewerBranchId != null ? " · kho của bạn" : ""}
             </p>

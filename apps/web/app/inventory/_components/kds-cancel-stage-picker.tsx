@@ -149,9 +149,9 @@ export function KdsCancelStagePicker({
                   {stage === "before_cook" ? (
                     <IconFlameOff className="size-4 text-muted-foreground" />
                   ) : stage === "after_cook" ? (
-                    <IconChefHat className="size-4 text-orange-600" />
+                    <IconChefHat className="size-4 text-tier-note" />
                   ) : (
-                    <IconFlame className="size-4 text-amber-600" />
+                    <IconFlame className="size-4 text-warning-foreground" />
                   )}
                 </span>
               </div>
@@ -160,14 +160,14 @@ export function KdsCancelStagePicker({
                 {meta.producesWaste ? (
                   <Badge
                     variant="outline"
-                    className="border-red-300 bg-red-50 text-red-900 text-[10px]"
+                    className="border-destructive/40 bg-destructive/10 text-destructive text-3xs"
                   >
                     Sinh waste
                   </Badge>
                 ) : (
                   <Badge
                     variant="outline"
-                    className="border-slate-300 text-slate-700 text-[10px]"
+                    className="border-border text-muted-foreground text-3xs"
                   >
                     Không sinh waste
                   </Badge>
@@ -180,14 +180,14 @@ export function KdsCancelStagePicker({
 
       {value === "mid_cook" ? (
         <div
-          className="space-y-2 rounded-md border border-amber-200 bg-amber-50/60 p-3"
+          className="space-y-2 rounded-md border border-warning/30 bg-warning/10 p-3"
           data-slot="kds-cancel-stage-picker-ratio"
         >
           <div className="flex items-center justify-between">
             <Label className="text-sm">
               Tỉ lệ nguyên liệu đã dùng
             </Label>
-            <span className="font-semibold tabular-nums text-amber-900">
+            <span className="font-semibold tabular-nums text-warning-foreground">
               {clampRatio(ratio)}%
             </span>
           </div>
@@ -202,7 +202,7 @@ export function KdsCancelStagePicker({
               if (typeof v === "number") updateRatio(v);
             }}
           />
-          <p className="text-xs text-amber-800">
+          <p className="text-xs text-warning-foreground">
             Waste sẽ = công thức × {clampRatio(ratio)}%. Bước 5% để tránh chia
             nhỏ cố ý vượt trần ca.
           </p>

@@ -81,7 +81,7 @@ export function ColdChainClient({ initial }: Props) {
   return (
     <div className="container mx-auto max-w-3xl space-y-4 py-6">
       <div className="flex items-center gap-2">
-        <IconSnowflake className="size-6 text-blue-600" />
+        <IconSnowflake className="size-6 text-info" />
         <h1 className="text-2xl font-semibold">Danh mục cần duyệt thủ công</h1>
       </div>
 
@@ -124,7 +124,7 @@ export function ColdChainClient({ initial }: Props) {
                           {row.itemCount} SKU
                         </Badge>
                         {row.requiresManualReview ? (
-                          <Badge className="bg-blue-100 text-blue-900 border-blue-300 border text-xs">
+                          <Badge className="bg-info/15 text-info border-info/40 border text-xs">
                             Manual review
                           </Badge>
                         ) : null}

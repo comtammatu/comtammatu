@@ -44,16 +44,16 @@ export function ShiftCapMeter({
 
   const tone =
     pct >= 0.9 || willExceed
-      ? "bg-red-500"
+      ? "bg-destructive"
       : pct >= 0.7
-        ? "bg-yellow-500"
-        : "bg-green-600";
+        ? "bg-warning"
+        : "bg-success";
 
   const wrapTone =
     pct >= 0.9 || willExceed
-      ? "border-red-300 bg-red-50"
+      ? "border-destructive/40 bg-destructive/10"
       : pct >= 0.7
-        ? "border-yellow-300 bg-yellow-50"
+        ? "border-warning/40 bg-warning/10"
         : "border-muted";
 
   return (
@@ -89,7 +89,7 @@ export function ShiftCapMeter({
           ⚠ Phiếu này sẽ trigger tier 2 → QLV phải duyệt
         </p>
       ) : pct >= 0.7 ? (
-        <p className="text-yellow-700">
+        <p className="text-warning-foreground">
           Gần cap — thêm{" "}
           {formatVND(shiftCap - projected)} nữa sẽ cần duyệt
         </p>

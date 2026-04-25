@@ -24,7 +24,7 @@ export function PeriodAdminClient({ initial }: Props) {
   return (
     <div className="container mx-auto max-w-3xl space-y-4 py-6">
       <div className="flex items-center gap-2">
-        <IconCalendarStats className="size-6 text-blue-600" />
+        <IconCalendarStats className="size-6 text-info" />
         <div>
           <h1 className="text-2xl font-semibold">Kỳ kế toán</h1>
           <p className="text-sm text-muted-foreground">

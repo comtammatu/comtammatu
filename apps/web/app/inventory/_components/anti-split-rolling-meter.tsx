@@ -79,7 +79,7 @@ export function AntiSplitRollingMeter({
   if (projected === 0) return null;
 
   const tone = willTriggerPhoto
-    ? "text-orange-700 bg-orange-50 border-orange-200"
+    ? "text-tier-note-foreground bg-tier-note/10 border-tier-note/30"
     : "text-muted-foreground bg-muted/30 border-muted";
 
   return (

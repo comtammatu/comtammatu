@@ -119,8 +119,8 @@ export function PeriodCloseCard({
   return (
     <Card
       className={cn(
-        isHardClosed && "border-red-200 bg-red-50/40",
-        !isHardClosed && isSoftClosed && "border-amber-200 bg-amber-50/30",
+        isHardClosed && "border-destructive/30 bg-destructive/10",
+        !isHardClosed && isSoftClosed && "border-warning/30 bg-warning/10",
         className,
       )}
       data-slot="period-close-card"
@@ -132,12 +132,12 @@ export function PeriodCloseCard({
             <CardTitle className="text-base flex items-center gap-2">
               Kỳ {monthLabel}
               {isHardClosed ? (
-                <Badge className="bg-red-100 text-red-900 border-red-300 border">
+                <Badge className="bg-destructive/15 text-destructive border-destructive/40 border">
                   <IconShieldLock className="mr-1 size-3" />
                   Hard closed
                 </Badge>
               ) : isSoftClosed ? (
-                <Badge className="bg-amber-100 text-amber-900 border-amber-300 border">
+                <Badge className="bg-warning/15 text-warning-foreground border-warning/40 border">
                   <IconLock className="mr-1 size-3" />
                   Soft closed
                 </Badge>

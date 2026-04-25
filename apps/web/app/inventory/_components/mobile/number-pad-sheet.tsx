@@ -94,7 +94,7 @@ export function NumberPadSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="h-auto max-h-[95dvh] gap-0 bg-background p-0 text-foreground"
+        className="h-auto max-h-dvh-95 gap-0 bg-background p-0 text-foreground"
         showCloseButton={false}
       >
         <SheetHeader className="border-b p-4 pb-3">

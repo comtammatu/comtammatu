@@ -287,7 +287,7 @@ export function GrnCreateClient({
 
       {lineCount > 0 ? (
         <Card className="gap-2 p-3">
-          <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <div className="flex items-center justify-between text-2xs font-medium uppercase tracking-wider text-muted-foreground">
             <span>Đã thêm {lineCount} mặt hàng</span>
             <span className="text-foreground">{formatVND(total)} đ</span>
           </div>
@@ -373,7 +373,7 @@ export function GrnCreateClient({
                 onClick={() => openEdit(ingredient)}
                 className="flex items-center gap-3 rounded-xl border bg-card px-3 py-3 text-left transition hover:bg-accent/40 active:scale-[0.99]"
               >
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-[11px] font-bold uppercase text-muted-foreground">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-2xs font-bold uppercase text-muted-foreground">
                   {(ingredient.sku ?? ingredient.name).slice(0, 2)}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -512,13 +512,13 @@ function LineEditSheet({
     >
       <SheetContent
         side="bottom"
-        className="h-auto max-h-[95dvh] gap-0 bg-background p-0 text-foreground"
+        className="h-auto max-h-dvh-95 gap-0 bg-background p-0 text-foreground"
         showCloseButton={false}
       >
         {edit ? (
           <>
             <SheetHeader className="border-b p-4">
-              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
                 {edit.line ? "Sửa mặt hàng" : "Thêm mặt hàng"}
               </p>
               <SheetTitle className="text-lg font-semibold">
@@ -537,7 +537,7 @@ function LineEditSheet({
                   onClick={() => onOpenNumpad("qty")}
                   className="flex flex-col items-start gap-1 rounded-xl border bg-card px-3 py-3 text-left transition active:scale-[0.99]"
                 >
-                  <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
                     Số lượng
                   </span>
                   <span className="text-2xl font-semibold tabular-nums">
@@ -552,7 +552,7 @@ function LineEditSheet({
                   onClick={() => onOpenNumpad("cost")}
                   className="flex flex-col items-start gap-1 rounded-xl border bg-card px-3 py-3 text-left transition active:scale-[0.99]"
                 >
-                  <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
                     Đơn giá
                   </span>
                   <span className="text-2xl font-semibold tabular-nums">
@@ -592,7 +592,7 @@ function LineEditSheet({
               <div>
                 <label
                   htmlFor="line-note"
-                  className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
+                  className="text-2xs font-medium uppercase tracking-wider text-muted-foreground"
                 >
                   Ghi chú (tùy chọn)
                 </label>

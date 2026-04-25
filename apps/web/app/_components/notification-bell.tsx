@@ -39,7 +39,7 @@ export function NotificationBell({ tenantId }: Props) {
           <IconBell className="size-5" />
           {unreadCount > 0 ? (
             <span
-              className="absolute right-1 top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-4 text-destructive-foreground"
+              className="absolute right-1 top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-3xs font-semibold leading-4 text-destructive-foreground"
               aria-live="polite"
             >
               {unreadCount > 99 ? "99+" : unreadCount}
@@ -50,7 +50,7 @@ export function NotificationBell({ tenantId }: Props) {
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="w-[360px] p-0 sm:w-[400px]"
+        className="w-90 p-0 sm:w-100"
       >
         <NotificationList
           items={items}

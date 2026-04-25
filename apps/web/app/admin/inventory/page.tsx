@@ -42,36 +42,36 @@ export default async function InventoryAdminHubPage() {
           href="/admin/inventory/feature-flags"
           title="Feature flags"
           description="Bật/tắt module kho per chi nhánh. Rollout pilot mà không cần redeploy."
-          icon={<IconFlag className="size-5 text-amber-600" />}
-          badge={{ label: "Nav wiring", tone: "border-amber-300 bg-amber-50 text-amber-900" }}
+          icon={<IconFlag className="size-5 text-warning-foreground" />}
+          badge={{ label: "Nav wiring", tone: "border-warning/40 bg-warning/15 text-warning-foreground" }}
         />
         <ToolCard
           href="/admin/inventory/trust"
           title="Trust leaderboard"
           description="Bảng xếp hạng điểm tin cậy per chi nhánh. Cổng c8 auto-approve GRN ≥ 70."
-          icon={<IconShieldCheck className="size-5 text-purple-600" />}
-          badge={{ label: "S15-min", tone: "border-purple-300 bg-purple-50 text-purple-900" }}
+          icon={<IconShieldCheck className="size-5 text-tier-elite" />}
+          badge={{ label: "S15-min", tone: "border-tier-elite/40 bg-tier-elite/10 text-tier-elite" }}
         />
         <ToolCard
           href="/admin/inventory/cold-chain"
           title="Cold-chain policy"
           description="Category checkbox + item override. Ngưỡng nhiệt + review policy per ingredient."
-          icon={<IconSnowflake className="size-5 text-blue-600" />}
-          badge={{ label: "S10", tone: "border-blue-300 bg-blue-50 text-blue-900" }}
+          icon={<IconSnowflake className="size-5 text-info" />}
+          badge={{ label: "S10", tone: "border-info/40 bg-info/10 text-info" }}
         />
         <ToolCard
           href="/admin/inventory/express-windows"
           title="Express windows"
           description="Cấu hình cửa sổ auto-approve GRN (ngày giờ mở + đóng) cho từng chi nhánh."
-          icon={<IconClock className="size-5 text-amber-600" />}
-          badge={{ label: "S10", tone: "border-amber-300 bg-amber-50 text-amber-900" }}
+          icon={<IconClock className="size-5 text-warning-foreground" />}
+          badge={{ label: "S10", tone: "border-warning/40 bg-warning/15 text-warning-foreground" }}
         />
         <ToolCard
           href="/admin/accounting/periods"
           title="Kỳ kế toán"
           description="Soft-close / hard-close tháng, reopen khi cần. Mutations inventory bám theo kỳ."
-          icon={<IconReceipt2 className="size-5 text-green-600" />}
-          badge={{ label: "S12", tone: "border-green-300 bg-green-50 text-green-900" }}
+          icon={<IconReceipt2 className="size-5 text-success" />}
+          badge={{ label: "S12", tone: "border-success/40 bg-success/10 text-success" }}
         />
       </div>
     </div>

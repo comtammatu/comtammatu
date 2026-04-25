@@ -141,11 +141,11 @@ export function StocktakeDraftSaverBadge({
 
   const tone =
     status === "error"
-      ? "border-red-300 bg-red-50 text-red-900"
+      ? "border-destructive/40 bg-destructive/10 text-destructive"
       : status === "saving"
-        ? "border-blue-300 bg-blue-50 text-blue-900"
+        ? "border-info/40 bg-info/10 text-info"
         : status === "saved"
-          ? "border-green-300 bg-green-50 text-green-900"
+          ? "border-success/40 bg-success/10 text-success"
           : "border-muted bg-muted/40 text-muted-foreground";
 
   const Icon =

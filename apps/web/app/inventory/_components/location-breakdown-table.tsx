@@ -110,7 +110,7 @@ export function LocationBreakdownTable({
                     {loc.alertsCount > 0 ? (
                       <Badge
                         variant="outline"
-                        className="bg-orange-100 text-orange-900 border-orange-300"
+                        className="bg-tier-note/15 text-tier-note-foreground border-tier-note/40"
                       >
                         {loc.alertsCount}
                       </Badge>

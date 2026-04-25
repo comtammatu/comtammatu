@@ -74,7 +74,7 @@ export function TrustLeaderboardClient({
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-semibold">
-            <IconShieldCheck className="size-6 text-purple-600" />
+            <IconShieldCheck className="size-6 text-tier-elite" />
             Trust leaderboard
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -103,25 +103,25 @@ export function TrustLeaderboardClient({
         <TierCard
           label="Elite (≥ 85)"
           count={tierCounts.elite}
-          tone="border-purple-300 bg-purple-50 text-purple-900"
+          tone="border-tier-elite/40 bg-tier-elite/10 text-tier-elite"
           icon={<IconShieldCheck className="size-4" />}
         />
         <TierCard
           label="Trusted (≥ 70)"
           count={tierCounts.trusted}
-          tone="border-green-300 bg-green-50 text-green-900"
+          tone="border-success/40 bg-success/10 text-success"
           icon={<IconShieldCheck className="size-4" />}
         />
         <TierCard
           label="Bootstrap (50-69)"
           count={tierCounts.bootstrap}
-          tone="border-blue-300 bg-blue-50 text-blue-900"
+          tone="border-info/40 bg-info/10 text-info"
           icon={<IconFlame className="size-4" />}
         />
         <TierCard
           label="At risk (< 50)"
           count={tierCounts.at_risk}
-          tone="border-red-300 bg-red-50 text-red-900"
+          tone="border-destructive/40 bg-destructive/10 text-destructive"
           icon={<IconAlertTriangle className="size-4" />}
         />
       </div>
@@ -155,7 +155,7 @@ export function TrustLeaderboardClient({
                 </SelectContent>
               </Select>
             </div>
-            <div className="relative min-w-[220px]">
+            <div className="relative min-w-56">
               <IconSearch className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={query}
@@ -221,7 +221,7 @@ export function TrustLeaderboardClient({
                           "px-3 py-2 text-right tabular-nums font-medium",
                           typeof r.computedScore === "number" &&
                             Math.abs(r.computedScore - r.score) > 2
-                            ? "text-amber-700"
+                            ? "text-warning-foreground"
                             : "",
                         )}
                       >
@@ -237,7 +237,7 @@ export function TrustLeaderboardClient({
                       {r.varianceIncidents30d > 0 ? (
                         <Badge
                           variant="outline"
-                          className="border-red-300 text-red-900"
+                          className="border-destructive/40 text-destructive"
                         >
                           {r.varianceIncidents30d}
                         </Badge>

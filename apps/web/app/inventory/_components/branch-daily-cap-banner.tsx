@@ -48,7 +48,7 @@ export function BranchDailyCapBanner({
     <Alert
       variant={tone}
       className={cn(
-        !willExceed && "border-yellow-300 bg-yellow-50 text-yellow-900",
+        !willExceed && "border-warning/40 bg-warning/10 text-warning-foreground",
         className,
       )}
       data-slot="branch-daily-cap-banner"

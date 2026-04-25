@@ -104,7 +104,7 @@ export function ConflictsQueueClient({
         {pending.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
-              <IconCheck className="size-8 text-green-600" />
+              <IconCheck className="size-8 text-success" />
               <div className="text-sm font-medium">
                 Không có conflict nào chờ xử lý
               </div>
@@ -220,7 +220,7 @@ function ConflictRow({ row, onResolved }: ConflictRowProps) {
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <IconAlertOctagon className="size-4 text-red-600" />
+              <IconAlertOctagon className="size-4 text-destructive" />
               <span className="font-medium">{row.ingredientName}</span>
               <Badge variant="outline" className="gap-1">
                 Session #{row.sessionId}
@@ -233,8 +233,8 @@ function ConflictRow({ row, onResolved }: ConflictRowProps) {
                 className={cn(
                   "gap-1",
                   row.conflictType === "clock_tamper"
-                    ? "border-red-300 bg-red-50 text-red-900"
-                    : "border-orange-300 bg-orange-50 text-orange-900",
+                    ? "border-destructive/40 bg-destructive/10 text-destructive"
+                    : "border-tier-note/40 bg-tier-note/10 text-tier-note-foreground",
                 )}
               >
                 {CONFLICT_TYPE_VI[row.conflictType]}
@@ -249,21 +249,21 @@ function ConflictRow({ row, onResolved }: ConflictRowProps) {
         </div>
 
         <div className="grid gap-2 sm:grid-cols-2">
-          <div className="rounded-md border border-blue-200 bg-blue-50/40 p-2 text-xs">
-            <div className="font-medium text-blue-900">Server đang giữ</div>
+          <div className="rounded-md border border-info/30 bg-info/10 p-2 text-xs">
+            <div className="font-medium text-info">Server đang giữ</div>
             <div className="mt-1 text-lg font-semibold tabular-nums">
               {Number.isFinite(serverQty) ? serverQty : "—"}
             </div>
-            <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all text-[11px] text-muted-foreground">
+            <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all text-2xs text-muted-foreground">
               {JSON.stringify(row.serverPayload ?? {}, null, 2)}
             </pre>
           </div>
-          <div className="rounded-md border border-orange-200 bg-orange-50/40 p-2 text-xs">
-            <div className="font-medium text-orange-900">Client offline submit</div>
+          <div className="rounded-md border border-tier-note/30 bg-tier-note/10 p-2 text-xs">
+            <div className="font-medium text-tier-note-foreground">Client offline submit</div>
             <div className="mt-1 text-lg font-semibold tabular-nums">
               {Number.isFinite(clientQty) ? clientQty : "—"}
             </div>
-            <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all text-[11px] text-muted-foreground">
+            <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all text-2xs text-muted-foreground">
               {JSON.stringify(row.clientPayload ?? {}, null, 2)}
             </pre>
           </div>
@@ -369,13 +369,13 @@ function resolutionLabelVi(r: Resolution | null | undefined): string {
 function resolutionTone(r: Resolution | null | undefined): string {
   switch (r) {
     case "keep_server":
-      return "border-blue-300 text-blue-900";
+      return "border-info/40 text-info";
     case "apply_client":
-      return "border-orange-300 text-orange-900";
+      return "border-tier-note/40 text-tier-note-foreground";
     case "manual_value":
-      return "border-purple-300 text-purple-900";
+      return "border-tier-elite/40 text-tier-elite";
     case "reject":
-      return "border-slate-300 text-slate-700";
+      return "border-border text-muted-foreground";
     default:
       return "";
   }
