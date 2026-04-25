@@ -24,6 +24,22 @@ Mục tiêu:
 | Code, DB schema, type, RPC, file path | Tiếng Anh | Không đặt identifier bằng tiếng Việt |
 | Comment kỹ thuật | Tiếng Anh hoặc tiếng Việt ngắn gọn | Ưu tiên rõ nghĩa, không trộn 2 nghĩa cho cùng một entity |
 
+## Quy ước chính tả tiếng Việt
+
+Dự án dùng **quy tắc chính tả mới (sau 1984)** — dấu thanh đặt trên nguyên âm chính, không trên nguyên âm phụ:
+
+| Dùng (chuẩn) | Không dùng (cũ) |
+| --- | --- |
+| `hóa đơn`, `chuẩn hóa`, `tối ưu hóa` | `hoá đơn`, `chuẩn hoá`, `tối ưu hoá` |
+| `thỏa thuận`, `thỏa mãn` | `thoả thuận`, `thoả mãn` |
+| `hòa giải`, `hòa đồng` | `hoà giải`, `hoà đồng` |
+| `lóa mắt`, `tỏa sáng`, `xòa` | `loá mắt`, `toả sáng`, `xoà` |
+| `quả`, `thủy`, `quỳnh` | (không đổi — chỉ áp dụng khi nguyên âm chính là `o`/`a` đứng trước) |
+
+Nguyên tắc đơn: với nhóm `oa / oe / oo / uy` + dấu thanh, đặt dấu trên nguyên âm đứng sau (`ó`, `ẻ`, `ỗ`, `ý`). Ví dụ: `hóa` (ó trên o thứ hai của oa), `thỏa` (ỏ trên o thứ hai), `lúy`.
+
+Lint nhẹ: nếu copy/docs mới xuất hiện `hoá|thoả|hoà|loá|toả|xoà|choáng` → review thay bằng form `hóa|thỏa|hòa|lóa|tỏa|xòa|choáng`. Ngoại lệ: URL, tên file legacy, trích dẫn nguyên văn từ nguồn bên ngoài.
+
 ## Whitelist English được giữ lại
 
 Chỉ giữ English trong một trong các nhóm sau:
@@ -151,6 +167,276 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 
 Copy UI ưu tiên tiếng Việt: `chức vụ`, `khóa quyền`, `bộ quyền mẫu`, `cấp quyền`. Code, schema, RPC giữ tên tiếng Anh.
 
+### Trạng thái POS, món, và phiếu bếp
+
+| Entity | Status values | Ý nghĩa |
+| --- | --- | --- |
+| `orders.status` | `new` → `confirmed` → `preparing` → `ready` → `served` → `completed` / `cancelled` | Vòng đời đơn bán ở POS. `completed` = đã thanh toán, đóng phía POS, release bàn dine-in. |
+| `order_items.status` | `pending` → `preparing` → `ready` → `served` / `cancelled` | Trạng thái từng dòng món. Sync từ `kds_tickets` qua trigger `sync_order_item_status`. |
+| `kds_tickets.status` | `pending` → `preparing` → `ready` → `served` / `cancelled` | Trạng thái ticket trên KDS. Fulfillment signal, không phải commercial close. |
+| `tables.status` | `available` → `occupied` → `available` | Release khi đơn `completed` hoặc `cancelled`, không release khi chỉ `served`. |
+
+Canonical rule (áp dụng 2026-04-24): payment confirmation → `orders.status='completed'`; `served` KHÔNG release bàn; bếp vẫn tiếp tục ticket sau thanh toán. Tham chiếu regression: `PAYMENT-AUTO-COMPLETES-ORDER`, `POS-SERVED-NOT-TABLE-TERMINAL`.
+
+### Thao tác mutation trên đơn bán
+
+| Canonical English | Nhãn tiếng Việt | Dùng khi nào | Khác biệt |
+| --- | --- | --- | --- |
+| `append items` | thêm món | Bổ sung vào đơn chưa `served` | Không tạo đơn mới, route lại KDS qua `route_order_to_kds` |
+| `void item` | hủy món | Hủy 1 dòng món (mgr+, cần lý do) | Nếu hủy dòng cuối → auto-cancel đơn |
+| `cancel order` | hủy đơn | Terminal, giải phóng bàn (mgr+, cần lý do) | Khác `void item` ở cấp entity |
+| `transfer table` | chuyển bàn | Đơn dine-in, sang bàn khả dụng khác | Giữ nguyên items |
+| `quick reorder` | đặt lại | Nạp giỏ từ đơn cũ, tạo đơn mới | Lọc item đã deactivate |
+| `refund` | hoàn tiền | Hoàn tiền sau thanh toán (M4 Payment, **chưa triển khai**) | Khác `cancel` — đơn đã `paid` |
+
+### Thanh toán
+
+| Canonical English | Nhãn tiếng Việt | Ghi chú |
+| --- | --- | --- |
+| `payment_method` | phương thức thanh toán | `cash`, `bank_transfer`, `momo`, `vietqr` |
+| `cash` | tiền mặt | |
+| `bank_transfer` | chuyển khoản | Bắt buộc với giao dịch NCC ≥ 20 triệu để được khấu trừ VAT (TT 25/2018) |
+| `momo` | ví MoMo | Giữ tên thương hiệu, không dịch |
+| `vietqr` | VietQR | QR chuyển khoản liên ngân hàng, giữ nguyên tên |
+| `payment_status` | trạng thái thanh toán | `unpaid` → `partial` → `paid` (dùng cho `supplier_invoices`) |
+| `payment close` | đóng thanh toán POS | Event: xác nhận thanh toán → `orders.status='completed'` + release bàn |
+
+### In ấn và thiết bị
+
+| Canonical English | Nhãn tiếng Việt | Ghi chú |
+| --- | --- | --- |
+| `print agent` | agent in | Daemon 1 instance / chi nhánh, subscribe Realtime `print_jobs` |
+| `print_jobs` | công việc in | Row xếp hàng chờ agent claim + render + dispatch |
+| `printer_agents` | bảng máy in đã đăng ký | Heartbeat, `is_online` theo ngưỡng 60s |
+| `receipt` | phiếu tạm tính / hóa đơn POS | **Không phải** `tax invoice`. In cho khách xem, không có mã CQT |
+| `kitchen ticket` | phiếu bếp | Đồng nghĩa `kds ticket`; dùng khi nói về bản in giấy |
+| `ESC/POS` | ESC/POS | Giao thức máy in nhiệt, giữ nguyên English |
+| `connection_type` | kiểu kết nối máy in | `lan` (TCP:9100) hoặc `usb` |
+| `print_mode` | chế độ in | `text` (ESC/POS + CP1258) hoặc `bitmap` (rasterize tiếng Việt) |
+
+### Kế toán và thuế GTGT
+
+| Canonical English | Nhãn tiếng Việt | Ghi chú |
+| --- | --- | --- |
+| `value-added tax (VAT)` | thuế GTGT | Phương pháp khấu trừ: đầu ra − đầu vào |
+| `output VAT` | GTGT đầu ra | Thu từ khách, nộp CQT |
+| `input VAT` | GTGT đầu vào | Trả cho NCC, được khấu trừ nếu đủ điều kiện |
+| `vat_rate` | thuế suất GTGT | Lưu `NUMERIC(5,2)`, ví dụ `8.00`, `10.00`, `5.00` — **KHÔNG** lưu `0.08` |
+| `Cục Quản lý Thuế (CQT)` | Cục Quản lý Thuế | Cơ quan cấp mã cho HĐĐT |
+| `cqt_code` | mã CQT | Mã xác thực HĐĐT sau khi `issued` |
+| `invoice_series` | ký hiệu hóa đơn | Ví dụ `1C25TLL` |
+| `invoice_number` | số hóa đơn | Do provider / CQT cấp |
+| `einvoice provider` | nhà cung cấp HĐĐT | `viettel`, `misa`, `vnpt` |
+| `declared_period` | kỳ kê khai | Format `YYYY-MM` |
+| `is_vat_deductible` | khấu trừ GTGT | Boolean; cần 3-way match + hóa đơn hợp lệ + thanh toán ngân hàng nếu ≥ 20 triệu |
+| `matching_status` | trạng thái đối soát 3 chứng từ | `pending` → `matched` / `discrepancy` → `approved` |
+
+**HĐĐT state machine** (`tax_invoices.status`): `draft` → `signing` → `submitted` → `issued` → (`cancelled` / `replaced`). Chỉ `issued` là hợp lệ; hủy sau `issued` phải lập biên bản + xuất HĐ thay thế.
+
+**Tờ khai chuẩn** — hệ thống chỉ **xuất dữ liệu**, không nộp trực tiếp:
+
+| Tờ khai | Nội dung | Hạn nộp |
+| --- | --- | --- |
+| `01/GTGT` | Kê khai GTGT tháng | Ngày 20 tháng sau |
+| `05/KK-TNCN` | Khấu trừ TNCN từ lương | Ngày 20 tháng sau (hoặc ngày 30 quý sau nếu khai quý) |
+| `05/QTT-TNCN` | Quyết toán TNCN năm | 31/3 năm kế tiếp |
+| `05/BK-TNCN` | Bảng kê thu nhập cá nhân | Kèm `05/QTT-TNCN` |
+| `02/ĐK-TNCN` | Đăng ký người phụ thuộc | NLĐ nộp cho HR |
+
+### Nhân sự và tiền lương
+
+| Canonical English | Nhãn tiếng Việt | Ghi chú |
+| --- | --- | --- |
+| `employee` | nhân viên | Row `employees` — hồ sơ HR |
+| `employment contract` | hợp đồng lao động (HĐLĐ) | Row `employment_contracts`, source of truth cho `insurance_base_salary` |
+| `NSDLĐ` | người sử dụng lao động | Phía công ty, đóng BHXH 21.5% |
+| `NLĐ` | người lao động | Phía nhân viên, đóng BHXH 10.5% |
+| `indefinite` | HĐ không xác định thời hạn | Mặc định sau 2 HĐ `fixed_term` liên tiếp |
+| `fixed_term` | HĐ xác định thời hạn | 12–36 tháng, ký tối đa 2 lần |
+| `seasonal` | HĐ mùa vụ / công việc cụ thể | < 12 tháng, không gia hạn |
+| `probation` | HĐ thử việc | 30 ngày (phổ thông) / 60 ngày (kỹ thuật, quản lý); lương ≥ 85% chính thức |
+| `BHXH` | bảo hiểm xã hội | NLĐ 8% + NSDLĐ 17.5% = 25.5% |
+| `BHYT` | bảo hiểm y tế | NLĐ 1.5% + NSDLĐ 3% = 4.5% |
+| `BHTN` | bảo hiểm thất nghiệp | NLĐ 1% + NSDLĐ 1% = 2% |
+| `PIT` / `TNCN` | thuế thu nhập cá nhân | Biểu lũy tiến 7 bậc 5% → 35% |
+| `gross_salary` | lương gộp (gross) | Lương thỏa thuận trước BHXH + PIT |
+| `net_salary` | lương thực lĩnh | Gross − BHXH NLĐ − PIT − khấu trừ khác + phụ cấp miễn thuế |
+| `insurance_base_salary` | mức lương đóng BH | Source `employment_contracts` → sync `employees` → snapshot `payroll_entries.insurance_base`. **Khác `gross_salary`** |
+| `personal_deduction` | giảm trừ bản thân | 11,000,000 VND/tháng (từ 01/07/2020) |
+| `dependent_deduction` | giảm trừ người phụ thuộc | 4,400,000 VND/người/tháng |
+| `payroll_period` | kỳ lương | (tháng, năm); status `draft` → `calculated` → `approved` → `paid` |
+| `payroll_entry` | dòng lương | 1 nhân viên × 1 kỳ, `UNIQUE(period, employee)` |
+| `working_days` | ngày công thực tế | |
+| `standard_days` | ngày công chuẩn tháng | |
+| `overtime_pay` | tiền làm thêm giờ | Phần vượt 150% chịu thuế; 150% ngày thường miễn thuế |
+| `tax_exempt_allowances` | phụ cấp miễn thuế | Ăn ca ≤ 730k, xăng xe, điện thoại, gửi xe có hóa đơn |
+| `insurance_cap` | trần đóng BHXH | 20 × lương cơ sở = 46,800,000 VND/tháng (2024) |
+
+## Label variants — long / short / acronym
+
+Mỗi thuật ngữ có thể có tối đa 3 dạng hiển thị. Chọn theo **bề mặt UI**, không theo sở thích.
+
+### Quy tắc chọn variants
+
+| Dạng | Dùng ở | Điều kiện bắt buộc |
+| --- | --- | --- |
+| `long` | heading, table cell, description, form label, tooltip dài | Mọi canonical term đều có `long` |
+| `short` | button, tab, badge, sidebar nav, mobile chip, table header compact | Chỉ thêm khi `long > 14 ký tự` HOẶC xuất hiện trong nav/button |
+| `acronym` | KPI card, status pill 2–4 ký tự, icon label, chart legend | Chỉ dùng khi đối tượng đọc đã quen business vocab |
+
+Quy tắc phụ:
+
+- Nếu `short == long` thì **bỏ cột short** (tránh trùng lặp).
+- `acronym` phải nằm trong [Whitelist English](#whitelist-english-được-giữ-lại) hoặc là viết tắt tiếng Việt chính thức (`HĐĐT`, `HĐLĐ`, `NSDLĐ`, `NLĐ`, `GTGT`, `TNCN`, `BHXH`, `BHYT`, `BHTN`).
+- Tránh trộn English + Vietnamese trong cùng một label cùng dạng (vd: không dùng `"Đơn NCC (PO)"` ở dạng short — hoặc `Đơn NCC` hoặc `PO`, chọn một).
+- Responsive rule: dưới 640px breakpoint → ưu tiên `short`; ≥ 768px → `long`. Nav desktop collapsed dùng `short` hoặc `acronym`.
+
+### Cơ chế thực thi (hiện tại)
+
+File [apps/web/app/inventory/_lib/labels.ts](../../apps/web/app/inventory/_lib/labels.ts) đã hiện thực `LabelContext` (`button`/`tab`/`badge`/`navigation`/`heading`/`table`) với mapping: nav/button/tab/badge → `short`, heading/table → `long`. Khi promote ra shared (L2 roadmap), các module POS/HR/Finance sẽ dùng lại pattern này.
+
+### Bảng variants — Tổ chức và địa điểm
+
+| Term | Long | Short | Acronym |
+| --- | --- | --- | --- |
+| `central_warehouse` | Kho Tổng | — | `CW` |
+| `central_kitchen` | Bếp Trung Tâm | Bếp TT | `CK` |
+| `branch_warehouse` | Kho chi nhánh | Kho CN | — |
+| `branch_kitchen` | Bếp chi nhánh | Bếp CN | — |
+| `branch` | Chi nhánh | — | `CN` |
+| `tenant` | Pháp nhân CTCP | Pháp nhân | — |
+
+### Bảng variants — POS / KDS / bán hàng
+
+| Term | Long | Short | Acronym |
+| --- | --- | --- | --- |
+| `order` | Đơn hàng bán | Đơn bán | — |
+| `order_item` | Dòng món | Món | — |
+| `kds_ticket` | Phiếu bếp | — | — |
+| `table_session` | Phiên bàn | — | — |
+| `pos_session` | Ca POS | — | — |
+| `release_table` | Trả bàn | — | — |
+| `append_items` | Thêm món | — | — |
+| `void_item` | Hủy món | — | — |
+| `cancel_order` | Hủy đơn | — | — |
+| `transfer_table` | Chuyển bàn | — | — |
+| `quick_reorder` | Đặt lại | — | — |
+| `refund` | Hoàn tiền | — | — |
+| **Status values** | | | |
+| `pending` | Chờ xử lý | Chờ | — |
+| `preparing` | Đang chế biến | Đang làm | — |
+| `ready` | Sẵn sàng | — | — |
+| `served` | Đã phục vụ | Phục vụ | — |
+| `completed` | Hoàn thành (POS) | Xong | — |
+| `cancelled` | Đã hủy | Hủy | — |
+
+### Bảng variants — Thanh toán
+
+| Term | Long | Short | Acronym |
+| --- | --- | --- | --- |
+| `payment_method` | Phương thức thanh toán | PT thanh toán | — |
+| `payment_status` | Trạng thái thanh toán | TT thanh toán | — |
+| `payment_close` | Đóng thanh toán POS | Đóng TT | — |
+| `cash` | Tiền mặt | — | — |
+| `bank_transfer` | Chuyển khoản ngân hàng | Chuyển khoản | — |
+| `momo` | Ví MoMo | MoMo | — |
+| `vietqr` | VietQR | — | — |
+| `unpaid` | Chưa thanh toán | Chưa trả | — |
+| `partial` | Thanh toán một phần | Trả một phần | — |
+| `paid` | Đã thanh toán | — | — |
+
+### Bảng variants — Procurement / kho / sản xuất
+
+| Term | Long | Short | Acronym |
+| --- | --- | --- | --- |
+| `purchase_order` | Đơn đặt hàng NCC | Đơn NCC | `PO` |
+| `goods_received_note` | Phiếu nhập kho | Phiếu nhập | `GRN` |
+| `supplier_invoice` | Hóa đơn NCC | HĐ NCC | — |
+| `supplier_return` | Phiếu trả nhà cung cấp | Trả NCC | — |
+| `supplier_credit_note` | Ghi có nhà cung cấp | Ghi có NCC | — |
+| `stock_level` | Tồn kho | — | — |
+| `stock_movement` | Biến động tồn kho | Biến động | — |
+| `stock_transfer` | Phiếu điều chuyển nội bộ | Điều chuyển | — |
+| `stock_issue` | Phiếu xuất kho nội bộ | Xuất kho | — |
+| `stocktake` | Kiểm kê | — | — |
+| `raw_material` | Nguyên liệu | — | — |
+| `finished_good` | Thành phẩm | — | — |
+| `recipe` | Công thức món | Định mức | — |
+| `production_recipe` | Công thức sản xuất | Định mức SX | `BOM` |
+| `production_order` | Lệnh sản xuất | Lệnh SX | — |
+| `three_way_matching` | Đối soát 3 chứng từ | Đối soát 3 chiều | — |
+| `weighted_average_cost` | Giá vốn bình quân gia quyền | Giá vốn BQ | `WAC` |
+| `expiry_warning` | Cảnh báo hạn sử dụng | Hạn dùng | — |
+
+### Bảng variants — Kế toán và thuế
+
+| Term | Long | Short | Acronym |
+| --- | --- | --- | --- |
+| `value_added_tax` | Thuế giá trị gia tăng | Thuế GTGT | `GTGT` |
+| `output_vat` | GTGT đầu ra | — | — |
+| `input_vat` | GTGT đầu vào | — | — |
+| `vat_rate` | Thuế suất GTGT | TS GTGT | — |
+| `tax_invoice` | Hóa đơn điện tử | HĐ điện tử | `HĐĐT` |
+| `cqt_code` | Mã Cục Quản lý Thuế | Mã CQT | `CQT` |
+| `invoice_series` | Ký hiệu hóa đơn | Ký hiệu HĐ | — |
+| `invoice_number` | Số hóa đơn | Số HĐ | — |
+| `einvoice_provider` | Nhà cung cấp HĐĐT | NCC HĐĐT | — |
+| `declared_period` | Kỳ kê khai | — | — |
+| `vat_deductible` | Được khấu trừ GTGT | Khấu trừ | — |
+| `matching_status` | Trạng thái đối soát | Đối soát | — |
+
+### Bảng variants — Nhân sự và tiền lương
+
+| Term | Long | Short | Acronym |
+| --- | --- | --- | --- |
+| `employee` | Nhân viên | NV | — |
+| `employment_contract` | Hợp đồng lao động | Hợp đồng | `HĐLĐ` |
+| `employer` | Người sử dụng lao động | Công ty | `NSDLĐ` |
+| `employee_party` | Người lao động | Nhân viên | `NLĐ` |
+| `indefinite_contract` | HĐ không xác định thời hạn | HĐ vô thời hạn | — |
+| `fixed_term_contract` | HĐ xác định thời hạn | HĐ có thời hạn | — |
+| `seasonal_contract` | HĐ mùa vụ / công việc cụ thể | HĐ mùa vụ | — |
+| `probation_contract` | HĐ thử việc | Thử việc | — |
+| `social_insurance` | Bảo hiểm xã hội | BHXH | `BHXH` |
+| `health_insurance` | Bảo hiểm y tế | BHYT | `BHYT` |
+| `unemployment_insurance` | Bảo hiểm thất nghiệp | BHTN | `BHTN` |
+| `personal_income_tax` | Thuế thu nhập cá nhân | Thuế TNCN | `TNCN` / `PIT` |
+| `gross_salary` | Lương gộp | Gross | — |
+| `net_salary` | Lương thực lĩnh | Thực lĩnh | — |
+| `insurance_base_salary` | Mức lương đóng bảo hiểm | Lương đóng BH | — |
+| `personal_deduction` | Giảm trừ bản thân | GT bản thân | — |
+| `dependent_deduction` | Giảm trừ người phụ thuộc | GT NPT | — |
+| `payroll_period` | Kỳ lương | — | — |
+| `payroll_entry` | Dòng lương | Lương NV | — |
+| `working_days` | Ngày công thực tế | Công thực tế | — |
+| `standard_days` | Ngày công chuẩn tháng | Công chuẩn | — |
+| `overtime_pay` | Tiền làm thêm giờ | Làm thêm | — |
+| `tax_exempt_allowances` | Phụ cấp miễn thuế | PC miễn thuế | — |
+| `insurance_cap` | Trần đóng bảo hiểm | Trần BH | — |
+
+### Bảng variants — In ấn và thiết bị
+
+| Term | Long | Short | Acronym |
+| --- | --- | --- | --- |
+| `print_agent` | Agent in nhiệt | Agent in | — |
+| `print_jobs` | Lệnh in | — | — |
+| `printer_agents` | Máy in đã đăng ký | Máy in | — |
+| `receipt` | Phiếu tạm tính | Phiếu | — |
+| `kitchen_ticket` | Phiếu bếp in | Phiếu bếp | — |
+| `connection_type` | Kiểu kết nối máy in | Kết nối | — |
+
+### Bảng variants — Bề mặt sản phẩm (nav)
+
+| Term | Long | Short | Acronym |
+| --- | --- | --- | --- |
+| `admin` | Quản trị | — | — |
+| `inventory_ops` | Kho hàng | — | — |
+| `content_management` | Quản trị nội dung | Nội dung | `CMS` |
+| `customer_relationship` | Quản lý khách hàng | Khách hàng | `CRM` |
+| `employee_portal` | Cổng nhân viên | Nhân viên | — |
+| `dashboard` | Tổng quan | — | — |
+| `reports` | Báo cáo | — | — |
+
 ## Decision rules cho các cặp từ dễ drift
 
 ### `order` vs `purchase order`
@@ -183,6 +469,41 @@ Copy UI ưu tiên tiếng Việt: `chức vụ`, `khóa quyền`, `bộ quyền 
 - `tax invoice / e-invoice` là hóa đơn bán ra cho giao dịch.
 - Không dùng `invoice` trần trong docs/specs nếu có thể gây nhầm.
 
+### `order.status='completed'` vs `kds_ticket.status='served'`
+
+- `completed` là **commercial close** — đơn đã thanh toán, bàn release. Payment confirmation là sự kiện duy nhất chuyển sang `completed`.
+- `served` là **fulfillment signal** — món/đơn đã lên bàn. Không gate thanh toán, không release bàn.
+- Thanh toán **KHÔNG** force `kds_tickets.status` hoặc `order_items.status` sang terminal — bếp vẫn tiếp tục ticket sau khi đơn `completed`.
+- Không dùng `hoàn thành` cho cả "bếp xong" và "thanh toán xong" trong cùng một surface.
+
+### `void item` vs `cancel order` vs `refund`
+
+- `void item`: hủy 1 dòng món **trước khi thanh toán**, mgr+ + lý do. Nếu dòng cuối → auto-cancel đơn + release bàn.
+- `cancel order`: hủy toàn đơn **trước khi `completed`**, mgr+ + lý do, release bàn.
+- `refund`: hoàn tiền **sau khi đã thanh toán** (đơn `completed`/`paid`). Thuộc M4 Payment, **chưa triển khai**.
+- Không gọi `cancel order` là `refund` (chưa paid thì không có tiền để hoàn).
+
+### `receipt` (phiếu tạm tính) vs `tax invoice` (HĐĐT)
+
+- `receipt` = bản in hóa đơn POS (`BillReceipt`), không có mã CQT, không có giá trị pháp lý khấu trừ.
+- `tax invoice / HĐĐT` = row trong `tax_invoices` với `status='issued'` và `cqt_code` đã cấp.
+- Khách không yêu cầu HĐĐT → chỉ in `receipt`. Khách yêu cầu HĐĐT → tạo `tax_invoices` row → ký số → gửi CQT → in HĐĐT có mã.
+- Không gọi `receipt` là `hóa đơn` trong kế toán/báo cáo thuế.
+
+### `gross_salary` vs `insurance_base_salary` vs `net_salary`
+
+- `gross_salary`: lương thỏa thuận trong HĐ, gồm phụ cấp chịu thuế.
+- `insurance_base_salary`: căn cứ đóng BH; **có thể nhỏ hơn gross** vì không tính thưởng, ăn ca, xăng xe, nhà ở. Trần = 46,800,000 VND/tháng.
+- `net_salary`: lương thực lĩnh = gross − BHXH NLĐ (10.5%) − PIT − khấu trừ khác + phụ cấp miễn thuế.
+- Nguồn sự thật: `employment_contracts.insurance_base_salary` → sync `employees.insurance_base_salary` → snapshot `payroll_entries.insurance_base` (immutable sau `approved`).
+- Không cho phép update trực tiếp `employees.insurance_base_salary` ngoài luồng HĐ.
+
+### `BHXH` vs `BHYT/BHTN` vs `PIT`
+
+- `BHXH`, `BHYT`, `BHTN` là 3 loại bảo hiểm **riêng biệt**, đóng song song (tổng NLĐ 10.5% + NSDLĐ 21.5% = 32% trên `insurance_base_salary`). Không gom cả 3 thành "bảo hiểm xã hội" trong docs/code/copy.
+- `PIT / TNCN` là **thuế**, không phải bảo hiểm. Khấu trừ theo biểu lũy tiến 7 bậc.
+- Trong `payroll_entries`: 3 cột riêng `bhxh_employee`, `bhyt_employee`, `bhtn_employee` + cột `pit_tax`.
+
 ## Quy tắc áp dụng theo bề mặt
 
 ### UI và product copy
@@ -206,9 +527,15 @@ Copy UI ưu tiên tiếng Việt: `chức vụ`, `khóa quyền`, `bộ quyền 
 ## Quan hệ với các nguồn chuẩn khác
 
 - Business semantics chi tiết: [business-context.md](business-context.md), [inventory.md](inventory.md)
+- HĐĐT & thuế GTGT: [einvoice-tax.md](einvoice-tax.md)
+- Thuế TNCN & lương: [payroll-pit.md](payroll-pit.md)
+- HĐLĐ, BHXH: [labor-contracts.md](labor-contracts.md)
 - Kiến trúc hệ thống: [../spec/architecture.md](../spec/architecture.md)
 - Schema và enum: [../spec/database-schema.md](../spec/database-schema.md)
-- Inventory UI labels hiện có: [../../apps/web/app/inventory/_lib/dictionary.ts](../../apps/web/app/inventory/_lib/dictionary.ts)
+- POS order lifecycle (payment-close override): [../plan/m2-order-lifecycle.md](../plan/m2-order-lifecycle.md)
+- Inventory UI labels: [../../apps/web/app/inventory/_lib/dictionary.ts](../../apps/web/app/inventory/_lib/dictionary.ts)
+- Module / site / nav labels chung: [../../packages/shared/src/labels/vi.ts](../../packages/shared/src/labels/vi.ts)
+- Regression rules: [../../tasks/regressions.md](../../tasks/regressions.md)
 
 ## Khi thêm thuật ngữ mới
 
