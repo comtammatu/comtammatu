@@ -200,11 +200,15 @@ export async function submitOrder(
   }
 
   const kitchenWarning = await autoSendKitchen(supabase, result.order_id);
+  const kitchenSent = kitchenWarning === null;
 
   return {
     success: true,
     data: { order_id: result.order_id, order_number: result.order_number },
-    ...(kitchenWarning ? { meta: { kitchenWarning } } : {}),
+    meta: {
+      kitchenSent,
+      ...(kitchenWarning ? { kitchenWarning } : {}),
+    },
   };
 }
 
@@ -686,6 +690,10 @@ export async function appendOrderItems(
   const kitchenWarning = result.idempotent
     ? null
     : await autoSendKitchen(supabase, result.order_id);
+  // Only claim "đã gửi bếp" when this call actually dispatched. Idempotent
+  // replay short-circuits the print, so we don't know the first call's
+  // outcome here and must not falsely affirm it.
+  const kitchenSent = !result.idempotent && kitchenWarning === null;
 
   return {
     success: true,
@@ -696,7 +704,10 @@ export async function appendOrderItems(
       added_count: Number(result.added_count),
       ...(result.idempotent ? { idempotent: true } : {}),
     },
-    ...(kitchenWarning ? { meta: { kitchenWarning } } : {}),
+    meta: {
+      kitchenSent,
+      ...(kitchenWarning ? { kitchenWarning } : {}),
+    },
   };
 }
 
