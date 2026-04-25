@@ -38,6 +38,7 @@ import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { formatVND } from "../_lib/format";
 import { tNav } from "../_lib/dictionary";
+import { PRICE_VARIANCE_THRESHOLD_PCT } from "../_lib/playbook-data";
 
 export type GrnRow = {
   id: number;
@@ -47,7 +48,15 @@ export type GrnRow = {
   date: string;
   total: number;
   status: string;
+  /** Largest-magnitude variance % across line items, sign preserved. Null when no item has a populated baseline. */
+  signedMaxVariancePct: number | null;
+  maxAbsVariancePct: number | null;
 };
+
+function formatVariance(signed: number): string {
+  const rounded = Math.round(signed * 10) / 10;
+  return `${rounded > 0 ? "+" : ""}${rounded}%`;
+}
 
 const statusFilterOptions = [
   { value: "all", label: "Tất cả" },
@@ -56,15 +65,35 @@ const statusFilterOptions = [
   { value: "cancelled", label: "Đã hủy" },
 ];
 
-export function GrnListClient({ grns }: { grns: GrnRow[] }) {
+export function GrnListClient({
+  grns,
+  initialStatusFilter = null,
+  initialPriceReviewFilter = false,
+}: {
+  grns: GrnRow[];
+  initialStatusFilter?: string | null;
+  initialPriceReviewFilter?: boolean;
+}) {
   const isMobile = useIsMobile();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(
+    initialStatusFilter ?? "all",
+  );
+  const [priceReviewOnly, setPriceReviewOnly] = useState(
+    initialPriceReviewFilter,
+  );
 
   const filtered = useMemo(() => {
     let result = grns;
     if (statusFilter !== "all") {
       result = result.filter((g) => g.status === statusFilter);
+    }
+    if (priceReviewOnly) {
+      result = result.filter(
+        (g) =>
+          g.maxAbsVariancePct != null &&
+          g.maxAbsVariancePct > PRICE_VARIANCE_THRESHOLD_PCT,
+      );
     }
     const q = search.trim().toLowerCase();
     if (q) {
@@ -76,7 +105,17 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
       );
     }
     return result;
-  }, [grns, search, statusFilter]);
+  }, [grns, search, statusFilter, priceReviewOnly]);
+
+  const priceReviewCount = useMemo(
+    () =>
+      grns.filter(
+        (g) =>
+          g.maxAbsVariancePct != null &&
+          g.maxAbsVariancePct > PRICE_VARIANCE_THRESHOLD_PCT,
+      ).length,
+    [grns],
+  );
 
   return (
     <>
@@ -119,6 +158,20 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
             </SelectContent>
           </Select>
 
+          <Button
+            type="button"
+            size="sm"
+            variant={priceReviewOnly ? "default" : "outline"}
+            onClick={() => setPriceReviewOnly((prev) => !prev)}
+            disabled={priceReviewCount === 0 && !priceReviewOnly}
+            aria-pressed={priceReviewOnly}
+          >
+            Chỉ cần kiểm giá
+            <Badge variant="outline" className="ml-1 tabular-nums">
+              {priceReviewCount}
+            </Badge>
+          </Button>
+
           <Badge variant="outline" className="rounded-full">
             {filtered.length}/{grns.length}
           </Badge>
@@ -148,6 +201,20 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
                           {g.code}
                         </span>
                         <StatusBadge status={g.status} size="sm" />
+                        {g.signedMaxVariancePct != null &&
+                        Math.abs(g.signedMaxVariancePct) >
+                          PRICE_VARIANCE_THRESHOLD_PCT ? (
+                          <Badge
+                            variant={
+                              g.signedMaxVariancePct > 0
+                                ? "destructive"
+                                : "secondary"
+                            }
+                            className="text-xs"
+                          >
+                            {formatVariance(g.signedMaxVariancePct)}
+                          </Badge>
+                        ) : null}
                       </div>
                       <p className="truncate text-xs text-muted-foreground">
                         {g.supplierName}
@@ -178,6 +245,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
                     <TableHead>PO liên kết</TableHead>
                     <TableHead>Ngày kiểm nhận</TableHead>
                     <TableHead>Tổng tiền</TableHead>
+                    <TableHead>Lệch giá</TableHead>
                     <TableHead>Trạng thái</TableHead>
                     <TableHead className="w-10" />
                   </TableRow>
@@ -185,10 +253,12 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
                 <TableBody>
                   {filtered.length === 0 && (
                     <TableEmptyStateRow
-                      colSpan={7}
+                      colSpan={8}
                       icon={<IconReceipt className="size-5" />}
                       title={
-                        search.trim() || statusFilter !== "all"
+                        search.trim() ||
+                        statusFilter !== "all" ||
+                        priceReviewOnly
                           ? "Không tìm thấy phiếu nhập phù hợp"
                           : "Chưa có phiếu nhập kho nào"
                       }
@@ -218,6 +288,24 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
                       </TableCell>
                       <TableCell className="text-sm font-medium">
                         {formatVND(g.total)} ₫
+                      </TableCell>
+                      <TableCell>
+                        {g.signedMaxVariancePct != null &&
+                        Math.abs(g.signedMaxVariancePct) >
+                          PRICE_VARIANCE_THRESHOLD_PCT ? (
+                          <Badge
+                            variant={
+                              g.signedMaxVariancePct > 0
+                                ? "destructive"
+                                : "secondary"
+                            }
+                            className="tabular-nums"
+                          >
+                            {formatVariance(g.signedMaxVariancePct)}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={g.status} size="sm" />

@@ -18,6 +18,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import Link from "next/link";
 import { PlaybookTaskCard } from "./playbook-task-card";
 import { PlaybookActionButtons } from "./playbook-action-buttons";
+import { branchHrefOrPath } from "../_lib/href";
 import {
   severityBucket,
   severityBucketLabel,
@@ -197,7 +198,9 @@ function renderTask(
           : null,
         actionSlot: action,
         deeplink: {
-          href: branchHref(branchId, "/inventory/grn"),
+          href: branchHrefOrPath(branchId, "/inventory/grn", {
+            filter: "draft",
+          }),
           label: "Mở danh sách",
         },
       };
@@ -215,7 +218,9 @@ function renderTask(
           : null,
         actionSlot: action,
         deeplink: {
-          href: branchHref(branchId, "/inventory/grn"),
+          href: branchHrefOrPath(branchId, "/inventory/grn", {
+            priceReview: "1",
+          }),
           label: "Kiểm tra GRN",
         },
       };

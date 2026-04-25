@@ -215,6 +215,7 @@ export function DashboardClient(props: DashboardProps) {
                 href={branchHrefOrPath(
                   props.playbookBranchId,
                   "/inventory/grn",
+                  { priceReview: "1" },
                 )}
               />
               <InventoryStatChip

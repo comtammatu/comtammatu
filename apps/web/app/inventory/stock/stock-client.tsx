@@ -826,7 +826,9 @@ export function StockClient({
             value={String(summary.pendingGrnCount)}
             tone={summary.pendingGrnCount > 0 ? "warning" : "muted"}
             disabled={summary.pendingGrnCount === 0}
-            href={branchHrefOrPath(branchId, "/inventory/grn")}
+            href={branchHrefOrPath(branchId, "/inventory/grn", {
+              filter: "draft",
+            })}
           />
           <InventoryStatChip
             kind="link"
