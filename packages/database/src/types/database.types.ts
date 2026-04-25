@@ -5634,6 +5634,64 @@ export type Database = {
           },
         ]
       }
+      tax_invoice_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          from_status: string | null
+          id: number
+          note: string | null
+          payload: Json | null
+          tax_invoice_id: number
+          tenant_id: number
+          to_status: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: never
+          note?: string | null
+          payload?: Json | null
+          tax_invoice_id: number
+          tenant_id: number
+          to_status: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: never
+          note?: string | null
+          payload?: Json | null
+          tax_invoice_id?: number
+          tenant_id?: number
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_invoice_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoice_events_tax_invoice_id_fkey"
+            columns: ["tax_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "tax_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoice_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tax_invoices: {
         Row: {
           branch_id: number
@@ -5651,6 +5709,7 @@ export type Database = {
           provider_data: Json | null
           provider_ref: string | null
           replaced_by: number | null
+          signing_started_at: string | null
           status: string
           subtotal: number
           tenant_id: number
@@ -5675,6 +5734,7 @@ export type Database = {
           provider_data?: Json | null
           provider_ref?: string | null
           replaced_by?: number | null
+          signing_started_at?: string | null
           status?: string
           subtotal: number
           tenant_id: number
@@ -5699,6 +5759,7 @@ export type Database = {
           provider_data?: Json | null
           provider_ref?: string | null
           replaced_by?: number | null
+          signing_started_at?: string | null
           status?: string
           subtotal?: number
           tenant_id?: number
@@ -5825,6 +5886,59 @@ export type Database = {
           },
           {
             foreignKeyName: "user_trust_score_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vas_report_lines: {
+        Row: {
+          created_at: string
+          display_order: number
+          form_code: string
+          formula: Json
+          formula_version: string
+          id: number
+          is_total: boolean
+          level: number
+          line_code: string
+          line_label_vi: string
+          parent_line: string | null
+          tenant_id: number | null
+        }
+        Insert: {
+          created_at?: string
+          display_order: number
+          form_code: string
+          formula: Json
+          formula_version?: string
+          id?: never
+          is_total?: boolean
+          level?: number
+          line_code: string
+          line_label_vi: string
+          parent_line?: string | null
+          tenant_id?: number | null
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          form_code?: string
+          formula?: Json
+          formula_version?: string
+          id?: never
+          is_total?: boolean
+          level?: number
+          line_code?: string
+          line_label_vi?: string
+          parent_line?: string | null
+          tenant_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vas_report_lines_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -6443,6 +6557,13 @@ export type Database = {
         Returns: undefined
       }
       finalize_stocktake: { Args: { p_session_id: number }; Returns: Json }
+      finance_views_last_refresh: {
+        Args: never
+        Returns: {
+          last_run: string
+          status: string
+        }[]
+      }
       find_payment_order_desync: {
         Args: { p_since?: string }
         Returns: {
@@ -6459,6 +6580,55 @@ export type Database = {
           payment_status: string
           tenant_id: number
         }[]
+      }
+      fn_eval_account_expr: {
+        Args: {
+          p_end_date: string
+          p_expr: Json
+          p_start_date: string
+          p_tenant_id: number
+        }
+        Returns: number
+      }
+      fn_generate_b01_dn: {
+        Args: { p_as_of_date: string; p_tenant_id: number }
+        Returns: Json
+      }
+      fn_generate_b02_dn: {
+        Args: { p_end_date: string; p_start_date: string; p_tenant_id: number }
+        Returns: Json
+      }
+      fn_generate_form_01_gtgt: {
+        Args: { p_month: number; p_tenant_id: number; p_year: number }
+        Returns: Json
+      }
+      fn_reconcile_drilldown: {
+        Args: {
+          p_branch_id?: number
+          p_category: string
+          p_end_date: string
+          p_limit?: number
+          p_side: string
+          p_start_date: string
+          p_tenant_id: number
+        }
+        Returns: {
+          amount: number
+          branch_id: number
+          description: string
+          ref_date: string
+          ref_id: number
+          ref_label: string
+        }[]
+      }
+      fn_reconcile_period: {
+        Args: {
+          p_branch_id?: number
+          p_end_date: string
+          p_start_date: string
+          p_tenant_id: number
+        }
+        Returns: Json
       }
       get_grn_price_baseline: {
         Args: { p_ingredient_id: number; p_supplier_id: number; p_uom?: string }
@@ -6747,6 +6917,15 @@ export type Database = {
       }
       transition_supplier_return: {
         Args: { p_notes?: string; p_return_id: number; p_target_status: string }
+        Returns: Json
+      }
+      transition_tax_invoice_state: {
+        Args: {
+          p_note?: string
+          p_payload?: Json
+          p_tax_invoice_id: number
+          p_to_status: string
+        }
         Returns: Json
       }
       try_auto_approve_grn: { Args: { p_grn_id: number }; Returns: Json }
