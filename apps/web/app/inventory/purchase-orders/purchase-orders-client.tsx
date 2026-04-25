@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight as IconArrowRight, Plus as IconPlus, Search as IconSearch } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -73,17 +73,34 @@ export function PurchaseOrdersClient({
   suppliers,
   purchaseOrdersBasePath = "/inventory/purchase-orders",
   suppliersPath = "/inventory/suppliers",
+  initialStatusFilter = null,
+  highlightIds = [],
 }: {
   initial: PurchaseOrderRow[];
   suppliers: SupplierRow[];
   purchaseOrdersBasePath?: string;
   suppliersPath?: string;
+  initialStatusFilter?: string | null;
+  highlightIds?: number[];
 }) {
   const [rows] = useState(initial);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState(ALL_FILTER_VALUE);
+  const [statusFilter, setStatusFilter] = useState(
+    initialStatusFilter ?? ALL_FILTER_VALUE,
+  );
   const [supplierFilter, setSupplierFilter] = useState(ALL_FILTER_VALUE);
   const isMobile = useIsMobile();
+  const highlightSet = useMemo(() => new Set(highlightIds), [highlightIds]);
+  const firstHighlightRef = useRef<HTMLTableRowElement | null>(null);
+
+  useEffect(() => {
+    if (firstHighlightRef.current) {
+      firstHighlightRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, []);
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -297,10 +314,29 @@ export function PurchaseOrdersClient({
                     />
                   ) : null}
 
-                  {filteredRows.map((row) => (
-                    <TableRow key={row.id}>
+                  {filteredRows.map((row, index) => {
+                    const highlighted = highlightSet.has(row.id);
+                    const isFirstHighlight =
+                      highlighted &&
+                      filteredRows.findIndex((r) => highlightSet.has(r.id)) ===
+                        index;
+                    return (
+                    <TableRow
+                      key={row.id}
+                      ref={isFirstHighlight ? firstHighlightRef : undefined}
+                      className={cn(
+                        highlighted && "bg-primary/5 hover:bg-primary/10",
+                      )}
+                    >
                       <TableCell className="font-mono font-medium">
-                        {row.po_number}
+                        <span className="inline-flex items-center gap-2">
+                          {row.po_number}
+                          {highlighted ? (
+                            <Badge variant="success" className="text-[10px]">
+                              Mới tạo
+                            </Badge>
+                          ) : null}
+                        </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {row.suppliers?.name ?? "Chưa gắn nhà cung cấp"}
@@ -330,7 +366,8 @@ export function PurchaseOrdersClient({
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}

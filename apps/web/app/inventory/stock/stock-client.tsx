@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRightToLine as IconArrowBarRight, ClipboardList as IconClipboardList, Pencil as IconPencil, Receipt as IconReceipt, Search as IconSearch, ShoppingCart as IconShoppingCart, Trash as IconTrash, Truck as IconTruck } from "lucide-react";
+import { ArrowRightToLine as IconArrowBarRight, ClipboardList as IconClipboardList, Package as IconPackage, Pencil as IconPencil, Receipt as IconReceipt, Search as IconSearch, ShoppingCart as IconShoppingCart, Trash as IconTrash, Truck as IconTruck } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -48,9 +49,13 @@ import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { InteractiveCard } from "../_components/interactive-card";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
+import { InventoryBulkActionBar } from "../_components/bulk-action-bar";
+import { useInventoryBulkSelection } from "../_lib/use-inventory-bulk-selection";
 import { formatDateTime, formatQty, formatVND } from "../_lib/format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
 import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";
+import { createPurchaseOrdersFromIngredients } from "../purchase-order-actions";
+import { createStockRequisitionsFromIngredients } from "../transfer-actions";
 import { AdjustStockDialog } from "./adjust-stock-dialog";
 
 export type StockIngredient = {
@@ -102,6 +107,27 @@ export type StockMovementHistory = {
   orderId: number | null;
   productionOrderId: number | null;
 };
+
+export type StockSupplyBranchOption = {
+  id: number;
+  name: string;
+  branch_kind: string;
+};
+
+function isProcurementKind(kind: string): boolean {
+  return kind === "central_warehouse" || kind === "central_kitchen";
+}
+
+/**
+ * Suggested order quantity for an ingredient.
+ * Mirrors fetchPoSuggestions logic so reviewers see one source of truth.
+ */
+function suggestedOrderQty(item: StockIngredient): number {
+  if (item.max > 0) return Math.max(0, item.max - item.qty);
+  if (item.reorder > 0) return Math.max(item.reorder * 2 - item.qty, 1);
+  // Last resort: at least 1 unit so the line is valid.
+  return 1;
+}
 
 type StockFilter = "all" | "in_stock" | "low" | "out";
 type RiskFilter = "all" | "reorder" | "not_counted";
@@ -441,22 +467,27 @@ function QuickStockIssueDialog({
 export function StockClient({
   ingredients,
   branchId,
+  branchKind,
   branchValue,
   totalValue,
   summary,
   permissions,
   movementHistory,
+  supplyBranches,
 }: {
   ingredients: StockIngredient[];
   branchId: number;
+  branchKind: string;
   branchValue: number | null;
   totalValue: number | null;
   summary: StockWorkSummary;
   permissions: StockActionPermissions;
   movementHistory: StockMovementHistory[];
+  supplyBranches: StockSupplyBranchOption[];
 }) {
   const router = useRouter();
   const isMobile = useIsMobile();
+  const isProcurementBranch = isProcurementKind(branchKind);
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
@@ -470,6 +501,10 @@ export function StockClient({
   );
   const [quickIssueTarget, setQuickIssueTarget] =
     useState<QuickIssueTarget | null>(null);
+  const [supplyBranchId, setSupplyBranchId] = useState<number | null>(
+    supplyBranches[0]?.id ?? null,
+  );
+  const [isSmartActionPending, startSmartAction] = useTransition();
 
   const categories = useMemo(() => {
     const values = [
@@ -565,6 +600,146 @@ export function StockClient({
   const visibleTotalValue = branchValue ?? filteredValue;
   const liveLabel = new Date().toLocaleDateString("vi-VN");
 
+  // Bulk selection (Smart PO / Smart Requisition)
+  const bulkSelection = useInventoryBulkSelection<StockIngredient>(filtered);
+  const canSmartCreatePo =
+    isProcurementBranch && permissions.canCreatePurchaseOrder;
+  const canSmartRequest =
+    !isProcurementBranch &&
+    permissions.canCreateTransfer &&
+    supplyBranches.length > 0;
+  const smartActionAvailable = canSmartCreatePo || canSmartRequest;
+
+  const buildItemsPayload = (items: StockIngredient[]) =>
+    items
+      .map((item) => ({
+        ingredientId: item.id,
+        quantity: suggestedOrderQty(item),
+        unit: item.unit || undefined,
+      }))
+      .filter((line) => line.quantity > 0);
+
+  const handleSmartCreatePo = (items: StockIngredient[]) => {
+    if (!canSmartCreatePo || items.length === 0) return;
+    const payload = buildItemsPayload(items);
+    if (payload.length === 0) {
+      toast.error("Số lượng đề xuất bằng 0, không tạo được PO.");
+      return;
+    }
+    startSmartAction(async () => {
+      const res = await createPurchaseOrdersFromIngredients({
+        branchId,
+        items: payload,
+      });
+      if (!res.success || !res.data) {
+        toast.error(res.error ?? "Không thể tạo PO.");
+        return;
+      }
+      const data = res.data as {
+        pos: Array<{ po_id: number; po_number: string; line_count: number; missing_price_count: number }>;
+        unresolved: Array<{ ingredient_id: number; reason: string }>;
+      };
+      const lineTotal = data.pos.reduce((sum, po) => sum + po.line_count, 0);
+      const missingPrice = data.pos.reduce(
+        (sum, po) => sum + po.missing_price_count,
+        0,
+      );
+      const unresolvedCount = data.unresolved.length;
+      const parts = [`Đã tạo ${data.pos.length} PO nháp (${lineTotal} dòng)`];
+      if (missingPrice > 0) parts.push(`${missingPrice} dòng chưa có giá`);
+      if (unresolvedCount > 0)
+        parts.push(`${unresolvedCount} nguyên liệu chưa có NCC`);
+      toast.success(parts.join(" · "));
+      bulkSelection.clear();
+      if (data.pos.length === 1) {
+        const [first] = data.pos;
+        if (first) {
+          router.push(`/inventory/purchase-orders/${first.po_id}`);
+          return;
+        }
+      }
+      const ids = data.pos.map((po) => po.po_id).join(",");
+      router.push(
+        `/inventory/purchase-orders?branchId=${branchId}&filter=draft&highlight=${ids}`,
+      );
+    });
+  };
+
+  const handleSmartRequisition = (items: StockIngredient[]) => {
+    if (!canSmartRequest || items.length === 0 || supplyBranchId == null) return;
+    const payload = buildItemsPayload(items);
+    if (payload.length === 0) {
+      toast.error("Số lượng đề xuất bằng 0, không tạo được yêu cầu.");
+      return;
+    }
+    startSmartAction(async () => {
+      const res = await createStockRequisitionsFromIngredients({
+        toBranchId: branchId,
+        fromBranchId: supplyBranchId,
+        items: payload,
+      });
+      if (!res.success || !res.data) {
+        toast.error(res.error ?? "Không thể tạo yêu cầu cấp hàng.");
+        return;
+      }
+      const data = res.data as {
+        transfer_id: number;
+        transfer_number: string;
+        line_count: number;
+      };
+      toast.success(
+        `Đã tạo yêu cầu ${data.transfer_number} (${data.line_count} dòng)`,
+      );
+      bulkSelection.clear();
+      router.push(`/inventory/transfers/${data.transfer_id}`);
+    });
+  };
+
+  const smartBarActions = canSmartCreatePo
+    ? [
+        {
+          key: "smart-po",
+          label: `Tạo PO ngay (${bulkSelection.selectedCount})`,
+          icon: IconShoppingCart,
+          primary: true,
+          onClick: () => handleSmartCreatePo(bulkSelection.selectedItems),
+        },
+      ]
+    : canSmartRequest
+      ? [
+          {
+            key: "smart-req",
+            label: `Yêu cầu cấp hàng (${bulkSelection.selectedCount})`,
+            icon: IconPackage,
+            primary: true,
+            disabled: supplyBranchId == null,
+            onClick: () => handleSmartRequisition(bulkSelection.selectedItems),
+          },
+        ]
+      : [];
+
+  const supplyBranchSelector =
+    canSmartRequest && supplyBranches.length > 0 ? (
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted-foreground">Yêu cầu từ:</span>
+        <Select
+          value={supplyBranchId == null ? "" : String(supplyBranchId)}
+          onValueChange={(value) => setSupplyBranchId(Number(value))}
+        >
+          <SelectTrigger size="sm" className="min-w-40">
+            <SelectValue placeholder="Chọn nguồn" />
+          </SelectTrigger>
+          <SelectContent>
+            {supplyBranches.map((branch) => (
+              <SelectItem key={branch.id} value={String(branch.id)}>
+                {branch.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    ) : null;
+
   return (
     <>
       <InventoryHeader
@@ -617,7 +792,7 @@ export function StockClient({
             <QuickActionButton
               href={branchHref(branchId, "/inventory/purchase-orders/new")}
               icon={IconShoppingCart}
-              label="Đề xuất mua"
+              label="PO trống"
             />
           ) : null}
 
@@ -856,6 +1031,24 @@ export function StockClient({
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/20 hover:bg-muted/20">
+                      {smartActionAvailable ? (
+                        <TableHead className="w-10">
+                          <Checkbox
+                            checked={
+                              bulkSelection.isAllSelected
+                                ? true
+                                : bulkSelection.isSomeSelected
+                                  ? "indeterminate"
+                                  : false
+                            }
+                            onCheckedChange={(value) => {
+                              if (value) bulkSelection.selectAll();
+                              else bulkSelection.clear();
+                            }}
+                            aria-label="Chọn tất cả"
+                          />
+                        </TableHead>
+                      ) : null}
                       <TableHead className="min-w-56">Nguyên liệu</TableHead>
                       <TableHead className="min-w-32">Danh mục</TableHead>
                       <TableHead className="min-w-24 text-right">Tồn</TableHead>
@@ -874,7 +1067,7 @@ export function StockClient({
                   <TableBody>
                     {filtered.length === 0 ? (
                       <TableEmptyStateRow
-                        colSpan={7}
+                        colSpan={smartActionAvailable ? 8 : 7}
                         title={
                           searchQuery.trim()
                             ? "Không tìm thấy nguyên liệu phù hợp"
@@ -890,6 +1083,7 @@ export function StockClient({
 
                     {filtered.map((item) => {
                       const active = selected?.id === item.id;
+                      const isItemSelected = bulkSelection.isSelected(item.id);
                       return (
                         <TableRow
                           key={item.id}
@@ -908,6 +1102,20 @@ export function StockClient({
                           }}
                           aria-label={`Xem chi tiết ${item.name}`}
                         >
+                          {smartActionAvailable ? (
+                            <TableCell
+                              className="w-10"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <Checkbox
+                                checked={isItemSelected}
+                                onCheckedChange={(value) =>
+                                  bulkSelection.setSelected(item.id, value === true)
+                                }
+                                aria-label={`Chọn ${item.name}`}
+                              />
+                            </TableCell>
+                          ) : null}
                           <TableCell>
                             <div className="space-y-1">
                               <p className="font-semibold">{item.name}</p>
@@ -1027,8 +1235,38 @@ export function StockClient({
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
+                    {canSmartCreatePo ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => handleSmartCreatePo([selected])}
+                        disabled={isSmartActionPending}
+                      >
+                        <IconShoppingCart className="size-3.5" />
+                        Tạo PO ngay
+                      </Button>
+                    ) : null}
+                    {canSmartRequest ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => handleSmartRequisition([selected])}
+                        disabled={
+                          isSmartActionPending || supplyBranchId == null
+                        }
+                      >
+                        <IconPackage className="size-3.5" />
+                        Yêu cầu cấp hàng
+                      </Button>
+                    ) : null}
                     {permissions.canReceiveGrn ? (
-                      <Button asChild size="sm">
+                      <Button
+                        asChild
+                        size="sm"
+                        variant={
+                          smartActionAvailable ? "outline" : "default"
+                        }
+                      >
                         <Link href={branchHref(branchId, "/inventory/grn")}>
                           <IconReceipt className="size-3.5" />
                           Nhận hàng
@@ -1207,6 +1445,16 @@ export function StockClient({
             onOpenChange={(open) => {
               if (!open) setQuickIssueTarget(null);
             }}
+          />
+        ) : null}
+
+        {!isMobile && smartActionAvailable ? (
+          <InventoryBulkActionBar
+            selectedCount={bulkSelection.selectedCount}
+            actions={smartBarActions}
+            onClear={bulkSelection.clear}
+            isPending={isSmartActionPending}
+            leftSlot={supplyBranchSelector}
           />
         ) : null}
       </InventoryPageContent>

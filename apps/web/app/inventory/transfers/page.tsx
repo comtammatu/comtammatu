@@ -17,15 +17,30 @@ import type {
 import { TransfersListClient } from "./transfers-list-client";
 import type { IngredientRow } from "../page";
 
+function parseHighlightIds(value: string | string[] | undefined): number[] {
+  if (!value) return [];
+  const raw = Array.isArray(value) ? value.join(",") : value;
+  const out: number[] = [];
+  for (const part of raw.split(",")) {
+    const n = Number(part.trim());
+    if (Number.isInteger(n) && n > 0) out.push(n);
+  }
+  return out;
+}
+
 export default async function TransfersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string | string[] }>;
+  searchParams: Promise<{
+    branchId?: string | string[];
+    highlight?: string | string[];
+  }>;
 }) {
   const params = await searchParams;
   const { supabase, claims } = await loadAuthState();
   const requested = await resolveRequestedBranchId(params.branchId);
   const scope = await resolveInventoryBranchScope(supabase, claims, requested);
+  const highlightIds = parseHighlightIds(params.highlight);
   // Sidebar-selected branch drives action context. For branch-scoped roles it
   // collapses to claims.branch_id; for owner/super_manager/area_manager it
   // reflects the sidebar picker (URL ?branchId=).
@@ -66,6 +81,7 @@ export default async function TransfersPage({
       userBranchId={userBranchId}
       userRole={claims.user_role}
       basePath="/inventory/transfers"
+      highlightIds={highlightIds}
     />
   );
 }

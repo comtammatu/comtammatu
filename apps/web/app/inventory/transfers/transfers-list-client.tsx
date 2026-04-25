@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight as IconArrowRight, CircleCheck as IconCircleCheck, ChevronRight as IconChevronRight, PackagePlus as IconPackageImport, PackageX as IconPackageOff, Plus as IconPlus, Search as IconSearch, Send as IconSend } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
@@ -116,6 +117,7 @@ export function TransfersListClient({
   userBranchId,
   userRole,
   basePath = "/inventory/transfers",
+  highlightIds = [],
 }: {
   initial: TransferListRow[];
   branches: BranchForTransfer[];
@@ -125,10 +127,12 @@ export function TransfersListClient({
   userBranchId: number | null;
   userRole: StaffRole;
   basePath?: string;
+  highlightIds?: number[];
 }) {
   const router = useRouter();
   const isMobile = useIsMobile();
   const [rows, setRows] = useState(initial);
+  const highlightSet = useMemo(() => new Set(highlightIds), [highlightIds]);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -391,10 +395,23 @@ export function TransfersListClient({
                       ? `Nhận: ${new Date(r.received_at).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })}`
                       : "—";
 
+                  const highlighted = highlightSet.has(r.id);
                   return (
-                    <TableRow key={r.id}>
+                    <TableRow
+                      key={r.id}
+                      className={cn(
+                        highlighted && "bg-primary/5 hover:bg-primary/10",
+                      )}
+                    >
                       <TableCell className="font-medium">
-                        {r.transfer_number}
+                        <span className="inline-flex items-center gap-2">
+                          {r.transfer_number}
+                          {highlighted ? (
+                            <Badge variant="success" className="text-[10px]">
+                              Mới tạo
+                            </Badge>
+                          ) : null}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5 text-sm">

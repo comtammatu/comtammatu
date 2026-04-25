@@ -7,12 +7,14 @@ import {
   resolveInventoryBranchScope,
   resolveRequestedBranchId,
 } from "../_lib/inventory-scope";
+import { fetchProcurementBranches } from "../_lib/procurement-branches";
 import { formatDate } from "../_lib/format";
 import { StockClient } from "./stock-client";
 import type {
   StockActionPermissions,
   StockIngredient,
   StockMovementHistory,
+  StockSupplyBranchOption,
   StockWorkSummary,
 } from "./stock-client";
 
@@ -45,6 +47,15 @@ export default async function StockPage({
   const scope = await resolveInventoryBranchScope(supabase, claims, requested);
   const branchId = scope.selectedBranchId;
   if (!branchId) redirect("/inventory");
+
+  // Resolve current branch kind so the client can pick PO vs Requisition flow.
+  const { data: branchRow } = await supabase
+    .from("branches")
+    .select("branch_kind")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("id", branchId)
+    .maybeSingle();
+  const branchKind = branchRow?.branch_kind ?? "branch";
 
   // Fetch the stock workbench data in parallel. Extra counts are read-only
   // hints for the compact operations strip.
@@ -266,15 +277,26 @@ export default async function StockPage({
     productionOrderId: row.production_order_id,
   }));
 
+  // Operational branches need a list of CW/CK to pick as supply source for
+  // "Yêu cầu cấp hàng". Procurement branches don't need this list.
+  const supplyBranches: StockSupplyBranchOption[] =
+    branchKind === "branch"
+      ? (await fetchProcurementBranches(supabase, claims.tenant_id))
+          .filter((b) => b.id !== branchId)
+          .map((b) => ({ id: b.id, name: b.name, branch_kind: b.branch_kind }))
+      : [];
+
   return (
     <StockClient
       ingredients={ingredients}
       branchId={branchId}
+      branchKind={branchKind}
       branchValue={branchValue}
       totalValue={totalValue}
       summary={summary}
       permissions={permissions}
       movementHistory={movementHistory}
+      supplyBranches={supplyBranches}
     />
   );
 }

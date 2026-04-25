@@ -1,6 +1,5 @@
 "use server";
 
-import { randomUUID } from "crypto";
 import { z } from "zod";
 import { INVENTORY_OPS_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
@@ -174,7 +173,7 @@ export async function createStockTransfer(
     }
   }
 
-  const transferNumber = `TRF-${randomUUID().slice(0, 8)}`;
+  const transferNumber = await nextTransferNumber(supabase);
 
   // Resolve locations if not provided
   const fromLocationId = parsed.data.fromLocationId ?? await resolveDefaultInventoryLocation(
@@ -387,3 +386,124 @@ export async function fetchInventoryLocationsForBranch(
   if (error) return { success: false, error: "Không thể tải vị trí kho." };
   return { success: true, data: data ?? [] };
 }
+
+/* ─── Helpers ─── */
+
+async function nextTransferNumber(supabase: TenantSupabase): Promise<string> {
+  const { data, error } = await supabase.rpc("next_inventory_doc_number", {
+    p_kind: "trf",
+  });
+  if (error || typeof data !== "string" || data.length === 0) {
+    // Fallback so a transient sequence-grant glitch doesn't block transfers.
+    // Format mirrors the sequence output to keep downstream consumers happy.
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const fallback = String(Date.now()).slice(-4);
+    return `TRF-${today}-${fallback}`;
+  }
+  return data;
+}
+
+/* ─── createStockRequisitionsFromIngredients (Smart Requisition from Stock) ─── */
+
+const smartRequisitionSchema = z.object({
+  toBranchId: z.coerce.number().int().positive(),
+  fromBranchId: z.coerce.number().int().positive(),
+  items: z
+    .array(
+      z.object({
+        ingredientId: z.coerce.number().int().positive(),
+        quantity: z.coerce.number().positive(),
+        unit: z.string().min(1).optional(),
+      }),
+    )
+    .min(1)
+    .max(200),
+  notes: z.string().max(500).optional(),
+});
+
+export interface SmartRequisitionResult {
+  transfer_id: number;
+  transfer_number: string;
+  from_branch_id: number;
+  to_branch_id: number;
+  line_count: number;
+}
+
+const SMART_REQ_RPC_ERROR_MAP: Record<string, string> = {
+  branches_required: "Thiếu thông tin chi nhánh.",
+  branch_not_found: "Chi nhánh không tồn tại.",
+  source_must_be_procurement:
+    "Nguồn cấp phải là Kho Tổng hoặc Bếp Trung Tâm.",
+  requisition_same_branch: "Không thể yêu cầu cấp hàng cho chính kho mình.",
+  requisition_branch_to_branch:
+    "Không được tạo yêu cầu giữa hai chi nhánh vận hành.",
+  branch_scope_violation: "Bạn chỉ được tạo phiếu liên quan đến kho của mình.",
+  forbidden: "Bạn không có quyền tạo phiếu chuyển.",
+  items_required: "Cần chọn ít nhất 1 nguyên liệu.",
+  no_lines_inserted: "Không tạo được dòng nguyên liệu nào.",
+};
+
+export const createStockRequisitionsFromIngredients = withAction(
+  {
+    roles: ROLES,
+    schema: smartRequisitionSchema,
+    permission: PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
+  },
+  async (
+    data,
+    { supabase, claims },
+  ): Promise<ActionResult<SmartRequisitionResult>> => {
+    if (data.fromBranchId === data.toBranchId) {
+      return {
+        success: false,
+        error: "Không thể yêu cầu cấp hàng cho chính kho mình.",
+      };
+    }
+
+    // Branch-scoped role check (mirrors createStockTransfer).
+    if (
+      claims.user_role &&
+      ["branch_manager", "warehouse_manager", "production_manager"].includes(
+        claims.user_role,
+      ) &&
+      claims.branch_id != null
+    ) {
+      const my = claims.branch_id;
+      if (data.fromBranchId !== my && data.toBranchId !== my) {
+        return {
+          success: false,
+          error: "Bạn chỉ được tạo phiếu liên quan đến kho của mình.",
+        };
+      }
+    }
+
+    const { data: rpcData, error } = await supabase.rpc(
+      "create_stock_requisitions_from_ingredients",
+      {
+        p_to_branch_id: data.toBranchId,
+        p_from_branch_id: data.fromBranchId,
+        p_items: data.items.map((item) => ({
+          ingredientId: item.ingredientId,
+          quantity: item.quantity,
+          unit: item.unit ?? null,
+        })),
+        ...(data.notes !== undefined && { p_notes: data.notes }),
+      },
+    );
+
+    if (error) {
+      const mapped = SMART_REQ_RPC_ERROR_MAP[error.message];
+      return {
+        success: false,
+        error: mapped ?? "Không thể tạo yêu cầu cấp hàng.",
+      };
+    }
+
+    const payload = rpcData as unknown as SmartRequisitionResult | null;
+    if (!payload || typeof payload.transfer_id !== "number") {
+      return { success: false, error: "Không thể tạo yêu cầu cấp hàng." };
+    }
+
+    return { success: true, data: payload };
+  },
+);

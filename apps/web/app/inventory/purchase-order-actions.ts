@@ -724,3 +724,109 @@ export const fetchIngredientPriceHistory = withAction(
     return { success: true, data: result };
   },
 );
+
+/* ─── createPurchaseOrdersFromIngredients (Smart PO from Stock) ─── */
+
+const smartPoSchema = z.object({
+  branchId: z.coerce.number().int().positive(),
+  items: z
+    .array(
+      z.object({
+        ingredientId: z.coerce.number().int().positive(),
+        quantity: z.coerce.number().positive(),
+        unit: z.string().min(1).optional(),
+      }),
+    )
+    .min(1)
+    .max(200),
+  notes: z.string().max(500).optional(),
+});
+
+export interface SmartPoCreated {
+  po_id: number;
+  supplier_id: number;
+  po_number: string;
+  line_count: number;
+  missing_price_count: number;
+}
+
+export interface SmartPoUnresolved {
+  ingredient_id: number;
+  reason: "no_supplier";
+}
+
+export interface SmartPoResult {
+  pos: SmartPoCreated[];
+  unresolved: SmartPoUnresolved[];
+}
+
+const SMART_PO_RPC_ERROR_MAP: Record<string, string> = {
+  branch_not_found: "Chi nhánh không tồn tại.",
+  branch_not_procurement: "Chỉ Kho Tổng / Bếp Trung Tâm được tạo PO.",
+  branch_scope_violation: "Bạn chỉ được tạo PO cho kho của mình.",
+  forbidden: "Bạn không có quyền tạo PO.",
+  invalid_quantity: "Số lượng không hợp lệ.",
+  items_required: "Cần chọn ít nhất 1 nguyên liệu.",
+  all_items_unresolved:
+    "Không tìm thấy NCC cho các nguyên liệu đã chọn. Hãy gán NCC trong danh mục trước.",
+  unsupported_strategy: "Chiến lược chọn NCC không hợp lệ.",
+};
+
+export const createPurchaseOrdersFromIngredients = withAction(
+  {
+    roles: ROLES,
+    schema: smartPoSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+  },
+  async (data, { supabase, claims }): Promise<ActionResult<SmartPoResult>> => {
+    if (!canAccessProcurementBranch(claims, data.branchId)) {
+      return { success: false, error: "Bạn chỉ được tạo PO cho kho của mình." };
+    }
+
+    const procBranches = await fetchProcurementBranches(
+      supabase,
+      claims.tenant_id,
+    );
+    if (!procBranches.some((b) => b.id === data.branchId)) {
+      return {
+        success: false,
+        error: "Chi nhánh không hợp lệ (phải là Kho Tổng hoặc Bếp Trung Tâm).",
+      };
+    }
+
+    const { data: rpcData, error } = await supabase.rpc(
+      "create_purchase_orders_from_ingredients",
+      {
+        p_branch_id: data.branchId,
+        p_items: data.items.map((item) => ({
+          ingredientId: item.ingredientId,
+          quantity: item.quantity,
+          unit: item.unit ?? null,
+        })),
+        p_strategy: "latest_supplier_item",
+        ...(data.notes !== undefined && { p_notes: data.notes }),
+      },
+    );
+
+    if (error) {
+      const mapped = SMART_PO_RPC_ERROR_MAP[error.message];
+      return {
+        success: false,
+        error: mapped ?? "Không thể tạo đơn đặt hàng.",
+      };
+    }
+
+    const payload = rpcData as unknown as SmartPoResult | null;
+    if (!payload || !Array.isArray(payload.pos) || payload.pos.length === 0) {
+      return { success: false, error: "Không tạo được PO nháp nào." };
+    }
+
+    return {
+      success: true,
+      data: {
+        pos: payload.pos,
+        unresolved: Array.isArray(payload.unresolved) ? payload.unresolved : [],
+      },
+    };
+  },
+);

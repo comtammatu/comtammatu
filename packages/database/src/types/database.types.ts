@@ -6444,6 +6444,28 @@ export type Database = {
         }
         Returns: Json
       }
+      create_purchase_orders_from_ingredients: {
+        Args: {
+          p_branch_id: number
+          p_items: Json
+          p_notes?: string
+          p_strategy?: string
+        }
+        Returns: Json
+      }
+      next_inventory_doc_number: {
+        Args: { p_kind: string }
+        Returns: string
+      }
+      create_stock_requisitions_from_ingredients: {
+        Args: {
+          p_from_branch_id: number
+          p_items: Json
+          p_notes?: string
+          p_to_branch_id: number
+        }
+        Returns: Json
+      }
       create_stock_transfer_draft: {
         Args: {
           p_from_branch_id: number
