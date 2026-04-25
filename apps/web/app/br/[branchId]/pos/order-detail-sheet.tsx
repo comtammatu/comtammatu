@@ -24,7 +24,11 @@ import { Item } from "@comtammatu/ui/components/item";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { notify } from "@comtammatu/ui/lib/notify";
-import { Ellipsis as IconDots, Receipt as IconReceipt } from "lucide-react";
+import {
+  Ellipsis as IconDots,
+  Receipt as IconReceipt,
+  X as IconX,
+} from "lucide-react";
 import { AppBoneyardSkeleton } from "../../../_components/boneyard-skeleton";
 import {
   fetchOrderDetail,
@@ -509,15 +513,31 @@ export function OrderDetailSheet({
           className="flex w-full flex-col sm:max-w-md"
         >
           <SheetHeader className="border-b border-border/60 px-3 py-2.5 text-left sm:px-4">
-            <SheetTitle className="flex min-w-0 items-center gap-2 text-base">
-              {orderContextLabel && <span>{orderContextLabel}</span>}
-              {orderContextLabel && sheetTitle && (
-                <span className="text-muted-foreground">·</span>
-              )}
-              <span className="truncate">
-                {sheetTitle ? `#${sheetTitle}` : orderId !== null ? "Đơn" : ""}
-              </span>
-            </SheetTitle>
+            <div className="flex items-center justify-between gap-3">
+              <SheetTitle className="flex min-w-0 items-center gap-2 text-base">
+                {orderContextLabel && <span>{orderContextLabel}</span>}
+                {orderContextLabel && sheetTitle && (
+                  <span className="text-muted-foreground">·</span>
+                )}
+                <span className="truncate">
+                  {sheetTitle
+                    ? `#${sheetTitle}`
+                    : orderId !== null
+                      ? "Đơn"
+                      : ""}
+                </span>
+              </SheetTitle>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="shrink-0 text-muted-foreground"
+                aria-label="Đóng chi tiết đơn"
+                onClick={onClose}
+              >
+                <IconX />
+              </Button>
+            </div>
             <SheetDescription className="sr-only">
               Chi tiết đơn hàng, thêm món và cập nhật trạng thái phục vụ
             </SheetDescription>
