@@ -198,6 +198,62 @@ export function PlaybookActionButtons({
       );
     }
 
+    case "transfer_suggestion": {
+      // Render one button per (from, to) pair. Each click creates exactly
+      // one transfer draft via the same Phase 1 RPC operational branches
+      // already use for ad-hoc requisitions — no batch loop, no chaining.
+      const handleCreatePair = (
+        pairIndex: number,
+      ) => {
+        const pair = task.pairs[pairIndex];
+        if (!pair) return;
+        startAction(async () => {
+          const res = await createStockRequisitionsFromIngredients({
+            toBranchId: pair.to_branch_id,
+            fromBranchId: pair.from_branch_id,
+            items: pair.ingredients.map((ing) => ({
+              ingredientId: ing.ingredient_id,
+              quantity: ing.suggested_qty,
+              unit: ing.unit || undefined,
+            })),
+          });
+          if (!res.success || !res.data) {
+            toast.error(res.error ?? "Không thể tạo phiếu chuyển.");
+            return;
+          }
+          const data = res.data as {
+            transfer_id: number;
+            transfer_number: string;
+            line_count: number;
+          };
+          toast.success(
+            `Đã tạo ${data.transfer_number} (${data.line_count} dòng)`,
+          );
+          router.push(`/inventory/transfers/${data.transfer_id}`);
+        });
+      };
+      // Cap rendered buttons; if there are more pairs the task card's
+      // deeplink "Mở danh sách" lets the user reach them all.
+      const visiblePairs = task.pairs.slice(0, 3);
+      return (
+        <>
+          {visiblePairs.map((pair, idx) => (
+            <Button
+              key={`${pair.from_branch_id}-${pair.to_branch_id}`}
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => handleCreatePair(idx)}
+              disabled={isPending || pair.ingredients.length === 0}
+            >
+              <IconPackage className="size-3.5" />
+              {`Tạo phiếu từ ${pair.from_branch_name} → ${pair.to_branch_name}`}
+            </Button>
+          ))}
+        </>
+      );
+    }
+
     // The remaining task kinds use deeplink-only navigation; the parent
     // PlaybookTaskCard renders the deeplink prop, so no inline button here.
     case "transfer_inbound_unconfirmed":

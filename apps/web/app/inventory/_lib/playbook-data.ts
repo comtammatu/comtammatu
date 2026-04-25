@@ -24,6 +24,7 @@ import {
   type PlaybookStocktakeSession,
   type PlaybookTask,
   type PlaybookTransferRow,
+  type PlaybookTransferSuggestionPair,
 } from "./playbook-types";
 
 type BranchKind = "central_warehouse" | "central_kitchen" | "branch";
@@ -95,6 +96,7 @@ export async function loadInventoryPlaybook(
     reorderRes,
     expiryRes,
     priceReviewRes,
+    transferSuggestionPairs,
   ] = await Promise.all([
     wantsProcurementTasks
       ? fetchPurchaseOrders(branchId)
@@ -115,6 +117,14 @@ export async function loadInventoryPlaybook(
     wantsProcurementTasks
       ? fetchPriceReviewLines(supabase, claims.tenant_id, branchId)
       : Promise.resolve([] as PlaybookPriceReviewLine[]),
+    canCreateTransfer
+      ? fetchTransferSuggestions(
+          supabase,
+          claims.tenant_id,
+          branchId,
+          branchKind,
+        )
+      : Promise.resolve([] as PlaybookTransferSuggestionPair[]),
   ]);
 
   const tasks: PlaybookTask[] = [];
@@ -374,6 +384,39 @@ export async function loadInventoryPlaybook(
     });
   }
 
+  // ── 9. Transfer suggestions (CW over → branch low matching) ──
+  // Skip ingredients already covered by reorder_critical for the current
+  // branch — they get a more direct action there. This keeps the playbook
+  // free of duplicate calls-to-action on the same SKU.
+  if (canCreateTransfer && transferSuggestionPairs.length > 0) {
+    const reorderTask = tasks.find((t) => t.kind === "reorder_critical");
+    const dedupeIds = new Set(
+      reorderTask && reorderTask.kind === "reorder_critical"
+        ? reorderTask.ingredients.map((i) => i.ingredient_id)
+        : [],
+    );
+    const filteredPairs = dedupeIds.size
+      ? transferSuggestionPairs
+          .map<PlaybookTransferSuggestionPair>((pair) => ({
+            ...pair,
+            ingredients: pair.ingredients.filter(
+              (ing) => !dedupeIds.has(ing.ingredient_id),
+            ),
+          }))
+          .filter((pair) => pair.ingredients.length > 0)
+      : transferSuggestionPairs;
+
+    if (filteredPairs.length > 0) {
+      tasks.push({
+        kind: "transfer_suggestion",
+        severity: "info",
+        branch_id: branchId,
+        branch_kind: branchKind,
+        pairs: filteredPairs,
+      });
+    }
+  }
+
   return {
     branchId,
     branchKind,
@@ -430,4 +473,197 @@ async function fetchPriceReviewLines(
   }
   // Cap to 20 lines so the task card stays readable.
   return lines.slice(0, 20);
+}
+
+interface StockLevelJoinRow {
+  branch_id: number;
+  current_quantity: number;
+  ingredients: {
+    id: number;
+    name: string;
+    unit: string;
+    purchase_unit: string | null;
+    reorder_point: number | null;
+    max_stock_level: number | null;
+    is_active: boolean | null;
+  } | null;
+  branches: {
+    id: number;
+    name: string;
+    branch_kind: string | null;
+  } | null;
+}
+
+/**
+ * Build (source → target) transfer pairs for the current branch context.
+ * Picks operational rows where `current_quantity ≤ reorder_point` (low) and
+ * procurement rows where `current_quantity > max_stock_level` (over) on the
+ * same ingredient. Quantity per pair is `min(deficit, surplus)` clamped > 0,
+ * with surplus consumed FIFO across target branches by `branch_id` ASC.
+ *
+ * Branch-scope filter:
+ *   - procurement branch viewing → only pairs where `from = currentBranchId`
+ *   - operational branch viewing → only pairs where `to   = currentBranchId`
+ */
+async function fetchTransferSuggestions(
+  supabase: Awaited<ReturnType<typeof loadAuthState>>["supabase"],
+  tenantId: number,
+  currentBranchId: number,
+  currentBranchKind: BranchKind,
+): Promise<PlaybookTransferSuggestionPair[]> {
+  const { data, error } = await supabase
+    .from("stock_levels")
+    .select(
+      `
+      branch_id,
+      current_quantity,
+      ingredients!inner (
+        id, name, unit, purchase_unit, reorder_point, max_stock_level, is_active
+      ),
+      branches!inner ( id, name, branch_kind )
+    `,
+    )
+    .eq("tenant_id", tenantId)
+    .eq("ingredients.is_active", true)
+    .not("ingredients.reorder_point", "is", null)
+    .not("ingredients.max_stock_level", "is", null);
+
+  if (error || !data) return [];
+
+  type LowRow = {
+    branch_id: number;
+    branch_name: string;
+    deficit: number;
+    current: number;
+    reorder: number;
+  };
+  type OverRow = {
+    branch_id: number;
+    branch_name: string;
+    surplus: number;
+    current: number;
+  };
+  type IngredientBucket = {
+    ingredient_id: number;
+    name: string;
+    unit: string;
+    lows: LowRow[];
+    overs: OverRow[];
+  };
+
+  const buckets = new Map<number, IngredientBucket>();
+  for (const row of data as unknown as StockLevelJoinRow[]) {
+    const ing = row.ingredients;
+    const br = row.branches;
+    if (!ing || !br) continue;
+    const reorder = ing.reorder_point;
+    const maxStock = ing.max_stock_level;
+    if (reorder == null || maxStock == null) continue;
+
+    const isProcurement =
+      br.branch_kind === "central_warehouse" ||
+      br.branch_kind === "central_kitchen";
+    const isOperational = br.branch_kind === "branch";
+
+    const isLow = isOperational && row.current_quantity <= reorder;
+    const isOver = isProcurement && row.current_quantity > maxStock;
+    if (!isLow && !isOver) continue;
+
+    const bucket =
+      buckets.get(ing.id) ??
+      ({
+        ingredient_id: ing.id,
+        name: ing.name,
+        unit: ing.purchase_unit || ing.unit,
+        lows: [],
+        overs: [],
+      } as IngredientBucket);
+
+    if (isLow) {
+      bucket.lows.push({
+        branch_id: row.branch_id,
+        branch_name: br.name,
+        deficit: reorder - row.current_quantity,
+        current: row.current_quantity,
+        reorder,
+      });
+    }
+    if (isOver) {
+      bucket.overs.push({
+        branch_id: row.branch_id,
+        branch_name: br.name,
+        surplus: row.current_quantity - maxStock,
+        current: row.current_quantity,
+      });
+    }
+    buckets.set(ing.id, bucket);
+  }
+
+  // Compose (source, target) pairs. Allocate surplus FIFO across the target
+  // branches by branch_id ASC so the same low branch isn't starved when
+  // multiple sites compete for a limited surplus.
+  const pairsMap = new Map<string, PlaybookTransferSuggestionPair>();
+  for (const bucket of buckets.values()) {
+    if (bucket.lows.length === 0 || bucket.overs.length === 0) continue;
+    bucket.lows.sort((a, b) => a.branch_id - b.branch_id);
+    bucket.overs.sort((a, b) => a.branch_id - b.branch_id);
+
+    // Pick the largest-surplus source for now (simple v1 — refine later if
+    // operations want round-robin across multiple CWs).
+    const source = bucket.overs.reduce(
+      (best, cur) => (cur.surplus > best.surplus ? cur : best),
+      bucket.overs[0]!,
+    );
+    let remainingSurplus = source.surplus;
+
+    for (const low of bucket.lows) {
+      if (remainingSurplus <= 0) break;
+      const qty = Math.floor(Math.min(low.deficit, remainingSurplus));
+      if (qty <= 0) continue;
+      remainingSurplus -= qty;
+
+      const pairKey = `${source.branch_id}->${low.branch_id}`;
+      const pair =
+        pairsMap.get(pairKey) ??
+        ({
+          from_branch_id: source.branch_id,
+          from_branch_name: source.branch_name,
+          to_branch_id: low.branch_id,
+          to_branch_name: low.branch_name,
+          ingredients: [],
+        } as PlaybookTransferSuggestionPair);
+      pair.ingredients.push({
+        ingredient_id: bucket.ingredient_id,
+        name: bucket.name,
+        unit: bucket.unit,
+        current_target: low.current,
+        current_source: source.current,
+        suggested_qty: qty,
+      });
+      pairsMap.set(pairKey, pair);
+    }
+  }
+
+  // Branch-scope: only pairs where the current branch participates.
+  const isProcurementBranch =
+    currentBranchKind === "central_warehouse" ||
+    currentBranchKind === "central_kitchen";
+  const filtered: PlaybookTransferSuggestionPair[] = [];
+  for (const pair of pairsMap.values()) {
+    if (isProcurementBranch) {
+      if (pair.from_branch_id !== currentBranchId) continue;
+    } else {
+      if (pair.to_branch_id !== currentBranchId) continue;
+    }
+    filtered.push(pair);
+  }
+
+  // Stable order: lowest from_branch_id then to_branch_id. Cap to 6 pairs
+  // so the card stays readable; surplus signal is still surfaced.
+  filtered.sort(
+    (a, b) =>
+      a.from_branch_id - b.from_branch_id ||
+      a.to_branch_id - b.to_branch_id,
+  );
+  return filtered.slice(0, 6);
 }

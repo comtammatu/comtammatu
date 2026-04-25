@@ -220,6 +220,37 @@ function renderTask(
         },
       };
     }
+
+    case "transfer_suggestion": {
+      const totalIngredients = task.pairs.reduce(
+        (sum, pair) => sum + pair.ingredients.length,
+        0,
+      );
+      const isProcurement =
+        task.branch_kind === "central_warehouse" ||
+        task.branch_kind === "central_kitchen";
+      const samplePair = task.pairs[0];
+      const sampleIngredient = samplePair?.ingredients[0];
+      return {
+        icon: IconSend,
+        title: isProcurement
+          ? `Đề xuất chuyển hàng (${task.pairs.length} chi nhánh)`
+          : `Kho có dư cho ${totalIngredients} nguyên liệu bạn đang thiếu`,
+        description: isProcurement
+          ? "Bạn đang dư kho, các chi nhánh đang thiếu cùng nguyên liệu — tạo phiếu chuyển 1-click."
+          : "Bù tồn ngay từ Kho Tổng / Bếp TT đang dư.",
+        count: totalIngredients,
+        meta:
+          samplePair && sampleIngredient
+            ? `Sớm nhất: ${samplePair.from_branch_name} → ${samplePair.to_branch_name} · ${sampleIngredient.name} ${sampleIngredient.suggested_qty} ${sampleIngredient.unit}`
+            : null,
+        actionSlot: action,
+        deeplink: {
+          href: branchHref(branchId, "/inventory/transfers"),
+          label: "Mở danh sách chuyển",
+        },
+      };
+    }
   }
 }
 

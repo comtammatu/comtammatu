@@ -68,6 +68,23 @@ export interface PlaybookPriceReviewLine {
   variance_pct: number;
 }
 
+export interface PlaybookTransferSuggestionIngredient {
+  ingredient_id: number;
+  name: string;
+  unit: string;
+  current_target: number;
+  current_source: number;
+  suggested_qty: number;
+}
+
+export interface PlaybookTransferSuggestionPair {
+  from_branch_id: number;
+  from_branch_name: string;
+  to_branch_id: number;
+  to_branch_name: string;
+  ingredients: PlaybookTransferSuggestionIngredient[];
+}
+
 export type PlaybookTask =
   | {
       kind: "po_draft_pending";
@@ -115,6 +132,13 @@ export type PlaybookTask =
       kind: "price_review_pending";
       severity: PlaybookSeverity;
       lines: PlaybookPriceReviewLine[];
+    }
+  | {
+      kind: "transfer_suggestion";
+      severity: PlaybookSeverity;
+      branch_id: number;
+      branch_kind: "central_warehouse" | "central_kitchen" | "branch";
+      pairs: PlaybookTransferSuggestionPair[];
     };
 
 export type PlaybookTaskKind = PlaybookTask["kind"];
@@ -129,6 +153,7 @@ export const PLAYBOOK_KIND_ORDER: Record<PlaybookTaskKind, number> = {
   transfer_outbound_pending: 5,
   grn_draft_pending: 6,
   stocktake_in_progress: 7,
+  transfer_suggestion: 8,
 };
 
 const SEVERITY_WEIGHT: Record<PlaybookSeverity, number> = {
@@ -169,6 +194,8 @@ function taskItemCount(task: PlaybookTask): number {
       return task.grns.length;
     case "price_review_pending":
       return task.lines.length;
+    case "transfer_suggestion":
+      return task.pairs.reduce((sum, pair) => sum + pair.ingredients.length, 0);
   }
 }
 
