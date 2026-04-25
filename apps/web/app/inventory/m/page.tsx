@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight as IconArrowRight, ChartBar as IconChartBar, ClipboardList as IconClipboardList, Factory as IconBuildingFactory, Package as IconPackage, Receipt as IconReceipt, Truck as IconTruck } from "lucide-react";
+import { ArrowRight as IconArrowRight, ChartBar as IconChartBar, ClipboardList as IconClipboardList, Factory as IconBuildingFactory, Hourglass as IconHourglass, Package as IconPackage, Receipt as IconReceipt, Truck as IconTruck } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
   extractClaimsFromAccessToken,
@@ -13,6 +13,9 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { MobilePage } from "../_components/mobile/mobile-page";
 import { InteractiveCard } from "../_components/mobile/interactive-card";
 import { MobileSectionHeader } from "../_components/mobile/mobile-section-header";
+import { MobilePlaybookFeed } from "../_components/mobile/mobile-playbook-feed";
+import { loadInventoryPlaybook } from "../_lib/playbook-data";
+import { resolveRequestedBranchId } from "../_lib/inventory-scope";
 import {
   canAccessProductionSurface,
   hasCurrentProductionBranchAccess,
@@ -115,7 +118,11 @@ async function fetchHubCounts(): Promise<{
   };
 }
 
-export default async function InventoryMobileHub() {
+export default async function InventoryMobileHub({
+  searchParams,
+}: {
+  searchParams: Promise<{ branchId?: string | string[] }>;
+}) {
   const supabase = await createClient();
   const {
     data: { session },
@@ -123,13 +130,20 @@ export default async function InventoryMobileHub() {
   const name = session?.user.user_metadata?.["display_name"] as
     | string
     | undefined;
+  const params = await searchParams;
+  const requestedBranchId = await resolveRequestedBranchId(params.branchId);
+
+  const [counts, playbook] = await Promise.all([
+    fetchHubCounts(),
+    loadInventoryPlaybook(requestedBranchId),
+  ]);
   const {
     openPoCount,
     pendingTransferCount,
     draftProductionCount,
     canOpenProcurement,
     canOpenProduction,
-  } = await fetchHubCounts();
+  } = counts;
 
   const primaryTiles: ActionTile[] = [];
   if (canOpenProcurement) {
@@ -172,6 +186,12 @@ export default async function InventoryMobileHub() {
       description: "Mở màn hình tồn kho đầy đủ",
     },
     {
+      href: "/inventory/m/expiry",
+      icon: IconHourglass,
+      title: "Hạn dùng",
+      description: "Cận hạn / hết hạn — hao hụt nhanh",
+    },
+    {
       href: "/inventory",
       icon: IconChartBar,
       title: "Bản đầy đủ",
@@ -185,6 +205,11 @@ export default async function InventoryMobileHub() {
         eyebrow="Trang chính"
         title={name ? `Xin chào, ${name.split(" ")[0] ?? ""}` : "Xin chào"}
         description="Chọn thao tác bạn cần làm ngay bây giờ."
+      />
+
+      <MobilePlaybookFeed
+        tasks={playbook.tasks}
+        branchId={playbook.branchId}
       />
 
       <div className="flex flex-col gap-3">

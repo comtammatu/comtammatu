@@ -59,22 +59,8 @@ import {
   type WasteEntryItem,
 } from "../_components/waste-entry-dialog";
 import { useInventoryBulkSelection } from "../_lib/use-inventory-bulk-selection";
+import { URGENCY_META } from "../_lib/constants";
 import type { BranchOption, ExpiryAlertRow } from "../page";
-
-const URGENCY_META: Record<string, { label: string; className: string }> = {
-  expired: {
-    label: "Đã hết hạn",
-    className: "bg-destructive/10 text-destructive border-destructive/30",
-  },
-  critical: {
-    label: "Nguy cấp",
-    className: "bg-destructive/10 text-destructive border-destructive/30",
-  },
-  warning: {
-    label: "Sắp hết hạn",
-    className: "bg-warning/10 text-warning border-warning/30",
-  },
-};
 
 function alertToWasteItem(alert: ExpiryAlertRow): WasteEntryItem {
   return {

@@ -19,14 +19,9 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { FormattedNumberInput } from "./formatted-number-input";
 import { createWasteEntry } from "../waste-actions";
+import { WASTE_TIER_ZERO_VND } from "../_lib/constants";
 
-/**
- * Tier-1 photo gate threshold (per s3 waste tier spec). Lines with
- * `unit_cost * quantity` at or above this value are NOT eligible for the
- * inline bulk-waste flow — they require photo evidence and are routed to
- * `/inventory/waste/new` for full submission instead.
- */
-export const WASTE_TIER_ZERO_VND = 150_000;
+export { WASTE_TIER_ZERO_VND };
 
 export interface WasteEntryItem {
   /** Stable client-side id for selection / list keys. */

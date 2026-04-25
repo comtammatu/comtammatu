@@ -86,3 +86,38 @@ export const PG_ERR = {
   INSUFFICIENT_PRIVILEGE: "42501",
   INVALID_TEXT_REPRESENTATION: "22023",
 } as const;
+
+/* ─── Waste tier threshold ─── */
+
+/**
+ * VND threshold above which a waste line trips tier 1 server-side and
+ * requires photo evidence. Both `<WasteEntryDialog>` (desktop) and
+ * `<MobileWasteSheet>` filter inline submissions by this so the user
+ * isn't routed through a doomed RPC call.
+ */
+export const WASTE_TIER_ZERO_VND = 150_000;
+
+/* ─── Expiry urgency styling ─── */
+
+/**
+ * Visual styling for expiry urgency badges. Same labels + class strings
+ * used on `/inventory/expiry` (desktop) and `/inventory/m/expiry` (mobile)
+ * so signal stays consistent across surfaces.
+ */
+export const URGENCY_META: Record<
+  string,
+  { label: string; className: string }
+> = {
+  expired: {
+    label: "Đã hết hạn",
+    className: "bg-destructive/10 text-destructive border-destructive/30",
+  },
+  critical: {
+    label: "Nguy cấp",
+    className: "bg-destructive/10 text-destructive border-destructive/30",
+  },
+  warning: {
+    label: "Sắp hết hạn",
+    className: "bg-warning/10 text-warning border-warning/30",
+  },
+};
