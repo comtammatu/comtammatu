@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@comtammatu/ui/components/button";
-import { IconAlertTriangle, IconArrowRight } from "@tabler/icons-react";
+import { TriangleAlert as IconAlertTriangle, ArrowRight as IconArrowRight } from "lucide-react";
 
 interface UnassignedBannerProps {
   count: number;

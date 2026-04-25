@@ -9,7 +9,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
-import { IconChefHat } from "@tabler/icons-react";
+import { ChefHat as IconChefHat } from "lucide-react";
 import { OrderCard } from "../order-card";
 import type { KdsOrder } from "../types";
 import type { KdsViewMode } from "../hooks/use-kds-view-mode";

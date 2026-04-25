@@ -4,11 +4,7 @@ import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import {
-  IconCheck,
-  IconChevronRight,
-  IconRotate,
-} from "@tabler/icons-react";
+import { Check as IconCheck, ChevronRight as IconChevronRight, RotateCcw as IconRotate } from "lucide-react";
 import { getStatusLabel, getStatusVariant } from "../lib/status-config";
 import { CancelledOverlay } from "./cancelled-overlay";
 import { TicketRowMeta } from "./ticket-row-meta";

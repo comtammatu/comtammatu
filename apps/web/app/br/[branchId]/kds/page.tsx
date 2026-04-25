@@ -1,4 +1,4 @@
-import { IconAlertCircle } from "@tabler/icons-react";
+import { CircleAlert as IconAlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";

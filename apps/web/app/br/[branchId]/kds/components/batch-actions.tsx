@@ -3,11 +3,7 @@
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import {
-  IconCheck,
-  IconChevronRight,
-  IconToolsKitchen,
-} from "@tabler/icons-react";
+import { Check as IconCheck, ChevronRight as IconChevronRight, Utensils as IconToolsKitchen } from "lucide-react";
 import { CardFooter } from "@comtammatu/ui/components/card";
 import type { KdsTicket } from "../types";
 

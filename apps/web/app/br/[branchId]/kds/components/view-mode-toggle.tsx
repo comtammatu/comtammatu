@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@comtammatu/ui/components/button";
-import { IconLayoutGrid, IconLayoutList } from "@tabler/icons-react";
+import { LayoutGrid as IconLayoutGrid, List as IconLayoutList } from "lucide-react";
 import type { KdsViewMode } from "../hooks/use-kds-view-mode";
 
 interface ViewModeToggleProps {

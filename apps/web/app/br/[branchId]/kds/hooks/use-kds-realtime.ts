@@ -49,6 +49,9 @@ export function useKdsRealtime({
   const supabaseRef = useRef(createClient());
   const ordersRef = useRef(orders);
   const lastSnapshotSyncRef = useRef(Date.now());
+  const refreshBoardSnapshotRef =
+    useRef<() => Promise<void>>(() => Promise.resolve());
+  const initialSubscribeSeenRef = useRef(false);
 
   useEffect(() => {
     ordersRef.current = orders;
@@ -170,6 +173,10 @@ export function useKdsRealtime({
   }, [branchId]);
 
   useEffect(() => {
+    refreshBoardSnapshotRef.current = refreshBoardSnapshot;
+  }, [refreshBoardSnapshot]);
+
+  useEffect(() => {
     const supabase = supabaseRef.current;
 
     const channel = supabase
@@ -207,7 +214,19 @@ export function useKdsRealtime({
           }
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status !== "SUBSCRIBED") return;
+        // Skip the FIRST SUBSCRIBED — board state is already seeded from
+        // RSC props (initialTickets/initialOrders/initialOrderItems).
+        // Every SUBSCRIBED after that is a genuine reconnect: refetch a
+        // fresh snapshot so we don't carry stale state from events that
+        // fired during the disconnect window.
+        if (!initialSubscribeSeenRef.current) {
+          initialSubscribeSeenRef.current = true;
+          return;
+        }
+        void refreshBoardSnapshotRef.current();
+      });
 
     return () => {
       void supabase.removeChannel(channel);

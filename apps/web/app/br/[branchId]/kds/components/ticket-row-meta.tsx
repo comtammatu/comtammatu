@@ -1,11 +1,7 @@
 "use client";
 
 import { cn } from "@comtammatu/ui";
-import {
-  IconAlertTriangle,
-  IconNote,
-  IconPlus,
-} from "@tabler/icons-react";
+import { TriangleAlert as IconAlertTriangle, NotebookText as IconNote, Plus as IconPlus } from "lucide-react";
 import { classifyModifier } from "../lib/modifier-format";
 import type { OrderItemModifier, OrderItemSide } from "../types";
 

@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { IconFilter, IconX } from "@tabler/icons-react";
+import { Filter as IconFilter, X as IconX } from "lucide-react";
 import type {
   FilterOption,
   OrderTypeFilter,
