@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { formatVND } from "@comtammatu/shared/format";
+import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import {
@@ -200,6 +201,10 @@ export interface OrderDetailSheetProps {
   onStartAppend: (orderId: number, orderNumber: string) => void;
   onReorderToCart: (items: CartItem[], skippedCount: number) => void;
   tables: BranchTable[];
+  /** Map<table_id, count of active orders> — drives the "N đơn" indicator
+   * in the transfer-table dropdown so the cashier sees that the target
+   * bàn already has guests before confirming a multi-order ghép. */
+  orderCountByTable?: Map<number, number>;
   onOrderUpdated?: () => void | Promise<void>;
 }
 
@@ -214,6 +219,7 @@ export function OrderDetailSheet({
   onStartAppend,
   onReorderToCart,
   tables,
+  orderCountByTable,
   onOrderUpdated,
 }: OrderDetailSheetProps) {
   const [data, setData] = useState<OrderDetailData | null>(null);
@@ -293,6 +299,52 @@ export function OrderDetailSheet({
     load();
   }, [load, orderId, refreshToken]);
 
+  // Cross-terminal realtime sync for the open order. The shell-level
+  // `useOrderSync` only refreshes the orders LIST — the detail sheet
+  // misses two classes of updates without its own subscription:
+  //   1. Another terminal appends items (orders.subtotal/total UPDATE
+  //      fires, but only the list listens) → totals + items go stale.
+  //   2. KDS bumps a ticket (kds_tickets UPDATE → trigger flips
+  //      order_items.status). order_items isn't in the publication, so
+  //      neither the list nor the sheet sees per-item status changes
+  //      until something else forces a refetch.
+  // Subscribing to orders (id=eq) + kds_tickets (order_id=eq) for the
+  // open order_id fixes both. `load()` already coalesces via React's
+  // useTransition; an extra fetch from a burst is acceptable.
+  useRealtimeChannel(
+    (supabase) => {
+      if (orderId === null) return null;
+      return supabase
+        .channel(`pos-order-detail-${String(orderId)}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "orders",
+            filter: `id=eq.${String(orderId)}`,
+          },
+          () => {
+            load();
+          },
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "kds_tickets",
+            filter: `order_id=eq.${String(orderId)}`,
+          },
+          () => {
+            load();
+          },
+        )
+        .subscribe();
+    },
+    [load, orderId],
+  );
+
   const handleOpenChange = (open: boolean) => {
     if (!open) onClose();
   };
@@ -300,8 +352,10 @@ export function OrderDetailSheet({
   const handleVoidConfirm = () => {
     if (voidItemId === null) return;
     const reason = voidReason.trim();
-    if (reason.length === 0) {
-      notify.error("Nhập lý do hủy món trước khi xác nhận");
+    // Mirror voidItemSchema min(5) so user gets immediate feedback
+    // instead of a delayed server-side reject.
+    if (reason.length < 5) {
+      notify.error("Lý do hủy món tối thiểu 5 ký tự");
       return;
     }
     startTransition(async () => {
@@ -328,8 +382,10 @@ export function OrderDetailSheet({
   const handleCancelOrder = () => {
     if (orderId === null) return;
     const reason = cancelReason.trim();
-    if (reason.length === 0) {
-      notify.error("Nhập lý do hủy đơn trước khi xác nhận");
+    // Mirror cancelOrderSchema min(5) so user gets immediate feedback
+    // instead of a delayed server-side reject.
+    if (reason.length < 5) {
+      notify.error("Lý do hủy đơn tối thiểu 5 ký tự");
       return;
     }
     startTransition(async () => {
@@ -404,8 +460,15 @@ export function OrderDetailSheet({
     });
   };
 
+  // Multi-order-per-table alignment (PR3): a target bàn that is `occupied`
+  // is now a valid transfer destination — the order joins the existing
+  // order(s) on that bàn. `reserved` and `maintenance` still excluded; the
+  // bàn hiện tại always shows so cashier keeps it as a fallback option.
   const availableTables = tables.filter(
-    (t) => t.status === "available" || t.id === data?.table_id,
+    (t) =>
+      t.status === "available" ||
+      t.status === "occupied" ||
+      t.id === data?.table_id,
   );
 
   const canShowCancel =
@@ -701,6 +764,7 @@ export function OrderDetailSheet({
         onTableIdChange={setTransferTableId}
         currentTableId={data?.table_id ?? null}
         availableTables={availableTables}
+        orderCountByTable={orderCountByTable}
         onConfirm={handleTransfer}
         orderNumber={data?.order_number ?? orderNumber}
         currentTableNumber={data?.tables?.number ?? null}

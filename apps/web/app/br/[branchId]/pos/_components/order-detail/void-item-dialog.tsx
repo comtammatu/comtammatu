@@ -37,7 +37,11 @@ export function VoidItemDialog({
   itemLabel,
   isPending = false,
 }: VoidItemDialogProps) {
-  const reasonReady = reason.trim().length > 0;
+  const trimmedLen = reason.trim().length;
+  // Mirror server-side voidItemSchema (order-actions.ts): min(5). Surface
+  // the rule as a counter + invalid state so cashier sees it before submit
+  // rather than getting a delayed action reject.
+  const reasonReady = trimmedLen >= 5;
 
   return (
     <AlertDialog
@@ -58,17 +62,17 @@ export function VoidItemDialog({
         </AlertDialogHeader>
 
         <FieldGroup className="py-2">
-          <Field data-invalid={!reasonReady && reason.length > 0}>
+          <Field data-invalid={!reasonReady && trimmedLen > 0}>
             <FieldLabel htmlFor="void-reason">Lý do hủy món</FieldLabel>
             <Textarea
               id="void-reason"
               value={reason}
               onChange={(event) => onReasonChange(event.target.value)}
               placeholder="Ví dụ: khách đổi ý, bếp hết món"
-              aria-invalid={!reasonReady && reason.length > 0}
+              aria-invalid={!reasonReady && trimmedLen > 0}
             />
             <FieldDescription>
-              POS chỉ gửi yêu cầu hủy món sau khi có lý do.
+              Tối thiểu 5 ký tự để đảm bảo audit trail rõ ràng. ({trimmedLen}/5)
             </FieldDescription>
           </Field>
         </FieldGroup>

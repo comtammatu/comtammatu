@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { createClient } from "@comtammatu/database/supabase/client";
+import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import {
   Printer as IconPrinter,
   PrinterX as IconPrinterOff,
@@ -51,69 +52,77 @@ export function PrinterStatusBadge({
     hasAgent: false,
   });
 
-  useEffect(() => {
+  // Fetch + 30s poll. Stays separate from the realtime channel so the
+  // helper can own the auth-await dance. Uses its own short-lived
+  // Supabase client (matches existing pattern; both clients share
+  // supabase-js's underlying connection pool internally).
+  const fetchStatus = useCallback(async () => {
     const supabase = createClient();
-    let cancelled = false;
-    let initialSubscribeSeen = false;
-
-    const fetchStatus = async () => {
-      const { data } = await supabase
-        .from("printer_agent_status")
-        .select("agent_id, last_seen_at")
-        .eq("branch_id", branchId)
-        .maybeSingle();
-      if (cancelled) return;
-      setStatus(
-        computeStatus(
-          (data?.agent_id as string | undefined) ?? null,
-          (data?.last_seen_at as string | undefined) ?? null,
-        ),
-      );
-    };
-
-    void fetchStatus();
-    const pollId = setInterval(() => void fetchStatus(), POLL_INTERVAL_MS);
-
-    const channel = supabase
-      .channel(`printer_agents:branch=${branchId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "printer_agents",
-          filter: `branch_id=eq.${branchId}`,
-        },
-        (payload) => {
-          const row = payload.new as {
-            agent_id?: string;
-            last_seen_at?: string;
-          } | null;
-          if (!row) return;
-          setStatus(
-            computeStatus(row.agent_id ?? null, row.last_seen_at ?? null),
-          );
-        },
-      )
-      .subscribe((status) => {
-        if (status !== "SUBSCRIBED") return;
-        // Skip the FIRST SUBSCRIBED — fetchStatus() ran on mount above.
-        // Every SUBSCRIBED after that is a reconnect: refetch so the
-        // badge reflects any agent state change that fired during the
-        // WS disconnect window (otherwise we'd wait up to POLL_INTERVAL_MS).
-        if (!initialSubscribeSeen) {
-          initialSubscribeSeen = true;
-          return;
-        }
-        void fetchStatus();
-      });
-
-    return () => {
-      cancelled = true;
-      clearInterval(pollId);
-      void supabase.removeChannel(channel);
-    };
+    const { data } = await supabase
+      .from("printer_agent_status")
+      .select("agent_id, last_seen_at")
+      .eq("branch_id", branchId)
+      .maybeSingle();
+    setStatus(
+      computeStatus(
+        (data?.agent_id as string | undefined) ?? null,
+        (data?.last_seen_at as string | undefined) ?? null,
+      ),
+    );
   }, [branchId]);
+
+  const fetchStatusRef = useRef(fetchStatus);
+  useEffect(() => {
+    fetchStatusRef.current = fetchStatus;
+  }, [fetchStatus]);
+
+  useEffect(() => {
+    void fetchStatus();
+    const pollId = setInterval(() => void fetchStatusRef.current(), POLL_INTERVAL_MS);
+    return () => {
+      clearInterval(pollId);
+    };
+  }, [fetchStatus]);
+
+  const initialSubscribeSeenRef = useRef(false);
+
+  useRealtimeChannel(
+    (supabase) =>
+      supabase
+        .channel(`printer_agents:branch=${String(branchId)}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "printer_agents",
+            filter: `branch_id=eq.${String(branchId)}`,
+          },
+          (payload) => {
+            const row = payload.new as {
+              agent_id?: string;
+              last_seen_at?: string;
+            } | null;
+            if (!row) return;
+            setStatus(
+              computeStatus(row.agent_id ?? null, row.last_seen_at ?? null),
+            );
+          },
+        )
+        .subscribe((status) => {
+          if (status !== "SUBSCRIBED") return;
+          // Skip the FIRST SUBSCRIBED — fetchStatus() ran on mount above.
+          // Every SUBSCRIBED after that is a reconnect: refetch so the
+          // badge reflects any agent state change that fired during the
+          // WS disconnect window (otherwise we'd wait up to POLL_INTERVAL_MS).
+          if (!initialSubscribeSeenRef.current) {
+            initialSubscribeSeenRef.current = true;
+            return;
+          }
+          void fetchStatusRef.current();
+        }),
+    [branchId],
+  );
 
   const badge = !status.hasAgent ? (
     <Badge

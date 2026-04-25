@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@comtammatu/database/supabase/client";
+import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import type { KdsOrderInfo, KdsOrderItem, KdsTicket } from "../types";
 
 const POLL_INTERVAL_MS = 12_000;
@@ -176,62 +177,65 @@ export function useKdsRealtime({
     refreshBoardSnapshotRef.current = refreshBoardSnapshot;
   }, [refreshBoardSnapshot]);
 
+  const fetchOrderInfoRef = useRef(fetchOrderInfo);
+  const syncOrderItemStatusFromTicketRef = useRef(syncOrderItemStatusFromTicket);
   useEffect(() => {
-    const supabase = supabaseRef.current;
+    fetchOrderInfoRef.current = fetchOrderInfo;
+    syncOrderItemStatusFromTicketRef.current = syncOrderItemStatusFromTicket;
+  }, [fetchOrderInfo, syncOrderItemStatusFromTicket]);
 
-    const channel = supabase
-      .channel(`kds-tickets-${String(branchId)}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "kds_tickets",
-          filter: `branch_id=eq.${String(branchId)}`,
-        },
-        (payload) => {
-          if (payload.eventType === "INSERT") {
-            const newTicket = payload.new as KdsTicket;
-            setTickets((prev) => [...prev, newTicket]);
-            syncOrderItemStatusFromTicket(newTicket);
-            lastSnapshotSyncRef.current = Date.now();
+  useRealtimeChannel(
+    (supabase) =>
+      supabase
+        .channel(`kds-tickets-${String(branchId)}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "kds_tickets",
+            filter: `branch_id=eq.${String(branchId)}`,
+          },
+          (payload) => {
+            if (payload.eventType === "INSERT") {
+              const newTicket = payload.new as KdsTicket;
+              setTickets((prev) => [...prev, newTicket]);
+              syncOrderItemStatusFromTicketRef.current(newTicket);
+              lastSnapshotSyncRef.current = Date.now();
 
-            const orderId = newTicket.order_id;
-            if (!ordersRef.current.has(orderId)) {
-              void fetchOrderInfo(orderId);
+              const orderId = newTicket.order_id;
+              if (!ordersRef.current.has(orderId)) {
+                void fetchOrderInfoRef.current(orderId);
+              }
+            } else if (payload.eventType === "UPDATE") {
+              const updated = payload.new as KdsTicket;
+              setTickets((prev) =>
+                prev.map((t) => (t.id === updated.id ? updated : t)),
+              );
+              syncOrderItemStatusFromTicketRef.current(updated);
+              lastSnapshotSyncRef.current = Date.now();
+            } else if (payload.eventType === "DELETE") {
+              const deleted = payload.old as { id: number };
+              setTickets((prev) => prev.filter((t) => t.id !== deleted.id));
+              lastSnapshotSyncRef.current = Date.now();
             }
-          } else if (payload.eventType === "UPDATE") {
-            const updated = payload.new as KdsTicket;
-            setTickets((prev) =>
-              prev.map((t) => (t.id === updated.id ? updated : t)),
-            );
-            syncOrderItemStatusFromTicket(updated);
-            lastSnapshotSyncRef.current = Date.now();
-          } else if (payload.eventType === "DELETE") {
-            const deleted = payload.old as { id: number };
-            setTickets((prev) => prev.filter((t) => t.id !== deleted.id));
-            lastSnapshotSyncRef.current = Date.now();
+          },
+        )
+        .subscribe((status) => {
+          if (status !== "SUBSCRIBED") return;
+          // Skip the FIRST SUBSCRIBED — board state is already seeded from
+          // RSC props (initialTickets/initialOrders/initialOrderItems).
+          // Every SUBSCRIBED after that is a genuine reconnect: refetch a
+          // fresh snapshot so we don't carry stale state from events that
+          // fired during the disconnect window.
+          if (!initialSubscribeSeenRef.current) {
+            initialSubscribeSeenRef.current = true;
+            return;
           }
-        },
-      )
-      .subscribe((status) => {
-        if (status !== "SUBSCRIBED") return;
-        // Skip the FIRST SUBSCRIBED — board state is already seeded from
-        // RSC props (initialTickets/initialOrders/initialOrderItems).
-        // Every SUBSCRIBED after that is a genuine reconnect: refetch a
-        // fresh snapshot so we don't carry stale state from events that
-        // fired during the disconnect window.
-        if (!initialSubscribeSeenRef.current) {
-          initialSubscribeSeenRef.current = true;
-          return;
-        }
-        void refreshBoardSnapshotRef.current();
-      });
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [branchId, fetchOrderInfo, syncOrderItemStatusFromTicket]);
+          void refreshBoardSnapshotRef.current();
+        }),
+    [branchId],
+  );
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {

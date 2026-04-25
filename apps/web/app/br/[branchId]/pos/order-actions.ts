@@ -704,7 +704,15 @@ export async function appendOrderItems(
 
 const voidItemSchema = z.object({
   orderItemId: z.coerce.number().int().positive({ error: "Món không hợp lệ" }),
-  reason: z.string().trim().min(1, { error: "Nhập lý do hủy món" }),
+  // min(5): single-char "x" reasons defeat the audit trail. 5 is the floor
+  // that still admits short legitimate reasons ("hết", "khách đổi") while
+  // rejecting fat-finger noise. Stocktake escalation uses 20 (see rule
+  // R4-ESCALATE-NOTE-MIN-CHARS); POS void is more frequent so 5 balances
+  // operator friction with audit value.
+  reason: z
+    .string()
+    .trim()
+    .min(5, { error: "Lý do hủy món tối thiểu 5 ký tự" }),
 });
 
 // Skip withAction: positional (orderItemId, reason) args + POS_VOID_ROLES
@@ -802,7 +810,16 @@ export async function voidOrderItem(
 
 const cancelOrderSchema = z.object({
   orderId: z.coerce.number().int().positive({ error: "Đơn không hợp lệ" }),
-  reason: z.string().trim().min(1, { error: "Nhập lý do hủy đơn" }),
+  // min(5): cancelling a whole order destroys revenue + sometimes leaks
+  // food cost. Single-char "x" defeats the audit trail. 5 is the floor —
+  // long enough for short legitimate reasons ("hết", "khách đổi") yet
+  // strong enough to reject fat-finger noise. UI guard MUST mirror this
+  // in the CancelOrderDialog before submit so cashier sees the rule
+  // before the action call rather than getting a delayed server reject.
+  reason: z
+    .string()
+    .trim()
+    .min(5, { error: "Lý do hủy đơn tối thiểu 5 ký tự" }),
 });
 
 // Skip withAction: positional (orderId, reason) args + POS_VOID_ROLES

@@ -4,9 +4,11 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from "react";
+import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import type { ComponentType } from "react";
 import { formatVND } from "@comtammatu/shared/format";
 import type { PaymentMethod } from "@comtammatu/shared/providers";
@@ -43,6 +45,7 @@ import {
   createPayment,
   fetchPaymentMethodsForPos,
 } from "../../payment-actions";
+import { useIsOnline } from "../pwa/online-status-provider";
 import type { OrderData, PendingExtras } from "./bill-receipt-types";
 import {
   buildInvoicePayload,
@@ -234,12 +237,17 @@ export function BillReceipt({
   const [isPending, startTransition] = useTransition();
   const [actionPending, startActionTransition] = useTransition();
   const [methodPending, startMethodTransition] = useTransition();
+  const isOnline = useIsOnline();
 
   const totalAmount = Number(order?.total_amount ?? 0);
   const cashReceived = Number(cashInput) || 0;
   const cashChange = cashReceived - totalAmount;
   const invoiceValid = isInvoiceFormValid(invoiceForm);
+  // Offline guard: cash RPC + e-wallet confirm both touch the network. Cash is
+  // the most dangerous (physical money already in hand if cashier presses
+  // confirm and request fails) — see regression HDDT-PAYMENT-FIRST-FAILSOFT-ORPHAN.
   const canConfirmPaid =
+    isOnline &&
     invoiceValid &&
     (selectedMethod === "cash"
       ? cashReceived >= totalAmount && totalAmount > 0
@@ -308,6 +316,68 @@ export function BillReceipt({
     };
   }, [branchId, canConfirmCash, initialOrder, orderId]);
 
+  // Cross-terminal realtime sync. Without this, when cashier on tablet
+  // A confirms cash payment for an order, tablet B with the same bill
+  // open keeps showing "đang chờ khách xác nhận" until manual refresh
+  // — exactly the symptom described in the original payment-realtime
+  // migration that this sheet's predecessor (`bill-receipt-payment-status`)
+  // used to handle. Subscribe to:
+  //   - orders:id=eq.{orderId} for `payment_status` UPDATE (cross-tablet
+  //     confirm sync) and `status='completed'` (auto-close on payment).
+  //   - payments:order_id=eq.{orderId} for any payment row change
+  //     (covers MoMo / VietQR webhook callbacks confirming a pending
+  //     e-wallet payment in real time).
+  // Refetches the full order on any event — `fetchOrderForBill` is the
+  // single source of truth and the response includes `payment_status`,
+  // payment_method and total totals.
+  const refetchOrder = useCallback(() => {
+    if (orderId === null) return;
+    void fetchOrderForBill(orderId).then((result) => {
+      if (result.success && result.data) {
+        setOrder(result.data as OrderData);
+      }
+    });
+  }, [orderId]);
+
+  const refetchOrderRef = useRef(refetchOrder);
+  useEffect(() => {
+    refetchOrderRef.current = refetchOrder;
+  }, [refetchOrder]);
+
+  useRealtimeChannel(
+    (supabase) => {
+      if (orderId === null) return null;
+      return supabase
+        .channel(`pos-bill-${String(orderId)}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "orders",
+            filter: `id=eq.${String(orderId)}`,
+          },
+          () => {
+            refetchOrderRef.current();
+          },
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "payments",
+            filter: `order_id=eq.${String(orderId)}`,
+          },
+          () => {
+            refetchOrderRef.current();
+          },
+        )
+        .subscribe();
+    },
+    [orderId],
+  );
+
   const handleOpenChange = useCallback(
     (open: boolean) => {
       if (!open) onClose();
@@ -318,6 +388,10 @@ export function BillReceipt({
   const handleSelectMethod = useCallback(
     (method: PaymentMethod) => {
       if (!order || orderId === null) return;
+      if (!isOnline && method !== "cash") {
+        toast.error("Mất kết nối — chuyển khoản chưa khả dụng.");
+        return;
+      }
       setSelectedMethod(method);
 
       if (method === "cash") {
@@ -349,7 +423,7 @@ export function BillReceipt({
         }
       });
     },
-    [branchId, order, orderId],
+    [branchId, isOnline, order, orderId],
   );
 
   const handleConfirmPaid = useCallback(() => {
@@ -396,7 +470,15 @@ export function BillReceipt({
         pendingExtras.provider_ref ?? "",
       );
       if (result.success) {
-        toast.success("Đã thanh toán");
+        const print = result.data?.print;
+        if (print?.failed) {
+          toast.warning("Đã thanh toán — chưa gửi được hoá đơn tới máy in", {
+            description:
+              print.error ?? "Vui lòng in lại từ màn hình quản lý đơn.",
+          });
+        } else {
+          toast.success("Đã thanh toán & gửi hoá đơn tới máy in");
+        }
         await onOrderUpdated?.();
         onClose();
       } else {

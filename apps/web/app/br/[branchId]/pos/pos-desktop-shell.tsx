@@ -1033,6 +1033,7 @@ function PosDesktopInner({
           }
         }}
         tables={tables}
+        orderCountByTable={orderCountByTable}
         onOrderUpdated={() => void refreshOperational()}
       />
 

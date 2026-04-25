@@ -32,6 +32,9 @@ interface TransferTableDialogProps {
   onTableIdChange: (id: string) => void;
   currentTableId: number | null;
   availableTables: BranchTable[];
+  /** Map<table_id, count of active orders> — surfaces "N đơn" suffix so the
+   * cashier sees that picking an occupied bàn will create a multi-order ghép. */
+  orderCountByTable?: Map<number, number>;
   onConfirm: () => void;
   orderNumber?: string | null;
   currentTableNumber?: number | null;
@@ -45,6 +48,7 @@ export function TransferTableDialog({
   onTableIdChange,
   currentTableId,
   availableTables,
+  orderCountByTable,
   onConfirm,
   orderNumber,
   currentTableNumber,
@@ -76,8 +80,9 @@ export function TransferTableDialog({
             Chuyển {orderNumber ? `đơn ${orderNumber}` : "đơn"} sang bàn khác
           </DialogTitle>
           <DialogDescription>
-            Chuyển đơn từ {currentTableLabel} sang bàn còn trống. Thao tác này
-            không hủy món và không thanh toán đơn.
+            Chuyển đơn từ {currentTableLabel} sang bàn trống hoặc bàn đang
+            dùng (đơn sẽ ghép vào). Thao tác này không hủy món và không
+            thanh toán đơn.
           </DialogDescription>
         </DialogHeader>
 
@@ -90,16 +95,25 @@ export function TransferTableDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  {availableTables.map((table) => (
-                    <SelectItem
-                      key={table.id}
-                      value={String(table.id)}
-                      disabled={table.id === currentTableId}
-                    >
-                      Bàn {table.number}
-                      {table.id === currentTableId ? " (hiện tại)" : ""}
-                    </SelectItem>
-                  ))}
+                  {availableTables.map((table) => {
+                    const isCurrent = table.id === currentTableId;
+                    const orderCount = orderCountByTable?.get(table.id) ?? 0;
+                    const suffix = isCurrent
+                      ? " (hiện tại)"
+                      : orderCount > 0
+                        ? ` — ${orderCount} đơn`
+                        : "";
+                    return (
+                      <SelectItem
+                        key={table.id}
+                        value={String(table.id)}
+                        disabled={isCurrent}
+                      >
+                        Bàn {table.number}
+                        {suffix}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectGroup>
               </SelectContent>
             </Select>

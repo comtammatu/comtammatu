@@ -100,7 +100,7 @@ F&B pilot scenarios not covered by current POS:
 
 - `create_order` RPC ([20260425020000_fix_pos_order_rpcs_auth_v2.sql:99-106](../../supabase/migrations/20260425020000_fix_pos_order_rpcs_auth_v2.sql)) — KHÔNG block theo `tables.status` → multi-order-friendly today
 - `trg_release_table_on_order_status` ([20260426040000_pos_payment_close_table_release.sql:37-48](../../supabase/migrations/20260426040000_pos_payment_close_table_release.sql)) — đã COUNT(active orders on table) trước khi release → tự động đúng cho multi-order
-- `transfer_order_table` STILL block target = occupied (giữ — di chuyển đơn vào multi-order là conversation khác)
+- `transfer_order_table` đã RELAX để accept target ∈ (`available`, `occupied`) — alignment với multi-order-per-table (migration [20260429100000_transfer_order_table_allow_occupied.sql](../../supabase/migrations/20260429100000_transfer_order_table_allow_occupied.sql)). Block `reserved` và `maintenance` (intentionally unavailable). UI dropdown `transfer-table-dialog.tsx` show "N đơn" suffix khi target đã có active orders để cashier biết ghép vào.
 
 **Regression rule added:**
 - `POS-MULTI-ORDER-PER-TABLE-NEW-INTENT-EXPLICIT` ([tasks/regressions.md](../../tasks/regressions.md))

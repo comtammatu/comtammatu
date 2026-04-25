@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { createClient } from "@comtammatu/database/supabase/client";
+import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import type { BranchTable } from "../page";
 
 const STALE_POLL_MS = 20_000;
@@ -33,6 +33,9 @@ export interface UseOrderSyncArgs {
 // Current transport: Supabase Realtime postgres_changes on `orders` + `tables`,
 // branch-scoped via URL branchId. Interface is stable so a Phase-2 local-first
 // swap can replace the implementation without touching callers.
+//
+// Auth-await + setAuth-before-subscribe lives in `useRealtimeChannel` so this
+// hook (and every other realtime sub in the app) doesn't repeat the dance.
 export function useOrderSync({
   branchId,
   setTables,
@@ -40,22 +43,21 @@ export function useOrderSync({
   refreshAll,
   skipFirstSubscribedRefresh = false,
 }: UseOrderSyncArgs): void {
-  const supabaseRef = useRef(createClient());
   const refreshOrdersRef = useRef(refreshOrders);
   const refreshAllRef = useRef(refreshAll);
+  const setTablesRef = useRef(setTables);
   const lastSyncRef = useRef<number>(Date.now());
   const initialSubscribeSeenRef = useRef(false);
 
   useEffect(() => {
     refreshOrdersRef.current = refreshOrders;
     refreshAllRef.current = refreshAll;
-  }, [refreshOrders, refreshAll]);
+    setTablesRef.current = setTables;
+  }, [refreshOrders, refreshAll, setTables]);
 
-  useEffect(() => {
-    const supabase = supabaseRef.current;
+  useRealtimeChannel((supabase) => {
     const branchFilter = `branch_id=eq.${String(branchId)}`;
-
-    const channel = supabase
+    return supabase
       .channel(`pos-branch-${String(branchId)}`)
       .on(
         "postgres_changes",
@@ -81,7 +83,7 @@ export function useOrderSync({
         (payload) => {
           lastSyncRef.current = Date.now();
           const updated = payload.new as Partial<BranchTable> & { id: number };
-          setTables((prev) => {
+          setTablesRef.current((prev) => {
             const idx = prev.findIndex((t) => t.id === updated.id);
             if (idx < 0) return prev;
             const current = prev[idx];
@@ -94,22 +96,18 @@ export function useOrderSync({
       )
       .subscribe((status) => {
         if (status !== "SUBSCRIBED") return;
-        // The FIRST SUBSCRIBED is the initial mount subscription. When the
-        // caller has already seeded state (e.g. from RSC prefetch), skip
-        // this one refresh — it would duplicate work. Every SUBSCRIBED
-        // after that is a genuine reconnect and must refresh to catch
-        // events missed during disconnect.
+        // The FIRST SUBSCRIBED is the initial mount subscription. When
+        // the caller has already seeded state (e.g. from RSC prefetch),
+        // skip this one refresh — it would duplicate work. Every
+        // SUBSCRIBED after that is a genuine reconnect and must refresh
+        // to catch events missed during disconnect.
         if (!initialSubscribeSeenRef.current) {
           initialSubscribeSeenRef.current = true;
           if (skipFirstSubscribedRefresh) return;
         }
         refreshAllRef.current();
       });
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [branchId, setTables]);
+  }, [branchId]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {

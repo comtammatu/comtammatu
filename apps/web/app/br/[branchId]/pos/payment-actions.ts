@@ -439,15 +439,26 @@ function pickVietQrInfo(
 
 /* ─── confirmPayment ─── */
 
+export interface ConfirmPaymentResult {
+  /**
+   * Receipt-print outcome. E-wallet money has already settled to the bank
+   * account by the time the cashier confirms — printer queue failure must
+   * NOT roll back the payment (mirrors HDDT-PAYMENT-FIRST-FAILSOFT-ORPHAN
+   * regression rule). UI surfaces this as a soft warning toast instead.
+   */
+  print: { jobId?: number; failed: boolean; error?: string };
+}
+
 /**
  * Confirm a pending VietQR/MoMo payment (called by webhook or poll).
  * Uses atomic RPC: update payment → update order → auto-post GL journal.
  * Stock consumption remains non-fatal secondary call.
+ * Receipt print is enqueued failsoft after RPC succeeds.
  */
 export async function confirmPayment(
   paymentId: number,
   providerRef: string,
-): Promise<ActionResult> {
+): Promise<ActionResult<ConfirmPaymentResult>> {
   const idSchema = z.coerce.number().int().positive();
   const parsedId = idSchema.safeParse(paymentId);
   if (!parsedId.success) {
@@ -485,16 +496,12 @@ export async function confirmPayment(
 
   // Atomic RPC: confirm payment + update order + auto-post GL journal
   // Must run BEFORE stock consumption so if it fails, no stock is deducted.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error: rpcError } = await (supabase as any).rpc(
-    "confirm_payment_and_post",
-    {
-      p_payment_id: parsedId.data,
-      p_tenant_id: claims.tenant_id,
-      p_branch_id: claims.branch_id,
-      p_provider_ref: providerRef,
-    },
-  );
+  const { error: rpcError } = await supabase.rpc("confirm_payment_and_post", {
+    p_payment_id: parsedId.data,
+    p_tenant_id: claims.tenant_id,
+    p_branch_id: claims.branch_id,
+    p_provider_ref: providerRef,
+  });
 
   if (rpcError) {
     const msg = rpcError.message ?? "";
@@ -527,7 +534,40 @@ export async function confirmPayment(
     );
   }
 
-  return { success: true, data };
+  // Enqueue receipt print. Cash flow does this atomically inside
+  // confirm_cash_payment; the e-wallet RPC (confirm_payment_and_post)
+  // does not, so the cashier never got a printed receipt for VietQR/MoMo
+  // payments before this fix. Failsoft on purpose — see HDDT-PAYMENT-
+  // FIRST-FAILSOFT-ORPHAN: money has already settled, refusing the close
+  // because of a printer queue fault loses a real sale for a paper fault.
+  let printOutcome: ConfirmPaymentResult["print"] = { failed: false };
+  const { data: printRes, error: printErr } = await supabase.rpc(
+    "enqueue_receipt_print",
+    { p_order_id: payment.order_id },
+  );
+  if (printErr) {
+    const printMsg = String(printErr.message ?? "").toLowerCase();
+    let userError: string;
+    if (printMsg.includes("no active") && printMsg.includes("printer")) {
+      userError = "Chi nhánh chưa cấu hình máy in hoá đơn.";
+    } else if (printMsg.includes("permission denied")) {
+      userError = "Không có quyền in hoá đơn.";
+    } else {
+      userError = "Không thể gửi hoá đơn tới máy in.";
+    }
+    console.error(
+      "[confirmPayment] enqueue_receipt_print failed:",
+      printErr.message,
+    );
+    printOutcome = { failed: true, error: userError };
+  } else {
+    const printData = printRes as { job_id?: number } | null;
+    if (printData?.job_id != null) {
+      printOutcome = { failed: false, jobId: printData.job_id };
+    }
+  }
+
+  return { success: true, data: { print: printOutcome } };
 }
 
 /* ─── fetchDailyReconciliation ─── */

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createClient } from "@comtammatu/database/supabase/client";
+import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import {
   getUnreadCount,
   listNotifications,
@@ -98,44 +98,45 @@ export function useNotifications({
     refreshRef.current = refresh;
   }, [refresh]);
 
-  useEffect(() => {
-    const supabase = createClient();
-    const channel = supabase
-      .channel(`notifications-${tenantId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `tenant_id=eq.${String(tenantId)}`,
-        },
-        () => {
+  useRealtimeChannel(
+    (supabase) =>
+      supabase
+        .channel(`notifications-${String(tenantId)}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notifications",
+            filter: `tenant_id=eq.${String(tenantId)}`,
+          },
+          () => {
+            void refreshRef.current();
+          },
+        )
+        .subscribe((status) => {
+          if (status !== "SUBSCRIBED") return;
+          // Skip the FIRST SUBSCRIBED — list/unread are seeded from RSC
+          // props. Every SUBSCRIBED after that is a reconnect: refetch to
+          // catch any INSERTs that fired during the disconnect window.
+          if (!initialSubscribeSeenRef.current) {
+            initialSubscribeSeenRef.current = true;
+            return;
+          }
           void refreshRef.current();
-        },
-      )
-      .subscribe((status) => {
-        if (status !== "SUBSCRIBED") return;
-        // Skip the FIRST SUBSCRIBED — list/unread are seeded from RSC
-        // props. Every SUBSCRIBED after that is a reconnect: refetch to
-        // catch any INSERTs that fired during the disconnect window.
-        if (!initialSubscribeSeenRef.current) {
-          initialSubscribeSeenRef.current = true;
-          return;
-        }
-        void refreshRef.current();
-      });
+        }),
+    [tenantId],
+  );
 
+  useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === "visible") void refreshRef.current();
     };
     document.addEventListener("visibilitychange", handleVisibility);
-
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
-      void supabase.removeChannel(channel);
     };
-  }, [tenantId]);
+  }, []);
 
   return { items, unreadCount, loading, error, refresh, markRead, markAll };
 }

@@ -43,7 +43,9 @@ export function CancelOrderDialog({
   itemCount = 0,
   isPending = false,
 }: CancelOrderDialogProps) {
-  const reasonReady = reason.trim().length > 0;
+  const trimmedLen = reason.trim().length;
+  // Mirror server-side cancelOrderSchema (order-actions.ts): min(5).
+  const reasonReady = trimmedLen >= 5;
   const orderLabel = orderNumber ? ` ${orderNumber}` : "";
   const contextLabel =
     orderType === "dine_in" ? `Bàn ${tableNumber ?? "đang chọn"}` : "Mang về";
@@ -62,17 +64,17 @@ export function CancelOrderDialog({
         </AlertDialogHeader>
 
         <FieldGroup className="py-2">
-          <Field data-invalid={!reasonReady && reason.length > 0}>
+          <Field data-invalid={!reasonReady && trimmedLen > 0}>
             <FieldLabel htmlFor="cancel-reason">Lý do hủy đơn</FieldLabel>
             <Textarea
               id="cancel-reason"
               value={reason}
               onChange={(event) => onReasonChange(event.target.value)}
               placeholder="Bắt buộc để đối soát ca và bếp"
-              aria-invalid={!reasonReady && reason.length > 0}
+              aria-invalid={!reasonReady && trimmedLen > 0}
             />
             <FieldDescription>
-              Nút hủy chỉ mở khi đã nhập lý do cụ thể.
+              Tối thiểu 5 ký tự để đảm bảo audit trail rõ ràng. ({trimmedLen}/5)
             </FieldDescription>
           </Field>
         </FieldGroup>
