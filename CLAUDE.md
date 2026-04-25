@@ -14,7 +14,7 @@ pnpm dev          # Start dev server (Turbopack)
 pnpm build        # Production build
 pnpm typecheck    # Type checking across all packages
 pnpm lint         # ESLint
-pnpm db:types     # Regenerate Supabase types (after migration merged & applied)
+pnpm db:types     # Regenerate Supabase types (after migration is applied to the type source schema)
 ```
 
 ## Constraints
@@ -27,8 +27,9 @@ pnpm db:types     # Regenerate Supabase types (after migration merged & applied)
 - NEVER import `@comtammatu/database` barrel in "use client" components
 - NEVER store scope in localStorage/Context — URL params only
 - Multi-item atomic writes → Postgres RPC function
-- After SQL migration applied → `pnpm db:types` to regenerate types
-- Claude applies migrations via `supabase db push` (or equivalent) — write file → apply → regen types. Owner does NOT apply manually
+- Agents may apply migrations via `supabase db push` (or equivalent) on approved dev/test servers only, after verifying the target environment
+- NEVER apply migrations directly to production. Production flow: write file → PR → merge → owner applies manually
+- After SQL migration is applied to the type source schema → `pnpm db:types` to regenerate types
 - ACL single source: route-level = `packages/shared/src/auth/module-acl.ts`; row-level = `staff_permissions` table + `has_permission(branch, key)` SQL helper (Auth v2). Permission key catalog = `packages/shared/src/auth/permissions.ts`
 
 ## Architecture

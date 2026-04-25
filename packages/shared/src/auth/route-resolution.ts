@@ -61,6 +61,8 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (resolvedPathname.startsWith("/admin/crm")) return "crm";
   if (resolvedPathname.startsWith("/admin/reports")) return "reports";
   if (resolvedPathname.startsWith("/admin/settings")) return "settings";
+  if (resolvedPathname.startsWith("/admin/inventory")) return "inventory_admin";
+  if (resolvedPathname.startsWith("/admin/accounting")) return "accounting";
 
   for (const prefix of INVENTORY_PROCUREMENT_PREFIXES) {
     if (resolvedPathname === prefix || resolvedPathname.startsWith(`${prefix}/`)) {

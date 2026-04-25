@@ -115,10 +115,10 @@ export async function proxy(request: NextRequest) {
     return redirectToAccessDenied(request, response, "missing-auth-context");
   }
 
-  if (isAdminRoutePath(pathname) && !canAccess(claims.user_role, "dashboard")) {
-    return redirectToDefaultLanding(request, response, claims, surface);
-  }
-
+  // Module ACL: each route resolves to a ModuleKey, and the user's role
+  // must be in that module's allowedRoles. Admin routes that fail ACL
+  // redirect to the role's default landing page; non-admin routes redirect
+  // to /access-denied.
   const moduleKey: ModuleKey | null = resolveModuleFromPath(pathname);
   if (moduleKey) {
     if (!canAccess(claims.user_role, moduleKey)) {
@@ -202,6 +202,10 @@ export async function proxy(request: NextRequest) {
         }
       }
     }
+  } else if (isAdminRoutePath(pathname)) {
+    // Admin route with no module mapping — redirect to default landing
+    // to avoid serving admin pages without ACL enforcement.
+    return redirectToDefaultLanding(request, response, claims, surface);
   }
 
   return response;

@@ -29,6 +29,8 @@ interface MisaConfig {
   taxCode: string;
   appId?: string;
   sandbox?: boolean;
+  /** Override base URL (takes precedence over the sandbox toggle). */
+  baseUrl?: string;
 }
 
 interface MisaInvoiceResponse {
@@ -55,9 +57,10 @@ export class MisaProvider implements InvoiceProvider {
     this.taxCode = config.taxCode;
     this.appId = config.appId ?? "";
     this.baseUrl =
-      (config.sandbox ?? process.env.MISA_SANDBOX === "true")
+      config.baseUrl
+      ?? ((config.sandbox ?? process.env.MISA_SANDBOX === "true")
         ? SANDBOX_BASE
-        : PRODUCTION_BASE;
+        : PRODUCTION_BASE);
   }
 
   private get headers(): Record<string, string> {
