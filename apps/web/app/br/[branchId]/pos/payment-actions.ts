@@ -13,6 +13,7 @@ import {
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { ensurePaymentProvidersRegistered } from "../../../../lib/payment-providers-init";
 import { getAuthContextWithPermission } from "../../_lib/auth";
+import { createTaxInvoice } from "../../../finance/actions";
 
 type PosSupabase = NonNullable<
   Awaited<ReturnType<typeof getAuthContextWithPermission>>
@@ -732,4 +733,104 @@ export async function confirmCashPayment(
   }
 
   return { success: true, data: result };
+}
+
+/* ─── Cash payment + optional HĐĐT issuance ─── */
+
+export interface InvoiceOutcome {
+  status: "issued" | "draft" | "submitted" | "signing" | "failed";
+  invoiceId?: number;
+  invoiceNumber?: string | null;
+  error?: string;
+}
+
+export interface CashPaymentWithInvoiceResult extends CashPaymentResult {
+  invoice: InvoiceOutcome | null;
+}
+
+const invoicePayloadSchema = z
+  .object({
+    buyerName: z.string().trim().max(200).optional(),
+    buyerTaxCode: z.string().trim().optional(),
+    buyerAddress: z.string().trim().max(500).optional(),
+  })
+  .optional()
+  .nullable();
+
+/**
+ * Orchestrator: confirm cash payment, then optionally issue HĐĐT.
+ *
+ * Failure isolation contract:
+ *   - Payment is the commercial close. It commits independently.
+ *   - HĐĐT failure does NOT roll back payment — the order stays paid and
+ *     the invoice attempt becomes an orphan picked up by Finance.
+ *   - On HĐĐT failure, we still return success: true with invoice.status='failed'
+ *     so the cashier UI can confirm "Đã thu tiền" and show a soft toast.
+ */
+export async function confirmCashPaymentWithInvoice(
+  orderId: number,
+  cashReceived: number,
+  invoice: z.infer<typeof invoicePayloadSchema> | null,
+): Promise<ActionResult<CashPaymentWithInvoiceResult>> {
+  const paymentResult = await confirmCashPayment(orderId, cashReceived);
+  if (!paymentResult.success || !paymentResult.data) {
+    return paymentResult as ActionResult<CashPaymentWithInvoiceResult>;
+  }
+
+  if (!invoice) {
+    return {
+      success: true,
+      data: { ...paymentResult.data, invoice: null },
+    };
+  }
+
+  const parsed = invoicePayloadSchema.safeParse(invoice);
+  if (!parsed.success) {
+    return {
+      success: true,
+      data: {
+        ...paymentResult.data,
+        invoice: {
+          status: "failed",
+          error: parsed.error.issues[0]?.message ?? "Dữ liệu HĐĐT không hợp lệ",
+        },
+      },
+    };
+  }
+
+  const invoiceResult = await createTaxInvoice({
+    orderId,
+    ...(parsed.data ?? {}),
+  });
+
+  if (!invoiceResult.success) {
+    return {
+      success: true,
+      data: {
+        ...paymentResult.data,
+        invoice: {
+          status: "failed",
+          error: invoiceResult.error ?? "Không thể xuất hóa đơn",
+        },
+      },
+    };
+  }
+
+  const inv = invoiceResult.data as
+    | { id: number; invoice_number: string | null; status?: string }
+    | undefined;
+
+  return {
+    success: true,
+    data: {
+      ...paymentResult.data,
+      invoice: inv
+        ? {
+            status: (inv.status as InvoiceOutcome["status"]) ?? "issued",
+            invoiceId: inv.id,
+            invoiceNumber: inv.invoice_number,
+          }
+        : { status: "failed", error: "Hóa đơn trả về thiếu dữ liệu." },
+    },
+  };
 }

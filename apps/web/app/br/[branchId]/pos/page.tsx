@@ -1,6 +1,8 @@
 import { Suspense } from "react";
-import { IconDeviceDesktop, IconAlertTriangle } from "@tabler/icons-react";
-import { Skeleton } from "@comtammatu/ui/components/skeleton";
+import {
+  Monitor as IconDeviceDesktop,
+  TriangleAlert as IconAlertTriangle,
+} from "lucide-react";
 import {
   fetchMenuForPos,
   fetchTablesForBranch,
@@ -15,52 +17,7 @@ import type { SessionOrder } from "./order-history";
 import { SessionGate } from "./session-gate";
 import type { OrderType } from "./types";
 import { PosStatusShell } from "./pos-status-shell";
-
-function PosPageSkeleton() {
-  return (
-    <div className="flex h-dvh min-h-0 flex-col bg-background">
-      <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-4 py-3">
-        <div className="min-w-0 space-y-2">
-          <Skeleton className="h-5 w-36" />
-          <Skeleton className="h-4 w-24" />
-        </div>
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-9 w-24 rounded-full" />
-          <Skeleton className="size-9 rounded-full" />
-        </div>
-      </div>
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <div className="flex min-h-0 flex-col overflow-hidden p-3">
-          <div className="mb-3 flex shrink-0 gap-2">
-            <Skeleton className="h-10 flex-1" />
-            <Skeleton className="h-10 flex-1" />
-          </div>
-          <div className="grid flex-1 auto-rows-min grid-cols-2 gap-3 overflow-hidden sm:grid-cols-3 lg:grid-cols-4">
-            {Array.from({ length: 12 }).map((_, index) => (
-              <div key={index} className="rounded-lg border bg-card p-3">
-                <Skeleton className="mb-3 aspect-square w-full" />
-                <Skeleton className="h-5 w-4/5" />
-                <Skeleton className="mt-2 h-4 w-1/2" />
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="hidden min-h-0 w-96 border-l border-border/60 p-3 md:flex md:flex-col">
-          <Skeleton className="h-6 w-32" />
-          <div className="mt-4 space-y-3">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="rounded-lg border bg-card p-3">
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="mt-2 h-4 w-1/2" />
-              </div>
-            ))}
-          </div>
-          <Skeleton className="mt-auto h-12 w-full" />
-        </div>
-      </div>
-    </div>
-  );
-}
+import { PosPageSkeleton } from "./pos-page-skeleton";
 
 export default async function PosPage({
   params,
@@ -83,7 +40,7 @@ export default async function PosPage({
   const branchIdNum = Number(branchId);
 
   // Fetch session + perm flags song song — session dùng cho branch gate,
-  // flags dùng cho "mở ca" gate (no-session) và "đóng ca" button (with-session).
+  // flags dùng cho"mở ca" gate (no-session) và"đóng ca" button (with-session).
   const [sessionResult, permFlags] = await Promise.all([
     fetchActiveSession(branchIdNum),
     fetchPosPermissionFlags(branchIdNum),
@@ -126,7 +83,7 @@ export default async function PosPage({
 
   // No open session → chỉ role có quyền thao tác két (cashier/branch_manager)
   // mới được tự mở ca. Waiter chỉ có pos:use → chặn tại đây, hướng dẫn liên hệ
-  // thu ngân để tránh dead-end ở form "Mở ca".
+  // thu ngân để tránh dead-end ở form"Mở ca".
   if (!sessionResult.data) {
     if (!permFlags.canOpenShift) {
       return (

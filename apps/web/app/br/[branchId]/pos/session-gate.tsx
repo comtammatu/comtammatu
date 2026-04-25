@@ -34,10 +34,9 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
-  IconDeviceDesktop,
-  IconAlertTriangle,
-  IconWallet,
-} from "@tabler/icons-react";
+  Monitor as IconDeviceDesktop,
+  TriangleAlert as IconAlertTriangle,
+} from "lucide-react";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { openPosSession } from "./actions";
 
@@ -75,14 +74,6 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
     !selectedTerminalOccupied &&
     !isPending;
 
-  const statusText = canOpen
-    ? "Có thể mở ca ngay"
-    : selectedTerminalOccupied
-      ? "Máy POS đang bận"
-      : terminalId === ""
-        ? "Chọn máy POS để tiếp tục"
-        : "Kiểm tra tiền đầu ca";
-
   const handleOpen = useCallback(() => {
     if (!canOpen) return;
 
@@ -119,7 +110,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
                   Chọn máy POS và nhập tiền đầu ca để bắt đầu nhận đơn.
                 </CardDescription>
               </div>
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <div className="flex size-11 shrink-0 items-center justify-center bg-primary/10 text-primary">
                 <IconDeviceDesktop className="size-5" />
               </div>
             </div>
@@ -199,20 +190,6 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
                   Ghi số tiền mặt đầu ca để đối soát khi đóng ca.
                 </FieldDescription>
               </Field>
-
-              <div className="rounded-lg border bg-muted/35 px-4 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                      Trạng thái
-                    </p>
-                    <p className="mt-1 text-base font-semibold text-foreground">
-                      {statusText}
-                    </p>
-                  </div>
-                  <IconWallet className="size-4 shrink-0 text-muted-foreground" />
-                </div>
-              </div>
             </FieldGroup>
           </CardContent>
 
@@ -229,7 +206,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
                   Đang mở ca...
                 </>
               ) : (
-                "Mở ca"
+                "Mở ca POS"
               )}
             </Button>
           </CardFooter>

@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { createClient } from "@comtammatu/database/supabase/client";
-import { IconPrinter, IconPrinterOff } from "@tabler/icons-react";
+import {
+  Printer as IconPrinter,
+  PrinterX as IconPrinterOff,
+} from "lucide-react";
 
 interface PrinterStatusBadgeProps {
   branchId: number;
@@ -51,6 +54,7 @@ export function PrinterStatusBadge({
   useEffect(() => {
     const supabase = createClient();
     let cancelled = false;
+    let initialSubscribeSeen = false;
 
     const fetchStatus = async () => {
       const { data } = await supabase
@@ -91,7 +95,18 @@ export function PrinterStatusBadge({
           );
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status !== "SUBSCRIBED") return;
+        // Skip the FIRST SUBSCRIBED — fetchStatus() ran on mount above.
+        // Every SUBSCRIBED after that is a reconnect: refetch so the
+        // badge reflects any agent state change that fired during the
+        // WS disconnect window (otherwise we'd wait up to POLL_INTERVAL_MS).
+        if (!initialSubscribeSeen) {
+          initialSubscribeSeen = true;
+          return;
+        }
+        void fetchStatus();
+      });
 
     return () => {
       cancelled = true;

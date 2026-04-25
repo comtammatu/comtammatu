@@ -2,15 +2,14 @@
 
 import { memo } from "react";
 import { Button } from "@comtammatu/ui/components/button";
-import { IconClock, IconDeviceDesktop } from "@tabler/icons-react";
+import { Clock as IconClock, Monitor as IconDeviceDesktop } from "lucide-react";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { formatTime } from "./pos-menu-types";
-import { PosThemeToggle } from "./pos-theme-toggle";
 import type { ActiveSession } from "./page";
 
 interface PosSessionHeaderProps {
   session: ActiveSession;
-  /** Ẩn nút "Chốt ca" cho role không có `pos:close_shift` (waiter). */
+  /** Ẩn nút"Chốt ca" cho role không có `pos:close_shift` (waiter). */
   canCloseShift: boolean;
   onShowCloseSession: () => void;
 }
@@ -43,12 +42,11 @@ function PosSessionHeaderComponent({
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
-          <PosThemeToggle />
           {canCloseShift ? (
             <Button
               variant="ghost"
               size="sm"
-              className="min-h-10 h-9 shrink-0 rounded-full px-3 text-sm font-semibold text-muted-foreground hover:text-destructive md:min-h-11 md:px-4"
+              className="h-9 min-h-10 shrink-0 px-3 text-sm font-semibold text-muted-foreground hover:text-destructive md:min-h-11 md:px-4"
               onClick={onShowCloseSession}
               aria-label="Chốt ca POS"
             >

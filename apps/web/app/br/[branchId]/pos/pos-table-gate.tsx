@@ -3,6 +3,7 @@
 import { memo, useCallback, useMemo } from "react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Empty,
   EmptyDescription,
@@ -11,25 +12,32 @@ import {
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import { IconLayoutGrid, IconMapPin } from "@tabler/icons-react";
+import {
+  LayoutGrid as IconLayoutGrid,
+  MapPin as IconMapPin,
+} from "lucide-react";
 import type { BranchTable } from "./page";
 
 interface PosTableGateProps {
   tables: BranchTable[];
   selectedTableId: number | null;
   onTableSelect: (table: BranchTable) => void;
+  /** Map<table_id, count of active orders on that table> for multi-order indicator */
+  orderCountByTable?: Map<number, number>;
   className?: string;
 }
 
 interface TableButtonProps {
   table: BranchTable;
   isSelected: boolean;
+  orderCount: number;
   onTableSelect: (table: BranchTable) => void;
 }
 
 const TableButton = memo(function TableButton({
   table,
   isSelected,
+  orderCount,
   onTableSelect,
 }: TableButtonProps) {
   const handleClick = useCallback(
@@ -47,18 +55,19 @@ const TableButton = memo(function TableButton({
         : "Đã đặt";
 
   return (
-    <button
+    <Button
       type="button"
+      variant={isSelected ? "default" : "outline"}
       aria-label={`Bàn ${String(table.number)} ${statusLabel}`}
       className={cn(
-        "flex min-h-24 flex-col justify-between rounded-lg border p-3 text-left transition-transform hover:-translate-y-0.5 hover:shadow-md sm:p-4",
+        "h-auto min-h-24 w-full flex-col items-stretch justify-between p-3 text-left whitespace-normal hover:shadow-md sm:p-4",
         isSelected
-          ? "border-primary/30 bg-primary text-primary-foreground shadow-md"
+          ? "shadow-md"
           : isAvailable
-            ? "border-border bg-card shadow-sm hover:border-primary/25"
+            ? "bg-card shadow-sm hover:border-primary/25"
             : isOccupied
-              ? "border-warning/25 bg-warning/10 text-foreground shadow-sm hover:border-warning/35"
-              : "border-border/70 bg-muted/55 text-muted-foreground shadow-sm hover:border-border",
+              ? "bg-warning/10 text-foreground shadow-sm hover:border-warning/35"
+              : "bg-muted/55 text-muted-foreground shadow-sm hover:border-border",
       )}
       onClick={handleClick}
     >
@@ -94,7 +103,13 @@ const TableButton = memo(function TableButton({
           {table.capacity} chỗ
         </p>
       </div>
-    </button>
+
+      {orderCount >= 2 && (
+        <Badge variant="secondary" className="mt-2 w-fit text-xs font-semibold">
+          {orderCount} đơn
+        </Badge>
+      )}
+    </Button>
   );
 });
 
@@ -102,6 +117,7 @@ function PosTableGateComponent({
   tables,
   selectedTableId,
   onTableSelect,
+  orderCountByTable,
   className,
 }: PosTableGateProps) {
   const tableGroups = useMemo(() => {
@@ -147,7 +163,7 @@ function PosTableGateComponent({
               <section key={zoneName} className="flex flex-col gap-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2">
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <div className="flex size-10 shrink-0 items-center justify-center bg-primary/10 text-primary">
                       <IconMapPin className="size-5" />
                     </div>
                     <div className="min-w-0">
@@ -168,6 +184,7 @@ function PosTableGateComponent({
                       key={table.id}
                       table={table}
                       isSelected={selectedTableId === table.id}
+                      orderCount={orderCountByTable?.get(table.id) ?? 0}
                       onTableSelect={onTableSelect}
                     />
                   ))}

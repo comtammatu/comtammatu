@@ -26,7 +26,10 @@ export async function fetchTablesForBranch(
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -79,7 +82,10 @@ export async function fetchPosTerminals(
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -161,7 +167,10 @@ export async function fetchActiveSession(
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -344,9 +353,7 @@ const closeSessionSchema = z.object({
     .number()
     .int()
     .positive({ error: "Session ID không hợp lệ" }),
-  closingCash: z.coerce
-    .number()
-    .min(0, { error: "Tiền đóng ca không hợp lệ" }),
+  closingCash: z.coerce.number().min(0, { error: "Tiền đóng ca không hợp lệ" }),
   note: z.string().optional(),
 });
 

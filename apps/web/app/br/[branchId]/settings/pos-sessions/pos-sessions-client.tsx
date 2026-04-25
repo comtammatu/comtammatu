@@ -3,13 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
-import {
-  IconCash,
-  IconChevronRight,
-  IconClock,
-  IconReceipt,
-  IconToolsKitchen2,
-} from "@tabler/icons-react";
+import { Banknote as IconCash, ChevronRight as IconChevronRight, Clock as IconClock, Receipt as IconReceipt, CookingPot as IconToolsKitchen2 } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";

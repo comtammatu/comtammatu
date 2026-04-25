@@ -1,0 +1,99 @@
+"use client";
+
+import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@comtammatu/ui/components/dialog";
+import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
+import { formatVND } from "@comtammatu/shared/format";
+import { Plus as IconPlus } from "lucide-react";
+import type { SessionOrder } from "../order-history";
+
+const STATUS_LABELS: Record<string, string> = {
+  new: "Mới",
+  confirmed: "Xác nhận",
+  preparing: "Đang làm",
+  ready: "Sẵn sàng",
+  served: "Đã phục vụ",
+};
+
+interface MultiOrderTablePickerProps {
+  open: boolean;
+  tableNumber: number | null;
+  orders: SessionOrder[];
+  onOpenOrder: (orderId: number, orderNumber: string) => void;
+  onCreateNew: () => void;
+  onClose: () => void;
+}
+
+export function MultiOrderTablePicker({
+  open,
+  tableNumber,
+  orders,
+  onOpenOrder,
+  onCreateNew,
+  onClose,
+}: MultiOrderTablePickerProps) {
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            Bàn {tableNumber ?? "—"} — {orders.length} đơn
+          </DialogTitle>
+          <DialogDescription>
+            Chọn đơn để xem chi tiết, hoặc tạo đơn mới trên bàn này.
+          </DialogDescription>
+        </DialogHeader>
+
+        <ScrollArea className="max-h-72">
+          <div className="flex flex-col gap-2 pr-2">
+            {orders.map((order) => (
+              <Button
+                key={order.id}
+                type="button"
+                variant="outline"
+                onClick={() => onOpenOrder(order.id, order.order_number)}
+                className="h-auto w-full justify-between p-3 text-left whitespace-normal transition-colors hover:border-primary/40 hover:bg-accent"
+              >
+                <div className="flex min-w-0 flex-col gap-1">
+                  <p className="truncate text-sm font-semibold">
+                    {order.order_number}
+                  </p>
+                  <Badge variant="outline" className="w-fit text-xs">
+                    {STATUS_LABELS[order.status] ?? order.status}
+                  </Badge>
+                </div>
+                <p className="shrink-0 text-base font-semibold tabular-nums">
+                  {formatVND(order.total_amount)}
+                </p>
+              </Button>
+            ))}
+          </div>
+        </ScrollArea>
+
+        <Button
+          type="button"
+          variant="default"
+          className="w-full"
+          onClick={onCreateNew}
+        >
+          <IconPlus data-icon="inline-start" />
+          Tạo đơn mới trên bàn này
+        </Button>
+
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Đóng
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

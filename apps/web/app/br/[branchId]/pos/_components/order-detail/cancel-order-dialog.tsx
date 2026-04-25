@@ -10,8 +10,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@comtammatu/ui/components/field";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 
 interface CancelOrderDialogProps {
   open: boolean;
@@ -19,6 +24,11 @@ interface CancelOrderDialogProps {
   reason: string;
   onReasonChange: (reason: string) => void;
   onConfirm: () => void;
+  orderNumber?: string | null;
+  orderType?: string | null;
+  tableNumber?: number | null;
+  itemCount?: number;
+  isPending?: boolean;
 }
 
 export function CancelOrderDialog({
@@ -27,37 +37,60 @@ export function CancelOrderDialog({
   reason,
   onReasonChange,
   onConfirm,
+  orderNumber,
+  orderType,
+  tableNumber,
+  itemCount = 0,
+  isPending = false,
 }: CancelOrderDialogProps) {
+  const reasonReady = reason.trim().length > 0;
+  const orderLabel = orderNumber ? ` ${orderNumber}` : "";
+  const contextLabel =
+    orderType === "dine_in" ? `Bàn ${tableNumber ?? "đang chọn"}` : "Mang về";
+  const itemLabel =
+    itemCount > 0 ? `${itemCount} món còn hiệu lực` : "các món còn hiệu lực";
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Hủy đơn hàng?</AlertDialogTitle>
+          <AlertDialogTitle>Hủy đơn{orderLabel}?</AlertDialogTitle>
           <AlertDialogDescription>
-            Tất cả món sẽ bị hủy. Bàn sẽ được giải phóng nếu không còn đơn.
+            Hủy {itemLabel} trong đơn này. {contextLabel} chỉ được cập nhật theo
+            trạng thái đơn sau khi thao tác hủy thành công.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <div className="space-y-2 py-2">
-          <Label htmlFor="cancel-reason">Lý do</Label>
-          <Input
-            id="cancel-reason"
-            value={reason}
-            onChange={(e) => onReasonChange(e.target.value)}
-            placeholder="Bắt buộc"
-          />
-        </div>
+
+        <FieldGroup className="py-2">
+          <Field data-invalid={!reasonReady && reason.length > 0}>
+            <FieldLabel htmlFor="cancel-reason">Lý do hủy đơn</FieldLabel>
+            <Textarea
+              id="cancel-reason"
+              value={reason}
+              onChange={(event) => onReasonChange(event.target.value)}
+              placeholder="Bắt buộc để đối soát ca và bếp"
+              aria-invalid={!reasonReady && reason.length > 0}
+            />
+            <FieldDescription>
+              Nút hủy chỉ mở khi đã nhập lý do cụ thể.
+            </FieldDescription>
+          </Field>
+        </FieldGroup>
+
         <AlertDialogFooter>
           <AlertDialogCancel onClick={() => onReasonChange("")}>
-            Đóng
+            Giữ đơn
           </AlertDialogCancel>
           <AlertDialogAction
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            onClick={(e) => {
-              e.preventDefault();
+            variant="destructive"
+            disabled={!reasonReady || isPending}
+            onClick={(event) => {
+              event.preventDefault();
+              if (!reasonReady || isPending) return;
               onConfirm();
             }}
           >
-            Xác nhận hủy đơn
+            Hủy đơn
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

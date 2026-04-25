@@ -1,15 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  IconArmchair,
-  IconArrowLeft,
-  IconArrowRight,
-  IconChecklist,
-  IconDeviceDesktop,
-  IconLayoutGrid,
-  IconPrinter,
-  IconReceipt2,
-} from "@tabler/icons-react";
+import { Armchair as IconArmchair, ArrowLeft as IconArrowLeft, ArrowRight as IconArrowRight, ListChecks as IconChecklist, Monitor as IconDeviceDesktop, LayoutGrid as IconLayoutGrid, Printer as IconPrinter, ReceiptText as IconReceipt2 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {

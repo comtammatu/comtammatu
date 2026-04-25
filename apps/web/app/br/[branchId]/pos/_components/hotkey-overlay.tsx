@@ -47,9 +47,7 @@ const GROUPS: HotkeyGroup[] = [
   },
   {
     title: "Trợ giúp",
-    rows: [
-      { keys: ["?"], label: "Mở / đóng bảng phím tắt" },
-    ],
+    rows: [{ keys: ["?"], label: "Mở / đóng bảng phím tắt" }],
   },
 ];
 
@@ -61,8 +59,8 @@ interface HotkeyOverlayProps {
 export function HotkeyOverlay({ open, onOpenChange }: HotkeyOverlayProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="max-h-[70vh] rounded-t-2xl p-0">
-        <div className="flex max-h-[70vh] flex-col overflow-hidden">
+      <SheetContent side="bottom" className="max-h-dvh p-0">
+        <div className="flex max-h-dvh flex-col overflow-hidden">
           <SheetHeader className="border-b px-5 pt-5 pb-3 text-left">
             <SheetTitle>Phím tắt POS</SheetTitle>
             <SheetDescription>

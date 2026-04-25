@@ -6,11 +6,11 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
-  IconCurrencyDollar,
-  IconExternalLink,
-  IconFileInvoice,
-  IconQrcode,
-} from "@tabler/icons-react";
+  DollarSign as IconCurrencyDollar,
+  ExternalLink as IconExternalLink,
+  ReceiptText as IconFileInvoice,
+  QrCode as IconQrcode,
+} from "lucide-react";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { METHOD_LABELS } from "./bill-receipt-types";
 import type { PendingExtras } from "./bill-receipt-types";
@@ -32,7 +32,7 @@ export function BillReceiptPaymentPicker({
 }: BillReceiptPaymentPickerProps) {
   return (
     <Card className="shadow-sm">
-      <CardContent className="space-y-3 p-3">
+      <CardContent className="flex flex-col gap-3 p-3">
         <div className="flex items-center justify-between gap-2">
           <h4 className="text-base font-semibold">Phương thức thanh toán</h4>
           <Badge variant="outline">{methods.length}</Badge>
@@ -47,41 +47,39 @@ export function BillReceiptPaymentPicker({
               variant={m === "cash" ? "default" : "secondary"}
               disabled={payPending || hasPendingRemotePayment}
               className={cn(
-                "h-12 w-full justify-between rounded-lg px-4 text-base font-semibold shadow-sm transition-transform hover:-translate-y-0.5",
+                "h-12 w-full justify-between px-4 text-base font-semibold shadow-sm",
                 m === "cash" && "shadow-md",
               )}
               onClick={() => onPay(m)}
             >
               <span className="flex items-center gap-2">
                 {m === "cash" ? (
-                  <IconCurrencyDollar className="size-4" />
+                  <IconCurrencyDollar data-icon="inline-start" />
                 ) : (
-                  <IconQrcode className="size-4" />
+                  <IconQrcode data-icon="inline-start" />
                 )}
                 {METHOD_LABELS[m] ?? m}
               </span>
               {payPending ? (
                 <Spinner />
               ) : (
-                <IconFileInvoice className="size-4 opacity-70" />
+                <IconFileInvoice
+                  data-icon="inline-end"
+                  className="opacity-70"
+                />
               )}
             </Button>
           ))}
         </div>
 
         {pendingExtras?.redirect_url && (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full rounded-lg"
-            asChild
-          >
+          <Button type="button" variant="outline" className="w-full" asChild>
             <a
               href={pendingExtras.redirect_url}
               target="_blank"
               rel="noopener noreferrer"
             >
-              <IconExternalLink className="mr-2 size-4" />
+              <IconExternalLink data-icon="inline-start" />
               Mở trang thanh toán MoMo
             </a>
           </Button>

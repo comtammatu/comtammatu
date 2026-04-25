@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { IconDeviceDesktop, IconMoon, IconSun } from "@tabler/icons-react";
+import {
+  Monitor as IconDeviceDesktop,
+  Moon as IconMoon,
+  Sun as IconSun,
+} from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   DropdownMenu,
@@ -29,11 +33,11 @@ export function PosThemeToggle() {
           type="button"
           variant="ghost"
           size="icon"
-          className="min-h-11 min-w-11 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
+          className="min-h-11 min-w-11 shrink-0 text-muted-foreground hover:text-foreground"
           aria-label="Chọn giao diện POS"
           title="Giao diện POS"
         >
-          {isDark ? <IconMoon className="size-4" /> : <IconSun className="size-4" />}
+          {isDark ? <IconMoon /> : <IconSun />}
           <span className="sr-only">Chọn giao diện POS</span>
         </Button>
       </DropdownMenuTrigger>
@@ -42,21 +46,21 @@ export function PosThemeToggle() {
           onClick={() => setTheme("light")}
           data-active={current === "light"}
         >
-          <IconSun className="mr-2 size-4" />
+          <IconSun />
           Sáng
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => setTheme("dark")}
           data-active={current === "dark"}
         >
-          <IconMoon className="mr-2 size-4" />
+          <IconMoon />
           Tối
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => setTheme("system")}
           data-active={current === "system"}
         >
-          <IconDeviceDesktop className="mr-2 size-4" />
+          <IconDeviceDesktop />
           Hệ thống
         </DropdownMenuItem>
       </DropdownMenuContent>

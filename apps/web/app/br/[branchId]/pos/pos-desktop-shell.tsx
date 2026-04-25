@@ -7,6 +7,7 @@ import {
   useState,
   useTransition,
 } from "react";
+import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
@@ -19,9 +20,10 @@ import {
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { IconKeyboard, IconX } from "@tabler/icons-react";
+import { X as IconX } from "lucide-react";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
 import { PosTableGate } from "./pos-table-gate";
+import { MultiOrderTablePicker } from "./_components/multi-order-table-picker";
 import { ItemCustomizer } from "./item-customizer";
 import { CloseSessionSheet } from "./close-session-sheet";
 import { BillReceipt } from "./_components/bill/bill-receipt-sheet";
@@ -41,7 +43,7 @@ import { submitPosOrderWithRetry } from "./_utils/submit-with-retry";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
 import type { ActiveSession, BranchTable } from "./page";
-import type { SessionOrder } from "./order-history";
+import { ACTIVE_POS_STATUSES, type SessionOrder } from "./order-history";
 import type { OrderData } from "./_components/bill/bill-receipt-types";
 import type { OrderDetailData } from "./order-detail-sheet";
 import {
@@ -77,9 +79,9 @@ interface PosDesktopShellProps {
    * fires a full refresh as recovery.
    */
   initialOrdersSeeded: boolean;
-  /** User hiện tại có `pos:close_shift` không (ẩn nút "Chốt ca" với waiter). */
+  /** User hiện tại có `pos:close_shift` không (ẩn nút"Chốt ca" với waiter). */
   canCloseShift: boolean;
-  /** `pos:confirm_payment` — gate phương thức "Tiền mặt" trên bill (cashier+). */
+  /** `pos:confirm_payment` — gate phương thức"Tiền mặt" trên bill (cashier+). */
   canConfirmCash: boolean;
 }
 
@@ -176,8 +178,23 @@ function PosDesktopInner({
   } | null>(null);
   const [showOrders, setShowOrders] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const [appendDraftItems, setAppendDraftItems] = useState<CartItem[]>([]);
+  const [appendSubmitting, setAppendSubmitting] = useState(false);
   const [detailRefreshTick, setDetailRefreshTick] = useState(0);
   const [hotkeyOpen, setHotkeyOpen] = useState(false);
+  // Multi-order-per-table (PR3 Gộp bàn Option A): when user taps an occupied
+  // table, show a picker listing active orders +"Tạo đơn mới" button. The
+  // picker is the only path to start a 2nd order on the same physical table.
+  const [tablePicker, setTablePicker] = useState<{
+    table: BranchTable;
+    orders: SessionOrder[];
+  } | null>(null);
+  // When the user explicitly chose to create a new order on an occupied table,
+  // we record the table id here so the auto-clear effect doesn't reset it the
+  // moment table.status becomes !=="available".
+  const [allowOccupiedTableId, setAllowOccupiedTableId] = useState<
+    number | null
+  >(null);
   const isMobile = useIsMobile();
 
   const menuItemById = useMemo(() => {
@@ -208,45 +225,72 @@ function PosDesktopInner({
   }, [refreshOrdersDeduped, bumpDetailRefresh]);
 
   // Clear selected table if it becomes unavailable while in dine-in mode.
+  // Skip the clear when the user explicitly opted into an occupied table
+  // (multi-order-per-table flow) so their selection survives the status flip.
   useEffect(() => {
     if (
       cartOrderType === "dine_in" &&
       selectedTableId !== null &&
       selectedTable != null &&
-      selectedTable.status !== "available"
+      selectedTable.status !== "available" &&
+      selectedTableId !== allowOccupiedTableId
     ) {
       setActiveTable(null);
     }
-  }, [cartOrderType, selectedTable, selectedTableId, setActiveTable]);
+  }, [
+    allowOccupiedTableId,
+    cartOrderType,
+    selectedTable,
+    selectedTableId,
+    setActiveTable,
+  ]);
 
-  const orderContextReady =
-    cartOrderType === "takeaway" || selectedTableAvailable;
+  // Drop the explicit-occupied flag once the user moves away from that table
+  // (manual switch, post-submit reset, etc.). Keeps the flag tied to one
+  // active selection at a time — never accidentally reused on a later tap.
+  useEffect(() => {
+    if (
+      allowOccupiedTableId !== null &&
+      selectedTableId !== allowOccupiedTableId
+    ) {
+      setAllowOccupiedTableId(null);
+    }
+  }, [allowOccupiedTableId, selectedTableId]);
+
+  const isExplicitOccupied =
+    selectedTableId !== null && selectedTableId === allowOccupiedTableId;
+  const selectedTableUsable = selectedTableAvailable || isExplicitOccupied;
+
+  const orderContextReady = cartOrderType === "takeaway" || selectedTableUsable;
   const isAppendingToOrder = appendTarget != null;
   const menuContextReady = orderContextReady || isAppendingToOrder;
   const selectedTableNumber = selectedTable?.number;
-
-  const hasAwaitingPaymentOrder = useMemo(
-    () => orders.some(isOrderAwaitingPayment),
-    [orders],
+  const appendDraftQuantity = useMemo(
+    () => appendDraftItems.reduce((sum, item) => sum + item.quantity, 0),
+    [appendDraftItems],
   );
 
-  // Poll for payment-awaiting orders while no bill is actively open.
   useEffect(() => {
-    if (!hasAwaitingPaymentOrder || billOrderId !== null) return;
+    setAppendDraftItems([]);
+  }, [appendTarget?.orderId]);
 
-    const intervalId = window.setInterval(() => {
-      if (document.visibilityState === "hidden") return;
-      void refreshOperational();
-    }, 4000);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [billOrderId, hasAwaitingPaymentOrder, refreshOperational]);
+  // Count active orders per table — drives the"N đơn" badge on multi-order
+  // tables and the picker's order list.
+  const orderCountByTable = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const order of orders) {
+      if (
+        order.table_id !== null &&
+        ACTIVE_POS_STATUSES.includes(order.status)
+      ) {
+        map.set(order.table_id, (map.get(order.table_id) ?? 0) + 1);
+      }
+    }
+    return map;
+  }, [orders]);
 
   const canSubmit =
-    cartItemCount > 0 &&
-    (cartOrderType === "takeaway" || selectedTableAvailable);
+    cartItemCount > 0 && (cartOrderType === "takeaway" || selectedTableUsable);
 
   const focusOrderWorkflow = useCallback(
     (orderId: number, orderNumber?: string | null) => {
@@ -260,10 +304,73 @@ function PosDesktopInner({
 
   const { performAppend } = usePosAppend({
     branchId,
-    clearAppendTarget,
-    focusOrderWorkflow,
     refreshOperational,
   });
+
+  const addAppendDraftItem = useCallback((line: CartItem) => {
+    setAppendDraftItems((currentItems) => {
+      const existing = currentItems.find((item) => item.key === line.key);
+      if (existing == null) {
+        return [...currentItems, line];
+      }
+
+      return currentItems.map((item) =>
+        item.key === line.key
+          ? { ...item, quantity: item.quantity + line.quantity }
+          : item,
+      );
+    });
+    setShowOrders(false);
+  }, []);
+
+  const removeAppendDraftItem = useCallback((key: string) => {
+    setAppendDraftItems((currentItems) =>
+      currentItems.filter((item) => item.key !== key),
+    );
+  }, []);
+
+  const cancelAppendWorkflow = useCallback(() => {
+    if (appendTarget == null) return;
+
+    const target = appendTarget;
+    setAppendDraftItems([]);
+    clearAppendTarget();
+    setCustomizerItem(null);
+    setEditingCartItem(null);
+    setCartDrawerOpen(false);
+    focusOrderWorkflow(target.orderId, target.orderNumber);
+  }, [appendTarget, clearAppendTarget, focusOrderWorkflow]);
+
+  const handleSubmitAppendDraft = useCallback(() => {
+    if (
+      appendTarget == null ||
+      appendDraftItems.length === 0 ||
+      appendSubmitting
+    ) {
+      return;
+    }
+
+    const target = appendTarget;
+    const items = appendDraftItems;
+    setAppendSubmitting(true);
+    void performAppend(target, items, {
+      onSuccess: () => {
+        setAppendDraftItems([]);
+        clearAppendTarget();
+        setCustomizerItem(null);
+        setEditingCartItem(null);
+        setCartDrawerOpen(false);
+        focusOrderWorkflow(target.orderId, target.orderNumber);
+      },
+    }).finally(() => setAppendSubmitting(false));
+  }, [
+    appendDraftItems,
+    appendSubmitting,
+    appendTarget,
+    clearAppendTarget,
+    focusOrderWorkflow,
+    performAppend,
+  ]);
 
   const handleTableSelect = useCallback(
     (table: BranchTable) => {
@@ -277,36 +384,72 @@ function PosDesktopInner({
         return;
       }
 
-      startTransition(async () => {
-        const result = await fetchActiveOrderForTable(branchId, table.id);
-        if (result.success && result.data) {
-          const order = result.data.order as unknown as OrderDetailData;
-          // Seed the detail sheet with the already-fetched payload so it
-          // renders immediately — no second round-trip for the same row.
-          setOrderDetailSeed({
-            order,
-            canManage: result.data.canManageOrders,
-          });
-          focusOrderWorkflow(order.id, order.order_number);
-          void refreshOperational();
-          return;
-        }
+      // Multi-order-per-table: tap on occupied table opens a picker showing
+      // active orders +"Tạo đơn mới" button. The picker is the discoverable
+      // entry point for the new"2nd order on same bàn" flow.
+      const activeOrders = orders.filter(
+        (o) =>
+          o.table_id === table.id && ACTIVE_POS_STATUSES.includes(o.status),
+      );
 
-        toast.error(
-          result.error ?? "Chưa tìm thấy đơn đang phục vụ của bàn này.",
-        );
-        void refreshOperational();
-      });
+      if (activeOrders.length === 0) {
+        // Edge case: tables.status is occupied but no active order surfaces in
+        // the current orders list (stale realtime, cross-session race). Fall
+        // back to the legacy single-fetch path so the cashier still sees the
+        // row instead of an empty picker.
+        startTransition(async () => {
+          const result = await fetchActiveOrderForTable(branchId, table.id);
+          if (result.success && result.data) {
+            const order = result.data.order as unknown as OrderDetailData;
+            setOrderDetailSeed({
+              order,
+              canManage: result.data.canManageOrders,
+            });
+            focusOrderWorkflow(order.id, order.order_number);
+            void refreshOperational();
+            return;
+          }
+          toast.error(
+            result.error ?? "Chưa tìm thấy đơn đang phục vụ của bàn này.",
+          );
+          void refreshOperational();
+        });
+        return;
+      }
+
+      setTablePicker({ table, orders: activeOrders });
     },
     [
       branchId,
       focusOrderWorkflow,
+      orders,
       refreshOperational,
       selectedTableId,
       setActiveTable,
       startTransition,
     ],
   );
+
+  const handleClosePicker = useCallback(() => {
+    setTablePicker(null);
+  }, []);
+
+  const handleOpenOrderFromPicker = useCallback(
+    (orderId: number, orderNumber: string) => {
+      setTablePicker(null);
+      focusOrderWorkflow(orderId, orderNumber);
+    },
+    [focusOrderWorkflow],
+  );
+
+  const handleCreateNewOnOccupied = useCallback(() => {
+    if (tablePicker == null) return;
+    const tableId = tablePicker.table.id;
+    setTablePicker(null);
+    setAllowOccupiedTableId(tableId);
+    setActiveTable(tableId);
+    setCartDrawerOpen(false);
+  }, [setActiveTable, tablePicker]);
 
   const handleOrderTypeChange = useCallback(
     (type: OrderType) => {
@@ -383,11 +526,14 @@ function PosDesktopInner({
       const hasSides = item.menu_item_available_sides.length > 0;
 
       if (appendTarget) {
+        if (appendSubmitting) {
+          toast.message("Đang gửi món thêm, vui lòng chờ...");
+          return;
+        }
         if (hasVariants || hasModifiers || hasSides) {
           setEditingCartItem(null);
           setCustomizerItem(item);
         } else {
-          const target = appendTarget;
           const line: CartItem = {
             key: makeCartKey(item.id, undefined, [], []),
             menu_item_id: item.id,
@@ -397,9 +543,7 @@ function PosDesktopInner({
             modifiers: [],
             sides: [],
           };
-          startTransition(() => {
-            void performAppend(target, [line]);
-          });
+          addAppendDraftItem(line);
         }
         return;
       }
@@ -412,7 +556,7 @@ function PosDesktopInner({
         addCartItem(item);
       }
     },
-    [addCartItem, appendTarget, performAppend],
+    [addAppendDraftItem, addCartItem, appendSubmitting, appendTarget],
   );
 
   const handleCartItemCustomize = useCallback(
@@ -484,7 +628,10 @@ function PosDesktopInner({
       }
 
       if (appendTarget) {
-        const target = appendTarget;
+        if (appendSubmitting) {
+          toast.message("Đang gửi món thêm, vui lòng chờ...");
+          return;
+        }
         const hasNote = note !== undefined && note.length > 0;
         const baseKey = makeCartKey(item.id, variantId, modifiers, sides);
         const key = hasNote ? makeNotedCartKey(baseKey) : baseKey;
@@ -500,11 +647,8 @@ function PosDesktopInner({
           sides,
           note,
         };
-        startTransition(() => {
-          void performAppend(target, [line], {
-            onSuccess: () => setCustomizerItem(null),
-          });
-        });
+        addAppendDraftItem(line);
+        setCustomizerItem(null);
         return;
       }
       setShowOrders(false);
@@ -521,10 +665,11 @@ function PosDesktopInner({
     },
     [
       addCartItem,
+      addAppendDraftItem,
+      appendSubmitting,
       appendTarget,
       cartStore,
       editingCartItem,
-      performAppend,
       replaceCartItems,
     ],
   );
@@ -607,6 +752,14 @@ function PosDesktopInner({
     showOrders,
     canSubmit,
     isPending,
+    appendDraft: {
+      target: appendTarget,
+      items: appendDraftItems,
+      isSubmitting: appendSubmitting,
+      onSubmit: handleSubmitAppendDraft,
+      onCancel: cancelAppendWorkflow,
+      onRemoveItem: removeAppendDraftItem,
+    },
     onSubmitOrder: handleSubmitOrder,
     onOrderTypeChange: handleOrderTypeChange,
     onCustomizeItem: handleCartItemCustomize,
@@ -650,31 +803,31 @@ function PosDesktopInner({
         className="border-b border-warning/15 bg-warning/10 px-3 py-3 md:px-4"
         role="status"
       >
-        <div className="w-full">
-          <div className="rounded-xl border border-warning/20 bg-warning/10 shadow-sm p-3">
-            <div className="relative flex items-center justify-between gap-2">
-              <p className="min-w-0 text-base leading-6 text-foreground">
-                <span className="font-semibold">
-                  Thêm món vào đơn #{appendTarget.orderNumber}
-                </span>
-                <span className="text-muted-foreground">
-                  {" "}
-                  Chọn món trên danh sách bên dưới để tiếp tục thêm vào đơn.
-                </span>
-              </p>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="min-h-11 min-w-11 h-9 shrink-0 gap-1 rounded-full px-3 text-sm text-foreground hover:bg-warning/25"
-                onClick={clearAppendTarget}
-              >
-                <IconX className="size-3.5" />
-                Hủy
-              </Button>
-            </div>
-          </div>
-        </div>
+        <Alert className="border-warning/20 bg-warning/10">
+          <AlertDescription className="relative flex items-center justify-between gap-2 text-current">
+            <p className="min-w-0 text-base leading-6 text-foreground">
+              <span className="font-semibold">
+                Thêm món vào đơn #{appendTarget.orderNumber}
+              </span>
+              <span className="text-muted-foreground">
+                {""}
+                {appendDraftQuantity > 0
+                  ? `${String(appendDraftQuantity)} món đang chờ gửi.`
+                  : "Chọn món trên menu, chưa gửi bếp cho tới khi xác nhận."}
+              </span>
+            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-9 min-h-11 min-w-11 shrink-0 gap-1 px-3 text-sm text-foreground hover:bg-warning/25"
+              onClick={cancelAppendWorkflow}
+            >
+              <IconX data-icon="inline-start" />
+              Hủy
+            </Button>
+          </AlertDescription>
+        </Alert>
       </div>
     ) : null;
 
@@ -697,7 +850,7 @@ function PosDesktopInner({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="min-h-10 min-w-10 shrink-0 rounded-full px-3 text-sm font-bold"
+                className="min-h-10 min-w-10 shrink-0 px-3 text-sm font-bold"
                 disabled={cartItemCount > 0}
                 onClick={() => {
                   setShowOrders(false);
@@ -712,14 +865,14 @@ function PosDesktopInner({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="min-h-10 min-w-10 shrink-0 rounded-full px-3 text-sm font-bold"
+                className="min-h-10 min-w-10 shrink-0 px-3 text-sm font-bold"
                 onClick={() => {
                   setShowOrders(false);
                   setCartDrawerOpen(false);
                   setActiveTable(null);
                 }}
               >
-                Đổi bàn
+                Chọn lại bàn
               </Button>
             ))}
         </div>
@@ -734,10 +887,14 @@ function PosDesktopInner({
     >
       <DrawerContent
         showHandle={false}
-        className="h-svh max-h-svh p-0 before:inset-0 before:rounded-none sm:h-5/6 sm:max-h-dvh sm:p-2 sm:before:inset-2 sm:before:rounded-xl"
+        className="h-svh max-h-svh p-0 before:inset-0 sm:h-5/6 sm:max-h-dvh sm:p-2 sm:before:inset-2"
       >
         <DrawerTitle className="sr-only">
-          {showOrders ? "Đơn đang phục vụ" : "Giỏ hàng"}
+          {appendTarget != null
+            ? `Món thêm cho đơn #${appendTarget.orderNumber}`
+            : showOrders
+              ? "Đơn cần xử lý"
+              : "Giỏ đơn mới"}
         </DrawerTitle>
         <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
           <PosSidebarContent {...sidebarContentProps} />
@@ -786,6 +943,7 @@ function PosDesktopInner({
               tables={tables}
               selectedTableId={selectedTableId}
               onTableSelect={handleTableSelect}
+              orderCountByTable={orderCountByTable}
               className="min-h-0 flex-1"
             />
           </div>
@@ -809,6 +967,7 @@ function PosDesktopInner({
         cartOrderType={cartOrderType}
         selectedTableId={selectedTableId}
         cartQuantity={cartQuantity}
+        appendDraftQuantity={appendDraftQuantity}
         ordersCount={orders.length}
         onOpenOrdersDrawer={() => {
           setShowOrders(true);
@@ -822,6 +981,10 @@ function PosDesktopInner({
           setActiveTable(null);
         }}
         onOpenCartDrawer={() => {
+          setShowOrders(false);
+          setCartDrawerOpen(true);
+        }}
+        onOpenAppendDrawer={() => {
           setShowOrders(false);
           setCartDrawerOpen(true);
         }}
@@ -856,7 +1019,7 @@ function PosDesktopInner({
           setCartDrawerOpen(false);
           startAppendTarget(oid, onum);
           setShowOrders(false);
-          toast.message("Chọn món trên menu để thêm vào đơn");
+          toast.message("Chọn món trên menu, kiểm tra lại rồi gửi món thêm");
         }}
         onReorderToCart={(items, skippedCount) => {
           replaceCartItems(items);
@@ -866,7 +1029,7 @@ function PosDesktopInner({
               `Đã bỏ qua ${String(skippedCount)} món không còn trong thực đơn.`,
             );
           } else {
-            toast.success("Đã thêm món vào giỏ từ đơn cũ");
+            toast.success("Đã tạo giỏ đơn mới từ đơn cũ");
           }
         }}
         tables={tables}
@@ -890,17 +1053,14 @@ function PosDesktopInner({
 
       <HotkeyOverlay open={hotkeyOpen} onOpenChange={setHotkeyOpen} />
 
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="fixed bottom-4 left-4 z-40 hidden size-10 rounded-full shadow-lg md:inline-flex"
-        aria-label="Mở phím tắt (?)"
-        title="Phím tắt (?)"
-        onClick={() => setHotkeyOpen(true)}
-      >
-        <IconKeyboard className="size-5" />
-      </Button>
+      <MultiOrderTablePicker
+        open={tablePicker !== null}
+        tableNumber={tablePicker?.table.number ?? null}
+        orders={tablePicker?.orders ?? []}
+        onOpenOrder={handleOpenOrderFromPicker}
+        onCreateNew={handleCreateNewOnOccupied}
+        onClose={handleClosePicker}
+      />
     </>
   );
 }

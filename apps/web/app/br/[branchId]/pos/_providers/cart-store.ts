@@ -71,9 +71,7 @@ export class CartStore {
         this.setState({
           ...this.state,
           items: items.map((ci) =>
-            ci.key === key
-              ? { ...ci, quantity: ci.quantity + quantity }
-              : ci,
+            ci.key === key ? { ...ci, quantity: ci.quantity + quantity } : ci,
           ),
         });
         return;

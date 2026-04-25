@@ -1,19 +1,24 @@
 "use client";
 
+import { Button } from "@comtammatu/ui/components/button";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@comtammatu/ui/components/alert-dialog";
-import { Label } from "@comtammatu/ui/components/label";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@comtammatu/ui/components/dialog";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@comtammatu/ui/components/field";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -28,6 +33,9 @@ interface TransferTableDialogProps {
   currentTableId: number | null;
   availableTables: BranchTable[];
   onConfirm: () => void;
+  orderNumber?: string | null;
+  currentTableNumber?: number | null;
+  isPending?: boolean;
 }
 
 export function TransferTableDialog({
@@ -38,47 +46,91 @@ export function TransferTableDialog({
   currentTableId,
   availableTables,
   onConfirm,
+  orderNumber,
+  currentTableNumber,
+  isPending = false,
 }: TransferTableDialogProps) {
+  const selectedTableId = tableId === "" ? null : Number.parseInt(tableId, 10);
+  const selectedTable =
+    selectedTableId != null && Number.isFinite(selectedTableId)
+      ? availableTables.find((table) => table.id === selectedTableId)
+      : null;
+  const canConfirm =
+    selectedTable != null && selectedTable.id !== currentTableId && !isPending;
+  const currentTableLabel =
+    currentTableNumber != null ? `bàn ${currentTableNumber}` : "bàn hiện tại";
+  const targetLabel = selectedTable
+    ? `bàn ${selectedTable.number}`
+    : "bàn trống";
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) onTableIdChange("");
+    onOpenChange(nextOpen);
+  };
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Chuyển bàn</AlertDialogTitle>
-          <AlertDialogDescription>
-            Chọn bàn trống. Bàn đang được giữ chỗ bởi đơn khác sẽ không hiển
-            thị.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <div className="space-y-2 py-2">
-          <Label htmlFor="transfer-table">Bàn</Label>
-          <Select value={tableId} onValueChange={onTableIdChange}>
-            <SelectTrigger id="transfer-table">
-              <SelectValue placeholder="Chọn bàn" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableTables.map((t) => (
-                <SelectItem key={t.id} value={String(t.id)}>
-                  Bàn {t.number}
-                  {t.id === currentTableId ? " (hiện tại)" : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => onTableIdChange("")}>
-            Đóng
-          </AlertDialogCancel>
-          <AlertDialogAction
-            onClick={(e) => {
-              e.preventDefault();
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            Chuyển {orderNumber ? `đơn ${orderNumber}` : "đơn"} sang bàn khác
+          </DialogTitle>
+          <DialogDescription>
+            Chuyển đơn từ {currentTableLabel} sang bàn còn trống. Thao tác này
+            không hủy món và không thanh toán đơn.
+          </DialogDescription>
+        </DialogHeader>
+
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="transfer-table">Bàn chuyển đến</FieldLabel>
+            <Select value={tableId} onValueChange={onTableIdChange}>
+              <SelectTrigger id="transfer-table">
+                <SelectValue placeholder="Chọn bàn trống" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {availableTables.map((table) => (
+                    <SelectItem
+                      key={table.id}
+                      value={String(table.id)}
+                      disabled={table.id === currentTableId}
+                    >
+                      Bàn {table.number}
+                      {table.id === currentTableId ? " (hiện tại)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <FieldDescription>
+              {selectedTable
+                ? `Sẵn sàng chuyển sang ${targetLabel}.`
+                : "Chọn bàn đích trước khi xác nhận."}
+            </FieldDescription>
+          </Field>
+        </FieldGroup>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+          >
+            Giữ bàn hiện tại
+          </Button>
+          <Button
+            type="button"
+            disabled={!canConfirm}
+            onClick={() => {
+              if (!canConfirm) return;
               onConfirm();
             }}
           >
-            Xác nhận
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+            Chuyển bàn
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

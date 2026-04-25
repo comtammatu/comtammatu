@@ -3,6 +3,7 @@
 import { memo, type ComponentProps } from "react";
 import { PosSessionHeader } from "../pos-session-header";
 import { PosSidebarContent, PosSidebarTabs } from "../pos-sidebar-panel";
+import { AppendDraftPane } from "./append-draft-pane";
 import { CartPane } from "./cart-pane";
 import { OrderListPane } from "./order-list-pane";
 import type { ActiveSession } from "../page";
@@ -37,10 +38,12 @@ function TabbedSidebarComponent({
         canCloseShift={canCloseShift}
         onShowCloseSession={onShowCloseSession}
       />
-      <PosSidebarTabs
-        showOrders={showOrders}
-        onShowOrdersChange={onShowOrdersChange}
-      />
+      {sidebarContentProps.appendDraft.target == null && (
+        <PosSidebarTabs
+          showOrders={showOrders}
+          onShowOrdersChange={onShowOrdersChange}
+        />
+      )}
       <PosSidebarContent {...sidebarContentProps} />
     </div>
   );
@@ -62,6 +65,7 @@ function SplitSidebarComponent({
   const {
     canSubmit,
     isPending,
+    appendDraft,
     onSubmitOrder,
     onOrderTypeChange,
     onCustomizeItem,
@@ -79,14 +83,25 @@ function SplitSidebarComponent({
       />
       <div className="flex min-h-0 flex-1">
         <div className="flex w-96 shrink-0 flex-col">
-          <CartPane
-            canSubmit={canSubmit}
-            isSubmitting={isPending}
-            onSubmitOrder={onSubmitOrder}
-            onOrderTypeChange={onOrderTypeChange}
-            onCustomizeItem={onCustomizeItem}
-            onReturnToTables={onReturnToTables}
-          />
+          {appendDraft.target != null ? (
+            <AppendDraftPane
+              orderNumber={appendDraft.target.orderNumber}
+              items={appendDraft.items}
+              isSubmitting={appendDraft.isSubmitting}
+              onSubmit={appendDraft.onSubmit}
+              onCancel={appendDraft.onCancel}
+              onRemoveItem={appendDraft.onRemoveItem}
+            />
+          ) : (
+            <CartPane
+              canSubmit={canSubmit}
+              isSubmitting={isPending}
+              onSubmitOrder={onSubmitOrder}
+              onOrderTypeChange={onOrderTypeChange}
+              onCustomizeItem={onCustomizeItem}
+              onReturnToTables={onReturnToTables}
+            />
+          )}
         </div>
         <div className="flex w-80 shrink-0 flex-col border-l border-border/60 2xl:w-96">
           <OrderListPane onViewBill={onViewBill} onViewDetail={onViewDetail} />

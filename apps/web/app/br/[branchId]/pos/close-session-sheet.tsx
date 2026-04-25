@@ -4,8 +4,10 @@ import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
+import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
 import {
@@ -20,10 +22,10 @@ import { Progress } from "@comtammatu/ui/components/progress";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
-  IconArrowLeft,
-  IconArrowRight,
-  IconCircleCheck,
-} from "@tabler/icons-react";
+  ArrowLeft as IconArrowLeft,
+  ArrowRight as IconArrowRight,
+  CircleCheck as IconCircleCheck,
+} from "lucide-react";
 import { closePosSession } from "./actions";
 import {
   DenominationInput,
@@ -133,7 +135,7 @@ export function CloseSessionSheet({
         <SheetHeader className="border-b px-5 pt-5 pb-3 text-left">
           <SheetTitle>Đóng ca bán hàng</SheetTitle>
           <SheetDescription>
-            Bước {stepIndex}/2 —{" "}
+            Bước {stepIndex}/2 —{""}
             {step === "count" ? "Đếm tiền mặt cuối ca" : "Đối soát & xác nhận"}
           </SheetDescription>
           <div className="mt-2">
@@ -163,7 +165,7 @@ export function CloseSessionSheet({
                     onChange={(e) => setNote(e.target.value)}
                     placeholder="Ví dụ: thu hộ khách lẻ 10k, đổi tờ rách..."
                     rows={3}
-                    className="resize-none rounded-lg text-base"
+                    className="resize-none text-base"
                   />
                   <p className="text-sm text-muted-foreground">
                     Nếu chênh lệch &gt; {formatVND(SIGNIFICANT_DIFF_THRESHOLD)},
@@ -175,49 +177,54 @@ export function CloseSessionSheet({
 
             {step === "reconcile" && summary && (
               <div className="flex flex-col gap-4">
-                <div className="rounded-lg border bg-card p-4 shadow-sm">
-                  <div className="flex flex-col gap-3 text-base">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Kỳ vọng tồn quỹ
-                      </span>
-                      <span className="font-medium tabular-nums">
-                        {formatVND(summary.expected_cash)}
-                      </span>
+                <Card size="sm">
+                  <CardContent>
+                    <div className="flex flex-col gap-3 text-base">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Kỳ vọng tồn quỹ
+                        </span>
+                        <span className="font-medium tabular-nums">
+                          {formatVND(summary.expected_cash)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Đã đếm được
+                        </span>
+                        <span className="font-medium tabular-nums">
+                          {formatVND(summary.closing_cash)}
+                        </span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Chênh lệch
+                        </span>
+                        <span
+                          className={cn(
+                            "text-base font-bold tabular-nums",
+                            diffToneClass(summary.cash_difference),
+                          )}
+                        >
+                          {summary.cash_difference >= 0 ? "+" : ""}
+                          {formatVND(summary.cash_difference)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Số đơn trong ca
+                        </span>
+                        <span className="font-medium tabular-nums">
+                          {summary.order_count}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Đã đếm được</span>
-                      <span className="font-medium tabular-nums">
-                        {formatVND(summary.closing_cash)}
-                      </span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Chênh lệch</span>
-                      <span
-                        className={cn(
-                          "text-base font-bold tabular-nums",
-                          diffToneClass(summary.cash_difference),
-                        )}
-                      >
-                        {summary.cash_difference >= 0 ? "+" : ""}
-                        {formatVND(summary.cash_difference)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Số đơn trong ca
-                      </span>
-                      <span className="font-medium tabular-nums">
-                        {summary.order_count}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
 
-                <div
+                <Alert
                   className={cn(
-                    "rounded-lg border px-3 py-2.5 text-base font-medium",
                     summary.cash_difference === 0
                       ? "border-success/20 bg-success/10 text-success"
                       : !significantDiff
@@ -225,17 +232,21 @@ export function CloseSessionSheet({
                         : "border-destructive/20 bg-destructive/10 text-destructive",
                   )}
                 >
-                  {summary.cash_difference === 0
-                    ? "Số dư khớp hoàn toàn. Có thể chốt ca."
-                    : !significantDiff
-                      ? "Chênh lệch nhỏ, xác nhận lại trước khi chốt."
-                      : `Chênh lệch lớn (> ${formatVND(SIGNIFICANT_DIFF_THRESHOLD)}). Đã ghi chú chưa?`}
-                </div>
+                  <AlertDescription className="text-current">
+                    {summary.cash_difference === 0
+                      ? "Số dư khớp hoàn toàn. Có thể chốt ca."
+                      : !significantDiff
+                        ? "Chênh lệch nhỏ, xác nhận lại trước khi chốt."
+                        : `Chênh lệch lớn (> ${formatVND(SIGNIFICANT_DIFF_THRESHOLD)}). Đã ghi chú chưa?`}
+                  </AlertDescription>
+                </Alert>
 
-                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-                  Ca đã được ghi lại trong hệ thống. Nhấn xác nhận để đóng sheet
-                  và quay về trang nhân viên.
-                </div>
+                <Alert>
+                  <AlertDescription>
+                    Ca đã được ghi lại trong hệ thống. Nhấn xác nhận để đóng
+                    sheet và quay về trang nhân viên.
+                  </AlertDescription>
+                </Alert>
 
                 <div className="flex flex-col gap-2">
                   <Badge variant="outline" className="w-fit text-sm">
@@ -253,31 +264,30 @@ export function CloseSessionSheet({
               <Button
                 type="button"
                 variant="ghost"
-                className="rounded-lg"
                 onClick={() => onOpenChange(false)}
                 disabled={isPending}
               >
                 Hủy
               </Button>
               <div className="flex-1 text-right text-base text-muted-foreground">
-                Đã đếm:{" "}
+                Đã đếm:{""}
                 <span className="font-semibold tabular-nums text-foreground">
                   {formatVND(totalCounted)}
                 </span>
               </div>
               <Button
                 type="button"
-                className="min-h-11 rounded-lg"
+                className="min-h-11"
                 disabled={isPending || needsNoteForSubmit}
                 onClick={handleSubmit}
               >
                 {isPending ? (
                   <>
-                    <Spinner className="mr-2" /> Đang gửi
+                    <Spinner data-icon="inline-start" /> Đang gửi
                   </>
                 ) : (
                   <>
-                    Đối soát <IconArrowRight className="ml-2 size-4" />
+                    Đối soát <IconArrowRight data-icon="inline-end" />
                   </>
                 )}
               </Button>
@@ -287,19 +297,18 @@ export function CloseSessionSheet({
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-lg"
                 onClick={() => setStep("count")}
                 disabled={isPending}
               >
-                <IconArrowLeft className="mr-2 size-4" />
+                <IconArrowLeft data-icon="inline-start" />
                 Đếm lại
               </Button>
               <Button
                 type="button"
-                className="min-h-11 flex-1 rounded-lg"
+                className="min-h-11 flex-1"
                 onClick={handleConfirm}
               >
-                <IconCircleCheck className="mr-2 size-4" />
+                <IconCircleCheck data-icon="inline-start" />
                 Xác nhận & đóng ca
               </Button>
             </div>

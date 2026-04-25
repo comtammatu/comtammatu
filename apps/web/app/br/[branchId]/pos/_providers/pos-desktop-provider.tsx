@@ -29,7 +29,8 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 
 export function usePosSession(): SessionContextValue {
   const ctx = useContext(SessionContext);
-  if (!ctx) throw new Error("usePosSession must be used inside PosDesktopProvider");
+  if (!ctx)
+    throw new Error("usePosSession must be used inside PosDesktopProvider");
   return ctx;
 }
 
@@ -39,7 +40,8 @@ const CartStoreContext = createContext<CartStore | null>(null);
 
 export function usePosCartStore(): CartStore {
   const store = useContext(CartStoreContext);
-  if (!store) throw new Error("usePosCartStore must be used inside PosDesktopProvider");
+  if (!store)
+    throw new Error("usePosCartStore must be used inside PosDesktopProvider");
   return store;
 }
 
@@ -53,15 +55,15 @@ type OperationalData = {
 type OperationalDispatch = {
   /** Raw promise-returning full refresh (orders + tables). */
   refreshAll: () => Promise<void>;
-  /** Raw promise-returning orders refresh. Used by the manual "Tải lại" button — always immediate. */
+  /** Raw promise-returning orders refresh. Used by the manual"Tải lại" button — always immediate. */
   refreshOrders: () => Promise<void>;
   /**
    * Deduped, fire-and-forget orders refresh. Bursts coalesce to at
    * most 2 network calls (current + trailing). Use this from:
-   *   - post-mutation shell paths (submit, append, void, cancel, etc.)
-   *   - realtime `orders` handlers
-   *   - SUBSCRIBED-on-reconnect catch-up
-   *   - stale-visibility polls
+   * - post-mutation shell paths (submit, append, void, cancel, etc.)
+   * - realtime `orders` handlers
+   * - SUBSCRIBED-on-reconnect catch-up
+   * - stale-visibility polls
    */
   refreshOrdersDeduped: () => void;
   /** Deduped full refresh. Used by SUBSCRIBED catch-up + stale poll. */
@@ -83,13 +85,15 @@ export function usePosOperationalData(): OperationalData {
 
 export function usePosOrders(): SessionOrder[] {
   const ctx = useContext(OrdersContext);
-  if (!ctx) throw new Error("usePosOrders must be used inside PosDesktopProvider");
+  if (!ctx)
+    throw new Error("usePosOrders must be used inside PosDesktopProvider");
   return ctx;
 }
 
 export function usePosTables(): BranchTable[] {
   const ctx = useContext(TablesContext);
-  if (!ctx) throw new Error("usePosTables must be used inside PosDesktopProvider");
+  if (!ctx)
+    throw new Error("usePosTables must be used inside PosDesktopProvider");
   return ctx;
 }
 
@@ -183,7 +187,10 @@ export function PosDesktopProvider({
     () => makeDeduper(loadOrders),
     [loadOrders],
   );
-  const refreshAllDeduped = useMemo(() => makeDeduper(refreshAll), [refreshAll]);
+  const refreshAllDeduped = useMemo(
+    () => makeDeduper(refreshAll),
+    [refreshAll],
+  );
 
   useOrderSync({
     branchId,

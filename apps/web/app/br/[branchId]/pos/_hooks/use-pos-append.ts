@@ -12,10 +12,6 @@ export interface AppendTargetLike {
 
 export interface UsePosAppendArgs {
   branchId: number;
-  /** Clear the shell's append-mode state after a successful or replayed append. */
-  clearAppendTarget: () => void;
-  /** Open the order-detail sheet on the appended order. */
-  focusOrderWorkflow: (orderId: number, orderNumber: string) => void;
   /** Refresh orders + tables snapshot after a successful append. */
   refreshOperational: () => Promise<void> | void;
 }
@@ -30,8 +26,8 @@ export interface UsePosAppendReturn {
    * Append one or more cart lines to an existing order, with:
    *   - per-call idempotency key (server dedupes double-tap / retries)
    *   - in-flight guard (second concurrent call short-circuits with a toast)
-   *   - success orchestration: toast + clear append-mode + open detail + refresh
-   * Safe to call from either tap-direct or customizer-confirm paths.
+   *   - success orchestration: toast + caller cleanup + refresh
+   * Safe to call from the explicit "Gửi món thêm" confirmation path.
    */
   performAppend: (
     target: AppendTargetLike,
@@ -41,12 +37,7 @@ export interface UsePosAppendReturn {
 }
 
 export function usePosAppend(args: UsePosAppendArgs): UsePosAppendReturn {
-  const {
-    branchId,
-    clearAppendTarget,
-    focusOrderWorkflow,
-    refreshOperational,
-  } = args;
+  const { branchId, refreshOperational } = args;
 
   const pendingRef = useRef(false);
 
@@ -82,15 +73,13 @@ export function usePosAppend(args: UsePosAppendArgs): UsePosAppendReturn {
           toast.warning(kitchenWarning);
         }
 
-        clearAppendTarget();
         opts?.onSuccess?.();
-        focusOrderWorkflow(target.orderId, target.orderNumber);
         void refreshOperational();
       } finally {
         pendingRef.current = false;
       }
     },
-    [branchId, clearAppendTarget, focusOrderWorkflow, refreshOperational],
+    [branchId, refreshOperational],
   );
 
   return { performAppend };

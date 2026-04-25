@@ -9,7 +9,11 @@ import type { MenuItem } from "../pos-menu-types";
 
 export function useCartSnapshot(): CartSnapshot {
   const store = usePosCartStore();
-  return useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
+  return useSyncExternalStore(
+    store.subscribe,
+    store.getSnapshot,
+    store.getSnapshot,
+  );
 }
 
 export function useCartOrderType(): OrderType {
@@ -34,9 +38,7 @@ export function useCartQuantity(): number {
   const store = usePosCartStore();
   const getQuantity = useCallback(
     () =>
-      store
-        .getSnapshot()
-        .items.reduce((sum, item) => sum + item.quantity, 0),
+      store.getSnapshot().items.reduce((sum, item) => sum + item.quantity, 0),
     [store],
   );
   return useSyncExternalStore(store.subscribe, getQuantity, getQuantity);

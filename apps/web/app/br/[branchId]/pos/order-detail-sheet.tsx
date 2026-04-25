@@ -19,10 +19,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
+import { Item } from "@comtammatu/ui/components/item";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { notify } from "@comtammatu/ui/lib/notify";
-import { IconDots, IconReceipt } from "@tabler/icons-react";
+import { Ellipsis as IconDots, Receipt as IconReceipt } from "lucide-react";
+import { AppBoneyardSkeleton } from "../../../_components/boneyard-skeleton";
 import {
   fetchOrderDetail,
   voidOrderItem,
@@ -31,7 +33,7 @@ import {
   updateOrderStatus,
   fetchOrderItemsForReorder,
 } from "./actions";
-import type { CartItem } from "./types";
+import { getPosLineItemDisplayName, type CartItem } from "./types";
 import type { BranchTable } from "./page";
 import { messages } from "@lib/messages";
 import { printProvisionalBill } from "./print-actions";
@@ -51,7 +53,127 @@ export type OrderDetailData = Omit<OrderData, "order_items"> & {
 };
 
 function canAppendOrderStatus(status: string): boolean {
-  return ["new", "confirmed", "preparing", "ready"].includes(status);
+  return ["new", "confirmed", "preparing", "ready", "served"].includes(status);
+}
+
+const ORDER_DETAIL_LOADING_TEXT = {
+  append: "Th\u00eam m\u00f3n",
+  aria: "\u0110ang t\u1ea3i danh s\u00e1ch m\u00f3n",
+  payment: "Thanh to\u00e1n",
+  print: "In phi\u1ebfu t\u1ea1m t\u00ednh",
+  served: "\u0110\u00e3 ph\u1ee5c v\u1ee5",
+  sr: "\u0110ang t\u1ea3i \u0111\u01a1n h\u00e0ng",
+} as const;
+
+const ORDER_DETAIL_SKELETON_ITEMS: OrderItemRowData[] = [
+  {
+    id: 1,
+    item_name: "Com tam suon",
+    variant_name: "Tieu chuan",
+    quantity: 2,
+    unit_price: 65000,
+    subtotal: 130000,
+    status: "preparing",
+    modifiers: [],
+    sides: [],
+    note: "It mo hanh",
+  },
+  {
+    id: 2,
+    item_name: "Canh kho qua",
+    variant_name: null,
+    quantity: 1,
+    unit_price: 25000,
+    subtotal: 25000,
+    status: "pending",
+    modifiers: [],
+    sides: [],
+    note: null,
+  },
+  {
+    id: 3,
+    item_name: "Tra da",
+    variant_name: null,
+    quantity: 2,
+    unit_price: 5000,
+    subtotal: 10000,
+    status: "ready",
+    modifiers: [],
+    sides: [],
+    note: null,
+  },
+];
+
+function OrderDetailLoadingFixture() {
+  return (
+    <>
+      <ScrollArea className="min-h-0 flex-1">
+        <ul
+          className="flex flex-col gap-2 px-3 py-2 sm:px-4"
+          aria-label={ORDER_DETAIL_LOADING_TEXT.aria}
+        >
+          {ORDER_DETAIL_SKELETON_ITEMS.map((row) => (
+            <OrderItemRow
+              key={row.id}
+              row={row}
+              canManage={false}
+              onVoid={() => undefined}
+            />
+          ))}
+        </ul>
+      </ScrollArea>
+      <div className="mt-auto flex shrink-0 flex-col gap-2 border-t px-3 py-3 sm:px-4">
+        <Button type="button" variant="outline" size="lg" className="w-full">
+          <IconReceipt data-icon="inline-start" />
+          {ORDER_DETAIL_LOADING_TEXT.print}
+        </Button>
+        <Button type="button" size="lg" className="w-full">
+          {ORDER_DETAIL_LOADING_TEXT.payment} - {formatVND(165000)}
+        </Button>
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" className="flex-1">
+            {ORDER_DETAIL_LOADING_TEXT.append}
+          </Button>
+          <Button type="button" variant="secondary" className="flex-1">
+            {ORDER_DETAIL_LOADING_TEXT.served}
+          </Button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function OrderDetailSheetSkeletonFallback() {
+  return (
+    <>
+      <ScrollArea className="min-h-0 flex-1">
+        <ul
+          className="flex flex-col gap-2 px-3 py-2 sm:px-4"
+          aria-label={ORDER_DETAIL_LOADING_TEXT.aria}
+        >
+          {Array.from({ length: 5 }).map((_, index) => (
+            <Item key={index} asChild variant="outline" className="px-2.5 py-2">
+              <li>
+                <div className="flex items-start gap-3">
+                  <Skeleton className="mt-1 size-4" />
+                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <Skeleton className="h-5 w-4/5" />
+                    <Skeleton className="h-4 w-3/5" />
+                    <Skeleton className="h-4 w-2/5" />
+                  </div>
+                </div>
+              </li>
+            </Item>
+          ))}
+        </ul>
+      </ScrollArea>
+      <div className="mt-auto flex shrink-0 flex-col gap-2 border-t px-3 py-3 sm:px-4">
+        <Skeleton className="h-9 w-full" />
+        <Skeleton className="h-7 w-full" />
+      </div>
+      <span className="sr-only">{ORDER_DETAIL_LOADING_TEXT.sr}</span>
+    </>
+  );
 }
 
 export interface OrderDetailSheetProps {
@@ -156,8 +278,18 @@ export function OrderDetailSheet({
     load();
   }, [load, orderId]);
 
+  // Force-refresh effect: only fires when the parent BUMPS refreshToken
+  // (e.g. after void/cancel/transfer). Using a ref to track the previous
+  // value means the mount itself does not trigger a redundant fetch —
+  // critical when the parent provides a seed via `initialOrder`, since
+  // `0 == null` is false and the naive check would call `load()` and
+  // flip `isPending=true`, briefly disabling Chuyển bàn / Đã phục vụ /
+  // Hủy đơn even though the seed already painted the data.
+  const lastRefreshTokenRef = useRef(refreshToken);
   useEffect(() => {
-    if (orderId === null || refreshToken == null) return;
+    if (orderId === null) return;
+    if (lastRefreshTokenRef.current === refreshToken) return;
+    lastRefreshTokenRef.current = refreshToken;
     load();
   }, [load, orderId, refreshToken]);
 
@@ -167,9 +299,14 @@ export function OrderDetailSheet({
 
   const handleVoidConfirm = () => {
     if (voidItemId === null) return;
+    const reason = voidReason.trim();
+    if (reason.length === 0) {
+      notify.error("Nhập lý do hủy món trước khi xác nhận");
+      return;
+    }
     startTransition(async () => {
       const id = voidItemId;
-      const r = await voidOrderItem(id, voidReason);
+      const r = await voidOrderItem(id, reason);
       if (r.success) {
         notify.success(
           r.data?.autoCancelledOrder
@@ -190,8 +327,13 @@ export function OrderDetailSheet({
 
   const handleCancelOrder = () => {
     if (orderId === null) return;
+    const reason = cancelReason.trim();
+    if (reason.length === 0) {
+      notify.error("Nhập lý do hủy đơn trước khi xác nhận");
+      return;
+    }
     startTransition(async () => {
-      const r = await cancelOrder(orderId, cancelReason);
+      const r = await cancelOrder(orderId, reason);
       if (r.success) {
         notify.success(messages.pos.order.voided);
         setShowCancel(false);
@@ -208,6 +350,7 @@ export function OrderDetailSheet({
     if (orderId === null || transferTableId === "") return;
     const tid = Number.parseInt(transferTableId, 10);
     if (!Number.isFinite(tid)) return;
+    if (tid === data?.table_id) return;
     startTransition(async () => {
       const r = await transferOrderTable(orderId, tid);
       if (r.success) {
@@ -283,8 +426,10 @@ export function OrderDetailSheet({
   const canMarkServed =
     data != null &&
     ["new", "confirmed", "preparing", "ready"].includes(data.status);
-  const canShowMoreMenu =
-    canShowBillInMenu || canShowReorder || canShowTransfer || canShowCancel;
+  const canShowMoreMenu = canShowBillInMenu || canShowReorder || canShowCancel;
+  const voidItem = data?.order_items.find((item) => item.id === voidItemId);
+  const activeItemCount =
+    data?.order_items.filter((item) => item.status !== "cancelled").length ?? 0;
   const sheetTitle = data?.order_number ?? orderNumber;
   const orderContextLabel = data
     ? data.order_type === "dine_in"
@@ -316,26 +461,37 @@ export function OrderDetailSheet({
           </SheetHeader>
 
           {isPending && !data && orderId !== null && (
-            <>
+            <AppBoneyardSkeleton
+              name="pos-order-detail-sheet"
+              loading
+              className="flex min-h-0 flex-1 flex-col"
+              fixture={<OrderDetailLoadingFixture />}
+              fallback={<OrderDetailSheetSkeletonFallback />}
+              snapshotConfig={{ excludeSelectors: ["svg"] }}
+            >
               <ScrollArea className="min-h-0 flex-1">
                 <ul
                   className="flex flex-col gap-2 px-3 py-2 sm:px-4"
                   aria-label="Đang tải danh sách món"
                 >
                   {Array.from({ length: 5 }).map((_, index) => (
-                    <li
+                    <Item
                       key={index}
-                      className="rounded-md border border-border bg-card px-2.5 py-2"
+                      asChild
+                      variant="outline"
+                      className="px-2.5 py-2"
                     >
-                      <div className="flex items-start gap-3">
-                        <Skeleton className="mt-1 size-4 rounded-full" />
-                        <div className="min-w-0 flex-1 space-y-1.5">
-                          <Skeleton className="h-5 w-4/5" />
-                          <Skeleton className="h-4 w-3/5" />
-                          <Skeleton className="h-4 w-2/5" />
+                      <li>
+                        <div className="flex items-start gap-3">
+                          <Skeleton className="mt-1 size-4" />
+                          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                            <Skeleton className="h-5 w-4/5" />
+                            <Skeleton className="h-4 w-3/5" />
+                            <Skeleton className="h-4 w-2/5" />
+                          </div>
                         </div>
-                      </div>
-                    </li>
+                      </li>
+                    </Item>
                   ))}
                 </ul>
               </ScrollArea>
@@ -344,7 +500,7 @@ export function OrderDetailSheet({
                 <Skeleton className="h-7 w-full" />
               </div>
               <span className="sr-only">Đang tải đơn hàng</span>
-            </>
+            </AppBoneyardSkeleton>
           )}
 
           {error && (
@@ -380,7 +536,7 @@ export function OrderDetailSheet({
                 {data.note && (
                   <p className="px-3 text-sm text-muted-foreground sm:px-4">
                     <span className="font-medium text-foreground">
-                      Ghi chú:{" "}
+                      Ghi chú:{""}
                     </span>
                     {data.note}
                   </p>
@@ -399,11 +555,11 @@ export function OrderDetailSheet({
                       onClick={() => void handlePrintProvisional()}
                     >
                       {printPending ? (
-                        <Spinner className="mr-2" />
+                        <Spinner data-icon="inline-start" />
                       ) : (
                         <IconReceipt data-icon="inline-start" />
                       )}
-                      In tạm tính
+                      In phiếu tạm tính
                     </Button>
                     <Button
                       type="button"
@@ -441,10 +597,22 @@ export function OrderDetailSheet({
                         disabled={isPending}
                         onClick={() => void handleStatus("served")}
                       >
-                        Phục vụ
+                        Đã phục vụ
                       </Button>
                     )}
                   </div>
+                )}
+
+                {canShowTransfer && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    disabled={isPending}
+                    onClick={() => setShowTransfer(true)}
+                  >
+                    Chuyển bàn
+                  </Button>
                 )}
 
                 {canShowMoreMenu && (
@@ -454,7 +622,7 @@ export function OrderDetailSheet({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-9 w-full rounded-lg text-muted-foreground"
+                        className="h-9 w-full text-muted-foreground"
                       >
                         <IconDots data-icon="inline-start" />
                         Khác…
@@ -469,22 +637,14 @@ export function OrderDetailSheet({
                               onClose();
                             }}
                           >
-                            Xem hóa đơn
+                            Hóa đơn POS
                           </DropdownMenuItem>
                         )}
                         {canShowReorder && (
                           <DropdownMenuItem
                             onClick={() => void handleReorder()}
                           >
-                            Đặt lại vào giỏ
-                          </DropdownMenuItem>
-                        )}
-                        {canShowTransfer && (
-                          <DropdownMenuItem
-                            disabled={isPending}
-                            onClick={() => setShowTransfer(true)}
-                          >
-                            Chuyển bàn
+                            Tạo đơn mới từ đơn này
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuGroup>
@@ -517,6 +677,8 @@ export function OrderDetailSheet({
         onReasonChange={setVoidReason}
         onCancel={() => setVoidItemId(null)}
         onConfirm={handleVoidConfirm}
+        itemLabel={voidItem ? getPosLineItemDisplayName(voidItem) : null}
+        isPending={isPending}
       />
 
       <CancelOrderDialog
@@ -525,6 +687,11 @@ export function OrderDetailSheet({
         reason={cancelReason}
         onReasonChange={setCancelReason}
         onConfirm={handleCancelOrder}
+        orderNumber={data?.order_number ?? orderNumber}
+        orderType={data?.order_type ?? null}
+        tableNumber={data?.tables?.number ?? null}
+        itemCount={activeItemCount}
+        isPending={isPending}
       />
 
       <TransferTableDialog
@@ -535,6 +702,9 @@ export function OrderDetailSheet({
         currentTableId={data?.table_id ?? null}
         availableTables={availableTables}
         onConfirm={handleTransfer}
+        orderNumber={data?.order_number ?? orderNumber}
+        currentTableNumber={data?.tables?.number ?? null}
+        isPending={isPending}
       />
     </>
   );

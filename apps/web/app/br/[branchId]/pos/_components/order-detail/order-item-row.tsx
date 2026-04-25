@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
@@ -11,7 +12,7 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { IconX } from "@tabler/icons-react";
+import { X as IconX } from "lucide-react";
 import { getPosLineItemDisplayName } from "../../types";
 import type { CartModifier, CartSide } from "../../types";
 
@@ -34,6 +35,20 @@ interface OrderItemRowProps {
   onVoid: (itemId: number) => void;
 }
 
+const ITEM_STATUS_LABELS: Record<
+  string,
+  {
+    label: string;
+    variant: "default" | "secondary" | "outline" | "destructive" | "success";
+  }
+> = {
+  pending: { label: "Chờ", variant: "outline" },
+  preparing: { label: "Đang làm", variant: "secondary" },
+  ready: { label: "Sẵn sàng", variant: "default" },
+  served: { label: "Đã phục vụ", variant: "success" },
+  cancelled: { label: "Đã hủy", variant: "destructive" },
+};
+
 export function OrderItemRow({ row, canManage, onVoid }: OrderItemRowProps) {
   const [isDeleteRevealed, setIsDeleteRevealed] = useState(false);
   const [dragged, setDragged] = useState(false);
@@ -47,23 +62,27 @@ export function OrderItemRow({ row, canManage, onVoid }: OrderItemRowProps) {
     !cancelled &&
     ["pending", "preparing", "ready"].includes(row.status);
   const displayName = getPosLineItemDisplayName(row);
+  const statusInfo = ITEM_STATUS_LABELS[row.status] ?? {
+    label: row.status,
+    variant: "outline" as const,
+  };
   const lineDetails = [
-    row.modifiers.map((m) => `+ ${m.name}`).join(", "),
+    row.modifiers.map((m) => `+ ${m.name}`).join(","),
     row.sides.length > 0
       ? row.sides
           .map((s) => (s.quantity > 1 ? `${s.name} x${s.quantity}` : s.name))
-          .join(", ")
+          .join(",")
       : "",
     row.note ? `* ${row.note}` : "",
   ].filter(Boolean);
 
   return (
-    <li className="relative overflow-hidden rounded-md">
+    <li className="relative overflow-hidden">
       {canVoid && (
         <Button
           type="button"
           variant="destructive"
-          className="absolute inset-y-0 right-0 h-auto min-h-full w-20 rounded-none sm:hidden"
+          className="absolute inset-y-0 right-0 h-auto min-h-full w-20 sm:hidden"
           aria-label={`Hủy ${displayName}`}
           onClick={() => {
             onVoid(row.id);
@@ -121,11 +140,12 @@ export function OrderItemRow({ row, canManage, onVoid }: OrderItemRowProps) {
             {displayName}
           </ItemTitle>
           {lineDetails.length > 0 && (
-            <ItemDescription>{lineDetails.join(" · ")}</ItemDescription>
+            <ItemDescription>{lineDetails.join(" ·")}</ItemDescription>
           )}
           <ItemDescription>{formatVND(row.subtotal)}</ItemDescription>
         </ItemContent>
         <ItemActions className="shrink-0 self-start">
+          <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
           {canVoid && (
             <Button
               type="button"

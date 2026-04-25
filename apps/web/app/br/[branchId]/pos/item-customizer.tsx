@@ -4,6 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatVND } from "@comtammatu/shared/format";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
 import { Textarea } from "@comtammatu/ui/components/textarea";
@@ -245,7 +251,7 @@ export function ItemCustomizer({
                 {mode === "append" && appendOrderLabel
                   ? `Thêm món vào đơn #${appendOrderLabel}`
                   : mode === "edit"
-                    ? "Cập nhật lựa chọn trong giỏ hàng"
+                    ? "Cập nhật lựa chọn trong giỏ đơn mới"
                     : (item.description ??
                       "Tùy chọn món (biến thể, topping, món kèm)")}
               </SheetDescription>
@@ -262,14 +268,13 @@ export function ItemCustomizer({
                         const isSelected = selectedVariant?.id === v.id;
                         const price = item.base_price + v.price_adjustment;
                         return (
-                          <button
+                          <Button
                             key={v.id}
                             type="button"
+                            variant={isSelected ? "default" : "outline"}
                             className={cn(
-                              "rounded-lg border px-3 py-2 text-base transition-colors",
-                              isSelected
-                                ? "border-primary bg-primary/10 font-medium text-primary"
-                                : "border-border hover:bg-accent",
+                              "h-auto justify-start px-3 py-2 text-base whitespace-normal",
+                              isSelected ? "font-medium" : "hover:bg-accent",
                             )}
                             onClick={() => setSelectedVariant(v)}
                           >
@@ -277,7 +282,7 @@ export function ItemCustomizer({
                             <span className="ml-1.5 text-sm opacity-70">
                               {formatVND(price)}
                             </span>
-                          </button>
+                          </Button>
                         );
                       })}
                     </div>
@@ -290,19 +295,29 @@ export function ItemCustomizer({
                     <h3 className="mb-2 text-base font-semibold">Thêm</h3>
                     <div className="flex flex-col gap-2">
                       {item.menu_item_modifiers.map((m) => (
-                        <label
+                        <Item
                           key={m.id}
-                          className="flex cursor-pointer items-center gap-3 rounded-md border p-2.5 transition-colors hover:bg-accent"
+                          asChild
+                          variant="outline"
+                          className="cursor-pointer hover:bg-accent"
                         >
-                          <Checkbox
-                            checked={selectedModifierIds.has(m.id)}
-                            onCheckedChange={() => toggleModifier(m.id)}
-                          />
-                          <span className="flex-1 text-base">{m.name}</span>
-                          <span className="text-base text-muted-foreground">
-                            +{formatVND(m.price)}
-                          </span>
-                        </label>
+                          <label>
+                            <Checkbox
+                              checked={selectedModifierIds.has(m.id)}
+                              onCheckedChange={() => toggleModifier(m.id)}
+                            />
+                            <ItemContent>
+                              <ItemTitle className="text-base">
+                                {m.name}
+                              </ItemTitle>
+                            </ItemContent>
+                            <ItemActions>
+                              <span className="text-base text-muted-foreground">
+                                +{formatVND(m.price)}
+                              </span>
+                            </ItemActions>
+                          </label>
+                        </Item>
                       ))}
                     </div>
                   </div>
@@ -323,9 +338,10 @@ export function ItemCustomizer({
                           s.side_item.base_price * displaySideQuantity;
 
                         return (
-                          <div
+                          <Item
                             key={s.id}
-                            className="flex items-center gap-3 rounded-md border p-2.5 transition-colors hover:bg-accent"
+                            variant="outline"
+                            className="hover:bg-accent"
                           >
                             <Checkbox
                               id={`side-${String(s.id)}`}
@@ -386,7 +402,7 @@ export function ItemCustomizer({
                                 </Button>
                               </div>
                             </div>
-                          </div>
+                          </Item>
                         );
                       })}
                     </div>
@@ -454,10 +470,10 @@ export function ItemCustomizer({
                 onClick={handleConfirm}
               >
                 {mode === "append"
-                  ? "Thêm vào đơn"
+                  ? "Đưa vào món thêm"
                   : mode === "edit"
                     ? "Cập nhật"
-                    : "Thêm vào giỏ"}
+                    : "Thêm vào giỏ đơn mới"}
               </Button>
             </div>
           </div>

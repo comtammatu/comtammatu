@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { formatVND } from "@comtammatu/shared/format";
+import { cn } from "@comtammatu/ui";
+import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Dialog,
   DialogContent,
@@ -11,8 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
+import { Field, FieldGroup, FieldLabel } from "@comtammatu/ui/components/field";
 import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { confirmCashPayment } from "../../payment-actions";
@@ -63,9 +66,7 @@ export function CashTenderedDialog({
       { label: "Lên 50k", value: roundUpToStep(base, 50_000) },
       { label: "Lên 100k", value: roundUpToStep(base, 100_000) },
       { label: "Lên 500k", value: roundUpToStep(base, 500_000) },
-    ].filter(
-      (c, i, arr) => arr.findIndex((x) => x.value === c.value) === i,
-    );
+    ].filter((c, i, arr) => arr.findIndex((x) => x.value === c.value) === i);
   }, [totalAmount]);
 
   const handleSubmit = () => {
@@ -94,66 +95,73 @@ export function CashTenderedDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-3">
-            <span className="text-sm font-medium text-muted-foreground">
-              Tổng cần thu
-            </span>
-            <span className="text-lg font-bold tabular-nums">
-              {formatVND(totalAmount)}
-            </span>
-          </div>
+        <div className="flex flex-col gap-4">
+          <Card size="sm">
+            <CardContent className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-muted-foreground">
+                Tổng cần thu
+              </span>
+              <span className="text-lg font-bold tabular-nums">
+                {formatVND(totalAmount)}
+              </span>
+            </CardContent>
+          </Card>
 
-          <div className="space-y-2">
-            <Label htmlFor="cash-received">Tiền nhận</Label>
-            <Input
-              id="cash-received"
-              data-testid="bill-cash-received"
-              type="number"
-              inputMode="numeric"
-              min={0}
-              step={1000}
-              value={cashInput}
-              onChange={(e) => setCashInput(e.target.value)}
-              onFocus={(e) => e.currentTarget.select()}
-              className="text-lg tabular-nums"
-              disabled={pending}
-              autoFocus
-            />
-            <div className="flex flex-wrap gap-1.5">
-              {quickAmounts.map((c) => (
-                <Button
-                  key={c.value}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCashInput(String(c.value))}
-                  disabled={pending}
-                >
-                  {c.label}
-                </Button>
-              ))}
-            </div>
-          </div>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="cash-received">Tiền nhận</FieldLabel>
+              <Input
+                id="cash-received"
+                data-testid="bill-cash-received"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                step={1000}
+                value={cashInput}
+                onChange={(e) => setCashInput(e.target.value)}
+                onFocus={(e) => e.currentTarget.select()}
+                className="text-lg tabular-nums"
+                disabled={pending}
+                autoFocus
+              />
+              <div className="flex flex-wrap gap-1.5">
+                {quickAmounts.map((c) => (
+                  <Button
+                    key={c.value}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCashInput(String(c.value))}
+                    disabled={pending}
+                  >
+                    {c.label}
+                  </Button>
+                ))}
+              </div>
+            </Field>
+          </FieldGroup>
 
-          <div
-            className={`flex items-center justify-between rounded-lg border p-3 ${
+          <Alert
+            className={cn(
               isUnderpaid
                 ? "border-destructive/50 bg-destructive/5"
-                : "border-primary/50 bg-primary/5"
-            }`}
+                : "border-primary/50 bg-primary/5",
+            )}
           >
-            <span className="text-sm font-medium">Tiền trả khách</span>
-            <span
-              className={`text-lg font-bold tabular-nums ${
-                isUnderpaid ? "text-destructive" : "text-primary"
-              }`}
-            >
-              {isUnderpaid
-                ? `Thiếu ${formatVND(Math.abs(cashChange))}`
-                : formatVND(cashChange)}
-            </span>
-          </div>
+            <AlertDescription className="flex items-center justify-between gap-3 text-current">
+              <span className="text-sm font-medium">Tiền trả khách</span>
+              <span
+                className={cn(
+                  "text-lg font-bold tabular-nums",
+                  isUnderpaid ? "text-destructive" : "text-primary",
+                )}
+              >
+                {isUnderpaid
+                  ? `Thiếu ${formatVND(Math.abs(cashChange))}`
+                  : formatVND(cashChange)}
+              </span>
+            </AlertDescription>
+          </Alert>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-2">
@@ -171,9 +179,7 @@ export function CashTenderedDialog({
             onClick={handleSubmit}
             disabled={!canSubmit}
           >
-            {pending ? (
-              <Spinner className="mr-2" />
-            ) : null}
+            {pending ? <Spinner data-icon="inline-start" /> : null}
             Xác nhận thanh toán
           </Button>
         </DialogFooter>

@@ -2,9 +2,13 @@
 
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { MODULE_ACL, PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  MODULE_ACL,
+  PERMISSION_KEYS,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContextWithPermission } from "../../_lib/auth";
+import { getAuthContextWithPermission, probePermission } from "../../_lib/auth";
 import { cartStateSchema, calcItemSubtotal, cartItemSchema } from "./types";
 import type { CartState, CartItem } from "./types";
 
@@ -96,7 +100,10 @@ export async function submitOrder(
     }
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -222,7 +229,10 @@ export async function fetchSessionOrders(
     return { success: false, error: "Session ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -293,7 +303,10 @@ export async function fetchActiveOrderForTable(
     };
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -302,16 +315,15 @@ export async function fetchActiveOrderForTable(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  const voidCtx = await getAuthContextWithPermission(
-    POS_VOID_ROLES,
-    PERMISSION_KEYS.POS_VOID_ORDER,
-    claims.branch_id,
-  );
-
-  const { data, error } = await supabase
-    .from("orders")
-    .select(
-      `
+  // Parallelize: data SELECT + void-permission probe (UI hint only).
+  // Probe reuses the same supabase client → skips a 2nd getUser() HTTP
+  // round-trip + getSession() cookie parse. This is the dominant latency
+  // cut on table-click (Server Action goes from 6 round-trips to 3).
+  const [{ data, error }, canManageOrders] = await Promise.all([
+    supabase
+      .from("orders")
+      .select(
+        `
       id,
       order_number,
       order_type,
@@ -348,14 +360,16 @@ export async function fetchActiveOrderForTable(
         menu_item_id
       )
     `,
-    )
-    .eq("branch_id", parsed.data.branchId)
-    .eq("tenant_id", claims.tenant_id)
-    .eq("table_id", parsed.data.tableId)
-    .in("status", ["new", "confirmed", "preparing", "ready", "served"])
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+      )
+      .eq("branch_id", parsed.data.branchId)
+      .eq("tenant_id", claims.tenant_id)
+      .eq("table_id", parsed.data.tableId)
+      .in("status", ["new", "confirmed", "preparing", "ready", "served"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    probePermission(ctx, PERMISSION_KEYS.POS_VOID_ORDER, claims.branch_id),
+  ]);
 
   if (error) {
     return {
@@ -370,7 +384,7 @@ export async function fetchActiveOrderForTable(
     success: true,
     data: {
       order: data,
-      canManageOrders: voidCtx !== null,
+      canManageOrders,
     },
   };
 }
@@ -389,7 +403,10 @@ export async function fetchOrderForBill(
     return { success: false, error: "Order ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -471,15 +488,13 @@ export async function fetchOrderDetail(orderId: number): Promise<
     return { success: false, error: "Order ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
-  const voidCtx = await getAuthContextWithPermission(
-    POS_VOID_ROLES,
-    PERMISSION_KEYS.POS_VOID_ORDER,
-    claims.branch_id,
-  );
 
   let detailQuery = supabase
     .from("orders")
@@ -530,7 +545,14 @@ export async function fetchOrderDetail(orderId: number): Promise<
     detailQuery = detailQuery.eq("branch_id", claims.branch_id);
   }
 
-  const { data: order, error } = await detailQuery.single();
+  // Parallelize: data SELECT + void-permission probe (UI hint only).
+  // Probe reuses the same supabase client → skips a 2nd getUser() HTTP
+  // round-trip + getSession() cookie parse. Server-side void/cancel RPCs
+  // remain the authoritative gate; hint=false on probe error is fail-safe.
+  const [{ data: order, error }, canManageOrders] = await Promise.all([
+    detailQuery.single(),
+    probePermission(ctx, PERMISSION_KEYS.POS_VOID_ORDER, claims.branch_id),
+  ]);
 
   if (error) {
     if (error.code === "PGRST116") {
@@ -546,7 +568,7 @@ export async function fetchOrderDetail(orderId: number): Promise<
     success: true,
     data: {
       order: order as unknown as Record<string, unknown>,
-      canManageOrders: voidCtx !== null,
+      canManageOrders,
     },
   };
 }
@@ -554,10 +576,7 @@ export async function fetchOrderDetail(orderId: number): Promise<
 /* ─── appendOrderItems ─── */
 
 const appendItemsSchema = z.object({
-  orderId: z.coerce
-    .number()
-    .int()
-    .positive({ error: "Order ID không hợp lệ" }),
+  orderId: z.coerce.number().int().positive({ error: "Order ID không hợp lệ" }),
   items: z.array(cartItemSchema).min(1, { error: "Cần ít nhất một món" }),
 });
 
@@ -589,7 +608,10 @@ export async function appendOrderItems(
     };
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -681,10 +703,7 @@ export async function appendOrderItems(
 /* ─── voidOrderItem ─── */
 
 const voidItemSchema = z.object({
-  orderItemId: z.coerce
-    .number()
-    .int()
-    .positive({ error: "Món không hợp lệ" }),
+  orderItemId: z.coerce.number().int().positive({ error: "Món không hợp lệ" }),
   reason: z.string().trim().min(1, { error: "Nhập lý do hủy món" }),
 });
 
@@ -851,7 +870,10 @@ export async function transferOrderTable(
     };
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase } = ctx;
@@ -904,7 +926,10 @@ export async function updateOrderStatus(
     };
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase } = ctx;
@@ -953,7 +978,10 @@ export async function fetchOrderItemsForReorder(
     return { success: false, error: "Order ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -1099,7 +1127,8 @@ export async function fetchOrderItemsForReorder(
       skippedCount += 1;
       continue;
     }
-    const variantAdj = variantId != null ? (liveVariantAdj.get(variantId) ?? 0) : 0;
+    const variantAdj =
+      variantId != null ? (liveVariantAdj.get(variantId) ?? 0) : 0;
 
     const modsRaw = Array.isArray(r.modifiers)
       ? (r.modifiers as { modifier_id: number; name: string; price: number }[])

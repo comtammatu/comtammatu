@@ -32,11 +32,11 @@ import { formatVND } from "@comtammatu/shared/format";
 import type { CategoryType } from "@comtammatu/shared";
 import { CATEGORY_TYPE_LABELS } from "@comtammatu/shared/menu";
 import {
-  IconChefHat,
-  IconSearch,
-  IconShoppingCart,
-  IconX,
-} from "@tabler/icons-react";
+  ChefHat as IconChefHat,
+  Search as IconSearch,
+  ShoppingCart as IconShoppingCart,
+  X as IconX,
+} from "lucide-react";
 import { MENU_ZONE_ORDER } from "./pos-menu-types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
 
@@ -63,7 +63,7 @@ const MenuItemButton = memo(function MenuItemButton({
       type="button"
       variant="outline"
       className={cn(
-        "h-auto min-h-32 w-full cursor-pointer flex-col items-stretch justify-between rounded-lg bg-card p-3 text-left whitespace-normal shadow-sm transition-transform hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md active:scale-95 md:min-h-48 md:p-5 lg:min-h-56",
+        "h-auto min-h-32 w-full cursor-pointer flex-col items-stretch justify-between p-3 text-left whitespace-normal shadow-sm transition-transform hover:border-primary/30 hover:shadow-md active:scale-95 md:min-h-48 md:p-5 lg:min-h-56",
         sparseMenu && "md:min-h-64 md:p-6",
       )}
       onClick={handleClick}
@@ -249,7 +249,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
               >
                 <TabsList
                   aria-label="Khu thực đơn"
-                  className="h-10 w-max min-w-full justify-start gap-1 rounded-lg border bg-card p-1 md:h-11 md:gap-2"
+                  className="h-10 w-max min-w-full justify-start gap-1 md:h-11 md:gap-2"
                 >
                   {availableMenuZones.map((zone) => (
                     <TabsTrigger
@@ -272,7 +272,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
               >
                 <TabsList
                   aria-label="Danh mục món"
-                  className="h-10 w-max min-w-full justify-start gap-1 rounded-lg border bg-background p-1 md:gap-2"
+                  className="h-10 w-max min-w-full justify-start gap-1 md:gap-2"
                 >
                   {categoriesInActiveZone.map((category) => (
                     <TabsTrigger

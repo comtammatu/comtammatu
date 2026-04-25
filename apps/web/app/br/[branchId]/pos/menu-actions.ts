@@ -16,15 +16,16 @@ const branchIdSchema = z.coerce
  * Fetch full menu for POS display: categories -> items -> variants + modifiers + sides.
  * Only returns active categories and active items.
  */
-export async function fetchMenuForPos(
-  branchId: number,
-): Promise<ActionResult> {
+export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(POS_ROLES, PERMISSION_KEYS.POS_USE);
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;

@@ -1,7 +1,11 @@
 "use server";
 
 import { z } from "zod";
-import { MODULE_ACL, PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  MODULE_ACL,
+  PERMISSION_KEYS,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import { buildVietQrEmvco, resolveBankBin } from "@comtammatu/shared/providers";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "../../_lib/auth";
@@ -142,7 +146,9 @@ export async function printReceipt(
 
 export async function printProvisionalBill(
   orderId: number,
-): Promise<ActionResult<{ job_id: number; printer_id: number; qr_type: string | null }>> {
+): Promise<
+  ActionResult<{ job_id: number; printer_id: number; qr_type: string | null }>
+> {
   const parsed = orderIdSchema.safeParse(orderId);
   if (!parsed.success) {
     return { success: false, error: "Order ID không hợp lệ" };
@@ -204,13 +210,14 @@ export async function printProvisionalBill(
   const accountName = nameRes.data?.value?.toString() ?? "";
 
   if (qrType === "vietqr" && bankCode && accountNo) {
-    qrContent = buildVietQrEmvco({
-      bankCode,
-      accountNo,
-      amount: Number(orderRes.data.total_amount),
-      description: `DH ${orderRes.data.order_number}`,
-      accountName,
-    }) ?? undefined;
+    qrContent =
+      buildVietQrEmvco({
+        bankCode,
+        accountNo,
+        amount: Number(orderRes.data.total_amount),
+        description: `DH ${orderRes.data.order_number}`,
+        accountName,
+      }) ?? undefined;
     if (qrContent) {
       qrHeaderLabel = `${bankCode.toUpperCase()} (BIN ${resolveBankBin(bankCode)})`;
     }
@@ -269,9 +276,7 @@ export async function printProvisionalBill(
   return { success: true, data: result };
 }
 
-export async function retryPrintJob(
-  jobId: number,
-): Promise<ActionResult> {
+export async function retryPrintJob(jobId: number): Promise<ActionResult> {
   const parsed = jobIdSchema.safeParse(jobId);
   if (!parsed.success) {
     return { success: false, error: "Job ID không hợp lệ" };

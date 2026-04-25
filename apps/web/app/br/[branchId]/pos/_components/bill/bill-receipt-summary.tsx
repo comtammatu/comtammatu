@@ -91,12 +91,12 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
                   </div>
                   {item.modifiers.length > 0 && (
                     <div className="mt-0.5 break-words leading-4 text-muted-foreground">
-                      {item.modifiers.map((m) => `+ ${m.name}`).join(", ")}
+                      {item.modifiers.map((m) => `+ ${m.name}`).join(",")}
                     </div>
                   )}
                   {item.sides.length > 0 && (
                     <div className="mt-0.5 break-words leading-4 text-muted-foreground">
-                      Kèm:{" "}
+                      Kèm:{""}
                       {item.sides
                         .map((s) =>
                           s.price > 0
@@ -105,7 +105,7 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
                               } (${formatVND(s.price * s.quantity)})`
                             : s.name,
                         )
-                        .join(", ")}
+                        .join(",")}
                     </div>
                   )}
                   {item.note && (

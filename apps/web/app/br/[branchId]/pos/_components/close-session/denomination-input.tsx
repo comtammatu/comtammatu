@@ -2,6 +2,13 @@
 
 import { useRef } from "react";
 import { formatVND } from "@comtammatu/shared/format";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 
@@ -47,14 +54,14 @@ export function DenominationInput({
   const total = sumDenominations(counts);
 
   return (
-    <div className="rounded-lg border bg-card p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+    <Card size="sm">
+      <CardHeader className="flex-row items-center justify-between gap-3">
+        <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground">
           Đếm tiền mặt theo mệnh giá
-        </p>
+        </CardTitle>
         <p className="text-sm text-muted-foreground">Enter để sang dòng kế</p>
-      </div>
-      <div className="flex flex-col gap-2">
+      </CardHeader>
+      <CardContent className="flex flex-col gap-2">
         {DENOMINATIONS.map((denom, index) => {
           const count = counts[denom] ?? 0;
           const subtotal = denom * count;
@@ -94,13 +101,13 @@ export function DenominationInput({
             </div>
           );
         })}
-      </div>
-      <div className="mt-3 flex items-center justify-between border-t pt-3">
+      </CardContent>
+      <CardFooter className="justify-between border-t">
         <span className="text-base font-semibold">Tổng đếm được</span>
         <span className="text-lg font-bold tabular-nums text-primary">
           {formatVND(total)}
         </span>
-      </div>
-    </div>
+      </CardFooter>
+    </Card>
   );
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";

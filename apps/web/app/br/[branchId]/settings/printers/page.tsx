@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { loadAuthState } from "@/_lib/auth";
 import {
   PrintersClient,
