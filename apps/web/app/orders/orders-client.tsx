@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useMemo } from "react";
-import { IconShoppingBag } from "@tabler/icons-react";
+import { ShoppingBag as IconShoppingBag } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";

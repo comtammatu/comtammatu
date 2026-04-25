@@ -1,14 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import {
-  IconDots,
-  IconPencil,
-  IconToggleLeft,
-  IconToggleRight,
-  IconSettings2,
-  IconToolsKitchen,
-} from "@tabler/icons-react";
+import { Ellipsis as IconDots, Pencil as IconPencil, ToggleLeft as IconToggleLeft, ToggleRight as IconToggleRight, SlidersHorizontal as IconSettings2, Utensils as IconToolsKitchen } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";

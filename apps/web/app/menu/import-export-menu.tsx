@@ -1,12 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import {
-  IconAlertCircle,
-  IconDownload,
-  IconFileSpreadsheet,
-  IconUpload,
-} from "@tabler/icons-react";
+import { CircleAlert as IconAlertCircle, Download as IconDownload, Sheet as IconFileSpreadsheet, Upload as IconUpload } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {

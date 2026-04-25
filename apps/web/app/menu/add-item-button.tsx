@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IconPlus } from "@tabler/icons-react";
+import { Plus as IconPlus } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { ItemFormDialog } from "./item-form-dialog";
 import type { CategoryRow } from "./category-table";

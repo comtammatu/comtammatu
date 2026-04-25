@@ -3,12 +3,7 @@
 import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  IconArrowLeft,
-  IconLayoutDashboard,
-  IconLogout,
-  IconToolsKitchen,
-} from "@tabler/icons-react";
+import { ArrowLeft as IconArrowLeft, LayoutDashboard as IconLayoutDashboard, LogOut as IconLogout, Utensils as IconToolsKitchen } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";

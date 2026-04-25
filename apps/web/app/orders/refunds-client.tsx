@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { IconRotate, IconCircleCheck, IconCircleX } from "@tabler/icons-react";
+import { RotateCcw as IconRotate, CircleCheck as IconCircleCheck, CircleX as IconCircleX } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
