@@ -50,7 +50,9 @@ import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { InteractiveCard } from "../_components/interactive-card";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { InventoryBulkActionBar } from "../_components/bulk-action-bar";
+import { InventoryStatChip } from "../_components/inventory-stat-chip";
 import { useInventoryBulkSelection } from "../_lib/use-inventory-bulk-selection";
+import { branchHrefOrPath } from "../_lib/href";
 import { formatDateTime, formatQty, formatVND } from "../_lib/format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
 import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";
@@ -234,31 +236,6 @@ function movementVariant(quantityChange: number): MovementBadgeVariant {
   if (quantityChange > 0) return "success";
   if (quantityChange < 0) return "destructive";
   return "secondary";
-}
-
-function SummaryMetric({
-  label,
-  value,
-  tone = "default",
-}: {
-  label: string;
-  value: string;
-  tone?: "default" | "warning" | "muted";
-}) {
-  return (
-    <div className="flex min-w-fit items-center gap-2 px-3 py-2">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span
-        className={cn(
-          "text-sm font-semibold tabular-nums",
-          tone === "warning" && "text-destructive",
-          tone === "muted" && "text-muted-foreground",
-        )}
-      >
-        {value}
-      </span>
-    </div>
-  );
 }
 
 function QuickActionButton({
@@ -810,30 +787,54 @@ export function StockClient({
         </div>
 
         <div className="flex flex-wrap items-center divide-x overflow-hidden border bg-card">
-          <SummaryMetric
+          <InventoryStatChip
+            kind="info"
             label="Kho chọn"
             value={`${formatVND(visibleTotalValue)} đ`}
           />
           {totalValue != null ? (
-            <SummaryMetric
+            <InventoryStatChip
+              kind="info"
               label="Toàn hệ thống"
               value={`${formatVND(totalValue)} đ`}
             />
           ) : null}
-          <SummaryMetric
+          <InventoryStatChip
+            kind="filter"
             label="Dưới ngưỡng"
             value={String(summary.underThresholdCount)}
-            tone={summary.underThresholdCount > 0 ? "warning" : "muted"}
+            tone={
+              summary.underThresholdCount > 0 ? "destructive" : "muted"
+            }
+            active={riskFilter === "reorder"}
+            disabled={summary.underThresholdCount === 0}
+            onToggle={() =>
+              setRiskFilter((prev) => (prev === "reorder" ? "all" : "reorder"))
+            }
           />
-          <SummaryMetric
+          <InventoryStatChip
+            kind="link"
             label="Cận date"
             value={String(summary.expiryCount)}
             tone={summary.expiryCount > 0 ? "warning" : "muted"}
+            disabled={summary.expiryCount === 0}
+            href={branchHrefOrPath(branchId, "/inventory/expiry")}
           />
-          <SummaryMetric
-            label="Chờ xử lý"
-            value={String(summary.pendingWorkCount)}
-            tone={summary.pendingWorkCount > 0 ? "warning" : "muted"}
+          <InventoryStatChip
+            kind="link"
+            label="GRN nháp"
+            value={String(summary.pendingGrnCount)}
+            tone={summary.pendingGrnCount > 0 ? "warning" : "muted"}
+            disabled={summary.pendingGrnCount === 0}
+            href={branchHrefOrPath(branchId, "/inventory/grn")}
+          />
+          <InventoryStatChip
+            kind="link"
+            label="Phiếu chuyển chờ"
+            value={String(summary.pendingTransferCount)}
+            tone={summary.pendingTransferCount > 0 ? "warning" : "muted"}
+            disabled={summary.pendingTransferCount === 0}
+            href={branchHrefOrPath(branchId, "/inventory/transfers")}
           />
         </div>
 

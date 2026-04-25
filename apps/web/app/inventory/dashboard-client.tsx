@@ -10,13 +10,14 @@ import {
   Receipt as IconReceipt,
   ShoppingCart as IconShoppingCart,
 } from "lucide-react";
-import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { InventoryHeader } from "./_components/inventory-header";
 import { InventoryPageContent } from "./_components/inventory-page-layout";
+import { InventoryStatChip } from "./_components/inventory-stat-chip";
 import { PlaybookFeed } from "./_components/playbook-feed";
+import { branchHrefOrPath } from "./_lib/href";
 import { formatVND } from "./_lib/format";
 import { getInventoryPaths, type InventoryRouteBase } from "./_lib/paths";
 import { tNav } from "./_lib/dictionary";
@@ -121,35 +122,6 @@ function buildQuickActions(
   ];
 }
 
-/**
- * Slim KPI metric for the top strip. No big cards — single line, tabular
- * numbers, optional warning tone.
- */
-function KpiMetric({
-  label,
-  value,
-  tone = "default",
-}: {
-  label: string;
-  value: string;
-  tone?: "default" | "warning" | "destructive";
-}) {
-  return (
-    <div className="flex min-w-fit items-center gap-2 px-3 py-2">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span
-        className={cn(
-          "text-sm font-semibold tabular-nums",
-          tone === "destructive" && "text-destructive",
-          tone === "warning" && "text-warning",
-        )}
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
-
 export function DashboardClient(props: DashboardProps) {
   const {
     routeBase,
@@ -185,35 +157,76 @@ export function DashboardClient(props: DashboardProps) {
       >
         {/* Slim KPI strip — one row, signal only. No big cards. */}
         <div className="flex flex-wrap items-center divide-x overflow-hidden border bg-card">
-          <KpiMetric
+          <InventoryStatChip
+            kind="info"
             label="Giá trị tồn"
             value={`${formatVND(totalStockValue)}đ`}
           />
-          <KpiMetric label="PO đang mở" value={String(pendingPO)} />
-          <KpiMetric
+          <InventoryStatChip
+            kind="link"
+            label="PO đang mở"
+            value={String(pendingPO)}
+            disabled={pendingPO === 0}
+            href={branchHrefOrPath(
+              props.playbookBranchId,
+              "/inventory/purchase-orders",
+              { filter: "draft" },
+            )}
+          />
+          <InventoryStatChip
+            kind="link"
             label="Phiếu chuyển đang xử lý"
             value={String(activeTransfers)}
+            disabled={activeTransfers === 0}
+            href={branchHrefOrPath(
+              props.playbookBranchId,
+              "/inventory/transfers",
+            )}
           />
-          <KpiMetric
+          <InventoryStatChip
+            kind="link"
             label="Phiên kiểm kê đang mở"
             value={String(activeStocktakes)}
+            disabled={activeStocktakes === 0}
+            href={branchHrefOrPath(
+              props.playbookBranchId,
+              "/inventory/stocktake",
+            )}
           />
-          <KpiMetric
+          <InventoryStatChip
+            kind="link"
             label="Cảnh báo hết hạn"
             value={String(expiryAlerts.length)}
             tone={expiryAlerts.length > 0 ? "warning" : "default"}
+            disabled={expiryAlerts.length === 0}
+            href={branchHrefOrPath(
+              props.playbookBranchId,
+              "/inventory/expiry",
+            )}
           />
           {showProcurement ? (
             <>
-              <KpiMetric
+              <InventoryStatChip
+                kind="link"
                 label="GRN cần kiểm giá (30d)"
                 value={String(priceReviewCount)}
                 tone={priceReviewCount > 0 ? "destructive" : "default"}
+                disabled={priceReviewCount === 0}
+                href={branchHrefOrPath(
+                  props.playbookBranchId,
+                  "/inventory/grn",
+                )}
               />
-              <KpiMetric
+              <InventoryStatChip
+                kind="link"
                 label="Phiếu trả NCC mở"
                 value={String(pendingSupplierReturns)}
                 tone={pendingSupplierReturns > 0 ? "warning" : "default"}
+                disabled={pendingSupplierReturns === 0}
+                href={branchHrefOrPath(
+                  props.playbookBranchId,
+                  "/inventory/supplier-returns",
+                )}
               />
             </>
           ) : null}
