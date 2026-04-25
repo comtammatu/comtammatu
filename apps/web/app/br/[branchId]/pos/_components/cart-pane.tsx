@@ -15,13 +15,6 @@ import {
 } from "@comtammatu/ui/components/alert-dialog";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 import { Item } from "@comtammatu/ui/components/item";
 import { Kbd, KbdGroup } from "@comtammatu/ui/components/kbd";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
@@ -33,7 +26,6 @@ import {
 import {
   LayoutGrid as IconLayoutGrid,
   Package as IconPackage,
-  ShoppingCart as IconShoppingCart,
   Trash as IconTrash,
   Utensils as IconToolsKitchen,
   X as IconX,
@@ -41,7 +33,11 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { cn } from "@comtammatu/ui";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
-import { calcItemSubtotal, getPosLineItemDisplayName } from "../types";
+import {
+  calcItemSubtotal,
+  getPosLineItemDisplayName,
+  getPosLineItemOptionLines,
+} from "../types";
 import type { CartItem, OrderType } from "../types";
 import { useCart } from "../_hooks/use-cart";
 import { useActiveTable } from "../_hooks/use-active-table";
@@ -148,13 +144,8 @@ function CartPaneComponent({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="truncate text-base font-semibold tracking-tight text-foreground sm:text-xl">
-                {contextLabel} - Giỏ đơn mới
+                {contextLabel}
               </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {cart.items.length > 0
-                  ? `${totalQuantity} món đang chờ xác nhận`
-                  : "Chưa có món cho đơn mới"}
-              </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {cart.orderType === "dine_in" && selectedTableNumber != null && (
@@ -260,19 +251,7 @@ function CartPaneComponent({
 
       {cart.items.length === 0 ? (
         <>
-          <div className="flex flex-1 items-center justify-center p-4">
-            <Empty className="py-12">
-              <EmptyMedia variant="icon">
-                <IconShoppingCart />
-              </EmptyMedia>
-              <EmptyHeader>
-                <EmptyTitle>Giỏ đơn mới đang trống</EmptyTitle>
-                <EmptyDescription>
-                  Chạm món ở khu thực đơn để đưa vào đơn mới.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          </div>
+          <div className="min-h-0 flex-1" aria-hidden="true" />
 
           <div className="shrink-0 border-t border-border/60 bg-background px-4 py-4">
             <div className="mb-3 flex items-center justify-between gap-3">
@@ -288,7 +267,7 @@ function CartPaneComponent({
               size="lg"
               disabled
             >
-              Đặt món
+              Đặt món (0)
             </Button>
           </div>
         </>
@@ -300,6 +279,7 @@ function CartPaneComponent({
                 const subtotal = calcItemSubtotal(item);
                 const isDeleteRevealed = revealedItemKey === item.key;
                 const displayName = getPosLineItemDisplayName(item);
+                const optionLines = getPosLineItemOptionLines(item);
 
                 return (
                   <div key={item.key} className="relative overflow-hidden">
@@ -358,9 +338,7 @@ function CartPaneComponent({
                             startOffset: isDeleteRevealed
                               ? -DELETE_REVEAL_WIDTH
                               : 0,
-                            offset: isDeleteRevealed
-                              ? -DELETE_REVEAL_WIDTH
-                              : 0,
+                            offset: isDeleteRevealed ? -DELETE_REVEAL_WIDTH : 0,
                             dragging: false,
                           };
                         }}
@@ -437,41 +415,27 @@ function CartPaneComponent({
                           }
                         }}
                       >
-                        <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
                             <div className="flex min-w-0 items-center gap-2">
                               <span className="shrink-0 text-sm font-bold text-muted-foreground tabular-nums">
                                 x{item.quantity}
                               </span>
-                              <p className="truncate text-base font-semibold leading-snug text-foreground">
+                              <p className="min-w-0 truncate text-base font-semibold leading-snug text-foreground">
                                 {displayName}
                               </p>
                             </div>
-                            {item.modifiers.length > 0 && (
-                              <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                                + {item.modifiers.map((m) => m.name).join(",")}
+                            {optionLines.map((line) => (
+                              <p
+                                key={line}
+                                className="mt-1 text-sm leading-5 text-muted-foreground"
+                              >
+                                {line}
                               </p>
-                            )}
-                            {item.sides.length > 0 && (
-                              <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                                Kèm:{""}
-                                {item.sides
-                                  .map((s) =>
-                                    s.quantity > 1
-                                      ? `${s.name} x${String(s.quantity)}`
-                                      : s.name,
-                                  )
-                                  .join(",")}
-                              </p>
-                            )}
-                            {item.note && (
-                              <p className="mt-1 text-sm italic leading-5 text-muted-foreground">
-                                Ghi chú: {item.note}
-                              </p>
-                            )}
+                            ))}
                           </div>
-                          <div className="flex shrink-0 items-center gap-2 self-center">
-                            <p className="text-base font-bold text-primary tabular-nums">
+                          <div className="shrink-0 pt-0.5">
+                            <p className="whitespace-nowrap text-right text-base font-bold text-primary tabular-nums">
                               {formatVND(subtotal)}
                             </p>
                           </div>
@@ -545,7 +509,7 @@ function CartPaneComponent({
                         </>
                       ) : (
                         <>
-                          Đặt món
+                          Đặt món ({totalQuantity})
                           <KbdGroup className="ml-2 hidden md:inline-flex">
                             <Kbd>{"⌘"}</Kbd>
                             <Kbd>Enter</Kbd>

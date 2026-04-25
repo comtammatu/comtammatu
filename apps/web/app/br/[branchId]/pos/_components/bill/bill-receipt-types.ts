@@ -33,6 +33,8 @@ export interface OrderData {
   order_items: OrderItem[];
 }
 
+export type BillReceiptIntent = "payment" | "receipt";
+
 export interface PendingExtras {
   payment_id?: number;
   provider_ref?: string;

@@ -218,12 +218,23 @@ export function resolvePostLoginRedirect(
     return fallback;
   }
 
-  if (moduleKey === "pos" || moduleKey === "kds") {
+  if (moduleKey === "pos" || moduleKey === "kds" || moduleKey === "branch_settings") {
     const routePath = stripBetaPrefix(targetUrl.pathname);
     const branchMatch = routePath.match(/^\/br\/(\d+)\//);
     const routeBranchId = branchMatch ? Number(branchMatch[1]) : null;
 
-    if (routeBranchId === null || claims.branch_id !== routeBranchId) {
+    const allowCrossBranchSettings =
+      moduleKey === "branch_settings" &&
+      (
+        claims.user_role === "owner" ||
+        claims.user_role === "super_manager" ||
+        claims.user_role === "area_manager"
+      );
+
+    if (
+      routeBranchId === null ||
+      (!allowCrossBranchSettings && claims.branch_id !== routeBranchId)
+    ) {
       return fallback;
     }
   }

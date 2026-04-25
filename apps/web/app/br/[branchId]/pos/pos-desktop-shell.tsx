@@ -44,7 +44,10 @@ import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
 import type { ActiveSession, BranchTable } from "./page";
 import { ACTIVE_POS_STATUSES, type SessionOrder } from "./order-history";
-import type { OrderData } from "./_components/bill/bill-receipt-types";
+import type {
+  BillReceiptIntent,
+  OrderData,
+} from "./_components/bill/bill-receipt-types";
 import type { OrderDetailData } from "./order-detail-sheet";
 import {
   PosDesktopProvider,
@@ -155,6 +158,7 @@ function PosDesktopInner({
   const [isPending, startTransition] = useTransition();
   const [showCloseSession, setShowCloseSession] = useState(false);
   const [billOrderId, setBillOrderId] = useState<number | null>(null);
+  const [billIntent, setBillIntent] = useState<BillReceiptIntent>("payment");
   // Seed passed to BillReceipt when we just came from OrderDetailSheet
   // on the same order — lets BillReceipt skip its own fetch. Null for
   // bill opens from any other path (toast action, order-list direct
@@ -491,7 +495,10 @@ function PosDesktopInner({
         toast.success(`Đặt món thành công — #${orderNumber}`, {
           action: {
             label: "Xem hóa đơn",
-            onClick: () => setBillOrderId(orderId),
+            onClick: () => {
+              setBillIntent("payment");
+              setBillOrderId(orderId);
+            },
           },
         });
         const kitchenWarning = result.meta?.kitchenWarning;
@@ -674,14 +681,19 @@ function PosDesktopInner({
     ],
   );
 
-  const openBill = useCallback((id: number, seed?: OrderData) => {
-    setCartDrawerOpen(false);
-    setBillInitialOrder(seed ?? null);
-    setBillOrderId(id);
-  }, []);
+  const openBill = useCallback(
+    (id: number, intent: BillReceiptIntent = "payment", seed?: OrderData) => {
+      setCartDrawerOpen(false);
+      setBillIntent(intent);
+      setBillInitialOrder(seed ?? null);
+      setBillOrderId(id);
+    },
+    [],
+  );
 
   const closeBill = useCallback(() => {
     setBillOrderId(null);
+    setBillIntent("payment");
     setBillInitialOrder(null);
   }, []);
 
@@ -893,7 +905,7 @@ function PosDesktopInner({
           {appendTarget != null
             ? `Món thêm cho đơn #${appendTarget.orderNumber}`
             : showOrders
-              ? "Đơn cần xử lý"
+              ? "Đơn trong ca"
               : "Giỏ đơn mới"}
         </DrawerTitle>
         <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
@@ -1015,7 +1027,15 @@ function PosDesktopInner({
         onClose={closeOrderDetail}
         onOpenBill={(id, seed) => {
           closeOrderDetail();
-          openBill(id, seed);
+          openBill(
+            id,
+            seed.payment_status === "paid" ||
+              seed.status === "completed" ||
+              seed.status === "cancelled"
+              ? "receipt"
+              : "payment",
+            seed,
+          );
         }}
         onStartAppend={(oid, onum) => {
           closeOrderDetail();
@@ -1049,6 +1069,7 @@ function PosDesktopInner({
       <BillReceipt
         branchId={branchId}
         orderId={billOrderId}
+        intent={billIntent}
         initialOrder={billInitialOrder}
         canConfirmCash={canConfirmCash}
         onOrderUpdated={() => void refreshOperational()}

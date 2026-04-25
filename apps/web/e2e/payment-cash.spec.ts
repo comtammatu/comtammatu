@@ -79,6 +79,21 @@ test.describe("Cash payment -> POS close", () => {
         .toBe("pending");
       await expect(orderCard).toBeHidden({ timeout: 15_000 });
 
+      await page
+        .getByTestId(`pos-order-bill-${String(testOrder.orderId)}`)
+        .click();
+      const receipt = page.locator("#pos-receipt");
+      await expect(
+        page.getByRole("dialog", { name: "Hóa đơn" }),
+      ).toBeVisible();
+      await expect(page.getByRole("dialog")).not.toContainText(
+        "Phương thức thanh toán",
+      );
+      await expect(receipt).toContainText(`#${testOrder.orderNumber}`);
+      await expect(receipt).toContainText(testOrder.menuItemName);
+      await expect(receipt).toContainText("Tiền mặt");
+      await page.getByRole("button", { name: "Đóng" }).click();
+
       const stockConsumed = await verifyStockConsumed(testOrder.orderId);
       console.log(
         `[e2e] stock consumed for order ${testOrder.orderId}: ${stockConsumed}`,

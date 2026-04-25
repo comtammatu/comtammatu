@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { AppendDraftPane } from "./_components/append-draft-pane";
 import { CartPane } from "./_components/cart-pane";
 import { OrderListPane } from "./_components/order-list-pane";
+import type { BillReceiptIntent } from "./_components/bill/bill-receipt-types";
 import { useCartQuantity } from "./_hooks/use-cart";
 import { usePosOperationalDispatch } from "./_providers/pos-desktop-provider";
 import type { CartItem, OrderType } from "./types";
@@ -53,7 +54,7 @@ function PosSidebarTabsComponent({
             data-testid="pos-active-orders-tab"
             className="h-full min-w-0 gap-2 px-2 py-0 text-base font-semibold"
           >
-            <span className="truncate">Đơn cần xử lý</span>
+            <span className="truncate">Đơn trong ca</span>
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -79,7 +80,7 @@ interface PosSidebarContentProps {
   onSubmitOrder: () => void;
   onOrderTypeChange: (type: OrderType) => void;
   onCustomizeItem: (item: CartItem) => void;
-  onViewBill: (orderId: number) => void;
+  onViewBill: (orderId: number, intent?: BillReceiptIntent) => void;
   onViewDetail: (orderId: number, orderNumber: string) => void;
   onReturnToTables?: () => void;
 }

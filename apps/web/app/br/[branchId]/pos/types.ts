@@ -1,3 +1,4 @@
+import { formatVND } from "@comtammatu/shared/format";
 import { z } from "zod";
 
 /* ─── Order Types ─── */
@@ -45,13 +46,73 @@ export const cartItemSchema = z.object({
 
 export type CartItem = z.infer<typeof cartItemSchema>;
 
-export function getPosLineItemDisplayName(item: {
+type PosLineItemDisplayInput = {
   item_name: string;
   variant_name?: string | null;
-}): string {
-  return item.variant_name
-    ? `${item.item_name} — ${item.variant_name}`
-    : item.item_name;
+};
+
+type PosLineItemOptionInput = {
+  name: string;
+  price?: number | null;
+};
+
+type PosLineItemSideInput = PosLineItemOptionInput & {
+  quantity?: number | null;
+};
+
+type PosLineItemDetailsInput = PosLineItemDisplayInput & {
+  modifiers?: readonly PosLineItemOptionInput[] | null;
+  sides?: readonly PosLineItemSideInput[] | null;
+  note?: string | null;
+};
+
+function formatPosLineItemPrice(price: number | null | undefined): string {
+  return typeof price === "number" && price > 0
+    ? ` (+${formatVND(price)})`
+    : "";
+}
+
+function formatPosLineItemSide(side: PosLineItemSideInput): string {
+  const quantity = side.quantity ?? 1;
+  const quantitySuffix = quantity > 1 ? ` x${String(quantity)}` : "";
+  const price = typeof side.price === "number" ? side.price * quantity : null;
+
+  return `${side.name}${quantitySuffix}${formatPosLineItemPrice(price)}`;
+}
+
+export function getPosLineItemDisplayName(
+  item: PosLineItemDisplayInput,
+): string {
+  const itemName = item.item_name.trim();
+  const variantName = item.variant_name?.trim();
+
+  if (!variantName || variantName === itemName) return itemName;
+
+  return `${itemName} — ${variantName}`;
+}
+
+export function getPosLineItemOptionLines(
+  item: PosLineItemDetailsInput,
+): string[] {
+  const modifierLine =
+    item.modifiers && item.modifiers.length > 0
+      ? `Tuỳ chọn: ${item.modifiers
+          .map(
+            (modifier) =>
+              `${modifier.name}${formatPosLineItemPrice(modifier.price)}`,
+          )
+          .join(", ")}`
+      : null;
+  const sideLine =
+    item.sides && item.sides.length > 0
+      ? `Kèm: ${item.sides.map(formatPosLineItemSide).join(", ")}`
+      : null;
+  const note = item.note?.trim();
+  const noteLine = note ? `Ghi chú: ${note}` : null;
+
+  return [modifierLine, sideLine, noteLine].filter((line): line is string =>
+    Boolean(line),
+  );
 }
 
 /* ─── Cart State ─── */

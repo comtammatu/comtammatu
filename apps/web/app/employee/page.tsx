@@ -1,6 +1,11 @@
 import Link from "next/link";
-import { ArrowRight as IconArrowRight, CalendarDays as IconCalendarEvent, ChefHat as IconChefHat, Clock as IconClock, CreditCard as IconCreditCard, Monitor as IconDeviceDesktop, LogIn as IconDoorEnter, LogOut as IconLogout, CircleUserRound as IconUserCircle } from "lucide-react";
-import { canAccess } from "@comtammatu/shared/auth";
+import type { ElementType } from "react";
+import { ArrowRight as IconArrowRight, BarChart3 as IconChartBar, Briefcase as IconBriefcase, CalendarDays as IconCalendarEvent, ChefHat as IconChefHat, Clock as IconClock, CreditCard as IconCreditCard, Monitor as IconDeviceDesktop, LayoutDashboard as IconLayoutDashboard, LogIn as IconDoorEnter, LogOut as IconLogout, Package as IconPackage, Receipt as IconReceipt, Settings as IconSettings, ShieldCheck as IconShieldCheck, Utensils as IconToolsKitchen, CircleUserRound as IconUserCircle, Users as IconUsers, Wallet as IconWallet } from "lucide-react";
+import {
+  resolveDiscoveredAppGroups,
+  type DiscoveredAppGroup,
+  type DiscoveredAppLink,
+} from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
@@ -9,6 +14,7 @@ import {
 import {
   Item,
   ItemContent,
+  ItemDescription,
   ItemGroup,
   ItemMedia,
   ItemTitle,
@@ -17,12 +23,118 @@ import { getEmployeeContext } from "./_lib/employee-context";
 import { loadAuthState } from "@/_lib/auth";
 import { getTodayVN, formatTimeVN } from "./_lib/vn-business-date";
 
+const PORTAL_ICON_MAP: Record<string, ElementType> = {
+  LayoutDashboard: IconLayoutDashboard,
+  BarChart3: IconChartBar,
+  Users: IconUsers,
+  Wallet: IconWallet,
+  Package: IconPackage,
+  Briefcase: IconBriefcase,
+  Monitor: IconDeviceDesktop,
+  Settings: IconSettings,
+  ChefHat: IconChefHat,
+  Receipt: IconReceipt,
+  ToolsKitchen: IconToolsKitchen,
+  ShieldCheck: IconShieldCheck,
+};
+
+function getPortalBlockedReason(
+  app: DiscoveredAppLink,
+  branchIsHq: boolean,
+): string | null {
+  if (branchIsHq && (app.moduleKey === "pos" || app.moduleKey === "kds")) {
+    return "Trụ sở không dùng POS/KDS.";
+  }
+
+  if (app.status === "blocked" && app.blockedReason === "missing-branch-context") {
+    return "Chưa gắn chi nhánh.";
+  }
+
+  return null;
+}
+
+function PortalModuleItem({
+  app,
+  branchIsHq,
+}: {
+  app: DiscoveredAppLink;
+  branchIsHq: boolean;
+}) {
+  const Icon = PORTAL_ICON_MAP[app.icon] ?? IconArrowRight;
+  const blockedReason = getPortalBlockedReason(app, branchIsHq);
+  const href = blockedReason ? null : app.href;
+
+  return (
+    <Item variant="outline" className="items-center">
+      {href ? (
+        <Button
+          asChild
+          variant="ghost"
+          className="group h-auto w-full justify-start rounded-xl p-0"
+        >
+          <Link href={href} className="flex w-full items-center gap-4 px-4 py-3">
+            <ItemMedia variant="icon">
+              <Icon />
+            </ItemMedia>
+            <ItemContent>
+              <ItemTitle>{app.label}</ItemTitle>
+            </ItemContent>
+            <IconArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        </Button>
+      ) : (
+        <div
+          className="flex w-full items-center gap-4 px-4 py-3 opacity-60"
+          aria-disabled="true"
+        >
+          <ItemMedia variant="icon">
+            <Icon />
+          </ItemMedia>
+          <ItemContent>
+            <ItemTitle>{app.label}</ItemTitle>
+            {blockedReason ? (
+              <ItemDescription>{blockedReason}</ItemDescription>
+            ) : null}
+          </ItemContent>
+        </div>
+      )}
+    </Item>
+  );
+}
+
+function PortalModuleGroups({
+  groups,
+  branchIsHq,
+}: {
+  groups: DiscoveredAppGroup[];
+  branchIsHq: boolean;
+}) {
+  if (groups.length === 0) return null;
+
+  return (
+    <div className="space-y-4">
+      {groups.map((group) => (
+        <section key={`${group.surface}-${group.title}`} className="space-y-2">
+          <h2 className="text-sm font-semibold">{group.title}</h2>
+          <ItemGroup className="gap-2">
+            {group.items.map((app) => (
+              <PortalModuleItem
+                key={`${app.moduleKey}-${app.href ?? app.blockedReason ?? "blocked"}`}
+                app={app}
+                branchIsHq={branchIsHq}
+              />
+            ))}
+          </ItemGroup>
+        </section>
+      ))}
+    </div>
+  );
+}
+
 export default async function EmployeePage() {
-  const { claims } = await loadAuthState();
+  const { supabase, claims } = await loadAuthState();
   const ctx = await getEmployeeContext();
 
-  const canPos = canAccess(claims.user_role, "pos");
-  const canKds = canAccess(claims.user_role, "kds");
   const branchId = ctx?.branchId ?? claims.branch_id;
 
   // Today's attendance status
@@ -92,8 +204,8 @@ export default async function EmployeePage() {
 
   // Branch info for POS/KDS links
   let branchIsHq = false;
-  if (branchId && ctx) {
-    const { data } = await ctx.supabase
+  if (branchId) {
+    const { data } = await supabase
       .from("branches")
       .select("branch_kind")
       .eq("id", branchId)
@@ -104,10 +216,18 @@ export default async function EmployeePage() {
       data?.branch_kind === "central_kitchen";
   }
 
-  const posHref = branchId ? `/br/${branchId}/pos` : "/employee";
-  const kdsHref = branchId ? `/br/${branchId}/kds` : "/employee";
-  const posDisabled = !canPos || !branchId || branchIsHq;
-  const kdsDisabled = !canKds || !branchId || branchIsHq;
+  const moduleGroups = resolveDiscoveredAppGroups(claims.user_role, branchId, {
+    includeBlocked: true,
+  })
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((app) => {
+        if (app.status !== "blocked") return true;
+        if (app.moduleKey !== "branch_settings") return true;
+        return claims.user_role === "branch_manager";
+      }),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <div className="flex flex-col gap-5">
@@ -322,48 +442,7 @@ export default async function EmployeePage() {
         </Item>
       </ItemGroup>
 
-      {/* POS/KDS handoff links — compact secondary placement */}
-      {(canPos || canKds) && (
-        <div className="flex gap-2">
-          {canPos && (
-            <Button
-              asChild
-              variant={posDisabled ? "outline" : "secondary"}
-              className="flex-1"
-              disabled={posDisabled}
-            >
-              <Link href={posHref}>
-                <IconDeviceDesktop data-icon="inline-start" />
-                POS
-              </Link>
-            </Button>
-          )}
-          {canKds && (
-            <Button
-              asChild
-              variant={kdsDisabled ? "outline" : "secondary"}
-              className="flex-1"
-              disabled={kdsDisabled}
-            >
-              <Link href={kdsHref}>
-                <IconChefHat data-icon="inline-start" />
-                KDS
-              </Link>
-            </Button>
-          )}
-        </div>
-      )}
-
-      {!branchId && (canPos || canKds) && (
-        <p className="text-xs text-muted-foreground">
-          Chưa gắn chi nhánh — không thể mở POS/KDS. Liên hệ quản lý.
-        </p>
-      )}
-      {branchId && branchIsHq && (canPos || canKds) && (
-        <p className="text-xs text-muted-foreground">
-          Trụ sở không dùng POS/KDS.
-        </p>
-      )}
+      <PortalModuleGroups groups={moduleGroups} branchIsHq={branchIsHq} />
 
       {/* Logout */}
       <form

@@ -9,6 +9,7 @@ import {
 import { buildAccessDeniedPath } from "../blocked-state";
 import { STAFF_ROLES, type JwtClaims, type StaffRole } from "../types";
 import { canAccess } from "../module-acl";
+import { resolveDiscoveredApps } from "../app-discovery";
 
 function makeClaims(
   role: StaffRole,
@@ -209,6 +210,27 @@ test("resolvePostLoginRedirect → branch_manager on own POS → allowed", () =>
   );
 });
 
+test("resolvePostLoginRedirect → branch settings follows branch scope", () => {
+  assert.equal(
+    resolvePostLoginRedirect(
+      makeClaims("branch_manager", 3),
+      "/br/3/settings",
+    ),
+    "/br/3/settings",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(
+      makeClaims("branch_manager", 3),
+      "/br/7/settings",
+    ),
+    "/employee",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("owner"), "/br/7/settings"),
+    "/br/7/settings",
+  );
+});
+
 test("canAccess → only owner and super_manager can access tenant admin modules", () => {
   const adminModules = [
     "dashboard",
@@ -254,6 +276,42 @@ test("canAccess → employee portal is available to every staff role", () => {
   for (const role of STAFF_ROLES) {
     assert.equal(canAccess(role, "employee"), true);
   }
+});
+
+test("resolveDiscoveredApps → settings entries are discoverable from employee portal", () => {
+  const ownerApps = resolveDiscoveredApps("owner");
+  assert.ok(
+    ownerApps.some(
+      (app) => app.moduleKey === "settings" && app.href === "/admin/settings",
+    ),
+  );
+  assert.ok(
+    ownerApps.some(
+      (app) =>
+        app.moduleKey === "inventory_admin" && app.href === "/admin/inventory",
+    ),
+  );
+
+  const branchManagerApps = resolveDiscoveredApps("branch_manager", 3);
+  assert.ok(
+    branchManagerApps.some(
+      (app) => app.moduleKey === "settings" && app.href === "/admin/settings",
+    ),
+  );
+  assert.ok(
+    branchManagerApps.some(
+      (app) =>
+        app.moduleKey === "branch_settings" &&
+        app.href === "/br/3/settings",
+    ),
+  );
+
+  const cashierApps = resolveDiscoveredApps("cashier", 3);
+  assert.equal(cashierApps.some((app) => app.moduleKey === "settings"), false);
+  assert.equal(
+    cashierApps.some((app) => app.moduleKey === "branch_settings"),
+    false,
+  );
 });
 
 test("resolvePostLoginRedirect → beta surface → admin returnTo becomes /beta/admin/dashboard", () => {

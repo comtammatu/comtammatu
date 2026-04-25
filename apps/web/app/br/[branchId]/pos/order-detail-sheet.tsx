@@ -720,7 +720,7 @@ export function OrderDetailSheet({
                               onClose();
                             }}
                           >
-                            Hóa đơn POS
+                            Hóa đơn
                           </DropdownMenuItem>
                         )}
                         {canShowReorder && (

@@ -2,7 +2,10 @@
 
 import { formatVND } from "@comtammatu/shared/format";
 import { Separator } from "@comtammatu/ui/components/separator";
-import { getPosLineItemDisplayName } from "../../types";
+import {
+  getPosLineItemDisplayName,
+  getPosLineItemOptionLines,
+} from "../../types";
 import { METHOD_LABELS } from "./bill-receipt-types";
 import type { OrderData } from "./bill-receipt-types";
 
@@ -21,7 +24,16 @@ function formatDate(dateStr: string) {
 }
 
 export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
-  const isPaid = order.payment_status === "paid";
+  const isPaid =
+    order.payment_status === "paid" || order.status === "completed";
+  const paymentLabel =
+    order.status === "cancelled"
+      ? "Đã hủy"
+      : isPaid
+        ? (METHOD_LABELS[order.payment_method ?? ""] ??
+          order.payment_method ??
+          "Đã thanh toán")
+        : "Chưa thanh toán";
 
   return (
     <div id="pos-receipt" className="px-4 py-3">
@@ -62,13 +74,7 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
         )}
         <div className="flex justify-between">
           <span>Thanh toán:</span>
-          <span className="font-medium">
-            {isPaid
-              ? (METHOD_LABELS[order.payment_method ?? ""] ??
-                order.payment_method ??
-                "Đã thanh toán")
-              : "Chưa thanh toán"}
-          </span>
+          <span className="font-medium">{paymentLabel}</span>
         </div>
       </div>
 
@@ -82,6 +88,7 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
         <div className="divide-y divide-dashed">
           {order.order_items.map((item) => {
             const displayName = getPosLineItemDisplayName(item);
+            const optionLines = getPosLineItemOptionLines(item);
 
             return (
               <div key={item.id} className="flex gap-3 py-2">
@@ -89,30 +96,14 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
                   <div className="break-words font-medium leading-snug">
                     {displayName}
                   </div>
-                  {item.modifiers.length > 0 && (
-                    <div className="mt-0.5 break-words leading-4 text-muted-foreground">
-                      {item.modifiers.map((m) => `+ ${m.name}`).join(",")}
+                  {optionLines.map((line) => (
+                    <div
+                      key={line}
+                      className="mt-0.5 break-words leading-4 text-muted-foreground"
+                    >
+                      {line}
                     </div>
-                  )}
-                  {item.sides.length > 0 && (
-                    <div className="mt-0.5 break-words leading-4 text-muted-foreground">
-                      Kèm:{""}
-                      {item.sides
-                        .map((s) =>
-                          s.price > 0
-                            ? `${s.name}${
-                                s.quantity > 1 ? ` x${s.quantity}` : ""
-                              } (${formatVND(s.price * s.quantity)})`
-                            : s.name,
-                        )
-                        .join(",")}
-                    </div>
-                  )}
-                  {item.note && (
-                    <div className="mt-0.5 break-words leading-4 italic text-muted-foreground">
-                      * {item.note}
-                    </div>
-                  )}
+                  ))}
                 </div>
                 <div className="shrink-0 whitespace-nowrap text-right tabular-nums">
                   <div className="font-semibold">
@@ -121,9 +112,6 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
                   <div className="mt-0.5 text-muted-foreground">
                     {item.quantity} × {formatVND(item.unit_price)}
                   </div>
-                  {(item.modifiers.length > 0 || item.sides.length > 0) && (
-                    <div className="text-muted-foreground">gồm tuỳ chọn</div>
-                  )}
                 </div>
               </div>
             );
