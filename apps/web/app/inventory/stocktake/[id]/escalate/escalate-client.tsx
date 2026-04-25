@@ -164,7 +164,7 @@ export function EscalateClient({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  <IconShieldCheck className="size-5 text-red-600" />
+                  <IconShieldCheck className="size-5 text-destructive" />
                   Escalation QLV + Admin
                 </CardTitle>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -187,14 +187,14 @@ export function EscalateClient({
           </CardHeader>
           <CardContent className="space-y-3">
             {!editable ? (
-              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-warning-foreground">
                 <IconAlertTriangle className="mr-2 inline size-4 -translate-y-[1px]" />
                 Session không ở trạng thái escalation. Status = {status} · Round = R{currentRound}.
               </div>
             ) : null}
 
             {needEscalation.length === 0 ? (
-              <div className="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-900">
+              <div className="rounded-md border border-success/40 bg-success/10 p-3 text-sm text-success">
                 <IconCheck className="mr-2 inline size-4 -translate-y-[1px]" />
                 Tất cả dòng đã được xử lý. Bấm &quot;Finalize session&quot; để đóng kỳ.
               </div>
@@ -221,7 +221,7 @@ export function EscalateClient({
                   {resolved.map((row) => (
                     <div
                       key={row.ingredientId}
-                      className="flex items-center justify-between rounded-md border border-green-200 bg-green-50/50 px-3 py-2 text-sm"
+                      className="flex items-center justify-between rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm"
                     >
                       <div>
                         <div className="font-medium">{row.ingredientName}</div>
@@ -229,7 +229,7 @@ export function EscalateClient({
                           Final: {row.r4FinalQty} {row.unit}
                         </div>
                       </div>
-                      <Badge variant="outline" className="border-green-300 text-green-900">
+                      <Badge variant="outline" className="border-success/40 text-success">
                         <IconCheck className="size-3.5" /> R4
                       </Badge>
                     </div>
@@ -309,7 +309,7 @@ function EscalationRow({
             <span
               className={cn(
                 "tabular-nums",
-                noteLen >= MIN_NOTE_LENGTH ? "text-green-700" : "text-muted-foreground",
+                noteLen >= MIN_NOTE_LENGTH ? "text-success" : "text-muted-foreground",
               )}
             >
               ({noteLen}/{MIN_NOTE_LENGTH})

@@ -88,7 +88,7 @@ function TopAlertsCard({ dashboard }: { dashboard: InventoryDashboard }) {
         {alerts.length > 0 ? (
           <Badge
             variant="outline"
-            className="bg-orange-100 text-orange-900 border-orange-300"
+            className="bg-tier-note/15 text-tier-note-foreground border-tier-note/40"
           >
             {alerts.length}
           </Badge>
@@ -114,10 +114,10 @@ function TopAlertsCard({ dashboard }: { dashboard: InventoryDashboard }) {
                 variant="outline"
                 className={
                   a.alertType === "negative_stock"
-                    ? "border-red-300 text-red-900"
+                    ? "border-destructive/40 text-destructive"
                     : a.alertType === "out_of_stock"
-                      ? "border-orange-300 text-orange-900"
-                      : "border-yellow-300 text-yellow-900"
+                      ? "border-tier-note/40 text-tier-note-foreground"
+                      : "border-warning/40 text-warning-foreground"
                 }
               >
                 {Math.round(a.shortageRatio * 100)}%

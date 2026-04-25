@@ -128,7 +128,7 @@ export function PaymentsForm({
                     </Label>
                     <p className="text-xs text-muted-foreground">
                       Nhập STK ngân hàng dưới đây. Nếu để trống sẽ dùng biến môi
-                      trường <code className="text-[11px]">VIETQR_*</code>{" "}
+                      trường <code className="text-2xs">VIETQR_*</code>{" "}
                       ({vietqrEnvConfigured ? "✓ có sẵn" : "chưa đặt"}).
                     </p>
                   </div>
@@ -191,7 +191,7 @@ export function PaymentsForm({
                 )}
               </div>
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-2xs text-muted-foreground">
               Mã NH: TCB, VCB, BIDV, MB, ACB, TPB, VPB, STB... (Napas BIN cũng
               chấp nhận, vd 970407 = Techcombank).
             </p>

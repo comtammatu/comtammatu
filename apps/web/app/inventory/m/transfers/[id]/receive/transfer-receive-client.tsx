@@ -135,7 +135,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
         </div>
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
               Tổng xuất
             </p>
             <p className="text-lg font-semibold tabular-nums">
@@ -143,7 +143,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
             </p>
           </div>
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
               Tổng nhận
             </p>
             <p
@@ -195,7 +195,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
       ) : null}
 
       <section className="flex flex-col gap-2">
-        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
           {lines.length} mặt hàng trong phiếu
         </p>
         <ul className="flex flex-col gap-2">
@@ -214,7 +214,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
                     <p className="truncate text-sm font-semibold">
                       {line.ingredientName}
                     </p>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-2xs text-muted-foreground">
                       Phiếu xuất: {formatQty(line.sentQty)} {line.unit}
                     </p>
                     <div className="mt-1 flex items-baseline gap-2">
@@ -248,7 +248,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
                         type="button"
                         variant="link"
                         size="sm"
-                        className="h-auto p-0 text-[11px] font-medium"
+                        className="h-auto p-0 text-2xs font-medium"
                         onClick={() =>
                           setValues((current) => ({
                             ...current,

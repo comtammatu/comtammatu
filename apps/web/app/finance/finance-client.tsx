@@ -33,7 +33,7 @@ export function FinanceClient({
         </TabsTrigger>
         <Button asChild variant="ghost" size="sm" className="ml-auto">
           <Link href="/finance/reconciliation">
-            <IconAlertTriangle className="mr-1 size-4 text-amber-500" />
+            <IconAlertTriangle className="mr-1 size-4 text-warning-foreground" />
             Đối soát
           </Link>
         </Button>

@@ -72,7 +72,7 @@ export function BlindCountingGrid({
       className={cn("flex flex-col gap-3", className)}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[220px]">
+        <div className="relative flex-1 min-w-56">
           <IconSearch className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
@@ -89,7 +89,7 @@ export function BlindCountingGrid({
           Đã nhập: {totalEntered}
         </Badge>
         {blindMode ? (
-          <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-900">
+          <Badge variant="outline" className="border-warning/40 bg-warning/15 text-warning-foreground">
             Blind mode
           </Badge>
         ) : null}
@@ -146,9 +146,9 @@ function CountRow({
   onChange: (qty: number | null) => void;
 }) {
   const rowTone = line.isFinal
-    ? "bg-green-50/40"
+    ? "bg-success/10"
     : line.needsRecount
-      ? "bg-orange-50/40"
+      ? "bg-tier-note/10"
       : "";
 
   return (
@@ -183,13 +183,13 @@ function CountRow({
       <td className="px-3 py-2 text-right">
         <div className="inline-flex items-center gap-1">
           {line.isFinal ? (
-            <Badge variant="outline" className="gap-1 border-green-300 text-green-900">
+            <Badge variant="outline" className="gap-1 border-success/40 text-success">
               <IconCheck className="size-3.5" /> Final
             </Badge>
           ) : line.needsRecount ? (
             <Badge
               variant="outline"
-              className="gap-1 border-orange-300 text-orange-900"
+              className="gap-1 border-tier-note/40 text-tier-note-foreground"
             >
               <IconFlag3 className="size-3.5" /> Cần recount
             </Badge>

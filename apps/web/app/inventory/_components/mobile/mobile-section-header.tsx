@@ -36,7 +36,7 @@ export function MobileSectionHeader({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {eyebrow ? (
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
               {eyebrow}
             </p>
           ) : null}

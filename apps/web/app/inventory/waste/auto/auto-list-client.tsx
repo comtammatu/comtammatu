@@ -36,15 +36,15 @@ interface Props {
 const SOURCE_LABEL_VI: Record<string, { label: string; tone: string }> = {
   pos_return: {
     label: "POS trả khách",
-    tone: "border-red-300 bg-red-50 text-red-900",
+    tone: "border-destructive/40 bg-destructive/10 text-destructive",
   },
   kds_cancel_mid_cook: {
     label: "KDS hủy giữa chừng",
-    tone: "border-amber-300 bg-amber-50 text-amber-900",
+    tone: "border-warning/40 bg-warning/10 text-warning-foreground",
   },
   kds_cancel_after_cook: {
     label: "KDS hủy sau khi nấu",
-    tone: "border-orange-300 bg-orange-50 text-orange-900",
+    tone: "border-tier-note/40 bg-tier-note/10 text-tier-note-foreground",
   },
 };
 
@@ -133,11 +133,11 @@ function AutoWasteCard({ row }: { row: AutoWasteRow }) {
         <div className="flex flex-wrap items-start justify-between gap-2">
           <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
             {row.sourceType === "pos_return" ? (
-              <IconShoppingCartX className="size-4 text-red-600" />
+              <IconShoppingCartX className="size-4 text-destructive" />
             ) : row.sourceType === "kds_cancel_mid_cook" ? (
-              <IconFlame className="size-4 text-amber-600" />
+              <IconFlame className="size-4 text-warning-foreground" />
             ) : (
-              <IconChefHat className="size-4 text-orange-600" />
+              <IconChefHat className="size-4 text-tier-note" />
             )}
             Phiếu #{row.id}
             <Badge variant="outline" className={cn(src.tone)}>
@@ -155,11 +155,11 @@ function AutoWasteCard({ row }: { row: AutoWasteRow }) {
               className={cn(
                 "gap-1",
                 row.approvalStatus === "pending"
-                  ? "border-amber-300 bg-amber-50 text-amber-900"
+                  ? "border-warning/40 bg-warning/10 text-warning-foreground"
                   : row.approvalStatus === "approved"
-                    ? "border-green-300 bg-green-50 text-green-900"
+                    ? "border-success/40 bg-success/10 text-success"
                     : row.approvalStatus === "rejected"
-                      ? "border-red-300 bg-red-50 text-red-900"
+                      ? "border-destructive/40 bg-destructive/10 text-destructive"
                       : "",
               )}
             >

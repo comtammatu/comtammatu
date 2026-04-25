@@ -144,7 +144,7 @@ export function ZoneLockIndicator({
       <span className="font-medium">Zone: {zoneId}</span>
       {state.kind === "held" ? (
         <>
-          <Badge variant="outline" className="border-green-300 bg-white text-green-900">
+          <Badge variant="outline" className="border-success/40 bg-background text-success">
             Bạn đang giữ lock
           </Badge>
           <span className="tabular-nums text-muted-foreground">
@@ -162,7 +162,7 @@ export function ZoneLockIndicator({
         </>
       ) : state.kind === "blocked" ? (
         <>
-          <Badge variant="outline" className="border-orange-300 bg-white text-orange-900">
+          <Badge variant="outline" className="border-tier-note/40 bg-background text-tier-note-foreground">
             Đã có người giữ
           </Badge>
           <span className="text-muted-foreground">
@@ -208,15 +208,15 @@ export function ZoneLockIndicator({
 function toneFor(kind: LockState["kind"]): string {
   switch (kind) {
     case "held":
-      return "border-green-300 bg-green-50 text-green-900";
+      return "border-success/40 bg-success/10 text-success";
     case "blocked":
-      return "border-orange-300 bg-orange-50 text-orange-900";
+      return "border-tier-note/40 bg-tier-note/15 text-tier-note-foreground";
     case "lost":
-      return "border-red-400 bg-red-50 text-red-900";
+      return "border-destructive/50 bg-destructive/10 text-destructive";
     case "error":
-      return "border-red-300 bg-red-50 text-red-900";
+      return "border-destructive/40 bg-destructive/10 text-destructive";
     case "acquiring":
-      return "border-blue-300 bg-blue-50 text-blue-900";
+      return "border-info/40 bg-info/10 text-info";
     default:
       return "border-muted bg-muted/30 text-muted-foreground";
   }

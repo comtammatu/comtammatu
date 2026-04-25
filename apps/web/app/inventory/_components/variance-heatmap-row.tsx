@@ -65,7 +65,7 @@ export function VarianceHeatmapRow({
       onClick={onClick}
       className={cn(
         "border-t align-middle",
-        isFinal ? "bg-green-50/30" : needsRecount ? "bg-orange-50/30" : "",
+        isFinal ? "bg-success/10" : needsRecount ? "bg-tier-note/10" : "",
         onClick && "cursor-pointer hover:bg-muted/40",
         className,
       )}
@@ -100,11 +100,11 @@ export function VarianceHeatmapRow({
       })}
       <td className="px-3 py-2 text-right">
         {isFinal ? (
-          <Badge variant="outline" className="gap-1 border-green-300 text-green-900">
+          <Badge variant="outline" className="gap-1 border-success/40 text-success">
             <IconCheck className="size-3.5" /> Final
           </Badge>
         ) : needsRecount ? (
-          <Badge variant="outline" className="gap-1 border-orange-300 text-orange-900">
+          <Badge variant="outline" className="gap-1 border-tier-note/40 text-tier-note-foreground">
             <IconFlag3 className="size-3.5" /> Cần recount
           </Badge>
         ) : (
@@ -118,9 +118,9 @@ export function VarianceHeatmapRow({
 function cellTone(qty: number, median: number, thresholdPct: number): string {
   if (median === 0) return "";
   const pct = Math.abs((qty - median) / median) * 100;
-  if (pct > thresholdPct * 2) return "bg-red-100 text-red-900";
-  if (pct > thresholdPct) return "bg-orange-100 text-orange-900";
-  if (pct > thresholdPct / 2) return "bg-yellow-50 text-yellow-900";
+  if (pct > thresholdPct * 2) return "bg-destructive/15 text-destructive";
+  if (pct > thresholdPct) return "bg-tier-note/15 text-tier-note-foreground";
+  if (pct > thresholdPct / 2) return "bg-warning/15 text-warning-foreground";
   return "";
 }
 

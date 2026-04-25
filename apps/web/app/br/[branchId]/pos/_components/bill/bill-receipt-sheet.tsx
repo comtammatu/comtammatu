@@ -28,6 +28,7 @@ import {
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
 import { Input } from "@comtammatu/ui/components/input";
+import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -46,7 +47,12 @@ import {
   fetchPaymentMethodsForPos,
 } from "../../payment-actions";
 import { useIsOnline } from "../pwa/online-status-provider";
-import type { OrderData, PendingExtras } from "./bill-receipt-types";
+import { BillReceiptSummary } from "./bill-receipt-summary";
+import type {
+  BillReceiptIntent,
+  OrderData,
+  PendingExtras,
+} from "./bill-receipt-types";
 import {
   buildInvoicePayload,
   EMPTY_INVOICE_FORM,
@@ -58,6 +64,7 @@ import {
 interface BillReceiptProps {
   branchId: number;
   orderId: number | null;
+  intent?: BillReceiptIntent;
   /**
    * Order data already fetched by an upstream sheet. When it matches `orderId`,
    * the bill opens without an extra order fetch.
@@ -214,9 +221,51 @@ function PaymentQrLoadingFixture() {
   );
 }
 
+const RECEIPT_LOADING_ORDER: OrderData = {
+  id: 0,
+  order_number: "TC-000000-000",
+  order_type: "dine_in",
+  status: "completed",
+  payment_status: "paid",
+  payment_method: "cash",
+  subtotal: 138000,
+  tax_amount: 0,
+  service_charge: 0,
+  discount_amount: 0,
+  total_amount: 138000,
+  customer_count: 2,
+  note: null,
+  created_at: "2026-04-26T00:00:00.000Z",
+  table_id: 2,
+  tables: { number: 2 },
+  branches: { name: "Chi nhánh Đất Đỏ", address: "Ấp Phước Sơn, Xã Đất Đỏ" },
+  order_items: [
+    {
+      id: 0,
+      item_name: "Sườn Cây",
+      variant_name: null,
+      quantity: 2,
+      unit_price: 69000,
+      subtotal: 138000,
+      modifiers: [],
+      sides: [],
+      note: null,
+    },
+  ],
+};
+
+function ReceiptLoadingFixture() {
+  return (
+    <ScrollArea className="max-h-96">
+      <BillReceiptSummary order={RECEIPT_LOADING_ORDER} />
+    </ScrollArea>
+  );
+}
+
 export function BillReceipt({
   branchId,
   orderId,
+  intent = "payment",
   initialOrder,
   canConfirmCash,
   onOrderUpdated,
@@ -519,64 +568,63 @@ export function BillReceipt({
   ]);
 
   const MethodIcon = METHOD_META[selectedMethod]?.icon ?? IconCreditCard;
+  const isReceiptIntent = intent === "receipt";
   const isReadOnlyOrder =
     order?.payment_status === "paid" ||
     order?.status === "completed" ||
     order?.status === "cancelled";
   const showUnservedWarning =
     order != null && !isReadOnlyOrder && order.status !== "served";
+  const dialogTitle =
+    isReceiptIntent || isReadOnlyOrder ? "Hóa đơn" : "Phương thức thanh toán";
+  const dialogDescription =
+    isReceiptIntent || isReadOnlyOrder
+      ? "Xem lại chi tiết hóa đơn đã xử lý."
+      : "Chọn tiền mặt hoặc chuyển khoản và xác nhận thanh toán.";
 
   return (
     <Dialog open={orderId !== null} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Phương thức thanh toán</DialogTitle>
+          <DialogTitle>{dialogTitle}</DialogTitle>
           <DialogDescription className="sr-only">
-            Chọn tiền mặt hoặc chuyển khoản và xác nhận thanh toán.
+            {dialogDescription}
           </DialogDescription>
         </DialogHeader>
 
         {isPending ? (
-          <AppBoneyardSkeleton
-            name="pos-bill-receipt-payment"
-            loading
-            fixture={<PaymentLoadingFixture />}
-            fallback={<PaymentSkeleton />}
-            snapshotConfig={{ excludeSelectors: ["svg"] }}
-          >
-            <PaymentLoadingFixture />
-          </AppBoneyardSkeleton>
+          isReceiptIntent ? (
+            <AppBoneyardSkeleton
+              name="pos-bill-receipt-view"
+              loading
+              fixture={<ReceiptLoadingFixture />}
+              fallback={
+                <div className="flex items-center justify-center py-10">
+                  <Spinner />
+                </div>
+              }
+              snapshotConfig={{ excludeSelectors: ["svg"] }}
+            >
+              <ReceiptLoadingFixture />
+            </AppBoneyardSkeleton>
+          ) : (
+            <AppBoneyardSkeleton
+              name="pos-bill-receipt-payment"
+              loading
+              fixture={<PaymentLoadingFixture />}
+              fallback={<PaymentSkeleton />}
+              snapshotConfig={{ excludeSelectors: ["svg"] }}
+            >
+              <PaymentLoadingFixture />
+            </AppBoneyardSkeleton>
+          )
         ) : error ? (
           <p className="text-base text-destructive">{error}</p>
         ) : isReadOnlyOrder && order ? (
           <div className="flex flex-col gap-3">
-            <Card size="sm">
-              <CardContent className="flex flex-col gap-2">
-                <p className="text-base font-semibold">
-                  Đơn #{order.order_number} -{""}
-                  {order.payment_status === "paid"
-                    ? "Đã thanh toán"
-                    : order.status === "cancelled"
-                      ? "Đã hủy"
-                      : "Đã thanh toán"}
-                </p>
-                <div className="mt-2 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Tổng đơn</span>
-                  <span className="font-semibold tabular-nums">
-                    {formatVND(totalAmount)}
-                  </span>
-                </div>
-                {order.payment_method && (
-                  <div className="mt-1 flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Phương thức</span>
-                    <span className="font-medium">
-                      {METHOD_META[order.payment_method as PaymentMethod]
-                        ?.label ?? order.payment_method}
-                    </span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <ScrollArea className="max-h-96">
+              <BillReceiptSummary order={order} />
+            </ScrollArea>
             <DialogFooter>
               <Button type="button" onClick={onClose}>
                 Đóng

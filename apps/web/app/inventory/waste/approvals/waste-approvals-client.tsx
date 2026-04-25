@@ -66,7 +66,7 @@ export function WasteApprovalsClient({ initial, branchFilter }: Props) {
       <div className="flex items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <IconClock className="size-6 text-orange-600" />
+            <IconClock className="size-6 text-tier-note" />
             Duyệt waste — chờ QLV
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -160,7 +160,7 @@ function WasteApprovalCard({
     <li>
       <Card
         className={cn(
-          row.isSelfCreated && "border-amber-300 bg-amber-50/50",
+          row.isSelfCreated && "border-warning/40 bg-warning/10",
         )}
       >
         <CardHeader>
@@ -183,7 +183,7 @@ function WasteApprovalCard({
               <CardDescription>
                 {row.createdByName}
                 {row.isSelfCreated ? (
-                  <Badge className="ml-2 bg-amber-100 text-amber-900 border-amber-300 border text-xs">
+                  <Badge className="ml-2 bg-warning/15 text-warning-foreground border-warning/40 border text-xs">
                     Bạn tạo — không thể tự duyệt
                   </Badge>
                 ) : null}

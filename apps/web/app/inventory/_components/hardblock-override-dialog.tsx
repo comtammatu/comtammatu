@@ -184,7 +184,7 @@ export function HardblockOverrideDialog({
               <span
                 className={cn(
                   "text-xs",
-                  noteOk ? "text-green-700" : "text-muted-foreground",
+                  noteOk ? "text-success" : "text-muted-foreground",
                 )}
               >
                 {noteLen}/{NOTE_MIN} ký tự

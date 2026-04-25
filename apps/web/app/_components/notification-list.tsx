@@ -148,7 +148,7 @@ export function NotificationList({
         ) : null}
       </div>
 
-      <ScrollArea className="h-[360px]">
+      <ScrollArea className="h-90">
         <AppBoneyardSkeleton
           name="notifications-list"
           loading={loading}

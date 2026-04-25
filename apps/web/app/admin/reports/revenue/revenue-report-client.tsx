@@ -99,7 +99,7 @@ export function RevenueReportClient({
       </Card>
 
       <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3 items-end gap-3">
-        <div className="grid min-w-[11rem] flex-1 gap-1.5 sm:max-w-44 sm:flex-none">
+        <div className="grid min-w-44 flex-1 gap-1.5 sm:max-w-44 sm:flex-none">
           <Label className="text-xs">Từ ngày</Label>
           <Input
             type="date"
@@ -109,7 +109,7 @@ export function RevenueReportClient({
             }
           />
         </div>
-        <div className="grid min-w-[11rem] flex-1 gap-1.5 sm:max-w-44 sm:flex-none">
+        <div className="grid min-w-44 flex-1 gap-1.5 sm:max-w-44 sm:flex-none">
           <Label className="text-xs">Đến ngày</Label>
           <Input
             type="date"
@@ -119,9 +119,9 @@ export function RevenueReportClient({
             }
           />
         </div>
-        <div className="flex min-w-[11rem] flex-1 items-center justify-between gap-3 rounded-[1.75rem] border border-border/60 bg-background/75 px-4 py-3 sm:max-w-sm">
+        <div className="flex min-w-44 flex-1 items-center justify-between gap-3 rounded-3xl border border-border/60 bg-background/75 px-4 py-3 sm:max-w-sm">
           <div className="space-y-0.5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground">
               Khoảng ngày
             </p>
             <p className="text-sm font-medium text-foreground">
@@ -194,7 +194,7 @@ export function RevenueReportClient({
           </p>
         </CardHeader>
         <CardContent className="px-4 sm:px-5">
-          <div className="mb-4 grid gap-3 rounded-[1.75rem] border border-border/60 bg-background/70 p-4 md:grid-cols-3">
+          <div className="mb-4 grid gap-3 rounded-3xl border border-border/60 bg-background/70 p-4 md:grid-cols-3">
             <div className="space-y-1">
               <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
                 Tiền mặt

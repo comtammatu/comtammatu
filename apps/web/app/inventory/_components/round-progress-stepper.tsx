@@ -50,11 +50,11 @@ export function RoundProgressStepper({
         const escalated = r === 4 && round4Escalated;
 
         const tone = escalated
-          ? "border-red-400 bg-red-50 text-red-900"
+          ? "border-destructive/50 bg-destructive/10 text-destructive"
           : isActive
             ? "border-primary bg-primary/10 text-primary"
             : isPast
-              ? "border-green-400 bg-green-50 text-green-900"
+              ? "border-success/50 bg-success/10 text-success"
               : "border-muted bg-muted/30 text-muted-foreground";
 
         return (
@@ -90,14 +90,14 @@ export function RoundProgressStepper({
                       : `Recount ${r - 1}`}
               </span>
               {finals > 0 ? (
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className="text-3xs">
                   {finals} final
                 </Badge>
               ) : null}
               {pending > 0 ? (
                 <Badge
                   variant="outline"
-                  className="border-orange-300 text-orange-900 text-[10px]"
+                  className="border-tier-note/40 text-tier-note-foreground text-3xs"
                 >
                   {pending} cần recount
                 </Badge>
@@ -107,7 +107,7 @@ export function RoundProgressStepper({
               <div
                 className={cn(
                   "h-0.5 w-4",
-                  isPast ? "bg-green-400" : "bg-muted",
+                  isPast ? "bg-success" : "bg-muted",
                 )}
               />
             ) : null}

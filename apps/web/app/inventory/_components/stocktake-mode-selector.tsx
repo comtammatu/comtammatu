@@ -112,7 +112,7 @@ export function StocktakeModeSelector({
                 {meta.defaultBlind ? (
                   <Badge
                     variant="outline"
-                    className="border-amber-300 bg-amber-50 text-amber-900 text-[10px]"
+                    className="border-warning/40 bg-warning/15 text-warning-foreground text-3xs"
                   >
                     Blind
                   </Badge>
@@ -120,7 +120,7 @@ export function StocktakeModeSelector({
                 {meta.unaudited ? (
                   <Badge
                     variant="outline"
-                    className="border-slate-300 bg-slate-50 text-slate-800 text-[10px]"
+                    className="border-border bg-muted text-muted-foreground text-3xs"
                   >
                     Unaudited
                   </Badge>

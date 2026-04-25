@@ -209,7 +209,7 @@ Implementation lock after POS workflow debate:
 - `Giỏ đơn mới` is the only cart vocabulary and is used only before submitting a new order.
 - `Thêm món` on an existing order creates a client-local append draft. Menu taps and customizer confirmation add lines to that draft; only `Gửi món thêm` calls the append mutation.
 - Payment opens directly to method selection. `served` is a service marker only; the bill sheet may warn when an order is not served, but must not call `updateOrderStatus(..., "served")` or block payment.
-- Paid orders use `Đã thanh toán` / `Hóa đơn POS`; cancelled orders use `Đã hủy`.
+- Paid orders use `Đã thanh toán` / `Hóa đơn`; cancelled orders use `Đã hủy`.
 - Active served-but-unpaid orders remain in `Đơn cần xử lý` until payment closes the order.
 
 Target layout:

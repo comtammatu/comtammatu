@@ -25,9 +25,9 @@ export function AbcClassChip({
   if (!class_) return null;
 
   const tone = {
-    A: "bg-red-100 text-red-900 border-red-300",
-    B: "bg-amber-100 text-amber-900 border-amber-300",
-    C: "bg-slate-100 text-slate-800 border-slate-300",
+    A: "bg-destructive/15 text-destructive border-destructive/40",
+    B: "bg-warning/15 text-warning-foreground border-warning/40",
+    C: "bg-muted text-muted-foreground border-border",
   }[class_];
 
   const label = compact ? class_ : ABC_CLASS_LABELS_VI[class_];

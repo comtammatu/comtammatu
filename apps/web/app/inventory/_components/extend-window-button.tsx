@@ -147,7 +147,7 @@ export function ExtendWindowButton({
               <span
                 className={cn(
                   "text-xs",
-                  noteOk ? "text-green-700" : "text-muted-foreground",
+                  noteOk ? "text-success" : "text-muted-foreground",
                 )}
               >
                 {note.length}/{NOTE_MIN} ký tự

@@ -184,7 +184,7 @@ export function MobileStockClient({ rows }: { rows: StockRow[] }) {
                     </p>
                     <span
                       className={cn(
-                        "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium",
+                        "shrink-0 rounded-full px-2 py-0.5 text-3xs font-medium",
                         style.className,
                       )}
                     >
@@ -244,7 +244,7 @@ function StatusSummary({
         active && "ring-2 ring-offset-2 ring-offset-background",
       )}
     >
-      <span className="text-[10px] font-medium uppercase tracking-wider">
+      <span className="text-3xs font-medium uppercase tracking-wider">
         {label}
       </span>
       <span className="text-xl font-bold tabular-nums">{value}</span>

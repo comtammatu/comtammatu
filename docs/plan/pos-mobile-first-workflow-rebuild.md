@@ -129,7 +129,7 @@ Rules:
 - Entry starts from order history/detail.
 - Destructive actions are separated and confirmed with reason where required.
 - Payment opens directly to method selection.
-- Paid order shows `Đã thanh toán` / `Hóa đơn POS`.
+- Paid order shows `Đã thanh toán` / `Hóa đơn`.
 - Cancelled order shows `Đã hủy`.
 - Served-but-unpaid order remains in `Đơn cần xử lý`.
 

@@ -170,10 +170,10 @@ export default async function MobileGrnSupplierList({
       {openPos.length > 0 ? (
         <section className="flex flex-col gap-2">
           <div className="flex items-center justify-between px-1">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
               Từ PO chờ nhận
             </p>
-            <Badge variant="secondary" className="h-5 px-2 text-[10px]">
+            <Badge variant="secondary" className="h-5 px-2 text-3xs">
               {openPos.length}
             </Badge>
           </div>
@@ -202,7 +202,7 @@ export default async function MobileGrnSupplierList({
                       {po.status === "partially_received" ? (
                         <Badge
                           variant="outline"
-                          className="h-5 px-1.5 text-[10px]"
+                          className="h-5 px-1.5 text-3xs"
                         >
                           Nhận một phần
                         </Badge>
@@ -229,7 +229,7 @@ export default async function MobileGrnSupplierList({
 
       <section className="flex flex-col gap-2">
         <div className="flex items-center justify-between px-1">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
             Nhập ad-hoc theo nhà cung cấp
           </p>
         </div>

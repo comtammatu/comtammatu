@@ -48,6 +48,7 @@ interface PosTestContext {
 export interface TestOrder {
   orderId: number;
   orderNumber: string;
+  menuItemName: string;
   tenantId: number;
   branchId: number;
   tableId: number;
@@ -569,6 +570,7 @@ export async function createTestOrder(): Promise<TestOrder> {
   return {
     orderId: order.id,
     orderNumber,
+    menuItemName: context.menuItemName,
     tenantId: context.tenantId,
     branchId: context.branchId,
     tableId: context.tableId,

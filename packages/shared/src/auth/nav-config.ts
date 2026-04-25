@@ -81,6 +81,11 @@ export const DOMAIN_WORKSPACE_ITEMS: WorkspaceNavItemConfig[] = [
 /** Branch-scoped operational entry points */
 export const BRANCH_OPERATION_ITEMS: BranchOperationNavItemConfig[] = [
   {
+    moduleKey: "branch_settings",
+    icon: "Settings",
+    hrefTemplate: "/br/{branchId}/settings",
+  },
+  {
     moduleKey: "pos",
     icon: "Monitor",
     hrefTemplate: "/br/{branchId}/pos",

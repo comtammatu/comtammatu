@@ -1,5 +1,8 @@
-import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
+import Link from "next/link";
+import { Settings as IconSettings } from "lucide-react";
+import { canAccess, ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import { getEmployeeContext } from "../_lib/employee-context";
 import { loadAuthState } from "@/_lib/auth";
 
@@ -9,6 +12,9 @@ export async function MobileHeader() {
 
   const roleLabel = ROLE_LABEL_VI[claims.user_role] ?? claims.user_role;
   const branchName = ctx?.branchName ?? null;
+  const settingsHref = canAccess(claims.user_role, "settings")
+    ? "/admin/settings"
+    : null;
 
   return (
     <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
@@ -20,6 +26,19 @@ export async function MobileHeader() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {settingsHref ? (
+            <Button
+              asChild
+              variant="outline"
+              size="icon-sm"
+              aria-label="Cài đặt"
+              title="Cài đặt"
+            >
+              <Link href={settingsHref}>
+                <IconSettings className="size-4" />
+              </Link>
+            </Button>
+          ) : null}
           <Badge variant="outline">{roleLabel}</Badge>
           <Badge variant={branchName ? "success" : "warning"}>
             {branchName ? "Chi nhánh" : "Thiếu chi nhánh"}

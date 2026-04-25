@@ -30,6 +30,7 @@ import {
   calcCartTotal,
   calcItemSubtotal,
   getPosLineItemDisplayName,
+  getPosLineItemOptionLines,
 } from "../types";
 import type { CartItem } from "../types";
 
@@ -107,21 +108,7 @@ function AppendDraftPaneComponent({
           >
             {items.map((item) => {
               const displayName = getPosLineItemDisplayName(item);
-              const details = [
-                item.modifiers
-                  .map((modifier) => `+ ${modifier.name}`)
-                  .join(","),
-                item.sides.length > 0
-                  ? item.sides
-                      .map((side) =>
-                        side.quantity > 1
-                          ? `${side.name} x${String(side.quantity)}`
-                          : side.name,
-                      )
-                      .join(",")
-                  : "",
-                item.note ? `* ${item.note}` : "",
-              ].filter(Boolean);
+              const optionLines = getPosLineItemOptionLines(item);
 
               return (
                 <li key={item.key}>
@@ -133,9 +120,9 @@ function AppendDraftPaneComponent({
                         </span>
                         {displayName}
                       </ItemTitle>
-                      {details.length > 0 && (
-                        <ItemDescription>{details.join(" ·")}</ItemDescription>
-                      )}
+                      {optionLines.map((line) => (
+                        <ItemDescription key={line}>{line}</ItemDescription>
+                      ))}
                       <ItemDescription>
                         {formatVND(calcItemSubtotal(item))}
                       </ItemDescription>

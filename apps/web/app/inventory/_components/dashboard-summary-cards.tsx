@@ -42,7 +42,7 @@ export function DashboardSummaryCards({
       className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4", className)}
     >
       <SummaryCard
-        icon={<IconCoin className="size-5 text-emerald-600" />}
+        icon={<IconCoin className="size-5 text-success" />}
         label="Tổng giá trị tồn"
         value={
           canViewCost
@@ -52,7 +52,7 @@ export function DashboardSummaryCards({
         hint={canViewCost ? undefined : "Không có quyền xem cost"}
       />
       <SummaryCard
-        icon={<IconBox className="size-5 text-blue-600" />}
+        icon={<IconBox className="size-5 text-info" />}
         label="Số SKU đang hoạt động"
         value={String(summary.totalSkus)}
         hint={`${summary.locationCount} location`}
@@ -62,7 +62,7 @@ export function DashboardSummaryCards({
           <IconAlertTriangle
             className={cn(
               "size-5",
-              summary.alertsCount > 0 ? "text-orange-600" : "text-muted-foreground",
+              summary.alertsCount > 0 ? "text-tier-note" : "text-muted-foreground",
             )}
           />
         }
@@ -72,7 +72,7 @@ export function DashboardSummaryCards({
         tone={summary.alertsCount > 0 ? "warning" : "default"}
       />
       <SummaryCard
-        icon={<IconTruckDelivery className="size-5 text-purple-600" />}
+        icon={<IconTruckDelivery className="size-5 text-tier-elite" />}
         label="In-transit"
         value={String(inTransitCount)}
         hint={inTransitCount > 0 ? `Tổng ${inTransitQty}` : "Không có chuyển kho"}
@@ -97,7 +97,7 @@ function SummaryCard({
   return (
     <Card
       className={cn(
-        tone === "warning" && "border-orange-200 bg-orange-50/50",
+        tone === "warning" && "border-tier-note/30 bg-tier-note/10",
       )}
     >
       <CardHeader className="pb-2">

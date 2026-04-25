@@ -235,8 +235,8 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="border-b border-border/60 bg-background px-2 py-2 md:px-5 md:py-4 lg:px-6">
           <div className="flex flex-col gap-2 md:gap-3">
-            <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-              <InputGroup className="h-10 md:h-11 lg:max-w-md">
+            <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
+              <InputGroup className="h-10 w-full md:h-11 md:max-w-md xl:w-64 xl:max-w-none xl:flex-none 2xl:w-72">
                 <InputGroupAddon>
                   <IconSearch />
                 </InputGroupAddon>
@@ -263,11 +263,11 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
               <Tabs
                 value={effectiveMenuZone}
                 onValueChange={handleMenuZoneChange}
-                className="min-w-0 w-full gap-0 overflow-x-auto lg:flex-1"
+                className="min-w-0 w-full gap-0 overflow-hidden xl:flex-1"
               >
                 <TabsList
                   aria-label="Khu thực đơn"
-                  className="h-10 w-max min-w-full justify-start gap-1 md:h-11 md:gap-2"
+                  className="h-10 w-full min-w-0 justify-start gap-1 md:h-11 md:gap-2"
                 >
                   {availableMenuZones.map((zone) => (
                     <TabsTrigger
@@ -286,7 +286,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
               <Tabs
                 value={activeCategoryValue}
                 onValueChange={handleCategoryChange}
-                className="w-full gap-0 overflow-x-auto"
+                className="w-full min-w-0 gap-0 overflow-x-auto overflow-y-hidden"
               >
                 <TabsList
                   aria-label="Danh mục món"

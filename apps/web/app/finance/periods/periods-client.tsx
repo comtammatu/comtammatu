@@ -318,7 +318,7 @@ export function PeriodsClient({ periods: initial }: Props) {
                           {Number(item.gl_total).toLocaleString("vi-VN")}
                         </TableCell>
                         <TableCell
-                          className={`text-right tabular-nums font-medium ${hasDiff ? "text-destructive" : "text-emerald-600"}`}
+                          className={`text-right tabular-nums font-medium ${hasDiff ? "text-destructive" : "text-success"}`}
                         >
                           {hasDiff
                             ? Number(item.difference).toLocaleString("vi-VN")

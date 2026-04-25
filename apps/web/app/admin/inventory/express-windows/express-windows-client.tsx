@@ -43,7 +43,7 @@ export function ExpressWindowsClient({ initial }: Props) {
   return (
     <div className="container mx-auto max-w-3xl space-y-4 py-6">
       <div className="flex items-center gap-2">
-        <IconClockHour6 className="size-6 text-blue-600" />
+        <IconClockHour6 className="size-6 text-info" />
         <h1 className="text-2xl font-semibold">
           Express window & Override code (theo chi nhánh)
         </h1>

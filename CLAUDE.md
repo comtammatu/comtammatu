@@ -77,6 +77,7 @@ Money: `NUMERIC(15,2)` | Time: `TIMESTAMPTZ` | PK: `BIGINT GENERATED ALWAYS AS I
 - Auth hook MUST be SECURITY DEFINER or JWT gets no custom claims (silent fail)
 - New tables need explicit `GRANT ... TO authenticated`
 - UNIQUE constraints: `UNIQUE(field, tenant_id)` not `UNIQUE(field)`
+- Theme drift — `packages/ui/src/styles/globals.css` is partitioned into Zone A (preset `b1GN1lxvE` verbatim), Zone B (additive overrides only), Zone C (app utilities). NEVER edit Zone A vars; NEVER use raw Tailwind palette classes (`bg-purple-50`, `text-yellow-900`...) outside that file. See `tasks/regressions.md` rules `PRESET-EXACT-MATCH-OR-LAYERED-OVERRIDE` and `NO-RAW-TAILWIND-PALETTE-IN-APP`
 - TypeScript 6: packages using `process.env` need `"types": ["node"]` in tsconfig
 - Zod 4: `{ message: }` → `{ error: }`, `.email()` → `z.email()`
 

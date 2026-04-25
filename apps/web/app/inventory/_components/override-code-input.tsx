@@ -96,7 +96,7 @@ export function OverrideCodeInput({
       <Label htmlFor="override-code" className="text-sm font-medium">
         {label}
         {verified ? (
-          <span className="ml-2 text-xs text-green-700">✓ đã xác nhận</span>
+          <span className="ml-2 text-xs text-success">✓ đã xác nhận</span>
         ) : null}
       </Label>
       <div className="flex gap-2">

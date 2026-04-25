@@ -64,7 +64,7 @@ function tierOf(score: number) {
     return {
       key: "elite" as const,
       label: "Elite",
-      tone: "border-purple-300 bg-purple-50 text-purple-900",
+      tone: "border-tier-elite/40 bg-tier-elite/10 text-tier-elite",
       Icon: IconShieldCheck,
       tooltip:
         "≥ 85 — cao nhất. Bất kỳ incident nào cũng kéo xuống 85 theo §Q4b.",
@@ -74,7 +74,7 @@ function tierOf(score: number) {
     return {
       key: "trusted" as const,
       label: "Trusted",
-      tone: "border-green-300 bg-green-50 text-green-900",
+      tone: "border-success/40 bg-success/10 text-success",
       Icon: IconShieldHalf,
       tooltip:
         "≥ 70 — đủ điều kiện auto-approve GRN (cổng c8). Bảo toàn khi không có incident.",
@@ -84,7 +84,7 @@ function tierOf(score: number) {
     return {
       key: "bootstrap" as const,
       label: "Bootstrap",
-      tone: "border-blue-300 bg-blue-50 text-blue-900",
+      tone: "border-info/40 bg-info/10 text-info",
       Icon: IconShield,
       tooltip:
         "Warmup 50-69 — cần ≥ 20 GRN sạch trong 60 ngày để lên Trusted.",
@@ -93,7 +93,7 @@ function tierOf(score: number) {
   return {
     key: "at_risk" as const,
     label: "At risk",
-    tone: "border-red-300 bg-red-50 text-red-900",
+    tone: "border-destructive/40 bg-destructive/10 text-destructive",
     Icon: IconShieldX,
     tooltip: "< 50 — có incident gần đây, cần cân nhắc trước khi approve.",
   };

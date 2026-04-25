@@ -13,7 +13,10 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { X as IconX } from "lucide-react";
-import { getPosLineItemDisplayName } from "../../types";
+import {
+  getPosLineItemDisplayName,
+  getPosLineItemOptionLines,
+} from "../../types";
 import type { CartModifier, CartSide } from "../../types";
 
 export interface OrderItemRowData {
@@ -66,15 +69,7 @@ export function OrderItemRow({ row, canManage, onVoid }: OrderItemRowProps) {
     label: row.status,
     variant: "outline" as const,
   };
-  const lineDetails = [
-    row.modifiers.map((m) => `+ ${m.name}`).join(","),
-    row.sides.length > 0
-      ? row.sides
-          .map((s) => (s.quantity > 1 ? `${s.name} x${s.quantity}` : s.name))
-          .join(",")
-      : "",
-    row.note ? `* ${row.note}` : "",
-  ].filter(Boolean);
+  const optionLines = getPosLineItemOptionLines(row);
 
   return (
     <li className="relative overflow-hidden">
@@ -139,9 +134,9 @@ export function OrderItemRow({ row, canManage, onVoid }: OrderItemRowProps) {
             </span>
             {displayName}
           </ItemTitle>
-          {lineDetails.length > 0 && (
-            <ItemDescription>{lineDetails.join(" ·")}</ItemDescription>
-          )}
+          {optionLines.map((line) => (
+            <ItemDescription key={line}>{line}</ItemDescription>
+          ))}
           <ItemDescription>{formatVND(row.subtotal)}</ItemDescription>
         </ItemContent>
         <ItemActions className="shrink-0 self-start">

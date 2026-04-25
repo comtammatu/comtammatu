@@ -223,21 +223,21 @@ function alertTone(t: AlertType) {
   switch (t) {
     case "negative_stock":
       return {
-        wrap: "border-red-300 bg-red-50",
-        icon: "text-red-600",
-        badge: "border-red-300 text-red-900",
+        wrap: "border-destructive/40 bg-destructive/10",
+        icon: "text-destructive",
+        badge: "border-destructive/40 text-destructive",
       };
     case "out_of_stock":
       return {
-        wrap: "border-orange-300 bg-orange-50",
-        icon: "text-orange-600",
-        badge: "border-orange-300 text-orange-900",
+        wrap: "border-tier-note/40 bg-tier-note/10",
+        icon: "text-tier-note-foreground",
+        badge: "border-tier-note/40 text-tier-note-foreground",
       };
     default:
       return {
-        wrap: "border-yellow-200 bg-yellow-50/60",
-        icon: "text-yellow-700",
-        badge: "border-yellow-300 text-yellow-900",
+        wrap: "border-warning/30 bg-warning/10",
+        icon: "text-warning-foreground",
+        badge: "border-warning/40 text-warning-foreground",
       };
   }
 }

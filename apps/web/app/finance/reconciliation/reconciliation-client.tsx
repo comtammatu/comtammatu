@@ -449,7 +449,7 @@ function SummaryCard({
         </p>
         <p
           className={`text-xl font-semibold ${
-            highlight ? "text-amber-600" : ""
+            highlight ? "text-warning-foreground" : ""
           }`}
         >
           {value}
@@ -494,7 +494,7 @@ function CategoryRow({
       </TableCell>
       <TableCell
         className={`text-right ${
-          isException ? "font-semibold text-amber-600" : ""
+          isException ? "font-semibold text-warning-foreground" : ""
         }`}
       >
         {diff == null ? "—" : formatVND(diff)}
@@ -553,7 +553,7 @@ function DesyncTable({
     return (
       <Card>
         <CardContent className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-          <IconCircleCheck className="size-4 text-emerald-500" />
+          <IconCircleCheck className="size-4 text-success" />
           Tất cả thanh toán đều khớp trạng thái đơn trong cửa sổ 30 ngày gần
           nhất.
         </CardContent>
@@ -565,7 +565,7 @@ function DesyncTable({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <IconAlertTriangle className="size-4 text-amber-500" />
+          <IconAlertTriangle className="size-4 text-warning-foreground" />
           {rows.length} mục cần kiểm tra
         </CardTitle>
       </CardHeader>

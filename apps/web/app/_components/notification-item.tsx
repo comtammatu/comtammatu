@@ -112,7 +112,7 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
             {item.body}
           </p>
         )}
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-2xs text-muted-foreground">
           {kindLabel} · {relativeTime(item.created_at)}
         </p>
       </div>

@@ -81,9 +81,9 @@ export function VarianceTierBadge({
   }
 
   const tone = {
-    1: "bg-yellow-100 text-yellow-900 border-yellow-300",
-    2: "bg-orange-100 text-orange-900 border-orange-300",
-    3: "bg-red-100 text-red-900 border-red-400",
+    1: "bg-warning/15 text-warning-foreground border-warning/40",
+    2: "bg-tier-note/15 text-tier-note-foreground border-tier-note/40",
+    3: "bg-destructive/15 text-destructive border-destructive/50",
   }[resolvedTier];
 
   const label = VARIANCE_TIER_LABELS_VI[resolvedTier];
