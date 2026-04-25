@@ -35,6 +35,15 @@ export default tseslint.config(
     },
   },
   {
-    ignores: [".next/", ".turbo/", "node_modules/"],
+    ignores: [
+      ".next/",
+      ".turbo/",
+      "node_modules/",
+      // Serwist-generated service worker bundle + chunks; minified output.
+      "public/sw.js",
+      "public/sw.js.map",
+      "public/swe-worker-*.js",
+      "public/workbox-*.js",
+    ],
   },
 );

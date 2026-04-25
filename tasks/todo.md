@@ -101,3 +101,10 @@
 - [ ] Advanced Analytics
 - [ ] VNPay integration
 - [ ] Employee portal full features (hiện placeholder)
+- [ ] **Native POS migration (PWA → Flutter Android)** — đánh giá khi pilot phát sinh:
+  - Bluetooth/USB thermal printer fail rate >5% (Web Bluetooth/WebUSB không reliable; Xprinter/Bixolon dominate VN F&B)
+  - Cash drawer auto-pop cần direct hardware control
+  - MoMo/ZaloPay/VNPay native SDK UX > deeplink
+  - Scale ≥20 chi nhánh với hardware đa dạng
+  - **Stepping stone**: Capacitor wrap (~1-2 tuần, giữ Next.js codebase) trước khi cân nhắc full Flutter rewrite (3-6 tháng + 2× maintenance). Capacitor đủ cho 95% native peripheral cases.
+  - Backend Supabase dùng chung qua `supabase_flutter` SDK — không cần API rewrite
