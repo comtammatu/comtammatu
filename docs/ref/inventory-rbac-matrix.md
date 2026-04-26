@@ -182,7 +182,7 @@ Phase 2-RPC cutover là P0 tiếp theo. Khi đó whitelist body sẽ thay bằng
 
 - [inventory.md](inventory.md) — business rules nghiệp vụ
 - [inventory-sop.md](inventory-sop.md) — Standard Operating Procedure
-- [inventory-branch-kitchen-model.md](../plan/inventory-branch-kitchen-model.md) — pilot contract cho Kho ↔ Bếp model
+- [inventory-location-ledger.md](../plan/inventory-location-ledger.md) — pilot contract cho Kho ↔ Bếp model (CW/CK)
 - [auth.md](../modules/auth.md) — Auth v2 architecture
 - [permissions.ts](../../packages/shared/src/auth/permissions.ts) — permission catalog source
 - [module-acl.ts](../../packages/shared/src/auth/module-acl.ts) — route-level ACL source

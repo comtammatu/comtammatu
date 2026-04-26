@@ -328,4 +328,4 @@ GROUP BY 1 ORDER BY 1;
 
 - `docs/ref/inventory.md` — 3-way matching GRN / PO / Supplier Invoice
 - `docs/spec/database-schema.md` — Schema đầy đủ
-- `docs/plan/sprint-3.md` — Sprint HĐĐT + Procurement
+- `docs/archive/plan/sprint-3.md` — Sprint HĐĐT + Procurement

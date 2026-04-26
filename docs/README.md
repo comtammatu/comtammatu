@@ -16,8 +16,7 @@
 
 - Canonical reference: [ref/inventory.md](ref/inventory.md)
 - Sơ đồ tổng quan: [spec/inventory-overview-diagrams.md](spec/inventory-overview-diagrams.md)
-- Mô hình kho chi nhánh / bếp chi nhánh: [plan/inventory-branch-kitchen-model.md](plan/inventory-branch-kitchen-model.md)
-- Thiết kế location ledger: [plan/inventory-location-ledger.md](plan/inventory-location-ledger.md)
+- Thiết kế location ledger (kho/bếp chi nhánh): [plan/inventory-location-ledger.md](plan/inventory-location-ledger.md)
 - Contract Phase 2: [plan/inventory-location-ledger-phase2.md](plan/inventory-location-ledger-phase2.md)
 - App patch map Phase 2: [plan/inventory-location-ledger-phase2-app-patch.md](plan/inventory-location-ledger-phase2-app-patch.md)
 - SOP: [ref/inventory-sop.md](ref/inventory-sop.md)

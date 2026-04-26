@@ -2,7 +2,7 @@
 
 > Date: `2026-04-14`  
 > Status: `Phase 1 migration drafted - not applied`  
-> Depends: `docs/plan/inventory-branch-kitchen-model.md`
+> See decision D000 in `docs/plan/decisions.md` for the CW/CK retire-HQ architecture context.
 
 ## 1. Why This Exists
 

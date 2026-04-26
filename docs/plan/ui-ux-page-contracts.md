@@ -1032,7 +1032,7 @@ Acceptance:
 
 Surface: Employee Self-Service, `P1`.
 
-Rebuild plan: `docs/plan/employee-portal-rebuild-plan.md`.
+Rebuild plan: `docs/archive/plan/employee-portal-rebuild-plan.md`.
 
 Files:
 

@@ -390,4 +390,4 @@ Ví dụ: Nhân viên lương gross 10 triệu → công ty thực tế chi ~12.
 ## Tài liệu liên quan
 
 - `docs/ref/labor-contracts.md` — Hợp đồng lao động, BHXH
-- `docs/plan/sprint-6.md` — Sprint Nhân sự & tiền lương
+- `docs/archive/plan/sprint-6.md` — Sprint Nhân sự & tiền lương

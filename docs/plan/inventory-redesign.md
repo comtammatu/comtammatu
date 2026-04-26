@@ -307,7 +307,7 @@ Dev effort: ~55 ngày người tổng (44.5 + S0). Với 2 dev + 1 QA parallel: 
 
 ## 7. Cross-reference
 
-- Kiến trúc CW/CK: `docs/plan/inventory-location-ledger.md`, `docs/plan/inventory-location-ledger-phase2.md`, `docs/plan/inventory-branch-kitchen-model.md`
+- Kiến trúc CW/CK: `docs/plan/inventory-location-ledger.md`, `docs/plan/inventory-location-ledger-phase2.md`
 - Business context: `docs/ref/inventory.md`, `docs/ref/inventory-sop.md`, `docs/ref/business-context.md`
 - Auth: `docs/modules/auth.md`
 - DB: `docs/modules/database.md`, `docs/spec/database-schema.md`

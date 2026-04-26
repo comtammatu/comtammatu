@@ -26,11 +26,11 @@
 | ERP source | Repo hiện tại | Mức khớp | Quyết định | Ghi chú |
 | ---------- | ------------- | -------- | ---------- | ------- |
 | `docs/domain/inventory/README.md` | [inventory.md](inventory.md), [inventory-sop.md](inventory-sop.md), [inventory-role-handoff.md](inventory-role-handoff.md) | Cao | `Adapt` | Cùng trục vận hành giữa `CW`, `CK`, `Kho chi nhánh`, `Bếp chi nhánh`, nhưng repo hiện tại cần giữ phrasing ngắn gọn và gắn chặt vào route/RPC thật. |
-| `docs/domain/inventory/schema-erd-v1.md` | [database-schema.md](../spec/database-schema.md), [inventory.md](inventory.md), [m5-stock-enhancement.md](../plan/m5-stock-enhancement.md) | Trung bình | `Adapt` | Nên lấy ledger, audit, FK/index conventions, production semantics. Không mang `business_documents`, `applications`, tree location enterprise. |
+| `docs/domain/inventory/schema-erd-v1.md` | [database-schema.md](../spec/database-schema.md), [inventory.md](inventory.md), [m5-stock-enhancement.md](../archive/plan/m5-stock-enhancement.md) | Trung bình | `Adapt` | Nên lấy ledger, audit, FK/index conventions, production semantics. Không mang `business_documents`, `applications`, tree location enterprise. |
 | `docs/domain/inventory/rbac.md` | [auth.md](../modules/auth.md), [inventory.md](inventory.md) | Trung bình | `Adapt` | Nên lấy business action matrix và data visibility. Không copy role catalog ERP; repo vẫn dùng 8 role hiện tại. |
-| `docs/domain/inventory/price-variance-management.md` | [inventory.md](inventory.md), [m5-stock-enhancement.md](../plan/m5-stock-enhancement.md) | Trung bình | `Adapt` | Nên nhập tolerance, payment terms, due date, payment status, AP aging, alert semantics. Không nhập FX variance, price lock, standard cost engine lúc này. |
+| `docs/domain/inventory/price-variance-management.md` | [inventory.md](inventory.md), [m5-stock-enhancement.md](../archive/plan/m5-stock-enhancement.md) | Trung bình | `Adapt` | Nên nhập tolerance, payment terms, due date, payment status, AP aging, alert semantics. Không nhập FX variance, price lock, standard cost engine lúc này. |
 | `docs/domain/inventory/central-kitchen-production-flow.md` | [inventory.md](inventory.md), [inventory-sop.md](inventory-sop.md) | Cao | `Adapt` | Nên nhập cách mô tả BOM, yield, by-product, transfer-price boundary ở mức tối thiểu; không nhập đủ labor/overhead/WIP accounting. |
-| `docs/plan/inventory-implementation-roadmap.md` | [roadmap.md](../plan/roadmap.md), [m5-stock-enhancement.md](../plan/m5-stock-enhancement.md) | Thấp | `Defer` | Roadmap ERP có nhịp ERP foundation trước domain. Repo hiện tại đã chốt đường đi khác, nên chỉ dùng để tham khảo sequencing domain. |
+| `docs/plan/inventory-implementation-roadmap.md` | [roadmap.md](../plan/roadmap.md), [m5-stock-enhancement.md](../archive/plan/m5-stock-enhancement.md) | Thấp | `Defer` | Roadmap ERP có nhịp ERP foundation trước domain. Repo hiện tại đã chốt đường đi khác, nên chỉ dùng để tham khảo sequencing domain. |
 | `docs/runbooks/inventory/*` | Chưa có tương đương trực tiếp | Thấp | `Adopt` | Repo hiện tại thiếu runbook release/readiness cho Inventory. Nên bổ sung phiên bản lean bám vào verify thật. |
 | `docs/worklog/inventory/*` | Chưa có tương đương trực tiếp | Thấp | `Adopt` | Repo hiện tại thiếu matrix theo dõi “doc ↔ code ↔ verify ↔ readiness”. Nên thêm bản gọn, không cần cả control tower. |
 | `docs/llm-wiki/module-cards/inventory.md` | [CODEBASE_MAP.md](../CODEBASE_MAP.md), `AGENTS.md` | Thấp | `Defer` | Có ích cho agent continuity, nhưng chưa phải khoảng trống lớn nhất so với RBAC/runbook/readiness. |
@@ -73,7 +73,7 @@
 | ------------------------ | ------------------ |
 | Role matrix ERP | Lệch với `staff_role` và `module-acl.ts` hiện tại |
 | Platform schema ERP | Phá quyết định `Tenant -> Branch` ở [decisions.md](../plan/decisions.md) |
-| FIFO / lot-heavy design | Lệch với WAC-first direction ở [m5-stock-enhancement.md](../plan/m5-stock-enhancement.md) |
+| FIFO / lot-heavy design | Lệch với WAC-first direction ở [m5-stock-enhancement.md](../archive/plan/m5-stock-enhancement.md) |
 | Approval kernel nhiều lớp | Đi ngược chủ đích “never run out, never overpay”, tăng ma sát pilot |
 
 ---

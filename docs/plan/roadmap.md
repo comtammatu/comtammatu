@@ -413,7 +413,7 @@ Mỗi module phải đạt đủ trước khi đánh dấu SHIPPED:
 ## M5-Ext: Stock Enhancement — Kho Hàng Nâng Cao
 
 > Status: APPROVED | Depends: M5 (SHIPPED)
-> Plan: `docs/plan/m5-stock-enhancement.md`
+> Plan: `docs/archive/plan/m5-stock-enhancement.md`
 > North Star: "Không bao giờ hết sườn, không bao giờ mua đắt."
 
 **Context:** 30-50 SKU, 1 người đặt hàng qua Zalo, chưa bao giờ kiểm kê, food cost ước tính sơ bộ.
