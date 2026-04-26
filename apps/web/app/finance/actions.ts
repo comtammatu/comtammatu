@@ -103,13 +103,15 @@ export async function createTaxInvoice(
     };
   }
 
-  // Check no existing active invoice for this order
+  // Check no existing active invoice for this order. `not_required` is
+  // terminal-opt-out per D4 (2026-04-26) — it does NOT count as active so
+  // a future real invoice issuance for the same order is allowed.
   const { data: existing } = await supabase
     .from("tax_invoices")
     .select("id")
     .eq("order_id", parsed.data.orderId)
     .eq("tenant_id", claims.tenant_id)
-    .not("status", "in", '("cancelled","replaced")')
+    .not("status", "in", '("cancelled","replaced","not_required")')
     .maybeSingle();
 
   if (existing) {
@@ -128,6 +130,58 @@ export async function createTaxInvoice(
   );
   const subtotal = Number(order.total_amount) / (1 + vatRate / 100);
   const vatAmount = Number(order.total_amount) - subtotal;
+
+  // D4 short-circuit (owner 2026-04-26): no MST → skip MISA call, insert
+  // an audit row with status='not_required'. Khách comp meal / khách lẻ
+  // không yêu cầu HĐĐT thì không tốn MISA quota; nếu sau này khách quay
+  // lại nhập MST, createTaxInvoice gọi lần nữa sẽ insert hoá đơn thật
+  // (uq_tax_invoices_active_per_order loại trừ not_required).
+  const buyerTaxCodeTrimmed = parsed.data.buyerTaxCode?.trim() ?? "";
+  const hasMst = buyerTaxCodeTrimmed.length > 0;
+
+  if (!hasMst) {
+    const { data: skipInvoice, error: skipErr } = await supabase
+      .from("tax_invoices")
+      .insert({
+        tenant_id: claims.tenant_id,
+        branch_id: order.branch_id,
+        order_id: parsed.data.orderId,
+        invoice_number: null,
+        status: "not_required",
+        buyer_name: parsed.data.buyerName ?? null,
+        buyer_tax_code: null,
+        buyer_address: parsed.data.buyerAddress ?? null,
+        subtotal: Math.round(subtotal * 100) / 100,
+        vat_rate: vatRate,
+        vat_amount: Math.round(vatAmount * 100) / 100,
+        total_amount: Number(order.total_amount),
+        provider: "skipped",
+        provider_ref: null,
+        provider_data: null,
+        issued_at: null,
+        created_by: user.id,
+      })
+      .select("id, invoice_number, status")
+      .single();
+
+    if (skipErr) {
+      if (skipErr.code === "23505") {
+        return { success: false, error: "Đơn hàng đã có hóa đơn." };
+      }
+      return { success: false, error: "Không thể ghi trạng thái HĐĐT." };
+    }
+
+    await logAudit(supabase, {
+      tenantId: claims.tenant_id,
+      userId: user.id,
+      action: "create",
+      entityType: "tax_invoice",
+      entityId: skipInvoice?.id ?? null,
+      newData: { status: "not_required", reason: "no_mst" },
+    });
+
+    return { success: true, data: skipInvoice };
+  }
 
   // Use provider interface — swap MISA/ViettelSinvoice without changing this code
   ensureInvoiceProviderRegistered();

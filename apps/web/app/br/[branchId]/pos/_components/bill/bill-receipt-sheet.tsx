@@ -547,6 +547,10 @@ export function BillReceipt({
           toast.warning("Đã thu tiền — HĐĐT chưa xuất được", {
             description: inv.error ?? "Lưu nháp; Finance sẽ xuất lại sau.",
           });
+        } else if (inv.status === "not_required") {
+          toast.success("Đã thanh toán — không xuất HĐĐT", {
+            description: `Khách không nhập MST · Tiền trả khách: ${formatVND(change)}`,
+          });
         } else {
           toast.success("Đã thanh toán & xuất HĐĐT", {
             description: `Số HĐ: ${inv.invoiceNumber ?? `#${inv.invoiceId}`} · Tiền trả khách: ${formatVND(change)}`,
