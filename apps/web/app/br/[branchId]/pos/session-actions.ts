@@ -302,7 +302,7 @@ export async function fetchActiveSessionsForBranch(
 /* ─── fetchPosPermissionFlags ─── */
 
 /**
- * Lấy cờ quyền thao tác POS của user trên chi nhánh (1 call, 3 RPC song song).
+ * Lấy cờ quyền thao tác POS của user trên chi nhánh (1 call, 4 RPC song song).
  *
  * - `canOpenShift` (`pos:open_cashbox`): gate render SessionGate ở page-level.
  *   Waiter (chỉ có `pos:use`) không mở ca được → hiện màn "liên hệ thu ngân".
@@ -311,6 +311,10 @@ export async function fetchActiveSessionsForBranch(
  * - `canConfirmCash` (`pos:confirm_payment`): gate phương thức "Tiền mặt" trên
  *   bill — cash chạm két vật lý → chỉ cashier/branch_manager+. Waiter vẫn
  *   thấy/chọn VietQR/MoMo (e-wallet không chạm cash drawer).
+ * - `canOverrideVariance` (`pos:close_shift_variance_override`): gate hiện
+ *   ô nhập "Lý do chênh lệch" + cho phép submit khi |diff| > threshold.
+ *   Cashier KHÔNG có quyền này → variance vượt ngưỡng → BM phải đăng nhập
+ *   để close (decision D3, 2026-04-26).
  *
  * Defense in depth: server-side RPC vẫn reject bất kỳ bypass UI nào.
  */
@@ -318,11 +322,13 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
   canOpenShift: boolean;
   canCloseShift: boolean;
   canConfirmCash: boolean;
+  canOverrideVariance: boolean;
 }> {
   const deny = {
     canOpenShift: false,
     canCloseShift: false,
     canConfirmCash: false,
+    canOverrideVariance: false,
   };
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) return deny;
@@ -331,7 +337,7 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
   if (!ctx) return deny;
   if (ctx.claims.branch_id !== parsedBranchId.data) return deny;
 
-  const [openRes, closeRes, cashRes] = await Promise.all([
+  const [openRes, closeRes, cashRes, varianceRes] = await Promise.all([
     ctx.supabase.rpc("has_permission", {
       p_branch_id: parsedBranchId.data,
       p_key: PERMISSION_KEYS.POS_OPEN_CASHBOX,
@@ -344,12 +350,18 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
       p_branch_id: parsedBranchId.data,
       p_key: PERMISSION_KEYS.POS_CONFIRM_PAYMENT,
     }),
+    ctx.supabase.rpc("has_permission", {
+      p_branch_id: parsedBranchId.data,
+      p_key: PERMISSION_KEYS.POS_CLOSE_SHIFT_VARIANCE_OVERRIDE,
+    }),
   ]);
 
   return {
     canOpenShift: !openRes.error && openRes.data === true,
     canCloseShift: !closeRes.error && closeRes.data === true,
     canConfirmCash: !cashRes.error && cashRes.data === true,
+    canOverrideVariance:
+      !varianceRes.error && varianceRes.data === true,
   };
 }
 
@@ -441,18 +453,57 @@ const closeSessionSchema = z.object({
     .positive({ error: "Session ID không hợp lệ" }),
   closingCash: z.coerce.number().min(0, { error: "Tiền đóng ca không hợp lệ" }),
   note: z.string().optional(),
+  varianceNote: z.string().optional(),
 });
 
-// Skip withAction: positional (sessionId, closingCash, note?) args
+/**
+ * Sentinel error codes used by the close-session UI to switch into the
+ * variance-approval sub-flow without re-fetching the summary.
+ */
+export type CloseSessionErrorCode =
+  | "variance_requires_bm_approval"
+  | "variance_note_required"
+  | "session_not_found"
+  | "session_already_closed"
+  | "unknown";
+
+export interface CloseSessionErrorPayload {
+  code: CloseSessionErrorCode;
+  /** Variance VND emitted by RPC when threshold breached; null otherwise. */
+  diff?: number;
+  /** Threshold VND emitted by RPC when threshold breached; null otherwise. */
+  threshold?: number;
+}
+
+function parseVarianceContext(message: string | undefined): {
+  diff?: number;
+  threshold?: number;
+} {
+  if (!message) return {};
+  const m = /diff=(-?[\d.]+),\s*threshold=([\d.]+)/.exec(message);
+  if (!m) return {};
+  const diff = Number(m[1]);
+  const threshold = Number(m[2]);
+  return {
+    diff: Number.isFinite(diff) ? diff : undefined,
+    threshold: Number.isFinite(threshold) ? threshold : undefined,
+  };
+}
+
+// Skip withAction: positional (sessionId, closingCash, note?, varianceNote?) args
+// On failure, `meta` matches CloseSessionErrorPayload (`Record<string, unknown>`
+// in the base type — narrowed by callers via meta.code).
 export async function closePosSession(
   sessionId: number,
   closingCash: number,
   note?: string,
+  varianceNote?: string,
 ): Promise<ActionResult> {
   const parsed = closeSessionSchema.safeParse({
     sessionId,
     closingCash,
     note,
+    varianceNote,
   });
   if (!parsed.success) {
     return {
@@ -473,18 +524,50 @@ export async function closePosSession(
     p_session_id: parsed.data.sessionId,
     p_closing_cash: parsed.data.closingCash,
     p_note: parsed.data.note ?? undefined,
+    p_variance_note: parsed.data.varianceNote ?? undefined,
   });
 
   if (error) {
-    if (error.message?.includes("not found")) {
-      return { success: false, error: "Không tìm thấy ca" };
+    const msg = error.message ?? "";
+
+    if (msg.includes("variance_requires_bm_approval")) {
+      const ctxMeta = parseVarianceContext(msg);
+      return {
+        success: false,
+        error: "Chênh lệch vượt ngưỡng — cần quản lý chi nhánh đăng nhập để duyệt.",
+        meta: { code: "variance_requires_bm_approval", ...ctxMeta },
+      };
     }
-    if (error.message?.includes("not open")) {
-      return { success: false, error: "Ca đã được đóng" };
+
+    if (msg.includes("variance_note_required")) {
+      const ctxMeta = parseVarianceContext(msg);
+      return {
+        success: false,
+        error: "Cần nhập lý do chênh lệch ≥ 10 ký tự.",
+        meta: { code: "variance_note_required", ...ctxMeta },
+      };
     }
+
+    if (msg.includes("session_not_found")) {
+      return {
+        success: false,
+        error: "Không tìm thấy ca",
+        meta: { code: "session_not_found" },
+      };
+    }
+
+    if (msg.includes("session_already_closed")) {
+      return {
+        success: false,
+        error: "Ca đã được đóng",
+        meta: { code: "session_already_closed" },
+      };
+    }
+
     return {
       success: false,
       error: "Không thể đóng ca. Vui lòng thử lại.",
+      meta: { code: "unknown" },
     };
   }
 

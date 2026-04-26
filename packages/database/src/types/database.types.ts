@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       accounting_periods: {
@@ -2962,6 +2937,8 @@ export type Database = {
           tenant_id: number
           terminal_id: number
           updated_at: string
+          variance_approval_note: string | null
+          variance_approver_user_id: string | null
         }
         Insert: {
           branch_id: number
@@ -2980,6 +2957,8 @@ export type Database = {
           tenant_id: number
           terminal_id: number
           updated_at?: string
+          variance_approval_note?: string | null
+          variance_approver_user_id?: string | null
         }
         Update: {
           branch_id?: number
@@ -2998,6 +2977,8 @@ export type Database = {
           tenant_id?: number
           terminal_id?: number
           updated_at?: string
+          variance_approval_note?: string | null
+          variance_approver_user_id?: string | null
         }
         Relationships: [
           {
@@ -3033,6 +3014,13 @@ export type Database = {
             columns: ["terminal_id"]
             isOneToOne: false
             referencedRelation: "pos_terminals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sessions_variance_approver_user_id_fkey"
+            columns: ["variance_approver_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -6406,7 +6394,12 @@ export type Database = {
         Returns: undefined
       }
       close_pos_session: {
-        Args: { p_closing_cash: number; p_note?: string; p_session_id: number }
+        Args: {
+          p_closing_cash: number
+          p_note?: string
+          p_session_id: number
+          p_variance_note?: string
+        }
         Returns: Json
       }
       close_recount_round: {
@@ -7225,9 +7218,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },
