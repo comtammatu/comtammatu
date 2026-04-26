@@ -123,10 +123,12 @@ function CartPaneComponent({
     },
   ]);
 
+  const isMobileDrawer = onClosePane != null;
+
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-background">
       <div className="shrink-0 border-b border-border/60 px-3 py-2.5 sm:px-4 sm:py-4">
-        {onClosePane ? (
+        {isMobileDrawer && shouldShowOrderTypeSelector ? (
           <div className="mb-2 flex items-center justify-end">
             <Button
               type="button"
@@ -142,32 +144,34 @@ function CartPaneComponent({
         ) : null}
 
         {!shouldShowOrderTypeSelector && (
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <h2 className="truncate text-base font-semibold tracking-tight text-foreground sm:text-xl">
                 {contextLabel}
               </h2>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              {cart.orderType === "dine_in" && selectedTableNumber != null && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-10 min-h-10 min-w-10 px-3 text-sm text-muted-foreground sm:min-h-11 sm:min-w-11"
-                  onClick={() => {
-                    if (onReturnToTables) {
-                      onReturnToTables();
-                    } else {
-                      activeTable.setTable(null);
-                    }
-                  }}
-                >
-                  <IconLayoutGrid data-icon="inline-start" />
-                  Chọn lại bàn
-                </Button>
-              )}
-              {cart.items.length > 0 && (
+              {!isMobileDrawer &&
+                cart.orderType === "dine_in" &&
+                selectedTableNumber != null && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-10 min-h-10 min-w-10 px-3 text-sm text-muted-foreground sm:min-h-11 sm:min-w-11"
+                    onClick={() => {
+                      if (onReturnToTables) {
+                        onReturnToTables();
+                      } else {
+                        activeTable.setTable(null);
+                      }
+                    }}
+                  >
+                    <IconLayoutGrid data-icon="inline-start" />
+                    Chọn lại bàn
+                  </Button>
+                )}
+              {!isMobileDrawer && cart.items.length > 0 && (
                 <AlertDialog
                   open={clearConfirmOpen}
                   onOpenChange={setClearConfirmOpen}
@@ -204,6 +208,18 @@ function CartPaneComponent({
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+              )}
+              {isMobileDrawer && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-muted-foreground"
+                  aria-label="Đóng giỏ đơn"
+                  onClick={onClosePane}
+                >
+                  <IconX />
+                </Button>
               )}
             </div>
           </div>
@@ -310,14 +326,14 @@ function CartPaneComponent({
                       asChild
                       variant="outline"
                       className={cn(
-                        "relative touch-pan-y p-3 pr-12 text-left shadow-sm transition-transform duration-150 ease-out hover:shadow-md sm:p-4 sm:pr-14",
+                        "relative touch-pan-y bg-card p-3 pr-12 text-left shadow-sm transition-transform duration-150 ease-out hover:shadow-md sm:p-4 sm:pr-14",
                         isDeleteRevealed && "-translate-x-20 sm:translate-x-0",
                       )}
                     >
                       <Button
                         type="button"
                         variant="ghost"
-                        className="h-auto w-full justify-start p-0 text-left whitespace-normal hover:bg-transparent"
+                        className="h-auto w-full justify-start p-0 text-left whitespace-normal hover:bg-card"
                         onClick={(event) => {
                           if (suppressClickKeyRef.current === item.key) {
                             suppressClickKeyRef.current = null;
