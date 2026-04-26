@@ -12,7 +12,6 @@ import {
 } from "@comtammatu/ui/components/alert-dialog";
 import {
   Field,
-  FieldDescription,
   FieldGroup,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
@@ -57,15 +56,16 @@ export function VoidItemDialog({
           <AlertDialogTitle>
             {itemLabel ? `Hủy món: ${itemLabel}` : "Hủy món?"}
           </AlertDialogTitle>
-          <AlertDialogDescription>
-            Chỉ hủy dòng món này; đơn vẫn tiếp tục xử lý. Nhập lý do để bếp và
-            thu ngân đối soát đúng action.
+          <AlertDialogDescription className="sr-only">
+            Hủy dòng món này, đơn vẫn tiếp tục.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <FieldGroup className="py-2">
           <Field data-invalid={!reasonReady && trimmedLen > 0}>
-            <FieldLabel htmlFor="void-reason">Lý do hủy món</FieldLabel>
+            <FieldLabel htmlFor="void-reason" className="sr-only">
+              Lý do
+            </FieldLabel>
             <QuickReasonChips
               presets={VOID_ITEM_PRESETS}
               value={reason}
@@ -76,12 +76,9 @@ export function VoidItemDialog({
               id="void-reason"
               value={reason}
               onChange={(event) => onReasonChange(event.target.value)}
-              placeholder="Bấm gợi ý hoặc gõ thêm chi tiết..."
+              placeholder="Lý do (≥ 5 ký tự)"
               aria-invalid={!reasonReady && trimmedLen > 0}
             />
-            <FieldDescription>
-              Tối thiểu 5 ký tự để đảm bảo audit trail rõ ràng. ({trimmedLen}/5)
-            </FieldDescription>
           </Field>
         </FieldGroup>
 

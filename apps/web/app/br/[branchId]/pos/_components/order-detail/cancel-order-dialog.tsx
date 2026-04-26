@@ -12,7 +12,6 @@ import {
 } from "@comtammatu/ui/components/alert-dialog";
 import {
   Field,
-  FieldDescription,
   FieldGroup,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
@@ -50,24 +49,23 @@ export function CancelOrderDialog({
   const reasonReady = trimmedLen >= 5;
   const orderLabel = orderNumber ? ` ${orderNumber}` : "";
   const contextLabel =
-    orderType === "dine_in" ? `Bàn ${tableNumber ?? "đang chọn"}` : "Mang về";
-  const itemLabel =
-    itemCount > 0 ? `${itemCount} món còn hiệu lực` : "các món còn hiệu lực";
+    orderType === "dine_in" ? `Bàn ${tableNumber ?? "?"}` : "Mang về";
+  const summary =
+    itemCount > 0 ? `${itemCount} món · ${contextLabel}` : contextLabel;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Hủy đơn{orderLabel}?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Hủy {itemLabel} trong đơn này. {contextLabel} chỉ được cập nhật theo
-            trạng thái đơn sau khi thao tác hủy thành công.
-          </AlertDialogDescription>
+          <AlertDialogDescription>{summary}</AlertDialogDescription>
         </AlertDialogHeader>
 
         <FieldGroup className="py-2">
           <Field data-invalid={!reasonReady && trimmedLen > 0}>
-            <FieldLabel htmlFor="cancel-reason">Lý do hủy đơn</FieldLabel>
+            <FieldLabel htmlFor="cancel-reason" className="sr-only">
+              Lý do
+            </FieldLabel>
             <QuickReasonChips
               presets={CANCEL_ORDER_PRESETS}
               value={reason}
@@ -78,12 +76,9 @@ export function CancelOrderDialog({
               id="cancel-reason"
               value={reason}
               onChange={(event) => onReasonChange(event.target.value)}
-              placeholder="Bấm gợi ý hoặc gõ thêm chi tiết..."
+              placeholder="Lý do (≥ 5 ký tự)"
               aria-invalid={!reasonReady && trimmedLen > 0}
             />
-            <FieldDescription>
-              Tối thiểu 5 ký tự để đảm bảo audit trail rõ ràng. ({trimmedLen}/5)
-            </FieldDescription>
           </Field>
         </FieldGroup>
 
