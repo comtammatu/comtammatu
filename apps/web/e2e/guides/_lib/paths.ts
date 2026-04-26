@@ -15,10 +15,14 @@ export const VIEWPORT = { width: 390, height: 844 } as const;
 export const BEZEL = 14;
 
 /** Khoảng trống cho header (step badge + title) phía trên iPhone. */
-export const HEADER_HEIGHT = 48;
+export const HEADER_HEIGHT = 40;
 
-/** Padding tổng quanh iPhone trong composed canvas. */
-export const CANVAS_PADDING = 24;
+/**
+ * Padding ngoài quanh iPhone trong composed canvas.
+ * Để 0 cho iPhone gần fill canvas — markdown viewer thường scale ảnh xuống
+ * theo column width, padding lớn → iPhone hiển thị nhỏ.
+ */
+export const CANVAS_PADDING = 0;
 
 /** Kích thước composed canvas (đầu ra cuối cùng). */
 export const CANVAS = {

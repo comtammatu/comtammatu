@@ -145,6 +145,7 @@ export function composeHtml(input: ComposeInput): string {
 <html>
 <head>
 <meta charset="utf-8" />
+<meta name="viewport" content="width=${String(CANVAS.width)}, initial-scale=1, user-scalable=no" />
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {

@@ -102,22 +102,37 @@ export async function captureScenario(
   const shotBase64 = shotBuf.toString("base64");
 
   // Compose iPhone frame + annotations in a 2nd page.
+  // Explicit deviceScaleFactor:1 — Playwright Chromium khi DPR>1 sẽ
+  // interpret viewport như device-px, làm body width:418px chỉ fill nửa
+  // viewport. PNG output ở 1x (CSS px), đủ nét cho user-guide markdown.
   const composeContext = await browser.newContext({
     viewport: { width: CANVAS.width, height: CANVAS.height },
-    deviceScaleFactor: 2,
+    deviceScaleFactor: 1,
+    isMobile: false,
+    hasTouch: false,
   });
   const composePage = await composeContext.newPage();
 
+  const composed = composeHtml({
+    screenshotBase64: shotBase64,
+    step: scenario.step,
+    annotations: resolved,
+  });
+
+  // Set GUIDES_DUMP_HTML=1 để dump composed HTML cùng folder mockup —
+  // debug khi annotation/frame render lệch. File hậu tố `.debug.html`.
+  if (process.env.GUIDES_DUMP_HTML === "1") {
+    const dumpPath = mockupPath(
+      scenario.module,
+      scenario.flowId,
+      scenario.id,
+    ).replace(/\.png$/, ".debug.html");
+    await fs.writeFile(dumpPath, composed);
+  }
+
   // waitUntil: "load" → đợi `load` event = mọi <img> (kể cả base64 inline)
-  // đã decode xong. Không cần page.evaluate riêng để poll img.complete.
-  await composePage.setContent(
-    composeHtml({
-      screenshotBase64: shotBase64,
-      step: scenario.step,
-      annotations: resolved,
-    }),
-    { waitUntil: "load" },
-  );
+  // đã decode xong.
+  await composePage.setContent(composed, { waitUntil: "load" });
 
   const composedBuf = await composePage.screenshot({
     type: "png",
