@@ -40,6 +40,7 @@ export {
   fetchGrnDetail,
   createGrnDraft,
   upsertGrnLine,
+  deleteGrnLine,
   confirmGrn,
   fetchGrnsForPo,
   createGrnFromPo,

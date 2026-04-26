@@ -164,30 +164,35 @@ export const upsertPurchaseOrderLine = withAction(
       };
     }
     if (!canAccessProcurementBranch(claims, po.branch_id)) {
-      return { success: false, error: "Bạn chỉ được chỉnh sửa PO của kho mình." };
+      return {
+        success: false,
+        error: "Bạn chỉ được chỉnh sửa PO của kho mình.",
+      };
     }
 
     const unitPrice = data.unitPriceEst ?? null;
     const lineTotal =
-      unitPrice != null
-        ? Number((data.quantity * unitPrice).toFixed(2))
-        : null;
-    const { error } = await supabase.from("purchase_order_items").upsert(
-      {
-        tenant_id: claims.tenant_id,
-        po_id: data.poId,
-        ingredient_id: data.ingredientId,
-        quantity: data.quantity,
-        unit: data.unit,
-        unit_price_est: unitPrice,
-        line_total: lineTotal,
-      },
-      { onConflict: "po_id,ingredient_id,tenant_id" },
-    );
-    if (error) {
+      unitPrice != null ? Number((data.quantity * unitPrice).toFixed(2)) : null;
+    const { data: row, error } = await supabase
+      .from("purchase_order_items")
+      .upsert(
+        {
+          tenant_id: claims.tenant_id,
+          po_id: data.poId,
+          ingredient_id: data.ingredientId,
+          quantity: data.quantity,
+          unit: data.unit,
+          unit_price_est: unitPrice,
+          line_total: lineTotal,
+        },
+        { onConflict: "po_id,ingredient_id,tenant_id" },
+      )
+      .select("id")
+      .single();
+    if (error || !row) {
       return { success: false, error: "Không thể lưu dòng PO." };
     }
-    return { success: true };
+    return { success: true, data: row };
   },
 );
 
@@ -221,7 +226,10 @@ export const deletePurchaseOrderLine = withAction(
       };
     }
     if (!canAccessProcurementBranch(claims, po.branch_id)) {
-      return { success: false, error: "Bạn chỉ được chỉnh sửa PO của kho mình." };
+      return {
+        success: false,
+        error: "Bạn chỉ được chỉnh sửa PO của kho mình.",
+      };
     }
 
     const { error } = await supabase
@@ -410,7 +418,10 @@ export async function fetchPoSuggestions(input: {
   }
 
   // Validate branchId points to a procurement branch (CW or CK) in this tenant.
-  const procBranches = await fetchProcurementBranches(supabase, claims.tenant_id);
+  const procBranches = await fetchProcurementBranches(
+    supabase,
+    claims.tenant_id,
+  );
   const target = procBranches.find((b) => b.id === branchId);
   if (!target) {
     return {
@@ -439,7 +450,8 @@ export async function fetchPoSuggestions(input: {
     .eq("ingredients.is_active", true)
     .not("ingredients.reorder_point", "is", null);
 
-  if (e1) return { success: false, error: "Không thể tải tồn kho tại kho tổng." };
+  if (e1)
+    return { success: false, error: "Không thể tải tồn kho tại kho tổng." };
 
   // 2. Consumption aggregated tenant-wide over the period.
   // Proxy until branches.primary_warehouse_id FK exists (see inventory.md §10).
@@ -452,8 +464,7 @@ export async function fetchPoSuggestions(input: {
     .eq("type", "consumption")
     .gte("created_at", cutoff.toISOString());
 
-  if (e2)
-    return { success: false, error: "Không thể tải dữ liệu tiêu thụ." };
+  if (e2) return { success: false, error: "Không thể tải dữ liệu tiêu thụ." };
 
   // Aggregate consumption per ingredient (quantity_change is negative for consumption)
   const consumptionMap = new Map<number, number>();
@@ -641,8 +652,7 @@ export const fetchSinglePriceDeviation = withAction(
       history.reduce((sum, h) => sum + h.unit_cost, 0) / history.length;
     if (avgPrice === 0) return { success: true, data: null };
 
-    const deviationPct =
-      ((data.currentPrice - avgPrice) / avgPrice) * 100;
+    const deviationPct = ((data.currentPrice - avgPrice) / avgPrice) * 100;
 
     const result: SinglePriceDeviation = {
       avg_price: Math.round(avgPrice * 100) / 100,
@@ -691,15 +701,11 @@ export const fetchIngredientPriceHistory = withAction(
       .limit(20);
 
     if (data.supplierId) {
-      query = query.eq(
-        "goods_received_notes.supplier_id",
-        data.supplierId,
-      );
+      query = query.eq("goods_received_notes.supplier_id", data.supplierId);
     }
 
     const { data: rows, error } = await query;
-    if (error)
-      return { success: false, error: "Không thể tải lịch sử giá." };
+    if (error) return { success: false, error: "Không thể tải lịch sử giá." };
 
     const result: PriceHistoryRow[] = (rows ?? []).map((item) => {
       const grn = item.goods_received_notes as unknown as {

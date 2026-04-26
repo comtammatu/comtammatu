@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import type { FormEvent, TransitionStartFunction } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
@@ -12,6 +13,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@comtammatu/ui/components/dialog";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
@@ -23,13 +31,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { TriangleAlert as IconAlertTriangle, ArrowLeft as IconArrowLeft, CircleCheck as IconCircleCheck, Info as IconInfoCircle, PackageX as IconPackageOff, Save as IconDeviceFloppy } from "lucide-react";
+import {
+  TriangleAlert as IconAlertTriangle,
+  ArrowLeft as IconArrowLeft,
+  CircleCheck as IconCircleCheck,
+  Info as IconInfoCircle,
+  PackageX as IconPackageOff,
+  Save as IconDeviceFloppy,
+  Plus as IconPlus,
+  Trash as IconTrash,
+} from "lucide-react";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { notify } from "@comtammatu/ui/lib/notify";
+import { Combobox } from "@/components/form";
 import { InventoryHeader } from "../../_components/inventory-header";
+import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { formatVND } from "../../_lib/format";
 import { confirmGrn } from "../../procurement-actions";
-import { upsertGrnLine } from "../../grn-actions";
+import { deleteGrnLine, upsertGrnLine } from "../../grn-actions";
 import { createSupplierReturnFromGrn } from "../../supplier-return-actions";
 import { tRoute } from "../../_lib/dictionary";
 import { m, messages } from "@lib/messages";
@@ -37,6 +56,7 @@ import {
   getInventoryStatusBadgeVariant,
   getInventoryStatusLabel,
 } from "../../_lib/ui";
+import type { IngredientRow } from "../../page";
 
 export type GRNDetailItem = {
   lineId: number;
@@ -101,7 +121,13 @@ function deriveVariance(
   return Number((((unitCost - poUnitPrice) / poUnitPrice) * 100).toFixed(2));
 }
 
-export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
+export function GRNDetailClient({
+  grn,
+  ingredients,
+}: {
+  grn: GRNDetail;
+  ingredients: IngredientRow[];
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isMobile = searchParams.get("m") === "1";
@@ -109,6 +135,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
   const [isConfirming, startConfirm] = useTransition();
   const [isSaving, startSave] = useTransition();
   const [isCreatingReturn, startCreateReturn] = useTransition();
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [lines, setLines] = useState<EditableLine[]>(() =>
     grn.items.map((it) => ({ ...it, dirty: false })),
   );
@@ -198,6 +225,41 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
     });
   }
 
+  async function handleDeleteLine(line: EditableLine) {
+    const ok = await confirm({
+      title: "Xóa dòng GRN?",
+      description: line.name,
+      variant: "destructive",
+      confirmText: "Xóa dòng",
+    });
+    if (!ok) return;
+
+    startSave(async () => {
+      const res = await deleteGrnLine({
+        grnId: grn.id,
+        lineId: line.lineId,
+      });
+      if (!res.success) {
+        notify.error(res.error ?? "Không thể xóa dòng GRN.");
+        return;
+      }
+      setLines((prev) => prev.filter((item) => item.lineId !== line.lineId));
+      notify.success("Đã xóa dòng GRN.");
+      router.refresh();
+    });
+  }
+
+  function upsertLocalLine(line: EditableLine) {
+    setLines((prev) => {
+      const existingIndex = prev.findIndex(
+        (item) => item.ingredientId === line.ingredientId,
+      );
+      if (existingIndex < 0) return [...prev, line];
+      return prev.map((item, index) => (index === existingIndex ? line : item));
+    });
+    router.refresh();
+  }
+
   function validateBeforeConfirm(): string | null {
     for (const l of lines) {
       if (l.rejected > 0 && !l.rejectionReason.trim()) {
@@ -263,7 +325,9 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
           : 0) ?? 0;
       notify.success(
         reviewCount > 0
-          ? m(messages.inventory.grn.confirmedWithReview, { count: reviewCount })
+          ? m(messages.inventory.grn.confirmedWithReview, {
+              count: reviewCount,
+            })
           : messages.inventory.grn.confirmed,
       );
       if (isMobile) {
@@ -320,8 +384,8 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
             <Alert>
               <IconInfoCircle className="size-4" />
               <AlertDescription>
-                Đã lưu phiếu nháp. Kiểm tra số lượng, giá nhập, đánh dấu hàng
-                hư hỏng nếu có, rồi nhấn <strong>Chốt nhập kho</strong>.
+                Đã lưu phiếu nháp. Kiểm tra số lượng, giá nhập, đánh dấu hàng hư
+                hỏng nếu có, rồi nhấn <strong>Chốt nhập kho</strong>.
               </AlertDescription>
             </Alert>
           ) : null}
@@ -370,13 +434,25 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <Card className="overflow-hidden">
-                <CardHeader>
-                  <CardTitle>Danh sách mặt hàng kiểm nhận</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {isDraft
-                      ? `Tolerance: thiếu ≤ ${qc.qtyShortTolerancePct}% • Giá lệch ≥ ${qc.priceVarianceWarnPct}% bắt buộc lý do • ≥ ${qc.priceVarianceReviewPct}% gắn cờ kiểm tra`
-                      : `${lines.length} dòng đã chốt`}
-                  </p>
+                <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-1">
+                    <CardTitle>Danh sách mặt hàng kiểm nhận</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      {isDraft
+                        ? `Tolerance: thiếu ≤ ${qc.qtyShortTolerancePct}% • Giá lệch ≥ ${qc.priceVarianceWarnPct}% bắt buộc lý do • ≥ ${qc.priceVarianceReviewPct}% gắn cờ kiểm tra`
+                        : `${lines.length} dòng đã chốt`}
+                    </p>
+                  </div>
+                  {isDraft ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setAddDialogOpen(true)}
+                    >
+                      <IconPlus className="size-4" />
+                      Thêm dòng
+                    </Button>
+                  ) : null}
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {lines.map((line, idx) => (
@@ -389,6 +465,7 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
                       isDraft={isDraft}
                       qc={qc}
                       onChange={(p) => patch(idx, p)}
+                      onDelete={() => void handleDeleteLine(line)}
                     />
                   ))}
                 </CardContent>
@@ -472,7 +549,8 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
                   disabled={isSaving || dirtyLines.length === 0}
                 >
                   <IconDeviceFloppy className="size-5" />
-                  Lưu thay đổi {dirtyLines.length > 0 ? `(${dirtyLines.length})` : ""}
+                  Lưu thay đổi{" "}
+                  {dirtyLines.length > 0 ? `(${dirtyLines.length})` : ""}
                 </Button>
                 <Button
                   type="button"
@@ -487,7 +565,248 @@ export function GRNDetailClient({ grn }: { grn: GRNDetail }) {
           </footer>
         </div>
       </div>
+      <AddGrnLineDialog
+        grn={grn}
+        ingredients={ingredients}
+        isOpen={addDialogOpen}
+        isPending={isSaving}
+        onOpenChange={setAddDialogOpen}
+        onSaved={upsertLocalLine}
+        startTransition={startSave}
+      />
     </>
+  );
+}
+
+function AddGrnLineDialog({
+  grn,
+  ingredients,
+  isOpen,
+  isPending,
+  onOpenChange,
+  onSaved,
+  startTransition,
+}: {
+  grn: GRNDetail;
+  ingredients: IngredientRow[];
+  isOpen: boolean;
+  isPending: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSaved: (line: EditableLine) => void;
+  startTransition: TransitionStartFunction;
+}) {
+  const [ingredientId, setIngredientId] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [unit, setUnit] = useState("");
+  const [unitCost, setUnitCost] = useState("");
+  const [batchNumber, setBatchNumber] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+
+  function resetForm() {
+    setIngredientId("");
+    setQuantity("");
+    setUnit("");
+    setUnitCost("");
+    setBatchNumber("");
+    setExpiryDate("");
+  }
+
+  function handleIngredientChange(value: string) {
+    setIngredientId(value);
+    const ingredient = ingredients.find((item) => item.id === Number(value));
+    setUnit(
+      ingredient?.purchase_unit ??
+        ingredient?.measure_unit ??
+        ingredient?.unit ??
+        "",
+    );
+    setUnitCost(
+      ingredient?.unit_cost != null ? String(Number(ingredient.unit_cost)) : "",
+    );
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const parsedIngredientId = Number(ingredientId);
+    const parsedQuantity = Number(quantity);
+    const parsedUnitCost = unitCost.trim() ? Number(unitCost) : 0;
+    const ingredient = ingredients.find(
+      (item) => item.id === parsedIngredientId,
+    );
+
+    if (!parsedIngredientId || !ingredient) {
+      notify.error("Chọn nguyên liệu.");
+      return;
+    }
+    if (!Number.isFinite(parsedQuantity) || parsedQuantity < 0) {
+      notify.error("Số lượng nhận không hợp lệ.");
+      return;
+    }
+    if (!unit.trim()) {
+      notify.error("Đơn vị không được để trống.");
+      return;
+    }
+    if (!Number.isFinite(parsedUnitCost) || parsedUnitCost < 0) {
+      notify.error("Đơn giá không hợp lệ.");
+      return;
+    }
+
+    startTransition(async () => {
+      const res = await upsertGrnLine({
+        grnId: grn.id,
+        ingredientId: parsedIngredientId,
+        receivedQuantity: parsedQuantity,
+        unit: unit.trim(),
+        unitCost: parsedUnitCost,
+        qualityStatus: "accepted",
+        rejectedQuantity: 0,
+        rejectionReason: null,
+        rejectedPhotoUrl: null,
+        priceOverrideNote: null,
+        priceOverridePhotoUrl: null,
+        shortDeliveryAction: null,
+        batchNumber: batchNumber.trim() || null,
+        expiryDate: expiryDate || null,
+      });
+      if (!res.success || !res.data) {
+        notify.error(res.error ?? "Không thể lưu dòng GRN.");
+        return;
+      }
+
+      const row = res.data as { id: number };
+      onSaved({
+        lineId: row.id,
+        ingredientId: parsedIngredientId,
+        name: ingredient.name,
+        sku: ingredient.sku ?? "",
+        poQuantity: null,
+        poUnitPrice: null,
+        required: parsedQuantity,
+        actual: parsedQuantity,
+        rejected: 0,
+        rejectionReason: "",
+        rejectedPhotoUrl: "",
+        priceOverrideNote: "",
+        priceOverridePhotoUrl: "",
+        priceVariancePct: null,
+        requiresReview: false,
+        shortDeliveryAction: null,
+        unit: unit.trim(),
+        cost: parsedUnitCost,
+        lot: batchNumber.trim(),
+        expiry: expiryDate,
+        expiryDisplay: expiryDate || "—",
+        temp: null,
+        qualityStatus: "accepted",
+        status: "pass",
+        dirty: false,
+      });
+      notify.success("Đã lưu dòng GRN.");
+      onOpenChange(false);
+      resetForm();
+    });
+  }
+
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        onOpenChange(open);
+        if (!open) resetForm();
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Thêm dòng phiếu nhập</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label>Nguyên liệu *</Label>
+            <Combobox
+              value={ingredientId}
+              onValueChange={handleIngredientChange}
+              options={ingredients
+                .filter((ingredient) => ingredient.is_active)
+                .map((ingredient) => ({
+                  value: String(ingredient.id),
+                  label: ingredient.name,
+                  hint: ingredient.purchase_unit ?? ingredient.unit,
+                  keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
+                }))}
+              placeholder="Chọn nguyên liệu"
+              searchPlaceholder="Tìm tên, SKU, danh mục..."
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="grn-line-qty">Số lượng nhận *</Label>
+              <FormattedNumberInput
+                id="grn-line-qty"
+                value={quantity}
+                onValueChange={setQuantity}
+                maxFractionDigits={3}
+                placeholder="0"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="grn-line-unit">Đơn vị *</Label>
+              <Input
+                id="grn-line-unit"
+                value={unit}
+                onChange={(event) => setUnit(event.target.value)}
+                placeholder="kg"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="grn-line-cost">Đơn giá *</Label>
+              <FormattedNumberInput
+                id="grn-line-cost"
+                value={unitCost}
+                onValueChange={setUnitCost}
+                maxFractionDigits={0}
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="grn-line-batch">Số lô</Label>
+              <Input
+                id="grn-line-batch"
+                value={batchNumber}
+                onChange={(event) => setBatchNumber(event.target.value)}
+                placeholder="—"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="grn-line-expiry">HSD</Label>
+              <Input
+                id="grn-line-expiry"
+                type="date"
+                value={expiryDate}
+                onChange={(event) => setExpiryDate(event.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Hủy
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              <IconPlus className="size-4" />
+              Lưu dòng
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -539,6 +858,7 @@ function LineRow({
   isDraft,
   qc,
   onChange,
+  onDelete,
 }: {
   tenantId: number;
   grnId: number;
@@ -547,6 +867,7 @@ function LineRow({
   isDraft: boolean;
   qc: GRNDetail["qcSettings"];
   onChange: (p: Partial<EditableLine>) => void;
+  onDelete: () => void;
 }) {
   const variance = deriveVariance(line.cost, line.poUnitPrice);
   const variancesLabel =
@@ -586,7 +907,9 @@ function LineRow({
         <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
           <Stat label="Giá nhập">{formatVND(line.cost)} ₫</Stat>
           <Stat label="Giá PO">
-            {line.poUnitPrice != null ? `${formatVND(line.poUnitPrice)} ₫` : "—"}
+            {line.poUnitPrice != null
+              ? `${formatVND(line.poUnitPrice)} ₫`
+              : "—"}
           </Stat>
           <Stat label="Lệch giá">
             <span className={varianceTone}>{variancesLabel}</span>
@@ -636,6 +959,16 @@ function LineRow({
               chưa lưu
             </Badge>
           ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onDelete}
+            className="text-muted-foreground hover:text-destructive"
+            aria-label="Xóa dòng"
+          >
+            <IconTrash className="size-4" />
+          </Button>
         </div>
       </div>
 
@@ -648,9 +981,7 @@ function LineRow({
             min="0"
             step="0.001"
             value={line.actual}
-            onChange={(e) =>
-              onChange({ actual: Number(e.target.value || 0) })
-            }
+            onChange={(e) => onChange({ actual: Number(e.target.value || 0) })}
           />
         </Field>
         <Field id={`rejected-${idx}`} label={`Trả lại (${line.unit})`}>
@@ -732,16 +1063,11 @@ function LineRow({
                   ? `Giá lệch ${variance}% vượt ngưỡng kiểm tra ${qc.priceVarianceReviewPct}%. Bắt buộc nhập lý do + ảnh hóa đơn NCC.`
                   : `Giá lệch ${variance}% vượt ngưỡng cảnh báo ${qc.priceVarianceWarnPct}%. Nhập lý do để audit.`
               }
-              onChange={(e) =>
-                onChange({ priceOverrideNote: e.target.value })
-              }
+              onChange={(e) => onChange({ priceOverrideNote: e.target.value })}
             />
           </Field>
           {Math.abs(variance) > qc.priceVarianceReviewPct ? (
-            <Field
-              id={`override-photo-${idx}`}
-              label="Ảnh hóa đơn NCC *"
-            >
+            <Field id={`override-photo-${idx}`} label="Ảnh hóa đơn NCC *">
               <PhotoUploadInput
                 tenantId={tenantId}
                 folder={`grn/${grnId}/price-override/${line.lineId}`}
@@ -828,4 +1154,3 @@ function Stat({
     </div>
   );
 }
-

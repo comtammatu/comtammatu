@@ -340,36 +340,89 @@ export const upsertGrnLine = withAction(
     }
 
     const totalCost = data.receivedQuantity * data.unitCost;
-    const { error } = await supabase.from("grn_items").upsert(
-      {
-        tenant_id: claims.tenant_id,
-        grn_id: data.grnId,
-        ingredient_id: data.ingredientId,
-        received_quantity: data.receivedQuantity,
-        unit: data.unit,
-        unit_cost: data.unitCost,
-        total_cost: totalCost,
-        quality_status: data.qualityStatus,
-        receiving_temperature: data.receivingTemperature ?? null,
-        batch_number: data.batchNumber ?? null,
-        expiry_date: data.expiryDate ?? null,
-        rejected_quantity: rejected,
-        rejection_reason: data.rejectionReason ?? null,
-        rejected_photo_url: data.rejectedPhotoUrl ?? null,
-        price_override_note: data.priceOverrideNote ?? null,
-        price_override_photo_url: data.priceOverridePhotoUrl ?? null,
-        short_delivery_action: data.shortDeliveryAction ?? null,
-      },
-      { onConflict: "grn_id,ingredient_id,tenant_id" },
-    );
-    if (error) {
+    const { data: row, error } = await supabase
+      .from("grn_items")
+      .upsert(
+        {
+          tenant_id: claims.tenant_id,
+          grn_id: data.grnId,
+          ingredient_id: data.ingredientId,
+          received_quantity: data.receivedQuantity,
+          unit: data.unit,
+          unit_cost: data.unitCost,
+          total_cost: totalCost,
+          quality_status: data.qualityStatus,
+          receiving_temperature: data.receivingTemperature ?? null,
+          batch_number: data.batchNumber ?? null,
+          expiry_date: data.expiryDate ?? null,
+          rejected_quantity: rejected,
+          rejection_reason: data.rejectionReason ?? null,
+          rejected_photo_url: data.rejectedPhotoUrl ?? null,
+          price_override_note: data.priceOverrideNote ?? null,
+          price_override_photo_url: data.priceOverridePhotoUrl ?? null,
+          short_delivery_action: data.shortDeliveryAction ?? null,
+        },
+        { onConflict: "grn_id,ingredient_id,tenant_id" },
+      )
+      .select("id")
+      .single();
+    if (error || !row) {
       return { success: false, error: "Không thể lưu dòng phiếu nhập." };
     }
-    return { success: true };
+    return { success: true, data: row };
   },
 );
 
 /* ─── confirmGrn ─── */
+
+const deleteGrnLineSchema = z.object({
+  grnId: z.coerce.number().int().positive(),
+  lineId: z.coerce.number().int().positive(),
+});
+
+export const deleteGrnLine = withAction(
+  {
+    roles: ROLES,
+    schema: deleteGrnLineSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+  },
+  async (data, { supabase, claims }) => {
+    const { data: grn, error: grnError } = await supabase
+      .from("goods_received_notes")
+      .select("id, status, branch_id")
+      .eq("id", data.grnId)
+      .eq("tenant_id", claims.tenant_id)
+      .single();
+
+    if (grnError || !grn) {
+      return { success: false, error: "Không tìm thấy phiếu nhập." };
+    }
+    if (grn.status !== "draft") {
+      return {
+        success: false,
+        error: "Chỉ xóa dòng khi phiếu nhập đang ở trạng thái nháp.",
+      };
+    }
+    if (!canAccessProcurementBranch(claims, grn.branch_id)) {
+      return {
+        success: false,
+        error: "Bạn chỉ được chỉnh sửa phiếu nhập của kho mình.",
+      };
+    }
+
+    const { error } = await supabase
+      .from("grn_items")
+      .delete()
+      .eq("id", data.lineId)
+      .eq("grn_id", data.grnId)
+      .eq("tenant_id", claims.tenant_id);
+
+    if (error) {
+      return { success: false, error: "Không thể xóa dòng." };
+    }
+    return { success: true };
+  },
+);
 
 export async function confirmGrn(grnId: number): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(grnId);

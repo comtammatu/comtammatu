@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
 import { PROCUREMENT_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "../../_lib/auth";
+import { fetchIngredients } from "../../actions";
 import { fetchGrnDetail } from "../../procurement-actions";
 import { fetchQcSettings, type QcSettings } from "../../_lib/qc-settings";
 import { formatDate } from "../../_lib/format";
 import { GRNDetailClient } from "./grn-detail-client";
 import type { GRNDetail } from "./grn-detail-client";
+import type { IngredientRow } from "../../page";
 
 export default async function GRNDetailPage({
   params,
@@ -13,7 +15,10 @@ export default async function GRNDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const res = await fetchGrnDetail(Number(id));
+  const [res, ingredientsRes] = await Promise.all([
+    fetchGrnDetail(Number(id)),
+    fetchIngredients(),
+  ]);
   if (!res.success || !res.data) notFound();
 
   const ctx = await getAuthContextWithPermission(
@@ -152,5 +157,9 @@ export default async function GRNDetailPage({
     },
   };
 
-  return <GRNDetailClient grn={grn} />;
+  const ingredients: IngredientRow[] = ingredientsRes.success
+    ? ((ingredientsRes.data ?? []) as IngredientRow[])
+    : [];
+
+  return <GRNDetailClient grn={grn} ingredients={ingredients} />;
 }

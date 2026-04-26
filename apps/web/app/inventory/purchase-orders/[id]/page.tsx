@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
+import { fetchIngredients } from "../../actions";
 import { fetchPurchaseOrderDetail } from "../../procurement-actions";
 import { formatDate, formatDateTime } from "../../_lib/format";
 import { PODetailClient } from "./po-detail-client";
 import type { PODetail } from "./po-detail-client";
+import type { IngredientRow } from "../../page";
 
 export default async function PODetailPage({
   params,
@@ -10,7 +12,10 @@ export default async function PODetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const res = await fetchPurchaseOrderDetail(Number(id));
+  const [res, ingredientsRes] = await Promise.all([
+    fetchPurchaseOrderDetail(Number(id)),
+    fetchIngredients(),
+  ]);
   if (!res.success || !res.data) notFound();
 
   const d = res.data as {
@@ -22,6 +27,8 @@ export default async function PODetailPage({
       suppliers: { id: number; name: string } | null;
     };
     lines: Array<{
+      id: number;
+      ingredient_id: number;
       quantity: number;
       unit: string;
       unit_price_est: number | null;
@@ -44,9 +51,11 @@ export default async function PODetailPage({
       unit: string;
       purchase_unit: string | null;
     } | null;
-    const price = Number(l.unit_price_est ?? 0);
+    const price = l.unit_price_est != null ? Number(l.unit_price_est) : null;
     const total = Number(l.line_total ?? 0);
     return {
+      lineId: l.id,
+      ingredientId: l.ingredient_id ?? ing?.id ?? 0,
       name: ing?.name ?? "—",
       sku: "",
       qty: Number(l.quantity ?? 0),
@@ -78,5 +87,9 @@ export default async function PODetailPage({
     items,
   };
 
-  return <PODetailClient po={po} />;
+  const ingredients: IngredientRow[] = ingredientsRes.success
+    ? ((ingredientsRes.data ?? []) as IngredientRow[])
+    : [];
+
+  return <PODetailClient po={po} ingredients={ingredients} />;
 }
