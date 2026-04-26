@@ -168,9 +168,7 @@ function PosTableGateComponent({
               <section key={zoneName} className="flex flex-col gap-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2">
-                    <div className="flex size-10 shrink-0 items-center justify-center bg-primary/10 text-primary">
-                      <IconMapPin className="size-5" />
-                    </div>
+                    <IconMapPin className="size-5 shrink-0 text-primary" />
                     <div className="min-w-0">
                       <p className="truncate text-base font-semibold text-foreground">
                         {zoneName}

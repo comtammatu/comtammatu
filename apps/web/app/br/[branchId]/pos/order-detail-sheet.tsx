@@ -41,6 +41,7 @@ import {
 } from "./actions";
 import { getPosLineItemDisplayName, type CartItem } from "./types";
 import type { BranchTable } from "./page";
+import { ACTIVE_POS_STATUSES } from "./order-history";
 import { messages } from "@lib/messages";
 import { printProvisionalBill } from "./print-actions";
 import { OrderItemRow } from "./_components/order-detail/order-item-row";
@@ -60,7 +61,7 @@ export type OrderDetailData = Omit<OrderData, "order_items"> & {
 };
 
 function canAppendOrderStatus(status: string): boolean {
-  return ["new", "confirmed", "preparing", "ready", "served"].includes(status);
+  return ACTIVE_POS_STATUSES.includes(status);
 }
 
 const ORDER_DETAIL_LOADING_TEXT = {

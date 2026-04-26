@@ -7,7 +7,6 @@ import {
   useState,
   useTransition,
 } from "react";
-import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
@@ -133,9 +132,8 @@ function isOrderAwaitingPayment(order: {
   payment_status: string | null;
 }) {
   return (
-    ["new", "confirmed", "preparing", "ready", "served"].includes(
-      order.status,
-    ) && order.payment_status !== "paid"
+    ACTIVE_POS_STATUSES.includes(order.status) &&
+    order.payment_status !== "paid"
   );
 }
 
@@ -933,40 +931,36 @@ function PosDesktopInner({
   const appendBannerRow =
     appendTarget != null ? (
       <div
-        className="border-b border-warning/15 bg-warning/10 px-3 py-3 md:px-4"
         role="status"
+        className="flex items-center justify-between gap-2 border-b border-warning/20 bg-warning/10 px-4 py-3"
       >
-        <Alert className="border-warning/20 bg-warning/10">
-          <AlertDescription className="relative flex items-center justify-between gap-2 text-current">
-            <p className="min-w-0 text-base leading-6 text-foreground">
-              <span className="font-semibold">
-                Thêm món vào đơn #{appendTarget.orderNumber}
-              </span>
-              <span className="text-muted-foreground">
-                {""}
-                {appendDraftQuantity > 0
-                  ? `${String(appendDraftQuantity)} món đang chờ gửi.`
-                  : "Chọn món trên menu, chưa gửi bếp cho tới khi xác nhận."}
-              </span>
-            </p>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-9 min-h-11 min-w-11 shrink-0 gap-1 px-3 text-sm text-foreground hover:bg-warning/25"
-              onClick={cancelAppendWorkflow}
-            >
-              <IconX data-icon="inline-start" />
-              Hủy
-            </Button>
-          </AlertDescription>
-        </Alert>
+        <p className="min-w-0 text-base leading-6 text-foreground">
+          <span className="font-semibold">
+            Thêm món vào đơn #{appendTarget.orderNumber}
+          </span>
+          <span className="text-muted-foreground">
+            {""}
+            {appendDraftQuantity > 0
+              ? `${String(appendDraftQuantity)} món đang chờ gửi.`
+              : "Chọn món trên menu, chưa gửi bếp cho tới khi xác nhận."}
+          </span>
+        </p>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-9 min-h-11 min-w-11 shrink-0 gap-1 px-3 text-sm text-foreground hover:bg-warning/25"
+          onClick={cancelAppendWorkflow}
+        >
+          <IconX data-icon="inline-start" />
+          Hủy
+        </Button>
       </div>
     ) : null;
 
   const mobileOrderContextRow =
     isMobile && menuContextReady ? (
-      <div className="border-b border-border/60 bg-background/75 px-2 py-1 md:hidden">
+      <div className="border-b border-border/60 bg-background px-2 py-1 md:hidden">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-foreground">
@@ -1077,7 +1071,7 @@ function PosDesktopInner({
         <div className="flex min-h-0 flex-1 overflow-hidden bg-background/35">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {appendBannerRow}
-            <div className="border-b border-border/60 bg-background/75 px-2 py-2 md:hidden">
+            <div className="border-b border-border/60 bg-background px-2 py-2 md:hidden">
               {serviceModeSelector}
             </div>
             <PosTableGate

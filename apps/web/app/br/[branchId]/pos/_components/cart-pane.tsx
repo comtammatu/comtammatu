@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useRef, useState } from "react";
+import { memo, useState } from "react";
 import { formatVND } from "@comtammatu/shared/format";
 import {
   AlertDialog,
@@ -42,20 +42,11 @@ import {
 import type { CartItem, OrderType } from "../types";
 import { useCart } from "../_hooks/use-cart";
 import { useActiveTable } from "../_hooks/use-active-table";
+import { useSwipeReveal } from "../_hooks/use-swipe-reveal";
 
 const DELETE_REVEAL_WIDTH = 80;
 const SWIPE_ACTIVATION_PX = 8;
 const SWIPE_REVEAL_THRESHOLD_PX = 40;
-
-interface SwipeState {
-  key: string;
-  pointerId: number;
-  startX: number;
-  startY: number;
-  startOffset: number;
-  offset: number;
-  dragging: boolean;
-}
 
 interface CartPaneProps {
   canSubmit: boolean;
@@ -81,9 +72,11 @@ function CartPaneComponent({
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
-  const [revealedItemKey, setRevealedItemKey] = useState<string | null>(null);
-  const swipeStateRef = useRef<SwipeState | null>(null);
-  const suppressClickKeyRef = useRef<string | null>(null);
+  const swipe = useSwipeReveal({
+    revealWidth: DELETE_REVEAL_WIDTH,
+    activationPx: SWIPE_ACTIVATION_PX,
+    threshold: SWIPE_REVEAL_THRESHOLD_PX,
+  });
   const cartDialogOpen = confirmOpen || clearConfirmOpen;
 
   const selectedTableNumber = activeTable.table?.number;
@@ -172,42 +165,28 @@ function CartPaneComponent({
                   </Button>
                 )}
               {!isMobileDrawer && cart.items.length > 0 && (
-                <AlertDialog
-                  open={clearConfirmOpen}
-                  onOpenChange={setClearConfirmOpen}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-10 min-h-10 min-w-10 shrink-0 px-3 text-sm text-muted-foreground sm:min-h-11 sm:min-w-11"
+                  onClick={() => setClearConfirmOpen(true)}
                 >
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-10 min-h-10 min-w-10 shrink-0 px-3 text-sm text-muted-foreground sm:min-h-11 sm:min-w-11"
-                    >
-                      <IconTrash data-icon="inline-start" />
-                      Xóa đơn nháp
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Xóa đơn nháp?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Tất cả {cart.items.length} món sẽ bị xóa khỏi đơn nháp.
-                        Hành động này không thể hoàn tác.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Giữ đơn nháp</AlertDialogCancel>
-                      <AlertDialogAction
-                        variant="destructive"
-                        onClick={() => {
-                          cart.clear();
-                          setClearConfirmOpen(false);
-                        }}
-                      >
-                        Xóa đơn nháp
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                  <IconTrash data-icon="inline-start" />
+                  Xóa đơn nháp
+                </Button>
+              )}
+              {isMobileDrawer && cart.items.length > 0 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-muted-foreground hover:text-destructive"
+                  aria-label="Xóa đơn nháp"
+                  onClick={() => setClearConfirmOpen(true)}
+                >
+                  <IconTrash />
+                </Button>
               )}
               {isMobileDrawer && (
                 <Button
@@ -297,7 +276,8 @@ function CartPaneComponent({
             >
               {cart.items.map((item) => {
                 const subtotal = calcItemSubtotal(item);
-                const isDeleteRevealed = revealedItemKey === item.key;
+                const isDeleteRevealed = swipe.isRevealed(item.key);
+                const swipeHandlers = swipe.bindings(item.key);
                 const displayName = getPosLineItemDisplayName(item);
                 const optionLines = getPosLineItemOptionLines(item);
 
@@ -309,7 +289,7 @@ function CartPaneComponent({
                       aria-label={`Xóa ${displayName} khỏi giỏ đơn mới`}
                       onClick={() => {
                         cart.removeItem(item.key);
-                        setRevealedItemKey(null);
+                        swipe.setRevealedKey(null);
                       }}
                     >
                       Xóa
@@ -335,113 +315,18 @@ function CartPaneComponent({
                         variant="ghost"
                         className="h-auto w-full justify-start p-0 text-left whitespace-normal hover:bg-card"
                         onClick={(event) => {
-                          if (suppressClickKeyRef.current === item.key) {
-                            suppressClickKeyRef.current = null;
+                          if (swipe.consumeSuppression(item.key)) {
                             event.preventDefault();
                             event.stopPropagation();
                             return;
                           }
                           if (isDeleteRevealed) {
-                            setRevealedItemKey(null);
+                            swipe.clearReveal();
                             return;
                           }
                           onCustomizeItem(item);
                         }}
-                        onPointerDown={(event) => {
-                          if (event.pointerType !== "touch") return;
-                          if (
-                            revealedItemKey !== null &&
-                            revealedItemKey !== item.key
-                          ) {
-                            setRevealedItemKey(null);
-                          }
-                          event.currentTarget.setPointerCapture(
-                            event.pointerId,
-                          );
-                          swipeStateRef.current = {
-                            key: item.key,
-                            pointerId: event.pointerId,
-                            startX: event.clientX,
-                            startY: event.clientY,
-                            startOffset: isDeleteRevealed
-                              ? -DELETE_REVEAL_WIDTH
-                              : 0,
-                            offset: isDeleteRevealed ? -DELETE_REVEAL_WIDTH : 0,
-                            dragging: false,
-                          };
-                        }}
-                        onPointerMove={(event) => {
-                          const state = swipeStateRef.current;
-                          if (
-                            state == null ||
-                            state.key !== item.key ||
-                            state.pointerId !== event.pointerId
-                          ) {
-                            return;
-                          }
-                          const deltaX = event.clientX - state.startX;
-                          const deltaY = event.clientY - state.startY;
-                          const horizontal =
-                            Math.abs(deltaX) > Math.abs(deltaY) &&
-                            Math.abs(deltaX) > SWIPE_ACTIVATION_PX;
-                          if (!horizontal && !state.dragging) return;
-
-                          event.preventDefault();
-                          event.stopPropagation();
-
-                          const nextOffset = Math.min(
-                            0,
-                            Math.max(
-                              -DELETE_REVEAL_WIDTH,
-                              state.startOffset + deltaX,
-                            ),
-                          );
-                          swipeStateRef.current = {
-                            ...state,
-                            offset: nextOffset,
-                            dragging: true,
-                          };
-                        }}
-                        onPointerUp={(event) => {
-                          const state = swipeStateRef.current;
-                          if (
-                            state == null ||
-                            state.key !== item.key ||
-                            state.pointerId !== event.pointerId
-                          ) {
-                            return;
-                          }
-
-                          if (
-                            event.currentTarget.hasPointerCapture(
-                              event.pointerId,
-                            )
-                          ) {
-                            event.currentTarget.releasePointerCapture(
-                              event.pointerId,
-                            );
-                          }
-
-                          if (state.dragging) {
-                            const shouldReveal =
-                              state.offset <= -SWIPE_REVEAL_THRESHOLD_PX;
-                            setRevealedItemKey(shouldReveal ? item.key : null);
-                            suppressClickKeyRef.current = item.key;
-                            event.preventDefault();
-                            event.stopPropagation();
-                          }
-
-                          swipeStateRef.current = null;
-                        }}
-                        onPointerCancel={(event) => {
-                          const state = swipeStateRef.current;
-                          if (
-                            state?.key === item.key &&
-                            state.pointerId === event.pointerId
-                          ) {
-                            swipeStateRef.current = null;
-                          }
-                        }}
+                        {...swipeHandlers}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
@@ -580,6 +465,30 @@ function CartPaneComponent({
           </div>
         </>
       )}
+
+      <AlertDialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xóa đơn nháp?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tất cả {cart.items.length} món sẽ bị xóa khỏi đơn nháp. Hành động
+              này không thể hoàn tác.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Giữ đơn nháp</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                cart.clear();
+                setClearConfirmOpen(false);
+              }}
+            >
+              Xóa đơn nháp
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
