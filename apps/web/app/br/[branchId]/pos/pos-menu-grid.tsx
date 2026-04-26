@@ -30,15 +30,12 @@ import {
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { formatVND } from "@comtammatu/shared/format";
-import type { CategoryType } from "@comtammatu/shared";
-import { CATEGORY_TYPE_LABELS } from "@comtammatu/shared/menu";
 import {
   ChefHat as IconChefHat,
   Search as IconSearch,
   ShoppingCart as IconShoppingCart,
   X as IconX,
 } from "lucide-react";
-import { MENU_ZONE_ORDER } from "./pos-menu-types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
 
 interface PosMenuGridProps {
@@ -64,7 +61,7 @@ const MenuItemButton = memo(function MenuItemButton({
       type="button"
       variant="outline"
       className={cn(
-        "h-auto min-h-28 w-full cursor-pointer flex-col items-stretch justify-between gap-2 p-2.5 text-left whitespace-normal shadow-sm transition-transform hover:border-primary/30 hover:shadow-md active:scale-95 md:min-h-48 md:gap-0 md:p-5 lg:min-h-56",
+        "h-auto min-h-56 w-full cursor-pointer flex-col items-stretch justify-between gap-2 overflow-hidden p-2.5 text-left whitespace-normal shadow-sm transition-transform hover:border-primary/30 hover:shadow-md active:scale-95 md:min-h-64 md:gap-0 md:p-5 lg:min-h-72",
         sparseMenu && "md:min-h-64 md:p-6",
       )}
       onClick={handleClick}
@@ -72,7 +69,7 @@ const MenuItemButton = memo(function MenuItemButton({
       <div className="flex h-full w-full flex-col justify-between gap-2 md:gap-3">
         <div className="flex min-w-0 flex-col gap-2">
           {item.image_url ? (
-            <div className="relative h-20 w-full overflow-hidden rounded-md bg-muted md:aspect-square md:h-auto">
+            <div className="relative aspect-square w-full shrink-0 overflow-hidden rounded-md bg-muted">
               <Image
                 src={item.image_url}
                 alt=""
@@ -81,12 +78,11 @@ const MenuItemButton = memo(function MenuItemButton({
                 className="object-cover"
                 loading="lazy"
                 decoding="async"
-                unoptimized
               />
             </div>
           ) : (
             <div
-              className="h-20 w-full rounded-md bg-muted/40 md:aspect-square md:h-auto"
+              className="aspect-square w-full shrink-0 rounded-md bg-muted/40"
               aria-hidden
             />
           )}
@@ -123,52 +119,26 @@ const MenuItemButton = memo(function MenuItemButton({
 
 function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
   const [, startMenuTransition] = useTransition();
-  const [activeCategoryId, setActiveCategoryId] = useState<number | null>(
-    categories[0]?.id ?? null,
-  );
-  const [activeMenuZone, setActiveMenuZone] = useState<CategoryType | null>(
-    null,
+  const [activeCategoryId, setActiveCategoryId] = useState<number | null>(() =>
+    categories.find((category) => category.menu_items.length > 0)?.id ?? null,
   );
 
-  const availableMenuZones = useMemo(
-    () =>
-      MENU_ZONE_ORDER.filter((zone) =>
-        categories.some(
-          (category) =>
-            category.type === zone && category.menu_items.length > 0,
-        ),
-      ),
+  const availableCategories = useMemo(
+    () => categories.filter((category) => category.menu_items.length > 0),
     [categories],
-  );
-
-  const effectiveMenuZone = useMemo(() => {
-    if (activeMenuZone != null && availableMenuZones.includes(activeMenuZone)) {
-      return activeMenuZone;
-    }
-    return availableMenuZones[0] ?? "main_dish";
-  }, [activeMenuZone, availableMenuZones]);
-
-  const categoriesInActiveZone = useMemo(
-    () =>
-      categories.filter(
-        (category) =>
-          category.type === effectiveMenuZone && category.menu_items.length > 0,
-      ),
-    [categories, effectiveMenuZone],
   );
 
   useEffect(() => {
     setActiveCategoryId((prev) => {
-      const ok = categoriesInActiveZone.some(
-        (category) => category.id === prev,
-      );
-      return ok ? prev : (categoriesInActiveZone[0]?.id ?? null);
+      const ok = availableCategories.some((category) => category.id === prev);
+      return ok ? prev : (availableCategories[0]?.id ?? null);
     });
-  }, [categoriesInActiveZone]);
+  }, [availableCategories]);
 
   const activeCategory = useMemo(
-    () => categories.find((category) => category.id === activeCategoryId),
-    [categories, activeCategoryId],
+    () =>
+      availableCategories.find((category) => category.id === activeCategoryId),
+    [availableCategories, activeCategoryId],
   );
 
   const [query, setQuery] = useState("");
@@ -191,17 +161,6 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
     [],
   );
   const clearQuery = useCallback(() => setQuery(""), []);
-  const handleMenuZoneChange = useCallback(
-    (value: string) => {
-      const nextZone = value as CategoryType;
-      startMenuTransition(() => {
-        setActiveMenuZone((current) =>
-          current === nextZone ? current : nextZone,
-        );
-      });
-    },
-    [startMenuTransition],
-  );
   const handleCategoryChange = useCallback(
     (value: string) => {
       const nextCategoryId = Number(value);
@@ -216,7 +175,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
     [startMenuTransition],
   );
 
-  if (availableMenuZones.length === 0) {
+  if (availableCategories.length === 0) {
     return (
       <Empty className="flex-1">
         <EmptyMedia variant="icon">
@@ -263,42 +222,19 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
               </InputGroup>
 
               <Tabs
-                value={effectiveMenuZone}
-                onValueChange={handleMenuZoneChange}
-                className="min-w-0 w-full gap-0 overflow-hidden xl:flex-1"
-              >
-                <TabsList
-                  aria-label="Khu thực đơn"
-                  className="h-9 w-full min-w-0 justify-start gap-1 md:h-11 md:gap-2"
-                >
-                  {availableMenuZones.map((zone) => (
-                    <TabsTrigger
-                      key={zone}
-                      value={zone}
-                      className="h-full shrink-0 px-2.5 py-0 text-sm font-semibold md:px-4"
-                    >
-                      {CATEGORY_TYPE_LABELS[zone] ?? zone}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
-            </div>
-
-            {categoriesInActiveZone.length > 1 ? (
-              <Tabs
                 value={activeCategoryValue}
                 onValueChange={handleCategoryChange}
-                className="w-full min-w-0 gap-0 overflow-x-auto overflow-y-hidden"
+                className="min-w-0 w-full gap-0 overflow-x-auto overflow-y-hidden xl:flex-1"
               >
                 <TabsList
                   aria-label="Danh mục món"
-                  className="h-9 w-max min-w-full justify-start gap-1 md:h-10 md:gap-2"
+                  className="h-9 w-max min-w-full justify-start gap-1 md:h-11 md:gap-2"
                 >
-                  {categoriesInActiveZone.map((category) => (
+                  {availableCategories.map((category) => (
                     <TabsTrigger
                       key={category.id}
                       value={String(category.id)}
-                      className="h-full shrink-0 gap-1.5 px-2 py-0 text-xs font-medium md:gap-2 md:px-3 md:text-sm"
+                      className="h-full shrink-0 gap-1.5 px-2.5 py-0 text-sm font-semibold md:gap-2 md:px-4"
                     >
                       {category.name}
                       <Badge
@@ -311,7 +247,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
                   ))}
                 </TabsList>
               </Tabs>
-            ) : null}
+            </div>
           </div>
         </div>
 

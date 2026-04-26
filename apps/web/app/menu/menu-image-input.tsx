@@ -11,8 +11,14 @@ import { toast } from "@comtammatu/ui/components/sonner";
 const BUCKET = "menu-images";
 const MAX_SIZE = 5 * 1024 * 1024;
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
-const TARGET_DIMENSION = 1024;
-const JPEG_QUALITY = 0.82;
+// 800 is the upper bound the POS optimizer asks for (deviceSizes 320..960
+// in next.config); shipping a larger source just gets re-encoded down by
+// /_next/image. WebP at q=0.82 = ~40-60% smaller than JPEG q=0.82 with no
+// perceptual loss for menu thumbs. Existing JPEGs in Storage stay valid —
+// `<Image>` handles either source format and the optimizer normalises both
+// to WebP/AVIF on delivery.
+const TARGET_DIMENSION = 800;
+const WEBP_QUALITY = 0.82;
 
 interface MenuImageInputProps {
   tenantId: number;
@@ -48,8 +54,8 @@ async function resizeImage(file: File): Promise<Blob> {
   return new Promise<Blob>((resolve) => {
     canvas.toBlob(
       (blob) => resolve(blob ?? file),
-      "image/jpeg",
-      JPEG_QUALITY,
+      "image/webp",
+      WEBP_QUALITY,
     );
   });
 }
@@ -78,14 +84,14 @@ export function MenuImageInput({
       // Resize client-side: 2 MB camera shots become ~150-250 KB,
       // avoiding multi-MB downloads on POS when categories switch.
       const blob = await resizeImage(file);
-      const path = `${tenantId}/menu-${Date.now()}-${randomSuffix()}.jpg`;
+      const path = `${tenantId}/menu-${Date.now()}-${randomSuffix()}.webp`;
       const { error: upErr } = await supabase.storage
         .from(BUCKET)
         .upload(path, blob, {
           // Random suffix → unique URL → safe to cache 1 year immutable.
           cacheControl: "31536000, immutable",
           upsert: false,
-          contentType: "image/jpeg",
+          contentType: "image/webp",
         });
       if (upErr) {
         toast.error(upErr.message);
@@ -121,7 +127,6 @@ export function MenuImageInput({
             width={64}
             height={64}
             className="size-16 rounded object-cover"
-            unoptimized
           />
           <div className="flex flex-1 flex-wrap gap-2">
             <Button
