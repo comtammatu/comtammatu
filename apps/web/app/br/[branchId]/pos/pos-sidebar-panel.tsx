@@ -9,6 +9,7 @@ import { OrderListPane } from "./_components/order-list-pane";
 import type { BillReceiptIntent } from "./_components/bill/bill-receipt-types";
 import { useCartQuantity } from "./_hooks/use-cart";
 import { usePosOperationalDispatch } from "./_providers/pos-desktop-provider";
+import type { SessionOrder } from "./order-history";
 import type { CartItem, OrderType } from "./types";
 
 interface PosSidebarTabsProps {
@@ -81,7 +82,11 @@ interface PosSidebarContentProps {
   onOrderTypeChange: (type: OrderType) => void;
   onCustomizeItem: (item: CartItem) => void;
   onViewBill: (orderId: number, intent?: BillReceiptIntent) => void;
-  onViewDetail: (orderId: number, orderNumber: string) => void;
+  onViewDetail: (
+    orderId: number,
+    orderNumber: string,
+    summary?: SessionOrder,
+  ) => void;
   onReturnToTables?: () => void;
 }
 

@@ -153,7 +153,16 @@ export const ACTIVE_POS_STATUSES = [
 interface OrderHistoryProps {
   orders: SessionOrder[];
   onViewBill: (orderId: number, intent?: BillReceiptIntent) => void;
-  onViewDetail: (orderId: number, orderNumber: string) => void;
+  /**
+   * `summary` lets the detail sheet paint header (số đơn, bàn / mang về)
+   * instantly while items stream in. The sheet falls back to its own
+   * fetch when omitted, but the list always has the row in hand.
+   */
+  onViewDetail: (
+    orderId: number,
+    orderNumber: string,
+    summary?: SessionOrder,
+  ) => void;
 }
 
 export function OrderHistory({
@@ -250,7 +259,7 @@ export function OrderHistory({
                           size="sm"
                           className="h-10 px-3 text-sm"
                           onClick={() =>
-                            onViewDetail(order.id, order.order_number)
+                            onViewDetail(order.id, order.order_number, order)
                           }
                         >
                           Xử lý đơn

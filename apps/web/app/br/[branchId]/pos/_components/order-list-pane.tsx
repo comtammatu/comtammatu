@@ -4,7 +4,7 @@ import { memo } from "react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { RefreshCw as IconRefresh, X as IconX } from "lucide-react";
-import { OrderHistory } from "../order-history";
+import { OrderHistory, type SessionOrder } from "../order-history";
 import type { BillReceiptIntent } from "./bill/bill-receipt-types";
 import {
   usePosOperationalDispatch,
@@ -13,7 +13,11 @@ import {
 
 interface OrderListPaneProps {
   onViewBill: (orderId: number, intent?: BillReceiptIntent) => void;
-  onViewDetail: (orderId: number, orderNumber: string) => void;
+  onViewDetail: (
+    orderId: number,
+    orderNumber: string,
+    summary?: SessionOrder,
+  ) => void;
   onClosePane?: () => void;
 }
 
