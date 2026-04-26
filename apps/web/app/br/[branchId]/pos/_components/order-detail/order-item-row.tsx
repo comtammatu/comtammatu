@@ -12,7 +12,7 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { X as IconX } from "lucide-react";
+import { Check as IconCheck, X as IconX } from "lucide-react";
 import {
   getPosLineItemDisplayName,
   getPosLineItemOptionLines,
@@ -60,6 +60,7 @@ export function OrderItemRow({ row, canManage, onVoid }: OrderItemRowProps) {
     y: number;
   } | null>(null);
   const cancelled = row.status === "cancelled";
+  const served = row.status === "served";
   const canVoid =
     canManage &&
     !cancelled &&
@@ -94,6 +95,7 @@ export function OrderItemRow({ row, canManage, onVoid }: OrderItemRowProps) {
           "relative items-start bg-card text-sm transition-transform",
           isDeleteRevealed && canVoid && "-translate-x-20 sm:translate-x-0",
           cancelled && "border-dashed bg-muted/40",
+          served && "border-success/30 bg-success/5",
         )}
         onClick={() => {
           if (dragged) {
@@ -140,7 +142,10 @@ export function OrderItemRow({ row, canManage, onVoid }: OrderItemRowProps) {
           <ItemDescription>{formatVND(row.subtotal)}</ItemDescription>
         </ItemContent>
         <ItemActions className="shrink-0 self-start">
-          <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+          <Badge variant={statusInfo.variant} className="gap-1">
+            {served && <IconCheck className="size-3" aria-hidden="true" />}
+            {statusInfo.label}
+          </Badge>
           {canVoid && (
             <Button
               type="button"

@@ -722,7 +722,7 @@ export function OrderDetailSheet({
                         disabled={isPending}
                         onClick={() => void handleStatus("served")}
                       >
-                        Đã phục vụ
+                        Phục vụ
                       </Button>
                     )}
                   </div>
