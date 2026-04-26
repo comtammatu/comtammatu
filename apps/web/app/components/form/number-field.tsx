@@ -9,7 +9,7 @@ import {
   FieldError,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
-import { FormattedNumberInput } from "@/inventory/_components/formatted-number-input";
+import { FormattedNumberInput } from "./formatted-number-input";
 
 export interface NumberFieldProps<TFieldValues extends FieldValues> {
   control: Control<TFieldValues>;

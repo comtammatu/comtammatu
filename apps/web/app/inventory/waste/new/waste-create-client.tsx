@@ -10,7 +10,6 @@ import {
   CardTitle,
 } from "@comtammatu/ui/components/card";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
@@ -34,6 +33,7 @@ import { BranchDailyCapBanner } from "@/inventory/_components/branch-daily-cap-b
 import { AntiSplitRollingMeter } from "@/inventory/_components/anti-split-rolling-meter";
 import { createWasteEntry } from "@/inventory/waste-actions";
 import { formatVND } from "@comtammatu/shared/format";
+import { FormattedNumberInput } from "@/components/form";
 
 /* ─── Context shape from server component ─── */
 
@@ -369,13 +369,12 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label htmlFor={`qty-${line.uid}`}>Số lượng</Label>
-                      <Input
+                      <FormattedNumberInput
                         id={`qty-${line.uid}`}
-                        type="number"
-                        inputMode="decimal"
+                        maxFractionDigits={3}
                         value={line.quantity}
-                        onChange={(e) =>
-                          updateLine(line.uid, { quantity: e.target.value })
+                        onValueChange={(value) =>
+                          updateLine(line.uid, { quantity: value })
                         }
                         disabled={isSubmitting}
                         placeholder="0"
@@ -385,13 +384,12 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                       <Label htmlFor={`cost-${line.uid}`}>
                         Đơn giá (VND / {line.unit})
                       </Label>
-                      <Input
+                      <FormattedNumberInput
                         id={`cost-${line.uid}`}
-                        type="number"
-                        inputMode="decimal"
+                        maxFractionDigits={0}
                         value={line.unitCost}
-                        onChange={(e) =>
-                          updateLine(line.uid, { unitCost: e.target.value })
+                        onValueChange={(value) =>
+                          updateLine(line.uid, { unitCost: value })
                         }
                         disabled={isSubmitting}
                         placeholder="0"

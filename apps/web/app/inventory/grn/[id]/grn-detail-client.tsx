@@ -974,31 +974,25 @@ function LineRow({
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Field id={`actual-${idx}`} label={`Thực nhận (${line.unit})`}>
-          <Input
+          <FormattedNumberInput
             id={`actual-${idx}`}
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.001"
-            value={line.actual}
-            onChange={(e) => onChange({ actual: Number(e.target.value || 0) })}
+            maxFractionDigits={3}
+            value={String(line.actual)}
+            onValueChange={(value) => onChange({ actual: Number(value || 0) })}
           />
         </Field>
         <Field id={`rejected-${idx}`} label={`Trả lại (${line.unit})`}>
-          <Input
+          <FormattedNumberInput
             id={`rejected-${idx}`}
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.001"
-            value={line.rejected}
-            onChange={(e) =>
+            maxFractionDigits={3}
+            value={String(line.rejected)}
+            onValueChange={(value) =>
               onChange({
-                rejected: Number(e.target.value || 0),
+                rejected: Number(value || 0),
                 qualityStatus:
-                  Number(e.target.value || 0) > 0 && line.actual === 0
+                  Number(value || 0) > 0 && line.actual === 0
                     ? "rejected"
-                    : Number(e.target.value || 0) > 0
+                    : Number(value || 0) > 0
                       ? "partial"
                       : "accepted",
               })
@@ -1006,14 +1000,11 @@ function LineRow({
           />
         </Field>
         <Field id={`cost-${idx}`} label="Đơn giá (₫)">
-          <Input
+          <FormattedNumberInput
             id={`cost-${idx}`}
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.01"
-            value={line.cost}
-            onChange={(e) => onChange({ cost: Number(e.target.value || 0) })}
+            maxFractionDigits={0}
+            value={String(line.cost)}
+            onValueChange={(value) => onChange({ cost: Number(value || 0) })}
           />
         </Field>
         <Field id={`expiry-${idx}`} label="HSD">

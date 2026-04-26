@@ -1,5 +1,10 @@
 export { TextField } from "./text-field";
 export type { TextFieldProps } from "./text-field";
+export {
+  formatDisplayValue,
+  FormattedNumberInput,
+  sanitizeNumericInput,
+} from "./formatted-number-input";
 export { NumberField } from "./number-field";
 export type { NumberFieldProps } from "./number-field";
 export { SelectField } from "./select-field";

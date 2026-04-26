@@ -15,7 +15,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
-import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
@@ -34,6 +33,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { CreditCard as IconCreditCard } from "lucide-react";
+import { FormattedNumberInput } from "@/components/form";
 import { InventoryHeader } from "../_components/inventory-header";
 import { InventoryPageContent } from "../_components/inventory-page-layout";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
@@ -317,14 +317,11 @@ export function CreditNotesClient({
 
               <div className="space-y-2">
                 <Label htmlFor="amount">Số tiền áp (₫)</Label>
-                <Input
+                <FormattedNumberInput
                   id="amount"
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="0.01"
-                  value={amount}
-                  onChange={(e) => setAmount(Number(e.target.value || 0))}
+                  maxFractionDigits={0}
+                  value={String(amount)}
+                  onValueChange={(value) => setAmount(Number(value || 0))}
                 />
               </div>
             </div>

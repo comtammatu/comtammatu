@@ -15,9 +15,9 @@ import {
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
 import { Field, FieldGroup, FieldLabel } from "@comtammatu/ui/components/field";
-import { Input } from "@comtammatu/ui/components/input";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { FormattedNumberInput } from "@/components/form";
 import { confirmCashPayment } from "../../payment-actions";
 
 interface CashTenderedDialogProps {
@@ -118,15 +118,12 @@ export function CashTenderedDialog({
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="cash-received">Tiền nhận</FieldLabel>
-              <Input
+              <FormattedNumberInput
                 id="cash-received"
                 data-testid="bill-cash-received"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                step={1000}
+                maxFractionDigits={0}
                 value={cashInput}
-                onChange={(e) => setCashInput(e.target.value)}
+                onValueChange={setCashInput}
                 onFocus={(e) => e.currentTarget.select()}
                 className="text-lg tabular-nums"
                 disabled={pending}

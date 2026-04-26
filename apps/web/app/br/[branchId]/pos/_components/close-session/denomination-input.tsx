@@ -9,8 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
-import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
+import { FormattedNumberInput } from "@/components/form";
 
 export const DENOMINATIONS = [
   500_000, 200_000, 100_000, 50_000, 20_000, 10_000, 5_000, 2_000, 1_000,
@@ -74,18 +74,15 @@ export function DenominationInput({
                 {formatVND(denom)}
               </Label>
               <span className="text-sm text-muted-foreground">×</span>
-              <Input
+              <FormattedNumberInput
                 id={`denom-${String(denom)}`}
                 ref={(el) => {
                   inputRefs.current[index] = el;
                 }}
-                type="number"
-                inputMode="numeric"
-                min={0}
-                step={1}
+                maxFractionDigits={0}
                 disabled={disabled}
                 value={count === 0 ? "" : String(count)}
-                onChange={(e) => setCount(denom, e.target.value)}
+                onValueChange={(value) => setCount(denom, value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();

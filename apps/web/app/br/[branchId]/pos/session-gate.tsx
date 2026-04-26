@@ -23,9 +23,9 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
-import { Input } from "@comtammatu/ui/components/input";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { FormattedNumberInput } from "@/components/form";
 import {
   Monitor as IconDeviceDesktop,
   TriangleAlert as IconAlertTriangle,
@@ -126,13 +126,11 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
                 <FieldLabel htmlFor="opening-cash">
                   Tiền đầu ca (VND)
                 </FieldLabel>
-                <Input
+                <FormattedNumberInput
                   id="opening-cash"
-                  type="number"
-                  min="0"
-                  step="1000"
+                  maxFractionDigits={0}
                   value={openingCash}
-                  onChange={(event) => setOpeningCash(event.target.value)}
+                  onValueChange={setOpeningCash}
                   placeholder="0"
                   aria-invalid={!hasValidOpeningCash}
                 />

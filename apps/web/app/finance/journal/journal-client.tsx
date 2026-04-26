@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
+import { FormattedNumberInput } from "@/components/form";
 import { createJournalEntry } from "../accounting-actions";
 import type { JournalEntryRow, AccountOption } from "./page";
 
@@ -306,25 +307,23 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                           </Select>
                         </TableCell>
                         <TableCell className="py-1.5">
-                          <Input
+                          <FormattedNumberInput
                             className="h-8 text-right"
-                            type="number"
-                            min={0}
+                            maxFractionDigits={0}
                             value={line.debit}
-                            onChange={(
-                              e: React.ChangeEvent<HTMLInputElement>,
-                            ) => updateLine(i, "debit", e.target.value)}
+                            onValueChange={(value) =>
+                              updateLine(i, "debit", value)
+                            }
                           />
                         </TableCell>
                         <TableCell className="py-1.5">
-                          <Input
+                          <FormattedNumberInput
                             className="h-8 text-right"
-                            type="number"
-                            min={0}
+                            maxFractionDigits={0}
                             value={line.credit}
-                            onChange={(
-                              e: React.ChangeEvent<HTMLInputElement>,
-                            ) => updateLine(i, "credit", e.target.value)}
+                            onValueChange={(value) =>
+                              updateLine(i, "credit", value)
+                            }
                           />
                         </TableCell>
                         <TableCell className="py-1.5">

@@ -24,6 +24,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ArrowLeft as IconArrowLeft, Plus as IconPlus, Save as IconDeviceFloppy, Trash as IconTrash } from "lucide-react";
+import { FormattedNumberInput } from "@/components/form";
 import { InventoryHeader } from "../../_components/inventory-header";
 import { PhotoUploadInput } from "../../_components/photo-upload-input";
 import { formatVND } from "../../_lib/format";
@@ -353,15 +354,12 @@ export function NewSupplierReturnClient({
                         <Label className="text-xs text-muted-foreground">
                           Số lượng {ing ? `(${ing.unit})` : ""}
                         </Label>
-                        <Input
-                          type="number"
-                          inputMode="decimal"
-                          min="0"
-                          step="0.001"
-                          value={line.quantity}
-                          onChange={(e) =>
+                        <FormattedNumberInput
+                          maxFractionDigits={3}
+                          value={String(line.quantity)}
+                          onValueChange={(value) =>
                             patchLine(idx, {
-                              quantity: Number(e.target.value || 0),
+                              quantity: Number(value || 0),
                             })
                           }
                         />
@@ -370,15 +368,12 @@ export function NewSupplierReturnClient({
                         <Label className="text-xs text-muted-foreground">
                           Đơn giá (₫)
                         </Label>
-                        <Input
-                          type="number"
-                          inputMode="decimal"
-                          min="0"
-                          step="0.01"
-                          value={line.unitCost}
-                          onChange={(e) =>
+                        <FormattedNumberInput
+                          maxFractionDigits={0}
+                          value={String(line.unitCost)}
+                          onValueChange={(value) =>
                             patchLine(idx, {
-                              unitCost: Number(e.target.value || 0),
+                              unitCost: Number(value || 0),
                             })
                           }
                         />

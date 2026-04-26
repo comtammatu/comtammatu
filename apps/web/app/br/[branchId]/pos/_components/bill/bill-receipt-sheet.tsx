@@ -40,6 +40,7 @@ import {
   Receipt as IconReceipt,
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "../../../../../_components/boneyard-skeleton";
+import { FormattedNumberInput } from "@/components/form";
 import { fetchOrderForBill } from "../../actions";
 import {
   confirmCashPaymentWithInvoice,
@@ -745,15 +746,12 @@ export function BillReceipt({
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
                         Tổng nhận
                       </span>
-                      <Input
+                      <FormattedNumberInput
                         id="cash-received"
                         data-testid="bill-cash-received"
-                        type="number"
-                        inputMode="numeric"
-                        min={0}
-                        step={1000}
+                        maxFractionDigits={0}
                         value={cashInput}
-                        onChange={(event) => setCashInput(event.target.value)}
+                        onValueChange={setCashInput}
                         onFocus={(event) => event.currentTarget.select()}
                         disabled={actionPending}
                         className="h-12 pl-28 pr-3 text-right text-lg font-semibold tabular-nums"

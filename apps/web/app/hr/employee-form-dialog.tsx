@@ -15,7 +15,7 @@ import {
 import { FieldGroup } from "@comtammatu/ui/components/field";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { SelectField, TextField } from "@/components/form";
+import { NumberField, SelectField, TextField } from "@/components/form";
 import { createEmployee } from "./actions";
 
 const employeeSchema = z.object({
@@ -158,20 +158,18 @@ export function EmployeeFormDialog({
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <TextField
+              <NumberField
                 control={form.control}
                 name="base_salary"
                 label="Lương cơ bản (VND)"
-                type="number"
-                min={0}
-                placeholder="5000000"
+                maxFractionDigits={0}
+                placeholder="5.000.000"
               />
-              <TextField
+              <NumberField
                 control={form.control}
                 name="dependents_count"
                 label="Số người phụ thuộc"
-                type="number"
-                min={0}
+                maxFractionDigits={0}
               />
             </div>
 

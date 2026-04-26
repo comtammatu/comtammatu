@@ -9,7 +9,6 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
-import { Input } from "@comtammatu/ui/components/input";
 import {
   Sheet,
   SheetContent,
@@ -20,6 +19,7 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import { FormattedNumberInput } from "@/components/form";
 
 export type DiscountType = "pct" | "vnd";
 
@@ -162,15 +162,11 @@ export function DiscountSheet({
               <FieldLabel htmlFor="discount-value">
                 {type === "pct" ? "Phần trăm giảm" : "Số tiền giảm (VNĐ)"}
               </FieldLabel>
-              <Input
+              <FormattedNumberInput
                 id="discount-value"
-                type="number"
-                inputMode="decimal"
-                min={0}
-                max={type === "pct" ? 100 : Math.max(subtotal, 0)}
-                step={type === "pct" ? 1 : 1000}
+                maxFractionDigits={type === "pct" ? 2 : 0}
                 value={valueText}
-                onChange={(e) => setValueText(e.target.value)}
+                onValueChange={setValueText}
                 placeholder={type === "pct" ? "Vd: 10" : "Vd: 20000"}
               />
               <FieldDescription>

@@ -4,6 +4,7 @@ import { Controller } from "react-hook-form";
 import { z } from "zod";
 import {
   FormDialog,
+  NumberField,
   SelectField,
   TextField,
   TextareaField,
@@ -102,14 +103,12 @@ export function ItemFormDialog({
             placeholder="Chọn danh mục"
             required
           />
-          <TextField
+          <NumberField
             control={form.control}
             name="base_price"
             label="Giá gốc (VND)"
-            type="number"
-            min={0}
-            step={1000}
-            placeholder="35000"
+            maxFractionDigits={0}
+            placeholder="35.000"
             required
           />
           <TextareaField

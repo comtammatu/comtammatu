@@ -25,6 +25,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { createClient } from "@comtammatu/database/supabase/client";
 import type { ItemRow } from "./item-table";
 import { EmptyStatePanel } from "@/admin/components/empty-state-panel";
+import { FormattedNumberInput } from "@/components/form";
 
 /* ─── Local Types ─── */
 
@@ -308,12 +309,13 @@ export function ItemDetailDialog({
                   </div>
                   <div className="w-28 space-y-1">
                     <Label className="text-xs">+/- Giá</Label>
-                    <Input
-                      type="number"
-                      defaultValue={v.price_adjustment}
+                    <FormattedNumberInput
+                      defaultValue={String(v.price_adjustment)}
+                      allowNegative
+                      maxFractionDigits={0}
                       key={v.id ?? `price-${idx}`}
-                      onBlur={(e) => {
-                        const num = Number(e.target.value);
+                      onValueBlur={(value) => {
+                        const num = Number(value);
                         if (!Number.isNaN(num)) {
                           updateVariant(idx, "price_adjustment", num);
                         }
@@ -375,13 +377,12 @@ export function ItemDetailDialog({
                   </div>
                   <div className="w-28 space-y-1">
                     <Label className="text-xs">Giá</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      defaultValue={m.price}
+                    <FormattedNumberInput
+                      defaultValue={String(m.price)}
+                      maxFractionDigits={0}
                       key={m.id ?? `mod-price-${idx}`}
-                      onBlur={(e) => {
-                        const num = Number(e.target.value);
+                      onValueBlur={(value) => {
+                        const num = Number(value);
                         if (!Number.isNaN(num)) {
                           updateModifier(idx, "price", num);
                         }
