@@ -74,7 +74,10 @@ export async function fetchFoodCost(
     return { success: false, error: "Tham số không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(REPORT_ROLES);
+  const ctx = await getAuthContextWithPermission(
+    REPORT_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase } = ctx;
