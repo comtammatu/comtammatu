@@ -325,6 +325,17 @@ export function OrderDetailSheet({
   // Subscribing to orders (id=eq) + kds_tickets (order_id=eq) for the
   // open order_id fixes both. `load()` already coalesces via React's
   // useTransition; an extra fetch from a burst is acceptable.
+  // Reconnect-resync (REALTIME-SUBSCRIBE-NEEDS-STATUS-CALLBACK): the
+  // first SUBSCRIBED is the initial mount — data is already loaded by
+  // the seed effect or the load() call above, so skip a redundant
+  // refetch. Every later SUBSCRIBED is a reconnect after a dropped
+  // socket; refetch then so events missed during the disconnect are
+  // recovered.
+  const initialDetailSubscribeSeenRef = useRef(false);
+  useEffect(() => {
+    initialDetailSubscribeSeenRef.current = false;
+  }, [orderId]);
+
   useRealtimeChannel(
     (supabase) => {
       if (orderId === null) return null;
@@ -354,7 +365,14 @@ export function OrderDetailSheet({
             load();
           },
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (status !== "SUBSCRIBED") return;
+          if (!initialDetailSubscribeSeenRef.current) {
+            initialDetailSubscribeSeenRef.current = true;
+            return;
+          }
+          load();
+        });
     },
     [load, orderId],
   );

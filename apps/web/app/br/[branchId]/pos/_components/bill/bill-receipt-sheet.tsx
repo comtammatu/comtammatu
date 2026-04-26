@@ -400,6 +400,16 @@ export function BillReceipt({
     refetchOrderRef.current = refetchOrder;
   }, [refetchOrder]);
 
+  // Reconnect-resync: see REALTIME-SUBSCRIBE-NEEDS-STATUS-CALLBACK. Supabase
+  // Realtime is at-most-once — events fired while disconnected are lost.
+  // Skip the FIRST `SUBSCRIBED` (initial subscribe — order is already seeded
+  // by the load effect above); on every later `SUBSCRIBED` (genuine
+  // reconnect) refetch so missed payment / append events catch up.
+  const initialSubscribeSeenRef = useRef(false);
+  useEffect(() => {
+    initialSubscribeSeenRef.current = false;
+  }, [orderId]);
+
   useRealtimeChannel(
     (supabase) => {
       if (orderId === null) return null;
@@ -429,7 +439,14 @@ export function BillReceipt({
             refetchOrderRef.current();
           },
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (status !== "SUBSCRIBED") return;
+          if (!initialSubscribeSeenRef.current) {
+            initialSubscribeSeenRef.current = true;
+            return;
+          }
+          refetchOrderRef.current();
+        });
     },
     [orderId],
   );
