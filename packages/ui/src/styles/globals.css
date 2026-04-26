@@ -233,6 +233,14 @@
   --text-3xs--line-height: 0.875rem;
 }
 
+/* Override: extra-large card/sheet radius for hero surfaces (revenue
+ * report KPI bars, issue-detail summary). Preset stops at --radius-4xl
+ * (1.625rem); this 5xl step (1.75rem) preserves the original
+ * `rounded-[1.75rem]` design intent across the app. */
+@theme inline {
+  --radius-5xl: calc(var(--radius) * 2.8);
+}
+
 @theme inline {
   @keyframes accordion-down {
     from {
