@@ -138,9 +138,13 @@ const wrapText = (s: string, width: number): string[] => {
 // ─── Kitchen ticket ──────────────────────────────────────────────────────
 
 const KITCHEN_BORDER = "-".repeat(4) + "+" + "-".repeat(CHARS_PER_LINE_NORMAL - 5);
-/** Max chars for item name at double-size when prefix " xN | " eats 6 normal cells.
- * Prefix = 6 normal = 6 double-cells worth of width, leaving 24 - 3 ≈ 21 double chars. */
-const KITCHEN_NAME_WIDTH_DOUBLE = 21;
+/** Max chars for item name at double-size. Prefix " xN | " is now ALSO double-
+ * size (chef requested bigger qty), so prefix consumes 6 chars × 24 dots = 144
+ * dots. Remaining 432 dots / 24 = 18 chars at double for the item name. */
+const KITCHEN_NAME_WIDTH_DOUBLE = 18;
+/** Indent under kitchen border for variant/modifier/side/note rows: 8 normal
+ * cells (matches " SL | " column width). */
+const KITCHEN_DETAIL_INDENT = "    |   ";
 
 function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
   const parts: Uint8Array[] = [init(), lineSpacingZero()];
@@ -183,29 +187,37 @@ function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
     const qtyField = padRight(`x${it.quantity}`, 3);
     const chunks = wrapText(it.item_name, KITCHEN_NAME_WIDTH_DOUBLE);
     chunks.forEach((chunk, i) => {
-      const prefixText = i === 0 ? ` ${qtyField}| ` : `    | `;
+      // Both qty prefix AND name at double-size — chef called the previous
+      // small "x2" hard to read across the kitchen.
+      const prefixText = i === 0 ? ` ${qtyField}| ` : `     | `;
       const segs: Segment[] = [
-        { text: prefixText },
+        { text: prefixText, bold: true, double: true },
         { text: chunk, bold: true, double: true },
       ];
       parts.push(renderMixedRow(segs));
     });
 
-    if (it.variant_name) parts.push(line(`    |   (${it.variant_name})`));
+    if (it.variant_name) parts.push(line(`${KITCHEN_DETAIL_INDENT}(${it.variant_name})`));
     if (it.modifiers && it.modifiers.length > 0) {
       for (const m of it.modifiers) {
-        if (m.name) parts.push(line(`    |   + ${m.name}`));
+        if (m.name) parts.push(line(`${KITCHEN_DETAIL_INDENT}+ ${m.name}`));
       }
     }
+    // Sides ("món ăn kèm") at double-size bold — owner explicitly asked for
+    // bigger sides text. Indent stays normal so it lines up with the border.
     if (it.sides && it.sides.length > 0) {
       for (const s of it.sides) {
         const sideName = s.name ?? s.side_item_name;
         if (sideName) {
-          parts.push(line(`    |   - ${sideName}${s.quantity ? ` x${s.quantity}` : ""}`));
+          const text = `- ${sideName}${s.quantity ? ` x${s.quantity}` : ""}`;
+          parts.push(renderMixedRow([
+            { text: KITCHEN_DETAIL_INDENT },
+            { text, bold: true, double: true },
+          ]));
         }
       }
     }
-    if (it.note) parts.push(line(`    |   * ${it.note}`, { bold: true }));
+    if (it.note) parts.push(line(`${KITCHEN_DETAIL_INDENT}* ${it.note}`, { bold: true }));
   });
   parts.push(line(KITCHEN_BORDER));
 
@@ -438,9 +450,9 @@ function renderCancelTicketBitmap(p: CancelTicketPayload): Uint8Array {
     const qtyField = padRight(`x${it.quantity}`, 3);
     const chunks = wrapText(it.item_name, KITCHEN_NAME_WIDTH_DOUBLE);
     chunks.forEach((chunk, i) => {
-      const prefixText = i === 0 ? ` ${qtyField}| ` : `    | `;
+      const prefixText = i === 0 ? ` ${qtyField}| ` : `     | `;
       const segs: Segment[] = [
-        { text: prefixText },
+        { text: prefixText, bold: true, double: true, strikethrough: true },
         // Strikethrough on the item name itself — extra visual cue beyond
         // the HUỶ MÓN banner so chef sees "gạch ngang" at a glance.
         { text: chunk, bold: true, double: true, strikethrough: true },
@@ -448,17 +460,21 @@ function renderCancelTicketBitmap(p: CancelTicketPayload): Uint8Array {
       parts.push(renderMixedRow(segs));
     });
 
-    if (it.variant_name) parts.push(line(`    |   (${it.variant_name})`, { strikethrough: true }));
+    if (it.variant_name) parts.push(line(`${KITCHEN_DETAIL_INDENT}(${it.variant_name})`, { strikethrough: true }));
     if (it.modifiers && it.modifiers.length > 0) {
       for (const m of it.modifiers) {
-        if (m.name) parts.push(line(`    |   + ${m.name}`, { strikethrough: true }));
+        if (m.name) parts.push(line(`${KITCHEN_DETAIL_INDENT}+ ${m.name}`, { strikethrough: true }));
       }
     }
     if (it.sides && it.sides.length > 0) {
       for (const s of it.sides) {
         const sideName = s.name ?? s.side_item_name;
         if (sideName) {
-          parts.push(line(`    |   - ${sideName}${s.quantity ? ` x${s.quantity}` : ""}`, { strikethrough: true }));
+          const text = `- ${sideName}${s.quantity ? ` x${s.quantity}` : ""}`;
+          parts.push(renderMixedRow([
+            { text: KITCHEN_DETAIL_INDENT },
+            { text, bold: true, double: true, strikethrough: true },
+          ]));
         }
       }
     }
