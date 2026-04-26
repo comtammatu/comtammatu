@@ -852,7 +852,7 @@ export function renderShiftCloseReport(p: ShiftCloseReportPayload): Uint8Array {
   parts.push(divider("="));
   parts.push(pair("Đơn đã thanh toán", `${p.paid_order_count} đơn`));
   if (p.unpaid_order_count > 0) {
-    parts.push(pair("Đơn carry-over (ca sau)", `${p.unpaid_order_count} đơn`));
+    parts.push(pair("Đơn chuyển ca sau", `${p.unpaid_order_count} đơn`));
   }
   if (p.cancelled_order_count > 0) {
     parts.push(pair("Đơn đã huỷ", `${p.cancelled_order_count} đơn`));

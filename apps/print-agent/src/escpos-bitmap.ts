@@ -577,7 +577,7 @@ function renderShiftCloseReportBitmap(p: ShiftCloseReportPayload): Uint8Array {
   parts.push(divider("="));
   parts.push(line(pair48("Đơn đã thanh toán", `${p.paid_order_count} đơn`)));
   if (p.unpaid_order_count > 0) {
-    parts.push(line(pair48("Carry-over (ca sau)", `${p.unpaid_order_count} đơn`)));
+    parts.push(line(pair48("Đơn chuyển ca sau", `${p.unpaid_order_count} đơn`)));
   }
   if (p.cancelled_order_count > 0) {
     parts.push(line(pair48("Đơn đã huỷ", `${p.cancelled_order_count} đơn`)));
