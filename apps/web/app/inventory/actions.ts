@@ -5,14 +5,11 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import {
   INVENTORY_CATALOG_ROLES,
   INVENTORY_OPS_ROLES,
-  PERMISSION_KEYS,
 } from "@comtammatu/shared/auth";
-import {
-  getAuthContext,
-  getAuthContextWithAnyPermission,
-} from "./_lib/auth";
+import { getAuthContext, getAuthContextWithAnyPermission } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
+import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import {
   STORAGE_TYPE_BY_LABEL,
   ITEM_KIND_BY_LABEL,
@@ -30,10 +27,6 @@ import {
   stringToBase64,
   type SheetDef,
 } from "@/_lib/spreadsheet";
-
-const CATALOG_MANAGE_PERMISSIONS = [
-  PERMISSION_KEYS.INVENTORY_WRITE,
-] as const;
 
 /* ─── Schemas ─── */
 
@@ -498,13 +491,11 @@ export async function fetchStocktakeSessions(
 
   const enriched = sessions.map((s) => {
     const agg = bySession.get(s.id) ?? { total: 0, counted: 0 };
-    const branch = s.branches as
-      | {
-          id: number;
-          name: string;
-          branch_kind?: string | null;
-        }
-      | null;
+    const branch = s.branches as {
+      id: number;
+      name: string;
+      branch_kind?: string | null;
+    } | null;
     return {
       ...s,
       branches: branch
@@ -824,9 +815,7 @@ export async function fetchExpiryAlerts(
         expiry_date: item.expiry_date,
         grn_number: grn.grn_number,
         branch_id: grn.branch_id,
-        branch_name: grn.branches
-          ? getBranchSiteDisplayName(grn.branches)
-          : "",
+        branch_name: grn.branches ? getBranchSiteDisplayName(grn.branches) : "",
         days_remaining: daysRemaining,
         urgency,
       };
@@ -902,15 +891,14 @@ export async function fetchReorderAlerts(
         max_stock_level: ing.max_stock_level,
         suggested_order_qty: suggestedQty,
         branch_id: sl.branch_id,
-        branch_name:
-          sl.branches
-            ? getBranchSiteDisplayName(
-                sl.branches as unknown as {
-                  name: string;
-                  branch_kind?: string | null;
-                        },
-              )
-            : "",
+        branch_name: sl.branches
+          ? getBranchSiteDisplayName(
+              sl.branches as unknown as {
+                name: string;
+                branch_kind?: string | null;
+              },
+            )
+          : "",
       };
     })
     .sort((a, b) => a.ingredient_name.localeCompare(b.ingredient_name));

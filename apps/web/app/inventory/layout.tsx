@@ -6,17 +6,13 @@ import {
   currentUserHasPermissionAny,
 } from "../_lib/permissions";
 import { InventoryShell } from "./_components/inventory-shell";
+import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import { resolveInventoryBranchScope } from "./_lib/inventory-scope";
 import {
   canAccessProductionSurface,
   hasCurrentProductionBranchAccess,
   PRODUCTION_OPEN_PERMISSIONS,
 } from "./production-data";
-
-const CATALOG_MANAGE_PERMISSIONS = [
-  PERMISSION_KEYS.PROCUREMENT_SUPPLIER_MANAGE,
-  PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
-] as const;
 
 const INVENTORY_SETTINGS_PERMISSIONS = [
   PERMISSION_KEYS.SETTINGS_BRANCH,
@@ -37,17 +33,15 @@ export default async function InventoryLayout({
     canOpenSettings,
     hasProductionPermission,
     hasProductionBranchAccess,
-  ] =
-    await Promise.all([
-      currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ),
-      currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS),
-      currentUserHasAnyPermissionAny(INVENTORY_SETTINGS_PERMISSIONS),
-      currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS),
-      hasCurrentProductionBranchAccess(supabase, claims),
-    ]);
+  ] = await Promise.all([
+    currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ),
+    currentUserHasAnyPermissionAny(CATALOG_MANAGE_PERMISSIONS),
+    currentUserHasAnyPermissionAny(INVENTORY_SETTINGS_PERMISSIONS),
+    currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS),
+    hasCurrentProductionBranchAccess(supabase, claims),
+  ]);
   const showProcurement =
-    canAccess(claims.user_role, "inventory_procurement") &&
-    hasProcurementRead;
+    canAccess(claims.user_role, "inventory_procurement") && hasProcurementRead;
   const showProduction =
     canAccessProductionSurface(claims.user_role) &&
     hasProductionPermission &&

@@ -8,6 +8,7 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import { fetchIngredients } from "./actions";
+import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import {
   fetchProductionOrders,
   fetchProductionRecipes,
@@ -30,11 +31,6 @@ export const PRODUCTION_OPEN_PERMISSIONS = [
   PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
   PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
   PERMISSION_KEYS.MENU_WRITE,
-] as const;
-
-const CATALOG_MANAGE_PERMISSIONS = [
-  PERMISSION_KEYS.PROCUREMENT_SUPPLIER_MANAGE,
-  PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
 ] as const;
 
 const PRODUCTION_BRANCH_SCOPED_ROLES = ["production_manager"] as const;

@@ -5,6 +5,7 @@ import { Pencil as IconPencil, Search as IconSearch } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { toast } from "@comtammatu/ui/components/sonner";
 import {
   InputGroup,
   InputGroupAddon,
@@ -99,9 +100,15 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
   }, [rows, category, preservation, searchQuery]);
 
   async function reload() {
-    const response = await fetchIngredients();
-    if (response.success) {
-      setRows((response.data ?? []) as IngredientRow[]);
+    try {
+      const response = await fetchIngredients();
+      if (response.success) {
+        setRows((response.data ?? []) as IngredientRow[]);
+        return;
+      }
+      toast.error(response.error ?? "Không thể tải lại danh sách nguyên liệu.");
+    } catch {
+      toast.error("Không thể tải lại danh sách nguyên liệu.");
     }
   }
 

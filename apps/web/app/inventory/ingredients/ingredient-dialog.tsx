@@ -98,7 +98,7 @@ interface IngredientDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   ingredient: IngredientRow | null;
-  onSaved: () => void;
+  onSaved: () => void | Promise<void>;
 }
 
 function IngredientFormContent({
@@ -144,37 +144,46 @@ function IngredientFormContent({
         shelf_life_days: parseOptionalNumber(values.shelf_life_days),
       };
 
-      if (isEdit) {
-        const result = await updateIngredient(ingredient.id, payload);
-        if (!result.success) {
-          setServerError(result.error ?? "Đã xảy ra lỗi");
-          return;
+      try {
+        if (isEdit) {
+          const result = await updateIngredient(ingredient.id, payload);
+          if (!result.success) {
+            setServerError(result.error ?? "Đã xảy ra lỗi");
+            return;
+          }
+          toast.success("Đã cập nhật nguyên liệu");
+        } else {
+          const result = await createIngredient({
+            name: payload.name,
+            purchase_unit: payload.purchase_unit,
+            measure_unit: payload.measure_unit,
+            purchase_to_measure_factor: payload.purchase_to_measure_factor,
+            sku: payload.sku,
+            unit_cost: payload.unit_cost,
+            category: payload.category,
+            item_kind: payload.item_kind,
+            storage_type: payload.storage_type,
+            min_stock_level: payload.min_stock_level ?? 0,
+            max_stock_level: payload.max_stock_level,
+            reorder_point: payload.reorder_point,
+            shelf_life_days: payload.shelf_life_days,
+          });
+          if (!result.success) {
+            setServerError(result.error ?? "Đã xảy ra lỗi");
+            return;
+          }
+          toast.success("Đã thêm nguyên liệu mới");
         }
-        toast.success("Đã cập nhật nguyên liệu");
-      } else {
-        const result = await createIngredient({
-          name: payload.name,
-          purchase_unit: payload.purchase_unit,
-          measure_unit: payload.measure_unit,
-          purchase_to_measure_factor: payload.purchase_to_measure_factor,
-          sku: payload.sku,
-          unit_cost: payload.unit_cost,
-          category: payload.category,
-          item_kind: payload.item_kind,
-          storage_type: payload.storage_type,
-          min_stock_level: payload.min_stock_level ?? 0,
-          max_stock_level: payload.max_stock_level,
-          reorder_point: payload.reorder_point,
-          shelf_life_days: payload.shelf_life_days,
-        });
-        if (!result.success) {
-          setServerError(result.error ?? "Đã xảy ra lỗi");
-          return;
-        }
-        toast.success("Đã thêm nguyên liệu mới");
+      } catch {
+        setServerError("Không thể lưu nguyên liệu. Vui lòng thử lại.");
+        return;
       }
       onOpenChange(false);
-      onSaved();
+      try {
+        await onSaved();
+      } catch {
+        toast.error("Đã lưu nhưng chưa tải lại được danh sách nguyên liệu.");
+      }
     });
   }
 
