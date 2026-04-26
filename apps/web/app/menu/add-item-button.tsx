@@ -8,9 +8,10 @@ import type { CategoryRow } from "./category-table";
 
 interface AddItemButtonProps {
   categories: CategoryRow[];
+  tenantId: number;
 }
 
-export function AddItemButton({ categories }: AddItemButtonProps) {
+export function AddItemButton({ categories, tenantId }: AddItemButtonProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -23,6 +24,7 @@ export function AddItemButton({ categories }: AddItemButtonProps) {
         open={open}
         onOpenChange={setOpen}
         categories={categories}
+        tenantId={tenantId}
       />
     </>
   );

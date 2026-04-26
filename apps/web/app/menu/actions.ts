@@ -47,11 +47,22 @@ const updateCategorySchema = z.object({
 
 /* ─── Item Schemas ─── */
 
+const imageUrlField = z
+  .string()
+  .trim()
+  .max(500, { error: "URL ảnh quá dài" })
+  .refine((v) => v === "" || /^https?:\/\//i.test(v), {
+    error: "URL ảnh không hợp lệ",
+  })
+  .optional()
+  .default("");
+
 const createItemSchema = z.object({
   name: z.string().min(1, { error: "Tên món không được để trống" }),
   category_id: z.coerce.number().int().positive({ error: "Chọn danh mục" }),
   base_price: z.coerce.number().min(0, { error: "Giá không hợp lệ" }),
   description: z.string().optional().default(""),
+  image_url: imageUrlField,
 });
 
 const updateItemSchema = z.object({
@@ -60,6 +71,7 @@ const updateItemSchema = z.object({
   category_id: z.coerce.number().int().positive({ error: "Chọn danh mục" }),
   base_price: z.coerce.number().min(0, { error: "Giá không hợp lệ" }),
   description: z.string().optional().default(""),
+  image_url: imageUrlField,
 });
 
 /* ─── Variant/Modifier/Sides Schemas ─── */
@@ -196,6 +208,7 @@ export const createItem = withFormAction(
       category_id: fd.get("category_id"),
       base_price: fd.get("base_price"),
       description: fd.get("description") ?? "",
+      image_url: fd.get("image_url") ?? "",
     }),
   },
   async (data, { supabase, claims }) => {
@@ -205,6 +218,7 @@ export const createItem = withFormAction(
       name: data.name,
       base_price: data.base_price,
       description: data.description || null,
+      image_url: data.image_url || null,
     });
 
     if (error) {
@@ -226,6 +240,7 @@ export const updateItem = withFormAction(
       category_id: fd.get("category_id"),
       base_price: fd.get("base_price"),
       description: fd.get("description") ?? "",
+      image_url: fd.get("image_url") ?? "",
     }),
   },
   async (data, { supabase, claims }) => {
@@ -236,6 +251,7 @@ export const updateItem = withFormAction(
         category_id: data.category_id,
         base_price: data.base_price,
         description: data.description || null,
+        image_url: data.image_url || null,
       })
       .eq("id", data.id)
       .eq("tenant_id", claims.tenant_id);

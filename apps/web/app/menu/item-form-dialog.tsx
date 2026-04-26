@@ -1,5 +1,6 @@
 "use client";
 
+import { Controller } from "react-hook-form";
 import { z } from "zod";
 import {
   FormDialog,
@@ -8,7 +9,9 @@ import {
   TextareaField,
   valuesToFormData,
 } from "@/components/form";
+import { Field, FieldLabel } from "@comtammatu/ui/components/field";
 import { createItem, updateItem } from "./actions";
+import { MenuImageInput } from "./menu-image-input";
 import type { CategoryRow } from "./category-table";
 import type { ItemRow } from "./item-table";
 
@@ -21,6 +24,7 @@ const itemSchema = z.object({
     .min(1, { error: "Giá không được trống" })
     .refine((v) => Number(v) >= 0, { error: "Giá không hợp lệ" }),
   description: z.string().optional(),
+  image_url: z.string().nullable().optional(),
 });
 
 type ItemFormValues = z.infer<typeof itemSchema>;
@@ -31,6 +35,7 @@ function toFormValues(item: ItemRow | null | undefined): ItemFormValues {
     category_id: item?.category_id != null ? String(item.category_id) : "",
     base_price: item?.base_price != null ? String(item.base_price) : "",
     description: item?.description ?? "",
+    image_url: item?.image_url ?? null,
   };
 }
 
@@ -39,6 +44,7 @@ interface ItemFormDialogProps {
   onOpenChange: (open: boolean) => void;
   item?: ItemRow | null;
   categories: CategoryRow[];
+  tenantId: number;
 }
 
 export function ItemFormDialog({
@@ -46,6 +52,7 @@ export function ItemFormDialog({
   onOpenChange,
   item,
   categories,
+  tenantId,
 }: ItemFormDialogProps) {
   const isEdit = !!item;
   const activeCategories = categories.filter(
@@ -69,6 +76,8 @@ export function ItemFormDialog({
       submitLabel={isEdit ? "Cập nhật" : "Tạo mới"}
       onSubmit={async (values) => {
         const fd = valuesToFormData(values);
+        // valuesToFormData skips null/empty — set explicitly so server can clear it.
+        fd.set("image_url", values.image_url ?? "");
         if (isEdit && item) {
           fd.set("id", String(item.id));
           return updateItem(null, fd);
@@ -109,6 +118,20 @@ export function ItemFormDialog({
             label="Mô tả"
             rows={2}
             placeholder="Mô tả ngắn về món ăn"
+          />
+          <Controller
+            control={form.control}
+            name="image_url"
+            render={({ field }) => (
+              <Field>
+                <FieldLabel>Ảnh món</FieldLabel>
+                <MenuImageInput
+                  tenantId={tenantId}
+                  value={field.value ?? null}
+                  onChange={(url) => field.onChange(url)}
+                />
+              </Field>
+            )}
           />
         </>
       )}

@@ -1,4 +1,3 @@
-import { createClient } from "@comtammatu/database/supabase/server";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   TabsContent,
@@ -6,6 +5,7 @@ import {
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
 import { UrlTabs } from "@/_components/url-tabs";
+import { loadAuthState } from "@/_lib/auth";
 import { CategoryTable } from "./category-table";
 import { AddCategoryButton } from "./add-category-button";
 import { ItemTable } from "./item-table";
@@ -13,7 +13,7 @@ import { AddItemButton } from "./add-item-button";
 import { MenuImportExportMenu } from "./import-export-menu";
 
 export default async function MenuPage() {
-  const supabase = await createClient();
+  const { supabase, claims } = await loadAuthState();
 
   const [categoriesRes, itemsRes] = await Promise.all([
     supabase
@@ -24,7 +24,7 @@ export default async function MenuPage() {
     supabase
       .from("menu_items")
       .select(
-        "id, name, description, base_price, category_id, is_active, sort_order, menu_categories(name, type)",
+        "id, name, description, base_price, category_id, image_url, is_active, sort_order, menu_categories(name, type)",
       )
       .order("sort_order")
       .order("name"),
@@ -42,6 +42,7 @@ export default async function MenuPage() {
     category_id: item.category_id,
     category_name: item.menu_categories?.name ?? "—",
     category_type: item.menu_categories?.type ?? "main_dish",
+    image_url: item.image_url,
     is_active: item.is_active,
     sort_order: item.sort_order,
   }));
@@ -84,10 +85,17 @@ export default async function MenuPage() {
 
             <TabsContent value="items" className="mt-6 space-y-4">
               <div className="flex justify-end">
-                <AddItemButton categories={categories} />
+                <AddItemButton
+                  categories={categories}
+                  tenantId={claims.tenant_id}
+                />
               </div>
               <div className="rounded-lg border border-border/70 shadow-sm">
-                <ItemTable items={items} categories={categories} />
+                <ItemTable
+                  items={items}
+                  categories={categories}
+                  tenantId={claims.tenant_id}
+                />
               </div>
             </TabsContent>
 

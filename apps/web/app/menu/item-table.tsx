@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Ellipsis as IconDots, Pencil as IconPencil, ToggleLeft as IconToggleLeft, ToggleRight as IconToggleRight, SlidersHorizontal as IconSettings2, Utensils as IconToolsKitchen } from "lucide-react";
+import Image from "next/image";
+import { Ellipsis as IconDots, Pencil as IconPencil, ToggleLeft as IconToggleLeft, ToggleRight as IconToggleRight, SlidersHorizontal as IconSettings2, Utensils as IconToolsKitchen, Image as IconImage } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -36,6 +37,7 @@ export interface ItemRow {
   category_id: number;
   category_name: string;
   category_type: string;
+  image_url: string | null;
   is_active: boolean;
   sort_order: number;
 }
@@ -43,9 +45,10 @@ export interface ItemRow {
 interface ItemTableProps {
   items: ItemRow[];
   categories: CategoryRow[];
+  tenantId: number;
 }
 
-export function ItemTable({ items, categories }: ItemTableProps) {
+export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
   const [editItem, setEditItem] = useState<ItemRow | null>(null);
   const [detailItem, setDetailItem] = useState<ItemRow | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -65,6 +68,7 @@ export function ItemTable({ items, categories }: ItemTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-16">Ảnh</TableHead>
               <TableHead>Tên món</TableHead>
               <TableHead className="hidden sm:table-cell">Danh mục</TableHead>
               <TableHead className="hidden md:table-cell text-right">
@@ -77,7 +81,7 @@ export function ItemTable({ items, categories }: ItemTableProps) {
           <TableBody>
             {items.length === 0 && (
               <TableEmptyStateRow
-                colSpan={5}
+                colSpan={6}
                 title="Chưa có món ăn nào"
                 icon={
                   <IconToolsKitchen className="mx-auto size-8 text-muted-foreground" />
@@ -86,6 +90,22 @@ export function ItemTable({ items, categories }: ItemTableProps) {
             )}
             {items.map((item) => (
               <TableRow key={item.id} className={isPending ? "opacity-60" : ""}>
+                <TableCell>
+                  {item.image_url ? (
+                    <Image
+                      src={item.image_url}
+                      alt={item.name}
+                      width={48}
+                      height={48}
+                      className="size-12 rounded object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="flex size-12 items-center justify-center rounded bg-muted text-muted-foreground">
+                      <IconImage className="size-5" />
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell>
                   <div>
                     <span className="font-medium">{item.name}</span>
@@ -168,6 +188,7 @@ export function ItemTable({ items, categories }: ItemTableProps) {
         onOpenChange={(open) => !open && setEditItem(null)}
         item={editItem}
         categories={categories}
+        tenantId={tenantId}
       />
 
       <ItemDetailDialog
