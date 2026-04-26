@@ -77,6 +77,14 @@ export function CashTenderedDialog({
         toast.success("Đã xác nhận thanh toán", {
           description: `Tiền trả khách: ${formatVND(result.data.cash_change)}`,
         });
+        // Receipt enqueue is fail-soft inside confirm_cash_payment — surface
+        // any printer error as a warning so the cashier can re-print once
+        // the printer is back. Money is already in the drawer.
+        if (result.data.print_warning) {
+          toast.warning("Không in được hoá đơn", {
+            description: `${result.data.print_warning} — bấm "in lại" sau khi sửa máy in.`,
+          });
+        }
         onOpenChange(false);
         await onSuccess();
       } else {

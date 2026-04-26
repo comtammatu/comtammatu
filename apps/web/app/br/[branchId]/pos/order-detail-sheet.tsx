@@ -424,6 +424,9 @@ export function OrderDetailSheet({
       const r = await cancelOrder(orderId, reason);
       if (r.success) {
         notify.success(messages.pos.order.voided);
+        if (r.data?.printWarning) {
+          notify.warning(r.data.printWarning);
+        }
         setShowCancel(false);
         setCancelReason("");
         await onOrderUpdated?.();

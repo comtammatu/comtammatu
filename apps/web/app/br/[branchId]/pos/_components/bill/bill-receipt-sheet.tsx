@@ -544,6 +544,13 @@ export function BillReceipt({
             description: `Số HĐ: ${inv.invoiceNumber ?? `#${inv.invoiceId}`} · Tiền trả khách: ${formatVND(change)}`,
           });
         }
+        // Receipt enqueue is fail-soft inside confirm_cash_payment — surface
+        // any printer error as a warning so cashier knows to re-print later.
+        if (result.data?.print_warning) {
+          toast.warning("Không in được hoá đơn", {
+            description: `${result.data.print_warning} — bấm "in lại" sau khi sửa máy in.`,
+          });
+        }
         await onOrderUpdated?.();
         onClose();
         return;

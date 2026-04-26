@@ -686,7 +686,11 @@ export interface CashPaymentResult {
   payment_id: number;
   cash_received: number;
   cash_change: number;
-  print_job_id: number;
+  /** Null when receipt enqueue failed inside the RPC — payment still committed
+   * (see fail-soft contract in confirm_cash_payment). UI shows print_warning
+   * as a toast and offers "in lại". */
+  print_job_id: number | null;
+  print_warning?: string | null;
 }
 
 /**
@@ -766,7 +770,8 @@ export async function confirmCashPayment(
     payment_id: number;
     cash_received: number;
     cash_change: number;
-    print_job_id: number;
+    print_job_id: number | null;
+    print_warning?: string | null;
   } | null;
   if (!result) {
     return { success: false, error: "Không thể xác nhận thanh toán." };

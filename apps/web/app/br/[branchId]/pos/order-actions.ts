@@ -830,7 +830,7 @@ export async function voidOrderItem(
   // KDS realtime catches up. Surface as a toast warning, not an error.
   let printWarning: string | undefined;
   if (result?.was_sent_to_kitchen) {
-    const { error: printError } = await supabase.rpc(
+    const { data: printData, error: printError } = await supabase.rpc(
       "enqueue_cancel_ticket_print",
       {
         p_order_item_id: parsed.data.orderItemId,
@@ -847,6 +847,23 @@ export async function voidOrderItem(
       } else {
         printWarning =
           "Đã huỷ món. Không in được phiếu huỷ — kiểm tra máy in bếp.";
+      }
+    } else {
+      // RPC returns {skipped: true, reason: 'no_slot'|'no_printer'|...} when
+      // the item exists but the cancel ticket cannot be routed (drink with
+      // no kitchen slot, kitchen printer offline, feature flag off).
+      const skipReason = (printData as { skipped?: boolean; reason?: string } | null)
+        ?.skipped
+        ? (printData as { reason?: string }).reason
+        : undefined;
+      if (skipReason === "no_printer") {
+        printWarning = "Đã huỷ món. Máy in bếp offline — báo bếp trực tiếp.";
+      } else if (skipReason === "no_slot") {
+        printWarning =
+          "Đã huỷ món. Món không thuộc khu vực bếp (đồ uống chai?) — báo bar trực tiếp.";
+      } else if (skipReason === "feature_disabled") {
+        printWarning =
+          "Đã huỷ món. Tính năng in phiếu huỷ đang tắt — báo bếp trực tiếp.";
       }
     }
   }
@@ -880,7 +897,16 @@ const cancelOrderSchema = z.object({
 export async function cancelOrder(
   orderId: number,
   reason: string,
-): Promise<ActionResult> {
+): Promise<
+  ActionResult<{
+    cancelTickets: number;
+    cancelSkipped: number;
+    /** Surfaced when ≥1 cancelled item could not enqueue a kitchen/bar
+     * ticket (no_slot for drinks, no_printer for offline hardware, etc.).
+     * UI toasts so the operator can verbally notify the affected station. */
+    printWarning?: string;
+  }>
+> {
   const parsed = cancelOrderSchema.safeParse({ orderId, reason });
   if (!parsed.success) {
     return {
@@ -899,7 +925,7 @@ export async function cancelOrder(
 
   const { supabase } = ctx;
 
-  const { error } = await supabase.rpc("cancel_order", {
+  const { data, error } = await supabase.rpc("cancel_order", {
     p_order_id: parsed.data.orderId,
     p_reason: parsed.data.reason,
   });
@@ -918,7 +944,38 @@ export async function cancelOrder(
     return { success: false, error: "Không thể hủy đơn. Vui lòng thử lại." };
   }
 
-  return { success: true, data: null };
+  const result = data as unknown as {
+    order_id?: number;
+    status?: string;
+    cancel_tickets?: number;
+    cancel_skipped?: number;
+    skip_reasons?: string[];
+  } | null;
+
+  const skipped = result?.cancel_skipped ?? 0;
+  let printWarning: string | undefined;
+  if (skipped > 0) {
+    const reasons = result?.skip_reasons ?? [];
+    const has = (k: string) => reasons.some((r) => r.startsWith(k));
+    if (has("no_printer")) {
+      printWarning = `Đã huỷ đơn. ${skipped} món bếp/bar không nhận được phiếu báo huỷ (máy in offline) — báo trực tiếp.`;
+    } else if (has("no_slot")) {
+      printWarning = `Đã huỷ đơn. ${skipped} món không có khu vực bếp (đồ uống chai?) — báo bar trực tiếp.`;
+    } else if (has("feature_disabled")) {
+      printWarning = "Đã huỷ đơn. Tính năng in phiếu huỷ đang tắt — báo bếp trực tiếp.";
+    } else {
+      printWarning = `Đã huỷ đơn. ${skipped} phiếu huỷ không in được — báo bếp/bar trực tiếp.`;
+    }
+  }
+
+  return {
+    success: true,
+    data: {
+      cancelTickets: result?.cancel_tickets ?? 0,
+      cancelSkipped: skipped,
+      printWarning,
+    },
+  };
 }
 
 /* ─── transferOrderTable ─── */

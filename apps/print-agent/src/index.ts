@@ -243,6 +243,29 @@ async function drainPending(supabase: SupabaseClient): Promise<void> {
   }
 }
 
+/**
+ * Janitor: ask the DB to revert any print_jobs stuck in 'processing' for
+ * >5 min back to 'pending'. Happens when an agent crashes mid-dispatch
+ * (NSSM restarts node, but the row stays processing forever otherwise —
+ * UNIQUE(idempotency_key) blocks any new insert, retry button can't
+ * reach it). Without this, a single LAN blip + agent crash = silent
+ * print loss for the rest of the shift.
+ */
+async function reapStuckJobs(supabase: SupabaseClient): Promise<void> {
+  const { data, error } = await supabase.rpc("expire_stuck_print_jobs", {
+    p_stale_after_seconds: 300,
+  });
+  if (error) {
+    console.error("[agent] reap failed:", error.message);
+    return;
+  }
+  const revived = typeof data === "number" ? data : 0;
+  if (revived > 0) {
+    console.log(`[agent] reaped ${revived} stuck processing job(s) → pending`);
+    void drainPending(supabase);
+  }
+}
+
 async function main() {
   console.log(
     `[agent] starting ${config.agentId} v${config.version} branch=${config.branchId} transport=${config.transport} print_mode=${config.printMode}`,
@@ -302,6 +325,8 @@ async function main() {
   // Worst-case latency for a job INSERTed during a WS disconnect:
   // bounded by this interval (was 60_000 — too slow for a kitchen).
   setInterval(() => void drainPending(supabase), 15_000);
+  // Janitor: re-pending stuck 'processing' jobs every 60s.
+  setInterval(() => void reapStuckJobs(supabase), 60_000);
 
   const shutdown = () => {
     console.log("[agent] shutting down");
