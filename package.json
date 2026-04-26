@@ -7,6 +7,8 @@
   },
   "scripts": {
     "dev": "turbo dev",
+    "dev:web": "turbo dev --filter=@comtammatu/web",
+    "dev:print": "turbo dev --filter=@comtammatu/print-agent",
     "build": "turbo build",
     "lint": "pnpm lint:copy && pnpm lint:v2-imports && turbo lint",
     "lint:copy": "node scripts/lint-copy.mjs",
