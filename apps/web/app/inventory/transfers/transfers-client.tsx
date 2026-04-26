@@ -25,6 +25,7 @@ import {
   getInventoryStatusBadgeVariant,
   getInventoryStatusLabel,
 } from "../_lib/ui";
+import { matchesSearch } from "@lib/search";
 
 export type TransferRow = {
   id: number;
@@ -48,15 +49,11 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
   }), [transfers]);
 
   const filteredTransfers = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = searchQuery.trim();
     return transfers.filter((t) => {
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
       if (!q) return true;
-      return (
-        t.code.toLowerCase().includes(q) ||
-        t.fromBranch.toLowerCase().includes(q) ||
-        t.toBranch.toLowerCase().includes(q)
-      );
+      return matchesSearch([t.code, t.fromBranch, t.toBranch], q);
     });
   }, [transfers, statusFilter, searchQuery]);
 

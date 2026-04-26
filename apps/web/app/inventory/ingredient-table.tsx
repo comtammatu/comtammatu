@@ -34,6 +34,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { matchesSearch } from "@lib/search";
 import { IngredientFormDialog } from "./ingredient-form-dialog";
 import { TableEmptyStateRow } from "./_components/table-empty-state-row";
 import type { IngredientRow } from "./_lib/types";
@@ -73,13 +74,10 @@ export function IngredientTable({
   const isMobile = useIsMobile();
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = search.trim();
     if (!q) return ingredients;
-    return ingredients.filter(
-      (ing) =>
-        ing.name.toLowerCase().includes(q) ||
-        (ing.sku ?? "").toLowerCase().includes(q) ||
-        (ing.category ?? "").toLowerCase().includes(q),
+    return ingredients.filter((ing) =>
+      matchesSearch([ing.name, ing.sku, ing.category], q),
     );
   }, [ingredients, search]);
 

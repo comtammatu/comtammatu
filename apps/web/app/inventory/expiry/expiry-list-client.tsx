@@ -53,6 +53,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { matchesSearch } from "@lib/search";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { InventoryHeader } from "../_components/inventory-header";
 import {
@@ -116,14 +117,13 @@ export function ExpiryListClient({
       items = items.filter((a) => a.branch_id === bid);
     }
 
-    const q = search.trim().toLowerCase();
+    const q = search.trim();
     if (q) {
-      items = items.filter(
-        (a) =>
-          a.ingredient_name.toLowerCase().includes(q) ||
-          (a.batch_number ?? "").toLowerCase().includes(q) ||
-          a.grn_number.toLowerCase().includes(q) ||
-          a.branch_name.toLowerCase().includes(q),
+      items = items.filter((a) =>
+        matchesSearch(
+          [a.ingredient_name, a.batch_number, a.grn_number, a.branch_name],
+          q,
+        ),
       );
     }
 

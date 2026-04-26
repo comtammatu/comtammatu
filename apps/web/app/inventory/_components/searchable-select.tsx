@@ -3,6 +3,7 @@
 import { useState, type CSSProperties } from "react";
 import { Check as IconCheck, ChevronDown as IconChevronDown } from "lucide-react";
 import { cn } from "@comtammatu/ui";
+import { matchesSearch } from "@lib/search";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Popover,
@@ -84,9 +85,7 @@ export function SearchableSelect({
           filter={(optionValue, search) => {
             const option = options.find((item) => item.value === optionValue);
             if (!option) return 0;
-            return option.label.toLowerCase().includes(search.toLowerCase())
-              ? 1
-              : 0;
+            return matchesSearch([option.label], search) ? 1 : 0;
           }}
         >
           <CommandInput

@@ -8,6 +8,7 @@ import {
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { cn } from "@comtammatu/ui";
+import { matchesSearch } from "@lib/search";
 import { MobileEmptyState } from "../../_components/mobile/mobile-empty-state";
 import { formatQty } from "../../_lib/format";
 
@@ -78,7 +79,7 @@ export function MobileStockClient({ rows }: { rows: StockRow[] }) {
   }, [rows]);
 
   const filtered = React.useMemo(() => {
-    const needle = query.trim().toLowerCase();
+    const needle = query.trim();
     return rows.filter((row) => {
       if (filter === "out" && row.status !== "out") return false;
       if (filter === "low" && row.status !== "low") return false;
@@ -90,10 +91,7 @@ export function MobileStockClient({ rows }: { rows: StockRow[] }) {
       )
         return false;
       if (!needle) return true;
-      return (
-        row.name.toLowerCase().includes(needle) ||
-        (row.sku ?? "").toLowerCase().includes(needle)
-      );
+      return matchesSearch([row.name, row.sku], needle);
     });
   }, [rows, query, filter]);
 

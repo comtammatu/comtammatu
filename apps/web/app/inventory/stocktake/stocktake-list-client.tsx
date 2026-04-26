@@ -39,6 +39,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { matchesSearch } from "@lib/search";
 import { InventoryHeader } from "../_components/inventory-header";
 import {
   InventoryFilterBar,
@@ -111,13 +112,9 @@ export function StocktakeListClient({
     if (statusFilter !== "all") {
       list = list.filter((r) => r.status === statusFilter);
     }
-    const q = search.trim().toLowerCase();
+    const q = search.trim();
     if (q) {
-      list = list.filter(
-        (r) =>
-          `KK-${r.id}`.toLowerCase().includes(q) ||
-          (r.branches?.name ?? "").toLowerCase().includes(q),
-      );
+      list = list.filter((r) => matchesSearch([`KK-${r.id}`, r.branches?.name], q));
     }
     return list;
   }, [rows, search, statusFilter]);

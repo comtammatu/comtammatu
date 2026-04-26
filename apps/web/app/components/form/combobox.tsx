@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Check as IconCheck, ChevronsUpDown as IconSelector } from "lucide-react";
 import { cn } from "@comtammatu/ui";
+import { matchesSearch } from "@lib/search";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Command,
@@ -87,8 +88,7 @@ export function Combobox({
       >
         <Command
           filter={(v, search, keywords) => {
-            const haystack = `${v} ${keywords?.join(" ") ?? ""}`.toLowerCase();
-            return haystack.includes(search.toLowerCase()) ? 1 : 0;
+            return matchesSearch([v, ...(keywords ?? [])], search) ? 1 : 0;
           }}
         >
           <CommandInput placeholder={searchPlaceholder} />

@@ -31,6 +31,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { matchesSearch } from "@lib/search";
 import { InventoryHeader } from "../_components/inventory-header";
 import {
   InventoryFilterBar,
@@ -90,13 +91,10 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
   const [isPending, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = search.trim();
     if (!q) return rows;
-    return rows.filter(
-      (s) =>
-        s.name.toLowerCase().includes(q) ||
-        (s.tax_code ?? "").toLowerCase().includes(q) ||
-        (s.phone ?? "").toLowerCase().includes(q),
+    return rows.filter((s) =>
+      matchesSearch([s.name, s.tax_code, s.phone], q),
     );
   }, [rows, search]);
 

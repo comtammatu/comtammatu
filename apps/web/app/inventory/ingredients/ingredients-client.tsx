@@ -28,6 +28,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { matchesSearch } from "@lib/search";
 import { InventoryHeader } from "../_components/inventory-header";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
@@ -89,11 +90,8 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
       );
     }
     if (searchQuery.trim()) {
-      const query = searchQuery.trim().toLowerCase();
-      result = result.filter(
-        (item) =>
-          item.name.toLowerCase().includes(query) ||
-          (item.sku ?? "").toLowerCase().includes(query),
+      result = result.filter((item) =>
+        matchesSearch([item.name, item.sku], searchQuery),
       );
     }
     return result;

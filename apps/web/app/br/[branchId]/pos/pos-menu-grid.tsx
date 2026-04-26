@@ -30,6 +30,7 @@ import {
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { formatVND } from "@comtammatu/shared/format";
+import { normalizeSearch } from "@lib/search";
 import {
   ChefHat as IconChefHat,
   Search as IconSearch,
@@ -181,7 +182,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
 
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
-  const normalizedQuery = deferredQuery.trim().toLowerCase();
+  const normalizedQuery = normalizeSearch(deferredQuery).trim();
   const visibleCategories = useMemo(() => {
     if (normalizedQuery === "") return availableCategories;
 
@@ -189,8 +190,9 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
       .map((category) => ({
         ...category,
         menu_items: category.menu_items.filter((item) => {
-          const haystack =
-            `${item.name} ${item.description ?? ""}`.toLowerCase();
+          const haystack = normalizeSearch(
+            `${item.name} ${item.description ?? ""}`,
+          );
           return haystack.includes(normalizedQuery);
         }),
       }))

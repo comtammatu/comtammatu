@@ -40,6 +40,7 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { downloadCsv } from "@/_lib/download-file";
+import { matchesSearch } from "@lib/search";
 import { InventoryHeader } from "../_components/inventory-header";
 import {
   InventoryFilterBar,
@@ -153,13 +154,9 @@ export function IssuesClient({
     if (activeType !== "all") {
       result = result.filter((i) => i.type === activeType);
     }
-    const q = search.trim().toLowerCase();
+    const q = search.trim();
     if (q) {
-      result = result.filter(
-        (i) =>
-          i.code.toLowerCase().includes(q) ||
-          i.branchName.toLowerCase().includes(q),
-      );
+      result = result.filter((i) => matchesSearch([i.code, i.branchName], q));
     }
     return result;
   }, [activeStatus, activeType, search, issues]);

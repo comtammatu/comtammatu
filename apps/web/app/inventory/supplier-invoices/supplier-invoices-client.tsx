@@ -44,6 +44,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { Combobox } from "@/components/form";
+import { matchesSearch } from "@lib/search";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { InventoryHeader } from "../_components/inventory-header";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
@@ -182,7 +183,7 @@ export function SupplierInvoicesClient({
   }, [rows]);
 
   const filteredInvoices = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const query = search.trim();
 
     return rows.filter((invoice) => {
       if (
@@ -214,10 +215,9 @@ export function SupplierInvoicesClient({
         return true;
       }
 
-      return (
-        invoice.code.toLowerCase().includes(query) ||
-        invoice.supplierName.toLowerCase().includes(query) ||
-        (invoice.grnCode ?? "").toLowerCase().includes(query)
+      return matchesSearch(
+        [invoice.code, invoice.supplierName, invoice.grnCode],
+        query,
       );
     });
   }, [

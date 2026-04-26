@@ -5,6 +5,7 @@ import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
+import { matchesSearch } from "@lib/search";
 import { Search as IconSearch, Check as IconCheck, FlagTriangleRight as IconFlag3 } from "lucide-react";
 import { FormattedNumberInput } from "./formatted-number-input";
 import { AbcClassChip } from "./abc-class-chip";
@@ -52,11 +53,11 @@ export function BlindCountingGrid({
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = query.trim();
     return lines.filter((l) => {
       if (onlyNeedsRecount && !l.needsRecount) return false;
       if (!q) return true;
-      return l.ingredientName.toLowerCase().includes(q);
+      return matchesSearch([l.ingredientName], q);
     });
   }, [lines, query, onlyNeedsRecount]);
 

@@ -8,6 +8,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
+import { matchesSearch } from "@lib/search";
 import {
   Select,
   SelectContent,
@@ -50,9 +51,9 @@ export function TrustLeaderboardClient({
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = query.trim();
     if (!q) return rows;
-    return rows.filter((r) => r.fullName.toLowerCase().includes(q));
+    return rows.filter((r) => matchesSearch([r.fullName], q));
   }, [rows, query]);
 
   const tierCounts = useMemo(() => {

@@ -20,6 +20,7 @@ import {
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
+import { matchesSearch } from "@lib/search";
 import { MobilePage } from "../../../../_components/mobile/mobile-page";
 import { MobileSectionHeader } from "../../../../_components/mobile/mobile-section-header";
 import { MobileEmptyState } from "../../../../_components/mobile/mobile-empty-state";
@@ -110,12 +111,10 @@ export function GrnCreateClient({
   }, [draft]);
 
   const filtered = React.useMemo(() => {
-    const needle = query.trim().toLowerCase();
+    const needle = query.trim();
     if (!needle) return ingredients;
-    return ingredients.filter(
-      (item) =>
-        item.name.toLowerCase().includes(needle) ||
-        (item.sku ?? "").toLowerCase().includes(needle),
+    return ingredients.filter((item) =>
+      matchesSearch([item.name, item.sku], needle),
     );
   }, [query, ingredients]);
 

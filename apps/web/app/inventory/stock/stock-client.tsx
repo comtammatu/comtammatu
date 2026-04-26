@@ -39,6 +39,7 @@ import {
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
+import { matchesSearch } from "@lib/search";
 import { InventoryHeader } from "../_components/inventory-header";
 import {
   InventoryFilterBar,
@@ -401,7 +402,8 @@ function QuickStockIssueDialog({
               <Input
                 id="quick-issue-unit"
                 value={unit}
-                onChange={(event) => setUnit(event.target.value)}
+                readOnly
+                aria-readonly="true"
                 disabled={isPending}
               />
             </div>
@@ -508,11 +510,8 @@ export function StockClient({
     }
 
     if (searchQuery.trim()) {
-      const query = searchQuery.trim().toLowerCase();
-      result = result.filter(
-        (ingredient) =>
-          ingredient.name.toLowerCase().includes(query) ||
-          ingredient.sku.toLowerCase().includes(query),
+      result = result.filter((ingredient) =>
+        matchesSearch([ingredient.name, ingredient.sku], searchQuery),
       );
     }
 

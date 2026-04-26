@@ -30,6 +30,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { matchesSearch } from "@lib/search";
 import { fetchStockTransfers } from "../transfer-actions";
 import { CreateTransferDialog } from "./create-transfer-dialog";
 import type {
@@ -170,13 +171,13 @@ export function TransfersListClient({
     if (!isMobile && statusFilter !== "all") {
       list = list.filter((r) => r.status === statusFilter);
     }
-    const q = search.trim().toLowerCase();
+    const q = search.trim();
     if (q) {
-      list = list.filter(
-        (r) =>
-          r.transfer_number.toLowerCase().includes(q) ||
-          r.from_branch_name.toLowerCase().includes(q) ||
-          r.to_branch_name.toLowerCase().includes(q),
+      list = list.filter((r) =>
+        matchesSearch(
+          [r.transfer_number, r.from_branch_name, r.to_branch_name],
+          q,
+        ),
       );
     }
     return list;

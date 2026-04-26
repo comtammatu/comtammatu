@@ -5,6 +5,7 @@ import type { Control, FieldPath, FieldValues } from "react-hook-form";
 import { useController } from "react-hook-form";
 import { Check as IconCheck, ChevronsUpDown as IconSelector } from "lucide-react";
 import { cn } from "@comtammatu/ui";
+import { matchesSearch } from "@lib/search";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Command,
@@ -111,8 +112,7 @@ export function ComboboxField<TFieldValues extends FieldValues>({
         >
           <Command
             filter={(value, search, keywords) => {
-              const haystack = `${value} ${keywords?.join(" ") ?? ""}`.toLowerCase();
-              return haystack.includes(search.toLowerCase()) ? 1 : 0;
+              return matchesSearch([value, ...(keywords ?? [])], search) ? 1 : 0;
             }}
           >
             <CommandInput placeholder={searchPlaceholder} />

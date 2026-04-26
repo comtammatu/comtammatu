@@ -28,6 +28,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
+import { matchesSearch } from "@lib/search";
 import { InventoryHeader } from "../_components/inventory-header";
 import {
   InventoryFilterBar,
@@ -66,13 +67,10 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
     if (statusFilter !== "all") {
       result = result.filter((g) => g.status === statusFilter);
     }
-    const q = search.trim().toLowerCase();
+    const q = search.trim();
     if (q) {
-      result = result.filter(
-        (g) =>
-          g.code.toLowerCase().includes(q) ||
-          g.supplierName.toLowerCase().includes(q) ||
-          g.poCode.toLowerCase().includes(q),
+      result = result.filter((g) =>
+        matchesSearch([g.code, g.supplierName, g.poCode], q),
       );
     }
     return result;

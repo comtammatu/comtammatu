@@ -29,6 +29,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
+import { matchesSearch } from "@lib/search";
 import { InventoryHeader } from "../_components/inventory-header";
 import {
   InventoryFilterBar,
@@ -94,7 +95,7 @@ export function PurchaseOrdersClient({
   }, [rows]);
 
   const filteredRows = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const query = search.trim();
 
     return rows.filter((row) => {
       if (statusFilter !== ALL_FILTER_VALUE && row.status !== statusFilter) {
@@ -112,11 +113,7 @@ export function PurchaseOrdersClient({
         return true;
       }
 
-      return (
-        row.po_number.toLowerCase().includes(query) ||
-        (row.suppliers?.name ?? "").toLowerCase().includes(query) ||
-        (row.notes ?? "").toLowerCase().includes(query)
-      );
+      return matchesSearch([row.po_number, row.suppliers?.name, row.notes], query);
     });
   }, [rows, search, statusFilter, supplierFilter]);
 
