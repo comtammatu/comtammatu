@@ -246,7 +246,7 @@ export function ArchivedOrdersSheet({
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent
           showHandle
-          className="h-dvh max-h-dvh p-0 before:inset-0 before:rounded-b-none before:border-b-0"
+          className="h-dvh max-h-dvh p-0 data-[vaul-drawer-direction=bottom]:top-0 data-[vaul-drawer-direction=bottom]:mt-0 data-[vaul-drawer-direction=bottom]:max-h-dvh before:inset-0 before:rounded-none before:border-0 before:bg-background"
         >
           <DrawerTitle className="sr-only">Đơn đã xử lý</DrawerTitle>
           <DrawerDescription className="sr-only">

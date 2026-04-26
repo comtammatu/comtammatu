@@ -1020,7 +1020,7 @@ function PosDesktopInner({
     >
       <DrawerContent
         showHandle
-        className="h-dvh max-h-dvh p-0 before:inset-0 before:rounded-b-none before:border-b-0 sm:h-5/6 sm:p-2 sm:before:inset-2 sm:before:rounded-xl sm:before:border-b"
+        className="h-dvh max-h-dvh p-0 data-[vaul-drawer-direction=bottom]:top-0 data-[vaul-drawer-direction=bottom]:mt-0 data-[vaul-drawer-direction=bottom]:max-h-dvh before:inset-0 before:rounded-none before:border-0 before:bg-background sm:h-5/6 sm:p-2 sm:before:inset-2 sm:before:rounded-xl sm:before:border sm:before:bg-popover"
       >
         <DrawerTitle className="sr-only">
           {appendTarget != null

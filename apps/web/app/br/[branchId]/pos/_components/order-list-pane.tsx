@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   ChevronRight as IconChevronRight,
@@ -47,23 +48,20 @@ function OrderListPaneComponent({
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
           <p className="text-base font-semibold">Cần xử lý</p>
-          <span
-            className={
-              activeOrderCount > 0
-                ? "inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-warning px-1.5 text-sm font-bold tabular-nums text-warning-foreground"
-                : "inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-border px-1.5 text-sm tabular-nums text-muted-foreground"
-            }
+          <Badge
+            variant={activeOrderCount > 0 ? "warning" : "outline"}
+            className="h-6 min-w-6 px-1.5 text-sm font-bold tabular-nums"
             aria-label={`${String(activeOrderCount)} đơn cần xử lý`}
           >
             {activeOrderCount}
-          </span>
+          </Badge>
         </div>
         <div className="flex shrink-0 items-center gap-0.5">
           <Button
             type="button"
             variant="ghost"
-            size="icon-sm"
-            className="size-9 text-muted-foreground"
+            size="icon-lg"
+            className="text-muted-foreground"
             aria-label="Tải lại danh sách đơn cần xử lý"
             onClick={() => void refreshOrders()}
           >
@@ -73,8 +71,8 @@ function OrderListPaneComponent({
             <Button
               type="button"
               variant="ghost"
-              size="icon-sm"
-              className="size-9 text-muted-foreground"
+              size="icon-lg"
+              className="text-muted-foreground"
               aria-label="Đóng danh sách đơn"
               onClick={onClosePane}
             >
@@ -99,10 +97,10 @@ function OrderListPaneComponent({
           onClick={onOpenArchivedSheet}
         >
           <span className="flex items-center gap-2">
-            <IconClock className="size-4" />
+            <IconClock data-icon="inline-start" />
             Đã xử lý
           </span>
-          <IconChevronRight className="size-4" />
+          <IconChevronRight data-icon="inline-end" />
         </Button>
       ) : null}
     </div>
