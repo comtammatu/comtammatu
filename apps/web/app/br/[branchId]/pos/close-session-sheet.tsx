@@ -117,9 +117,18 @@ export function CloseSessionSheet({
         varianceCtx ? trimmedVarianceNote || undefined : undefined,
       );
       if (result.success && result.data) {
-        setSummary(result.data as CloseSummary);
+        const payload = result.data as CloseSummary & { print_warning?: string };
+        setSummary(payload);
         setStep("reconcile");
         setVarianceCtx(null);
+        // Best-effort shift-close print is fail-soft inside the Server Action.
+        // Surface a toast so the cashier knows to re-print once the printer
+        // is back. The close itself is already committed in DB.
+        if (payload.print_warning) {
+          toast.warning("Không in được phiếu chốt ca", {
+            description: payload.print_warning,
+          });
+        }
         return;
       }
 
@@ -182,9 +191,9 @@ export function CloseSessionSheet({
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
-        className="flex w-full flex-col sm:max-w-lg p-0"
+        className="flex w-full flex-col p-0 data-[side=right]:w-full sm:max-w-lg"
       >
-        <SheetHeader className="border-b px-5 pt-5 pb-3 text-left">
+        <SheetHeader className="border-b px-3 pt-5 pb-3 text-left sm:px-5">
           <SheetTitle>Đóng ca bán hàng</SheetTitle>
           <SheetDescription>
             Bước {stepIndex}/2 —{""}
@@ -196,7 +205,7 @@ export function CloseSessionSheet({
         </SheetHeader>
 
         <ScrollArea className="min-h-0 flex-1">
-          <div className="px-5 py-4">
+          <div className="px-3 py-3 sm:px-5 sm:py-4">
             {step === "count" && (
               <div className="flex flex-col gap-4">
                 <DenominationInput
@@ -368,44 +377,47 @@ export function CloseSessionSheet({
           </div>
         </ScrollArea>
 
-        <div className="border-t px-5 py-4">
+        <div className="border-t px-3 py-3 sm:px-5 sm:py-4">
           {step === "count" ? (
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-                disabled={isPending}
-              >
-                Hủy
-              </Button>
-              <div className="flex-1 text-right text-base text-muted-foreground">
-                Đã đếm:{""}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+                <span>Đã đếm</span>
                 <span className="font-semibold tabular-nums text-foreground">
                   {formatVND(totalCounted)}
                 </span>
               </div>
-              <Button
-                type="button"
-                className="min-h-11"
-                disabled={isPending || needsNoteForSubmit}
-                onClick={handleSubmit}
-              >
-                {isPending ? (
-                  <>
-                    <Spinner data-icon="inline-start" /> Đang gửi
-                  </>
-                ) : varianceCtx ? (
-                  <>
-                    Chốt ca với chênh lệch{" "}
-                    <IconArrowRight data-icon="inline-end" />
-                  </>
-                ) : (
-                  <>
-                    Đối soát <IconArrowRight data-icon="inline-end" />
-                  </>
-                )}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-h-11 px-4"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isPending}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  type="button"
+                  className="min-h-11 flex-1"
+                  disabled={isPending || needsNoteForSubmit}
+                  onClick={handleSubmit}
+                >
+                  {isPending ? (
+                    <>
+                      <Spinner data-icon="inline-start" /> Đang gửi
+                    </>
+                  ) : varianceCtx ? (
+                    <>
+                      Chốt ca với chênh lệch{" "}
+                      <IconArrowRight data-icon="inline-end" />
+                    </>
+                  ) : (
+                    <>
+                      Đối soát <IconArrowRight data-icon="inline-end" />
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="flex items-center gap-2">

@@ -138,6 +138,47 @@ export const cancelTicketPayloadSchema = z.object({
   printed_at: z.string(),
 });
 
+// ─── Shift close report (PHIẾU CHỐT CA) ──────────────────────────────────
+
+const paymentBreakdownLineSchema = z.object({
+  method: z.string(),
+  count: z.number().int(),
+  amount: z.number(),
+});
+
+export const shiftCloseReportPayloadSchema = z.object({
+  kind: z.literal("shift_close_report"),
+  branch_name: z.string().optional(),
+  branch_address: z.string().optional(),
+  branch_phone: z.string().optional(),
+  branch_tax_code: z.string().nullable().optional(),
+  session_id: z.number().int(),
+  /** full_name của người đóng ca (closed_by). */
+  cashier_name: z.string().optional(),
+  opened_at: z.string(),
+  closed_at: z.string(),
+  opening_cash: z.number(),
+  closing_cash: z.number(),
+  expected_cash: z.number(),
+  /** closing_cash - expected_cash. Negative = thiếu, positive = thừa. */
+  cash_difference: z.number(),
+  /** Free-text note from cashier (optional). */
+  note: z.string().nullable().optional(),
+  /** Lý do duyệt khi |cash_difference| vượt ngưỡng. Null khi trong ngưỡng. */
+  variance_note: z.string().nullable().optional(),
+  /** full_name người duyệt. Null khi không cần duyệt. */
+  variance_approver: z.string().nullable().optional(),
+  paid_order_count: z.number().int(),
+  /** Đơn unpaid carry-over sang ca sau (D1 semantics). */
+  unpaid_order_count: z.number().int(),
+  cancelled_order_count: z.number().int(),
+  /** Per-method aggregation: {cash, vietqr, momo, ...}. */
+  payment_breakdown: z.array(paymentBreakdownLineSchema),
+  /** Sum of paid orders.total_amount. */
+  total_revenue: z.number(),
+  printed_at: z.string(),
+});
+
 // ─── Union ───────────────────────────────────────────────────────────────
 
 export const printPayloadSchema = z.discriminatedUnion("kind", [
@@ -145,10 +186,12 @@ export const printPayloadSchema = z.discriminatedUnion("kind", [
   provisionalBillPayloadSchema,
   receiptPayloadSchema,
   cancelTicketPayloadSchema,
+  shiftCloseReportPayloadSchema,
 ]);
 
 export type KitchenTicketPayload = z.infer<typeof kitchenTicketPayloadSchema>;
 export type ProvisionalBillPayload = z.infer<typeof provisionalBillPayloadSchema>;
 export type ReceiptPayload = z.infer<typeof receiptPayloadSchema>;
 export type CancelTicketPayload = z.infer<typeof cancelTicketPayloadSchema>;
+export type ShiftCloseReportPayload = z.infer<typeof shiftCloseReportPayloadSchema>;
 export type PrintPayload = z.infer<typeof printPayloadSchema>;

@@ -20,6 +20,7 @@ import type {
   PrintPayload,
   ProvisionalBillPayload,
   ReceiptPayload,
+  ShiftCloseReportPayload,
   ModifierLine,
   SideLine,
 } from "./escpos.js";
@@ -495,6 +496,130 @@ function renderCancelTicketBitmap(p: CancelTicketPayload): Uint8Array {
   return concat(parts);
 }
 
+// ─── Shift close report (PHIẾU CHỐT CA) ──────────────────────────────────
+
+const PAYMENT_METHOD_LABEL_FULL: Record<string, string> = {
+  cash: "Tiền mặt",
+  vietqr: "Chuyển khoản (VietQR)",
+  bank_transfer: "Chuyển khoản",
+  momo: "MoMo",
+  unknown: "Khác",
+};
+
+/** "10 giờ 30 phút" between two ISO strings. Returns "" on bad input. */
+function formatDuration(openedIso: string, closedIso: string): string {
+  const ms = new Date(closedIso).getTime() - new Date(openedIso).getTime();
+  if (!Number.isFinite(ms) || ms <= 0) return "";
+  const totalMin = Math.round(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h > 0 && m > 0) return `${h} giờ ${m} phút`;
+  if (h > 0) return `${h} giờ`;
+  return `${m} phút`;
+}
+
+function diffSign(n: number): string {
+  if (n === 0) return "OK";
+  return n > 0 ? "THỪA" : "THIẾU";
+}
+
+function renderShiftCloseReportBitmap(p: ShiftCloseReportPayload): Uint8Array {
+  const parts: Uint8Array[] = [init(), lineSpacingZero()];
+
+  // Brand + branch
+  parts.push(line("CƠM TẤM MÁ TƯ", { bold: true, align: "center" }));
+  if (p.branch_name) parts.push(line(p.branch_name, { align: "center" }));
+  if (p.branch_address) parts.push(line(p.branch_address, { align: "center" }));
+  if (p.branch_phone) parts.push(line(`ĐT: ${p.branch_phone}`, { align: "center" }));
+  if (p.branch_tax_code) parts.push(line(`MST: ${p.branch_tax_code}`, { align: "center" }));
+  parts.push(divider("="));
+
+  // Title
+  parts.push(line("PHIẾU CHỐT CA", { bold: true, double: true, align: "center" }));
+  parts.push(line(`Mã ca: #${p.session_id}`, { align: "center" }));
+  parts.push(divider("="));
+
+  // Cashier + duration
+  const opened = splitDateTime(p.opened_at);
+  const closed = splitDateTime(p.closed_at);
+  if (p.cashier_name) parts.push(line(pair48("Thu ngân:", p.cashier_name)));
+  parts.push(line(pair48("Mở ca:", `${opened.time} ${opened.date}`.trim())));
+  parts.push(line(pair48("Đóng ca:", `${closed.time} ${closed.date}`.trim())));
+  const duration = formatDuration(p.opened_at, p.closed_at);
+  if (duration) parts.push(line(pair48("Thời gian:", duration)));
+
+  // Cash reconciliation
+  parts.push(divider("-"));
+  parts.push(line("KÉT TIỀN MẶT", { bold: true, align: "center" }));
+  parts.push(divider("-"));
+  parts.push(line(pair48("Tiền đầu ca", fmtMoney(p.opening_cash))));
+  const cashCollected = Math.max(0, p.expected_cash - p.opening_cash);
+  parts.push(line(pair48("+ Thu trong ca", fmtMoney(cashCollected))));
+  parts.push(line(pair48("= Két dự kiến", fmtMoney(p.expected_cash))));
+  parts.push(line(pair48("Két thực đếm", fmtMoney(p.closing_cash))));
+  parts.push(line(
+    pair48(`Chênh lệch (${diffSign(p.cash_difference)})`, fmtMoney(p.cash_difference)),
+    { bold: true },
+  ));
+
+  // Payment breakdown
+  if (p.payment_breakdown.length > 0) {
+    parts.push(divider("-"));
+    parts.push(line("PHƯƠNG THỨC THANH TOÁN", { bold: true, align: "center" }));
+    parts.push(divider("-"));
+    for (const row of p.payment_breakdown) {
+      const label = PAYMENT_METHOD_LABEL_FULL[row.method] ?? row.method;
+      parts.push(line(pair48(`${label} (${row.count} đơn)`, fmtMoney(row.amount))));
+    }
+  }
+
+  // Order tallies + total revenue
+  parts.push(divider("="));
+  parts.push(line(pair48("Đơn đã thanh toán", `${p.paid_order_count} đơn`)));
+  if (p.unpaid_order_count > 0) {
+    parts.push(line(pair48("Carry-over (ca sau)", `${p.unpaid_order_count} đơn`)));
+  }
+  if (p.cancelled_order_count > 0) {
+    parts.push(line(pair48("Đơn đã huỷ", `${p.cancelled_order_count} đơn`)));
+  }
+  parts.push(divider("="));
+  parts.push(line(
+    pair24("TỔNG DOANH THU", fmtMoney(p.total_revenue)),
+    { bold: true, double: true },
+  ));
+  parts.push(divider("="));
+
+  // Notes
+  if (p.note && p.note.trim()) {
+    parts.push(line("Ghi chú:"));
+    for (const chunk of wrapText(p.note, CHARS_PER_LINE_NORMAL)) {
+      parts.push(line(`  ${chunk}`));
+    }
+  }
+
+  // Variance approval block
+  if (p.variance_note && p.variance_note.trim()) {
+    parts.push(divider("="));
+    parts.push(line("DUYỆT CHÊNH LỆCH", { bold: true, align: "center" }));
+    if (p.variance_approver) {
+      parts.push(line(pair48("Người duyệt:", p.variance_approver)));
+    }
+    parts.push(line("Lý do:"));
+    for (const chunk of wrapText(p.variance_note, CHARS_PER_LINE_NORMAL)) {
+      parts.push(line(`  ${chunk}`));
+    }
+    parts.push(divider("="));
+  }
+
+  // Footer
+  const printed = splitDateTime(p.printed_at);
+  parts.push(bl());
+  parts.push(line(`In lúc: ${printed.time} ${printed.date}`.trim(), { align: "center" }));
+  parts.push(line("Cơm Tấm Má Tư", { align: "center" }));
+  parts.push(lineSpacingDefault(), feed(6), cutPartial());
+  return concat(parts);
+}
+
 // ─── Public dispatcher ───────────────────────────────────────────────────
 
 /**
@@ -512,5 +637,7 @@ export async function renderPayloadBitmap(payload: PrintPayload): Promise<Uint8A
       return renderReceiptBitmap(payload);
     case "cancel_ticket":
       return renderCancelTicketBitmap(payload);
+    case "shift_close_report":
+      return renderShiftCloseReportBitmap(payload);
   }
 }

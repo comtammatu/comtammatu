@@ -489,5 +489,36 @@ export async function closePosSession(
     };
   }
 
-  return { success: true, data };
+  // Best-effort shift-close print. Failure must NEVER undo the close —
+  // money/audit are already committed in DB. UI surfaces print_warning
+  // as a toast and offers re-print later.
+  const { data: printRes, error: printErr } = await supabase.rpc(
+    "enqueue_shift_close_print",
+    { p_session_id: parsed.data.sessionId },
+  );
+  let printWarning: string | undefined;
+  if (printErr) {
+    const m = String(printErr.message ?? "").toLowerCase();
+    if (m.includes("permission denied")) {
+      printWarning = "Đã chốt ca. Không có quyền in phiếu chốt — báo quản lý.";
+    } else if (m.includes("no active") && m.includes("printer")) {
+      printWarning =
+        "Đã chốt ca. Chi nhánh chưa có máy in hoá đơn — không in được phiếu chốt.";
+    } else {
+      printWarning = "Đã chốt ca. Không in được phiếu chốt — kiểm tra máy in.";
+    }
+  } else {
+    const skipReason = (printRes as { skipped?: boolean; reason?: string } | null)
+      ?.skipped
+      ? (printRes as { reason?: string }).reason
+      : undefined;
+    if (skipReason === "no_printer") {
+      printWarning = "Đã chốt ca. Máy in offline — không in được phiếu chốt.";
+    }
+  }
+
+  return {
+    success: true,
+    data: { ...(data as Record<string, unknown>), print_warning: printWarning },
+  };
 }
