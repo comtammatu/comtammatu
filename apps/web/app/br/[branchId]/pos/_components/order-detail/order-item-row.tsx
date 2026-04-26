@@ -88,36 +88,35 @@ export function OrderItemRow({
 
   return (
     <li className="relative overflow-hidden">
-      {revealableActionCount > 0 && (
-        <div className="absolute inset-y-0 right-0 flex sm:hidden">
-          {canMarkServed && (
-            <Button
-              type="button"
-              className="h-auto min-h-full w-20 rounded-none bg-success text-success-foreground hover:bg-success/90"
-              aria-label={`Đánh dấu ${displayName} đã phục vụ`}
-              onClick={() => {
-                onMarkServed?.(row.id);
-                setIsActionsRevealed(false);
-              }}
-            >
-              Phục vụ
-            </Button>
+      {canMarkServed && (
+        <Button
+          type="button"
+          className={cn(
+            "absolute inset-y-0 h-auto min-h-full w-20 rounded-none bg-success text-success-foreground hover:bg-success/90 sm:hidden",
+            canVoid ? "right-20" : "right-0",
           )}
-          {canVoid && (
-            <Button
-              type="button"
-              variant="destructive"
-              className="h-auto min-h-full w-20 rounded-none"
-              aria-label={`Hủy ${displayName}`}
-              onClick={() => {
-                onVoid(row.id);
-                setIsActionsRevealed(false);
-              }}
-            >
-              Hủy
-            </Button>
-          )}
-        </div>
+          aria-label={`Đánh dấu ${displayName} đã phục vụ`}
+          onClick={() => {
+            onMarkServed?.(row.id);
+            setIsActionsRevealed(false);
+          }}
+        >
+          Phục vụ
+        </Button>
+      )}
+      {canVoid && (
+        <Button
+          type="button"
+          variant="destructive"
+          className="absolute inset-y-0 right-0 h-auto min-h-full w-20 rounded-none sm:hidden"
+          aria-label={`Hủy ${displayName}`}
+          onClick={() => {
+            onVoid(row.id);
+            setIsActionsRevealed(false);
+          }}
+        >
+          Hủy
+        </Button>
       )}
       <Item
         variant="outline"
