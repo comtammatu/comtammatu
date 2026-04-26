@@ -24,6 +24,7 @@ import {
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
 import {
+  ChevronLeft as IconChevronLeft,
   LayoutGrid as IconLayoutGrid,
   Package as IconPackage,
   Trash as IconTrash,
@@ -297,6 +298,14 @@ function CartPaneComponent({
                     >
                       Xóa
                     </Button>
+                    {!isDeleteRevealed && (
+                      <span
+                        className="pointer-events-none absolute right-2 top-1/2 z-10 -translate-y-1/2 text-muted-foreground/35 sm:hidden"
+                        aria-hidden="true"
+                      >
+                        <IconChevronLeft className="size-4" />
+                      </span>
+                    )}
                     <Item
                       asChild
                       variant="outline"

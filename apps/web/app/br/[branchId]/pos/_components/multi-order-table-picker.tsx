@@ -3,13 +3,13 @@
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@comtammatu/ui/components/dialog";
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@comtammatu/ui/components/drawer";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { formatVND } from "@comtammatu/shared/format";
 import { Plus as IconPlus } from "lucide-react";
@@ -41,19 +41,19 @@ export function MultiOrderTablePicker({
   onClose,
 }: MultiOrderTablePickerProps) {
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>
+    <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
+      <DrawerContent className="mx-auto max-w-md sm:max-w-lg">
+        <DrawerHeader>
+          <DrawerTitle>
             Bàn {tableNumber ?? "—"} — {orders.length} đơn
-          </DialogTitle>
-          <DialogDescription>
+          </DrawerTitle>
+          <DrawerDescription>
             Chọn đơn để xem chi tiết, hoặc tạo đơn mới trên bàn này.
-          </DialogDescription>
-        </DialogHeader>
+          </DrawerDescription>
+        </DrawerHeader>
 
-        <ScrollArea className="max-h-72">
-          <div className="flex flex-col gap-2 pr-2">
+        <ScrollArea className="max-h-72 px-4">
+          <div className="flex flex-col gap-2 pr-2 pb-2">
             {orders.map((order) => (
               <Button
                 key={order.id}
@@ -78,22 +78,21 @@ export function MultiOrderTablePicker({
           </div>
         </ScrollArea>
 
-        <Button
-          type="button"
-          variant="default"
-          className="w-full"
-          onClick={onCreateNew}
-        >
-          <IconPlus data-icon="inline-start" />
-          Tạo đơn mới trên bàn này
-        </Button>
-
-        <DialogFooter>
+        <DrawerFooter className="pos-safe-bottom">
+          <Button
+            type="button"
+            variant="default"
+            className="w-full"
+            onClick={onCreateNew}
+          >
+            <IconPlus data-icon="inline-start" />
+            Tạo đơn mới trên bàn này
+          </Button>
           <Button type="button" variant="ghost" onClick={onClose}>
             Đóng
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }
