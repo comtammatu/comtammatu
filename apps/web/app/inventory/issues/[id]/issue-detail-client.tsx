@@ -485,7 +485,7 @@ export function IssueDetailClient({
               </>
             )}
 
-            <div className="mt-4 flex justify-end rounded-5xl border border-border/60 bg-muted/30 p-5 sm:p-6 lg:p-8">
+            <div className="mt-4 flex justify-end rounded-3xl border border-border/60 bg-muted/30 p-5 sm:p-6 lg:p-8">
               <div className="w-full max-w-sm space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Tổng số dòng:</span>

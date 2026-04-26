@@ -95,9 +95,10 @@ export function MultiSessionPicker({ sessions }: MultiSessionPickerProps) {
               <Card>
                 <CardContent className="flex flex-col gap-3 p-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-md border border-border/70 bg-background/80 text-primary">
-                      <IconDeviceDesktop className="size-5" />
-                    </div>
+                    <IconDeviceDesktop
+                      className="size-7 shrink-0 text-primary"
+                      aria-hidden="true"
+                    />
                     <div className="flex min-w-0 flex-col">
                       <span className="truncate text-base font-semibold">
                         {terminalName}
