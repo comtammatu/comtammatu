@@ -313,7 +313,7 @@ export function BillReceipt({
     isOnline &&
     invoiceValid &&
     (selectedMethod === "cash"
-      ? cashReceived >= totalAmount && totalAmount > 0
+      ? cashReceived >= totalAmount
       : Boolean(pendingExtras?.payment_id));
 
   const cashSuggestions = useMemo(

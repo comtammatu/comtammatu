@@ -678,7 +678,7 @@ const cashConfirmSchema = z.object({
   orderId: z.coerce.number().int().positive({ error: "Order ID không hợp lệ" }),
   cashReceived: z.coerce
     .number()
-    .positive({ error: "Số tiền nhận phải lớn hơn 0" }),
+    .nonnegative({ error: "Số tiền nhận không được âm" }),
 });
 
 export interface CashPaymentResult {
