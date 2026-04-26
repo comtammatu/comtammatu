@@ -125,6 +125,9 @@ interface PosDesktopShellProps {
   canCloseShift: boolean;
   /** `pos:confirm_payment` — gate phương thức"Tiền mặt" trên bill (cashier+). */
   canConfirmCash: boolean;
+  /** `pos:close_shift_variance_override` — cho phép đóng ca khi chênh lệch
+   *  vượt ngưỡng (BM+). Cashier không có quyền → block ở UI khi variance gate. */
+  canOverrideVariance: boolean;
 }
 
 function isOrderAwaitingPayment(order: {
@@ -151,6 +154,7 @@ export function PosDesktopShell(props: PosDesktopShellProps) {
         categories={props.categories}
         canCloseShift={props.canCloseShift}
         canConfirmCash={props.canConfirmCash}
+        canOverrideVariance={props.canOverrideVariance}
       />
     </PosDesktopProvider>
   );
@@ -162,10 +166,12 @@ function PosDesktopInner({
   categories,
   canCloseShift,
   canConfirmCash,
+  canOverrideVariance,
 }: {
   categories: MenuCategory[];
   canCloseShift: boolean;
   canConfirmCash: boolean;
+  canOverrideVariance: boolean;
 }) {
   const { branchId, session } = usePosSession();
   const orders = usePosOrders();
@@ -1188,6 +1194,7 @@ function PosDesktopInner({
         sessionId={session.id}
         open={showCloseSession}
         onOpenChange={setShowCloseSession}
+        canOverrideVariance={canOverrideVariance}
       />
 
       <ArchivedOrdersSheet

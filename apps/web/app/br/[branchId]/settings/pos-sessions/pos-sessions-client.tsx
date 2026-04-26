@@ -76,6 +76,9 @@ interface PosSessionsClientProps {
   sessions: PosSessionRow[];
   selectedSessionId: number | null;
   orders: PosSessionOrder[];
+  /** `pos:close_shift_variance_override` — passed through to the embedded
+   * CloseSessionSheet so admin-side close still respects the variance gate. */
+  canOverrideVariance: boolean;
 }
 
 const ORDER_STATUS_LABEL: Record<string, string> = {
@@ -93,6 +96,7 @@ export function PosSessionsClient({
   sessions,
   selectedSessionId,
   orders,
+  canOverrideVariance,
 }: PosSessionsClientProps) {
   const [closeSheetOpen, setCloseSheetOpen] = useState(false);
   const selectedSession =
@@ -301,6 +305,7 @@ export function PosSessionsClient({
           sessionId={selectedSession.id}
           open={closeSheetOpen}
           onOpenChange={setCloseSheetOpen}
+          canOverrideVariance={canOverrideVariance}
         />
       ) : null}
     </div>

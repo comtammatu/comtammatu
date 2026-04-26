@@ -117,6 +117,7 @@ export const PERMISSION_KEYS = {
   POS_SEND_KITCHEN: "pos:send_kitchen",
   POS_PRINT: "pos:print",
   POS_CONFIRM_PAYMENT: "pos:confirm_payment",
+  POS_CLOSE_SHIFT_VARIANCE_OVERRIDE: "pos:close_shift_variance_override",
 
   // kds
   KDS_USE: "kds:use",
@@ -130,7 +131,7 @@ export const PERMISSION_KEYS = {
 export type PermissionKey = (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];
 
 /** Total count (static assertion — update when adding keys) */
-export const PERMISSION_KEY_COUNT = 83;
+export const PERMISSION_KEY_COUNT = 84;
 
 /**
  * Pure function: check if a permission set contains a given key.

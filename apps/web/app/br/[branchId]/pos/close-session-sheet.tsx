@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
@@ -27,6 +27,7 @@ import {
   CircleCheck as IconCircleCheck,
 } from "lucide-react";
 import { closePosSession } from "./actions";
+import type { CloseSessionErrorPayload } from "./session-actions";
 import {
   DenominationInput,
   sumDenominations,
@@ -57,12 +58,24 @@ interface CloseSessionSheetProps {
   sessionId: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** `pos:close_shift_variance_override` — gate cho phép submit khi
+   * |chênh lệch| > max(50.000đ, 0.5% × expected_cash). Cashier không có quyền
+   * → variance gate hiển thị banner "liên hệ quản lý" và disable submit. */
+  canOverrideVariance: boolean;
 }
+
+interface VarianceGateContext {
+  diff: number;
+  threshold: number;
+}
+
+const VARIANCE_NOTE_MIN = 10;
 
 export function CloseSessionSheet({
   sessionId,
   open,
   onOpenChange,
+  canOverrideVariance,
 }: CloseSessionSheetProps) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("count");
@@ -70,31 +83,68 @@ export function CloseSessionSheet({
   const [note, setNote] = useState("");
   const [summary, setSummary] = useState<CloseSummary | null>(null);
   const [isPending, startTransition] = useTransition();
+  /** Set khi RPC raise `variance_note_required`; UI flip into approval gate. */
+  const [varianceCtx, setVarianceCtx] = useState<VarianceGateContext | null>(
+    null,
+  );
+  const [varianceNote, setVarianceNote] = useState("");
 
   const totalCounted = sumDenominations(counts);
+
+  // Recount sau khi đã preview variance → context cũ stale → clear để cashier
+  // resubmit cho variance preview mới (server source of truth).
+  useEffect(() => {
+    setVarianceCtx(null);
+    setVarianceNote("");
+  }, [totalCounted]);
 
   const reset = useCallback(() => {
     setStep("count");
     setCounts({});
     setNote("");
     setSummary(null);
+    setVarianceCtx(null);
+    setVarianceNote("");
   }, []);
 
   const handleSubmit = useCallback(() => {
     startTransition(async () => {
+      const trimmedVarianceNote = varianceNote.trim();
       const result = await closePosSession(
         sessionId,
         totalCounted,
         note.trim() || undefined,
+        varianceCtx ? trimmedVarianceNote || undefined : undefined,
       );
       if (result.success && result.data) {
         setSummary(result.data as CloseSummary);
         setStep("reconcile");
-      } else {
-        toast.error(result.error ?? "Không thể đóng ca");
+        setVarianceCtx(null);
+        return;
       }
+
+      const meta = result.meta as CloseSessionErrorPayload | undefined;
+
+      if (
+        meta?.code === "variance_note_required" &&
+        typeof meta.diff === "number" &&
+        typeof meta.threshold === "number"
+      ) {
+        setVarianceCtx({ diff: meta.diff, threshold: meta.threshold });
+        return;
+      }
+
+      if (meta?.code === "variance_requires_bm_approval") {
+        toast.error(
+          result.error ??
+            "Chênh lệch vượt ngưỡng — cần quản lý chi nhánh đăng nhập để duyệt.",
+        );
+        return;
+      }
+
+      toast.error(result.error ?? "Không thể đóng ca");
     });
-  }, [note, sessionId, totalCounted]);
+  }, [note, sessionId, totalCounted, varianceCtx, varianceNote]);
 
   const handleConfirm = useCallback(() => {
     toast.success("Đóng ca thành công");
@@ -120,9 +170,11 @@ export function CloseSessionSheet({
   const significantDiff =
     summary !== null &&
     Math.abs(summary.cash_difference) > SIGNIFICANT_DIFF_THRESHOLD;
-  const needsNoteForSubmit =
-    totalCounted === 0 ||
-    /* first submit on count step can't know diff yet — rely on server-side summary */ false;
+  const trimmedVarianceNote = varianceNote.trim();
+  const varianceNoteValid = trimmedVarianceNote.length >= VARIANCE_NOTE_MIN;
+  const submitBlockedByVariance =
+    varianceCtx !== null && (!canOverrideVariance || !varianceNoteValid);
+  const needsNoteForSubmit = totalCounted === 0 || submitBlockedByVariance;
 
   const stepIndex = step === "count" ? 1 : 2;
 
@@ -152,6 +204,64 @@ export function CloseSessionSheet({
                   onCountsChange={setCounts}
                   disabled={isPending}
                 />
+                {varianceCtx && (
+                  <Alert
+                    className={cn(
+                      "border-warning/30 bg-warning/10 text-warning",
+                      !canOverrideVariance &&
+                        "border-destructive/30 bg-destructive/10 text-destructive",
+                    )}
+                  >
+                    <AlertDescription className="flex flex-col gap-1 text-current">
+                      <span className="font-semibold">
+                        Chênh lệch{" "}
+                        <span className="tabular-nums">
+                          {varianceCtx.diff >= 0 ? "+" : ""}
+                          {formatVND(varianceCtx.diff)}
+                        </span>{" "}
+                        vượt ngưỡng{" "}
+                        <span className="tabular-nums">
+                          {formatVND(varianceCtx.threshold)}
+                        </span>
+                        .
+                      </span>
+                      <span>
+                        {canOverrideVariance
+                          ? `Nhập lý do duyệt ≥ ${VARIANCE_NOTE_MIN} ký tự để chốt ca.`
+                          : "Liên hệ quản lý chi nhánh đăng nhập để duyệt."}
+                      </span>
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {varianceCtx && (
+                  <div className="flex flex-col gap-2">
+                    <label
+                      htmlFor="close-variance-note"
+                      className="text-sm font-semibold uppercase tracking-wide text-muted-foreground"
+                    >
+                      Lý do duyệt chênh lệch
+                    </label>
+                    <Textarea
+                      id="close-variance-note"
+                      value={varianceNote}
+                      onChange={(e) => setVarianceNote(e.target.value)}
+                      placeholder="Ví dụ: két lệch 80k do trả tiền dư khách bàn 5..."
+                      rows={3}
+                      className="resize-none text-base"
+                      disabled={isPending || !canOverrideVariance}
+                    />
+                    <p
+                      className={cn(
+                        "text-sm",
+                        varianceNoteValid
+                          ? "text-success"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {trimmedVarianceNote.length}/{VARIANCE_NOTE_MIN} ký tự
+                    </p>
+                  </div>
+                )}
                 <div className="flex flex-col gap-2">
                   <label
                     htmlFor="close-note"
@@ -284,6 +394,11 @@ export function CloseSessionSheet({
                 {isPending ? (
                   <>
                     <Spinner data-icon="inline-start" /> Đang gửi
+                  </>
+                ) : varianceCtx ? (
+                  <>
+                    Chốt ca với chênh lệch{" "}
+                    <IconArrowRight data-icon="inline-end" />
                   </>
                 ) : (
                   <>

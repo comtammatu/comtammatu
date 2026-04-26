@@ -301,6 +301,7 @@ export default async function PosPage({
         initialOrdersSeeded={initialOrdersSeeded}
         canCloseShift={permFlags.canCloseShift}
         canConfirmCash={permFlags.canConfirmCash}
+        canOverrideVariance={permFlags.canOverrideVariance}
       />
     </Suspense>
   );

@@ -5,6 +5,7 @@ import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
 import { canAccessBranch } from "@/admin/_lib/branch-scope";
+import { fetchPosPermissionFlags } from "@/br/[branchId]/pos/actions";
 import {
   PosSessionsClient,
   type PosSessionOrder,
@@ -79,6 +80,8 @@ export default async function BranchPosSessionsPage({
 
   if (branchError || !branch) notFound();
   if (error) throw new Error("Không thể tải ca POS");
+
+  const permFlags = await fetchPosPermissionFlags(branchId);
 
   const sessionRows = ((sessions ?? []) as unknown as PosSessionRow[]).map(
     (session) => ({
@@ -172,6 +175,7 @@ export default async function BranchPosSessionsPage({
         sessions={sessionRows}
         selectedSessionId={selectedSessionId}
         orders={orders}
+        canOverrideVariance={permFlags.canOverrideVariance}
       />
     </div>
   );
