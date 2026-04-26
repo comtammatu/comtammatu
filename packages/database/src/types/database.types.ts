@@ -6599,6 +6599,10 @@ export type Database = {
         }
         Returns: Json
       }
+      enqueue_shift_close_print: {
+        Args: { p_session_id: number }
+        Returns: Json
+      }
       escalate_round_4: {
         Args: {
           p_final_qty: number
