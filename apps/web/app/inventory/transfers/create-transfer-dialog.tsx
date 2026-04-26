@@ -60,6 +60,10 @@ type DraftLine = {
   unit: string;
 };
 
+function getWarehouseUnit(ingredient: IngredientRow) {
+  return ingredient.purchase_unit || ingredient.unit;
+}
+
 export function CreateTransferDialog({
   open,
   onOpenChange,
@@ -151,7 +155,7 @@ export function CreateTransferDialog({
         ingredientId: ing.id,
         name: ing.name,
         quantity: "",
-        unit: ing.unit,
+        unit: getWarehouseUnit(ing),
       },
     ]);
     setPickerIngredientId("");
@@ -526,9 +530,9 @@ export function CreateTransferDialog({
                       <SelectItem
                         key={i.id}
                         value={String(i.id)}
-                        textValue={`${i.name} ${i.unit} ${i.id}`}
+                        textValue={`${i.name} ${getWarehouseUnit(i)} ${i.id}`}
                       >
-                        {i.name} ({i.unit})
+                        {i.name} ({getWarehouseUnit(i)})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -583,9 +587,8 @@ export function CreateTransferDialog({
                     <Input
                       className="h-8 w-16"
                       value={l.unit}
-                      onChange={(e) =>
-                        updateLine(l.key, { unit: e.target.value })
-                      }
+                      readOnly
+                      aria-readonly="true"
                       required
                     />
                     <Button

@@ -786,8 +786,7 @@ function LineItemsSection({
       return;
     }
     const ing = ingredients.find((x) => x.id === iid);
-    const resolvedUnit =
-      unit || ing?.purchase_unit || ing?.measure_unit || ing?.unit || "";
+    const resolvedUnit = unit || ing?.purchase_unit || ing?.unit || "";
     const qty = Number(qtyInput);
     const priceRaw = unitPriceInput.trim();
     const unitPriceEst = priceRaw === "" ? null : Number(priceRaw);
@@ -932,7 +931,8 @@ function LineItemsSection({
                   name="unit"
                   placeholder="ĐV"
                   value={unit}
-                  onChange={(e) => setUnit(e.target.value)}
+                  readOnly
+                  aria-readonly="true"
                   required
                   className="h-8 text-sm"
                 />
@@ -1103,7 +1103,8 @@ function LineItemsSection({
                 name="unit"
                 placeholder="ĐV"
                 value={unit}
-                onChange={(e) => setUnit(e.target.value)}
+                readOnly
+                aria-readonly="true"
                 required
                 className="h-8 text-sm"
               />

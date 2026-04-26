@@ -92,6 +92,10 @@ type AddIssueLineDialogProps = {
   startTransition: React.TransitionStartFunction;
 };
 
+function getWarehouseUnit(ingredient: IngredientRow) {
+  return ingredient.purchase_unit || ingredient.unit;
+}
+
 // kitchen_use retired 2026-04-25 (replaced by intra-branch stock_transfer).
 // Label for consumption flips by branch_kind:
 //   central_warehouse / central_kitchen → "Hao hụt kho"
@@ -666,7 +670,7 @@ function AddIssueLineDialog({
   function handleIngredientChange(value: string) {
     setIngredientId(value);
     const ingredient = ingredients.find((item) => item.id === Number(value));
-    setUnit(ingredient?.unit ?? "");
+    setUnit(ingredient ? getWarehouseUnit(ingredient) : "");
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -741,7 +745,7 @@ function AddIssueLineDialog({
                 .map((ingredient) => ({
                   value: String(ingredient.id),
                   label: ingredient.name,
-                  hint: ingredient.unit,
+                  hint: getWarehouseUnit(ingredient),
                   keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
                 }))}
               placeholder="Chọn nguyên liệu"
@@ -766,7 +770,8 @@ function AddIssueLineDialog({
               <Input
                 id="issue-line-unit"
                 value={unit}
-                onChange={(e) => setUnit(e.target.value)}
+                readOnly
+                aria-readonly="true"
                 placeholder="kg"
               />
             </div>

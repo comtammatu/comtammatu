@@ -614,12 +614,7 @@ function AddGrnLineDialog({
   function handleIngredientChange(value: string) {
     setIngredientId(value);
     const ingredient = ingredients.find((item) => item.id === Number(value));
-    setUnit(
-      ingredient?.purchase_unit ??
-        ingredient?.measure_unit ??
-        ingredient?.unit ??
-        "",
-    );
+    setUnit(ingredient?.purchase_unit ?? ingredient?.unit ?? "");
     setUnitCost(
       ingredient?.unit_cost != null ? String(Number(ingredient.unit_cost)) : "",
     );
@@ -754,7 +749,8 @@ function AddGrnLineDialog({
               <Input
                 id="grn-line-unit"
                 value={unit}
-                onChange={(event) => setUnit(event.target.value)}
+                readOnly
+                aria-readonly="true"
                 placeholder="kg"
               />
             </div>

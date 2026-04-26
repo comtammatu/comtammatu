@@ -819,7 +819,7 @@ export async function fetchRecipes(): Promise<ActionResult> {
       menu_categories ( name ),
       recipes (
         ingredient_id, quantity, unit, note, yield_factor,
-        ingredients ( id, name, unit, unit_cost )
+        ingredients ( id, name, unit, purchase_unit, unit_cost )
       )
     `,
     )
@@ -879,7 +879,7 @@ function buildRecipeSheets(rows: RecipeSheetRow[]): SheetDef[] {
         { header: "Mã nguyên liệu", key: "ingredient_id", width: 14 },
         { header: "Nguyên liệu", key: "ingredient_name", width: 32 },
         { header: "Số lượng", key: "quantity", width: 14 },
-        { header: "Đơn vị", key: "unit", width: 12 },
+        { header: "Đơn vị nhập", key: "unit", width: 14 },
         { header: "Yield", key: "yield_factor", width: 10 },
         { header: "Ghi chú", key: "note", width: 28 },
       ],
@@ -904,7 +904,12 @@ type RecipeExportMenuRow = {
     unit: string | null;
     note: string | null;
     yield_factor: number | string | null;
-    ingredients: { id: number; name: string; unit: string } | null;
+    ingredients: {
+      id: number;
+      name: string;
+      unit: string;
+      purchase_unit: string | null;
+    } | null;
   }> | null;
 };
 
@@ -925,7 +930,7 @@ export async function exportRecipes(
       id, name,
       recipes (
         ingredient_id, quantity, unit, note, yield_factor,
-        ingredients ( id, name, unit )
+        ingredients ( id, name, unit, purchase_unit )
       )
     `,
     )
@@ -947,7 +952,11 @@ export async function exportRecipes(
           ingredient_id: ingredientId ?? "",
           ingredient_name: line.ingredients?.name ?? "",
           quantity: line.quantity != null ? Number(line.quantity) : "",
-          unit: line.unit ?? line.ingredients?.unit ?? "",
+          unit:
+            line.unit ??
+            line.ingredients?.purchase_unit ??
+            line.ingredients?.unit ??
+            "",
           yield_factor:
             line.yield_factor != null ? Number(line.yield_factor) : 1,
           note: line.note ?? "",
@@ -1019,7 +1028,7 @@ type IngredientLookup = {
   id: number;
   name: string;
   unit: string;
-  measure_unit: string | null;
+  purchase_unit: string | null;
 };
 
 function readCell(raw: Record<string, string>, ...keys: string[]): string {
@@ -1116,7 +1125,7 @@ export async function importRecipes(
       .eq("tenant_id", claims.tenant_id),
     supabase
       .from("ingredients")
-      .select("id, name, unit, measure_unit")
+      .select("id, name, unit, purchase_unit")
       .eq("tenant_id", claims.tenant_id),
   ]);
 
@@ -1265,10 +1274,18 @@ export async function importRecipes(
       return;
     }
 
-    const unit =
-      readCell(raw, "Đơn vị", "unit") ||
-      ingredient.measure_unit ||
-      ingredient.unit;
+    const warehouseUnit = ingredient.purchase_unit || ingredient.unit;
+    const importedUnit = readCell(raw, "Đơn vị nhập", "Đơn vị", "unit");
+    if (importedUnit && importedUnit !== warehouseUnit) {
+      issues.push({
+        row: rowNumber,
+        field: "Đơn vị",
+        message:
+          "Đơn vị món bán phải khớp Đơn vị nhập trong danh mục nguyên liệu.",
+      });
+      return;
+    }
+    const unit = warehouseUnit;
     const parsedRow = importRecipeRowSchema.safeParse({
       menuItemId: menuItem.id,
       ingredientId: ingredient.id,

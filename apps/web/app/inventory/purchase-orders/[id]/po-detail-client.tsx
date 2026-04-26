@@ -142,10 +142,7 @@ export function PODetailClient({
     setAddIngredientId(value);
     const ingredient = ingredients.find((item) => item.id === Number(value));
     setAddUnit(
-      ingredient?.purchase_unit ??
-        ingredient?.measure_unit ??
-        ingredient?.unit ??
-        "",
+      ingredient?.purchase_unit ?? ingredient?.unit ?? "",
     );
     setAddPrice(
       ingredient?.unit_cost != null ? String(Number(ingredient.unit_cost)) : "",
@@ -486,11 +483,8 @@ export function PODetailClient({
                                 <p className="text-muted-foreground">Đơn vị</p>
                                 <Input
                                   value={item.unit}
-                                  onChange={(event) =>
-                                    patchLine(index, {
-                                      unit: event.target.value,
-                                    })
-                                  }
+                                  readOnly
+                                  aria-readonly="true"
                                   className="h-9"
                                 />
                               </div>
@@ -558,11 +552,8 @@ export function PODetailClient({
                                 {canSendOrCancel ? (
                                   <Input
                                     value={item.unit}
-                                    onChange={(event) =>
-                                      patchLine(index, {
-                                        unit: event.target.value,
-                                      })
-                                    }
+                                    readOnly
+                                    aria-readonly="true"
                                     className="mt-2 h-8 max-w-24"
                                     aria-label="Đơn vị"
                                   />
@@ -715,7 +706,8 @@ export function PODetailClient({
                       />
                       <Input
                         value={addUnit}
-                        onChange={(event) => setAddUnit(event.target.value)}
+                        readOnly
+                        aria-readonly="true"
                         placeholder="ĐV"
                         className="h-9"
                         required

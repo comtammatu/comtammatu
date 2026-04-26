@@ -56,7 +56,12 @@ export default async function TransferDetailPage({
       quantity_received: number | null;
       unit: string;
       unit_cost_at_ship: number | null;
-      ingredients: { id: number; name: string; unit: string } | null;
+      ingredients: {
+        id: number;
+        name: string;
+        unit: string;
+        purchase_unit: string | null;
+      } | null;
     }>;
   };
 
@@ -65,6 +70,7 @@ export default async function TransferDetailPage({
       id: number;
       name: string;
       unit: string;
+      purchase_unit: string | null;
     } | null;
     const cost = Number(l.unit_cost_at_ship ?? 0);
     const qty = Number(l.quantity ?? 0);
@@ -73,7 +79,7 @@ export default async function TransferDetailPage({
       name: ing?.name ?? "—",
       sku: "",
       qty,
-      unit: l.unit ?? ing?.unit ?? "",
+      unit: l.unit ?? ing?.purchase_unit ?? ing?.unit ?? "",
       cost,
       total: cost * qty,
       received:

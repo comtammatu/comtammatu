@@ -20,7 +20,7 @@ type MenuItemRow = {
       id: number;
       name: string;
       unit: string;
-      measure_unit?: string | null;
+      purchase_unit?: string | null;
       unit_cost: number | string | null;
     } | null;
   }> | null;
@@ -49,7 +49,7 @@ export default async function RecipesPage() {
           qty,
           unit:
             line.unit ??
-            line.ingredients?.measure_unit ??
+            line.ingredients?.purchase_unit ??
             line.ingredients?.unit ??
             "",
           yieldFactor: Number(line.yield_factor ?? 1),
@@ -84,12 +84,12 @@ export default async function RecipesPage() {
           id: number;
           name: string;
           unit: string;
-          measure_unit?: string;
+          purchase_unit?: string | null;
         }>
       ).map((i) => ({
         id: i.id,
         name: i.name,
-        unit: i.measure_unit ?? i.unit,
+        unit: i.purchase_unit ?? i.unit,
       }))
     : [];
 

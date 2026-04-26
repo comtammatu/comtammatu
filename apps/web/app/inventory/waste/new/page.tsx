@@ -56,7 +56,7 @@ export default async function WasteNewPage({ searchParams }: PageProps) {
       .order("sort_order", { ascending: true }),
     supabase
       .from("ingredients")
-      .select("id, name, unit, unit_cost")
+      .select("id, name, unit, purchase_unit, unit_cost")
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
       .order("name", { ascending: true }),
@@ -82,7 +82,7 @@ export default async function WasteNewPage({ searchParams }: PageProps) {
     ingredients: (ingredientsRes.data ?? []).map((i) => ({
       id: i.id,
       name: i.name,
-      unit: i.unit ?? "kg",
+      unit: i.purchase_unit ?? i.unit ?? "kg",
       unitCost: i.unit_cost === null ? null : Number(i.unit_cost),
     })),
     capStatus:

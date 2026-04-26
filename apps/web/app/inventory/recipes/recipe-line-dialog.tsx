@@ -172,8 +172,12 @@ function LineRowCells({
               placeholder="kg, lít..."
               {...field}
               value={field.value ?? ""}
+              readOnly
               aria-invalid={!!rowError?.unit}
-              className={cn("h-9", rowError?.unit && "border-destructive")}
+              className={cn(
+                "h-9 bg-muted/40",
+                rowError?.unit && "border-destructive",
+              )}
             />
           )}
         />

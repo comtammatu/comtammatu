@@ -47,7 +47,7 @@ export default async function MobileTransferReceivePage({
   const linesRes = await supabase
     .from("stock_transfer_items")
     .select(
-      "id, ingredient_id, quantity, unit, quantity_received, ingredients ( id, name, unit )",
+      "id, ingredient_id, quantity, unit, quantity_received, ingredients ( id, name, unit, purchase_unit )",
     )
     .eq("transfer_id", id)
     .eq("tenant_id", claims.tenant_id);
@@ -59,12 +59,17 @@ export default async function MobileTransferReceivePage({
   );
 
   const lines = (linesRes.data ?? []).map((l) => {
-    const ing = l.ingredients as { id: number; name: string; unit: string } | null;
+    const ing = l.ingredients as {
+      id: number;
+      name: string;
+      unit: string;
+      purchase_unit: string | null;
+    } | null;
     return {
       id: l.id,
       ingredientId: l.ingredient_id,
       ingredientName: ing?.name ?? "—",
-      unit: l.unit || ing?.unit || "",
+      unit: l.unit || ing?.purchase_unit || ing?.unit || "",
       sentQty: Number(l.quantity),
       receivedQty: Number(l.quantity_received ?? 0),
     };

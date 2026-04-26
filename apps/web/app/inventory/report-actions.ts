@@ -624,7 +624,10 @@ export async function fetchConsumptionVariance(
     .eq("is_active", true);
   if (ingErr) return { success: false, error: "Không tải được nguyên liệu." };
   const ingMap = new Map(
-    (ingredients ?? []).map((i) => [i.id, { name: i.name, unit: i.unit }]),
+    (ingredients ?? []).map((i) => [
+      i.id,
+      { name: i.name, unit: i.purchase_unit || i.unit },
+    ]),
   );
 
   // Compute theoretical: need order_items joined with recipes

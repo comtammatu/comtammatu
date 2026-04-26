@@ -31,6 +31,7 @@ export default async function NewSupplierReturnPage() {
         id: number;
         name: string;
         unit: string;
+        purchase_unit: string | null;
         unit_cost: number | null;
       }>) ?? [])
     : [];
@@ -43,7 +44,7 @@ export default async function NewSupplierReturnPage() {
       ingredients={ingredients.map((i) => ({
         id: i.id,
         name: i.name,
-        unit: i.unit,
+        unit: i.purchase_unit ?? i.unit,
         unitCost: i.unit_cost ?? 0,
       }))}
       defaultBranchId={branches[0]?.id ?? null}

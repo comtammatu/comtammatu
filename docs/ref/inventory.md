@@ -119,16 +119,15 @@ Ghi chú: phiếu `stock_issue(issue_type = kitchen_use)` hiện được dùng 
 
 ## 2. Nguyên liệu (Ingredients)
 
-### 2.1 Đơn vị tính
+### 2.1 Đơn vị nhập / Đơn vị tính
 
-| Nhóm       | Đơn vị                     | Ghi chú                |
-| ---------- | -------------------------- | ---------------------- |
-| Khối lượng | `kg`, `g`                  | Thịt, rau, gạo         |
-| Thể tích   | `lít`, `ml`                | Nước mắm, dầu, nước    |
-| Số lượng   | `cái`, `hộp`, `gói`, `lon` | Trứng, đồ đóng gói     |
-| Phần       | `phần`                     | Khi không cần chi tiết |
+`ingredients` là nơi duy nhất khai báo đơn vị:
 
-> **Quy tắc:** Lưu tồn theo **đơn vị cơ sở** (g, ml, cái). Nhập theo kg → quy đổi về đơn vị cơ sở trước khi ghi GRN.
+- **Đơn vị nhập (ĐVN) / `purchase_unit`:** đơn vị kho và mua hàng dùng để ghi `stock_levels`, `stock_movements`, PO, GRN, transfer, issue, waste, supplier return, stocktake và báo cáo kho.
+- **Đơn vị tính (ĐVT) / `measure_unit`:** đơn vị định lượng nhỏ hơn cho BOM sản xuất tại Bếp Trung Tâm.
+- **Tỷ lệ quy đổi / `purchase_to_measure_factor`:** số ĐVT trong 1 ĐVN, ví dụ `1 thùng = 10 kg` thì factor = `10`.
+
+> **Quy tắc:** người dùng chỉ nhập/chọn ĐVN, ĐVT và tỷ lệ quy đổi ở danh mục **Nguyên liệu**. Các nghiệp vụ kho tái sử dụng ĐVN tự động. Ngoại lệ duy nhất là `production_recipes` của Bếp Trung Tâm: BOM nhập theo ĐVT, nhưng khi xác nhận production phải quy đổi về ĐVN trước khi trừ tồn và tính WAC.
 
 ### 2.2 Database — bảng `ingredients`
 
@@ -140,14 +139,14 @@ Master data **theo tenant** (đã có trong DB). `unit_cost` trên `ingredients`
 ### 2.3 Tồn kho theo chi nhánh — bảng `stock_levels`
 
 - **Khóa:** `(tenant_id, branch_id, ingredient_id)` — mỗi site (Kho Tổng, Bếp Trung Tâm, chi nhánh) một dòng tồn.
-- **`current_quantity`:** tồn thực (đơn vị cơ sở) — tên cột trong DB.
+- **`current_quantity`:** tồn thực theo **Đơn vị nhập (`ingredients.purchase_unit`)** — tên cột trong DB.
 - **`avg_unit_cost`:** giá bình quân gia quyền (WAC) tại kho đó, cập nhật khi **GRN** (tại CW hoặc CK) và có thể dùng làm **đơn giá xuất nội bộ** khi CW hoặc bếp trung tâm chuyển về kho chi nhánh (policy mặc định: WAC tại thời điểm xuất).
 
 ---
 
 ## 3. Công thức (Recipes)
 
-Định mức nguyên liệu theo `menu_item`. Dùng để **xuất kho** (`consumption`) khi đơn hàng chuyển sang `completed` (thực hiện bằng RPC, không lặp HTTP).
+Định mức nguyên liệu theo `menu_item`. Dùng để **xuất kho** (`consumption`) khi đơn hàng chuyển sang `completed` (thực hiện bằng RPC, không lặp HTTP). Đây là nghiệp vụ kho/POS nên `recipes.quantity` và `recipes.unit` dùng **Đơn vị nhập** của nguyên liệu, không dùng ĐVT.
 
 ```sql
 -- Mục tiêu schema (triển khai theo migration)
@@ -168,7 +167,7 @@ CREATE TABLE recipes (
 
 Phần mở rộng cho bếp trung tâm dùng bộ bảng riêng:
 
-- `production_recipes`: BOM cho **thành phẩm** (`finished_good_id`) và các **nguyên liệu đầu vào** (`ingredient_id`), có `yield_factor`.
+- `production_recipes`: BOM cho **thành phẩm** (`finished_good_id`) và các **nguyên liệu đầu vào** (`ingredient_id`), có `yield_factor`. Đây là ngoại lệ dùng **Đơn vị tính** của nguyên liệu.
 - `production_orders`: lệnh sản xuất tại site có `branch_kind = central_kitchen`.
 - `production_order_items`: danh sách thành phẩm và số lượng thực hiện cho từng lệnh.
 
@@ -180,7 +179,7 @@ Workflow sản xuất chuẩn:
    - site phải là `central_kitchen`,
    - item đầu ra phải có `item_kind = finished_good`,
    - có đủ `production_recipes`,
-   - tồn kho nguyên liệu đủ để trừ.
+   - tồn kho nguyên liệu đủ để trừ sau khi quy đổi BOM từ ĐVT về ĐVN.
 4. RPC ghi atomically:
    - `production_consumption` cho nguyên liệu đầu vào,
    - `production_output` cho thành phẩm đầu ra,
@@ -237,7 +236,7 @@ Khi order → `completed`:
 1. Thiết lập **NCC**, điều khoản thanh toán.
 2. Tạo **PO** gắn **branch_id** = Kho Tổng hoặc Bếp Trung Tâm nào sẽ nhập.
 3. NCC giao hàng → kiểm đếm, QC.
-4. Lập **GRN** (số thực nhận, đơn giá, lô/HSD nếu có) → **xác nhận GRN** (RPC) → cập nhật tồn CW/CK + **WAC**.
+4. Lập **GRN** (số thực nhận theo ĐVN, đơn giá theo ĐVN, lô/HSD nếu có) → **xác nhận GRN** (RPC) → cập nhật tồn CW/CK + **WAC**.
 5. Nhận **HĐ từ NCC** → nhập **supplier_invoice** → **3-way matching** với PO & GRN (§7).
 
 **Nguyên tắc:** Food cost nhập mua theo **GRN** (thực nhận), không theo số đặt PO. GRN chỉ được tạo tại site có `branch_kind IN ('central_warehouse', 'central_kitchen')`.
