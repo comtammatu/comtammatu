@@ -30,66 +30,68 @@ import {
 
 /* ─── Schemas ─── */
 
-const ingredientSchema = z
-  .object({
-    name: z.string().min(1, { error: "Tên nguyên liệu không được để trống" }),
-    purchase_unit: z
-      .string()
-      .trim()
-      .min(1, { error: "Đơn vị nhập không được để trống" })
-      .optional(),
-    measure_unit: z
-      .string()
-      .trim()
-      .min(1, { error: "Đơn vị tính không được để trống" })
-      .optional(),
-    purchase_to_measure_factor: z.coerce.number().positive().default(1),
-    unit: z
-      .string()
-      .trim()
-      .min(1, { error: "Đơn vị không được để trống" })
-      .optional(),
-    sku: z.string().optional(),
-    unit_cost: z.coerce.number().min(0).optional(),
-    category: z.string().optional(),
-    item_kind: z
-      .enum(["raw_material", "finished_good"])
-      .default("raw_material"),
-    min_stock_level: z.coerce.number().min(0).default(0),
-    max_stock_level: z.coerce.number().min(0).optional(),
-    reorder_point: z.coerce.number().min(0).optional(),
-    storage_type: z
-      .enum(["ambient", "refrigerated", "frozen"])
-      .default("ambient"),
-    shelf_life_days: z.coerce.number().int().positive().optional(),
-  })
-  .superRefine((data, ctx) => {
-    const legacyUnit = data.unit?.trim();
-    const purchaseUnit = data.purchase_unit?.trim() ?? legacyUnit;
-    const measureUnit = data.measure_unit?.trim() ?? legacyUnit;
+const ingredientBaseSchema = z.object({
+  name: z.string().min(1, { error: "Tên nguyên liệu không được để trống" }),
+  purchase_unit: z
+    .string()
+    .trim()
+    .min(1, { error: "Đơn vị nhập không được để trống" })
+    .optional(),
+  measure_unit: z
+    .string()
+    .trim()
+    .min(1, { error: "Đơn vị tính không được để trống" })
+    .optional(),
+  purchase_to_measure_factor: z.coerce.number().positive().default(1),
+  unit: z
+    .string()
+    .trim()
+    .min(1, { error: "Đơn vị không được để trống" })
+    .optional(),
+  sku: z.string().optional(),
+  unit_cost: z.coerce.number().min(0).optional(),
+  category: z.string().optional(),
+  item_kind: z.enum(["raw_material", "finished_good"]).default("raw_material"),
+  min_stock_level: z.coerce.number().min(0).default(0),
+  max_stock_level: z.coerce.number().min(0).optional(),
+  reorder_point: z.coerce.number().min(0).optional(),
+  storage_type: z
+    .enum(["ambient", "refrigerated", "frozen"])
+    .default("ambient"),
+  shelf_life_days: z.coerce.number().int().positive().optional(),
+});
 
-    if (!purchaseUnit) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["purchase_unit"],
-        message: "Đơn vị nhập không được để trống",
-      });
-    }
+const ingredientSchema = ingredientBaseSchema.superRefine((data, ctx) => {
+  const legacyUnit = data.unit?.trim();
+  const purchaseUnit = data.purchase_unit?.trim() ?? legacyUnit;
+  const measureUnit = data.measure_unit?.trim() ?? legacyUnit;
 
-    if (!measureUnit) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["measure_unit"],
-        message: "Đơn vị tính không được để trống",
-      });
-    }
-  });
+  if (!purchaseUnit) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["purchase_unit"],
+      message: "Đơn vị nhập không được để trống",
+    });
+  }
 
-function resolveMeasureUnit(input: Partial<z.infer<typeof ingredientSchema>>) {
+  if (!measureUnit) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["measure_unit"],
+      message: "Đơn vị tính không được để trống",
+    });
+  }
+});
+
+const ingredientUpdateSchema = ingredientBaseSchema.partial();
+
+type IngredientInput = z.infer<typeof ingredientBaseSchema>;
+
+function resolveMeasureUnit(input: Partial<IngredientInput>) {
   return input.measure_unit?.trim() || input.unit?.trim() || null;
 }
 
-function resolvePurchaseUnit(input: Partial<z.infer<typeof ingredientSchema>>) {
+function resolvePurchaseUnit(input: Partial<IngredientInput>) {
   return input.purchase_unit?.trim() || input.unit?.trim() || null;
 }
 
@@ -159,7 +161,7 @@ export const createIngredient = withAction(
 
 export async function updateIngredient(
   id: number,
-  input: Partial<z.infer<typeof ingredientSchema>>,
+  input: Partial<IngredientInput>,
 ): Promise<ActionResult> {
   const idSchema = z.coerce.number().int().positive();
   const parsedId = idSchema.safeParse(id);
@@ -167,8 +169,7 @@ export async function updateIngredient(
     return { success: false, error: "ID không hợp lệ" };
   }
 
-  const updateSchema = ingredientSchema.partial();
-  const parsedInput = updateSchema.safeParse(input);
+  const parsedInput = ingredientUpdateSchema.safeParse(input);
   if (!parsedInput.success) {
     return { success: false, error: "Dữ liệu không hợp lệ" };
   }
@@ -181,7 +182,7 @@ export async function updateIngredient(
 
   const { supabase, claims } = ctx;
 
-  const normalizedInput: Partial<z.infer<typeof ingredientSchema>> = {
+  const normalizedInput: Partial<IngredientInput> = {
     ...parsedInput.data,
   };
   const measureUnit = resolveMeasureUnit(parsedInput.data);
