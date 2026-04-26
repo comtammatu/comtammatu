@@ -37,11 +37,12 @@ export default async function FoodCostPage() {
 }
 
 export interface FoodCostRow {
-  date: string | null;
+  period_start: string | null;
   branch_id: number | null;
   menu_item_id: number | null;
   item_name: string | null;
-  qty_sold: number | null;
+  quantity_sold: number | null;
   revenue: number | null;
-  food_cost: number | null;
+  ingredient_cost: number | null;
+  food_cost_pct: number | null;
 }

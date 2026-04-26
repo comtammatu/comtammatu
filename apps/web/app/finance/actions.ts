@@ -494,48 +494,6 @@ export async function fetchTopItems(
   return { success: true, data: data ?? [] };
 }
 
-/* ─── Food Cost ─── */
-
-export async function fetchFoodCost(
-  branchId: number,
-  startDate: string,
-  endDate: string,
-): Promise<ActionResult> {
-  const parsedBranch = z.coerce.number().int().positive().safeParse(branchId);
-  if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
-
-  const parsedStart = z.string().date().safeParse(startDate);
-  const parsedEnd = z.string().date().safeParse(endDate);
-  if (!parsedStart.success || !parsedEnd.success) {
-    return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
-  }
-
-  const ctx = await getAuthContextWithPermission(REPORT_ROLES, PERMISSION_KEYS.FINANCE_VIEW);
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase } = ctx;
-
-  // SECURITY DEFINER wrapper enforces tenant + branch + finance:view ACL
-  // (mv_food_cost has no direct grant). See migration
-  // 20260427000000_secure_finance_mvs_revoke_grants.sql.
-  const { data, error: fetchErr } = await supabase.rpc("get_food_cost", {
-    p_branch_id: parsedBranch.data,
-    p_start_date: parsedStart.data,
-    p_end_date: parsedEnd.data,
-  });
-
-  if (fetchErr) {
-    return {
-      success: false,
-      error: "Không thể tải dữ liệu chi phí nguyên liệu.",
-    };
-  }
-
-  return { success: true, data: data ?? [] };
-}
-
 /* ─── Refresh Materialized Views ─── */
 
 export async function refreshMaterializedViews(): Promise<ActionResult> {

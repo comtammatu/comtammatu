@@ -6641,7 +6641,11 @@ export type Database = {
         }[]
       }
       get_food_cost: {
-        Args: { p_branch_id: number; p_end_date: string; p_start_date: string }
+        Args: {
+          p_branch_id?: number
+          p_end_date?: string
+          p_start_date?: string
+        }
         Returns: {
           branch_id: number
           food_cost_pct: number
@@ -6705,7 +6709,11 @@ export type Database = {
         }[]
       }
       get_top_items: {
-        Args: { p_branch_id: number; p_limit?: number; p_period_start: string }
+        Args: {
+          p_branch_id?: number
+          p_limit?: number
+          p_period_start?: string
+        }
         Returns: {
           branch_id: number
           item_name: string

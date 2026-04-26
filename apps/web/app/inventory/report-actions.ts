@@ -77,28 +77,15 @@ export async function fetchFoodCost(
   const ctx = await getAuthContext(REPORT_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
+  const { supabase } = ctx;
 
-  let query = supabase
-    .from("mv_food_cost")
-    .select(
-      "date, branch_id, menu_item_id, item_name, qty_sold, revenue, food_cost",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .order("date", { ascending: false })
-    .order("revenue", { ascending: false });
-
-  if (parsed.data.startDate) {
-    query = query.gte("date", parsed.data.startDate);
-  }
-  if (parsed.data.endDate) {
-    query = query.lte("date", parsed.data.endDate);
-  }
-  if (parsed.data.branchId) {
-    query = query.eq("branch_id", parsed.data.branchId);
-  }
-
-  const { data, error } = await query;
+  // mv_food_cost direct SELECT was revoked in 20260426023632; use the
+  // SECURITY DEFINER wrapper. NULL branch = all branches caller can access.
+  const { data, error } = await supabase.rpc("get_food_cost", {
+    p_branch_id: parsed.data.branchId ?? undefined,
+    p_start_date: parsed.data.startDate ?? undefined,
+    p_end_date: parsed.data.endDate ?? undefined,
+  });
 
   if (error) {
     return { success: false, error: "Không thể tải dữ liệu food cost." };

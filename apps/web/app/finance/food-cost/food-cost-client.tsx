@@ -45,23 +45,26 @@ export function FoodCostClient({
     });
   }
 
-  const totalRevenue = rows.reduce((s, r) => s + (r.revenue ?? 0), 0);
-  const totalCost = rows.reduce((s, r) => s + (r.food_cost ?? 0), 0);
+  const totalRevenue = rows.reduce((s, r) => s + Number(r.revenue ?? 0), 0);
+  const totalCost = rows.reduce(
+    (s, r) => s + Number(r.ingredient_cost ?? 0),
+    0,
+  );
   const avgMargin =
     totalRevenue > 0
       ? (((totalRevenue - totalCost) / totalRevenue) * 100).toFixed(1)
       : "—";
 
   const margin = (r: FoodCostRow) => {
-    const rev = r.revenue ?? 0;
-    const cost = r.food_cost ?? 0;
+    const rev = Number(r.revenue ?? 0);
+    const cost = Number(r.ingredient_cost ?? 0);
     if (rev === 0) return "—";
     return `${(((rev - cost) / rev) * 100).toFixed(1)}%`;
   };
 
   const marginColor = (r: FoodCostRow) => {
-    const rev = r.revenue ?? 0;
-    const cost = r.food_cost ?? 0;
+    const rev = Number(r.revenue ?? 0);
+    const cost = Number(r.ingredient_cost ?? 0);
     if (rev === 0) return "";
     const pct = ((rev - cost) / rev) * 100;
     if (pct >= 60) return "text-success";
@@ -152,13 +155,13 @@ export function FoodCostClient({
                   <TableRow key={i}>
                     <TableCell>{r.item_name ?? "—"}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {(r.qty_sold ?? 0).toLocaleString("vi-VN")}
+                      {Number(r.quantity_sold ?? 0).toLocaleString("vi-VN")}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {(r.revenue ?? 0).toLocaleString("vi-VN")}
+                      {Number(r.revenue ?? 0).toLocaleString("vi-VN")}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {(r.food_cost ?? 0).toLocaleString("vi-VN")}
+                      {Number(r.ingredient_cost ?? 0).toLocaleString("vi-VN")}
                     </TableCell>
                     <TableCell
                       className={`text-right font-medium ${marginColor(r)}`}

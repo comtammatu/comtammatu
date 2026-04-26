@@ -22,7 +22,11 @@ function formatMonthKey(date: Date) {
 }
 
 function buildFoodCostTrend(
-  rows: Array<{ date: string; revenue: number; food_cost: number }>,
+  rows: Array<{
+    period_start: string;
+    revenue: number;
+    ingredient_cost: number;
+  }>,
   months = 12,
 ) {
   const today = new Date();
@@ -32,10 +36,10 @@ function buildFoodCostTrend(
   const buckets = new Map<string, { revenue: number; foodCost: number }>();
 
   for (const row of rows) {
-    const monthKey = row.date.slice(0, 7);
+    const monthKey = row.period_start.slice(0, 7);
     const bucket = buckets.get(monthKey) ?? { revenue: 0, foodCost: 0 };
     bucket.revenue += Number(row.revenue ?? 0);
-    bucket.foodCost += Number(row.food_cost ?? 0);
+    bucket.foodCost += Number(row.ingredient_cost ?? 0);
     buckets.set(monthKey, bucket);
   }
 
@@ -190,9 +194,9 @@ export default async function ReportsPage() {
   const foodCostRows =
     foodCostRes.success && foodCostRes.data
       ? (foodCostRes.data as Array<{
-          date: string;
+          period_start: string;
           revenue: number;
-          food_cost: number;
+          ingredient_cost: number;
         }>)
       : [];
   const foodCostTrendAvailable = foodCostRows.length > 0;
