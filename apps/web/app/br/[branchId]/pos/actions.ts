@@ -20,6 +20,7 @@ export {
   cancelOrder,
   transferOrderTable,
   updateOrderStatus,
+  markOrderItemServed,
   fetchOrderItemsForReorder,
 } from "./order-actions";
 

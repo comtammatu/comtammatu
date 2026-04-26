@@ -1213,6 +1213,61 @@ export async function updateOrderStatus(
   return { success: true, data: null };
 }
 
+/* ─── markOrderItemServed (POS waiter per-item) ─── */
+
+const markOrderItemServedSchema = z.object({
+  itemId: z.coerce.number().int().positive({ error: "Món không hợp lệ" }),
+});
+
+export async function markOrderItemServed(
+  itemId: number,
+): Promise<ActionResult> {
+  const parsed = markOrderItemServedSchema.safeParse({ itemId });
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase } = ctx;
+
+  const { error } = await supabase.rpc("mark_order_item_served", {
+    p_item_id: parsed.data.itemId,
+  });
+
+  if (error) {
+    const msg = String(error.message ?? "").toLowerCase();
+    if (msg.includes("invalid item transition")) {
+      return {
+        success: false,
+        error: "Món đã phục vụ hoặc đã hủy.",
+      };
+    }
+    if (msg.includes("order terminal")) {
+      return {
+        success: false,
+        error: "Đơn đã đóng, không thể cập nhật món.",
+      };
+    }
+    if (msg.includes("item not found")) {
+      return { success: false, error: "Không tìm thấy món." };
+    }
+    return {
+      success: false,
+      error: "Không thể đánh dấu phục vụ. Vui lòng thử lại.",
+    };
+  }
+
+  return { success: true, data: null };
+}
+
 /* ─── fetchOrderItemsForReorder ─── */
 
 export async function fetchOrderItemsForReorder(

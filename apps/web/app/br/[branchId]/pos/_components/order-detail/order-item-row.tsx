@@ -36,6 +36,7 @@ interface OrderItemRowProps {
   row: OrderItemRowData;
   canManage: boolean;
   onVoid: (itemId: number) => void;
+  onMarkServed?: (itemId: number) => void;
 }
 
 const ITEM_STATUS_LABELS: Record<
@@ -52,8 +53,13 @@ const ITEM_STATUS_LABELS: Record<
   cancelled: { label: "Đã hủy", variant: "destructive" },
 };
 
-export function OrderItemRow({ row, canManage, onVoid }: OrderItemRowProps) {
-  const [isDeleteRevealed, setIsDeleteRevealed] = useState(false);
+export function OrderItemRow({
+  row,
+  canManage,
+  onVoid,
+  onMarkServed,
+}: OrderItemRowProps) {
+  const [isActionsRevealed, setIsActionsRevealed] = useState(false);
   const [dragged, setDragged] = useState(false);
   const [touchStart, setTouchStart] = useState<{
     x: number;
@@ -65,6 +71,14 @@ export function OrderItemRow({ row, canManage, onVoid }: OrderItemRowProps) {
     canManage &&
     !cancelled &&
     ["pending", "preparing", "ready"].includes(row.status);
+  const canMarkServed =
+    onMarkServed != null &&
+    !cancelled &&
+    !served &&
+    ["pending", "preparing", "ready"].includes(row.status);
+  const revealableActionCount =
+    (canMarkServed ? 1 : 0) + (canVoid ? 1 : 0);
+  const isRevealed = isActionsRevealed && revealableActionCount > 0;
   const displayName = getPosLineItemDisplayName(row);
   const statusInfo = ITEM_STATUS_LABELS[row.status] ?? {
     label: row.status,
@@ -74,26 +88,44 @@ export function OrderItemRow({ row, canManage, onVoid }: OrderItemRowProps) {
 
   return (
     <li className="relative overflow-hidden">
-      {canVoid && (
-        <Button
-          type="button"
-          variant="destructive"
-          className="absolute inset-y-0 right-0 h-auto min-h-full w-20 sm:hidden"
-          aria-label={`Hủy ${displayName}`}
-          onClick={() => {
-            onVoid(row.id);
-            setIsDeleteRevealed(false);
-          }}
-        >
-          Hủy
-        </Button>
+      {revealableActionCount > 0 && (
+        <div className="absolute inset-y-0 right-0 flex sm:hidden">
+          {canMarkServed && (
+            <Button
+              type="button"
+              className="h-auto min-h-full w-20 rounded-none bg-success text-success-foreground hover:bg-success/90"
+              aria-label={`Đánh dấu ${displayName} đã phục vụ`}
+              onClick={() => {
+                onMarkServed?.(row.id);
+                setIsActionsRevealed(false);
+              }}
+            >
+              Phục vụ
+            </Button>
+          )}
+          {canVoid && (
+            <Button
+              type="button"
+              variant="destructive"
+              className="h-auto min-h-full w-20 rounded-none"
+              aria-label={`Hủy ${displayName}`}
+              onClick={() => {
+                onVoid(row.id);
+                setIsActionsRevealed(false);
+              }}
+            >
+              Hủy
+            </Button>
+          )}
+        </div>
       )}
       <Item
         variant="outline"
         size="xs"
         className={cn(
           "relative items-start bg-card text-sm transition-transform",
-          isDeleteRevealed && canVoid && "-translate-x-20 sm:translate-x-0",
+          isRevealed && revealableActionCount === 1 && "-translate-x-20 sm:translate-x-0",
+          isRevealed && revealableActionCount === 2 && "-translate-x-40 sm:translate-x-0",
           cancelled && "border-dashed bg-muted/40",
           served && "border-success/30 bg-success/5",
         )}
@@ -102,24 +134,24 @@ export function OrderItemRow({ row, canManage, onVoid }: OrderItemRowProps) {
             setDragged(false);
             return;
           }
-          if (isDeleteRevealed) setIsDeleteRevealed(false);
+          if (isActionsRevealed) setIsActionsRevealed(false);
         }}
         onTouchStart={(event) => {
           const touch = event.touches[0];
-          if (!touch || !canVoid) return;
+          if (!touch || revealableActionCount === 0) return;
           setTouchStart({ x: touch.clientX, y: touch.clientY });
         }}
         onTouchMove={(event) => {
           const touch = event.touches[0];
-          if (!touch || !touchStart || !canVoid) return;
+          if (!touch || !touchStart || revealableActionCount === 0) return;
           const deltaX = touch.clientX - touchStart.x;
           const deltaY = touch.clientY - touchStart.y;
           if (Math.abs(deltaX) < Math.abs(deltaY)) return;
           if (Math.abs(deltaX) > 12) setDragged(true);
           if (deltaX < -32) {
-            setIsDeleteRevealed(true);
+            setIsActionsRevealed(true);
           } else if (deltaX > 32) {
-            setIsDeleteRevealed(false);
+            setIsActionsRevealed(false);
           }
         }}
         onTouchEnd={() => setTouchStart(null)}

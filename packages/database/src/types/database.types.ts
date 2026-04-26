@@ -6544,6 +6544,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      expire_stuck_print_jobs: {
+        Args: { p_stale_after_seconds?: number }
+        Returns: number
+      }
       extend_express_window: {
         Args: { p_branch_id: number; p_minutes: number; p_note: string }
         Returns: string
@@ -6768,6 +6772,7 @@ export type Database = {
         Returns: boolean
       }
       mark_all_notifications_read: { Args: never; Returns: number }
+      mark_order_item_served: { Args: { p_item_id: number }; Returns: Json }
       override_grn_hardblock: {
         Args: {
           p_evidence_url: string

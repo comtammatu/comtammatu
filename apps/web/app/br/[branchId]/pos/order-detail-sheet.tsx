@@ -36,6 +36,7 @@ import {
   cancelOrder,
   transferOrderTable,
   updateOrderStatus,
+  markOrderItemServed,
   fetchOrderItemsForReorder,
 } from "./actions";
 import { getPosLineItemDisplayName, type CartItem } from "./types";
@@ -470,6 +471,19 @@ export function OrderDetailSheet({
     });
   };
 
+  const handleMarkItemServed = (itemId: number) => {
+    startTransition(async () => {
+      const r = await markOrderItemServed(itemId);
+      if (r.success) {
+        notify.success("Đã phục vụ món");
+        await onOrderUpdated?.();
+        load();
+      } else {
+        notify.error(r.error ?? messages.pos.order.statusUpdateFailed);
+      }
+    });
+  };
+
   const handleReorder = () => {
     if (orderId === null) return;
     startTransition(async () => {
@@ -655,6 +669,7 @@ export function OrderDetailSheet({
                       row={row}
                       canManage={canManage}
                       onVoid={setVoidItemId}
+                      onMarkServed={handleMarkItemServed}
                     />
                   ))}
                 </ul>
