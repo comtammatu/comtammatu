@@ -62,7 +62,8 @@ export function useSwipeReveal({
       const revealed = revealedKey === key;
       return {
         onPointerDown(event: ReactPointerEvent<HTMLElement>) {
-          if (event.pointerType !== "touch") return;
+          if (!event.isPrimary) return;
+          if (event.pointerType === "mouse" && event.button !== 0) return;
           if (revealedKey !== null && revealedKey !== key) {
             setRevealedKey(null);
           }
@@ -100,6 +101,11 @@ export function useSwipeReveal({
             0,
             Math.max(-revealWidth, state.startOffset + deltaX),
           );
+          setRevealedKey((current) => {
+            if (nextOffset <= -threshold) return key;
+            if (state.startOffset < 0 && nextOffset > -threshold) return null;
+            return current;
+          });
           swipeStateRef.current = {
             ...state,
             offset: nextOffset,
@@ -130,6 +136,9 @@ export function useSwipeReveal({
         onPointerCancel(event: ReactPointerEvent<HTMLElement>) {
           const state = swipeStateRef.current;
           if (state?.key === key && state.pointerId === event.pointerId) {
+            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+              event.currentTarget.releasePointerCapture(event.pointerId);
+            }
             swipeStateRef.current = null;
           }
         },

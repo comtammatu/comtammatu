@@ -256,10 +256,10 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
   return (
     <div className="flex min-h-0 flex-1 overflow-hidden bg-background">
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="border-b border-border/60 bg-background px-2 py-1.5 md:px-5 md:py-4 lg:px-6">
-          <div className="flex flex-col gap-1.5 md:gap-3">
-            <div className="flex flex-col gap-1.5 md:gap-2 xl:flex-row xl:items-center">
-              <InputGroup className="h-9 w-full md:h-11 md:max-w-md xl:w-64 xl:max-w-none xl:flex-none 2xl:w-72">
+        <div className="border-b border-border/60 bg-background px-2 py-1 md:px-5 md:py-4 lg:px-6">
+          <div className="flex flex-col gap-1 md:gap-3">
+            <div className="flex flex-col gap-1 md:gap-2 xl:flex-row xl:items-center">
+              <InputGroup className="h-8 w-full md:h-11 md:max-w-md xl:w-64 xl:max-w-none xl:flex-none 2xl:w-72">
                 <InputGroupAddon>
                   <IconSearch />
                 </InputGroupAddon>
@@ -290,11 +290,11 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
               >
                 <TabsList
                   aria-label="Danh mục món"
-                  className="h-9 w-max min-w-full justify-start gap-1 md:h-11 md:gap-2"
+                  className="h-8 w-max min-w-full justify-start gap-1 md:h-11 md:gap-2"
                 >
                   <TabsTrigger
                     value={ALL_MENU_VALUE}
-                    className="h-full shrink-0 gap-1.5 px-2.5 py-0 text-sm font-semibold md:gap-2 md:px-4"
+                    className="h-full shrink-0 gap-1 px-2 py-0 text-xs font-semibold md:gap-2 md:px-4 md:text-sm"
                   >
                     Tất cả
                     <Badge
@@ -308,7 +308,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
                     <TabsTrigger
                       key={category.id}
                       value={String(category.id)}
-                      className="h-full shrink-0 gap-1.5 px-2.5 py-0 text-sm font-semibold md:gap-2 md:px-4"
+                      className="h-full shrink-0 gap-1 px-2 py-0 text-xs font-semibold md:gap-2 md:px-4 md:text-sm"
                     >
                       {category.name}
                       <Badge

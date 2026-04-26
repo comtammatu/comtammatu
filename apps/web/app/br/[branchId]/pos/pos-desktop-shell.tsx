@@ -903,8 +903,8 @@ function PosDesktopInner({
     <ToggleGroup
       type="single"
       value={cartOrderType}
-      variant="outline"
-      className="grid h-10 w-full grid-cols-2 gap-0"
+      className="grid h-10 w-full grid-cols-2 overflow-hidden !rounded-none bg-muted/60"
+      aria-label="Chọn hình thức phục vụ"
       onValueChange={(value) => {
         if (value === "dine_in" || value === "takeaway") {
           handleOrderTypeChange(value);
@@ -913,14 +913,14 @@ function PosDesktopInner({
     >
       <ToggleGroupItem
         value="dine_in"
-        className="h-full justify-center text-base font-semibold"
+        className="h-full min-w-0 justify-center !rounded-none border-r border-border px-0 text-sm font-semibold text-muted-foreground hover:bg-background/70 hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
         disabled={cartItemCount > 0 && cartOrderType !== "dine_in"}
       >
         Tại bàn
       </ToggleGroupItem>
       <ToggleGroupItem
         value="takeaway"
-        className="h-full justify-center text-base font-semibold"
+        className="h-full min-w-0 justify-center !rounded-none px-0 text-sm font-semibold text-muted-foreground hover:bg-background/70 hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
         disabled={cartItemCount > 0 && cartOrderType !== "takeaway"}
       >
         Mang về
@@ -958,52 +958,53 @@ function PosDesktopInner({
       </div>
     ) : null;
 
-  const mobileOrderContextRow =
-    isMobile && menuContextReady ? (
-      <div className="border-b border-border/60 bg-background px-2 py-1 md:hidden">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-foreground">
-              {appendTarget != null
-                ? `Thêm món #${appendTarget.orderNumber}`
-                : cartOrderType === "takeaway"
-                  ? "Mang về"
-                  : `Bàn ${selectedTableNumber ?? ""}`}
-            </p>
-          </div>
-          {appendTarget == null &&
-            (cartOrderType === "takeaway" ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="min-h-9 shrink-0 px-2.5 text-xs font-bold"
-                disabled={cartItemCount > 0}
-                onClick={() => {
-                  setShowOrders(false);
-                  setCartDrawerOpen(false);
-                  handleOrderTypeChange("dine_in");
-                }}
-              >
-                Chọn bàn
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="min-h-9 shrink-0 px-2.5 text-xs font-bold"
-                onClick={() => {
-                  setShowOrders(false);
-                  setCartDrawerOpen(false);
-                  setActiveTable(null);
-                }}
-              >
-                Đổi bàn
-              </Button>
-            ))}
-        </div>
-      </div>
+  const mobileHeaderContextLabel = menuContextReady
+    ? appendTarget != null
+      ? `Thêm món #${appendTarget.orderNumber}`
+      : cartOrderType === "takeaway"
+        ? "Mang về"
+        : `Bàn ${selectedTableNumber ?? ""}`
+    : undefined;
+
+  const mobileHeaderContextAction =
+    menuContextReady && appendTarget == null ? (
+      cartOrderType === "takeaway" ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 min-h-0 shrink-0 px-2 text-xs font-bold"
+          onClick={() => {
+            if (cartItemCount > 0) {
+              toast.message(
+                "Giỏ đang có món. Xoá đơn nháp trong giỏ rồi mới đổi sang Tại bàn.",
+              );
+              setShowOrders(false);
+              setCartDrawerOpen(true);
+              return;
+            }
+            setShowOrders(false);
+            setCartDrawerOpen(false);
+            handleOrderTypeChange("dine_in");
+          }}
+        >
+          Chọn bàn
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 min-h-0 shrink-0 px-2 text-xs font-bold"
+          onClick={() => {
+            setShowOrders(false);
+            setCartDrawerOpen(false);
+            setActiveTable(null);
+          }}
+        >
+          Đổi bàn
+        </Button>
+      )
     ) : null;
 
   const mobileSidebarDrawer = isMobile ? (
@@ -1064,6 +1065,8 @@ function PosDesktopInner({
           session={session}
           canCloseShift={canCloseShift}
           onShowCloseSession={openCloseSession}
+          contextLabel={mobileHeaderContextLabel}
+          contextAction={mobileHeaderContextAction}
         />
       </div>
 
@@ -1071,7 +1074,7 @@ function PosDesktopInner({
         <div className="flex min-h-0 flex-1 overflow-hidden bg-background/35">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {appendBannerRow}
-            <div className="border-b border-border/60 bg-background px-2 py-2 md:hidden">
+            <div className="border-b border-border/60 bg-background p-0 md:hidden">
               {serviceModeSelector}
             </div>
             <PosTableGate
@@ -1088,7 +1091,6 @@ function PosDesktopInner({
         <div className="flex min-h-0 flex-1 overflow-hidden bg-background/35">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {appendBannerRow}
-            {mobileOrderContextRow}
             <MenuPane categories={categories} onItemTap={handleItemTap} />
           </div>
           {sidebars}
@@ -1139,6 +1141,7 @@ function PosDesktopInner({
       />
 
       <OrderDetailSheet
+        branchId={branchId}
         orderId={orderDetailId}
         orderNumber={orderDetailNumber}
         refreshToken={detailRefreshTick}

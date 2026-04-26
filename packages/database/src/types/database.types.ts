@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       accounting_periods: {
@@ -2417,9 +2442,14 @@ export type Database = {
           created_by: string
           customer_count: number
           discount_amount: number
+          discount_note: string | null
+          discount_type: string | null
+          discount_value: number | null
           id: number
           idempotency_key: string | null
           kitchen_send_count: number
+          merge_request_key: string | null
+          merged_into_order_id: number | null
           note: string | null
           order_number: string
           order_type: string
@@ -2427,6 +2457,7 @@ export type Database = {
           payment_status: string | null
           pos_session_id: number | null
           service_charge: number
+          split_from_order_id: number | null
           status: string
           subtotal: number
           table_id: number | null
@@ -2443,9 +2474,14 @@ export type Database = {
           created_by: string
           customer_count?: number
           discount_amount?: number
+          discount_note?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
           id?: never
           idempotency_key?: string | null
           kitchen_send_count?: number
+          merge_request_key?: string | null
+          merged_into_order_id?: number | null
           note?: string | null
           order_number: string
           order_type?: string
@@ -2453,6 +2489,7 @@ export type Database = {
           payment_status?: string | null
           pos_session_id?: number | null
           service_charge?: number
+          split_from_order_id?: number | null
           status?: string
           subtotal?: number
           table_id?: number | null
@@ -2469,9 +2506,14 @@ export type Database = {
           created_by?: string
           customer_count?: number
           discount_amount?: number
+          discount_note?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
           id?: never
           idempotency_key?: string | null
           kitchen_send_count?: number
+          merge_request_key?: string | null
+          merged_into_order_id?: number | null
           note?: string | null
           order_number?: string
           order_type?: string
@@ -2479,6 +2521,7 @@ export type Database = {
           payment_status?: string | null
           pos_session_id?: number | null
           service_charge?: number
+          split_from_order_id?: number | null
           status?: string
           subtotal?: number
           table_id?: number | null
@@ -2503,10 +2546,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "orders_merged_into_order_id_fkey"
+            columns: ["merged_into_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "orders_pos_session_id_fkey"
             columns: ["pos_session_id"]
             isOneToOne: false
             referencedRelation: "pos_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_split_from_order_id_fkey"
+            columns: ["split_from_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
           {
@@ -6265,6 +6322,15 @@ export type Database = {
         Args: { p_amount: number; p_credit_id: number; p_invoice_id: number }
         Returns: Json
       }
+      apply_order_discount: {
+        Args: {
+          p_note: string
+          p_order_id: number
+          p_type: string
+          p_value: number
+        }
+        Returns: Json
+      }
       apply_template_to_user: {
         Args: {
           p_branch_id: number
@@ -6321,6 +6387,7 @@ export type Database = {
         Args: { p_threshold?: string }
         Returns: number
       }
+      clear_order_discount: { Args: { p_order_id: number }; Returns: Json }
       close_fiscal_period: {
         Args: {
           p_month: number
@@ -6367,6 +6434,10 @@ export type Database = {
       }
       complete_stocktake: { Args: { p_session_id: number }; Returns: Json }
       compute_branch_daily_waste_caps: { Args: never; Returns: number }
+      compute_discount_amount: {
+        Args: { p_subtotal: number; p_type: string; p_value: number }
+        Returns: number
+      }
       compute_user_trust_score: {
         Args: { p_branch_id: number; p_user_id: string }
         Returns: number
@@ -6773,6 +6844,14 @@ export type Database = {
       }
       mark_all_notifications_read: { Args: never; Returns: number }
       mark_order_item_served: { Args: { p_item_id: number }; Returns: Json }
+      merge_orders: {
+        Args: {
+          p_idempotency_key?: string
+          p_source_order_id: number
+          p_target_order_id: number
+        }
+        Returns: Json
+      }
       override_grn_hardblock: {
         Args: {
           p_evidence_url: string
@@ -6890,6 +6969,14 @@ export type Database = {
       set_branch_kind: {
         Args: { p_branch_id: number; p_kind?: string }
         Returns: undefined
+      }
+      split_order: {
+        Args: {
+          p_idempotency_key?: string
+          p_item_ids: number[]
+          p_source_order_id: number
+        }
+        Returns: Json
       }
       start_stocktake: {
         Args: {
@@ -7138,6 +7225,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

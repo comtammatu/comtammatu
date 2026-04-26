@@ -11,13 +11,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemTitle,
-} from "@comtammatu/ui/components/item";
+import { Item } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -30,9 +24,10 @@ import {
   calcCartTotal,
   calcItemSubtotal,
   getPosLineItemDisplayName,
-  getPosLineItemOptionLines,
+  getPosLineItemSummary,
 } from "../types";
 import type { CartItem } from "../types";
+import { PosLineItemCompact } from "./pos-line-item-compact";
 
 interface AppendDraftPaneProps {
   orderNumber: string;
@@ -108,39 +103,35 @@ function AppendDraftPaneComponent({
           >
             {items.map((item) => {
               const displayName = getPosLineItemDisplayName(item);
-              const optionLines = getPosLineItemOptionLines(item);
+              const summary = getPosLineItemSummary(item);
+              const subtotal = calcItemSubtotal(item);
 
               return (
-                <li key={item.key}>
-                  <Item variant="outline" size="xs" className="bg-card">
-                    <ItemContent className="min-w-0">
-                      <ItemTitle className="max-w-full text-sm">
-                        <span className="shrink-0 text-muted-foreground tabular-nums">
-                          x{item.quantity}
-                        </span>
-                        {displayName}
-                      </ItemTitle>
-                      {optionLines.map((line) => (
-                        <ItemDescription key={line}>{line}</ItemDescription>
-                      ))}
-                      <ItemDescription>
-                        {formatVND(calcItemSubtotal(item))}
-                      </ItemDescription>
-                    </ItemContent>
-                    <ItemActions className="shrink-0 self-start">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        className="text-muted-foreground hover:text-destructive"
-                        aria-label={`Xóa ${displayName} khỏi món thêm`}
-                        disabled={isSubmitting}
-                        onClick={() => onRemoveItem(item.key)}
-                      >
-                        <IconTrash />
-                      </Button>
-                    </ItemActions>
+                <li key={item.key} className="relative">
+                  <Item
+                    variant="outline"
+                    size="sm"
+                    className="h-20 rounded-none bg-card px-3 py-2 pr-12 sm:px-4 sm:pr-14"
+                  >
+                    <PosLineItemCompact
+                      quantity={item.quantity}
+                      title={displayName}
+                      total={formatVND(subtotal)}
+                      options={summary.options}
+                      note={summary.note}
+                    />
                   </Item>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2 top-1/2 min-h-11 min-w-11 size-9 -translate-y-1/2 text-muted-foreground hover:text-destructive"
+                    aria-label={`Xóa ${displayName} khỏi món thêm`}
+                    disabled={isSubmitting}
+                    onClick={() => onRemoveItem(item.key)}
+                  >
+                    <IconTrash />
+                  </Button>
                 </li>
               );
             })}

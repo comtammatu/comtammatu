@@ -140,8 +140,18 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
         )}
         {order.discount_amount > 0 && (
           <div className="flex justify-between">
-            <span>Giảm giá</span>
+            <span>
+              Giảm giá
+              {order.discount_type === "pct" && order.discount_value != null
+                ? ` (${order.discount_value}%)`
+                : ""}
+            </span>
             <span>-{formatVND(order.discount_amount)}</span>
+          </div>
+        )}
+        {order.discount_amount > 0 && order.discount_note && (
+          <div className="text-[11px] italic text-muted-foreground">
+            Lý do: {order.discount_note}
           </div>
         )}
         <Separator className="my-1" />

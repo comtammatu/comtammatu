@@ -33,7 +33,7 @@ export function PosThemeToggle() {
           type="button"
           variant="ghost"
           size="icon"
-          className="min-h-11 min-w-11 shrink-0 text-muted-foreground hover:text-foreground"
+          className="shrink-0 text-muted-foreground hover:text-foreground"
           aria-label="Chọn giao diện POS"
           title="Giao diện POS"
         >

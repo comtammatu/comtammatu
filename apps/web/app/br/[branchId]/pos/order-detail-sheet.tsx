@@ -22,11 +22,9 @@ import {
 } from "@comtammatu/ui/components/dropdown-menu";
 import { Item } from "@comtammatu/ui/components/item";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
-import { Spinner } from "@comtammatu/ui/components/spinner";
 import { notify } from "@comtammatu/ui/lib/notify";
 import {
   Ellipsis as IconDots,
-  Receipt as IconReceipt,
   X as IconX,
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "../../../_components/boneyard-skeleton";
@@ -38,17 +36,24 @@ import {
   updateOrderStatus,
   markOrderItemServed,
   fetchOrderItemsForReorder,
+  applyOrderDiscount,
+  clearOrderDiscount,
+  splitOrder,
+  mergeOrders,
 } from "./actions";
 import { getPosLineItemDisplayName, type CartItem } from "./types";
 import type { BranchTable } from "./page";
 import { ACTIVE_POS_STATUSES } from "./order-history";
 import { messages } from "@lib/messages";
-import { printProvisionalBill } from "./print-actions";
 import { OrderItemRow } from "./_components/order-detail/order-item-row";
 import type { OrderItemRowData } from "./_components/order-detail/order-item-row";
+import { useSwipeReveal } from "./_hooks/use-swipe-reveal";
 import { VoidItemDialog } from "./_components/order-detail/void-item-dialog";
 import { CancelOrderDialog } from "./_components/order-detail/cancel-order-dialog";
 import { TransferTableDialog } from "./_components/order-detail/transfer-table-dialog";
+import { DiscountSheet } from "./_components/order-detail/discount-sheet";
+import { SplitOrderSheet } from "./_components/order-detail/split-order-sheet";
+import { MergeOrdersSheet } from "./_components/order-detail/merge-orders-sheet";
 import type { OrderData } from "./_components/bill/bill-receipt-types";
 import type { SessionOrder } from "./order-history";
 
@@ -64,11 +69,17 @@ function canAppendOrderStatus(status: string): boolean {
   return ACTIVE_POS_STATUSES.includes(status);
 }
 
+// Swipe reveals up to 2 buttons (Phục vụ + Hủy) at 80px each. Activation/
+// threshold tuned to match the cart-pane swipe-to-delete gesture so the
+// feel is identical across the POS sheets.
+const ITEM_REVEAL_WIDTH = 160;
+const ITEM_SWIPE_ACTIVATION_PX = 8;
+const ITEM_SWIPE_THRESHOLD_PX = 40;
+
 const ORDER_DETAIL_LOADING_TEXT = {
   append: "Th\u00eam m\u00f3n",
   aria: "\u0110ang t\u1ea3i danh s\u00e1ch m\u00f3n",
   payment: "Thanh to\u00e1n",
-  print: "In phi\u1ebfu t\u1ea1m t\u00ednh",
   served: "\u0110\u00e3 ph\u1ee5c v\u1ee5",
   sr: "\u0110ang t\u1ea3i \u0111\u01a1n h\u00e0ng",
 } as const;
@@ -115,9 +126,9 @@ const ORDER_DETAIL_SKELETON_ITEMS: OrderItemRowData[] = [
 function OrderDetailLoadingFixture() {
   return (
     <>
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea className="min-h-0 w-full min-w-0 max-w-full flex-1 overflow-hidden">
         <ul
-          className="flex flex-col gap-2 px-3 py-2 sm:px-4"
+          className="flex w-full min-w-0 max-w-full flex-col gap-2 overflow-hidden px-3 py-2 sm:px-4"
           aria-label={ORDER_DETAIL_LOADING_TEXT.aria}
         >
           {ORDER_DETAIL_SKELETON_ITEMS.map((row) => (
@@ -131,10 +142,6 @@ function OrderDetailLoadingFixture() {
         </ul>
       </ScrollArea>
       <div className="mt-auto flex shrink-0 flex-col gap-2 border-t px-3 py-3 sm:px-4">
-        <Button type="button" variant="outline" size="lg" className="w-full">
-          <IconReceipt data-icon="inline-start" />
-          {ORDER_DETAIL_LOADING_TEXT.print}
-        </Button>
         <Button type="button" size="lg" className="w-full">
           {ORDER_DETAIL_LOADING_TEXT.payment} - {formatVND(165000)}
         </Button>
@@ -154,9 +161,9 @@ function OrderDetailLoadingFixture() {
 function OrderDetailSheetSkeletonFallback() {
   return (
     <>
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea className="min-h-0 w-full min-w-0 max-w-full flex-1 overflow-hidden">
         <ul
-          className="flex flex-col gap-2 px-3 py-2 sm:px-4"
+          className="flex w-full min-w-0 max-w-full flex-col gap-2 overflow-hidden px-3 py-2 sm:px-4"
           aria-label={ORDER_DETAIL_LOADING_TEXT.aria}
         >
           {Array.from({ length: 5 }).map((_, index) => (
@@ -184,7 +191,14 @@ function OrderDetailSheetSkeletonFallback() {
   );
 }
 
+/**
+ * Branch ID is required for the discount/split/merge server actions —
+ * they all gate on JWT.branch_id matching this URL param. Optional in the
+ * type only to preserve back-compat for any caller that hasn't been
+ * updated yet; the discount/split/merge buttons are gated on its presence.
+ */
 export interface OrderDetailSheetProps {
+  branchId: number;
   orderId: number | null;
   orderNumber?: string | null;
   refreshToken?: number;
@@ -224,6 +238,7 @@ export interface OrderDetailSheetProps {
 }
 
 export function OrderDetailSheet({
+  branchId,
   orderId,
   orderNumber,
   refreshToken,
@@ -248,7 +263,22 @@ export function OrderDetailSheet({
   const [cancelReason, setCancelReason] = useState("");
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferTableId, setTransferTableId] = useState<string>("");
-  const [printPending, startPrintTransition] = useTransition();
+  const [showDiscount, setShowDiscount] = useState(false);
+  const [showSplit, setShowSplit] = useState(false);
+  const [showMerge, setShowMerge] = useState(false);
+  const swipe = useSwipeReveal({
+    revealWidth: ITEM_REVEAL_WIDTH,
+    activationPx: ITEM_SWIPE_ACTIVATION_PX,
+    threshold: ITEM_SWIPE_THRESHOLD_PX,
+  });
+  const clearSwipeReveal = swipe.clearReveal;
+  // Reset reveal whenever the sheet switches orders or closes — otherwise a
+  // row revealed in order A would still appear "open" when order B paints
+  // (item ids don't overlap, but the revealedKey lookup compares strings
+  // and the visual state is best treated as transient per-sheet-session).
+  useEffect(() => {
+    clearSwipeReveal();
+  }, [orderId, clearSwipeReveal]);
 
   const load = useCallback(() => {
     if (orderId === null) {
@@ -498,14 +528,88 @@ export function OrderDetailSheet({
     });
   };
 
-  const handlePrintProvisional = () => {
+  const handleApplyDiscount = (input: {
+    type: "pct" | "vnd";
+    value: number;
+    note: string;
+  }) => {
     if (orderId === null) return;
-    startPrintTransition(async () => {
-      const r = await printProvisionalBill(orderId);
+    startTransition(async () => {
+      const r = await applyOrderDiscount(branchId, {
+        orderId,
+        type: input.type,
+        value: input.value,
+        note: input.note,
+      });
       if (r.success) {
-        notify.success("Đã gửi phiếu tạm tính tới máy in");
+        notify.success("Đã áp chiết khấu");
+        setShowDiscount(false);
+        await onOrderUpdated?.();
+        load();
       } else {
-        notify.error(r.error ?? "Không thể in phiếu tạm tính");
+        notify.error(r.error ?? "Không thể áp chiết khấu.");
+      }
+    });
+  };
+
+  const handleClearDiscount = () => {
+    if (orderId === null) return;
+    startTransition(async () => {
+      const r = await clearOrderDiscount(branchId, orderId);
+      if (r.success) {
+        notify.success("Đã bỏ chiết khấu");
+        setShowDiscount(false);
+        await onOrderUpdated?.();
+        load();
+      } else {
+        notify.error(r.error ?? "Không thể bỏ chiết khấu.");
+      }
+    });
+  };
+
+  const handleSplit = (selectedItemIds: number[]) => {
+    if (orderId === null) return;
+    // Mint client UUID so a network retry replays cleanly via
+    // orders.idempotency_key on the new (split-out) order.
+    const idempotencyKey = crypto.randomUUID();
+    startTransition(async () => {
+      const r = await splitOrder(branchId, {
+        sourceOrderId: orderId,
+        itemIds: selectedItemIds,
+        idempotencyKey,
+      });
+      if (r.success && r.data) {
+        notify.success(
+          `Đã tách thành đơn mới #${r.data.new_order_number}. ` +
+            `Vui lòng in lại tạm tính nếu cần.`,
+        );
+        setShowSplit(false);
+        await onOrderUpdated?.();
+        load();
+      } else {
+        notify.error(r.error ?? "Không thể tách đơn.");
+      }
+    });
+  };
+
+  const handleMerge = (targetOrderId: number) => {
+    if (orderId === null) return;
+    const idempotencyKey = crypto.randomUUID();
+    startTransition(async () => {
+      const r = await mergeOrders(branchId, {
+        sourceOrderId: orderId,
+        targetOrderId,
+        idempotencyKey,
+      });
+      if (r.success) {
+        notify.success("Đã gộp đơn. Vui lòng in lại tạm tính của đơn nhận nếu cần.");
+        setShowMerge(false);
+        await onOrderUpdated?.();
+        // Source order is now cancelled — close the sheet so cashier focuses
+        // on the target order instead of looking at a "Đã hủy" detail.
+        onClose();
+      } else {
+        notify.error(r.error ?? "Không thể gộp đơn.");
       }
     });
   };
@@ -520,6 +624,10 @@ export function OrderDetailSheet({
       t.status === "occupied" ||
       t.id === data?.table_id,
   );
+
+  const voidItem = data?.order_items.find((item) => item.id === voidItemId);
+  const activeItemCount =
+    data?.order_items.filter((item) => item.status !== "cancelled").length ?? 0;
 
   const canShowCancel =
     canManage && data && !["completed", "cancelled"].includes(data.status);
@@ -539,10 +647,30 @@ export function OrderDetailSheet({
   const canMarkServed =
     data != null &&
     ["new", "confirmed", "preparing", "ready"].includes(data.status);
-  const canShowMoreMenu = canShowBillInMenu || canShowReorder || canShowCancel;
-  const voidItem = data?.order_items.find((item) => item.id === voidItemId);
-  const activeItemCount =
-    data?.order_items.filter((item) => item.status !== "cancelled").length ?? 0;
+  // Discount/split/merge gating — all require an active+unpaid order. The
+  // server enforces the same conditions; the UI guards just hide entries
+  // that would always reject so the cashier never wastes a tap.
+  const canShowDiscount = canShowPaymentAction;
+  const canShowSplit =
+    canShowPaymentAction &&
+    data?.order_type === "dine_in" &&
+    activeItemCount >= 2;
+  const tableSiblingCount =
+    data?.table_id != null
+      ? (orderCountByTable?.get(data.table_id) ?? 0)
+      : 0;
+  const canShowMerge =
+    canShowPaymentAction &&
+    data?.order_type === "dine_in" &&
+    data?.table_id != null &&
+    tableSiblingCount >= 2;
+  const canShowMoreMenu =
+    canShowBillInMenu ||
+    canShowReorder ||
+    canShowCancel ||
+    canShowDiscount ||
+    canShowSplit ||
+    canShowMerge;
   // Use summary only when it matches the open order — stale summary from a
   // prior tap would otherwise leak into the header for a different order.
   const summaryForCurrentOrder =
@@ -567,7 +695,7 @@ export function OrderDetailSheet({
         <SheetContent
           side="right"
           showCloseButton={false}
-          className="flex w-full flex-col sm:max-w-md"
+          className="flex w-full max-w-full flex-col overflow-hidden sm:max-w-md"
         >
           <SheetHeader className="border-b border-border/60 px-3 py-2.5 text-left sm:px-4">
             <div className="flex items-center justify-between gap-3">
@@ -609,9 +737,9 @@ export function OrderDetailSheet({
               fallback={<OrderDetailSheetSkeletonFallback />}
               snapshotConfig={{ excludeSelectors: ["svg"] }}
             >
-              <ScrollArea className="min-h-0 flex-1">
+              <ScrollArea className="min-h-0 w-full min-w-0 max-w-full flex-1 overflow-hidden">
                 <ul
-                  className="flex flex-col gap-2 px-3 py-2 sm:px-4"
+                  className="flex w-full min-w-0 max-w-full flex-col gap-2 overflow-hidden px-3 py-2 sm:px-4"
                   aria-label="Đang tải danh sách món"
                 >
                   {Array.from({ length: 5 }).map((_, index) => (
@@ -659,9 +787,9 @@ export function OrderDetailSheet({
 
           {data && !error && (
             <>
-              <ScrollArea className="min-h-0 flex-1">
+              <ScrollArea className="min-h-0 w-full min-w-0 max-w-full flex-1 overflow-hidden">
                 <ul
-                  className="flex flex-col gap-2 px-3 py-2 sm:px-4"
+                  className="flex w-full min-w-0 max-w-full flex-col gap-2 overflow-hidden px-3 py-2 sm:px-4"
                   aria-label="Danh sách món"
                 >
                   {data.order_items.map((row) => (
@@ -671,6 +799,7 @@ export function OrderDetailSheet({
                       canManage={canManage}
                       onVoid={setVoidItemId}
                       onMarkServed={handleMarkItemServed}
+                      swipe={swipe}
                     />
                   ))}
                 </ul>
@@ -686,34 +815,17 @@ export function OrderDetailSheet({
 
               <div className="mt-auto flex shrink-0 flex-col gap-2 border-t px-3 py-3 sm:px-4">
                 {canShowPaymentAction && (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="lg"
-                      className="w-full"
-                      disabled={printPending}
-                      onClick={() => void handlePrintProvisional()}
-                    >
-                      {printPending ? (
-                        <Spinner data-icon="inline-start" />
-                      ) : (
-                        <IconReceipt data-icon="inline-start" />
-                      )}
-                      In phiếu tạm tính
-                    </Button>
-                    <Button
-                      type="button"
-                      size="lg"
-                      className="w-full"
-                      onClick={() => {
-                        onOpenBill(data.id, data);
-                        onClose();
-                      }}
-                    >
-                      Thanh toán - {formatVND(data.total_amount)}
-                    </Button>
-                  </>
+                  <Button
+                    type="button"
+                    size="lg"
+                    className="w-full"
+                    onClick={() => {
+                      onOpenBill(data.id, data);
+                      onClose();
+                    }}
+                  >
+                    Thanh toán - {formatVND(data.total_amount)}
+                  </Button>
                 )}
 
                 {(canAppendOrderStatus(data.status) || canMarkServed) && (
@@ -789,6 +901,39 @@ export function OrderDetailSheet({
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuGroup>
+                      {(canShowDiscount || canShowSplit || canShowMerge) && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuGroup>
+                            {canShowDiscount && (
+                              <DropdownMenuItem
+                                disabled={isPending}
+                                onClick={() => setShowDiscount(true)}
+                              >
+                                {data.discount_amount > 0
+                                  ? "Sửa chiết khấu"
+                                  : "Chiết khấu"}
+                              </DropdownMenuItem>
+                            )}
+                            {canShowSplit && (
+                              <DropdownMenuItem
+                                disabled={isPending}
+                                onClick={() => setShowSplit(true)}
+                              >
+                                Tách hoá đơn
+                              </DropdownMenuItem>
+                            )}
+                            {canShowMerge && (
+                              <DropdownMenuItem
+                                disabled={isPending}
+                                onClick={() => setShowMerge(true)}
+                              >
+                                Gộp hoá đơn
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuGroup>
+                        </>
+                      )}
                       {canShowCancel && (
                         <>
                           <DropdownMenuSeparator />
@@ -848,6 +993,53 @@ export function OrderDetailSheet({
         currentTableNumber={data?.tables?.number ?? null}
         isPending={isPending}
       />
+
+      {data && (
+        <DiscountSheet
+          open={showDiscount}
+          onOpenChange={setShowDiscount}
+          subtotal={data.subtotal}
+          serviceCharge={data.service_charge}
+          current={{
+            type: data.discount_type,
+            value: data.discount_value,
+            note: data.discount_note,
+            amount: data.discount_amount,
+          }}
+          isPending={isPending}
+          onSubmit={handleApplyDiscount}
+          onClear={handleClearDiscount}
+        />
+      )}
+
+      {data && (
+        <SplitOrderSheet
+          open={showSplit}
+          onOpenChange={setShowSplit}
+          orderNumber={data.order_number}
+          tableNumber={data.tables?.number ?? null}
+          items={data.order_items}
+          isPending={isPending}
+          onSubmit={handleSplit}
+        />
+      )}
+
+      {data && data.table_id != null && (
+        <MergeOrdersSheet
+          open={showMerge}
+          onOpenChange={setShowMerge}
+          branchId={branchId}
+          sourceOrderId={data.id}
+          sourceOrderNumber={data.order_number}
+          sourceTableId={data.table_id}
+          sourceTableNumber={data.tables?.number ?? null}
+          sourceHasPctDiscount={
+            data.discount_amount > 0 && data.discount_type === "pct"
+          }
+          isPending={isPending}
+          onSubmit={handleMerge}
+        />
+      )}
     </>
   );
 }

@@ -37,6 +37,7 @@ import {
   Banknote as IconCash,
   CreditCard as IconCreditCard,
   QrCode as IconQrcode,
+  Receipt as IconReceipt,
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "../../../../../_components/boneyard-skeleton";
 import { fetchOrderForBill } from "../../actions";
@@ -46,6 +47,7 @@ import {
   createPayment,
   fetchPaymentMethodsForPos,
 } from "../../payment-actions";
+import { printProvisionalBill } from "../../print-actions";
 import { useIsOnline } from "../pwa/online-status-provider";
 import { BillReceiptSummary } from "./bill-receipt-summary";
 import type {
@@ -232,11 +234,16 @@ const RECEIPT_LOADING_ORDER: OrderData = {
   tax_amount: 0,
   service_charge: 0,
   discount_amount: 0,
+  discount_type: null,
+  discount_value: null,
+  discount_note: null,
   total_amount: 138000,
   customer_count: 2,
   note: null,
   created_at: "2026-04-26T00:00:00.000Z",
   table_id: 2,
+  split_from_order_id: null,
+  merged_into_order_id: null,
   tables: { number: 2 },
   branches: { name: "Chi nhánh Đất Đỏ", address: "Ấp Phước Sơn, Xã Đất Đỏ" },
   order_items: [
@@ -286,6 +293,7 @@ export function BillReceipt({
   const [isPending, startTransition] = useTransition();
   const [actionPending, startActionTransition] = useTransition();
   const [methodPending, startMethodTransition] = useTransition();
+  const [printPending, startPrintTransition] = useTransition();
   const isOnline = useIsOnline();
   // When the cashier taps a non-cash method while offline, remember the
   // intent so we can auto-restore it on reconnect. Without this, every
@@ -591,6 +599,18 @@ export function BillReceipt({
     selectedMethod,
   ]);
 
+  const handlePrintProvisional = useCallback(() => {
+    if (orderId === null) return;
+    startPrintTransition(async () => {
+      const result = await printProvisionalBill(orderId);
+      if (result.success) {
+        toast.success("Đã gửi phiếu tạm tính tới máy in");
+      } else {
+        toast.error(result.error ?? "Không thể in phiếu tạm tính");
+      }
+    });
+  }, [orderId]);
+
   const MethodIcon = METHOD_META[selectedMethod]?.icon ?? IconCreditCard;
   const isReceiptIntent = intent === "receipt";
   const isReadOnlyOrder =
@@ -824,6 +844,21 @@ export function BillReceipt({
             </div>
 
             <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void handlePrintProvisional()}
+                disabled={
+                  isPending || methodPending || actionPending || printPending
+                }
+              >
+                {printPending ? (
+                  <Spinner data-icon="inline-start" />
+                ) : (
+                  <IconReceipt data-icon="inline-start" />
+                )}
+                In tạm tính
+              </Button>
               <Button
                 data-testid={
                   selectedMethod === "cash" ? "bill-confirm-cash" : undefined

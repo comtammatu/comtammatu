@@ -25,7 +25,7 @@ interface OrderListPaneProps {
   ) => void;
   onClosePane?: () => void;
   /**
-   * Opens the "Đã xử lý" sheet (paid + cancelled orders, paginated).
+   * Opens the "Đơn hoàn thành" sheet (paid + cancelled orders, paginated).
    * Provided by the shell. Replaces the inline archived list — at scale
    * (200-300 đơn/ngày) the inline list dragged the sidebar's render and
    * pulled rows the cashier rarely touches.
@@ -47,11 +47,11 @@ function OrderListPaneComponent({
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
-          <p className="text-base font-semibold">Cần xử lý</p>
+          <p className="text-base font-semibold">Hoá đơn</p>
           <Badge
             variant={activeOrderCount > 0 ? "warning" : "outline"}
             className="h-6 min-w-6 px-1.5 text-sm font-bold tabular-nums"
-            aria-label={`${String(activeOrderCount)} đơn cần xử lý`}
+            aria-label={`${String(activeOrderCount)} hoá đơn`}
           >
             {activeOrderCount}
           </Badge>
@@ -62,7 +62,7 @@ function OrderListPaneComponent({
             variant="ghost"
             size="icon-lg"
             className="text-muted-foreground"
-            aria-label="Tải lại danh sách đơn cần xử lý"
+            aria-label="Tải lại danh sách hoá đơn"
             onClick={() => void refreshOrders()}
           >
             <IconRefresh />
@@ -98,7 +98,7 @@ function OrderListPaneComponent({
         >
           <span className="flex items-center gap-2">
             <IconClock data-icon="inline-start" />
-            Đã xử lý
+            Đơn hoàn thành
           </span>
           <IconChevronRight data-icon="inline-end" />
         </Button>

@@ -51,10 +51,14 @@ export interface UseOrderSyncArgs {
 // Realtime payload row carries only orders-table columns (no join). Spreading
 // raw row over a SessionOrder would leak unknown fields, so we project only
 // the SessionOrder shape and coerce numeric/text variants supabase-realtime
-// stringifies (e.g. NUMERIC → string).
+// stringifies (e.g. NUMERIC → string). When `table_id` shifts (e.g. POS
+// `transfer_order_table` ghép bàn), we resolve `tables.number` from the
+// cached tables snapshot so the sidebar's `Bàn X` label flips with the
+// new bàn instead of pinning the stale JOIN from `current`.
 function applyOrderUpdate(
   current: SessionOrder,
   payload: Record<string, unknown>,
+  tables: BranchTable[],
 ): SessionOrder {
   const next: SessionOrder = { ...current };
   if (typeof payload.order_number === "string")
@@ -72,12 +76,16 @@ function applyOrderUpdate(
   }
   if (payload.table_id === null) {
     next.table_id = null;
+    next.tables = null;
   } else if (typeof payload.table_id === "number") {
     next.table_id = payload.table_id;
+    if (payload.table_id !== current.table_id) {
+      const found = tables.find((t) => t.id === payload.table_id);
+      next.tables = found ? { number: found.number } : null;
+    }
   }
   if (typeof payload.created_at === "string")
     next.created_at = payload.created_at;
-  // `tables` join intentionally preserved from `current` — payload has no joins.
   return next;
 }
 
@@ -250,7 +258,11 @@ export function useOrderSync({
               const current = prev[idx];
               if (!current) return prev;
               const next = prev.slice();
-              next[idx] = applyOrderUpdate(current, updated);
+              next[idx] = applyOrderUpdate(
+                current,
+                updated,
+                getTablesRef.current(),
+              );
               return next;
             });
             return;

@@ -115,6 +115,50 @@ export function getPosLineItemOptionLines(
   );
 }
 
+const COMPACT_OPTION_SEPARATOR = " \u00b7 ";
+
+function formatPosLineItemCompactOption(
+  option: PosLineItemOptionInput,
+): string {
+  return option.name;
+}
+
+function formatPosLineItemCompactSide(side: PosLineItemSideInput): string {
+  const quantity = side.quantity ?? 1;
+  const quantitySuffix = quantity > 1 ? ` x${String(quantity)}` : "";
+
+  return `${side.name}${quantitySuffix}`;
+}
+
+export interface PosLineItemSummary {
+  options: string | null;
+  note: string | null;
+}
+
+export function getPosLineItemSummary(
+  item: PosLineItemDetailsInput,
+): PosLineItemSummary {
+  const parts: string[] = [];
+  if (item.modifiers && item.modifiers.length > 0) {
+    for (const modifier of item.modifiers) {
+      parts.push(formatPosLineItemCompactOption(modifier));
+    }
+  }
+  if (item.sides && item.sides.length > 0) {
+    for (const side of item.sides) {
+      parts.push(formatPosLineItemCompactSide(side));
+    }
+  }
+  const note = item.note?.trim();
+  return {
+    options:
+      parts.length > 0
+        ? `+ ${parts.join(COMPACT_OPTION_SEPARATOR)}`
+        : null,
+    note: note ? note : null,
+  };
+}
+
 /* ─── Cart State ─── */
 
 export const cartStateSchema = z.object({

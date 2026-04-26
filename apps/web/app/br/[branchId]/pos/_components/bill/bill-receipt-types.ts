@@ -23,11 +23,21 @@ export interface OrderData {
   tax_amount: number;
   service_charge: number;
   discount_amount: number;
+  /** 'pct' (theo %) hoặc 'vnd' (số tiền cố định). NULL khi không có giảm. */
+  discount_type: "pct" | "vnd" | null;
+  /** Giá trị gốc cashier nhập (10 cho 10%, 15000 cho 15.000đ). */
+  discount_value: number | null;
+  /** Ghi chú lý do giảm giá (≥ 3 ký tự sau trim). */
+  discount_note: string | null;
   total_amount: number;
   customer_count: number;
   note: string | null;
   created_at: string;
   table_id: number | null;
+  /** Đơn nguồn nếu đơn này được tách ra. NULL nếu tạo trực tiếp. */
+  split_from_order_id: number | null;
+  /** Đơn target nếu đơn này đã bị gộp vào đơn khác. */
+  merged_into_order_id: number | null;
   tables: { number: number } | null;
   branches: { name: string; address: string | null } | null;
   order_items: OrderItem[];

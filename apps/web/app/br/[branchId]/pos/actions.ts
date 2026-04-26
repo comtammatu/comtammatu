@@ -33,3 +33,12 @@ export {
   openPosSession,
   closePosSession,
 } from "./session-actions";
+
+export {
+  applyOrderDiscount,
+  clearOrderDiscount,
+  splitOrder,
+  mergeOrders,
+  fetchSiblingOrdersForTable,
+} from "./discount-actions";
+export type { SiblingOrderRow } from "./discount-actions";

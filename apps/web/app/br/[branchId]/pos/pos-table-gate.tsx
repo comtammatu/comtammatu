@@ -60,7 +60,7 @@ const TableButton = memo(function TableButton({
       variant={isSelected ? "default" : "outline"}
       aria-label={`Bàn ${String(table.number)} ${statusLabel}`}
       className={cn(
-        "h-36 w-full flex-col items-stretch justify-start gap-2 p-3 text-left whitespace-normal hover:shadow-md sm:h-40 sm:gap-3 sm:p-4 lg:h-44",
+        "@container/table-card h-32 w-full min-w-0 flex-col items-stretch justify-start gap-2 p-2.5 text-left whitespace-normal hover:shadow-md sm:gap-3 sm:p-3.5 @[11rem]/table-card:h-36 @[14rem]/table-card:h-40 @[14rem]/table-card:p-4 @[18rem]/table-card:h-44",
         isSelected
           ? "shadow-md"
           : isAvailable
@@ -71,8 +71,8 @@ const TableButton = memo(function TableButton({
       )}
       onClick={handleClick}
     >
-      <div className="flex w-full items-center justify-between gap-2">
-        <p className="text-base font-semibold uppercase tracking-wide opacity-70">
+      <div className="flex w-full min-w-0 items-center justify-between gap-1.5">
+        <p className="shrink-0 text-xs font-semibold uppercase tracking-wide opacity-60 @[9rem]/table-card:text-sm">
           Bàn
         </p>
         <Badge
@@ -86,7 +86,7 @@ const TableButton = memo(function TableButton({
                   : "secondary"
           }
           className={cn(
-            "text-sm font-semibold",
+            "min-w-0 truncate text-[10px] font-semibold @[9rem]/table-card:text-xs",
             isSelected &&
               "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground",
           )}
@@ -95,24 +95,23 @@ const TableButton = memo(function TableButton({
         </Badge>
       </div>
 
-      <div className="mt-auto flex w-full flex-col gap-2">
-        <div className="flex w-full items-end justify-between gap-2">
-          <p className="text-4xl font-black leading-none tabular-nums sm:text-5xl">
-            {table.number}
-          </p>
-          <p className="text-lg font-semibold tabular-nums">
+      <div className="mt-auto flex w-full min-w-0 items-end justify-between gap-2">
+        <p className="text-3xl font-black leading-none tabular-nums @[9rem]/table-card:text-4xl @[12rem]/table-card:text-5xl @[16rem]/table-card:text-6xl">
+          {table.number}
+        </p>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <p className="text-sm font-semibold tabular-nums opacity-80 @[9rem]/table-card:text-base @[14rem]/table-card:text-lg">
             {table.capacity} chỗ
           </p>
+          {orderCount >= 2 && (
+            <Badge
+              variant="secondary"
+              className="w-fit text-[10px] font-semibold @[9rem]/table-card:text-xs"
+            >
+              {orderCount} hoá đơn
+            </Badge>
+          )}
         </div>
-
-        {orderCount >= 2 && (
-          <Badge
-            variant="secondary"
-            className="w-fit text-xs font-semibold"
-          >
-            {orderCount} đơn
-          </Badge>
-        )}
       </div>
     </Button>
   );
@@ -181,7 +180,7 @@ function PosTableGateComponent({
                   <Badge variant="outline">{availableCount} trống</Badge>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9.5rem),1fr))] gap-2 sm:gap-3 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,11rem),1fr))]">
                   {zoneTables.map((table) => (
                     <TableButton
                       key={table.id}

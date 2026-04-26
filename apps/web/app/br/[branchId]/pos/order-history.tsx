@@ -101,9 +101,9 @@ export function OrderCardSummary({
           {formatVND(order.total_amount)}
         </span>
       </ItemTitle>
-      <ItemDescription className="flex w-full min-w-0 items-center justify-between gap-3 text-sm">
+      <ItemDescription className="flex w-full min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
         <span className="min-w-0 truncate">{getOrderMetaLabel(order)}</span>
-        <span className="flex shrink-0 items-center justify-end gap-1">
+        <span className="ml-auto flex flex-wrap items-center justify-end gap-1">
           {rightMeta}
         </span>
       </ItemDescription>
@@ -136,7 +136,7 @@ interface ActiveOrdersListProps {
 
 /**
  * Sidebar list of orders the cashier still needs to act on (kitchen flow
- * + payment). Provider holds active rows only; archived ("Đã xử lý") lives
+ * + payment). Provider holds active rows only; archived ("Đơn hoàn thành") lives
  * in `_components/archived-orders-sheet.tsx`. We still defensively filter
  * by status because the provider can briefly show a paid row between the
  * realtime payload arriving and the terminal-flip removal landing.
@@ -165,9 +165,9 @@ function ActiveOrdersListComponent({
           <IconReceipt />
         </EmptyMedia>
         <EmptyHeader>
-          <EmptyTitle>Không có đơn cần xử lý</EmptyTitle>
+          <EmptyTitle>Không có hoá đơn</EmptyTitle>
           <EmptyDescription>
-            Đơn mới sẽ hiện ở đây. Hóa đơn đã thanh toán xem ở "Đã xử lý".
+            Đơn mới sẽ hiện ở đây. Hóa đơn đã thanh toán xem ở "Đơn hoàn thành".
           </EmptyDescription>
         </EmptyHeader>
       </Empty>

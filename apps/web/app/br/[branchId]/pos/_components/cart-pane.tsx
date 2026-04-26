@@ -24,7 +24,6 @@ import {
   ToggleGroupItem,
 } from "@comtammatu/ui/components/toggle-group";
 import {
-  ChevronLeft as IconChevronLeft,
   LayoutGrid as IconLayoutGrid,
   Package as IconPackage,
   Trash as IconTrash,
@@ -37,12 +36,13 @@ import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
 import {
   calcItemSubtotal,
   getPosLineItemDisplayName,
-  getPosLineItemOptionLines,
+  getPosLineItemSummary,
 } from "../types";
 import type { CartItem, OrderType } from "../types";
 import { useCart } from "../_hooks/use-cart";
 import { useActiveTable } from "../_hooks/use-active-table";
 import { useSwipeReveal } from "../_hooks/use-swipe-reveal";
+import { PosLineItemCompact } from "./pos-line-item-compact";
 
 const DELETE_REVEAL_WIDTH = 80;
 const SWIPE_ACTIVATION_PX = 8;
@@ -120,7 +120,12 @@ function CartPaneComponent({
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-background">
-      <div className="shrink-0 border-b border-border/60 px-3 py-2.5 sm:px-4 sm:py-4">
+      <div
+        className={cn(
+          "shrink-0 border-b border-border/60",
+          shouldShowOrderTypeSelector ? "p-0" : "px-3 py-2.5 sm:px-4 sm:py-4",
+        )}
+      >
         {isMobileDrawer && shouldShowOrderTypeSelector ? (
           <div className="mb-2 flex items-center justify-end">
             <Button
@@ -208,10 +213,9 @@ function CartPaneComponent({
           <ToggleGroup
             type="single"
             value={cart.orderType}
-            variant="outline"
             size="lg"
-            spacing={2}
-            className="grid w-full grid-cols-2 gap-2"
+            className="grid h-14 w-full grid-cols-2 overflow-hidden rounded-none bg-muted/60"
+            aria-label="Chọn hình thức phục vụ"
             onValueChange={(value) => {
               if (
                 !modeLocked &&
@@ -223,23 +227,27 @@ function CartPaneComponent({
           >
             <ToggleGroupItem
               value="dine_in"
-              className="min-h-12 justify-center gap-2 text-base font-semibold"
+              className="h-full min-w-0 justify-center gap-2 !rounded-none border-r border-border px-0 text-base font-semibold text-muted-foreground hover:bg-background/70 hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
               aria-keyshortcuts="D"
               disabled={modeLocked && cart.orderType !== "dine_in"}
             >
-              <IconToolsKitchen className="size-4" />
+              <IconToolsKitchen data-icon="inline-start" />
               Tại bàn
-              <Kbd className="ml-1 hidden md:inline-flex">D</Kbd>
+              <Kbd className="hidden md:inline-flex group-data-[state=on]/toggle:bg-primary-foreground/20 group-data-[state=on]/toggle:text-primary-foreground">
+                D
+              </Kbd>
             </ToggleGroupItem>
             <ToggleGroupItem
               value="takeaway"
-              className="min-h-12 justify-center gap-2 text-base font-semibold"
+              className="h-full min-w-0 justify-center gap-2 !rounded-none px-0 text-base font-semibold text-muted-foreground hover:bg-background/70 hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
               aria-keyshortcuts="T"
               disabled={modeLocked && cart.orderType !== "takeaway"}
             >
-              <IconPackage className="size-4" />
+              <IconPackage data-icon="inline-start" />
               Mang về
-              <Kbd className="ml-1 hidden md:inline-flex">T</Kbd>
+              <Kbd className="hidden md:inline-flex group-data-[state=on]/toggle:bg-primary-foreground/20 group-data-[state=on]/toggle:text-primary-foreground">
+                T
+              </Kbd>
             </ToggleGroupItem>
           </ToggleGroup>
         )}
@@ -279,13 +287,19 @@ function CartPaneComponent({
                 const isDeleteRevealed = swipe.isRevealed(item.key);
                 const swipeHandlers = swipe.bindings(item.key);
                 const displayName = getPosLineItemDisplayName(item);
-                const optionLines = getPosLineItemOptionLines(item);
+                const summary = getPosLineItemSummary(item);
+                const itemPaddingClass = isDeleteRevealed
+                  ? "pr-20 sm:pr-14"
+                  : "pr-3 sm:pr-14";
 
                 return (
                   <div key={item.key} className="relative overflow-hidden">
                     <Button
                       variant="destructive"
-                      className="absolute inset-y-0 right-0 h-auto min-h-full w-20 sm:hidden"
+                      className={cn(
+                        "absolute inset-y-0 right-0 z-10 h-auto min-h-full w-20 rounded-none sm:hidden",
+                        !isDeleteRevealed && "hidden",
+                      )}
                       aria-label={`Xóa ${displayName} khỏi giỏ đơn mới`}
                       onClick={() => {
                         cart.removeItem(item.key);
@@ -294,26 +308,19 @@ function CartPaneComponent({
                     >
                       Xóa
                     </Button>
-                    {!isDeleteRevealed && (
-                      <span
-                        className="pointer-events-none absolute right-2 top-1/2 z-10 -translate-y-1/2 text-muted-foreground/35 sm:hidden"
-                        aria-hidden="true"
-                      >
-                        <IconChevronLeft className="size-4" />
-                      </span>
-                    )}
                     <Item
-                      asChild
                       variant="outline"
                       className={cn(
-                        "relative touch-pan-y bg-card p-3 pr-12 text-left shadow-sm transition-transform duration-150 ease-out hover:shadow-md sm:p-4 sm:pr-14",
-                        isDeleteRevealed && "-translate-x-20 sm:translate-x-0",
+                        "relative h-20 touch-pan-y rounded-none bg-card p-0 text-left shadow-sm transition-colors duration-150 ease-out hover:shadow-md",
                       )}
                     >
                       <Button
                         type="button"
                         variant="ghost"
-                        className="h-auto w-full justify-start p-0 text-left whitespace-normal hover:bg-card"
+                        className={cn(
+                          "h-full w-full justify-start py-2 pl-3 text-left whitespace-normal hover:bg-card sm:pl-4",
+                          itemPaddingClass,
+                        )}
                         onClick={(event) => {
                           if (swipe.consumeSuppression(item.key)) {
                             event.preventDefault();
@@ -328,31 +335,13 @@ function CartPaneComponent({
                         }}
                         {...swipeHandlers}
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex min-w-0 items-center gap-2">
-                              <span className="shrink-0 text-sm font-bold text-muted-foreground tabular-nums">
-                                x{item.quantity}
-                              </span>
-                              <p className="min-w-0 truncate text-base font-semibold leading-snug text-foreground">
-                                {displayName}
-                              </p>
-                            </div>
-                            {optionLines.map((line) => (
-                              <p
-                                key={line}
-                                className="mt-1 text-sm leading-5 text-muted-foreground"
-                              >
-                                {line}
-                              </p>
-                            ))}
-                          </div>
-                          <div className="shrink-0 pt-0.5">
-                            <p className="whitespace-nowrap text-right text-base font-bold text-primary tabular-nums">
-                              {formatVND(subtotal)}
-                            </p>
-                          </div>
-                        </div>
+                        <PosLineItemCompact
+                          quantity={item.quantity}
+                          title={displayName}
+                          total={formatVND(subtotal)}
+                          options={summary.options}
+                          note={summary.note}
+                        />
                       </Button>
                     </Item>
                     <Button
