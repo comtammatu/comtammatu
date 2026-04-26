@@ -220,10 +220,10 @@ export type ProvisionalBillPayload = BillBase & {
 
 export type ReceiptPayload = BillBase & {
   kind: "receipt";
-  /** Narrowed to 3 methods (cash | bank_transfer | momo). Unknown values render
-   * via fallback to raw key. Optional for backward-compat with old backend
-   * payloads that predate the provisional-bill split. */
-  payment_method?: "cash" | "bank_transfer" | "momo" | string | null;
+  /** Narrowed to known methods (cash | vietqr | bank_transfer | momo). Unknown
+   * values render via fallback to raw key. Optional for backward-compat with
+   * old backend payloads that predate the provisional-bill split. */
+  payment_method?: "cash" | "vietqr" | "bank_transfer" | "momo" | string | null;
   /** Tiền khách đưa (cash only); non-cash methods: = total_amount.
    * Optional for backward-compat; omitted rows are skipped. */
   cash_received?: number | null;
@@ -283,6 +283,7 @@ const splitDateTime = (iso: string | undefined): { date: string; time: string } 
 
 const PAYMENT_LABEL: Record<string, string> = {
   cash: "Tiền mặt",
+  vietqr: "VietQR",
   bank_transfer: "Chuyển khoản",
   momo: "MoMo",
 };

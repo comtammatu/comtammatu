@@ -93,10 +93,14 @@ export const provisionalBillPayloadSchema = z.object({
 export const receiptPayloadSchema = z.object({
   kind: z.literal("receipt"),
   ...billBaseFields,
-  /** Narrowed to 3 methods accepted by the POS. Unknown values fall through
+  /** Narrowed to methods accepted by the POS. Unknown values fall through
    * to the raw key in the renderer. */
   payment_method: z
-    .union([z.enum(["cash", "bank_transfer", "momo"]), z.string(), z.null()])
+    .union([
+      z.enum(["cash", "vietqr", "bank_transfer", "momo"]),
+      z.string(),
+      z.null(),
+    ])
     .optional(),
   /** Tiền mặt khách đưa. Null / omitted for non-cash payments. */
   cash_received: z.number().nullable().optional(),
