@@ -17,6 +17,8 @@ import {
   FieldLabel,
 } from "@comtammatu/ui/components/field";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import { QuickReasonChips } from "../quick-reason-chips";
+import { CANCEL_ORDER_PRESETS } from "../quick-reason-presets";
 
 interface CancelOrderDialogProps {
   open: boolean;
@@ -66,11 +68,17 @@ export function CancelOrderDialog({
         <FieldGroup className="py-2">
           <Field data-invalid={!reasonReady && trimmedLen > 0}>
             <FieldLabel htmlFor="cancel-reason">Lý do hủy đơn</FieldLabel>
+            <QuickReasonChips
+              presets={CANCEL_ORDER_PRESETS}
+              value={reason}
+              onChange={onReasonChange}
+              ariaLabel="Gợi ý lý do hủy đơn"
+            />
             <Textarea
               id="cancel-reason"
               value={reason}
               onChange={(event) => onReasonChange(event.target.value)}
-              placeholder="Bắt buộc để đối soát ca và bếp"
+              placeholder="Bấm gợi ý hoặc gõ thêm chi tiết..."
               aria-invalid={!reasonReady && trimmedLen > 0}
             />
             <FieldDescription>

@@ -17,6 +17,8 @@ import {
   FieldLabel,
 } from "@comtammatu/ui/components/field";
 import { Textarea } from "@comtammatu/ui/components/textarea";
+import { QuickReasonChips } from "../quick-reason-chips";
+import { VOID_ITEM_PRESETS } from "../quick-reason-presets";
 
 interface VoidItemDialogProps {
   open: boolean;
@@ -64,11 +66,17 @@ export function VoidItemDialog({
         <FieldGroup className="py-2">
           <Field data-invalid={!reasonReady && trimmedLen > 0}>
             <FieldLabel htmlFor="void-reason">Lý do hủy món</FieldLabel>
+            <QuickReasonChips
+              presets={VOID_ITEM_PRESETS}
+              value={reason}
+              onChange={onReasonChange}
+              ariaLabel="Gợi ý lý do hủy món"
+            />
             <Textarea
               id="void-reason"
               value={reason}
               onChange={(event) => onReasonChange(event.target.value)}
-              placeholder="Ví dụ: khách đổi ý, bếp hết món"
+              placeholder="Bấm gợi ý hoặc gõ thêm chi tiết..."
               aria-invalid={!reasonReady && trimmedLen > 0}
             />
             <FieldDescription>

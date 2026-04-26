@@ -24,6 +24,8 @@ import {
 import { cn } from "@comtammatu/ui";
 import type { CartItem, CartModifier, CartSide } from "./types";
 import type { MenuItem, MenuVariant } from "./pos-menu-types";
+import { QuickReasonChips } from "./_components/quick-reason-chips";
+import { ITEM_NOTE_PRESETS } from "./_components/quick-reason-presets";
 
 interface ItemCustomizerProps {
   item: MenuItem | null;
@@ -417,11 +419,18 @@ export function ItemCustomizer({
                   >
                     Ghi chú
                   </Label>
+                  <QuickReasonChips
+                    presets={ITEM_NOTE_PRESETS}
+                    value={note}
+                    onChange={setNote}
+                    ariaLabel="Gợi ý ghi chú món"
+                    className="mb-2"
+                  />
                   <Textarea
                     id="item-note"
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    placeholder="Ví dụ: ít cay, không hành..."
+                    placeholder="Bấm gợi ý hoặc gõ thêm chi tiết..."
                     rows={2}
                     maxLength={200}
                   />
