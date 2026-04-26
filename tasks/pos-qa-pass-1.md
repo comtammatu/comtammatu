@@ -10,11 +10,13 @@
 **Decisions:**
 - POS-08 — software-only (offline gate, manifest, SW NetworkOnly) IN; printer hardware deferred.
 - POS-06 (đánh dấu phục vụ) cut from Pass 1 — UI-only, no money risk.
-- Open questions narrowed after code review: close-shift with active orders is a P0 spec gap; 4 owner questions remain; 3 earlier questions are already answered by code (bottom of doc).
+- All 5 owner decisions resolved 2026-04-26 (`tasks/owner-decisions-pos-pass-1.md`). P0 spec gap on close-shift: closed.
 
 **P0 BLOCKERS — escalate immediately if any fails:** `05.04`, `07.04`, `07.08`, `RT.01`. Historical money-loss / data-corruption / silent-sync paths.
 
 **Automation required before pilot:** `05.03`, `05.04`, `07.04`, `07.08`, `RT.01`, `08.01`, `08.02`, `09.01`.
+
+**Engineering pre-work** (out of QA scope but unblocks runs): D1 + D3 RPC change, D4 invoice orchestrator change — see `tasks/owner-decisions-pos-pass-1.md` follow-up table.
 
 ---
 
@@ -160,13 +162,19 @@
 
 ### POS-09 — Đóng ca
 
-**09.01 [Layer A][Blocked: P0 spec gap] Cashier closes shift** — header "Chốt ca" or F10 → enter closing cash → confirm.
-- ⚠️ Blocking owner decision: force-close while active/preparing/served/unpaid orders exist must be specified before this can be a hard pass/fail gate.
-- ✅ `pos_sessions(status=closed, closed_at, variance computed)`. Redirect to summary; new POS load shows fresh "Mở ca" form.
+**09.01 [Layer A] Cashier closes shift (clean — no active orders)** — no live orders on session → header "Chốt ca" or F10 → enter closing cash matching expected → confirm.
+- ✅ `pos_sessions(status=closed, closed_at, variance=0)`. Redirect to summary; new POS load shows fresh "Mở ca" form.
+- 📜 Rule: per D1 2026-04-26.
 
-**09.01-baseline [Layer B] Observe close-shift with active orders (data for owner decision)** — leave 1 dine-in order in `status=active, payment_status=unpaid` on the open session → call "Chốt ca" → record what currently happens.
-- 🔍 Capture: does RPC succeed? `expected_cash` value (current code sums non-cancelled orders including unpaid → likely overstated). What `pos_sessions` row state results? Are unpaid orders re-attached to a future session, or orphaned? Does bàn release?
-- 🎯 Output: a paragraph + numbers handed to owner so the spec decision (block / allow + flag / require manager override) is evidence-based, not abstract.
+**09.01-carry [Layer A] Close shift with active unpaid order — carry forward** — leave 1 dine-in order in `status=active, payment_status=unpaid` on the open session → close the shift → cashier #2 opens a new shift on same terminal.
+- ✅ Close succeeds without blocking. `pos_sessions(status=closed, expected_cash = opening_cash + SUM(paid orders)`, **unpaid order NOT counted**, `variance ≈ 0` if cash matches paid revenue).
+- ✅ The unpaid order is still visible in cashier #2's order list after they open the new shift. When cashier #2 takes payment for it, that revenue counts toward the **new** shift's `expected_cash`, not the closed one.
+- 📜 Rule: per D1 2026-04-26 (Option 2 + paid-only filter on `expected_cash`).
+- 🛑 FAIL: close blocked with active orders (regression to old "block" semantics); OR `expected_cash` includes unpaid (variance shows fake −200k); OR unpaid order disappears / orphans on close.
+
+**09.01-variance [Layer A] Variance approval at threshold** — close shift with `|cash_difference|` deliberately above `max(50.000đ, 0.5% × expected_cash)`.
+- ✅ "Chốt ca" demands BM PIN + note ≥10 chars before commit. Below threshold: closes silently.
+- 📜 Rule: per D3 2026-04-26.
 
 **09.02 [Layer A] Waiter cannot close** — inspect DOM, press F10, force-fire `closePosSession` from devtools.
 - ✅ Button absent. F10 no-op. Server rejects with 403 (`POS_CLOSE_SHIFT`).
@@ -197,16 +205,15 @@
 
 ---
 
-## ⚠️ P0 spec gap
+## Decided by owner 2026-04-26
 
-1. Force-close shift with active/preparing/served/unpaid orders — block, or allow + flag? (`09.01` cross-flow). Current `close_pos_session` computes reconciliation and closes the session; it does not block live orders.
+Full context in `tasks/owner-decisions-pos-pass-1.md`. TL;DR:
 
-## Remaining owner questions
-
-1. Comp meal (total=0) — note required? approval gate? (`05.03`)
-2. Variance threshold for close-shift manager approval — VND tuyệt đối hay %? (`09.01`)
-3. HĐĐT for total=0 (comp) — gửi hay skip? (`05.03 + 05.05`)
-4. Failed-print log table for "in lại on-demand"? (POS-08 hardware-pass dependency)
+1. **D1** Close-shift with active orders — **Allow + carry forward**. `expected_cash` filters `payment_status='paid'` only; unpaid orders live across sessions.
+2. **D2** Comp meal (total=0) — **No additional gate**; discount note ≥3 chars suffices.
+3. **D3** Variance threshold — `max(50.000đ, 0.5% × expected_cash)` → BM PIN + note ≥10 chars.
+4. **D4** HĐĐT for total=0 — **Conditional on MST**; no MST → skip MISA + `tax_invoices.status='not_required'`.
+5. **D5** Failed-print log — **Reuse `print_jobs.status='failed'`** + 7-day query window; "In lại" links via `original_job_id`.
 
 ## Confirmed by code (no longer open)
 

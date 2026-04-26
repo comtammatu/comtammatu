@@ -4,17 +4,17 @@
 > Goal: 5 decisions in 1 sync, batched. Estimate ~25 phút.
 > Output: each row gets a written answer in this file → updates `tasks/pos-qa-pass-1.md` "Open questions" section.
 
-## TL;DR
+## TL;DR — DECIDED 2026-04-26
 
-| # | Decision | Recommend | Blocks Pass 1? |
-|---|---|---|---|
-| D1 | Close shift while active orders exist | **Manager override (Option 3)** | ✅ blocks `09.01` |
-| D2 | Comp meal (total=0) — note + approval gate | **Audit log only (Option 3)** | partial `05.03` |
-| D3 | Variance threshold for close-shift approval | **Combo 50k OR 0.5% (Option 3)** | partial `09.01` |
-| D4 | HĐĐT for total=0 (comp meal) | **Conditional on MST (Option 3)** | partial `05.03 + 05.05` |
-| D5 | Failed-print log: retry via `print_jobs` vs new table | **Reuse `print_jobs` (Option 1)** | defer to hardware pass |
+| # | Decision | Owner answer |
+|---|---|---|
+| D1 | Close shift while active orders exist | **Allow + carry forward** (đơn unpaid live qua ca sau); `expected_cash` filter `payment_status='paid'` |
+| D2 | Comp meal (total=0) — note + approval gate | **No additional gate** (discount note ≥3 chars là đủ) |
+| D3 | Variance threshold for close-shift approval | **Combo `max(50.000đ, 0.5% × expected_cash)`** → BM approval + note ≥10 chars |
+| D4 | HĐĐT for total=0 (comp meal) | **Conditional on MST** — MST nhập → gửi MISA; không nhập → skip + flag `tax_invoice_status='not_required'` |
+| D5 | Failed-print log: retry via `print_jobs` vs new table | **Reuse `print_jobs.status='failed'`** + query last 7d; "In lại" enqueue job mới với `original_job_id` link |
 
-**Hard blocker for Pass 1:** only D1. D2–D5 can defer if shipping pressure demands.
+**Pass 1 status:** all blockers resolved. `09.01` automation unblocked. Engineering follow-up tasks listed at bottom.
 
 ---
 
@@ -93,12 +93,30 @@
 
 ---
 
-## Owner answers (fill here)
+## Owner answers — recorded 2026-04-26
 
-- [ ] **D1:** _______
-- [ ] **D2:** _______
-- [ ] **D3:** _______
-- [ ] **D4:** _______
-- [ ] **D5:** _______
+- [x] **D1 — Option 2 + technical filter:** Cashier có thể "Chốt ca" trong khi còn đơn `active/preparing/served/unpaid`; đơn vẫn live, ca sau (next opener) nhìn thấy đơn. `close_pos_session` RPC sẽ filter `payment_status='paid'` khi tính `expected_cash` → đơn unpaid không tính vào ca đang close, tự cộng vào ca pay sau. Không cần BM PIN override; không cần block.
 
-After answering: update `tasks/pos-qa-pass-1.md` Open Questions / P0 spec gap sections, then unblock `09.01` automation work.
+- [x] **D2 — Option 1:** Comp meal (total=0) đi qua bình thường. Discount note ≥3 chars (đã enforce ở `apply_order_discount` constraint) là audit trail đủ. Không thêm gate ở payment confirm; không cần BM approval; không cần audit-only flag riêng.
+
+- [x] **D3 — Option 3:** Variance threshold = `max(50.000đ, 0.5% × expected_cash)`. Khi `|cash_difference|` vượt threshold → "Chốt ca" yêu cầu BM PIN + note ≥10 chars trước khi commit. Dưới threshold → close bình thường, variance vẫn được record.
+
+- [x] **D4 — Option 3:** HĐĐT chỉ gửi MISA khi khách nhập MST trong invoice form. Không nhập MST → skip MISA call + set `tax_invoices.status='not_required'`. Áp dụng cho mọi total bao gồm total=0 (comp meal). Logic này nằm ở action layer (`createTaxInvoice` / orchestrator `confirmCashPaymentWithInvoice`), không phải RPC.
+
+- [x] **D5 — Option 1:** Failed-print recovery dùng `print_jobs.status='failed'` thẳng. Admin UI query `WHERE status='failed' AND created_at > now() - interval '7 days'`. "In lại" enqueue job mới với column `original_job_id` link về fail row. Không tạo table `print_failures` riêng. Re-evaluate khi volume failed > 100/day.
+
+---
+
+## Engineering follow-up (separate from Pass 1 QA)
+
+Mỗi decision sinh ra implementation work; không thuộc Pass 1 QA scope.
+
+| # | Migration / change required | Priority |
+|---|---|---|
+| D1 | Edit `close_pos_session` RPC: SUM filter `AND payment_status='paid'`; add docs comment "carry-forward semantics per owner D1 2026-04-26" | P1 — unblocks 09.01 automation |
+| D3 | Add `pos_sessions.variance_approver_user_id BIGINT NULL`, `variance_approval_note TEXT NULL`; UI gate at variance > threshold demands BM PIN | P1 — same PR as D1 nice |
+| D4 | Edit `createTaxInvoice` orchestrator: short-circuit when `buyer_tax_id IS NULL`, mark `tax_invoices.status='not_required'`; UI shows "Không xuất HĐĐT (khách không nhập MST)" | P2 |
+| D5 | Add `print_jobs.original_job_id BIGINT NULL REFERENCES print_jobs(id)`; admin "In lại" enqueue helper | P2 — defer to printer-hardware pass |
+| D2 | None — already enforced by `orders_discount_metadata_paired` constraint | — |
+
+**Recommend:** PR D1+D3 cùng một change (close-shift semantics tổng thể). PR D4 riêng. PR D5 cùng printer-hardware pass.
