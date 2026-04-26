@@ -28,7 +28,7 @@ export default function PosLayout({
   return (
     <main
       id="main-content"
-      className="flex h-svh min-h-svh w-full flex-col touch-manipulation overflow-hidden bg-background md:h-dvh md:min-h-screen"
+      className="flex h-dvh min-h-dvh w-full flex-col touch-manipulation overflow-hidden bg-background md:min-h-screen"
     >
       <PosPwaProvider>
         <PosPwaToolbar />

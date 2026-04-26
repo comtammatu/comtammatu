@@ -915,8 +915,8 @@ function PosDesktopInner({
       shouldScaleBackground={false}
     >
       <DrawerContent
-        showHandle={false}
-        className="h-svh max-h-svh p-0 before:inset-0 sm:h-5/6 sm:max-h-dvh sm:p-2 sm:before:inset-2"
+        showHandle
+        className="h-dvh max-h-dvh p-0 before:inset-0 sm:h-5/6 sm:p-2 sm:before:inset-2"
       >
         <DrawerTitle className="sr-only">
           {appendTarget != null

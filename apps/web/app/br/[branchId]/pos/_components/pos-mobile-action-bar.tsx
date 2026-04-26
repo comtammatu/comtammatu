@@ -47,7 +47,7 @@ function PosMobileActionBarComponent({
 
   if (isAppendingToOrder) {
     return (
-      <div className="fixed inset-x-3 bottom-3 z-40 flex gap-2 md:hidden">
+      <div className="fixed inset-x-3 bottom-0 z-40 flex gap-2 pos-safe-bottom md:hidden">
         <Button
           type="button"
           className="min-h-14 min-w-14 flex-1 text-base font-bold shadow-lg"

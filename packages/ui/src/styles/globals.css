@@ -334,6 +334,19 @@
   max-height: 95dvh;
 }
 
+/* Override: iOS safe-area handling for POS surfaces. Phone home indicator
+ * (~34pt) sits inside `inset-x-3 bottom-3` floating action bars and PWA
+ * standalone mode loses the URL bar, so cashier taps land on home gesture
+ * instead of "Giỏ đơn mới". `max(...)` keeps the original spacing on
+ * non-notched devices while clearing the notch on iPhone X+.
+ * Names prefixed `pos-` to avoid collision with NO-LEGACY-APP-HELPERS rule. */
+@utility pos-safe-bottom {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+@utility pos-safe-top {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+
 @layer base {
   html {
     @apply font-mono;
