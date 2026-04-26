@@ -137,6 +137,15 @@ export function PosDesktopProvider({
   const [orders, setOrders] = useState<SessionOrder[]>(initialOrders);
   const [tables, setTables] = useState<BranchTable[]>(initialTables);
 
+  // Mirror tables state in a ref so realtime handlers (which run outside
+  // React's render scope) can resolve `tables.number` for INSERT payloads
+  // without re-creating the channel-subscribe effect on every tables change.
+  const tablesRef = useRef<BranchTable[]>(initialTables);
+  useEffect(() => {
+    tablesRef.current = tables;
+  }, [tables]);
+  const getTables = useCallback(() => tablesRef.current, []);
+
   const sessionValue = useMemo<SessionContextValue>(
     () => ({ branchId, session }),
     [branchId, session],
@@ -195,6 +204,8 @@ export function PosDesktopProvider({
   useOrderSync({
     branchId,
     setTables,
+    setOrders,
+    getTables,
     refreshOrders: refreshOrdersDeduped,
     refreshAll: refreshAllDeduped,
     skipFirstSubscribedRefresh: initialOrdersSeeded,

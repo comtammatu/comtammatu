@@ -196,10 +196,12 @@ function PosDesktopInner({
   // Multi-order-per-table (PR3 Gộp bàn Option A): when user taps an occupied
   // table, show a picker listing active orders +"Tạo đơn mới" button. The
   // picker is the only path to start a 2nd order on the same physical table.
-  const [tablePicker, setTablePicker] = useState<{
-    table: BranchTable;
-    orders: SessionOrder[];
-  } | null>(null);
+  //
+  // Storing only the table id (not a snapshot of orders) keeps the picker
+  // tied to live `orders` state — when realtime fires (another terminal
+  // creates a 2nd order, or the chef bumps an order to served), the picker
+  // re-derives instantly instead of showing a frozen list.
+  const [pickerTableId, setPickerTableId] = useState<number | null>(null);
   // When the user explicitly chose to create a new order on an occupied table,
   // we record the table id here so the auto-clear effect doesn't reset it the
   // moment table.status becomes !=="available".
@@ -299,6 +301,38 @@ function PosDesktopInner({
     }
     return map;
   }, [orders]);
+
+  // Live derivation for the multi-order table picker. Re-runs whenever
+  // `orders` or `tables` updates (realtime, post-mutation, refetch) so the
+  // dialog never shows stale data.
+  const pickerTable = useMemo(
+    () =>
+      pickerTableId !== null
+        ? (tables.find((t) => t.id === pickerTableId) ?? null)
+        : null,
+    [pickerTableId, tables],
+  );
+  const pickerOrders = useMemo(
+    () =>
+      pickerTableId !== null
+        ? orders.filter(
+            (o) =>
+              o.table_id === pickerTableId &&
+              ACTIVE_POS_STATUSES.includes(o.status),
+          )
+        : [],
+    [pickerTableId, orders],
+  );
+
+  // Auto-close picker when the last active order on the table goes terminal
+  // (paid / cancelled by another terminal mid-picker). Without this the user
+  // sees an empty list with no orders to pick — keeping the dialog open is
+  // worse UX than dropping back to the menu.
+  useEffect(() => {
+    if (pickerTableId !== null && pickerOrders.length === 0) {
+      setPickerTableId(null);
+    }
+  }, [pickerTableId, pickerOrders.length]);
 
   const canSubmit =
     cartItemCount > 0 && (cartOrderType === "takeaway" || selectedTableUsable);
@@ -428,7 +462,7 @@ function PosDesktopInner({
         return;
       }
 
-      setTablePicker({ table, orders: activeOrders });
+      setPickerTableId(table.id);
     },
     [
       branchId,
@@ -442,25 +476,25 @@ function PosDesktopInner({
   );
 
   const handleClosePicker = useCallback(() => {
-    setTablePicker(null);
+    setPickerTableId(null);
   }, []);
 
   const handleOpenOrderFromPicker = useCallback(
     (orderId: number, orderNumber: string) => {
-      setTablePicker(null);
+      setPickerTableId(null);
       focusOrderWorkflow(orderId, orderNumber);
     },
     [focusOrderWorkflow],
   );
 
   const handleCreateNewOnOccupied = useCallback(() => {
-    if (tablePicker == null) return;
-    const tableId = tablePicker.table.id;
-    setTablePicker(null);
+    if (pickerTableId === null) return;
+    const tableId = pickerTableId;
+    setPickerTableId(null);
     setAllowOccupiedTableId(tableId);
     setActiveTable(tableId);
     setCartDrawerOpen(false);
-  }, [setActiveTable, tablePicker]);
+  }, [pickerTableId, setActiveTable]);
 
   const handleOrderTypeChange = useCallback(
     (type: OrderType) => {
@@ -1097,9 +1131,9 @@ function PosDesktopInner({
       <HotkeyOverlay open={hotkeyOpen} onOpenChange={setHotkeyOpen} />
 
       <MultiOrderTablePicker
-        open={tablePicker !== null}
-        tableNumber={tablePicker?.table.number ?? null}
-        orders={tablePicker?.orders ?? []}
+        open={pickerTable !== null && pickerOrders.length > 0}
+        tableNumber={pickerTable?.number ?? null}
+        orders={pickerOrders}
         onOpenOrder={handleOpenOrderFromPicker}
         onCreateNew={handleCreateNewOnOccupied}
         onClose={handleClosePicker}
