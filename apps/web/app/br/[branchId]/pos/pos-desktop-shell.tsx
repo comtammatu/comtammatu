@@ -896,10 +896,10 @@ function PosDesktopInner({
 
   const mobileOrderContextRow =
     isMobile && menuContextReady ? (
-      <div className="border-b border-border/60 bg-background/75 px-2 py-2 md:hidden">
-        <div className="flex items-center justify-between gap-3">
+      <div className="border-b border-border/60 bg-background/75 px-2 py-1 md:hidden">
+        <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="truncate text-base font-semibold text-foreground">
+            <p className="truncate text-sm font-semibold text-foreground">
               {appendTarget != null
                 ? `Thêm món #${appendTarget.orderNumber}`
                 : cartOrderType === "takeaway"
@@ -913,7 +913,7 @@ function PosDesktopInner({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="min-h-10 min-w-10 shrink-0 px-3 text-sm font-bold"
+                className="min-h-9 shrink-0 px-2.5 text-xs font-bold"
                 disabled={cartItemCount > 0}
                 onClick={() => {
                   setShowOrders(false);
@@ -928,14 +928,14 @@ function PosDesktopInner({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="min-h-10 min-w-10 shrink-0 px-3 text-sm font-bold"
+                className="min-h-9 shrink-0 px-2.5 text-xs font-bold"
                 onClick={() => {
                   setShowOrders(false);
                   setCartDrawerOpen(false);
                   setActiveTable(null);
                 }}
               >
-                Chọn lại bàn
+                Đổi bàn
               </Button>
             ))}
         </div>

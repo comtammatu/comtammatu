@@ -64,15 +64,15 @@ const MenuItemButton = memo(function MenuItemButton({
       type="button"
       variant="outline"
       className={cn(
-        "h-auto min-h-32 w-full cursor-pointer flex-col items-stretch justify-between p-3 text-left whitespace-normal shadow-sm transition-transform hover:border-primary/30 hover:shadow-md active:scale-95 md:min-h-48 md:p-5 lg:min-h-56",
+        "h-auto min-h-28 w-full cursor-pointer flex-col items-stretch justify-between gap-2 p-2.5 text-left whitespace-normal shadow-sm transition-transform hover:border-primary/30 hover:shadow-md active:scale-95 md:min-h-48 md:gap-0 md:p-5 lg:min-h-56",
         sparseMenu && "md:min-h-64 md:p-6",
       )}
       onClick={handleClick}
     >
-      <div className="flex h-full w-full flex-col justify-between gap-3">
+      <div className="flex h-full w-full flex-col justify-between gap-2 md:gap-3">
         <div className="flex min-w-0 flex-col gap-2">
           {item.image_url ? (
-            <div className="relative aspect-square w-full overflow-hidden rounded-md bg-muted">
+            <div className="relative h-20 w-full overflow-hidden rounded-md bg-muted md:aspect-square md:h-auto">
               <Image
                 src={item.image_url}
                 alt=""
@@ -86,14 +86,14 @@ const MenuItemButton = memo(function MenuItemButton({
             </div>
           ) : (
             <div
-              className="aspect-square w-full rounded-md bg-muted/40"
+              className="h-20 w-full rounded-md bg-muted/40 md:aspect-square md:h-auto"
               aria-hidden
             />
           )}
           <div className="flex items-start justify-between gap-2">
             <p
               className={cn(
-                "line-clamp-2 min-w-0 text-base font-semibold leading-snug text-foreground md:text-lg",
+                "line-clamp-2 min-w-0 text-sm font-semibold leading-snug text-foreground md:text-lg",
                 sparseMenu && "md:text-3xl",
               )}
             >
@@ -103,12 +103,12 @@ const MenuItemButton = memo(function MenuItemButton({
         </div>
       </div>
 
-      <div className="mt-auto flex flex-col gap-3 pt-4 md:gap-4 md:pt-6">
+      <div className="mt-auto flex flex-col gap-2 pt-1 md:gap-4 md:pt-6">
         <div className="flex items-end justify-between gap-3">
           <div>
             <p
               className={cn(
-                "text-xl font-bold text-primary tabular-nums sm:mt-1 md:text-2xl",
+                "text-base font-bold text-primary tabular-nums sm:mt-1 md:text-2xl",
                 sparseMenu && "md:text-4xl",
               )}
             >
@@ -235,10 +235,10 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
   return (
     <div className="flex min-h-0 flex-1 overflow-hidden bg-background">
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="border-b border-border/60 bg-background px-2 py-2 md:px-5 md:py-4 lg:px-6">
-          <div className="flex flex-col gap-2 md:gap-3">
-            <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
-              <InputGroup className="h-10 w-full md:h-11 md:max-w-md xl:w-64 xl:max-w-none xl:flex-none 2xl:w-72">
+        <div className="border-b border-border/60 bg-background px-2 py-1.5 md:px-5 md:py-4 lg:px-6">
+          <div className="flex flex-col gap-1.5 md:gap-3">
+            <div className="flex flex-col gap-1.5 md:gap-2 xl:flex-row xl:items-center">
+              <InputGroup className="h-9 w-full md:h-11 md:max-w-md xl:w-64 xl:max-w-none xl:flex-none 2xl:w-72">
                 <InputGroupAddon>
                   <IconSearch />
                 </InputGroupAddon>
@@ -269,13 +269,13 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
               >
                 <TabsList
                   aria-label="Khu thực đơn"
-                  className="h-10 w-full min-w-0 justify-start gap-1 md:h-11 md:gap-2"
+                  className="h-9 w-full min-w-0 justify-start gap-1 md:h-11 md:gap-2"
                 >
                   {availableMenuZones.map((zone) => (
                     <TabsTrigger
                       key={zone}
                       value={zone}
-                      className="h-full shrink-0 px-3 py-0 text-sm font-semibold md:px-4"
+                      className="h-full shrink-0 px-2.5 py-0 text-sm font-semibold md:px-4"
                     >
                       {CATEGORY_TYPE_LABELS[zone] ?? zone}
                     </TabsTrigger>
@@ -292,13 +292,13 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
               >
                 <TabsList
                   aria-label="Danh mục món"
-                  className="h-10 w-max min-w-full justify-start gap-1 md:gap-2"
+                  className="h-9 w-max min-w-full justify-start gap-1 md:h-10 md:gap-2"
                 >
                   {categoriesInActiveZone.map((category) => (
                     <TabsTrigger
                       key={category.id}
                       value={String(category.id)}
-                      className="h-full shrink-0 gap-1.5 px-2.5 py-0 text-sm font-medium md:gap-2 md:px-3"
+                      className="h-full shrink-0 gap-1.5 px-2 py-0 text-xs font-medium md:gap-2 md:px-3 md:text-sm"
                     >
                       {category.name}
                       <Badge
