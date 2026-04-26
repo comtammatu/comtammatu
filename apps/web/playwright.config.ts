@@ -38,9 +38,26 @@ export default defineConfig({
       name: "setup",
       testMatch: /auth\.setup\.ts/,
     },
-    // Run E2E tests using saved auth state
+    // Default e2e suite — functional flows only. Visual specs are
+    // excluded so the default `pnpm test:e2e` run does not fail when
+    // baseline PNGs are missing (they need an explicit
+    // `--project=visual --update-snapshots` bootstrap first).
     {
       name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: E2E_AUTH_STORAGE,
+      },
+      dependencies: ["setup"],
+      testIgnore: /visual\//,
+    },
+    // Visual regression — opt-in. Run with:
+    //   pnpm test:e2e --project=visual --update-snapshots   (bootstrap)
+    //   pnpm test:e2e --project=visual                      (verify)
+    // Commit the resulting PNGs under apps/web/e2e/visual/__screenshots__/.
+    {
+      name: "visual",
+      testMatch: /visual\/.*\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         storageState: E2E_AUTH_STORAGE,
