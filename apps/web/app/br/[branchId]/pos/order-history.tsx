@@ -23,6 +23,7 @@ import {
 } from "@comtammatu/ui/components/item";
 import { formatVND } from "@comtammatu/shared/format";
 import type { BillReceiptIntent } from "./_components/bill/bill-receipt-types";
+import { getPosOrderStatusInfo } from "./_lib/order-status-display";
 
 export interface SessionOrder {
   id: number;
@@ -34,38 +35,6 @@ export interface SessionOrder {
   table_id: number | null;
   created_at: string;
   tables: { number: number } | null;
-}
-
-type OrderStatusInfo = {
-  label: string;
-  variant: "default" | "secondary" | "destructive" | "outline" | "success";
-};
-
-const STATUS_LABELS: Record<string, OrderStatusInfo> = {
-  new: { label: "Mới", variant: "default" },
-  confirmed: { label: "Xác nhận", variant: "default" },
-  preparing: { label: "Đang làm", variant: "secondary" },
-  ready: { label: "Sẵn sàng", variant: "outline" },
-  served: { label: "Đã phục vụ", variant: "outline" },
-  completed: { label: "Đã thanh toán", variant: "success" },
-  cancelled: { label: "Đã hủy", variant: "destructive" },
-};
-
-function getStatusInfo(order: SessionOrder): OrderStatusInfo {
-  if (order.status === "cancelled") {
-    return { label: "Đã hủy", variant: "destructive" };
-  }
-
-  if (order.payment_status === "paid") {
-    return { label: "Đã thanh toán", variant: "success" as const };
-  }
-
-  return (
-    STATUS_LABELS[order.status] ?? {
-      label: order.status,
-      variant: "outline" as const,
-    }
-  );
 }
 
 function getOrderMetaLabel(order: SessionOrder): string {
@@ -95,13 +64,13 @@ function getOrderContextLabel(order: SessionOrder): string {
 }
 
 function OrderStatusBadge({ order }: { order: SessionOrder }) {
-  const statusInfo = getStatusInfo(order);
+  const statusInfo = getPosOrderStatusInfo(order);
 
   return (
     <Badge
       variant={statusInfo.variant}
       className={cn(
-        "text-sm font-semibold",
+        "text-sm font-semibold tabular-nums",
         statusInfo.variant === "outline" && "bg-background",
       )}
     >
