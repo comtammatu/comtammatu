@@ -60,7 +60,7 @@ const TableButton = memo(function TableButton({
       variant={isSelected ? "default" : "outline"}
       aria-label={`Bàn ${String(table.number)} ${statusLabel}`}
       className={cn(
-        "h-auto min-h-24 w-full flex-col items-stretch justify-between p-3 text-left whitespace-normal hover:shadow-md sm:p-4",
+        "h-36 w-full flex-col items-stretch justify-start gap-2 p-3 text-left whitespace-normal hover:shadow-md sm:h-40 sm:gap-3 sm:p-4 lg:h-44",
         isSelected
           ? "shadow-md"
           : isAvailable
@@ -95,20 +95,25 @@ const TableButton = memo(function TableButton({
         </Badge>
       </div>
 
-      <div className="flex w-full items-end justify-between gap-2">
-        <p className="text-4xl font-black leading-none tabular-nums">
-          {table.number}
-        </p>
-        <p className="text-lg font-semibold tabular-nums">
-          {table.capacity} chỗ
-        </p>
-      </div>
+      <div className="mt-auto flex w-full flex-col gap-2">
+        <div className="flex w-full items-end justify-between gap-2">
+          <p className="text-4xl font-black leading-none tabular-nums sm:text-5xl">
+            {table.number}
+          </p>
+          <p className="text-lg font-semibold tabular-nums">
+            {table.capacity} chỗ
+          </p>
+        </div>
 
-      {orderCount >= 2 && (
-        <Badge variant="secondary" className="mt-2 w-fit text-xs font-semibold">
-          {orderCount} đơn
-        </Badge>
-      )}
+        {orderCount >= 2 && (
+          <Badge
+            variant="secondary"
+            className="w-fit text-xs font-semibold"
+          >
+            {orderCount} đơn
+          </Badge>
+        )}
+      </div>
     </Button>
   );
 });
@@ -178,7 +183,7 @@ function PosTableGateComponent({
                   <Badge variant="outline">{availableCount} trống</Badge>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+                <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
                   {zoneTables.map((table) => (
                     <TableButton
                       key={table.id}
