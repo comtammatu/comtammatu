@@ -70,6 +70,10 @@ const sizeNormal = () => buf([GS, 0x21, 0x00]);
  * on ESC/POS thermal printers. */
 const inverseOn = () => buf([GS, 0x42, 0x01]);
 const inverseOff = () => buf([GS, 0x42, 0x00]);
+/** ESC/POS has no native strikethrough — use 2-dot underline as the closest
+ * visual fallback in text mode. Bitmap mode draws an actual strike line. */
+const underlineOn = () => buf([ESC, 0x2d, 0x02]);
+const underlineOff = () => buf([ESC, 0x2d, 0x00]);
 const feed = (n: number) => buf([ESC, 0x64, n]);
 const newline = () => buf([0x0a]);
 
@@ -674,6 +678,10 @@ export function renderCancelTicket(p: CancelTicketPayload): Uint8Array {
 
   p.items.forEach((it, idx) => {
     if (idx > 0) parts.push(line(KITCHEN_BORDER));
+    // Underline-wrap the item rows as the text-mode "gạch ngang" fallback.
+    // ESC/POS lacks native strikethrough, so 2-dot underline is the closest
+    // available visual cue. Bitmap mode draws a real strike line through.
+    parts.push(underlineOn());
     parts.push(...kitchenItemRow(it.quantity, it.item_name));
 
     if (it.variant_name) {
@@ -697,6 +705,7 @@ export function renderCancelTicket(p: CancelTicketPayload): Uint8Array {
         }
       }
     }
+    parts.push(underlineOff());
   });
   parts.push(line(KITCHEN_BORDER));
 

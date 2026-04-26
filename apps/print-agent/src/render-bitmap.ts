@@ -95,6 +95,11 @@ export type RenderOpts = {
   /** Inverse video (white text on black) — used for HUỶ MÓN banner on
    * cancel tickets. Paints a solid black line, writes white glyphs. */
   inverse?: boolean;
+  /** Strike-through: draw a horizontal black line through the text middle
+   * after rasterizing. Used for cancelled item names so chef + customer
+   * see "gạch ngang" treatment. ESC/POS has no native strikethrough, so
+   * we paint it directly into the bitmap. */
+  strikethrough?: boolean;
 };
 
 /**
@@ -178,6 +183,17 @@ export const renderLineRaster = (text: string, opts: RenderOpts = {}): Uint8Arra
   // Small top padding so ascenders don't clip.
   ctx.fillText(text, x, 2);
 
+  // Strike-through: draw a 2-dot black line through the vertical middle of
+  // the text only (not the full canvas — leaves left/right padding clean).
+  if (opts.strikethrough) {
+    const metrics = ctx.measureText(text);
+    const w = Math.ceil(metrics.width);
+    const midY = Math.floor(lineHeight / 2);
+    const strokeH = opts.double ? 3 : 2;
+    ctx.fillStyle = opts.inverse ? "white" : "black";
+    ctx.fillRect(x, midY, w, strokeH);
+  }
+
   return wrapRasterCommand(packPixels(img), lineHeight);
 };
 
@@ -193,6 +209,10 @@ export type Segment = {
   text: string;
   bold?: boolean;
   double?: boolean;
+  /** Per-segment strikethrough — only the segment's text gets the line.
+   * Used by cancel ticket so the qty prefix stays clean while item name
+   * itself gets gạch ngang. */
+  strikethrough?: boolean;
 };
 
 /**
@@ -221,7 +241,16 @@ export const renderMixedRow = (segments: Segment[]): Uint8Array => {
     const yOffset = seg.double ? 2 : Math.max(2, height - LINE_HEIGHT_NORMAL + 2);
     ctx.fillText(seg.text, x, yOffset);
     const metrics = ctx.measureText(seg.text);
-    x += Math.ceil(metrics.width);
+    const segWidth = Math.ceil(metrics.width);
+    if (seg.strikethrough) {
+      // Strike-through: 2-dot (normal) or 3-dot (double) horizontal line
+      // through the vertical middle of THIS segment only.
+      const segLineHeight = seg.double ? LINE_HEIGHT_DOUBLE : LINE_HEIGHT_NORMAL;
+      const midY = yOffset + Math.floor(segLineHeight / 2);
+      const strokeH = seg.double ? 3 : 2;
+      ctx.fillRect(x, midY, segWidth, strokeH);
+    }
+    x += segWidth;
     if (x >= MARGIN_LEFT + DRAW_WIDTH) break; // clipped
   }
 

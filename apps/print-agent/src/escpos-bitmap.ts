@@ -82,6 +82,7 @@ type LineOpts = {
   double?: boolean;
   align?: "left" | "center" | "right";
   inverse?: boolean;
+  strikethrough?: boolean;
 };
 const line = (s: string, opts?: LineOpts): Uint8Array => renderLineRaster(s, opts);
 const bl = (h?: number): Uint8Array => blankLine(h);
@@ -440,22 +441,24 @@ function renderCancelTicketBitmap(p: CancelTicketPayload): Uint8Array {
       const prefixText = i === 0 ? ` ${qtyField}| ` : `    | `;
       const segs: Segment[] = [
         { text: prefixText },
-        { text: chunk, bold: true, double: true },
+        // Strikethrough on the item name itself — extra visual cue beyond
+        // the HUỶ MÓN banner so chef sees "gạch ngang" at a glance.
+        { text: chunk, bold: true, double: true, strikethrough: true },
       ];
       parts.push(renderMixedRow(segs));
     });
 
-    if (it.variant_name) parts.push(line(`    |   (${it.variant_name})`));
+    if (it.variant_name) parts.push(line(`    |   (${it.variant_name})`, { strikethrough: true }));
     if (it.modifiers && it.modifiers.length > 0) {
       for (const m of it.modifiers) {
-        if (m.name) parts.push(line(`    |   + ${m.name}`));
+        if (m.name) parts.push(line(`    |   + ${m.name}`, { strikethrough: true }));
       }
     }
     if (it.sides && it.sides.length > 0) {
       for (const s of it.sides) {
         const sideName = s.name ?? s.side_item_name;
         if (sideName) {
-          parts.push(line(`    |   - ${sideName}${s.quantity ? ` x${s.quantity}` : ""}`));
+          parts.push(line(`    |   - ${sideName}${s.quantity ? ` x${s.quantity}` : ""}`, { strikethrough: true }));
         }
       }
     }
