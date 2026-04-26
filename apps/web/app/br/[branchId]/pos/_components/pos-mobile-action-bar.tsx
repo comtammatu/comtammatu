@@ -29,6 +29,18 @@ export interface PosMobileActionBarProps {
   onOpenAppendDrawer: () => void;
 }
 
+const ACTION_BAR_CLASS =
+  "fixed inset-x-3 bottom-0 z-40 flex gap-2 border border-border bg-background/95 p-2 shadow-2xl backdrop-blur pos-safe-bottom md:hidden";
+
+const ACTION_PRIMARY_BUTTON_CLASS =
+  "min-h-14 min-w-14 flex-1 text-base font-bold shadow-lg";
+
+const ACTION_SECONDARY_BUTTON_CLASS =
+  "min-h-14 min-w-14 flex-1 border border-border bg-secondary text-base font-bold text-secondary-foreground shadow-lg";
+
+const ACTION_ICON_BUTTON_CLASS =
+  "min-h-14 min-w-14 border border-border bg-secondary px-3 text-base font-bold text-secondary-foreground shadow-lg";
+
 function PosMobileActionBarComponent({
   isMobile,
   isAppendingToOrder,
@@ -47,10 +59,10 @@ function PosMobileActionBarComponent({
 
   if (isAppendingToOrder) {
     return (
-      <div className="fixed inset-x-3 bottom-0 z-40 flex gap-2 pos-safe-bottom md:hidden">
+      <div className={ACTION_BAR_CLASS}>
         <Button
           type="button"
-          className="min-h-14 min-w-14 flex-1 text-base font-bold shadow-lg"
+          className={ACTION_PRIMARY_BUTTON_CLASS}
           onClick={onOpenAppendDrawer}
           aria-label="Mở món thêm"
         >
@@ -65,12 +77,12 @@ function PosMobileActionBarComponent({
   }
 
   return (
-    <div className="fixed inset-x-3 bottom-0 z-40 flex gap-2 pos-safe-bottom md:hidden">
+    <div className={ACTION_BAR_CLASS}>
       {!menuContextReady && (
         <Button
           type="button"
           variant="secondary"
-          className="min-h-14 min-w-14 flex-1 text-base font-bold shadow-lg"
+          className={ACTION_SECONDARY_BUTTON_CLASS}
           onClick={onOpenOrdersDrawer}
         >
           <IconReceipt data-icon="inline-start" />
@@ -86,7 +98,7 @@ function PosMobileActionBarComponent({
           <Button
             type="button"
             variant="outline"
-            className="min-h-14 min-w-14 bg-background px-3 text-base font-bold shadow-lg"
+            className={ACTION_ICON_BUTTON_CLASS}
             onClick={onEnterTablePicker}
             aria-label="Xem bàn"
           >
@@ -97,7 +109,7 @@ function PosMobileActionBarComponent({
         <Button
           type="button"
           variant="secondary"
-          className="min-h-14 min-w-14 bg-background px-3 text-base font-bold shadow-lg"
+          className={ACTION_ICON_BUTTON_CLASS}
           onClick={onOpenOrdersDrawer}
           aria-label="Mở đơn trong ca"
         >
@@ -109,7 +121,7 @@ function PosMobileActionBarComponent({
       {menuContextReady && (
         <Button
           type="button"
-          className="min-h-14 min-w-14 flex-1 text-base font-bold shadow-lg"
+          className={ACTION_PRIMARY_BUTTON_CLASS}
           onClick={onOpenCartDrawer}
           aria-label="Mở giỏ đơn mới"
         >
