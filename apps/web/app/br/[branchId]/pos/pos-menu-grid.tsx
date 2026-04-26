@@ -79,6 +79,8 @@ const MenuItemButton = memo(function MenuItemButton({
                 fill
                 sizes="(min-width: 1536px) 16vw, (min-width: 1280px) 22vw, (min-width: 640px) 33vw, 50vw"
                 className="object-cover"
+                loading="lazy"
+                decoding="async"
                 unoptimized
               />
             </div>

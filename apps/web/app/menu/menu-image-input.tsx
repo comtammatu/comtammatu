@@ -11,6 +11,8 @@ import { toast } from "@comtammatu/ui/components/sonner";
 const BUCKET = "menu-images";
 const MAX_SIZE = 5 * 1024 * 1024;
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
+const TARGET_DIMENSION = 1024;
+const JPEG_QUALITY = 0.82;
 
 interface MenuImageInputProps {
   tenantId: number;
@@ -23,9 +25,33 @@ function randomSuffix(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-function extFromName(name: string): string {
-  const i = name.lastIndexOf(".");
-  return i >= 0 ? name.slice(i).toLowerCase() : ".jpg";
+async function resizeImage(file: File): Promise<Blob> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(
+    1,
+    TARGET_DIMENSION / Math.max(bitmap.width, bitmap.height),
+  );
+  const width = Math.round(bitmap.width * scale);
+  const height = Math.round(bitmap.height * scale);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    bitmap.close();
+    return file;
+  }
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+
+  return new Promise<Blob>((resolve) => {
+    canvas.toBlob(
+      (blob) => resolve(blob ?? file),
+      "image/jpeg",
+      JPEG_QUALITY,
+    );
+  });
 }
 
 export function MenuImageInput({
@@ -49,13 +75,17 @@ export function MenuImageInput({
     setUploading(true);
     try {
       const supabase = createClient();
-      const path = `${tenantId}/menu-${Date.now()}-${randomSuffix()}${extFromName(file.name)}`;
+      // Resize client-side: 2 MB camera shots become ~150-250 KB,
+      // avoiding multi-MB downloads on POS when categories switch.
+      const blob = await resizeImage(file);
+      const path = `${tenantId}/menu-${Date.now()}-${randomSuffix()}.jpg`;
       const { error: upErr } = await supabase.storage
         .from(BUCKET)
-        .upload(path, file, {
-          cacheControl: "3600",
+        .upload(path, blob, {
+          // Random suffix → unique URL → safe to cache 1 year immutable.
+          cacheControl: "31536000, immutable",
           upsert: false,
-          contentType: file.type,
+          contentType: "image/jpeg",
         });
       if (upErr) {
         toast.error(upErr.message);
