@@ -2,10 +2,38 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CircleCheck as IconCircleCheck } from "lucide-react";
+import {
+  CircleCheck as IconCircleCheck,
+  ClipboardList as IconClipboardList,
+} from "lucide-react";
+import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemGroup,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import {
   Table,
   TableBody,
@@ -14,8 +42,9 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { cn } from "@comtammatu/ui";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { TableEmptyStateRow } from "./_components/table-empty-state-row";
 import {
   cancelProductionOrder,
   confirmProductionOrder,
@@ -32,12 +61,27 @@ interface ProductionOrderListProps {
   canConfirmProduction: boolean;
 }
 
+function formatOrderDate(value: string) {
+  return new Date(value).toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatCost(value: number) {
+  return `${value.toLocaleString("vi-VN")}đ`;
+}
+
 export function ProductionOrderList({
   orders,
   canConfirmProduction,
 }: ProductionOrderListProps) {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [isPending, startTransition] = useTransition();
+  const draftCount = orders.filter((order) => order.status === "draft").length;
 
   function handleConfirm(orderId: number) {
     startTransition(async () => {
@@ -63,101 +107,183 @@ export function ProductionOrderList({
     });
   }
 
+  function renderOrderActions(order: ProductionOrderRow) {
+    if (order.status !== "draft" || !canConfirmProduction) {
+      return <span className="text-sm text-muted-foreground">-</span>;
+    }
+
+    return (
+      <>
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => handleConfirm(order.id)}
+          disabled={isPending}
+        >
+          <IconCircleCheck data-icon="inline-start" />
+          Xác nhận
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => handleCancel(order.id)}
+          disabled={isPending}
+        >
+          Hủy
+        </Button>
+      </>
+    );
+  }
+
   return (
-    <Card className="overflow-hidden rounded-lg">
-      <CardContent className="px-4 sm:px-5">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Số lệnh</TableHead>
-              <TableHead>Bếp trung tâm</TableHead>
-              <TableHead>Thành phẩm</TableHead>
-              <TableHead>Trạng thái</TableHead>
-              <TableHead>Tổng chi phí</TableHead>
-              <TableHead className="w-40" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {orders.length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="py-12 text-center text-sm text-muted-foreground"
+    <Card>
+      <CardHeader className="border-b">
+        <CardTitle className="flex items-center gap-2">
+          <IconClipboardList />
+          Lệnh sản xuất
+        </CardTitle>
+        <CardDescription>
+          Chốt lệnh nháp để trừ nguyên liệu theo BOM và nhập thành phẩm vào tồn
+          bếp trung tâm.
+        </CardDescription>
+        <CardAction>
+          <Badge variant={draftCount > 0 ? "warning" : "secondary"}>
+            {draftCount} lệnh nháp
+          </Badge>
+        </CardAction>
+      </CardHeader>
+
+      {isMobile ? (
+        <CardContent className="flex flex-col gap-3">
+          {orders.length === 0 ? (
+            <Empty className="border bg-card py-8">
+              <EmptyMedia variant="icon">
+                <IconClipboardList />
+              </EmptyMedia>
+              <EmptyHeader>
+                <EmptyTitle>Chưa có lệnh sản xuất nào</EmptyTitle>
+                <EmptyDescription>
+                  Tạo lệnh mới khi bếp trung tâm đã có BOM và nguyên liệu sẵn
+                  sàng.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <ItemGroup>
+              {orders.map((order) => (
+                <Item
+                  key={order.id}
+                  variant="outline"
+                  className={cn(isPending && "opacity-70")}
                 >
-                  Chưa có lệnh sản xuất nào
-                </TableCell>
-              </TableRow>
-            )}
-            {orders.map((order) => (
-              <TableRow
-                key={order.id}
-                className={cn(isPending ? "opacity-70" : "")}
-              >
-                <TableCell className="font-medium">
-                  <div>{order.production_number}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(order.created_at).toLocaleString("vi-VN")}
-                  </div>
-                </TableCell>
-                <TableCell>{order.branch_name}</TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1.5">
-                    {order.items.map((item) => (
-                      <Badge
-                        key={item.id}
-                        variant={badgeVariantFromTone("neutral")}
-                        className="px-2 py-1 text-xs"
-                      >
-                        {item.finished_good_name} x {item.quantity} {item.unit}
-                      </Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={badgeVariantFromTone(
-                      orderStatusTone(order.status),
-                    )}
-                  >
-                    {orderStatusLabel(order.status)}
-                  </Badge>
-                </TableCell>
-                <TableCell className="font-mono tabular-nums">
-                  {order.total_cost.toLocaleString("vi-VN")}đ
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center justify-end gap-2">
-                    {order.status === "draft" && canConfirmProduction ? (
-                      <>
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => handleConfirm(order.id)}
-                          disabled={isPending}
+                  <ItemHeader>
+                    <ItemTitle>{order.production_number}</ItemTitle>
+                    <Badge
+                      variant={badgeVariantFromTone(
+                        orderStatusTone(order.status),
+                      )}
+                    >
+                      {orderStatusLabel(order.status)}
+                    </Badge>
+                  </ItemHeader>
+                  <ItemContent className="basis-full">
+                    <ItemDescription>
+                      {order.branch_name} · {formatOrderDate(order.created_at)}
+                    </ItemDescription>
+                    <div className="flex flex-wrap gap-1.5">
+                      {order.items.map((item) => (
+                        <Badge
+                          key={item.id}
+                          variant={badgeVariantFromTone("neutral")}
                         >
-                          <IconCircleCheck className="mr-2 size-4" />
-                          Xác nhận
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleCancel(order.id)}
-                          disabled={isPending}
-                        >
-                          Hủy
-                        </Button>
-                      </>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">—</span>
-                    )}
-                  </div>
-                </TableCell>
+                          {item.finished_good_name} x {item.quantity}{" "}
+                          {item.unit}
+                        </Badge>
+                      ))}
+                    </div>
+                  </ItemContent>
+                  <ItemFooter>
+                    <span className="font-mono text-sm font-semibold tabular-nums">
+                      {formatCost(order.total_cost)}
+                    </span>
+                    <ItemActions>{renderOrderActions(order)}</ItemActions>
+                  </ItemFooter>
+                </Item>
+              ))}
+            </ItemGroup>
+          )}
+        </CardContent>
+      ) : (
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Số lệnh</TableHead>
+                <TableHead>Bếp trung tâm</TableHead>
+                <TableHead>Thành phẩm</TableHead>
+                <TableHead>Trạng thái</TableHead>
+                <TableHead>Tổng chi phí</TableHead>
+                <TableHead className="w-40" />
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
+            </TableHeader>
+            <TableBody>
+              {orders.length === 0 ? (
+                <TableEmptyStateRow
+                  colSpan={6}
+                  title="Chưa có lệnh sản xuất nào"
+                  description="Tạo lệnh mới khi BOM và nguyên liệu đã sẵn sàng cho bếp trung tâm."
+                  icon={<IconClipboardList />}
+                />
+              ) : null}
+              {orders.map((order) => (
+                <TableRow
+                  key={order.id}
+                  className={cn(isPending ? "opacity-70" : "")}
+                >
+                  <TableCell className="font-medium">
+                    <div>{order.production_number}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatOrderDate(order.created_at)}
+                    </div>
+                  </TableCell>
+                  <TableCell>{order.branch_name}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1.5">
+                      {order.items.map((item) => (
+                        <Badge
+                          key={item.id}
+                          variant={badgeVariantFromTone("neutral")}
+                        >
+                          {item.finished_good_name} x {item.quantity}{" "}
+                          {item.unit}
+                        </Badge>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={badgeVariantFromTone(
+                        orderStatusTone(order.status),
+                      )}
+                    >
+                      {orderStatusLabel(order.status)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-mono tabular-nums">
+                    {formatCost(order.total_cost)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-2">
+                      {renderOrderActions(order)}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      )}
     </Card>
   );
 }
