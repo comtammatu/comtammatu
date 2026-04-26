@@ -314,7 +314,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
       ) : null}
 
       {!needsReceiveMode ? (
-        <div className="sticky bottom-4 z-10">
+        <div className="sticky chrome-safe-bottom z-10">
           <TouchButton
             type="button"
             onClick={submit}

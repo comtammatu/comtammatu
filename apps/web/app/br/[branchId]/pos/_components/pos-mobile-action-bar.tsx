@@ -65,7 +65,7 @@ function PosMobileActionBarComponent({
   }
 
   return (
-    <div className="fixed inset-x-3 bottom-3 z-40 flex gap-2 md:hidden">
+    <div className="fixed inset-x-3 bottom-0 z-40 flex gap-2 pos-safe-bottom md:hidden">
       {!menuContextReady && (
         <Button
           type="button"

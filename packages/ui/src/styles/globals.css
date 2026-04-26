@@ -342,17 +342,33 @@
   max-height: 95dvh;
 }
 
-/* Override: iOS safe-area handling for POS surfaces. Phone home indicator
- * (~34pt) sits inside `inset-x-3 bottom-3` floating action bars and PWA
- * standalone mode loses the URL bar, so cashier taps land on home gesture
- * instead of "Giỏ đơn mới". `max(...)` keeps the original spacing on
- * non-notched devices while clearing the notch on iPhone X+.
+/* Override: iOS + Android safe-area handling for POS floating bars.
+ * iOS home indicator (~34pt) and Android gesture/3-button nav sit inside
+ * `inset-x-3 bottom-3` floating action bars under PWA standalone mode
+ * (viewport-fit:cover loses the URL bar / extends under system chrome),
+ * so cashier taps land on home gesture instead of "Giỏ đơn mới".
+ * `max(...)` keeps the original spacing on non-notched devices while
+ * clearing the system bar on iPhone X+ / Android with gesture nav.
  * Names prefixed `pos-` to avoid collision with NO-LEGACY-APP-HELPERS rule. */
 @utility pos-safe-bottom {
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }
 @utility pos-safe-top {
   padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+
+/* Override: safe-area for app-shell chrome (BottomNav, sticky toolbars)
+ * when the PWA runs standalone on Android — viewport-fit:cover lets the
+ * system gesture/3-button nav bar overlap fixed-bottom UI. `max(...)`
+ * preserves the original chrome padding on non-gesture devices.
+ * `chrome-safe-pb` replaces `pb-2`-style chrome padding on `fixed bottom-0`
+ * shells; `chrome-safe-bottom` replaces `bottom-4`-style offsets on sticky
+ * floating buttons. Prefixed `chrome-` to avoid NO-LEGACY-APP-HELPERS. */
+@utility chrome-safe-pb {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+@utility chrome-safe-bottom {
+  bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
 @layer base {

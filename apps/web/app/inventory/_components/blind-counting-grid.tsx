@@ -224,7 +224,7 @@ export function BlindCountingGridToolbar({
   children,
 }: BlindCountingGridToolbarProps) {
   return (
-    <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-2 border-t bg-background/90 px-3 py-3 backdrop-blur">
+    <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-2 border-t bg-background/90 px-3 pt-3 chrome-safe-pb backdrop-blur">
       <div className="flex items-center gap-2">
         {onToggleOnlyRecount ? (
           <Button
