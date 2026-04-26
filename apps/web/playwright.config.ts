@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
 
 /**
@@ -13,11 +14,12 @@ import { defineConfig, devices } from "@playwright/test";
  * Run: pnpm test:e2e
  */
 
-// import.meta.dirname is available in Node 21.2+ (project uses Node 24)
-export const E2E_AUTH_STORAGE = new URL(
-  ".playwright/.auth/cashier.json",
-  import.meta.url,
-).pathname;
+// fileURLToPath: cross-platform URL → fs path. `.pathname` trên Windows
+// trả `/C:/...` khiến fs.open prepend cwd → `C:\C:\...`. Phải dùng
+// fileURLToPath để có path chuẩn `C:\...`.
+export const E2E_AUTH_STORAGE = fileURLToPath(
+  new URL(".playwright/.auth/cashier.json", import.meta.url),
+);
 
 export default defineConfig({
   testDir: "./e2e",
@@ -61,6 +63,26 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         storageState: E2E_AUTH_STORAGE,
+      },
+      dependencies: ["setup"],
+    },
+    // User-guide capture — opt-in. Sinh mockup iPhone cho docs/user-guides/.
+    // Mỗi spec mutate DB để dựng state, screenshot, ghép iPhone frame +
+    // annotation, ghi PNG vào docs/user-guides/<module>/mockups/<flow>/.
+    // Chạy: pnpm guides:capture (xem package.json).
+    //
+    // Dùng chromium thay devices["iPhone 13"] để tránh cài thêm WebKit. Mobile
+    // viewport + touch + scaleFactor set thủ công để mô phỏng thiết bị.
+    {
+      name: "guides",
+      testMatch: /guides\/.*\.guide\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: E2E_AUTH_STORAGE,
+        viewport: { width: 390, height: 844 },
+        deviceScaleFactor: 2,
+        isMobile: true,
+        hasTouch: true,
       },
       dependencies: ["setup"],
     },
