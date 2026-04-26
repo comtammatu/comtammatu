@@ -77,6 +77,35 @@ const productionRecipeSchema = z.object({
   note: z.string().optional(),
 });
 
+const productionRecipeLineUpsertSchema = z.object({
+  ingredientId: z.coerce.number().int().positive(),
+  quantity: z.coerce.number().positive(),
+  unit: z.string().min(1, { error: "Đơn vị không được để trống" }),
+  yieldFactor: z.coerce.number().positive().default(1),
+  note: z.string().optional(),
+});
+
+const productionRecipeLinesSchema = z
+  .object({
+    finishedGoodId: z.coerce.number().int().positive(),
+    lines: z.array(productionRecipeLineUpsertSchema).min(1, {
+      error: "Cần ít nhất một nguyên liệu trong BOM.",
+    }),
+  })
+  .superRefine((value, ctx) => {
+    const seen = new Set<number>();
+    value.lines.forEach((line, index) => {
+      if (seen.has(line.ingredientId)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["lines", index, "ingredientId"],
+          message: "Nguyên liệu bị trùng trong BOM.",
+        });
+      }
+      seen.add(line.ingredientId);
+    });
+  });
+
 const createProductionOrderSchema = z.object({
   branchId: z.coerce.number().int().positive(),
   productionNumber: z.string().min(1, {
@@ -1026,6 +1055,71 @@ export const upsertProductionRecipe = withAction(
       return { success: false, error: "Không thể lưu công thức." };
     }
 
+    return { success: true };
+  },
+);
+
+export const upsertProductionRecipeLines = withAction(
+  {
+    roles: PRODUCTION_ROLES,
+    schema: productionRecipeLinesSchema,
+    permission: PERMISSION_KEYS.MENU_WRITE,
+  },
+  async (data, ctx) => {
+    const { supabase, claims } = ctx;
+    if (isCentralKitchenScopedRole(claims.user_role)) {
+      if (claims.branch_id == null) {
+        return {
+          success: false,
+          error: "Tài khoản chưa được gán bếp trung tâm.",
+        };
+      }
+      const access = await requireCentralKitchenBranch(
+        supabase,
+        claims.tenant_id,
+        claims.branch_id,
+      );
+      if (!access.ok) {
+        return { success: false, error: access.error };
+      }
+    }
+
+    const sb = supabase as unknown as RpcClient;
+    const { error } = await sb.rpc("upsert_production_recipe_lines", {
+      p_finished_good_id: data.finishedGoodId,
+      p_lines: data.lines.map((line) => ({
+        ingredient_id: line.ingredientId,
+        quantity: line.quantity,
+        unit: line.unit.trim(),
+        note: line.note?.trim() ? line.note.trim() : null,
+        yield_factor: line.yieldFactor,
+      })),
+    });
+
+    if (error) {
+      const message = error.message ?? "";
+      if (
+        error.code === PG_ERR.UNIQUE_VIOLATION ||
+        message.includes("duplicate_ingredient")
+      ) {
+        return { success: false, error: "Nguyên liệu bị trùng trong BOM." };
+      }
+      if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
+        return { success: false, error: "Không có quyền lưu BOM sản xuất." };
+      }
+      if (error.code === PG_ERR.INVALID_TEXT_REPRESENTATION) {
+        return { success: false, error: "Dữ liệu BOM chưa hợp lệ." };
+      }
+      if (message.includes("finished_good_not_found")) {
+        return { success: false, error: "Thành phẩm không còn hợp lệ." };
+      }
+      if (message.includes("ingredient_not_found")) {
+        return { success: false, error: "Có nguyên liệu không còn hợp lệ." };
+      }
+      return { success: false, error: "Không thể lưu BOM sản xuất." };
+    }
+
+    revalidatePath("/inventory/production");
     return { success: true };
   },
 );
