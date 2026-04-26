@@ -24,13 +24,6 @@ import {
   FieldLabel,
 } from "@comtammatu/ui/components/field";
 import { Input } from "@comtammatu/ui/components/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
@@ -49,39 +42,38 @@ interface PosTerminal {
 
 interface SessionGateProps {
   branchId: number;
+  /**
+   * Per-branch model (Owner D7, 2026-04-27): list dùng để cảnh báo "branch
+   * chưa có máy POS nào" (block mở ca). KHÔNG còn picker chọn máy — ca POS
+   * giờ thuộc branch, không thuộc terminal.
+   */
   terminals: PosTerminal[];
 }
 
 export function SessionGate({ branchId, terminals }: SessionGateProps) {
   const router = useRouter();
-  const [terminalId, setTerminalId] = useState<string>("");
   const [openingCash, setOpeningCash] = useState<string>("0");
   const [isPending, startTransition] = useTransition();
   const cashAmount = Number(openingCash);
-  const selectedTerminal = terminals.find(
-    (terminal) => String(terminal.id) === terminalId,
-  );
-  const selectedTerminalOccupied = selectedTerminal?.has_open_session ?? false;
-  const availableTerminalCount = terminals.filter(
-    (terminal) => !terminal.has_open_session,
-  ).length;
   const hasValidOpeningCash =
     openingCash.trim() !== "" && !Number.isNaN(cashAmount) && cashAmount >= 0;
+  const branchHasTerminals = terminals.length > 0;
 
-  const canOpen =
-    terminalId !== "" &&
-    hasValidOpeningCash &&
-    !selectedTerminalOccupied &&
-    !isPending;
+  const canOpen = branchHasTerminals && hasValidOpeningCash && !isPending;
 
   const handleOpen = useCallback(() => {
     if (!canOpen) return;
 
     startTransition(async () => {
+      // Auto-pick first active terminal cho audit metadata. Per-branch model
+      // không bắt cashier chọn — UI 1-tap, terminal_id chỉ ghi sổ "máy nào
+      // physically mở ca". Nếu cashier muốn pick chính xác, admin có thể
+      // edit pos_terminals list (deactivate máy không dùng).
+      const firstTerminal = terminals[0];
       const result = await openPosSession(
         branchId,
-        Number(terminalId),
         cashAmount,
+        firstTerminal?.id,
       );
 
       if (result.success) {
@@ -91,7 +83,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
         toast.error(result.error ?? "Không thể mở ca");
       }
     });
-  }, [branchId, canOpen, cashAmount, router, terminalId]);
+  }, [branchId, canOpen, cashAmount, router, terminals]);
 
   return (
     <div className="relative flex flex-1 flex-col overflow-y-auto px-4 py-5 sm:px-6 sm:py-8">
@@ -107,7 +99,9 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
                 </Badge>
                 <CardTitle className="text-2xl">Mở ca bán hàng</CardTitle>
                 <CardDescription>
-                  Chọn máy POS và nhập tiền đầu ca để bắt đầu nhận đơn.
+                  Nhập tiền đầu ca để bắt đầu nhận đơn. Chi nhánh chỉ có 1 ca
+                  POS hoạt động cùng lúc — các nhân viên khác cùng chi nhánh
+                  sẽ tự động bán trên ca này.
                 </CardDescription>
               </div>
               <div className="flex size-11 shrink-0 items-center justify-center bg-primary/10 text-primary">
@@ -118,56 +112,12 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
 
           <CardContent>
             <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="terminal">Máy POS</FieldLabel>
-                {terminals.length === 0 ? (
-                  <Alert className="border-warning/20 bg-warning/10 text-warning">
-                    <IconAlertTriangle />
-                    <AlertTitle>Chưa có máy POS</AlertTitle>
-                    <AlertDescription>
-                      Liên hệ quản lý để thiết lập máy POS trước khi mở ca.
-                    </AlertDescription>
-                  </Alert>
-                ) : availableTerminalCount === 0 ? (
-                  <Alert className="border-warning/20 bg-warning/10 text-warning">
-                    <IconAlertTriangle />
-                    <AlertTitle>Tất cả máy đang có ca mở</AlertTitle>
-                    <AlertDescription>
-                      Đóng ca trên một máy POS hoặc chọn ca khác trước khi tiếp
-                      tục.
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <Select value={terminalId} onValueChange={setTerminalId}>
-                    <SelectTrigger id="terminal">
-                      <SelectValue placeholder="Chọn máy POS" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {terminals.map((terminal) => (
-                        <SelectItem
-                          key={terminal.id}
-                          value={String(terminal.id)}
-                          disabled={terminal.has_open_session}
-                        >
-                          {terminal.has_open_session
-                            ? `${terminal.name} - đang có ca mở`
-                            : terminal.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                <FieldDescription>
-                  Máy POS chỉ được có một ca đang mở tại một thời điểm.
-                </FieldDescription>
-              </Field>
-
-              {selectedTerminalOccupied ? (
+              {!branchHasTerminals ? (
                 <Alert className="border-warning/20 bg-warning/10 text-warning">
                   <IconAlertTriangle />
-                  <AlertTitle>Máy POS đang bận</AlertTitle>
+                  <AlertTitle>Chưa có máy POS</AlertTitle>
                   <AlertDescription>
-                    Chọn máy khác hoặc đóng ca hiện tại trước khi tiếp tục.
+                    Liên hệ quản lý để thiết lập máy POS trước khi mở ca.
                   </AlertDescription>
                 </Alert>
               ) : null}

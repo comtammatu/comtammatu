@@ -215,6 +215,18 @@ export async function submitOrder(
         errorCode: POS_ERROR_CODES.DB_LOCK_NOT_AVAILABLE,
       };
     }
+    // Stale `pos_session_id` from RSC props: cashier closed (and re-opened)
+    // the shift on another tab/terminal while this tab still holds the old
+    // `session.id`. RPC raises P0002 with this exact wording. Surface a
+    // typed code so the client can `router.refresh()` to pick up the new
+    // session instead of looping the cashier through "thử lại" forever.
+    if (errMsg.includes("pos session does not belong") || errMsg.includes("is not open")) {
+      return {
+        success: false,
+        error: "Ca POS đã đóng hoặc đổi máy — đang tải lại trang.",
+        errorCode: POS_ERROR_CODES.SCOPE_SESSION_NOT_OPEN,
+      };
+    }
     if (error.message?.includes("empty")) {
       return {
         success: false,

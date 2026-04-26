@@ -2935,7 +2935,7 @@ export type Database = {
           opening_cash: number
           status: string
           tenant_id: number
-          terminal_id: number
+          terminal_id: number | null
           updated_at: string
           variance_approval_note: string | null
           variance_approver_user_id: string | null
@@ -2955,7 +2955,7 @@ export type Database = {
           opening_cash?: number
           status?: string
           tenant_id: number
-          terminal_id: number
+          terminal_id?: number | null
           updated_at?: string
           variance_approval_note?: string | null
           variance_approver_user_id?: string | null
@@ -2975,7 +2975,7 @@ export type Database = {
           opening_cash?: number
           status?: string
           tenant_id?: number
-          terminal_id?: number
+          terminal_id?: number | null
           updated_at?: string
           variance_approval_note?: string | null
           variance_approver_user_id?: string | null

@@ -109,19 +109,18 @@ export async function fetchPosTerminals(
     };
   }
 
-  const terminalIds = (terminals ?? []).map((terminal) => terminal.id);
-
-  if (terminalIds.length === 0) {
-    return { success: true, data: [] };
-  }
-
-  const { data: openSessions, error: sessionError } = await supabase
+  // Per-branch model (Owner D7, 2026-04-27): branch chỉ có 1 ca mở duy
+  // nhất → flag mở-ca thuộc branch, không thuộc terminal. UI giờ chỉ
+  // dùng list để hiển thị tên máy (audit/preference); việc 1 trong các
+  // máy "đang có ca mở" không còn block các máy khác.
+  const { data: openSession, error: sessionError } = await supabase
     .from("pos_sessions")
-    .select("terminal_id")
+    .select("id")
     .eq("branch_id", parsedBranchId.data)
     .eq("tenant_id", claims.tenant_id)
     .eq("status", "open")
-    .in("terminal_id", terminalIds);
+    .limit(1)
+    .maybeSingle();
 
   if (sessionError) {
     return {
@@ -130,15 +129,14 @@ export async function fetchPosTerminals(
     };
   }
 
-  const occupiedTerminalIds = new Set(
-    (openSessions ?? []).map((session) => session.terminal_id),
-  );
+  const branchHasOpenSession = openSession !== null;
 
   return {
     success: true,
     data: (terminals ?? []).map((terminal) => ({
       ...terminal,
-      has_open_session: occupiedTerminalIds.has(terminal.id),
+      // Backward-compat field shape — flag now reflects branch-level state.
+      has_open_session: branchHasOpenSession,
     })),
   };
 }
@@ -148,39 +146,22 @@ export async function fetchPosTerminals(
 /**
  * Trả ca POS đang mở của chi nhánh (bất kỳ ai mở).
  *
- * Semantic: session là per-terminal (DB enforce `UNIQUE(terminal_id) WHERE status='open'`).
- * Cashier mở → waiter/cashier/branch_manager cùng ride. Orders bind `pos_session_id`
- * của ca đó; `orders.created_by` giữ audit "ai ring", `session.opened_by` giữ
- * audit "ai chịu trách nhiệm tiền".
+ * Per-branch model (Owner D7, 2026-04-27): DB enforce
+ * `UNIQUE(branch_id) WHERE status='open'` → tối đa 1 row khớp.
+ * Cashier mở → waiter / cashier / branch_manager cùng branch ride session
+ * đó. Orders bind `pos_session_id` của ca đó; `orders.created_by` giữ
+ * audit "ai ring", `session.opened_by` giữ audit "ai chịu trách nhiệm tiền".
  *
- * `terminalId` (optional): khi caller chuyên biệt 1 máy (ví dụ URL ?terminal=X
- * sau khi user pick từ MultiSessionPicker), filter về session của terminal đó.
- * Khi không truyền, fallback latest-opened — preserve legacy behavior cho
- * single-terminal branches mà không cần URL param.
- *
- * Regression guard: KHÔNG thêm filter `opened_by = user.id` — sẽ chặn waiter
- * (không có `pos:open_cashbox`) khỏi ca cashier đã mở, vỡ luồng take-order.
+ * Regression guard (rule POS-SESSION-SCOPE-PER-BRANCH): KHÔNG filter
+ * `opened_by = user.id` — sẽ chặn waiter (không có `pos:open_cashbox`)
+ * khỏi ca cashier đã mở, vỡ luồng take-order.
  */
 export async function fetchActiveSession(
   branchId: number,
-  terminalId?: number,
 ): Promise<ActionResult> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
     return { success: false, error: "Branch ID không hợp lệ" };
-  }
-
-  let parsedTerminalId: number | undefined;
-  if (terminalId !== undefined) {
-    const result = z.coerce
-      .number()
-      .int()
-      .positive({ error: "Terminal ID không hợp lệ" })
-      .safeParse(terminalId);
-    if (!result.success) {
-      return { success: false, error: "Terminal ID không hợp lệ" };
-    }
-    parsedTerminalId = result.data;
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -195,7 +176,7 @@ export async function fetchActiveSession(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  let query = supabase
+  const { data: session, error } = await supabase
     .from("pos_sessions")
     .select(
       `
@@ -214,15 +195,7 @@ export async function fetchActiveSession(
     )
     .eq("branch_id", parsedBranchId.data)
     .eq("tenant_id", claims.tenant_id)
-    .eq("status", "open");
-
-  if (parsedTerminalId !== undefined) {
-    query = query.eq("terminal_id", parsedTerminalId);
-  }
-
-  const { data: session, error } = await query
-    .order("opened_at", { ascending: false })
-    .limit(1)
+    .eq("status", "open")
     .maybeSingle();
 
   if (error) {
@@ -233,70 +206,6 @@ export async function fetchActiveSession(
   }
 
   return { success: true, data: session };
-}
-
-/* ─── fetchActiveSessionsForBranch ─── */
-
-/**
- * Trả TẤT CẢ ca POS đang mở của chi nhánh — phục vụ multi-terminal disambiguation.
- *
- * Khi branch có 2+ terminal cùng mở, page-level orchestration cần biết để
- * render `MultiSessionPicker` cho cashier chọn terminal họ đang dùng. Sau
- * khi pick, URL được stamp `?terminal=X`; lần load tiếp theo gọi thẳng
- * `fetchActiveSession(branchId, terminalId)` thay vì list này.
- *
- * Sort by opened_at desc để picker hiển thị ca mới nhất trước (UX bias).
- */
-export async function fetchActiveSessionsForBranch(
-  branchId: number,
-): Promise<ActionResult> {
-  const parsedBranchId = branchIdSchema.safeParse(branchId);
-  if (!parsedBranchId.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  if (claims.branch_id !== parsedBranchId.data) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
-
-  const { data: sessions, error } = await supabase
-    .from("pos_sessions")
-    .select(
-      `
-      id,
-      terminal_id,
-      opened_by,
-      opened_at,
-      opening_cash,
-      status,
-      note,
-      pos_terminals (
-        id,
-        name
-      )
-    `,
-    )
-    .eq("branch_id", parsedBranchId.data)
-    .eq("tenant_id", claims.tenant_id)
-    .eq("status", "open")
-    .order("opened_at", { ascending: false });
-
-  if (error) {
-    return {
-      success: false,
-      error: "Không thể tải danh sách ca. Vui lòng thử lại.",
-    };
-  }
-
-  return { success: true, data: sessions ?? [] };
 }
 
 /* ─── fetchPosPermissionFlags ─── */
@@ -368,15 +277,21 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
 /* ─── openPosSession ─── */
 
 const openSessionSchema = z.object({
-  terminalId: z.coerce.number().int().positive({ error: "Chọn máy POS" }),
+  // terminalId optional sau D7 (2026-04-27): chỉ là metadata audit (máy nào
+  // physically mở ca). NULL = ca chung của chi nhánh.
+  terminalId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Terminal ID không hợp lệ" })
+    .optional(),
   openingCash: z.coerce.number().min(0, { error: "Tiền mở ca không hợp lệ" }),
 });
 
-// Skip withAction: positional (branchId, terminalId, openingCash) args
+// Skip withAction: positional (branchId, openingCash, terminalId?) args
 export async function openPosSession(
   branchId: number,
-  terminalId: number,
   openingCash: number,
+  terminalId?: number,
 ): Promise<ActionResult<{ session_id: number }>> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
@@ -416,7 +331,8 @@ export async function openPosSession(
     .insert({
       tenant_id: claims.tenant_id,
       branch_id: parsedBranchId.data,
-      terminal_id: parsedInput.data.terminalId,
+      // terminal_id nullable sau D7 — UI mở ca không bắt buộc chọn máy.
+      terminal_id: parsedInput.data.terminalId ?? null,
       opened_by: user.id,
       opening_cash: parsedInput.data.openingCash,
     })
@@ -424,11 +340,13 @@ export async function openPosSession(
     .single();
 
   if (error) {
-    // Partial unique index violation: terminal already has an open session
+    // Partial unique index violation: branch đã có session đang mở
+    // (per-branch invariant từ migration 20260503000000_pos_session_per_branch).
     if (error.code === "23505") {
       return {
         success: false,
-        error: "Máy POS này đã có ca đang mở. Vui lòng đóng ca trước.",
+        error:
+          "Chi nhánh này đã có ca POS đang mở. Tải lại trang để vào ca hiện tại, hoặc đóng ca cũ trước khi mở ca mới.",
       };
     }
     return {

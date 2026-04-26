@@ -28,7 +28,6 @@ export {
   fetchTablesForBranch,
   fetchPosTerminals,
   fetchActiveSession,
-  fetchActiveSessionsForBranch,
   fetchPosPermissionFlags,
   openPosSession,
   closePosSession,

@@ -1,14 +1,16 @@
 /**
  * POS-01 Mở ca POS — capture spec.
  *
- * 5 main steps + 2 variants:
- *   step-01-form-empty       — vào màn mở ca trống
- *   step-02-pick-terminal    — danh sách máy POS đang xổ
- *   step-03-enter-cash       — đã chọn máy, focus vào ô tiền
- *   step-04-ready            — form hợp lệ, button active
- *   step-05-pos-main         — vào màn POS chính sau khi mở
- *   variant-all-occupied     — toàn bộ máy POS đã có ca mở
- *   variant-no-terminal      — chi nhánh chưa có máy POS (skip - destructive)
+ * Per-branch model (Owner D7, 2026-04-27): chi nhánh có tối đa 1 ca POS
+ * active cùng lúc, mở ca không cần chọn terminal cụ thể. UI chỉ còn 1 ô
+ * Tiền đầu ca + nút "Mở ca POS".
+ *
+ * 3 main steps + 1 variant:
+ *   step-01-form-empty   — vào màn mở ca trống
+ *   step-02-enter-cash   — focus ô tiền, nhập số
+ *   step-03-ready        — form hợp lệ, button active
+ *   step-04-pos-main     — vào màn POS chính sau khi mở
+ *   variant-no-terminal  — chi nhánh chưa có máy POS (skip - destructive)
  *
  * Chạy: pnpm --filter @comtammatu/web guides:capture --grep="POS-01"
  */
@@ -19,12 +21,11 @@ import {
   closeAllOpenSessions,
   ensureMinTerminals,
   getCashierContext,
-  openSessionsOnAllTerminals,
 } from "./_lib/fixtures";
 
 const FLOW = "pos-01";
 const MODULE = "pos";
-const TOTAL = 5;
+const TOTAL = 4;
 
 test.describe("POS-01 Mở ca POS", () => {
   test.describe.configure({ mode: "serial" });
@@ -32,7 +33,7 @@ test.describe("POS-01 Mở ca POS", () => {
   test("step-01-form-empty", async ({ page, browser }) => {
     const ctx = await getCashierContext();
     await closeAllOpenSessions(ctx);
-    await ensureMinTerminals(ctx, 2);
+    await ensureMinTerminals(ctx, 1);
 
     await captureScenario(page, browser, {
       id: "step-01-form-empty",
@@ -44,69 +45,31 @@ test.describe("POS-01 Mở ca POS", () => {
         await p.getByText("Mở ca bán hàng").waitFor({ state: "visible" });
       },
       annotations: [
-        { type: "highlight", selector: "#terminal" },
         { type: "highlight", selector: "#opening-cash" },
         {
           type: "callout-coord",
           anchorX: 195,
           anchorY: 130,
           placement: "below",
-          text: "Card mở ca\ngồm 2 ô bắt buộc",
+          text: "Card mở ca\nchỉ cần nhập tiền đầu ca",
         },
       ],
     });
   });
 
-  test("step-02-pick-terminal", async ({ page, browser }) => {
-    // Note: Radix Select render listbox qua portal ở body level — khi
-    // screenshot viewport mobile, portal hay bị clipped/dismiss do focus
-    // shift. Capture trigger + callout giải thích thao tác là đủ; danh
-    // sách máy POS được mô tả bằng text trong markdown.
+  test("step-02-enter-cash", async ({ page, browser }) => {
     const ctx = await getCashierContext();
     await closeAllOpenSessions(ctx);
-    await ensureMinTerminals(ctx, 2);
+    await ensureMinTerminals(ctx, 1);
 
     await captureScenario(page, browser, {
-      id: "step-02-pick-terminal",
+      id: "step-02-enter-cash",
       flowId: FLOW,
       module: MODULE,
-      step: { number: 2, total: TOTAL, title: "Chọn máy POS" },
+      step: { number: 2, total: TOTAL, title: "Nhập tiền đầu ca" },
       setup: async (p) => {
         await p.goto(`/br/${String(ctx.branchId)}/pos`);
         await p.getByText("Mở ca bán hàng").waitFor({ state: "visible" });
-      },
-      annotations: [
-        {
-          type: "tap",
-          selector: "#terminal",
-          label: "Chạm để mở danh sách",
-        },
-        {
-          type: "callout",
-          selector: "#terminal",
-          placement: "below",
-          text: "Chọn máy POS\nbạn đang ngồi",
-        },
-      ],
-    });
-  });
-
-  test("step-03-enter-cash", async ({ page, browser }) => {
-    const ctx = await getCashierContext();
-    await closeAllOpenSessions(ctx);
-    await ensureMinTerminals(ctx, 2);
-
-    await captureScenario(page, browser, {
-      id: "step-03-enter-cash",
-      flowId: FLOW,
-      module: MODULE,
-      step: { number: 3, total: TOTAL, title: "Nhập tiền đầu ca" },
-      setup: async (p) => {
-        await p.goto(`/br/${String(ctx.branchId)}/pos`);
-        await p.getByText("Mở ca bán hàng").waitFor({ state: "visible" });
-        await p.locator("#terminal").click();
-        // Click first non-disabled item
-        await p.locator("[role='option']:not([data-disabled])").first().click();
         await p.locator("#opening-cash").focus();
       },
       annotations: [
@@ -118,7 +81,7 @@ test.describe("POS-01 Mở ca POS", () => {
         {
           type: "callout-coord",
           anchorX: 200,
-          anchorY: 480,
+          anchorY: 380,
           placement: "above",
           text: "Số này dùng để\nđối soát cuối ca",
         },
@@ -126,21 +89,19 @@ test.describe("POS-01 Mở ca POS", () => {
     });
   });
 
-  test("step-04-ready", async ({ page, browser }) => {
+  test("step-03-ready", async ({ page, browser }) => {
     const ctx = await getCashierContext();
     await closeAllOpenSessions(ctx);
-    await ensureMinTerminals(ctx, 2);
+    await ensureMinTerminals(ctx, 1);
 
     await captureScenario(page, browser, {
-      id: "step-04-ready",
+      id: "step-03-ready",
       flowId: FLOW,
       module: MODULE,
-      step: { number: 4, total: TOTAL, title: "Sẵn sàng mở ca" },
+      step: { number: 3, total: TOTAL, title: "Sẵn sàng mở ca" },
       setup: async (p) => {
         await p.goto(`/br/${String(ctx.branchId)}/pos`);
         await p.getByText("Mở ca bán hàng").waitFor({ state: "visible" });
-        await p.locator("#terminal").click();
-        await p.locator("[role='option']:not([data-disabled])").first().click();
         await p.locator("#opening-cash").fill("500000");
         // Defocus to settle button state
         await p.locator("body").click({ position: { x: 5, y: 5 } });
@@ -155,21 +116,19 @@ test.describe("POS-01 Mở ca POS", () => {
     });
   });
 
-  test("step-05-pos-main", async ({ page, browser }) => {
+  test("step-04-pos-main", async ({ page, browser }) => {
     const ctx = await getCashierContext();
     await closeAllOpenSessions(ctx);
-    await ensureMinTerminals(ctx, 2);
+    await ensureMinTerminals(ctx, 1);
 
     await captureScenario(page, browser, {
-      id: "step-05-pos-main",
+      id: "step-04-pos-main",
       flowId: FLOW,
       module: MODULE,
-      step: { number: 5, total: TOTAL, title: "Vào màn POS bán hàng" },
+      step: { number: 4, total: TOTAL, title: "Vào màn POS bán hàng" },
       setup: async (p) => {
         await p.goto(`/br/${String(ctx.branchId)}/pos`);
         await p.getByText("Mở ca bán hàng").waitFor({ state: "visible" });
-        await p.locator("#terminal").click();
-        await p.locator("[role='option']:not([data-disabled])").first().click();
         await p.locator("#opening-cash").fill("500000");
         await p.locator("body").click({ position: { x: 5, y: 5 } });
         await p.locator('button:has-text("Mở ca POS")').click();
@@ -184,51 +143,9 @@ test.describe("POS-01 Mở ca POS", () => {
           anchorX: 195,
           anchorY: 30,
           placement: "below",
-          text: "Header: tên máy POS\n+ nút Chốt ca",
+          text: "Header POS chính:\nnút Chốt ca",
         },
       ],
     });
-  });
-
-  test("variant-multi-session-picker", async ({ page, browser }) => {
-    // Khi branch có 2+ ca POS đang mở (mọi máy có ca), page route tới
-    // MultiSessionPicker thay vì SessionGate. Đây là surface chính của
-    // tình huống "không có máy POS trống để mở ca mới".
-    //
-    // (Alert "Tất cả máy đang có ca mở" trong SessionGate thực tế là dead
-    // path: SessionGate chỉ render khi openSessions.length===0, mà điều
-    // này nghĩa là không có máy nào occupied.)
-    const ctx = await getCashierContext();
-    await closeAllOpenSessions(ctx);
-    await ensureMinTerminals(ctx, 2);
-    await openSessionsOnAllTerminals(ctx);
-
-    await captureScenario(page, browser, {
-      id: "variant-multi-session-picker",
-      flowId: FLOW,
-      module: MODULE,
-      step: {
-        number: 1,
-        total: 1,
-        title: "Variant — chọn ca POS đang mở",
-      },
-      setup: async (p) => {
-        await p.goto(`/br/${String(ctx.branchId)}/pos`);
-        await p
-          .getByText(/Chọn máy POS bạn đang dùng/i)
-          .waitFor({ state: "visible", timeout: 8000 });
-      },
-      annotations: [
-        {
-          type: "callout-coord",
-          anchorX: 195,
-          anchorY: 100,
-          placement: "below",
-          text: "Đã có ca mở trên\nmáy bạn → chạm\n\"Dùng máy này\"",
-        },
-      ],
-    });
-    // Cleanup so subsequent runs start fresh
-    await closeAllOpenSessions(ctx);
   });
 });

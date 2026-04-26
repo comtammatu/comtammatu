@@ -6,7 +6,7 @@ import {
 import {
   fetchMenuForPos,
   fetchTablesForBranch,
-  fetchActiveSessionsForBranch,
+  fetchActiveSession,
   fetchPosTerminals,
   fetchPosPermissionFlags,
   fetchActiveOrders,
@@ -18,17 +18,13 @@ import { SessionGate } from "./session-gate";
 import type { OrderType } from "./types";
 import { PosStatusShell } from "./pos-status-shell";
 import { PosPageSkeleton } from "./pos-page-skeleton";
-import {
-  MultiSessionPicker,
-  type OpenSessionForPicker,
-} from "./_components/multi-session-picker";
 
 export default async function PosPage({
   params,
   searchParams,
 }: {
   params: Promise<{ branchId: string }>;
-  searchParams: Promise<{ table?: string; terminal?: string }>;
+  searchParams: Promise<{ table?: string }>;
 }) {
   const { branchId } = await params;
   const sp = await searchParams;
@@ -41,34 +37,22 @@ export default async function PosPage({
       ? Math.trunc(parsedTable)
       : undefined;
 
-  // ?terminal=X — disambiguates which open POS session to bind orders to
-  // when the branch has 2+ ca mở simultaneously. Set by MultiSessionPicker
-  // (one-tap by cashier on first arrival) and persists via URL so a tab
-  // refresh keeps the same session.
-  const terminalParam = sp.terminal;
-  const parsedTerminal =
-    terminalParam !== undefined ? Number.parseInt(terminalParam, 10) : NaN;
-  const requestedTerminalId =
-    Number.isFinite(parsedTerminal) && parsedTerminal > 0
-      ? Math.trunc(parsedTerminal)
-      : null;
-
   const branchIdNum = Number(branchId);
 
-  // Fetch ALL open sessions + perm flags song song. Returning the full
-  // list (instead of a single latest-opened) lets us disambiguate when
-  // 2+ terminals are open at the same branch — see MultiSessionPicker.
-  const [sessionsResult, permFlags] = await Promise.all([
-    fetchActiveSessionsForBranch(branchIdNum),
+  // Per-branch model (Owner D7, 2026-04-27): branch chỉ có 0 hoặc 1 session
+  // đang mở (DB enforce UNIQUE(branch_id) WHERE status='open'). Disambiguation
+  // qua MultiSessionPicker / `?terminal=` URL param đã retired.
+  const [sessionResult, permFlags] = await Promise.all([
+    fetchActiveSession(branchIdNum),
     fetchPosPermissionFlags(branchIdNum),
   ]);
 
-  if (!sessionsResult.success) {
+  if (!sessionResult.success) {
     return (
       <PosStatusShell
         icon={<IconDeviceDesktop />}
         title="Không mở được POS"
-        description={sessionsResult.error ?? "Chưa lấy được ca làm hiện tại."}
+        description={sessionResult.error ?? "Chưa lấy được ca làm hiện tại."}
         badge={{
           label: "Sự cố tải ca làm",
           icon: <IconAlertTriangle className="size-3.5" />,
@@ -98,12 +82,12 @@ export default async function PosPage({
     );
   }
 
-  const openSessions = (sessionsResult.data ?? []) as ActiveSession[];
+  const session = (sessionResult.data ?? null) as ActiveSession | null;
 
   // No open session → chỉ role có quyền thao tác két (cashier/branch_manager)
   // mới được tự mở ca. Waiter chỉ có pos:use → chặn tại đây, hướng dẫn liên hệ
-  // thu ngân để tránh dead-end ở form"Mở ca".
-  if (openSessions.length === 0) {
+  // thu ngân để tránh dead-end ở form "Mở ca".
+  if (session === null) {
     if (!permFlags.canOpenShift) {
       return (
         <PosStatusShell
@@ -191,41 +175,6 @@ export default async function PosPage({
         }
       />
     );
-  }
-
-  // 1+ open sessions exist. Disambiguate which one to bind to.
-  let session: ActiveSession;
-
-  if (openSessions.length === 1) {
-    // Single ca mở — use it. Preserves legacy single-terminal/branch UX.
-    const only = openSessions[0];
-    if (only === undefined) {
-      // Defensive — TS narrowing, can't happen given length check.
-      return null;
-    }
-    session = only;
-  } else {
-    // 2+ ca mở. Try to match the URL-pinned terminal first.
-    const matched =
-      requestedTerminalId !== null
-        ? openSessions.find((s) => s.terminal_id === requestedTerminalId)
-        : undefined;
-
-    if (matched !== undefined) {
-      session = matched;
-    } else {
-      // No URL pin OR pin doesn't match an open session — render picker.
-      // Picker writes ?terminal=X to URL → page re-renders → matched path
-      // hits next time. Wrapping in PosStatusShell-like layout for visual
-      // parity with other "ca chưa sẵn sàng" surfaces.
-      return (
-        <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:py-8">
-          <MultiSessionPicker
-            sessions={openSessions as unknown as OpenSessionForPicker[]}
-          />
-        </div>
-      );
-    }
   }
 
   const [menuResult, tablesResult, ordersResult] = await Promise.all([
@@ -317,10 +266,14 @@ export interface BranchTable {
   branch_zones: { id: number; name: string } | null;
 }
 
-/** Active session shape returned by fetchActiveSession */
+/** Active session shape returned by fetchActiveSession.
+ *
+ * Per-branch model: `terminal_id` nullable (NULL = ca chung của chi nhánh,
+ * không liên kết terminal vật lý). Closed sessions từ trước D7 vẫn giữ
+ * terminal_id cho audit. */
 export interface ActiveSession {
   id: number;
-  terminal_id: number;
+  terminal_id: number | null;
   opened_by: string;
   opened_at: string;
   opening_cash: number;

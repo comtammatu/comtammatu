@@ -97,6 +97,303 @@ export async function closeAllOpenSessions(
   }
 }
 
+/**
+ * Đảm bảo cashier có 1 ca POS đang mở duy nhất (đóng các ca khác).
+ * Dùng cho mọi flow sau POS-01 — landing trực tiếp lên màn POS chính.
+ *
+ * Per-branch model (Owner D7, 2026-04-27): branch chỉ có 1 session active.
+ * `terminal_id` nullable — fixture không cần lookup terminal, set null để
+ * giảm coupling với pos_terminals seed.
+ */
+export async function ensureSingleOpenSession(
+  ctx: CashierContext,
+): Promise<void> {
+  await closeAllOpenSessions(ctx);
+
+  const supabase = createServiceClient();
+  await supabase.from("pos_sessions").insert({
+    tenant_id: ctx.tenantId,
+    branch_id: ctx.branchId,
+    terminal_id: null,
+    opened_by: ctx.userId,
+    opening_cash: 500000,
+    status: "open",
+  });
+}
+
+/** Đảm bảo branch có ÍT NHẤT N bàn active (status='available'). Tạo thêm nếu thiếu. */
+export async function ensureMinTables(
+  ctx: CashierContext,
+  minCount: number,
+): Promise<void> {
+  const supabase = createServiceClient();
+  const { data: existing } = await supabase
+    .from("tables")
+    .select("id, number, status")
+    .eq("branch_id", ctx.branchId)
+    .eq("tenant_id", ctx.tenantId)
+    .neq("status", "maintenance");
+
+  const have = existing?.length ?? 0;
+  if (have >= minCount) {
+    // Reset all existing to 'available' để clean state
+    if (existing) {
+      for (const t of existing) {
+        if (t.status !== "available") {
+          await supabase
+            .from("tables")
+            .update({ status: "available" })
+            .eq("id", t.id);
+        }
+      }
+    }
+    return;
+  }
+
+  const maxNumber = Math.max(0, ...(existing?.map((t) => t.number) ?? []));
+  for (let i = 0; i < minCount - have; i++) {
+    await supabase.from("tables").insert({
+      tenant_id: ctx.tenantId,
+      branch_id: ctx.branchId,
+      number: maxNumber + i + 1,
+      capacity: 4,
+      status: "available",
+    });
+  }
+}
+
+/**
+ * Đảm bảo có 1 bàn status='occupied' với 1+ đơn 'confirmed' bound vào nó.
+ * Trả về tableId + orderNumber để spec có thể assert.
+ */
+export async function ensureOccupiedTableWithOrder(
+  ctx: CashierContext,
+): Promise<{ tableId: number; tableNumber: number }> {
+  const supabase = createServiceClient();
+
+  // Tìm session đang mở của cashier để bind order
+  const { data: openSession } = await supabase
+    .from("pos_sessions")
+    .select("id")
+    .eq("tenant_id", ctx.tenantId)
+    .eq("branch_id", ctx.branchId)
+    .eq("status", "open")
+    .limit(1)
+    .maybeSingle();
+
+  if (!openSession) {
+    throw new Error(
+      "ensureOccupiedTableWithOrder: cần ensureSingleOpenSession() trước",
+    );
+  }
+
+  // Đảm bảo có ít nhất 2 bàn (1 trống + 1 sẽ chiếm)
+  await ensureMinTables(ctx, 2);
+
+  const { data: tables } = await supabase
+    .from("tables")
+    .select("id, number")
+    .eq("branch_id", ctx.branchId)
+    .eq("tenant_id", ctx.tenantId)
+    .neq("status", "maintenance")
+    .order("number")
+    .limit(2);
+
+  const targetTable = tables?.[0];
+  if (!targetTable) {
+    throw new Error("ensureOccupiedTableWithOrder: không tạo được bàn");
+  }
+
+  // Tìm 1 menu_item bất kỳ active để gắn order_item
+  const { data: menuItem } = await supabase
+    .from("menu_items")
+    .select("id, name, base_price")
+    .eq("tenant_id", ctx.tenantId)
+    .eq("is_active", true)
+    .limit(1)
+    .maybeSingle();
+  if (!menuItem) {
+    throw new Error("ensureOccupiedTableWithOrder: branch chưa có menu_item");
+  }
+
+  // Cleanup các order cũ của bàn này (idempotent)
+  const { data: oldOrders } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("table_id", targetTable.id)
+    .eq("tenant_id", ctx.tenantId)
+    .in("status", ["pending", "confirmed", "ready", "served"]);
+  for (const o of oldOrders ?? []) {
+    await supabase
+      .from("kds_tickets")
+      .delete()
+      .eq("order_id", o.id)
+      .eq("tenant_id", ctx.tenantId);
+    await supabase
+      .from("order_items")
+      .delete()
+      .eq("order_id", o.id)
+      .eq("tenant_id", ctx.tenantId);
+    await supabase
+      .from("orders")
+      .delete()
+      .eq("id", o.id)
+      .eq("tenant_id", ctx.tenantId);
+  }
+
+  const unitPrice = Number(menuItem.base_price);
+  const orderNumber = `GUIDE-${String(Date.now())}`;
+  const { data: order } = await supabase
+    .from("orders")
+    .insert({
+      tenant_id: ctx.tenantId,
+      branch_id: ctx.branchId,
+      table_id: targetTable.id,
+      order_number: orderNumber,
+      order_type: "dine_in",
+      status: "confirmed",
+      payment_status: "unpaid",
+      subtotal: unitPrice,
+      tax_amount: 0,
+      service_charge: 0,
+      discount_amount: 0,
+      total_amount: unitPrice,
+      customer_count: 2,
+      created_by: ctx.userId,
+      pos_session_id: openSession.id,
+    })
+    .select("id")
+    .single();
+
+  if (order) {
+    // 2 dòng item để split workflow available (canShowSplit cần activeItemCount >= 2)
+    await supabase.from("order_items").insert([
+      {
+        tenant_id: ctx.tenantId,
+        order_id: order.id,
+        menu_item_id: menuItem.id,
+        item_name: menuItem.name,
+        quantity: 1,
+        unit_price: unitPrice,
+        modifiers: [],
+        sides: [],
+        subtotal: unitPrice,
+        status: "pending",
+      },
+      {
+        tenant_id: ctx.tenantId,
+        order_id: order.id,
+        menu_item_id: menuItem.id,
+        item_name: menuItem.name,
+        quantity: 1,
+        unit_price: unitPrice,
+        modifiers: [],
+        sides: [],
+        subtotal: unitPrice,
+        status: "pending",
+      },
+    ]);
+    // Recompute totals
+    const newSubtotal = unitPrice * 2;
+    await supabase
+      .from("orders")
+      .update({ subtotal: newSubtotal, total_amount: newSubtotal })
+      .eq("id", order.id);
+  }
+
+  await supabase
+    .from("tables")
+    .update({ status: "occupied" })
+    .eq("id", targetTable.id)
+    .eq("tenant_id", ctx.tenantId);
+
+  return { tableId: targetTable.id, tableNumber: targetTable.number };
+}
+
+/**
+ * Tạo thêm 1 đơn confirmed thứ 2 trên CÙNG bàn — cho merge workflow available
+ * (canShowMerge cần tableSiblingCount >= 2).
+ *
+ * Yêu cầu chạy SAU ensureOccupiedTableWithOrder(ctx).
+ */
+export async function ensureSecondOrderSameTable(
+  ctx: CashierContext,
+  tableId: number,
+): Promise<void> {
+  const supabase = createServiceClient();
+
+  const { data: openSession } = await supabase
+    .from("pos_sessions")
+    .select("id")
+    .eq("tenant_id", ctx.tenantId)
+    .eq("branch_id", ctx.branchId)
+    .eq("status", "open")
+    .limit(1)
+    .maybeSingle();
+  if (!openSession) {
+    throw new Error("ensureSecondOrderSameTable: cần ensureSingleOpenSession()");
+  }
+
+  // Đếm đơn active trên bàn
+  const { data: existing } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("table_id", tableId)
+    .eq("tenant_id", ctx.tenantId)
+    .in("status", ["pending", "confirmed", "ready", "served"]);
+
+  if ((existing?.length ?? 0) >= 2) return; // đã đủ
+
+  const { data: menuItem } = await supabase
+    .from("menu_items")
+    .select("id, name, base_price")
+    .eq("tenant_id", ctx.tenantId)
+    .eq("is_active", true)
+    .limit(1)
+    .maybeSingle();
+  if (!menuItem) {
+    throw new Error("ensureSecondOrderSameTable: branch chưa có menu_item");
+  }
+
+  const unitPrice = Number(menuItem.base_price);
+  const { data: order2 } = await supabase
+    .from("orders")
+    .insert({
+      tenant_id: ctx.tenantId,
+      branch_id: ctx.branchId,
+      table_id: tableId,
+      order_number: `GUIDE2-${String(Date.now())}`,
+      order_type: "dine_in",
+      status: "confirmed",
+      payment_status: "unpaid",
+      subtotal: unitPrice,
+      tax_amount: 0,
+      service_charge: 0,
+      discount_amount: 0,
+      total_amount: unitPrice,
+      customer_count: 1,
+      created_by: ctx.userId,
+      pos_session_id: openSession.id,
+    })
+    .select("id")
+    .single();
+
+  if (order2) {
+    await supabase.from("order_items").insert({
+      tenant_id: ctx.tenantId,
+      order_id: order2.id,
+      menu_item_id: menuItem.id,
+      item_name: menuItem.name,
+      quantity: 1,
+      unit_price: unitPrice,
+      modifiers: [],
+      sides: [],
+      subtotal: unitPrice,
+      status: "pending",
+    });
+  }
+}
+
 /** Đảm bảo branch có ÍT NHẤT N máy POS active. Tạo thêm nếu thiếu. */
 export async function ensureMinTerminals(
   ctx: CashierContext,
@@ -123,37 +420,7 @@ export async function ensureMinTerminals(
   }
 }
 
-/**
- * Đảm bảo có 1 ca mở trên MỌI máy POS active của branch.
- * Dùng để chụp variant "tất cả máy đang có ca mở".
- */
-export async function openSessionsOnAllTerminals(
-  ctx: CashierContext,
-): Promise<void> {
-  const supabase = createServiceClient();
-  const { data: terminals } = await supabase
-    .from("pos_terminals")
-    .select("id")
-    .eq("branch_id", ctx.branchId)
-    .eq("tenant_id", ctx.tenantId)
-    .eq("is_active", true);
-
-  for (const terminal of terminals ?? []) {
-    const { data: existing } = await supabase
-      .from("pos_sessions")
-      .select("id")
-      .eq("terminal_id", terminal.id)
-      .eq("status", "open")
-      .maybeSingle();
-    if (existing) continue;
-
-    await supabase.from("pos_sessions").insert({
-      tenant_id: ctx.tenantId,
-      branch_id: ctx.branchId,
-      terminal_id: terminal.id,
-      opened_by: ctx.userId,
-      opening_cash: 0,
-      status: "open",
-    });
-  }
-}
+// `openSessionsOnAllTerminals` retired sau Owner D7 (2026-04-27).
+// Per-branch model = chỉ 1 ca active/branch → fixture multi-session
+// trên nhiều terminal cùng lúc không còn valid (vi phạm UNIQUE).
+// MultiSessionPicker variant trong POS-01 guide đã removed.

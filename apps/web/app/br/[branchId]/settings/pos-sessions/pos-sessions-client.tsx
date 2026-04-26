@@ -25,7 +25,9 @@ import { CloseSessionSheet } from "../../pos/close-session-sheet";
 
 export interface PosSessionRow {
   id: number;
-  terminal_id: number;
+  // Per-branch model (Owner D7, 2026-04-27): nullable. NULL = ca chung của
+  // chi nhánh, không liên kết terminal vật lý cụ thể.
+  terminal_id: number | null;
   opened_by: string;
   closed_by: string | null;
   opened_at: string;
@@ -39,6 +41,14 @@ export interface PosSessionRow {
   pos_terminals: { name: string } | null;
   opened_by_profile: { full_name: string } | null;
   closed_by_profile: { full_name: string } | null;
+}
+
+/** Resolve display name của ca: ưu tiên tên terminal nếu còn, fallback
+ * "Ca chung của chi nhánh" cho ca không liên kết terminal (post-D7). */
+function resolveSessionLabel(session: PosSessionRow): string {
+  if (session.pos_terminals?.name) return session.pos_terminals.name;
+  if (session.terminal_id != null) return `POS #${String(session.terminal_id)}`;
+  return "Ca chung của chi nhánh";
 }
 
 export interface PosSessionOrderItem {
@@ -142,7 +152,7 @@ export function PosSessionsClient({
                   </span>
                   <span className="min-w-0 flex-1 text-left">
                     <span className="block truncate text-sm font-semibold">
-                      {session.pos_terminals?.name ?? `POS #${session.terminal_id}`}
+                      {resolveSessionLabel(session)}
                     </span>
                     <span className="block truncate text-xs text-muted-foreground">
                       {formatDateTime(session.opened_at)}
@@ -165,8 +175,7 @@ export function PosSessionsClient({
               <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-1">
                   <CardTitle>
-                    {selectedSession.pos_terminals?.name ??
-                      `POS #${selectedSession.terminal_id}`}
+                    {resolveSessionLabel(selectedSession)}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
                     Mở bởi {selectedSession.opened_by_profile?.full_name ?? "Nhân viên"} ·{" "}

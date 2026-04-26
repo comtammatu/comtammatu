@@ -21,6 +21,9 @@ import {
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { X as IconX } from "lucide-react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import { POS_ERROR_CODES } from "./_utils/error-codes";
+import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
 import { PosTableGate } from "./pos-table-gate";
 import { ItemCustomizer } from "./item-customizer";
@@ -196,6 +199,58 @@ function PosDesktopInner({
   const selectedTable = activeTable.table;
   const selectedTableAvailable = activeTable.isAvailable;
   const setActiveTable = activeTable.setTable;
+
+  const router = useRouter();
+
+  // Cross-tab realtime: khi cashier (hoặc BM) đóng ca từ tab/máy khác,
+  // payload UPDATE bay tới đây với `new.status='closed'`. Refresh route
+  // để page re-fetch active session — nếu chưa có ca mới, page render
+  // SessionGate / "liên hệ thu ngân" tự động.
+  //
+  // Defense-in-depth (rule REALTIME-SUBSCRIBE-NEEDS-STATUS-CALLBACK):
+  // status callback skip lần SUBSCRIBED đầu (state đã seed từ RSC), reload
+  // mỗi reconnect sau đó để bắt event missed mid-disconnect.
+  useRealtimeChannel(
+    (supabase) => {
+      let initialSubscribe = true;
+      return supabase
+        .channel(`pos-session-branch-${String(branchId)}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "pos_sessions",
+            filter: `branch_id=eq.${String(branchId)}`,
+          },
+          (payload) => {
+            const next = payload.new;
+            if (
+              next !== null &&
+              typeof next === "object" &&
+              "id" in next &&
+              "status" in next &&
+              (next as { id: number }).id === session.id &&
+              (next as { status: string }).status === "closed"
+            ) {
+              toast.warning("Ca POS đã đóng — đang tải lại trang.");
+              router.refresh();
+            }
+          },
+        )
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            if (initialSubscribe) {
+              initialSubscribe = false;
+              return;
+            }
+            // Reconnect — may have missed a close event mid-disconnect.
+            router.refresh();
+          }
+        });
+    },
+    [branchId, session.id, router],
+  );
 
   const [customizerItem, setCustomizerItem] = useState<MenuItem | null>(null);
   const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
@@ -599,6 +654,15 @@ function PosDesktopInner({
         setActiveTable(null);
         void refreshOperational();
       } else {
+        // Stale session prop (RSC snapshot held the old session.id after
+        // a close-then-reopen on another tab). Self-heal: refresh the
+        // route so RSC re-fetches the currently open session, instead
+        // of looping the cashier through "thử lại" forever.
+        if (result.errorCode === POS_ERROR_CODES.SCOPE_SESSION_NOT_OPEN) {
+          toast.error(result.error ?? "Ca POS đã đóng — đang tải lại trang.");
+          router.refresh();
+          return;
+        }
         toast.error(result.error ?? "Không thể tạo đơn hàng");
       }
     });
@@ -612,6 +676,7 @@ function PosDesktopInner({
     session.id,
     focusOrderWorkflow,
     refreshOperational,
+    router,
   ]);
 
   const handleItemTap = useCallback(
