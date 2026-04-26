@@ -12,7 +12,7 @@ import {
 } from "react";
 import type { ActiveSession, BranchTable } from "../page";
 import type { SessionOrder } from "../order-history";
-import { fetchSessionOrders, fetchTablesForBranch } from "../actions";
+import { fetchActiveOrders, fetchTablesForBranch } from "../actions";
 import { CartStore } from "./cart-store";
 import { useOrderSync } from "../hooks/use-order-sync";
 import { makeDeduper } from "../_utils/make-deduper";
@@ -77,6 +77,14 @@ const OperationalDispatchContext = createContext<OperationalDispatch | null>(
   null,
 );
 
+// Monotonic counter that bumps every time an order flips into a terminal
+// status (paid / completed / cancelled). The "Đã xử lý" sheet's pagination
+// hook reads this token; when it changes while the sheet is open, the
+// hook resets to page 1 + refetches. Token-based invalidation avoids
+// pushing rows into a paginated cursor stream (which would create
+// ordering hazards across page boundaries).
+const ArchivedInvalidationContext = createContext<number>(0);
+
 export function usePosOperationalData(): OperationalData {
   const orders = usePosOrders();
   const tables = usePosTables();
@@ -104,6 +112,10 @@ export function usePosOperationalDispatch(): OperationalDispatch {
       "usePosOperationalDispatch must be used inside PosDesktopProvider",
     );
   return ctx;
+}
+
+export function usePosArchivedInvalidationToken(): number {
+  return useContext(ArchivedInvalidationContext);
 }
 
 /* ─── Provider ─── */
@@ -136,6 +148,10 @@ export function PosDesktopProvider({
 }: PosDesktopProviderProps) {
   const [orders, setOrders] = useState<SessionOrder[]>(initialOrders);
   const [tables, setTables] = useState<BranchTable[]>(initialTables);
+  const [archivedToken, setArchivedToken] = useState(0);
+  const bumpArchivedToken = useCallback(() => {
+    setArchivedToken((t) => t + 1);
+  }, []);
 
   // Mirror tables state in a ref so realtime handlers (which run outside
   // React's render scope) can resolve `tables.number` for INSERT payloads
@@ -163,15 +179,15 @@ export function PosDesktopProvider({
   }, [initialTables]);
 
   const loadOrders = useCallback(async () => {
-    const result = await fetchSessionOrders(branchId, session.id);
+    const result = await fetchActiveOrders(branchId);
     if (result.success && result.data) {
       setOrders(result.data as SessionOrder[]);
     }
-  }, [branchId, session.id]);
+  }, [branchId]);
 
   const refreshAll = useCallback(async () => {
     const [ordersResult, tablesResult] = await Promise.all([
-      fetchSessionOrders(branchId, session.id),
+      fetchActiveOrders(branchId),
       fetchTablesForBranch(branchId),
     ]);
     if (ordersResult.success && ordersResult.data) {
@@ -180,7 +196,7 @@ export function PosDesktopProvider({
     if (tablesResult.success && tablesResult.data) {
       setTables(tablesResult.data as BranchTable[]);
     }
-  }, [branchId, session.id]);
+  }, [branchId]);
 
   // Initial orders come from RSC seed (see `initialOrders` + `initialOrdersSeeded`
   // props). Skipping the client-side mount refetch eliminates one round-trip on
@@ -208,6 +224,7 @@ export function PosDesktopProvider({
     getTables,
     refreshOrders: refreshOrdersDeduped,
     refreshAll: refreshAllDeduped,
+    onArchivedInvalidate: bumpArchivedToken,
     skipFirstSubscribedRefresh: initialOrdersSeeded,
   });
 
@@ -228,7 +245,9 @@ export function PosDesktopProvider({
         <OperationalDispatchContext.Provider value={dispatchValue}>
           <OrdersContext.Provider value={orders}>
             <TablesContext.Provider value={tables}>
-              {children}
+              <ArchivedInvalidationContext.Provider value={archivedToken}>
+                {children}
+              </ArchivedInvalidationContext.Provider>
             </TablesContext.Provider>
           </OrdersContext.Provider>
         </OperationalDispatchContext.Provider>

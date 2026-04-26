@@ -1,10 +1,14 @@
 "use client";
 
 import { memo } from "react";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { RefreshCw as IconRefresh, X as IconX } from "lucide-react";
-import { OrderHistory, type SessionOrder } from "../order-history";
+import {
+  ChevronRight as IconChevronRight,
+  Clock as IconClock,
+  RefreshCw as IconRefresh,
+  X as IconX,
+} from "lucide-react";
+import { ActiveOrdersList, type SessionOrder } from "../order-history";
 import type { BillReceiptIntent } from "./bill/bill-receipt-types";
 import {
   usePosOperationalDispatch,
@@ -19,57 +23,58 @@ interface OrderListPaneProps {
     summary?: SessionOrder,
   ) => void;
   onClosePane?: () => void;
+  /**
+   * Opens the "Đã xử lý" sheet (paid + cancelled orders, paginated).
+   * Provided by the shell. Replaces the inline archived list — at scale
+   * (200-300 đơn/ngày) the inline list dragged the sidebar's render and
+   * pulled rows the cashier rarely touches.
+   */
+  onOpenArchivedSheet?: () => void;
 }
 
 function OrderListPaneComponent({
   onViewBill,
   onViewDetail,
   onClosePane,
+  onOpenArchivedSheet,
 }: OrderListPaneProps) {
   const orders = usePosOrders();
   const { refreshOrders } = usePosOperationalDispatch();
-  const activeOrderCount = orders.filter(
-    (order) =>
-      ["new", "confirmed", "preparing", "ready", "served"].includes(
-        order.status,
-      ) && order.payment_status !== "paid",
-  ).length;
-  const archivedOrderCount = orders.length - activeOrderCount;
+  const activeOrderCount = orders.length;
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/60 px-4 py-2">
-        <div className="min-w-0">
-          <p className="font-semibold">Đơn trong ca</p>
-          <div className="mt-1 flex flex-wrap items-center gap-1">
-            <Badge
-              variant={activeOrderCount > 0 ? "warning" : "outline"}
-              className="text-sm"
-            >
-              Cần xử lý {activeOrderCount}
-            </Badge>
-            <Badge variant="secondary" className="text-sm">
-              Đã xong {archivedOrderCount}
-            </Badge>
-          </div>
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="text-base font-semibold">Cần xử lý</p>
+          <span
+            className={
+              activeOrderCount > 0
+                ? "inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-warning px-1.5 text-sm font-bold tabular-nums text-warning-foreground"
+                : "inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-border px-1.5 text-sm tabular-nums text-muted-foreground"
+            }
+            aria-label={`${String(activeOrderCount)} đơn cần xử lý`}
+          >
+            {activeOrderCount}
+          </span>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-0.5">
           <Button
+            type="button"
             variant="ghost"
-            size="sm"
-            className="h-10 px-3 text-sm"
-            aria-label="Tải lại danh sách đơn trong ca"
+            size="icon-sm"
+            className="size-9 text-muted-foreground"
+            aria-label="Tải lại danh sách đơn cần xử lý"
             onClick={() => void refreshOrders()}
           >
-            <IconRefresh data-icon="inline-start" />
-            Tải lại
+            <IconRefresh />
           </Button>
           {onClosePane ? (
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
-              className="text-muted-foreground"
+              className="size-9 text-muted-foreground"
               aria-label="Đóng danh sách đơn"
               onClick={onClosePane}
             >
@@ -78,11 +83,28 @@ function OrderListPaneComponent({
           ) : null}
         </div>
       </div>
-      <OrderHistory
+
+      <ActiveOrdersList
         orders={orders}
         onViewBill={onViewBill}
         onViewDetail={onViewDetail}
       />
+
+      {onOpenArchivedSheet ? (
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-12 shrink-0 justify-between rounded-none border-t border-border/60 px-4 text-sm font-semibold text-muted-foreground hover:text-foreground"
+          data-testid="pos-archived-sheet-trigger"
+          onClick={onOpenArchivedSheet}
+        >
+          <span className="flex items-center gap-2">
+            <IconClock className="size-4" />
+            Đã xử lý
+          </span>
+          <IconChevronRight className="size-4" />
+        </Button>
+      ) : null}
     </div>
   );
 }

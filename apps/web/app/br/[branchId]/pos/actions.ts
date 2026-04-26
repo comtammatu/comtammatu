@@ -10,7 +10,8 @@ export { fetchMenuForPos } from "./menu-actions";
 
 export {
   submitOrder,
-  fetchSessionOrders,
+  fetchActiveOrders,
+  fetchArchivedOrders,
   fetchActiveOrderForTable,
   fetchOrderForBill,
   fetchOrderDetail,

@@ -255,25 +255,37 @@ export async function submitOrder(
   };
 }
 
-/* ─── fetchSessionOrders ─── */
+/* ─── fetchActiveOrders ─── */
+
+const ORDER_LIST_SELECT = `
+  id,
+  order_number,
+  order_type,
+  status,
+  payment_status,
+  total_amount,
+  table_id,
+  created_at,
+  tables ( number )
+`;
 
 /**
- * Fetch all orders for the current POS session.
- * Used to display order history in the POS sidebar.
+ * Fetch all ACTIVE orders for the branch — orders that POS still needs to
+ * act on (kitchen flow + payment). Cross-shift active orders are included
+ * by design: an order opened in the previous ca but still unpaid must
+ * surface in the current cashier's "Cần xử lý" list.
+ *
+ * Active = `status ∈ ACTIVE_POS_STATUSES AND payment_status != 'paid'`.
+ * No row cap needed — at any moment ≤ ~30-50 active orders even on a
+ * busy day.
  */
-// Skip withAction: positional (branchId, sessionId) args
-export async function fetchSessionOrders(
+// Skip withAction: positional (branchId) arg + simple query
+export async function fetchActiveOrders(
   branchId: number,
-  sessionId: number,
 ): Promise<ActionResult> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
     return { success: false, error: "Branch ID không hợp lệ" };
-  }
-
-  const parsedSessionId = sessionIdSchema.safeParse(sessionId);
-  if (!parsedSessionId.success) {
-    return { success: false, error: "Session ID không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -290,32 +302,137 @@ export async function fetchSessionOrders(
 
   const { data: orders, error } = await supabase
     .from("orders")
-    .select(
-      `
-      id,
-      order_number,
-      order_type,
-      status,
-      payment_status,
-      total_amount,
-      table_id,
-      created_at,
-      tables ( number )
-    `,
-    )
+    .select(ORDER_LIST_SELECT)
     .eq("branch_id", parsedBranchId.data)
     .eq("tenant_id", claims.tenant_id)
-    .or(
-      `pos_session_id.eq.${String(parsedSessionId.data)},status.in.(new,confirmed,preparing,ready,served)`,
-    )
-    .order("created_at", { ascending: false })
-    .limit(200);
+    .in("status", ["new", "confirmed", "preparing", "ready", "served"])
+    .neq("payment_status", "paid")
+    .order("created_at", { ascending: false });
 
   if (error) {
     return { success: false, error: "Không thể tải danh sách đơn hàng." };
   }
 
   return { success: true, data: orders ?? [] };
+}
+
+/* ─── fetchArchivedOrders ─── */
+
+const archivedCursorSchema = z
+  .object({
+    createdAt: z.string().min(1, { error: "Cursor không hợp lệ" }),
+    id: z.coerce.number().int().positive(),
+  })
+  .nullable()
+  .optional();
+
+const fetchArchivedOrdersSchema = z.object({
+  branchId: branchIdSchema,
+  // null = "Cả chi nhánh hôm nay" (no session filter); number = current session
+  sessionId: sessionIdSchema.nullable().optional(),
+  pageSize: z.coerce.number().int().min(10).max(100).default(30),
+  cursor: archivedCursorSchema,
+  q: z.string().trim().max(50).optional(),
+});
+
+/**
+ * Paginated lookup of archived (paid / cancelled) orders for the POS
+ * sidebar's "Đã xử lý" sheet. Keyset cursor on `(created_at desc, id desc)`
+ * — stable under concurrent inserts (a payment landing on terminal B
+ * mid-scroll cannot duplicate or skip rows on terminal A).
+ *
+ * Default scope = `pos_session_id` (current session). Setting `sessionId`
+ * to null widens the scope to the whole branch (cap is the cursor itself
+ * — user only fetches as far as they scroll).
+ */
+export async function fetchArchivedOrders(
+  input: z.infer<typeof fetchArchivedOrdersSchema>,
+): Promise<
+  ActionResult<{
+    rows: unknown[];
+    nextCursor: { createdAt: string; id: number } | null;
+  }>
+> {
+  const parsed = fetchArchivedOrdersSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Tham số tải đơn không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  if (claims.branch_id !== parsed.data.branchId) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const { sessionId, pageSize, cursor, q } = parsed.data;
+
+  let query = supabase
+    .from("orders")
+    .select(ORDER_LIST_SELECT)
+    .eq("branch_id", parsed.data.branchId)
+    .eq("tenant_id", claims.tenant_id)
+    // Archived = paid OR cancelled. The `or()` form (PostgREST) avoids a
+    // separate query for cancelled-without-payment edge.
+    .or("payment_status.eq.paid,status.eq.cancelled");
+
+  if (sessionId !== undefined && sessionId !== null) {
+    query = query.eq("pos_session_id", sessionId);
+  }
+
+  if (typeof q === "string" && q.length > 0) {
+    // ILIKE prefix-or-suffix match on order_number. Cashiers cite the
+    // last 3 digits of the đơn most of the time; ILIKE %q% covers that.
+    // Wildcard escape: PostgREST `ilike` value is the literal pattern
+    // string — caller's q is sanitized by Zod max-length only. Strip
+    // PostgREST reserved chars so no operator injection is possible.
+    const safeQ = q.replace(/[(),]/g, "");
+    if (safeQ.length > 0) {
+      query = query.ilike("order_number", `%${safeQ}%`);
+    }
+  }
+
+  if (cursor !== undefined && cursor !== null) {
+    // Keyset: rows STRICTLY after the cursor under (created_at desc, id desc).
+    // i.e. (created_at, id) < (cursor.createdAt, cursor.id) lexicographically.
+    // PostgREST cannot express composite "<" directly, so we OR two
+    // disjoint half-spaces:
+    //   created_at < cursor.createdAt
+    //   OR (created_at = cursor.createdAt AND id < cursor.id)
+    query = query.or(
+      `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${String(cursor.id)})`,
+    );
+  }
+
+  // Fetch pageSize+1 to probe nextCursor without a separate count round-trip.
+  const { data, error } = await query
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(pageSize + 1);
+
+  if (error) {
+    return { success: false, error: "Không thể tải lịch sử đơn." };
+  }
+
+  const fetched = (data ?? []) as Array<{
+    id: number;
+    created_at: string;
+    [k: string]: unknown;
+  }>;
+  const hasMore = fetched.length > pageSize;
+  const rows = hasMore ? fetched.slice(0, pageSize) : fetched;
+  const last = rows.at(-1);
+  const nextCursor =
+    hasMore && last !== undefined
+      ? { createdAt: last.created_at, id: last.id }
+      : null;
+
+  return { success: true, data: { rows, nextCursor } };
 }
 
 const activeTableOrderSchema = z.object({

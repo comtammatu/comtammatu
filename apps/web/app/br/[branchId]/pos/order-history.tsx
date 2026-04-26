@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { memo, useMemo, type ReactNode } from "react";
 import { cn } from "@comtammatu/ui";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -63,7 +63,7 @@ function getOrderContextLabel(order: SessionOrder): string {
   return "Mang về";
 }
 
-function OrderStatusBadge({ order }: { order: SessionOrder }) {
+export function OrderStatusBadge({ order }: { order: SessionOrder }) {
   const statusInfo = getPosOrderStatusInfo(order);
 
   return (
@@ -79,7 +79,7 @@ function OrderStatusBadge({ order }: { order: SessionOrder }) {
   );
 }
 
-function OrderCardSummary({
+export function OrderCardSummary({
   order,
   amountClassName,
   rightMeta,
@@ -119,7 +119,7 @@ export const ACTIVE_POS_STATUSES = [
   "served",
 ];
 
-interface OrderHistoryProps {
+interface ActiveOrdersListProps {
   orders: SessionOrder[];
   onViewBill: (orderId: number, intent?: BillReceiptIntent) => void;
   /**
@@ -134,31 +134,40 @@ interface OrderHistoryProps {
   ) => void;
 }
 
-export function OrderHistory({
+/**
+ * Sidebar list of orders the cashier still needs to act on (kitchen flow
+ * + payment). Provider holds active rows only; archived ("Đã xử lý") lives
+ * in `_components/archived-orders-sheet.tsx`. We still defensively filter
+ * by status because the provider can briefly show a paid row between the
+ * realtime payload arriving and the terminal-flip removal landing.
+ */
+function ActiveOrdersListComponent({
   orders,
   onViewBill,
   onViewDetail,
-}: OrderHistoryProps) {
-  const activeOrders = orders.filter(
-    (order) =>
-      ACTIVE_POS_STATUSES.includes(order.status) &&
-      order.payment_status !== "paid",
+}: ActiveOrdersListProps) {
+  const activeOrders = useMemo(
+    () =>
+      orders
+        .filter(
+          (order) =>
+            ACTIVE_POS_STATUSES.includes(order.status) &&
+            order.payment_status !== "paid",
+        )
+        .sort(compareOrdersNewestFirst),
+    [orders],
   );
-  const activeOrderIds = new Set(activeOrders.map((order) => order.id));
-  const archivedOrders = orders
-    .filter((order) => !activeOrderIds.has(order.id))
-    .sort(compareOrdersNewestFirst);
 
-  if (orders.length === 0) {
+  if (activeOrders.length === 0) {
     return (
       <Empty className="flex-1 px-6">
         <EmptyMedia variant="icon">
           <IconReceipt />
         </EmptyMedia>
         <EmptyHeader>
-          <EmptyTitle>Chưa có đơn trong ca</EmptyTitle>
+          <EmptyTitle>Không có đơn cần xử lý</EmptyTitle>
           <EmptyDescription>
-            Đơn cần xử lý và đơn đã thanh toán sẽ xuất hiện tại đây.
+            Đơn mới sẽ hiện ở đây. Hóa đơn đã thanh toán xem ở "Đã xử lý".
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
@@ -169,136 +178,67 @@ export function OrderHistory({
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
       <ScrollArea className="min-h-0 flex-1 overflow-hidden">
         <div className="flex flex-col gap-2 px-3 pb-24 pt-2 md:p-2">
-          <section className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <p className="text-base font-semibold text-foreground">
-                  Cần xử lý
-                </p>
-                <Badge
-                  variant={activeOrders.length > 0 ? "warning" : "outline"}
-                  className="text-sm"
+          <ItemGroup className="gap-2">
+            {activeOrders.map((order) => {
+              const waitingPayment = order.payment_status !== "paid";
+
+              return (
+                <Item
+                  key={order.id}
+                  data-testid={`pos-order-card-${order.id}`}
+                  variant="outline"
+                  size="sm"
+                  role="listitem"
+                  className="bg-card"
                 >
-                  {activeOrders.length}
-                </Badge>
-              </div>
-            </div>
-
-            {activeOrders.length === 0 ? (
-              <Empty className="min-h-16 flex-none rounded-md border p-3">
-                <EmptyHeader>
-                  <EmptyTitle>Không có đơn cần xử lý</EmptyTitle>
-                </EmptyHeader>
-              </Empty>
-            ) : (
-              <ItemGroup className="gap-2">
-                {activeOrders.map((order) => {
-                  const waitingPayment = order.payment_status !== "paid";
-
-                  return (
-                    <Item
-                      key={order.id}
-                      data-testid={`pos-order-card-${order.id}`}
+                  <OrderCardSummary
+                    order={order}
+                    amountClassName="text-primary"
+                    rightMeta={
+                      <>
+                        <OrderStatusBadge order={order} />
+                        {waitingPayment ? (
+                          <Badge
+                            variant="warning"
+                            className="text-sm font-semibold"
+                          >
+                            Chờ thanh toán
+                          </Badge>
+                        ) : null}
+                      </>
+                    }
+                  />
+                  <ItemFooter className="mt-1.5 justify-end border-t border-border/60 pt-2">
+                    <Button
+                      data-testid={`pos-order-detail-${order.id}`}
                       variant="outline"
                       size="sm"
-                      role="listitem"
-                      className="bg-card"
+                      className="h-10 px-3 text-sm"
+                      onClick={() =>
+                        onViewDetail(order.id, order.order_number, order)
+                      }
                     >
-                      <OrderCardSummary
-                        order={order}
-                        amountClassName="text-primary"
-                        rightMeta={
-                          <>
-                            <OrderStatusBadge order={order} />
-                            {waitingPayment ? (
-                              <Badge
-                                variant="warning"
-                                className="text-sm font-semibold"
-                              >
-                                Chờ thanh toán
-                              </Badge>
-                            ) : null}
-                          </>
-                        }
-                      />
-                      <ItemFooter className="mt-1.5 justify-end border-t border-border/60 pt-2">
-                        <Button
-                          data-testid={`pos-order-detail-${order.id}`}
-                          variant="outline"
-                          size="sm"
-                          className="h-10 px-3 text-sm"
-                          onClick={() =>
-                            onViewDetail(order.id, order.order_number, order)
-                          }
-                        >
-                          Xử lý đơn
-                        </Button>
-                        <Button
-                          data-testid={`pos-order-bill-${order.id}`}
-                          variant="default"
-                          size="sm"
-                          className="h-10 px-3 text-sm"
-                          onClick={() => onViewBill(order.id, "payment")}
-                        >
-                          <IconReceipt data-icon="inline-start" />
-                          Thanh toán
-                        </Button>
-                      </ItemFooter>
-                    </Item>
-                  );
-                })}
-              </ItemGroup>
-            )}
-          </section>
-
-          <section className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <p className="text-base font-semibold text-foreground">
-                  Đã xử lý
-                </p>
-                <Badge variant="secondary" className="text-sm">
-                  {archivedOrders.length}
-                </Badge>
-              </div>
-            </div>
-
-            {archivedOrders.length === 0 ? (
-              <Empty className="min-h-16 flex-none rounded-md border p-3">
-                <EmptyHeader>
-                  <EmptyTitle>Chưa có đơn đã xử lý</EmptyTitle>
-                </EmptyHeader>
-              </Empty>
-            ) : (
-              <ItemGroup className="gap-2">
-                {archivedOrders.map((order) => (
-                  <Item
-                    key={order.id}
-                    data-testid={`pos-order-bill-${order.id}`}
-                    variant="outline"
-                    size="sm"
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Mở hóa đơn #${order.order_number}`}
-                    className="cursor-pointer bg-card transition-colors hover:bg-muted/50 focus-visible:bg-muted/50"
-                    onClick={() => onViewBill(order.id, "receipt")}
-                    onKeyDown={(event) => {
-                      if (event.key !== "Enter" && event.key !== " ") return;
-                      event.preventDefault();
-                      onViewBill(order.id, "receipt");
-                    }}
-                  >
-                    <OrderCardSummary
-                      order={order}
-                      rightMeta={<OrderStatusBadge order={order} />}
-                    />
-                  </Item>
-                ))}
-              </ItemGroup>
-            )}
-          </section>
+                      Xử lý đơn
+                    </Button>
+                    <Button
+                      data-testid={`pos-order-bill-${order.id}`}
+                      variant="default"
+                      size="sm"
+                      className="h-10 px-3 text-sm"
+                      onClick={() => onViewBill(order.id, "payment")}
+                    >
+                      <IconReceipt data-icon="inline-start" />
+                      Thanh toán
+                    </Button>
+                  </ItemFooter>
+                </Item>
+              );
+            })}
+          </ItemGroup>
         </div>
       </ScrollArea>
     </div>
   );
 }
+
+export const ActiveOrdersList = memo(ActiveOrdersListComponent);

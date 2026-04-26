@@ -72,6 +72,7 @@ function SplitSidebarComponent({
     onReturnToTables,
     onViewBill,
     onViewDetail,
+    onOpenArchivedSheet,
   } = sidebarContentProps;
 
   return (
@@ -104,7 +105,11 @@ function SplitSidebarComponent({
           )}
         </div>
         <div className="flex w-80 shrink-0 flex-col border-l border-border/60 2xl:w-96">
-          <OrderListPane onViewBill={onViewBill} onViewDetail={onViewDetail} />
+          <OrderListPane
+            onViewBill={onViewBill}
+            onViewDetail={onViewDetail}
+            onOpenArchivedSheet={onOpenArchivedSheet}
+          />
         </div>
       </div>
     </div>

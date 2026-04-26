@@ -87,6 +87,7 @@ interface PosSidebarContentProps {
     orderNumber: string,
     summary?: SessionOrder,
   ) => void;
+  onOpenArchivedSheet?: () => void;
   onReturnToTables?: () => void;
 }
 
@@ -101,6 +102,7 @@ function PosSidebarContentComponent({
   onCustomizeItem,
   onViewBill,
   onViewDetail,
+  onOpenArchivedSheet,
   onReturnToTables,
 }: PosSidebarContentProps) {
   if (appendDraft.target != null) {
@@ -123,6 +125,7 @@ function PosSidebarContentComponent({
         onViewBill={onViewBill}
         onViewDetail={onViewDetail}
         onClosePane={onClosePane}
+        onOpenArchivedSheet={onOpenArchivedSheet}
       />
     );
   }

@@ -21,11 +21,10 @@ import {
 } from "@comtammatu/ui/components/toggle-group";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { X as IconX } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
 import { PosTableGate } from "./pos-table-gate";
-import { MultiOrderTablePicker } from "./_components/multi-order-table-picker";
 import { ItemCustomizer } from "./item-customizer";
-import { CloseSessionSheet } from "./close-session-sheet";
 import { BillReceipt } from "./_components/bill/bill-receipt-sheet";
 import { OrderDetailSheet } from "./order-detail-sheet";
 import { PosSessionHeader } from "./pos-session-header";
@@ -36,7 +35,48 @@ import {
   TabbedSidebar,
 } from "./_components/pos-sidebar-variants";
 import { PosSidebarContent } from "./pos-sidebar-panel";
-import { HotkeyOverlay } from "./_components/hotkey-overlay";
+
+// Lazy-load 3 modals OFF the cash path. Trims first-paint JS by ~14KB
+// minified (Sheet/Drawer/Card deps) without affecting payment latency.
+//
+// HotkeyOverlay: rare ?-key help.
+// CloseSessionSheet: once per shift via F10.
+// MultiOrderTablePicker: only when cashier taps an occupied table.
+//
+// BillReceipt + OrderDetailSheet + ItemCustomizer stay EAGER — they
+// participate in HDDT-PAYMENT-FIRST-FAILSOFT-ORPHAN +
+// HDDT-FORM-PAYLOAD-FREEZE-AT-CLICK + POS-PAYMENT-REUSE-UNIQUE-SLOT;
+// any chunk-load latency mid-payment is an unrecoverable cash risk.
+const HotkeyOverlay = dynamic(
+  () =>
+    import("./_components/hotkey-overlay").then((m) => ({
+      default: m.HotkeyOverlay,
+    })),
+  { ssr: false },
+);
+const CloseSessionSheet = dynamic(
+  () =>
+    import("./close-session-sheet").then((m) => ({
+      default: m.CloseSessionSheet,
+    })),
+  { ssr: false },
+);
+const MultiOrderTablePicker = dynamic(
+  () =>
+    import("./_components/multi-order-table-picker").then((m) => ({
+      default: m.MultiOrderTablePicker,
+    })),
+  { ssr: false },
+);
+// Archived orders is a lookup-only tool (reprint / dispute / scroll-back),
+// off the cash hot path. Lazy-loaded for the same reason as CloseSessionSheet.
+const ArchivedOrdersSheet = dynamic(
+  () =>
+    import("./_components/archived-orders-sheet").then((m) => ({
+      default: m.ArchivedOrdersSheet,
+    })),
+  { ssr: false },
+);
 import { fetchActiveOrderForTable } from "./actions";
 import { usePosAppend } from "./_hooks/use-pos-append";
 import { submitPosOrderWithRetry } from "./_utils/submit-with-retry";
@@ -188,6 +228,7 @@ function PosDesktopInner({
     canManage: boolean;
   } | null>(null);
   const [showOrders, setShowOrders] = useState(false);
+  const [archivedSheetOpen, setArchivedSheetOpen] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [appendDraftItems, setAppendDraftItems] = useState<CartItem[]>([]);
   const [appendSubmitting, setAppendSubmitting] = useState(false);
@@ -811,25 +852,54 @@ function PosDesktopInner({
     setActiveTable(null);
   }, [setActiveTable]);
 
-  const sidebarContentProps = {
-    showOrders,
-    canSubmit,
-    isPending,
-    appendDraft: {
-      target: appendTarget,
-      items: appendDraftItems,
-      isSubmitting: appendSubmitting,
-      onSubmit: handleSubmitAppendDraft,
-      onCancel: cancelAppendWorkflow,
-      onRemoveItem: removeAppendDraftItem,
-    },
-    onSubmitOrder: handleSubmitOrder,
-    onOrderTypeChange: handleOrderTypeChange,
-    onCustomizeItem: handleCartItemCustomize,
-    onViewBill: openBill,
-    onViewDetail: openDetail,
-    onReturnToTables: handleReturnToTables,
-  } as const;
+  // Memo so memo'd children (TabbedSidebar / SplitSidebar / PosSidebarContent)
+  // see the same props identity across realtime ticks; without this, the
+  // surrounding `usePosOrders` / cart subscriptions trigger a fresh object
+  // every render → all sidebars re-render even when nothing they read changed.
+  const handleOpenArchivedSheet = useCallback(() => {
+    setArchivedSheetOpen(true);
+  }, []);
+
+  const sidebarContentProps = useMemo(
+    () => ({
+      showOrders,
+      canSubmit,
+      isPending,
+      appendDraft: {
+        target: appendTarget,
+        items: appendDraftItems,
+        isSubmitting: appendSubmitting,
+        onSubmit: handleSubmitAppendDraft,
+        onCancel: cancelAppendWorkflow,
+        onRemoveItem: removeAppendDraftItem,
+      },
+      onSubmitOrder: handleSubmitOrder,
+      onOrderTypeChange: handleOrderTypeChange,
+      onCustomizeItem: handleCartItemCustomize,
+      onViewBill: openBill,
+      onViewDetail: openDetail,
+      onOpenArchivedSheet: handleOpenArchivedSheet,
+      onReturnToTables: handleReturnToTables,
+    }),
+    [
+      showOrders,
+      canSubmit,
+      isPending,
+      appendTarget,
+      appendDraftItems,
+      appendSubmitting,
+      handleSubmitAppendDraft,
+      cancelAppendWorkflow,
+      removeAppendDraftItem,
+      handleSubmitOrder,
+      handleOrderTypeChange,
+      handleCartItemCustomize,
+      openBill,
+      openDetail,
+      handleOpenArchivedSheet,
+      handleReturnToTables,
+    ],
+  );
 
   const serviceModeSelector = (
     <ToggleGroup
@@ -950,7 +1020,7 @@ function PosDesktopInner({
     >
       <DrawerContent
         showHandle
-        className="h-dvh max-h-dvh p-0 before:inset-0 sm:h-5/6 sm:p-2 sm:before:inset-2"
+        className="h-dvh max-h-dvh p-0 before:inset-0 before:rounded-b-none before:border-b-0 sm:h-5/6 sm:p-2 sm:before:inset-2 sm:before:rounded-xl sm:before:border-b"
       >
         <DrawerTitle className="sr-only">
           {appendTarget != null
@@ -969,7 +1039,12 @@ function PosDesktopInner({
     </Drawer>
   ) : null;
 
-  const sidebars = (
+  // Mobile uses `mobileSidebarDrawer` exclusively — skip the desktop sidebars
+  // entirely so phones don't carry hidden-via-Tailwind subtrees that still
+  // re-render on every realtime tick. `useIsMobile()` returns false during
+  // SSR/first paint (initial state is undefined → !!undefined === false), so
+  // desktop hydration is unaffected; mobile post-mount unmounts cleanly.
+  const sidebars = isMobile ? null : (
     <>
       <TabbedSidebar
         session={session}
@@ -1116,6 +1191,20 @@ function PosDesktopInner({
         sessionId={session.id}
         open={showCloseSession}
         onOpenChange={setShowCloseSession}
+      />
+
+      <ArchivedOrdersSheet
+        branchId={branchId}
+        sessionId={session.id}
+        open={archivedSheetOpen}
+        onOpenChange={setArchivedSheetOpen}
+        onViewBill={(id) => {
+          // Reprint flow: archived rows always open in receipt-only mode.
+          // Close the sheet first so we don't stack Drawer over Drawer on
+          // mobile (focus stack gets bumpy at the bottom-sheet boundary).
+          setArchivedSheetOpen(false);
+          openBill(id, "receipt");
+        }}
       />
 
       <BillReceipt

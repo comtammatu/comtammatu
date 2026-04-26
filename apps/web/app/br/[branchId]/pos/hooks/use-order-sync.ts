@@ -19,11 +19,11 @@ export interface UseOrderSyncArgs {
    */
   getTables: () => BranchTable[];
   /**
-   * Fire-and-forget refresh of the session orders list. MUST already
+   * Fire-and-forget refresh of the active orders list. MUST already
    * be deduped by the caller — used as a fallback after optimistic
-   * INSERT (the optimistic mapping may miss session-scoped fields the
-   * server query applies) and as a safety net on UPDATE/DELETE when
-   * the payload doesn't carry the row id.
+   * INSERT (the optimistic mapping may miss fields the server query
+   * applies) and as a safety net on UPDATE/DELETE when the payload
+   * doesn't carry the row id.
    */
   refreshOrders: () => void;
   /**
@@ -31,6 +31,14 @@ export interface UseOrderSyncArgs {
    * Invoked on SUBSCRIBED-reconnect and the stale visibility poll.
    */
   refreshAll: () => void;
+  /**
+   * Fired when an existing order flips into a terminal state (paid /
+   * completed / cancelled). The provider bumps a token; the archived
+   * sheet's pagination hook listens and resets to page 1. Active list
+   * itself is patched independently — this callback does NOT replace
+   * the active-side state mutation.
+   */
+  onArchivedInvalidate?: () => void;
   /**
    * When true, the FIRST `SUBSCRIBED` callback (initial mount subscription)
    * does not fire a catch-up refresh — orders are already seeded by the
@@ -133,6 +141,7 @@ export function useOrderSync({
   getTables,
   refreshOrders,
   refreshAll,
+  onArchivedInvalidate,
   skipFirstSubscribedRefresh = false,
 }: UseOrderSyncArgs): void {
   const refreshOrdersRef = useRef(refreshOrders);
@@ -140,6 +149,7 @@ export function useOrderSync({
   const setTablesRef = useRef(setTables);
   const setOrdersRef = useRef(setOrders);
   const getTablesRef = useRef(getTables);
+  const onArchivedInvalidateRef = useRef(onArchivedInvalidate);
   const lastSyncRef = useRef<number>(Date.now());
   const initialSubscribeSeenRef = useRef(false);
 
@@ -149,7 +159,15 @@ export function useOrderSync({
     setTablesRef.current = setTables;
     setOrdersRef.current = setOrders;
     getTablesRef.current = getTables;
-  }, [refreshOrders, refreshAll, setTables, setOrders, getTables]);
+    onArchivedInvalidateRef.current = onArchivedInvalidate;
+  }, [
+    refreshOrders,
+    refreshAll,
+    setTables,
+    setOrders,
+    getTables,
+    onArchivedInvalidate,
+  ]);
 
   useRealtimeChannel((supabase) => {
     const branchFilter = `branch_id=eq.${String(branchId)}`;
@@ -193,6 +211,33 @@ export function useOrderSync({
               refreshOrdersRef.current();
               return;
             }
+
+            // Provider holds ACTIVE orders only. A terminal-flip (paid /
+            // completed / cancelled) means the row leaves the active list
+            // and lands in the "Đã xử lý" sheet — remove from active state
+            // and bump the archived invalidation token so an open sheet
+            // can refetch its first page.
+            const newStatus =
+              typeof updated.status === "string" ? updated.status : null;
+            const newPaymentStatus =
+              typeof updated.payment_status === "string"
+                ? updated.payment_status
+                : null;
+            const isTerminal =
+              newPaymentStatus === "paid" ||
+              newStatus === "completed" ||
+              newStatus === "cancelled";
+
+            if (isTerminal) {
+              setOrdersRef.current((prev) =>
+                prev.some((o) => o.id === newId)
+                  ? prev.filter((o) => o.id !== newId)
+                  : prev,
+              );
+              onArchivedInvalidateRef.current?.();
+              return;
+            }
+
             setOrdersRef.current((prev) => {
               const idx = prev.findIndex((o) => o.id === newId);
               if (idx < 0) {

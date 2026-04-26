@@ -9,7 +9,7 @@ import {
   fetchActiveSessionsForBranch,
   fetchPosTerminals,
   fetchPosPermissionFlags,
-  fetchSessionOrders,
+  fetchActiveOrders,
 } from "./actions";
 import { PosDesktopShell } from "./pos-desktop-shell";
 import type { MenuCategory } from "./pos-menu-types";
@@ -231,10 +231,12 @@ export default async function PosPage({
   const [menuResult, tablesResult, ordersResult] = await Promise.all([
     fetchMenuForPos(branchIdNum),
     fetchTablesForBranch(branchIdNum),
-    fetchSessionOrders(branchIdNum, session.id),
+    fetchActiveOrders(branchIdNum),
   ]);
 
   // Seed the POS provider from RSC so the client does not re-fetch on mount.
+  // RSC seed is the active list ("Cần xử lý"). Archived ("Đã xử lý") is a
+  // lazy lookup that only fetches when the cashier opens the sheet.
   // On RSC fetch failure, seed empty and let useOrderSync's first SUBSCRIBED
   // callback still fire a full refresh — preserves old behavior as fallback.
   const initialOrders = (
