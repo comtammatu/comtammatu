@@ -783,7 +783,13 @@ export async function confirmCashPayment(
 /* ─── Cash payment + optional HĐĐT issuance ─── */
 
 export interface InvoiceOutcome {
-  status: "issued" | "draft" | "submitted" | "signing" | "failed";
+  status:
+    | "issued"
+    | "draft"
+    | "submitted"
+    | "signing"
+    | "failed"
+    | "not_required";
   invoiceId?: number;
   invoiceNumber?: string | null;
   error?: string;
