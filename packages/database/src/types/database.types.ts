@@ -6305,14 +6305,6 @@ export type Database = {
         }
         Returns: number
       }
-      backfill_permissions_from_role: {
-        Args: never
-        Returns: {
-          perm_rows_inserted: number
-          positions_set: number
-          total_profiles: number
-        }[]
-      }
       bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       can_access_branch: { Args: { p_branch_id: number }; Returns: boolean }
       cancel_order: {
@@ -6324,6 +6316,10 @@ export type Database = {
       claim_print_job: {
         Args: { p_agent_id: string; p_job_id: number }
         Returns: boolean
+      }
+      cleanup_abandoned_payments: {
+        Args: { p_threshold?: string }
+        Returns: number
       }
       close_fiscal_period: {
         Args: {
@@ -6630,6 +6626,35 @@ export type Database = {
         }
         Returns: Json
       }
+      get_daily_revenue: {
+        Args: { p_branch_id: number; p_end_date: string; p_start_date: string }
+        Returns: {
+          branch_id: number
+          cash_revenue: number
+          date: string
+          momo_revenue: number
+          order_count: number
+          tenant_id: number
+          total_revenue: number
+          total_tax: number
+          vietqr_revenue: number
+        }[]
+      }
+      get_food_cost: {
+        Args: { p_branch_id: number; p_end_date: string; p_start_date: string }
+        Returns: {
+          branch_id: number
+          food_cost_pct: number
+          ingredient_cost: number
+          item_name: string
+          menu_item_id: number
+          period_end: string
+          period_start: string
+          quantity_sold: number
+          revenue: number
+          tenant_id: number
+        }[]
+      }
       get_grn_price_baseline: {
         Args: { p_ingredient_id: number; p_supplier_id: number; p_uom?: string }
         Returns: {
@@ -6677,6 +6702,19 @@ export type Database = {
           needs_recount: boolean
           round_no: number
           unit: string
+        }[]
+      }
+      get_top_items: {
+        Args: { p_branch_id: number; p_limit?: number; p_period_start: string }
+        Returns: {
+          branch_id: number
+          item_name: string
+          menu_item_id: number
+          period_end: string
+          period_start: string
+          quantity_sold: number
+          revenue: number
+          tenant_id: number
         }[]
       }
       gl_reconciliation: {

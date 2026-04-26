@@ -438,16 +438,13 @@ export async function fetchDailyRevenue(
   const ctx = await getAuthContextWithPermission(REPORT_ROLES, PERMISSION_KEYS.FINANCE_VIEW);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
+  const { supabase } = ctx;
 
-  const { data, error } = await supabase
-    .from("mv_daily_revenue")
-    .select("*")
-    .eq("branch_id", parsedBranch.data)
-    .eq("tenant_id", claims.tenant_id)
-    .gte("date", parsedStart.data)
-    .lte("date", parsedEnd.data)
-    .order("date");
+  const { data, error } = await supabase.rpc("get_daily_revenue", {
+    p_branch_id: parsedBranch.data,
+    p_start_date: parsedStart.data,
+    p_end_date: parsedEnd.data,
+  });
 
   if (error) {
     return { success: false, error: "Không thể tải dữ liệu doanh thu." };
@@ -479,16 +476,16 @@ export async function fetchTopItems(
   const ctx = await getAuthContextWithPermission(REPORT_ROLES, PERMISSION_KEYS.FINANCE_VIEW);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
+  const { supabase } = ctx;
 
-  const { data, error } = await supabase
-    .from("mv_top_items")
-    .select("*")
-    .eq("branch_id", parsedBranch.data)
-    .eq("tenant_id", claims.tenant_id)
-    .eq("period_start", parsedPeriod.data)
-    .order("quantity_sold", { ascending: false })
-    .limit(20);
+  // RLS does not apply to materialized views — access goes through a
+  // SECURITY DEFINER wrapper that re-checks tenant_id + branch + ACL.
+  // See migration 20260427000000_secure_finance_mvs_revoke_grants.sql.
+  const { data, error } = await supabase.rpc("get_top_items", {
+    p_branch_id: parsedBranch.data,
+    p_period_start: parsedPeriod.data,
+    p_limit: 20,
+  });
 
   if (error) {
     return { success: false, error: "Không thể tải dữ liệu top món." };
@@ -518,16 +515,16 @@ export async function fetchFoodCost(
   const ctx = await getAuthContextWithPermission(REPORT_ROLES, PERMISSION_KEYS.FINANCE_VIEW);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
+  const { supabase } = ctx;
 
-  const { data, error: fetchErr } = await supabase
-    .from("mv_food_cost")
-    .select("*")
-    .eq("branch_id", parsedBranch.data)
-    .eq("tenant_id", claims.tenant_id)
-    .gte("period_start", parsedStart.data)
-    .lte("period_start", parsedEnd.data)
-    .order("food_cost_pct", { ascending: false });
+  // SECURITY DEFINER wrapper enforces tenant + branch + finance:view ACL
+  // (mv_food_cost has no direct grant). See migration
+  // 20260427000000_secure_finance_mvs_revoke_grants.sql.
+  const { data, error: fetchErr } = await supabase.rpc("get_food_cost", {
+    p_branch_id: parsedBranch.data,
+    p_start_date: parsedStart.data,
+    p_end_date: parsedEnd.data,
+  });
 
   if (fetchErr) {
     return {
