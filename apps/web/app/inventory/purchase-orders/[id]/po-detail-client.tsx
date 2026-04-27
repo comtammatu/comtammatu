@@ -96,9 +96,11 @@ function computePoLineTotal(line: Pick<EditablePoLine, "qty" | "price">) {
 export function PODetailClient({
   po,
   ingredients,
+  isOwner = false,
 }: {
   po: PODetail;
   ingredients: IngredientRow[];
+  isOwner?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -107,7 +109,9 @@ export function PODetailClient({
     po.supplierInfo.contact,
     po.supplierInfo.payment,
   ].some((value) => value && value !== "—");
-  const canEditLines = po.status === "draft";
+  // Owner force-edit: allow on any non-cancelled status. Non-owner: draft only.
+  const canEditLines =
+    po.status !== "cancelled" && (po.status === "draft" || isOwner);
   const canSendPo = po.status === "draft";
   const canCancelPo = po.status === "draft" || po.status === "sent";
   const canCreateGrn =

@@ -165,12 +165,17 @@ export default async function GRNDetailPage({
     d.grn.branch_id,
     PERMISSION_KEYS.INVENTORY_WRITE,
   );
+  const canAmendConfirmed = await currentUserHasPermission(
+    d.grn.branch_id,
+    PERMISSION_KEYS.PROCUREMENT_GRN_AMEND,
+  );
 
   return (
     <GRNDetailClient
       grn={grn}
       ingredients={ingredients}
       canAdjustStock={canAdjustStock}
+      canAmendConfirmed={canAmendConfirmed}
     />
   );
 }

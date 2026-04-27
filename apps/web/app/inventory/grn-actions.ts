@@ -465,6 +465,88 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
   return { success: true, data };
 }
 
+/* ─── amendGrnLine (Owner force-edit on confirmed GRN) ─── */
+
+const amendGrnLineSchema = z.object({
+  grnId: z.coerce.number().int().positive(),
+  lineId: z.coerce.number().int().positive(),
+  receivedQuantity: z.coerce.number().min(0, {
+    error: "Số lượng phải >= 0",
+  }),
+  unitCost: z.coerce.number().min(0, { error: "Đơn giá phải >= 0" }),
+  reason: z
+    .string()
+    .trim()
+    .min(5, { error: "Lý do tối thiểu 5 ký tự" })
+    .max(500, { error: "Lý do tối đa 500 ký tự" }),
+});
+
+export const amendGrnLine = withAction(
+  {
+    roles: ROLES,
+    schema: amendGrnLineSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_GRN_AMEND,
+  },
+  async (data, { supabase }) => {
+    const { data: row, error } = await supabase.rpc("amend_grn_line", {
+      p_grn_id: data.grnId,
+      p_line_id: data.lineId,
+      p_received_quantity: data.receivedQuantity,
+      p_unit_cost: data.unitCost,
+      p_reason: data.reason,
+    });
+
+    if (error) {
+      console.error("amendGrnLine", error);
+      // Map known PG error codes to friendly messages.
+      const msg = error.message || "";
+      if (msg.includes("forbidden_owner_only")) {
+        return { success: false, error: "Chỉ Owner được sửa phiếu đã chốt." };
+      }
+      if (msg.includes("grn_not_confirmed_use_upsert")) {
+        return {
+          success: false,
+          error: "Chỉ áp dụng cho phiếu nhập đã chốt.",
+        };
+      }
+      if (msg.includes("has_active_supplier_return")) {
+        return {
+          success: false,
+          error:
+            "Dòng đã có phiếu trả NCC liên kết — không thể sửa trực tiếp.",
+        };
+      }
+      if (msg.includes("has_paid_invoice")) {
+        return {
+          success: false,
+          error:
+            "Phiếu đã có hóa đơn NCC đang/đã thanh toán — không thể sửa trực tiếp.",
+        };
+      }
+      if (msg.includes("negative_stock")) {
+        return {
+          success: false,
+          error: "Sửa làm tồn kho âm — không cho phép.",
+        };
+      }
+      if (msg.includes("reason_required_min_5_chars")) {
+        return { success: false, error: "Lý do tối thiểu 5 ký tự." };
+      }
+      if (msg.includes("invalid_amount")) {
+        return { success: false, error: "Số lượng/đơn giá không hợp lệ." };
+      }
+      if (msg.includes("grn_line_not_found")) {
+        return { success: false, error: "Không tìm thấy dòng phiếu nhập." };
+      }
+      return { success: false, error: "Không thể sửa dòng phiếu nhập." };
+    }
+
+    revalidatePath("/inventory/grn");
+    revalidatePath(`/inventory/grn/${data.grnId}`);
+    return { success: true, data: row };
+  },
+);
+
 /* ─── fetchGrnsForPo ─── */
 
 export interface LinkedGrnRow {

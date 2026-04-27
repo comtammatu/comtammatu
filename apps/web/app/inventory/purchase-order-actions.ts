@@ -160,10 +160,19 @@ export const upsertPurchaseOrderLine = withAction(
     if (pe || !po) {
       return { success: false, error: "Không tìm thấy PO." };
     }
-    if (po.status !== "draft") {
+    // Owner force-edit: allow on draft/sent/partially_received/received.
+    // Non-owner: still restricted to draft (existing behavior).
+    const isOwner = claims.user_role === "owner";
+    if (!isOwner && po.status !== "draft") {
       return {
         success: false,
         error: "Chỉ chỉnh sửa dòng khi PO đang ở trạng thái nháp.",
+      };
+    }
+    if (po.status === "cancelled") {
+      return {
+        success: false,
+        error: "Không thể sửa PO đã hủy.",
       };
     }
     if (!canAccessProcurementBranch(claims, po.branch_id)) {
@@ -222,10 +231,17 @@ export const deletePurchaseOrderLine = withAction(
     if (pe || !po) {
       return { success: false, error: "Không tìm thấy PO." };
     }
-    if (po.status !== "draft") {
+    const isOwner = claims.user_role === "owner";
+    if (!isOwner && po.status !== "draft") {
       return {
         success: false,
         error: "Chỉ xóa dòng khi PO đang ở trạng thái nháp.",
+      };
+    }
+    if (po.status === "cancelled") {
+      return {
+        success: false,
+        error: "Không thể sửa PO đã hủy.",
       };
     }
     if (!canAccessProcurementBranch(claims, po.branch_id)) {

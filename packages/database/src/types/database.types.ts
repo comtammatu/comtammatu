@@ -6450,6 +6450,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      amend_grn_line: {
+        Args: {
+          p_grn_id: number
+          p_line_id: number
+          p_reason: string
+          p_received_quantity: number
+          p_unit_cost: number
+        }
+        Returns: Json
+      }
       append_order_items: {
         Args: { p_idempotency_key?: string; p_items: Json; p_order_id: number }
         Returns: Json

@@ -49,7 +49,11 @@ import { DocumentStockCorrectionDialog } from "../../_components/document-stock-
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { formatVND } from "../../_lib/format";
 import { confirmGrn } from "../../procurement-actions";
-import { deleteGrnLine, upsertGrnLine } from "../../grn-actions";
+import {
+  amendGrnLine,
+  deleteGrnLine,
+  upsertGrnLine,
+} from "../../grn-actions";
 import { createSupplierReturnFromGrn } from "../../supplier-return-actions";
 import { tRoute } from "../../_lib/dictionary";
 import { m, messages } from "@lib/messages";
@@ -127,10 +131,12 @@ export function GRNDetailClient({
   grn,
   ingredients,
   canAdjustStock,
+  canAmendConfirmed = false,
 }: {
   grn: GRNDetail;
   ingredients: IngredientRow[];
   canAdjustStock: boolean;
+  canAmendConfirmed?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -138,13 +144,17 @@ export function GRNDetailClient({
   const isReview = searchParams.get("review") === "1";
   const [isConfirming, startConfirm] = useTransition();
   const [isSaving, startSave] = useTransition();
+  const [isAmending, startAmend] = useTransition();
   const [isCreatingReturn, startCreateReturn] = useTransition();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [amendingLine, setAmendingLine] = useState<EditableLine | null>(null);
   const [lines, setLines] = useState<EditableLine[]>(() =>
     grn.items.map((it) => ({ ...it, dirty: false })),
   );
 
   const isDraft = grn.status === "draft";
+  const isConfirmed = grn.status === "confirmed";
+  const showAmendAffordance = canAmendConfirmed && isConfirmed;
   const qc = grn.qcSettings;
 
   const stats = useMemo(() => {
@@ -468,8 +478,10 @@ export function GRNDetailClient({
                       idx={idx}
                       isDraft={isDraft}
                       qc={qc}
+                      showAmendAffordance={showAmendAffordance}
                       onChange={(p) => patch(idx, p)}
                       onDelete={() => void handleDeleteLine(line)}
+                      onAmend={() => setAmendingLine(line)}
                     />
                   ))}
                 </CardContent>
@@ -591,7 +603,190 @@ export function GRNDetailClient({
         onSaved={upsertLocalLine}
         startTransition={startSave}
       />
+      <AmendOwnerDialog
+        grnId={grn.id}
+        line={amendingLine}
+        isPending={isAmending}
+        onClose={() => setAmendingLine(null)}
+        onSaved={(updatedLine) => {
+          setLines((prev) =>
+            prev.map((item) =>
+              item.lineId === updatedLine.lineId ? updatedLine : item,
+            ),
+          );
+          setAmendingLine(null);
+          router.refresh();
+        }}
+        startTransition={startAmend}
+      />
     </>
+  );
+}
+
+function AmendOwnerDialog({
+  grnId,
+  line,
+  isPending,
+  onClose,
+  onSaved,
+  startTransition,
+}: {
+  grnId: number;
+  line: EditableLine | null;
+  isPending: boolean;
+  onClose: () => void;
+  onSaved: (line: EditableLine) => void;
+  startTransition: TransitionStartFunction;
+}) {
+  const [quantity, setQuantity] = useState("");
+  const [unitCost, setUnitCost] = useState("");
+  const [reason, setReason] = useState("");
+
+  const isOpen = line !== null;
+
+  function resetForm() {
+    setQuantity("");
+    setUnitCost("");
+    setReason("");
+  }
+
+  function handleOpenChange(open: boolean) {
+    if (!open) {
+      resetForm();
+      onClose();
+    }
+  }
+
+  // Sync form fields when a new line is selected.
+  if (line && quantity === "" && unitCost === "") {
+    setQuantity(String(line.actual));
+    setUnitCost(String(line.cost));
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!line) return;
+
+    const parsedQty = Number(quantity);
+    const parsedCost = Number(unitCost);
+    const trimmedReason = reason.trim();
+
+    if (!Number.isFinite(parsedQty) || parsedQty < 0) {
+      notify.error("Số lượng không hợp lệ.");
+      return;
+    }
+    if (!Number.isFinite(parsedCost) || parsedCost < 0) {
+      notify.error("Đơn giá không hợp lệ.");
+      return;
+    }
+    if (trimmedReason.length < 5) {
+      notify.error("Lý do tối thiểu 5 ký tự.");
+      return;
+    }
+
+    startTransition(async () => {
+      const res = await amendGrnLine({
+        grnId,
+        lineId: line.lineId,
+        receivedQuantity: parsedQty,
+        unitCost: parsedCost,
+        reason: trimmedReason,
+      });
+      if (!res.success) {
+        notify.error(res.error ?? "Không thể sửa dòng phiếu nhập.");
+        return;
+      }
+      notify.success("Đã sửa dòng phiếu nhập (Owner).");
+      onSaved({
+        ...line,
+        actual: parsedQty,
+        cost: parsedCost,
+        dirty: false,
+      });
+      resetForm();
+    });
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Sửa dòng phiếu nhập (Owner)</DialogTitle>
+        </DialogHeader>
+        {line ? (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <Alert>
+              <IconAlertTriangle className="size-4" />
+              <AlertDescription>
+                Sửa trực tiếp phiếu đã chốt sẽ ghi compensating
+                stock_movement và recompute matching hóa đơn. Hành động được
+                lưu vết audit. Không áp dụng cho phiếu có trả NCC active hoặc
+                hóa đơn đã thanh toán.
+              </AlertDescription>
+            </Alert>
+
+            <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+              <p className="font-bold">{line.name}</p>
+              <p className="text-xs text-muted-foreground">
+                Hiện tại: {line.actual} {line.unit} @{" "}
+                {line.cost.toLocaleString("vi-VN")} ₫
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="amend-qty">Số lượng nhận mới *</Label>
+                <FormattedNumberInput
+                  id="amend-qty"
+                  value={quantity}
+                  onValueChange={setQuantity}
+                  maxFractionDigits={3}
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="amend-cost">Đơn giá mới (₫) *</Label>
+                <FormattedNumberInput
+                  id="amend-cost"
+                  value={unitCost}
+                  onValueChange={setUnitCost}
+                  maxFractionDigits={0}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="amend-reason">
+                Lý do sửa * (tối thiểu 5 ký tự)
+              </Label>
+              <Textarea
+                id="amend-reason"
+                rows={3}
+                value={reason}
+                placeholder="VD: Đối soát cuối tháng phát hiện gõ sai số lượng…"
+                onChange={(event) => setReason(event.target.value)}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleOpenChange(false)}
+                disabled={isPending}
+              >
+                {ACTIONS_VI.cancel}
+              </Button>
+              <Button type="submit" disabled={isPending}>
+                <IconDeviceFloppy className="size-4" />
+                Lưu sửa Owner
+              </Button>
+            </DialogFooter>
+          </form>
+        ) : null}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -870,8 +1065,10 @@ function LineRow({
   idx,
   isDraft,
   qc,
+  showAmendAffordance,
   onChange,
   onDelete,
+  onAmend,
 }: {
   tenantId: number;
   grnId: number;
@@ -879,8 +1076,10 @@ function LineRow({
   idx: number;
   isDraft: boolean;
   qc: GRNDetail["qcSettings"];
+  showAmendAffordance: boolean;
   onChange: (p: Partial<EditableLine>) => void;
   onDelete: () => void;
+  onAmend: () => void;
 }) {
   const variance = deriveVariance(line.cost, line.poUnitPrice);
   const variancesLabel =
@@ -903,7 +1102,7 @@ function LineRow({
   if (!isDraft) {
     return (
       <div className="rounded-lg border bg-muted/30 p-4">
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-3">
           <div>
             <p className="font-bold">{line.name}</p>
             <p className="text-xs text-muted-foreground">
@@ -911,11 +1110,23 @@ function LineRow({
               {line.rejected > 0 ? ` • Trả ${line.rejected} ${line.unit}` : ""}
             </p>
           </div>
-          {line.qualityStatus === "rejected" || line.rejected > 0 ? (
-            <IconAlertTriangle className="size-5 text-warning" />
-          ) : (
-            <IconCircleCheck className="size-5 text-success" />
-          )}
+          <div className="flex items-center gap-2">
+            {showAmendAffordance ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onAmend}
+              >
+                Sửa Owner
+              </Button>
+            ) : null}
+            {line.qualityStatus === "rejected" || line.rejected > 0 ? (
+              <IconAlertTriangle className="size-5 text-warning" />
+            ) : (
+              <IconCircleCheck className="size-5 text-success" />
+            )}
+          </div>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
           <Stat label="Giá nhập">{formatVND(line.cost)} ₫</Stat>

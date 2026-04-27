@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
+import { PROCUREMENT_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { fetchIngredients } from "../../actions";
 import { fetchPurchaseOrderDetail } from "../../procurement-actions";
+import { getAuthContextWithPermission } from "../../_lib/auth";
 import { formatDate, formatDateTime } from "../../_lib/format";
 import { PODetailClient } from "./po-detail-client";
 import type { PODetail } from "./po-detail-client";
@@ -12,11 +14,16 @@ export default async function PODetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [res, ingredientsRes] = await Promise.all([
+  const [res, ingredientsRes, ctx] = await Promise.all([
     fetchPurchaseOrderDetail(Number(id)),
     fetchIngredients(),
+    getAuthContextWithPermission(
+      PROCUREMENT_ROLES,
+      PERMISSION_KEYS.PROCUREMENT_READ,
+    ),
   ]);
   if (!res.success || !res.data) notFound();
+  const isOwner = ctx?.claims.user_role === "owner";
 
   const d = res.data as {
     po: {
@@ -91,5 +98,5 @@ export default async function PODetailPage({
     ? ((ingredientsRes.data ?? []) as IngredientRow[])
     : [];
 
-  return <PODetailClient po={po} ingredients={ingredients} />;
+  return <PODetailClient po={po} ingredients={ingredients} isOwner={isOwner} />;
 }

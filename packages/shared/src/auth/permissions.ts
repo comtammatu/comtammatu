@@ -47,6 +47,7 @@ export const PERMISSION_KEYS = {
   PROCUREMENT_PO_APPROVE: "procurement:po_approve",
   PROCUREMENT_GRN_CREATE: "procurement:grn_create",
   PROCUREMENT_GRN_CONFIRM: "procurement:grn_confirm",
+  PROCUREMENT_GRN_AMEND: "procurement:grn_amend",
   PROCUREMENT_INVOICE_CREATE: "procurement:invoice_create",
   PROCUREMENT_INVOICE_MATCH: "procurement:invoice_match",
   PROCUREMENT_SUPPLIER_MANAGE: "procurement:supplier_manage",
@@ -132,7 +133,7 @@ export const PERMISSION_KEYS = {
 export type PermissionKey = (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];
 
 /** Total count (static assertion — update when adding keys) */
-export const PERMISSION_KEY_COUNT = 85;
+export const PERMISSION_KEY_COUNT = 86;
 
 /**
  * Pure function: check if a permission set contains a given key.
