@@ -371,57 +371,39 @@ const closeSessionSchema = z.object({
     .positive({ error: "Session ID không hợp lệ" }),
   closingCash: z.coerce.number().min(0, { error: "Tiền đóng ca không hợp lệ" }),
   note: z.string().optional(),
-  varianceNote: z.string().optional(),
 });
 
 /**
- * Sentinel error codes used by the close-session UI to switch into the
- * variance-approval sub-flow without re-fetching the summary.
+ * D8 (2026-04-27): variance gate retired — close không còn block. RPC chỉ
+ * raise các lỗi "thực sự" (session_not_found, session_already_closed, hoặc
+ * unknown). UI đọc `meta.code` để tách path; variance breach giờ được
+ * server emit qua notifications, không qua exception.
  */
 export type CloseSessionErrorCode =
-  | "variance_requires_bm_approval"
-  | "variance_note_required"
   | "session_not_found"
   | "session_already_closed"
   | "unknown";
 
 export interface CloseSessionErrorPayload {
   code: CloseSessionErrorCode;
-  /** Variance VND emitted by RPC when threshold breached; null otherwise. */
-  diff?: number;
-  /** Threshold VND emitted by RPC when threshold breached; null otherwise. */
-  threshold?: number;
 }
 
-function parseVarianceContext(message: string | undefined): {
-  diff?: number;
-  threshold?: number;
-} {
-  if (!message) return {};
-  const m = /diff=(-?[\d.]+),\s*threshold=([\d.]+)/.exec(message);
-  if (!m) return {};
-  const diff = Number(m[1]);
-  const threshold = Number(m[2]);
-  return {
-    diff: Number.isFinite(diff) ? diff : undefined,
-    threshold: Number.isFinite(threshold) ? threshold : undefined,
-  };
-}
-
-// Skip withAction: positional (sessionId, closingCash, note?, varianceNote?) args
+// Skip withAction: positional (sessionId, closingCash, note?) args
 // On failure, `meta` matches CloseSessionErrorPayload (`Record<string, unknown>`
 // in the base type — narrowed by callers via meta.code).
+//
+// D8 (2026-04-27): variance note retired — RPC no longer requires it. UI
+// no longer renders the variance approval sub-step. Variance breach now
+// emits a notification to managers via trg_notify_pos_shift_variance.
 export async function closePosSession(
   sessionId: number,
   closingCash: number,
   note?: string,
-  varianceNote?: string,
 ): Promise<ActionResult> {
   const parsed = closeSessionSchema.safeParse({
     sessionId,
     closingCash,
     note,
-    varianceNote,
   });
   if (!parsed.success) {
     return {
@@ -442,29 +424,10 @@ export async function closePosSession(
     p_session_id: parsed.data.sessionId,
     p_closing_cash: parsed.data.closingCash,
     p_note: parsed.data.note ?? undefined,
-    p_variance_note: parsed.data.varianceNote ?? undefined,
   });
 
   if (error) {
     const msg = error.message ?? "";
-
-    if (msg.includes("variance_requires_bm_approval")) {
-      const ctxMeta = parseVarianceContext(msg);
-      return {
-        success: false,
-        error: "Chênh lệch vượt ngưỡng — cần quản lý chi nhánh đăng nhập để duyệt.",
-        meta: { code: "variance_requires_bm_approval", ...ctxMeta },
-      };
-    }
-
-    if (msg.includes("variance_note_required")) {
-      const ctxMeta = parseVarianceContext(msg);
-      return {
-        success: false,
-        error: "Cần nhập lý do chênh lệch ≥ 10 ký tự.",
-        meta: { code: "variance_note_required", ...ctxMeta },
-      };
-    }
 
     if (msg.includes("session_not_found")) {
       return {

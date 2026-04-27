@@ -61,6 +61,7 @@ export default async function BranchPosSessionsPage({
           cash_difference,
           status,
           note,
+          variance_approval_note,
           pos_terminals!pos_sessions_terminal_id_fkey (
             name
           ),
