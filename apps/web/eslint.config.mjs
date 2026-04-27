@@ -21,6 +21,62 @@ const RAW_TAILWIND_PALETTE_REGEX =
 const RAW_TAILWIND_PALETTE_MESSAGE =
   "Raw Tailwind palette class detected. Use semantic tokens instead (bg-success/10, text-tier-elite, border-destructive). Defined in packages/ui/src/styles/globals.css Zone B. See tasks/regressions.md NO-RAW-TAILWIND-PALETTE-IN-APP.";
 
+// Match any Vietnamese diacritic (Latin-1 Supplement + Latin Extended-A/B
+// VN-specific + Latin Extended Additional). Catches "Hủy"/"Đã"/"Đơn"/"Bàn"
+// etc. but not plain ASCII identifiers. Heuristic for "is this string
+// Vietnamese?" — false positives possible for European accented Latin but
+// rare in this single-locale codebase.
+const VI_DIACRITIC_REGEX =
+  /[À-ÿĂ-ăĐ-đƠ-ưẠ-ỹ]/;
+const VI_TARGET_ATTRS = /^(title|placeholder|aria-label|alt)$/;
+
+// Custom rule: flag inline Vietnamese strings in JSX text nodes and
+// user-facing attributes (title/placeholder/aria-label/alt). Severity is
+// "warn" during pilot — flip to "error" once Phase 2 sweep clears existing
+// offenders. Escape hatch: `// eslint-disable-next-line` with `vi-allow:`
+// reason for legal-fixed strings (HĐĐT/MST/...) or domain edge cases.
+// See tasks/regressions.md MESSAGES-SINGLE-SOURCE (2026-04-27).
+const i18nPlugin = {
+  rules: {
+    "no-inline-vietnamese": {
+      meta: {
+        type: "suggestion",
+        docs: {
+          description:
+            "Disallow inline Vietnamese string literals in JSX. Use ACTIONS_VI/STATES_VI/ERRORS_VI/domain dict from @comtammatu/shared/messages or apps/web/lib/messages/* instead.",
+        },
+        schema: [],
+        messages: {
+          inlineVN:
+            "Inline Vietnamese in JSX. Import from @comtammatu/shared/messages or apps/web/lib/messages/*. Override: `// eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: <reason>`.",
+        },
+      },
+      create(context) {
+        return {
+          JSXText(node) {
+            if (VI_DIACRITIC_REGEX.test(node.value)) {
+              context.report({ node, messageId: "inlineVN" });
+            }
+          },
+          JSXAttribute(node) {
+            const name = node.name?.name;
+            if (typeof name !== "string" || !VI_TARGET_ATTRS.test(name))
+              return;
+            const value = node.value;
+            if (
+              value?.type === "Literal" &&
+              typeof value.value === "string" &&
+              VI_DIACRITIC_REGEX.test(value.value)
+            ) {
+              context.report({ node: value, messageId: "inlineVN" });
+            }
+          },
+        };
+      },
+    },
+  },
+};
+
 export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
@@ -57,6 +113,15 @@ export default tseslint.config(
     rules: {
       ...nextPlugin.configs.recommended.rules,
       ...nextPlugin.configs["core-web-vitals"].rules,
+    },
+  },
+  {
+    files: ["**/*.tsx"],
+    plugins: {
+      i18n: i18nPlugin,
+    },
+    rules: {
+      "i18n/no-inline-vietnamese": "warn",
     },
   },
   {
