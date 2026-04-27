@@ -23,4 +23,10 @@ export const notifications = {
     "inventory.stock_low": "Tồn kho thấp",
     "inventory.expiry_soon": "Sắp hết hạn",
   } as Record<string, string>,
+  time: {
+    justNow: "vừa xong",
+    minutes: "phút",
+    hours: "giờ",
+    days: "ngày",
+  },
 } as const

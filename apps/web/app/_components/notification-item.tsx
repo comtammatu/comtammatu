@@ -38,16 +38,17 @@ function toneFor(severity: NotificationItemModel["severity"]) {
 }
 
 function relativeTime(iso: string) {
+  const t = messages.notifications.time;
   const now = Date.now();
   const then = new Date(iso).getTime();
   const diff = Math.max(0, now - then);
   const min = Math.floor(diff / 60_000);
-  if (min < 1) return "vừa xong";
-  if (min < 60) return `${min} phút`;
+  if (min < 1) return t.justNow;
+  if (min < 60) return `${min} ${t.minutes}`;
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} giờ`;
+  if (hr < 24) return `${hr} ${t.hours}`;
   const day = Math.floor(hr / 24);
-  if (day < 30) return `${day} ngày`;
+  if (day < 30) return `${day} ${t.days}`;
   return new Date(iso).toLocaleDateString("vi-VN");
 }
 
@@ -103,7 +104,7 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
           {unread && (
             <span
               className="inline-block size-2 shrink-0 rounded-full bg-primary"
-              aria-label="Chưa đọc"
+              aria-label={messages.notifications.filters.unread}
             />
           )}
         </div>
