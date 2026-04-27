@@ -1021,6 +1021,167 @@ export async function voidOrderItem(
   };
 }
 
+/* ─── reduceOrderItemQuantity ─── */
+
+const reduceItemSchema = z.object({
+  orderItemId: z.coerce.number().int().positive({ error: "Món không hợp lệ" }),
+  // Stepper UI clamps client-side, server enforces 1..(currentQty-1). Coerce
+  // because the dialog state stays a string until submit.
+  newQuantity: z.coerce
+    .number()
+    .int()
+    .min(1, { error: "Số lượng mới tối thiểu 1" }),
+  // Mirror voidItemSchema min(5) so audit trail isn't defeated by "x" reasons
+  // and so cashiers see the same UX rule across void / reduce.
+  reason: z
+    .string()
+    .trim()
+    .min(5, { error: "Lý do giảm SL tối thiểu 5 ký tự" }),
+});
+
+// Skip withAction: positional (orderItemId, newQuantity, reason) args + POS_VOID_ROLES
+export async function reduceOrderItemQuantity(
+  orderItemId: number,
+  newQuantity: number,
+  reason: string,
+): Promise<
+  ActionResult<{
+    qtyReduced: number;
+    oldQuantity: number;
+    newQuantity: number;
+    /** Surfaced when reduce committed but the partial-cancel kitchen ticket
+     * could not enqueue (printer offline / no slot for drinks / RLS / flag
+     * off). UI surfaces as a toast warning so the operator knows to verbally
+     * notify the kitchen — reduce itself is already committed. */
+    printWarning?: string;
+  }>
+> {
+  const parsed = reduceItemSchema.safeParse({ orderItemId, newQuantity, reason });
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    POS_VOID_ROLES,
+    PERMISSION_KEYS.POS_VOID_ORDER,
+  );
+  if (!ctx) {
+    return { success: false, error: "Cần quyền hủy đơn POS để giảm SL món." };
+  }
+
+  const { supabase } = ctx;
+
+  const { data, error } = await supabase.rpc("reduce_order_item_quantity", {
+    p_order_item_id: parsed.data.orderItemId,
+    p_new_quantity: parsed.data.newQuantity,
+    p_reason: parsed.data.reason,
+  });
+
+  if (error) {
+    const msg = String(error.message ?? "").toLowerCase();
+    if (msg.includes("forbidden")) {
+      return { success: false, error: "Cần quyền hủy đơn POS để giảm SL món." };
+    }
+    if (msg.includes("no reduction needed")) {
+      return {
+        success: false,
+        error: "Số lượng mới phải nhỏ hơn số lượng hiện tại.",
+      };
+    }
+    if (msg.includes("not reducible") || msg.includes("served")) {
+      return {
+        success: false,
+        error: "Không thể giảm SL món đã phục vụ hoặc đã hủy.",
+      };
+    }
+    if (msg.includes("order terminal")) {
+      return { success: false, error: "Đơn đã đóng, không thể giảm SL món." };
+    }
+    if (msg.includes("order already paid")) {
+      return { success: false, error: "Đơn đã thanh toán, không thể giảm SL." };
+    }
+    if (msg.includes("reason too short")) {
+      return {
+        success: false,
+        error: "Lý do giảm SL tối thiểu 5 ký tự.",
+      };
+    }
+    return { success: false, error: "Không thể giảm SL món. Vui lòng thử lại." };
+  }
+
+  const result = data as unknown as {
+    order_id: number;
+    order_item_id: number;
+    old_quantity: number;
+    new_quantity: number;
+    qty_reduced: number;
+    was_sent_to_kitchen?: boolean;
+  } | null;
+
+  if (!result) {
+    return {
+      success: false,
+      error: "Không thể giảm SL món. Vui lòng thử lại.",
+    };
+  }
+
+  // Fire partial-cancel ticket only when the kitchen actually saw the line.
+  // Print failure is non-fatal — the reduce is already committed; worst case
+  // the chef makes the original quantity until KDS realtime catches up.
+  // Surface as a toast warning, never a hard failure.
+  let printWarning: string | undefined;
+  if (result.was_sent_to_kitchen) {
+    const { data: printData, error: printError } = await supabase.rpc(
+      "enqueue_partial_cancel_ticket_print",
+      {
+        p_order_item_id: parsed.data.orderItemId,
+        p_old_quantity: result.old_quantity,
+        p_new_quantity: result.new_quantity,
+        p_reason: parsed.data.reason,
+      },
+    );
+    if (printError) {
+      const msg = String(printError.message ?? "").toLowerCase();
+      if (msg.includes("permission denied")) {
+        printWarning =
+          "Đã giảm SL. Không có quyền in phiếu báo bếp — báo bếp thủ công.";
+      } else if (msg.includes("tenant mismatch")) {
+        printWarning = "Đã giảm SL. Lỗi quyền tenant khi in phiếu báo bếp.";
+      } else {
+        printWarning =
+          "Đã giảm SL. Không in được phiếu báo bếp — kiểm tra máy in bếp.";
+      }
+    } else {
+      const skipReason = (printData as { skipped?: boolean; reason?: string } | null)
+        ?.skipped
+        ? (printData as { reason?: string }).reason
+        : undefined;
+      if (skipReason === "no_printer") {
+        printWarning = "Đã giảm SL. Máy in bếp offline — báo bếp trực tiếp.";
+      } else if (skipReason === "no_slot") {
+        printWarning =
+          "Đã giảm SL. Món không thuộc khu vực bếp (đồ uống chai?) — báo bar trực tiếp.";
+      } else if (skipReason === "feature_disabled") {
+        printWarning =
+          "Đã giảm SL. Tính năng in phiếu báo giảm đang tắt — báo bếp trực tiếp.";
+      }
+    }
+  }
+
+  return {
+    success: true,
+    data: {
+      qtyReduced: result.qty_reduced,
+      oldQuantity: result.old_quantity,
+      newQuantity: result.new_quantity,
+      printWarning,
+    },
+  };
+}
+
 /* ─── cancelOrder ─── */
 
 const cancelOrderSchema = z.object({

@@ -9,7 +9,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
-import { Check as IconCheck, X as IconX } from "lucide-react";
+import {
+  Check as IconCheck,
+  Minus as IconMinus,
+  X as IconX,
+} from "lucide-react";
 import {
   getPosLineItemDisplayName,
   getPosLineItemSummary,
@@ -32,6 +36,7 @@ interface OrderItemActionsSheetProps {
   onClose: () => void;
   onMarkServed: (itemId: number) => void;
   onVoidRequest: (itemId: number) => void;
+  onReduceRequest: (itemId: number) => void;
 }
 
 export function OrderItemActionsSheet({
@@ -41,6 +46,7 @@ export function OrderItemActionsSheet({
   onClose,
   onMarkServed,
   onVoidRequest,
+  onReduceRequest,
 }: OrderItemActionsSheetProps) {
   const cancelled = item?.status === "cancelled";
   const served = item?.status === "served";
@@ -50,6 +56,10 @@ export function OrderItemActionsSheet({
     ["pending", "preparing", "ready"].includes(item.status);
   const canVoid = canManage && actionable;
   const canMarkServed = actionable && !served;
+  // Reduce gates on canManage + qty>=2 + actionable. qty=1 means there's
+  // nothing to reduce — force the cashier into "Hủy món" so KDS card flips
+  // cancelled instead of leaving a zombie qty=0 row.
+  const canReduce = canManage && actionable && (item?.quantity ?? 0) >= 2;
   const displayName = item ? getPosLineItemDisplayName(item) : "";
   const summary = item
     ? getPosLineItemSummary(item)
@@ -117,6 +127,21 @@ export function OrderItemActionsSheet({
               Đã phục vụ
             </Button>
           )}
+          {canReduce && (
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="w-full"
+              disabled={isPending}
+              onClick={() => {
+                if (item) onReduceRequest(item.id);
+              }}
+            >
+              <IconMinus data-icon="inline-start" />
+              Giảm số lượng
+            </Button>
+          )}
           {canVoid && (
             <Button
               type="button"
@@ -132,7 +157,7 @@ export function OrderItemActionsSheet({
               Hủy món
             </Button>
           )}
-          {!canMarkServed && !canVoid && (
+          {!canMarkServed && !canVoid && !canReduce && (
             <p className="py-4 text-center text-sm text-muted-foreground">
               Không có thao tác khả dụng cho món này.
             </p>

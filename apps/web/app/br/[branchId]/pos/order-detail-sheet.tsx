@@ -31,6 +31,7 @@ import { AppBoneyardSkeleton } from "../../../_components/boneyard-skeleton";
 import {
   fetchOrderDetail,
   voidOrderItem,
+  reduceOrderItemQuantity,
   cancelOrder,
   transferOrderTable,
   updateOrderStatus,
@@ -49,6 +50,7 @@ import { OrderItemRow } from "./_components/order-detail/order-item-row";
 import type { OrderItemRowData } from "./_components/order-detail/order-item-row";
 import { OrderItemActionsSheet } from "./_components/order-detail/order-item-actions-sheet";
 import { VoidItemDialog } from "./_components/order-detail/void-item-dialog";
+import { ReduceQuantityDialog } from "./_components/order-detail/reduce-quantity-dialog";
 import { CancelOrderDialog } from "./_components/order-detail/cancel-order-dialog";
 import { TransferTableDialog } from "./_components/order-detail/transfer-table-dialog";
 import { DiscountSheet } from "./_components/order-detail/discount-sheet";
@@ -247,6 +249,9 @@ export function OrderDetailSheet({
   const [isPending, startTransition] = useTransition();
   const [voidItemId, setVoidItemId] = useState<number | null>(null);
   const [voidReason, setVoidReason] = useState("");
+  const [reduceItemId, setReduceItemId] = useState<number | null>(null);
+  const [reduceNewQty, setReduceNewQty] = useState<number>(1);
+  const [reduceReason, setReduceReason] = useState("");
   const [showCancel, setShowCancel] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [showTransfer, setShowTransfer] = useState(false);
@@ -506,6 +511,50 @@ export function OrderDetailSheet({
     setVoidItemId(itemId);
   };
 
+  // From the per-item actions sheet → open ReduceQuantityDialog seeded with
+  // current qty - 1 (most common case: khách bớt 1 phần). Reset reason so
+  // any prior cancel-flow text doesn't leak into reduce.
+  const handleReduceRequest = (itemId: number) => {
+    const target = data?.order_items.find((item) => item.id === itemId);
+    if (!target || target.quantity < 2) return;
+    setActionsItemId(null);
+    setReduceItemId(itemId);
+    setReduceNewQty(Math.max(target.quantity - 1, 1));
+    setReduceReason("");
+  };
+
+  const handleReduceConfirm = () => {
+    if (reduceItemId === null) return;
+    const target = data?.order_items.find((item) => item.id === reduceItemId);
+    if (!target) return;
+    const reason = reduceReason.trim();
+    if (reason.length < 5) {
+      notify.error("Lý do giảm SL tối thiểu 5 ký tự");
+      return;
+    }
+    if (reduceNewQty < 1 || reduceNewQty >= target.quantity) {
+      notify.error("Số lượng mới phải nhỏ hơn số lượng hiện tại.");
+      return;
+    }
+    startTransition(async () => {
+      const id = reduceItemId;
+      const r = await reduceOrderItemQuantity(id, reduceNewQty, reason);
+      if (r.success) {
+        notify.success(
+          `Đã giảm SL: ${target.quantity} → ${r.data?.newQuantity ?? reduceNewQty}`,
+        );
+        if (r.data?.printWarning) {
+          notify.warning(r.data.printWarning);
+        }
+        setReduceItemId(null);
+        setReduceReason("");
+        load();
+      } else {
+        notify.error(r.error ?? "Không thể giảm SL món.");
+      }
+    });
+  };
+
   const handleReorder = () => {
     if (orderId === null) return;
     startTransition(async () => {
@@ -617,6 +666,7 @@ export function OrderDetailSheet({
   );
 
   const voidItem = data?.order_items.find((item) => item.id === voidItemId);
+  const reduceItem = data?.order_items.find((item) => item.id === reduceItemId);
   const activeItemCount =
     data?.order_items.filter((item) => item.status !== "cancelled").length ?? 0;
 
@@ -954,6 +1004,7 @@ export function OrderDetailSheet({
         onClose={() => setActionsItemId(null)}
         onMarkServed={handleMarkItemServed}
         onVoidRequest={handleVoidRequest}
+        onReduceRequest={handleReduceRequest}
       />
 
       <VoidItemDialog
@@ -963,6 +1014,19 @@ export function OrderDetailSheet({
         onCancel={() => setVoidItemId(null)}
         onConfirm={handleVoidConfirm}
         itemLabel={voidItem ? getPosLineItemDisplayName(voidItem) : null}
+        isPending={isPending}
+      />
+
+      <ReduceQuantityDialog
+        open={reduceItemId !== null && reduceItem != null}
+        currentQuantity={reduceItem?.quantity ?? 1}
+        newQuantity={reduceNewQty}
+        onNewQuantityChange={setReduceNewQty}
+        reason={reduceReason}
+        onReasonChange={setReduceReason}
+        onCancel={() => setReduceItemId(null)}
+        onConfirm={handleReduceConfirm}
+        itemLabel={reduceItem ? getPosLineItemDisplayName(reduceItem) : null}
         isPending={isPending}
       />
 

@@ -6583,6 +6583,15 @@ export type Database = {
         Returns: Json
       }
       enqueue_kitchen_print: { Args: { p_order_id: number }; Returns: Json }
+      enqueue_partial_cancel_ticket_print: {
+        Args: {
+          p_new_quantity: number
+          p_old_quantity: number
+          p_order_item_id: number
+          p_reason: string
+        }
+        Returns: Json
+      }
       enqueue_provisional_bill: {
         Args: {
           p_order_id: number
@@ -6876,6 +6885,14 @@ export type Database = {
       recall_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       recompute_supplier_invoice_matching: {
         Args: { p_invoice_id: number }
+        Returns: Json
+      }
+      reduce_order_item_quantity: {
+        Args: {
+          p_new_quantity: number
+          p_order_item_id: number
+          p_reason: string
+        }
         Returns: Json
       }
       refresh_abc_classification: { Args: never; Returns: number }

@@ -16,6 +16,13 @@ export const VOID_ITEM_PRESETS = [
   "Hết nguyên liệu",
 ] as const;
 
+export const REDUCE_ITEM_PRESETS = [
+  "Khách bớt phần",
+  "Khách no không hết",
+  "Nhập dư số lượng",
+  "Hết một phần nguyên liệu",
+] as const;
+
 export const CANCEL_ORDER_PRESETS = [
   "Khách rời quán",
   "Khách đổi ý",

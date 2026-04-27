@@ -17,6 +17,7 @@ export {
   fetchOrderDetail,
   appendOrderItems,
   voidOrderItem,
+  reduceOrderItemQuantity,
   cancelOrder,
   transferOrderTable,
   updateOrderStatus,
