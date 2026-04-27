@@ -21,6 +21,7 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { fetchDailyRevenue } from "../../../finance/actions";
 import type { DailyRevenueRow } from "./page";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 
 interface Props {
   initialRows: DailyRevenueRow[];
@@ -50,7 +51,7 @@ export function RevenueReportClient({
       }
       const res = await fetchDailyRevenue(initialBranchId, startDate, endDate);
       if (!res.success) {
-        setError(res.error ?? "Lỗi không xác định");
+        setError(res.error ?? ERRORS_VI.unknown);
         return;
       }
       setRows((res.data ?? []) as DailyRevenueRow[]);

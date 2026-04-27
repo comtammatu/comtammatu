@@ -22,6 +22,7 @@ import {
   TextareaField,
 } from "@/components/form";
 import { adjustStock } from "../actions";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 
 const ADJUST_TYPE_OPTIONS = [
   { value: "adjustment", label: "Điều chỉnh thủ công" },
@@ -100,7 +101,7 @@ export function AdjustStockDialog({
       });
 
       if (!result.success) {
-        setServerError(result.error ?? "Đã xảy ra lỗi");
+        setServerError(result.error ?? ERRORS_VI.fallback);
         return;
       }
 

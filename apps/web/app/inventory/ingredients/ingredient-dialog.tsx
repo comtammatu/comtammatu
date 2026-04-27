@@ -20,6 +20,7 @@ import { createIngredient, updateIngredient } from "../actions";
 import type { IngredientRow } from "../_lib/types";
 import { STORAGE_OPTIONS, ITEM_KIND_OPTIONS } from "../_lib/constants";
 import { parseOptionalNumber } from "../_lib/format";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 
 const ingredientSchema = z.object({
   name: z.string().trim().min(1, { error: "Tên nguyên liệu không được trống" }),
@@ -148,7 +149,7 @@ function IngredientFormContent({
         if (isEdit) {
           const result = await updateIngredient(ingredient.id, payload);
           if (!result.success) {
-            setServerError(result.error ?? "Đã xảy ra lỗi");
+            setServerError(result.error ?? ERRORS_VI.fallback);
             return;
           }
           toast.success("Đã cập nhật nguyên liệu");
@@ -169,7 +170,7 @@ function IngredientFormContent({
             shelf_life_days: payload.shelf_life_days,
           });
           if (!result.success) {
-            setServerError(result.error ?? "Đã xảy ra lỗi");
+            setServerError(result.error ?? ERRORS_VI.fallback);
             return;
           }
           toast.success("Đã thêm nguyên liệu mới");

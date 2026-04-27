@@ -15,6 +15,7 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { fetchFoodCost } from "../accounting-actions";
 import type { FoodCostRow } from "./page";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 
 interface Props {
   initialRows: FoodCostRow[];
@@ -38,7 +39,7 @@ export function FoodCostClient({
     startTransition(async () => {
       const res = await fetchFoodCost({ startDate, endDate });
       if (!res.success) {
-        setError(res.error ?? "Lỗi không xác định");
+        setError(res.error ?? ERRORS_VI.unknown);
         return;
       }
       setRows((res.data ?? []) as FoodCostRow[]);

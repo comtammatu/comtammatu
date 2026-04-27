@@ -46,6 +46,7 @@ import {
 } from "./shift-assignment-actions";
 import { fetchShifts } from "./actions";
 import type { BranchOption, ShiftRow } from "./page";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 
 /* ─── Types ─── */
 
@@ -200,7 +201,7 @@ export function ShiftAssignmentsTable({
       });
 
       if (!result.success) {
-        setAddError(result.error ?? "Đã xảy ra lỗi");
+        setAddError(result.error ?? ERRORS_VI.fallback);
         return;
       }
 

@@ -21,6 +21,7 @@ import {
 } from "../../payroll-actions";
 import type { PayrollEntryRow } from "./page";
 import { useState } from "react";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 
 const fmt = (n: number) =>
   n.toLocaleString("vi-VN", { maximumFractionDigits: 0 });
@@ -55,7 +56,7 @@ export function PayrollDetailClient({
         );
         reload();
       } else {
-        toast.error(result.error ?? "Lỗi");
+        toast.error(result.error ?? ERRORS_VI.fallback);
       }
     });
   }
@@ -66,7 +67,7 @@ export function PayrollDetailClient({
       if (result.success) {
         toast.success("Đã duyệt bảng lương");
       } else {
-        toast.error(result.error ?? "Lỗi");
+        toast.error(result.error ?? ERRORS_VI.fallback);
       }
     });
   }
@@ -77,7 +78,7 @@ export function PayrollDetailClient({
       if (result.success) {
         toast.success("Đã đánh dấu thanh toán");
       } else {
-        toast.error(result.error ?? "Lỗi");
+        toast.error(result.error ?? ERRORS_VI.fallback);
       }
     });
   }

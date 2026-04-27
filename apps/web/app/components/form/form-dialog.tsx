@@ -29,6 +29,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 
 export interface FormDialogProps<TValues extends FieldValues> {
   open: boolean;
@@ -84,7 +85,7 @@ export function FormDialog<TValues extends FieldValues>({
       setServerError(null);
       const result = await onSubmit(values);
       if (!result.success) {
-        setServerError(result.error ?? "Đã xảy ra lỗi");
+        setServerError(result.error ?? ERRORS_VI.fallback);
         return;
       }
       toast.success(successMessage);

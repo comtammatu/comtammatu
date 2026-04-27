@@ -35,6 +35,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { upsertRecipeLines } from "../procurement-actions";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 
 export interface MenuItemOption {
   id: number;
@@ -340,7 +341,7 @@ export function RecipeLineDialog({
         lines: parsedLines,
       });
       if (!result.success) {
-        setServerError(result.error ?? "Đã xảy ra lỗi");
+        setServerError(result.error ?? ERRORS_VI.fallback);
         return;
       }
       toast.success(

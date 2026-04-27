@@ -21,6 +21,7 @@ import {
   approvePayroll,
 } from "../payroll-actions";
 import type { PayrollPeriodRow } from "./page";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 
 interface Props {
   periods: PayrollPeriodRow[];
@@ -70,7 +71,7 @@ export function PayrollClient({ periods: initialPeriods }: Props) {
     startTransition(async () => {
       const result = await createPayrollPeriod({ periodMonth: currentMonth });
       if (!result.success) {
-        setError(result.error ?? "Lỗi không xác định");
+        setError(result.error ?? ERRORS_VI.unknown);
         return;
       }
       router.refresh();
@@ -83,7 +84,7 @@ export function PayrollClient({ periods: initialPeriods }: Props) {
     startTransition(async () => {
       const result = await calculatePayroll({ periodId });
       if (!result.success) {
-        setError(result.error ?? "Lỗi không xác định");
+        setError(result.error ?? ERRORS_VI.unknown);
         setActiveId(null);
         return;
       }
@@ -98,7 +99,7 @@ export function PayrollClient({ periods: initialPeriods }: Props) {
     startTransition(async () => {
       const result = await approvePayroll({ periodId });
       if (!result.success) {
-        setError(result.error ?? "Lỗi không xác định");
+        setError(result.error ?? ERRORS_VI.unknown);
         setActiveId(null);
         return;
       }

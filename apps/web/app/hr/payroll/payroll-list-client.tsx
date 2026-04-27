@@ -17,6 +17,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Plus as IconPlus } from "lucide-react";
 import { createPayrollPeriod, fetchPayrollPeriods } from "../payroll-actions";
 import type { PayrollPeriodRow } from "./page";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Nháp",
@@ -57,7 +58,7 @@ export function PayrollListClient({
           setPeriods((reload.data ?? []) as PayrollPeriodRow[]);
         }
       } else {
-        toast.error(result.error ?? "Lỗi");
+        toast.error(result.error ?? ERRORS_VI.fallback);
       }
     });
   }
