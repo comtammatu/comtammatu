@@ -10,6 +10,7 @@ import { buildAccessDeniedPath } from "../blocked-state";
 import { STAFF_ROLES, type JwtClaims, type StaffRole } from "../types";
 import { canAccess } from "../module-acl";
 import { resolveDiscoveredApps } from "../app-discovery";
+import { isPublicAppPath } from "../route-resolution";
 
 function makeClaims(
   role: StaffRole,
@@ -208,6 +209,13 @@ test("resolvePostLoginRedirect → branch_manager on own POS → allowed", () =>
     resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/br/3/pos"),
     "/br/3/pos",
   );
+});
+
+test("isPublicAppPath PWA manifests bypass auth proxy", () => {
+  assert.equal(isPublicAppPath("/manifest.webmanifest"), true);
+  assert.equal(isPublicAppPath("/br/3/pos/manifest.webmanifest"), true);
+  assert.equal(isPublicAppPath("/br/3/pos"), false);
+  assert.equal(isPublicAppPath("/br/abc/pos/manifest.webmanifest"), false);
 });
 
 test("resolvePostLoginRedirect → branch settings follows branch scope", () => {

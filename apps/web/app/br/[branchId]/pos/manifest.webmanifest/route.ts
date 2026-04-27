@@ -42,7 +42,7 @@ export async function GET(_request: NextRequest, { params }: ManifestParams) {
         src: "/icons/icon-512.png",
         sizes: "512x512",
         type: "image/png",
-        purpose: "maskable",
+        purpose: "any maskable",
       },
     ],
   };

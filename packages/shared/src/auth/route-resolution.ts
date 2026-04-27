@@ -3,6 +3,7 @@ import type { ModuleKey } from "./module-acl";
 export const PUBLIC_APP_PATHS = [
   "/api/health",
   "/api/webhooks",
+  "/manifest.webmanifest",
   "/sw.js",
   "/access-denied",
 ] as const;
@@ -26,6 +27,7 @@ export const INVENTORY_PROCUREMENT_PREFIXES = [
 export function isPublicAppPath(pathname: string): boolean {
   if (pathname.startsWith("/swe-worker-")) return true;
   if (pathname.startsWith("/demo/")) return true;
+  if (/^\/br\/\d+\/pos\/manifest\.webmanifest$/.test(pathname)) return true;
 
   return PUBLIC_APP_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`),
