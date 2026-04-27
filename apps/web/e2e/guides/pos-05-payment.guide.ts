@@ -91,12 +91,15 @@ test.describe("POS-05 Thanh toán đơn", () => {
       step: { number: 2, total: TOTAL, title: "Nhập tiền khách đưa" },
       setup: async (p) => {
         await gotoBillSheet(p, ctx.branchId);
-        // Tap quick amount 20.000đ chip để mô tả overpay
+        // Click chip ĐẦU TIÊN có giá > tổng đơn (overpay → tiền thừa).
+        // Chip set tự generate theo total → không hardcode 20k/30k vì
+        // fixture có thể đổi.
         const chip = p
-          .locator('button:has-text("20.000đ")')
-          .first();
+          .locator('button')
+          .filter({ hasText: /^\s*\d+\.\d+đ\s*$/ })
+          .nth(1);
         await chip.click().catch(() => {
-          // Chip có thể không tồn tại nếu giá đơn != 15k — capture as-is
+          // Không có chip phù hợp — capture as-is (default Tổng nhận = total)
         });
       },
       annotations: [

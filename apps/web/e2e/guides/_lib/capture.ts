@@ -80,6 +80,35 @@ async function resolveAnnotation(
   };
 }
 
+/**
+ * Hide chrome that polutes guide mockups:
+ *   - Next.js dev "Rendering..." indicator (bottom-left bubble)
+ *   - Skeleton placeholders that haven't finished animating
+ *   - Anything tagged data-volatile=true (timestamps, counters)
+ *
+ * Inject CSS via addStyleTag — survives client-side re-renders within page.
+ */
+async function hideDevChrome(page: Page): Promise<void> {
+  await page
+    .addStyleTag({
+      content: `
+        nextjs-portal,
+        [data-nextjs-toast],
+        [data-nextjs-dialog-overlay],
+        [data-nextjs-dialog],
+        #__next-build-watcher,
+        [data-volatile="true"] {
+          display: none !important;
+          visibility: hidden !important;
+          opacity: 0 !important;
+        }
+      `,
+    })
+    .catch(() => {
+      // best-effort — page may have closed mid-call
+    });
+}
+
 export async function captureScenario(
   page: Page,
   browser: Browser,
@@ -87,8 +116,23 @@ export async function captureScenario(
 ): Promise<string> {
   await scenario.setup(page);
 
+  // Hide Next dev overlay + skeleton noise BEFORE settle wait.
+  await hideDevChrome(page);
+
+  // Đợi fonts ready để tránh capture chữ FOUT (Flash of Unstyled Text).
+  // Best-effort: nếu page đóng giữa chừng, bỏ qua và dùng screenshot ngay.
+  try {
+    await page.evaluate(() => document.fonts.ready);
+  } catch {
+    // page closed / fonts API unavailable
+  }
+
   // Wait an extra beat for layout settle (animations, fonts).
-  await page.waitForTimeout(400);
+  try {
+    await page.waitForTimeout(400);
+  } catch {
+    // page closed
+  }
 
   // Resolve annotations BEFORE screenshot (DOM positions stable).
   const resolved: ResolvedAnnotation[] = [];

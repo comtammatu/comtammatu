@@ -124,7 +124,9 @@ test.describe("POS-09 Đóng ca POS", () => {
         await openCloseSheet(p);
         // Nhập 1 mệnh giá để chênh lệch hiện
         // Find any number input và fill 1
-        const firstInput = p.locator('input[type="number"]').first();
+        const firstInput = p
+          .locator('input[inputmode="numeric"], input[type="number"]')
+          .first();
         await firstInput.waitFor({ state: "visible", timeout: 5000 });
         await firstInput.fill("1");
         await p.waitForTimeout(500);
@@ -154,7 +156,9 @@ test.describe("POS-09 Đóng ca POS", () => {
         await gotoPosMain(p, ctx.branchId);
         await openCloseSheet(p);
         // Nhập 1 mệnh giá nhỏ để confirm button enabled
-        const firstInput = p.locator('input[type="number"]').first();
+        const firstInput = p
+          .locator('input[inputmode="numeric"], input[type="number"]')
+          .first();
         await firstInput.waitFor({ state: "visible", timeout: 5000 });
         await firstInput.fill("5");
         // Page Down để cuộn sheet đến nút confirm — KHÔNG dùng locator
@@ -192,7 +196,9 @@ test.describe("POS-09 Đóng ca POS", () => {
         await gotoPosMain(p, ctx.branchId);
         await openCloseSheet(p);
         // Nhập 1 mệnh giá 500k (large) để trigger significant diff
-        const firstInput = p.locator('input[type="number"]').first();
+        const firstInput = p
+          .locator('input[inputmode="numeric"], input[type="number"]')
+          .first();
         await firstInput.fill("3");
         await p.waitForTimeout(500);
       },

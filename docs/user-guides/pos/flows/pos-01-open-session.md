@@ -3,15 +3,17 @@
 > Hướng dẫn mở ca bán hàng đầu giờ trên màn hình POS.
 > Dành cho **thu ngân (cashier)** và **quản lý chi nhánh (branch manager)**.
 
+> 📌 **Per-branch model (D7, 2026-04-27):** Chi nhánh chỉ có **1 ca POS hoạt động cùng lúc**. Cashier mở ca → tất cả nhân viên cùng chi nhánh ride chung ca đó (waiter, chef đều thấy đơn). Không cần chọn máy POS cụ thể.
+
 ## Tóm tắt
 
 | Trường | Giá trị |
 | --- | --- |
 | **Vai trò** | Thu ngân, Quản lý chi nhánh |
 | **Quyền cần có** | `pos:open_cashbox` (mở két) |
-| **Điều kiện trước** | Đã đăng nhập, đã được phân chi nhánh, chi nhánh có ít nhất 1 máy POS đang hoạt động |
-| **Kết quả đúng** | Hệ thống tạo ca POS mới (status `open`); UI chuyển sang màn POS chính (menu + danh sách bàn) |
-| **Thời gian** | ~30 giây |
+| **Điều kiện trước** | Đã đăng nhập, đã được phân chi nhánh |
+| **Kết quả đúng** | Hệ thống tạo ca POS mới (status `open`); UI chuyển sang màn POS chính (table picker / menu) |
+| **Thời gian** | ~15 giây |
 
 ## Đường dẫn
 
@@ -22,53 +24,50 @@ Ví dụ: `/br/1/pos`
 
 ### Bước 1 — Vào màn hình mở ca
 
-![Bước 1 - Màn mở ca trống](../mockups/pos-01/pos-01-step-01-form-empty.png)
+![Bước 1 - Card mở ca](../mockups/pos-01/pos-01-step-01-form-empty.png)
 
-**Bạn thấy:** Thẻ "Mở ca bán hàng" hiện tên chi nhánh, ô chọn máy POS, ô nhập tiền đầu ca.
+**Bạn thấy:** Card "Mở ca bán hàng" với:
 
-**Bạn làm:** Chuẩn bị 2 thông tin trước khi gõ:
+- Badge "Chi nhánh #N".
+- Mô tả: "Nhập tiền đầu ca để bắt đầu nhận đơn. Chi nhánh chỉ có 1 ca POS hoạt động cùng lúc — các nhân viên khác cùng chi nhánh sẽ tự động bán trên ca này."
+- Ô **Tiền đầu ca (VND)** (mặc định 0).
+- Nút **Mở ca POS** (active ngay vì 0 cũng là số hợp lệ).
 
-1. Máy POS bạn đang ngồi tên gì (ví dụ "Máy quầy A").
-2. Số tiền mặt thực tế trong két ngay lúc này.
+**Bạn chuẩn bị:** Đếm tiền mặt thực tế trong két ngay lúc này.
 
-> 🛡️ Nếu thấy "Bạn không có quyền mở ca" → bạn KHÔNG phải thu ngân. Báo thu ngân/quản lý mở giúp. Xem [Tình huống ngoại lệ](#không-có-quyền-mở-ca) bên dưới.
+> 🛡️ Nếu thấy "Bạn không có quyền mở ca" → bạn KHÔNG phải thu ngân/quản lý. Báo họ mở giúp. Xem [Tình huống ngoại lệ](#không-có-quyền-mở-ca).
 
-### Bước 2 — Chọn máy POS
+### Bước 2 — Nhập tiền đầu ca
 
-![Bước 2 - Chọn máy POS](../mockups/pos-01/pos-01-step-02-pick-terminal.png)
+![Bước 2 - Nhập tiền](../mockups/pos-01/pos-01-step-02-enter-cash.png)
 
-**Bạn làm:** Chạm ô "Chọn máy POS" → danh sách máy POS hiện ra → chạm máy đúng vị trí bạn đang ngồi.
+**Bạn làm:** Chạm ô **Tiền đầu ca (VND)** → gõ số tiền mặt thực tế trong két.
 
-> ⚠️ Quan trọng: máy nào hiện chữ "đang có ca mở" thì KHÔNG chọn được — đã có người mở ca trên máy đó. Chọn máy khác hoặc nhờ người đó chốt ca trước.
+**Ví dụ:** Két có sẵn 500.000đ → gõ `500000` (ô input tự format có dấu chấm khi mất focus).
 
-### Bước 3 — Nhập tiền đầu ca
+> 💡 Số này dùng để đối soát khi đóng ca cuối ngày (POS-09). Nhập sai → cuối ca lệch tiền → phải giải trình. Đếm kỹ trước khi gõ.
 
-![Bước 3 - Nhập tiền đầu ca](../mockups/pos-01/pos-01-step-03-enter-cash.png)
+### Bước 3 — Sẵn sàng mở ca
 
-**Bạn làm:** Đếm tiền mặt thực tế trong két, gõ số đó vào ô **Tiền đầu ca (VND)**.
+![Bước 3 - Nút Mở ca POS active](../mockups/pos-01/pos-01-step-03-ready.png)
 
-**Ví dụ:** Két có sẵn 500.000đ → gõ `500000` (không gõ dấu chấm).
-
-> 💡 Số này dùng để đối soát khi đóng ca cuối ngày. Nhập sai → cuối ca lệch tiền → phải giải trình. Đếm kỹ trước khi gõ.
-
-### Bước 4 — Sẵn sàng mở ca
-
-![Bước 4 - Nút Mở ca POS active](../mockups/pos-01/pos-01-step-04-ready.png)
-
-**Bạn thấy:** Nút **Mở ca POS** sáng lên (đổi từ xám sang màu chính).
+**Bạn thấy:** Số tiền đã nhập (ví dụ 500.000) hiện trong ô. Nút **Mở ca POS** sáng (đỏ).
 
 **Bạn làm:** Chạm **Mở ca POS**.
 
-### Bước 5 — Vào màn POS bán hàng
+### Bước 4 — Vào màn POS bán hàng
 
-![Bước 5 - Màn POS chính](../mockups/pos-01/pos-01-step-05-pos-main.png)
+![Bước 4 - Màn POS chính](../mockups/pos-01/pos-01-step-04-pos-main.png)
 
 **Bạn thấy:**
 
-- Toast "Mở ca thành công" hiện ngắn rồi tự đóng.
-- Màn hình chuyển sang giao diện chính: tên máy POS hiện trên header, có nút "Chốt ca" góc phải, danh sách bàn / menu sẵn sàng nhận đơn.
+- Toast xanh "Mở ca thành công" hiện ngắn (1-2s).
+- Màn hình chuyển sang giao diện chính:
+  - Header: "Thoát" + tên chi nhánh + nút **Chốt ca** (góc phải).
+  - 2 tab "Tại bàn" / "Mang về" — default "Tại bàn".
+  - Table grid theo zones.
 
-✅ **Xong!** Bây giờ có thể nhận đơn. Tiếp tục với [POS-02 — Chọn bối cảnh bán hàng](../flow-index.md).
+✅ **Xong!** Bây giờ có thể nhận đơn. Tiếp tục với [POS-02 — Chọn bối cảnh bán hàng](pos-02-select-context.md).
 
 ---
 
@@ -78,40 +77,23 @@ Ví dụ: `/br/1/pos`
 
 > _Mockup chưa có (cần waiter test account để capture — sẽ bổ sung sau)_
 
-**Khi nào gặp:** Vai trò phục vụ (waiter) — không có quyền `pos:open_cashbox`.
+**Khi nào gặp:** Vai trò phục vụ (waiter), bếp (chef) — không có quyền `pos:open_cashbox`.
 
-**Bạn thấy:** Màn "Chờ mở ca" với hướng dẫn liên hệ thu ngân:
+**Bạn thấy:** Màn "Chờ mở ca" với hướng dẫn:
 
 > Bạn không có quyền mở ca. Liên hệ thu ngân hoặc quản lý chi nhánh để mở ca trước khi nhận đơn.
 
-**Cách xử lý:** Báo thu ngân/quản lý chi nhánh mở ca. Sau khi họ mở xong, tải lại trang — bạn sẽ vào thẳng màn POS chính (ride chung ca thu ngân).
+**Cách xử lý:** Báo thu ngân/quản lý chi nhánh mở ca. Sau khi họ mở xong, **tải lại trang** — bạn sẽ vào thẳng màn POS chính (ride chung ca thu ngân).
 
-### Có ca đang mở trên máy bạn dùng
+### Chi nhánh đã có ca đang mở
 
-![Variant - Chọn ca POS đang mở](../mockups/pos-01/pos-01-variant-multi-session-picker.png)
+**Khi nào gặp:** Bạn vào POS sau khi đồng nghiệp đã mở ca trước.
 
-**Khi nào gặp:** Chi nhánh đã có 1 hoặc nhiều ca POS đang mở (ví dụ thu ngân ca trước chưa chốt, hoặc đồng nghiệp đã mở rồi).
+**Bạn thấy:** **KHÔNG** thấy form "Mở ca bán hàng" — vào thẳng màn POS chính.
 
-**Bạn thấy:** Màn "Chọn máy POS bạn đang dùng" hiện danh sách ca đang mở (mỗi card là một máy POS + thời gian mở + tiền mở két).
+**Cách xử lý:** Không cần làm gì. Bán hàng bình thường trên ca đã có. Per-branch model = 1 ca cho cả chi nhánh.
 
-**Cách xử lý:**
-
-1. Tìm thẻ máy POS bạn đang ngồi → chạm "Dùng máy này" → vào thẳng màn POS chính (ride chung ca có sẵn).
-2. Nếu không thấy máy bạn ngồi trong danh sách → nhờ thu ngân/quản lý mở ca trên máy đó trước, rồi tải lại trang.
-
-> 💡 Quan trọng: chọn ĐÚNG máy bạn đang ngồi. Chọn nhầm → đơn bị tag vào ca máy khác → cuối ca đối soát tiền lệch.
-
-### Chi nhánh chưa có máy POS
-
-> _Mockup chưa có (capture destructive — phải xóa toàn bộ máy POS, ảnh hưởng các test khác)_
-
-**Khi nào gặp:** Quản lý chưa thiết lập máy POS nào trên chi nhánh.
-
-**Bạn thấy:** Trong Card "Mở ca bán hàng", thay vì ô chọn máy POS sẽ là alert vàng:
-
-> ⚠️ Chưa có máy POS. Liên hệ quản lý để thiết lập máy POS trước khi mở ca.
-
-**Cách xử lý:** Báo quản lý vào `Quản lý → Cấu hình → Máy POS` để tạo máy trước. Không thể bán hàng cho đến khi có máy.
+> 💡 Khác với model cũ (per-terminal): không có picker "Chọn máy POS bạn đang dùng" nữa. Nếu thấy picker đó, hệ thống đang dùng version cũ — báo kỹ thuật.
 
 ### Lỗi mạng khi mở ca
 
@@ -120,7 +102,7 @@ Ví dụ: `/br/1/pos`
 **Cách xử lý:**
 
 1. Kiểm tra wifi/mạng → nếu rớt, đợi mạng có lại rồi nhấn "Mở ca POS" lần nữa.
-2. Nếu mạng tốt mà vẫn lỗi → báo kỹ thuật. Đừng nhấn liên tục — có thể tạo ra ca trùng.
+2. Nếu mạng tốt mà vẫn lỗi → báo kỹ thuật. Đừng nhấn liên tục — có thể tạo ca trùng.
 
 ---
 
@@ -134,11 +116,12 @@ Ví dụ: `/br/1/pos`
 - **Server action:** [apps/web/app/br/[branchId]/pos/session-actions.ts](../../../../apps/web/app/br/%5BbranchId%5D/pos/session-actions.ts) — function `openPosSession`
 - **Page-level orchestration:** [apps/web/app/br/[branchId]/pos/page.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/page.tsx)
 
-### Database
+### Database (per-branch model D7)
 
-- Insert vào bảng `pos_sessions`.
-- Constraint: `UNIQUE(terminal_id) WHERE status = 'open'` — chống mở 2 ca trên cùng máy.
-- Mã lỗi `23505` (duplicate) → trả thông báo "Máy POS này đã có ca đang mở".
+- Insert vào `pos_sessions` với `terminal_id = NULL` (per-branch không bind terminal cụ thể).
+- Constraint: `UNIQUE(branch_id) WHERE status = 'open'` — chống mở 2 ca cùng chi nhánh.
+- Mã lỗi `23505` (duplicate) → trả thông báo "Chi nhánh đã có ca đang mở. Vui lòng dùng ca hiện tại."
+- Realtime sync: subscribe channel `pos_sessions:branch_id=eq.{branchId}` để các tab khác auto-refresh khi ca đóng/mở.
 
 ### Permission
 
@@ -148,6 +131,7 @@ Ví dụ: `/br/1/pos`
 
 ### Tham chiếu thiết kế
 
+- Per-branch session migration: commit `0ccb059 feat(pos): per-branch session model + realtime sync (D7)`
 - Order lifecycle: [docs/plan/m2-order-lifecycle.md](../../../plan/m2-order-lifecycle.md)
 - UI page contracts: [docs/plan/ui-ux-page-contracts.md](../../../plan/ui-ux-page-contracts.md)
 - Design system: [docs/spec/design-system.md](../../../spec/design-system.md)
@@ -161,6 +145,6 @@ Ví dụ: `/br/1/pos`
 | Viewport | 390×844 (iPhone mặc định) — đổi tại [paths.ts](../../../../apps/web/e2e/guides/_lib/paths.ts) |
 | Capture script | [apps/web/e2e/guides/pos-01-open-session.guide.ts](../../../../apps/web/e2e/guides/pos-01-open-session.guide.ts) |
 | Lệnh refresh | `pnpm --filter @comtammatu/web guides:capture --grep="POS-01"` |
-| Cập nhật mockup gần nhất | 2026-04-26 |
-| Commit POS bám | `bb8ab4c` |
+| Cập nhật mockup gần nhất | 2026-04-27 |
+| Model bám | per-branch (D7) — `0ccb059` |
 | Người maintain | _TBD_ |

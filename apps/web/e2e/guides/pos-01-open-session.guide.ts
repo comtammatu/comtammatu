@@ -139,9 +139,8 @@ test.describe("POS-01 Mở ca POS", () => {
       },
       annotations: [
         {
-          type: "callout-coord",
-          anchorX: 195,
-          anchorY: 30,
+          type: "callout",
+          selector: 'button[aria-label*="Chốt ca POS"]',
           placement: "below",
           text: "Header POS chính:\nnút Chốt ca",
         },

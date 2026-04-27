@@ -86,10 +86,9 @@ test.describe("POS-04 Thêm món vào đơn đang phục vụ", () => {
       },
       annotations: [
         {
-          type: "callout-coord",
-          anchorX: 195,
-          anchorY: 100,
-          placement: "below",
+          type: "callout",
+          selector: 'button[aria-label*="Đóng chi tiết đơn"]',
+          placement: "left",
           text: "Chi tiết đơn:\nmón, trạng thái,\ntổng tiền",
         },
       ],
