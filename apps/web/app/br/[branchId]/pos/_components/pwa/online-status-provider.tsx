@@ -21,17 +21,29 @@ interface BeforeInstallPromptEvent extends Event {
 
 interface PosPwaContextValue {
   isOnline: boolean;
+  isStandalone: boolean;
   installPrompt: BeforeInstallPromptEvent | null;
   clearInstallPrompt: () => void;
 }
 
 const PosPwaContext = createContext<PosPwaContextValue | null>(null);
 
+function isRunningStandalone(): boolean {
+  const navigatorWithStandalone = navigator as Navigator & {
+    standalone?: boolean;
+  };
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    navigatorWithStandalone.standalone === true
+  );
+}
+
 export function PosPwaProvider({ children }: { children: ReactNode }) {
   // Hydration-safe default: assume online on server + first paint, sync from
   // navigator.onLine in the mount effect. Avoids SSR/CSR text mismatch when
   // device boots offline.
   const [isOnline, setIsOnline] = useState(true);
+  const [isStandalone, setIsStandalone] = useState(false);
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
 
@@ -44,6 +56,19 @@ export function PosPwaProvider({ children }: { children: ReactNode }) {
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const displayModeQuery = window.matchMedia("(display-mode: standalone)");
+    const handleDisplayModeChange = () => {
+      setIsStandalone(isRunningStandalone());
+    };
+
+    handleDisplayModeChange();
+    displayModeQuery.addEventListener("change", handleDisplayModeChange);
+    return () => {
+      displayModeQuery.removeEventListener("change", handleDisplayModeChange);
     };
   }, []);
 
@@ -66,8 +91,8 @@ export function PosPwaProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<PosPwaContextValue>(
-    () => ({ isOnline, installPrompt, clearInstallPrompt }),
-    [isOnline, installPrompt, clearInstallPrompt],
+    () => ({ isOnline, isStandalone, installPrompt, clearInstallPrompt }),
+    [isOnline, isStandalone, installPrompt, clearInstallPrompt],
   );
 
   return (
@@ -81,6 +106,12 @@ export function useIsOnline(): boolean {
   // the provider. Default to online so guard logic does not over-trip.
   if (ctx == null) return true;
   return ctx.isOnline;
+}
+
+export function useIsStandalone(): boolean {
+  const ctx = useContext(PosPwaContext);
+  if (ctx == null) return false;
+  return ctx.isStandalone;
 }
 
 interface InstallPromptHandle {
