@@ -70,6 +70,10 @@ export async function proxy(request: NextRequest) {
 
   // Login page: special handling.
   if (pathname === "/login" || pathname === "/beta/login") {
+    if (request.method !== "GET" || request.headers.has("next-action")) {
+      return response;
+    }
+
     if (!user) return response; // unauthenticated → show login
     // Authenticated → bounce to role's post-login destination.
     const {
