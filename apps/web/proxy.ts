@@ -218,10 +218,19 @@ export async function proxy(request: NextRequest) {
           // data access (PostgREST direct calls bypass this gate). Kill-switch
           // via POS_NETWORK_GATE=off for incident response.
           //
+          // Auto-bypassed in non-production NODE_ENV (dev / test) — localhost
+          // requests resolve to 127.0.0.1 which getClientIp() correctly rejects
+          // as a private range, so without this skip every dev request would
+          // 307 to /access-denied. Vercel preview deploys run as production;
+          // set POS_NETWORK_GATE=off on those if you don't want the gate there.
+          //
           // Admin roles already fail the branch-scope check above (their
           // branch_id is null), so they never reach this point — no explicit
           // bypass needed here.
-          if (process.env.POS_NETWORK_GATE !== "off") {
+          const networkGateEnabled =
+            process.env.NODE_ENV === "production"
+            && process.env.POS_NETWORK_GATE !== "off";
+          if (networkGateEnabled) {
             const clientIp = getClientIp(request.headers);
             const graceCutoff = new Date(
               Date.now() - 30 * 60_000,
